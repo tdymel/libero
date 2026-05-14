@@ -1,0 +1,15 @@
+[package]
+name = "libero"
+version = "0.0.1"
+edition = "2024"
+authors = ["Tom Dymel <tom@dymel.dev>"]
+description = "A work in progress UI library focused on DX, UX, a11y and configurability."
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/tdymel/libero"
+homepage = "https://github.com/tdymel/libero"
+documentation = "https://docs.rs/libero"
+readme = "README.md"
+keywords = ["components", "ui", "design-system", "dioxus"]
+categories = ["gui", "wasm", "web-programming"]
+
+[dependencies]
