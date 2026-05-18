@@ -4,6 +4,7 @@ use crate::sx::{
     static_value::IntoStaticValue,
 };
 use paste::paste;
+use std::fmt;
 
 macro_rules! css_declaration_methods {
     ($name:ident) => {
@@ -101,4 +102,47 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(width);
     css_declaration_methods!(height);
     css_declaration_methods!(opacity);
+}
+
+impl<const N: usize> fmt::Display for Sx<N> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if let Some(name) = self.name {
+            write!(f, ".{} {{ ", name)?;
+        }
+
+        for declaration in &self.declarations {
+            write!(f, "{} ", declaration)?;
+        }
+
+        if let Some(dynamic_declarations) = &self.dynamic_declarations {
+            for declaration in dynamic_declarations {
+                write!(f, "{} ", declaration)?;
+            }
+        }
+
+        if self.name.is_some() {
+            write!(f, "}}")?;
+        }
+
+        Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Sx, sx};
+
+    #[test]
+    fn display_formats_plain_css_declarations() {
+        let sx = sx().width(10).height(20).opacity_dyn(|| 50);
+
+        assert_eq!(sx.to_string(), "width: 10; height: 20; opacity: 50; ");
+    }
+
+    #[test]
+    fn display_formats_named_css_rule() {
+        const SX: Sx<2> = sx().name("card").width(10).height(20);
+
+        assert_eq!(SX.to_string(), ".card { width: 10; height: 20; }");
+    }
 }

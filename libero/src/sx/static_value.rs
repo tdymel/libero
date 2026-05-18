@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, PartialEq, Eq)]
 pub enum StaticValue {
     Integer(i64),
@@ -16,5 +18,13 @@ impl const IntoStaticValue for StaticValue {
 impl const IntoStaticValue for i64 {
     fn into_static_value(self) -> StaticValue {
         StaticValue::Integer(self)
+    }
+}
+
+impl fmt::Display for StaticValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Integer(value) => write!(f, "{}", value),
+        }
     }
 }
