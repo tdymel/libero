@@ -13,3 +13,4 @@ keywords = ["components", "ui", "design-system", "dioxus"]
 categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
+paste = "1"
