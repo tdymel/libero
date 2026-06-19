@@ -1,0 +1,3 @@
+[application]
+name = "playground"
+default_platform = "web"
