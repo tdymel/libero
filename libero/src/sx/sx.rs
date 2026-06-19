@@ -7,9 +7,9 @@ use paste::paste;
 use std::fmt;
 
 macro_rules! css_declaration_methods {
-    ($name:ident) => {
+    ($name:ident, $css_name:literal) => {
         pub const fn $name(self, value: impl const IntoStaticValue) -> Sx<{ N + 1 }> {
-            self.other(stringify!($name), value)
+            self.other($css_name, value)
         }
 
         paste! {
@@ -17,7 +17,7 @@ macro_rules! css_declaration_methods {
             where
                 V: IntoDynamicValue,
             {
-                self.other_dyn(stringify!($name), value)
+                self.other_dyn($css_name, value)
             }
         }
     };
@@ -99,9 +99,10 @@ impl<const N: usize> Sx<N> {
         self
     }
 
-    css_declaration_methods!(width);
-    css_declaration_methods!(height);
-    css_declaration_methods!(opacity);
+    css_declaration_methods!(width, "width");
+    css_declaration_methods!(height, "height");
+    css_declaration_methods!(opacity, "opacity");
+    css_declaration_methods!(background_color, "background-color");
 }
 
 impl<const N: usize> fmt::Display for Sx<N> {

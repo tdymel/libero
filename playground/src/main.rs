@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use libero::Button;
+use libero::{Button, LiberoProvider};
 
 fn main() {
     dioxus::launch(App);
@@ -8,9 +8,11 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
-        div {
-            h1 { "libero playground" }
-            Button {}
+        LiberoProvider {
+            div {
+                h1 { "libero playground" }
+                Button {}
+            }
         }
     }
 }
