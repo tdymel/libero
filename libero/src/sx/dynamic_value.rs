@@ -1,9 +1,10 @@
 use crate::sx::static_value::{IntoStaticValue, StaticValue};
-use std::fmt;
+use std::{fmt, rc::Rc};
 
+#[derive(Clone)]
 pub enum DynamicValue {
     StaticValue(StaticValue),
-    Closure(Box<dyn Fn() -> StaticValue>),
+    Closure(Rc<dyn Fn() -> StaticValue>),
 }
 
 pub trait IntoDynamicValue {
@@ -28,21 +29,26 @@ impl IntoDynamicValue for i64 {
     }
 }
 
-// impl<T: IntoStaticValue> IntoDynamicValue for T {
-//     fn into_dynamic_value(self) -> DynamicValue {
-//         DynamicValue::StaticValue(self.into_static_value())
-//     }
-// }
-
 impl<F, T> IntoDynamicValue for F
 where
     F: Fn() -> T + 'static,
     T: IntoStaticValue + 'static,
 {
     fn into_dynamic_value(self) -> DynamicValue {
-        DynamicValue::Closure(Box::new(move || self().into_static_value()))
+        DynamicValue::Closure(Rc::new(move || self().into_static_value()))
     }
 }
+
+impl PartialEq for DynamicValue {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::StaticValue(left), Self::StaticValue(right)) => left == right,
+            _ => false,
+        }
+    }
+}
+
+impl Eq for DynamicValue {}
 
 impl fmt::Display for DynamicValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

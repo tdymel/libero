@@ -23,15 +23,14 @@ macro_rules! css_declaration_methods {
     };
 }
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct Sx<const N: usize> {
-    name: Option<&'static str>,
-    declarations: [StaticDeclaration; N],
-    dynamic_declarations: Option<Vec<DynamicDeclaration>>,
+    pub(crate) declarations: [StaticDeclaration; N],
+    pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
 }
 
 pub const fn sx() -> Sx<0> {
     Sx {
-        name: None,
         declarations: [],
         dynamic_declarations: None,
     }
@@ -45,7 +44,6 @@ impl<const N: usize> Sx<N> {
         };
 
         let this = ManuallyDrop::new(self);
-        let name = unsafe { ptr::read(&this.name) };
         let declarations = unsafe { ptr::read(&this.declarations) };
         let dynamic_declarations = unsafe { ptr::read(&this.dynamic_declarations) };
         let declarations = ManuallyDrop::new(declarations);
@@ -61,15 +59,9 @@ impl<const N: usize> Sx<N> {
         };
 
         Sx {
-            name,
             declarations,
             dynamic_declarations,
         }
-    }
-
-    pub const fn name(mut self, name: &'static str) -> Self {
-        self.name = Some(name);
-        self
     }
 
     pub const fn other(
@@ -107,10 +99,6 @@ impl<const N: usize> Sx<N> {
 
 impl<const N: usize> fmt::Display for Sx<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if let Some(name) = self.name {
-            write!(f, ".{} {{ ", name)?;
-        }
-
         for declaration in &self.declarations {
             write!(f, "{} ", declaration)?;
         }
@@ -119,10 +107,6 @@ impl<const N: usize> fmt::Display for Sx<N> {
             for declaration in dynamic_declarations {
                 write!(f, "{} ", declaration)?;
             }
-        }
-
-        if self.name.is_some() {
-            write!(f, "}}")?;
         }
 
         Ok(())
@@ -138,12 +122,5 @@ mod tests {
         let sx = sx().width(10).height(20).opacity_dyn(|| 50);
 
         assert_eq!(sx.to_string(), "width: 10; height: 20; opacity: 50; ");
-    }
-
-    #[test]
-    fn display_formats_named_css_rule() {
-        const SX: Sx<2> = sx().name("card").width(10).height(20);
-
-        assert_eq!(SX.to_string(), ".card { width: 10; height: 20; }");
     }
 }

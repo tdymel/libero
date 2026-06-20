@@ -1,6 +1,7 @@
 use crate::sx::{dynamic_value::DynamicValue, static_value::StaticValue};
 use std::fmt;
 
+#[derive(Clone, PartialEq, Eq)]
 pub struct Declaration<Value> {
     pub(crate) key: &'static str,
     pub(crate) value: Value,
