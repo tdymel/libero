@@ -1,10 +1,17 @@
 use dioxus::prelude::*;
 
-use crate::{sx, use_sx};
+use crate::{Sx, sx as sx_builder, use_sx};
 
 #[component]
-pub fn Button() -> Element {
-    let class = use_sx(sx().background_color("red"));
+pub fn Button(sx: Option<Sx<2>>) -> Element {
+    let base_class = use_sx(sx_builder().background_color("red"));
+    let class = match sx {
+        Some(sx) => {
+            let override_class = use_sx(sx);
+            format!("{} {}", base_class, override_class)
+        }
+        None => base_class,
+    };
 
     rsx! {
         button {

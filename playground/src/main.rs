@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use libero::{Button, LiberoProvider};
+use libero::{Button, LiberoProvider, sx};
 
 fn main() {
     dioxus::launch(App);
@@ -11,7 +11,7 @@ fn App() -> Element {
         LiberoProvider {
             div {
                 h1 { "libero playground" }
-                Button {}
+                Button { sx: sx().width(200).background_color("yellow") }
             }
         }
     }
