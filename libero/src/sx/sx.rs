@@ -104,6 +104,16 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(color, "color");
     css_declaration_methods!(background_color, "background-color");
     css_declaration_methods!(gap, "gap");
+    css_declaration_methods!(padding, "padding");
+    css_declaration_methods!(padding_top, "padding-top");
+    css_declaration_methods!(padding_right, "padding-right");
+    css_declaration_methods!(padding_bottom, "padding-bottom");
+    css_declaration_methods!(padding_left, "padding-left");
+    css_declaration_methods!(margin, "margin");
+    css_declaration_methods!(margin_top, "margin-top");
+    css_declaration_methods!(margin_right, "margin-right");
+    css_declaration_methods!(margin_bottom, "margin-bottom");
+    css_declaration_methods!(margin_left, "margin-left");
 }
 
 impl<const N: usize> From<Sx<N>> for SxDyn {

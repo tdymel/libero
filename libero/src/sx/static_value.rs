@@ -56,7 +56,20 @@ impl const IntoStaticValue for &'static str {
 }
 
 fn uses_spacing_scale(prop_name: &str) -> bool {
-    matches!(prop_name, "gap")
+    matches!(
+        prop_name,
+        "gap"
+            | "padding"
+            | "padding-top"
+            | "padding-right"
+            | "padding-bottom"
+            | "padding-left"
+            | "margin"
+            | "margin-top"
+            | "margin-right"
+            | "margin-bottom"
+            | "margin-left"
+    )
 }
 
 fn size_css_value(prop_name: &str, size: Size) -> String {
