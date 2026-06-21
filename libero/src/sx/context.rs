@@ -9,12 +9,23 @@ use super::{SxDyn, optimize_styles};
 #[derive(Clone, Copy)]
 pub struct SxContext {
     registry: Signal<IndexMap<String, SxDyn>>,
+    stylesheet: Memo<String>,
 }
 
 impl Default for SxContext {
     fn default() -> Self {
+        let registry = Signal::new(IndexMap::new());
+        let stylesheet = Memo::new(move || {
+            optimize_styles(&registry.read())
+                .into_iter()
+                .map(|rule| format!("{} {{ {} }}", rule.selector, rule.sx))
+                .collect::<Vec<_>>()
+                .join("\n")
+        });
+
         Self {
-            registry: Signal::new(IndexMap::new()),
+            registry,
+            stylesheet,
         }
     }
 }
@@ -34,12 +45,7 @@ impl SxContext {
     }
 
     pub fn stylesheet(&self) -> String {
-        let registry = self.registry;
-        optimize_styles(&registry.read())
-            .into_iter()
-            .map(|rule| format!("{} {{ {} }}", rule.selector, rule.sx))
-            .collect::<Vec<_>>()
-            .join("\n")
+        self.stylesheet.read().clone()
     }
 }
 

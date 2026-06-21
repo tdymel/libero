@@ -13,7 +13,7 @@ fn App() -> Element {
                 h1 { "libero playground" }
                 Button { sx: sx().width(200)
                     .height(200)
-                    .opacity("0.5")
+                    .opacity("0.6")
                     .background_color("yellow") }
             }
         }
