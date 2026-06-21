@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{sx as sx_builder, use_sx};
 
-use super::props::ButtonProps;
+use super::button_props::ButtonProps;
 
 pub fn Button(props: ButtonProps) -> Element {
     let base_class = use_sx(

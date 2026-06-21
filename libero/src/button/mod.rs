@@ -1,5 +1,5 @@
-mod component;
-mod props;
+mod button;
+mod button_props;
 
-pub use component::Button;
-pub use props::ButtonProps;
+pub use button::Button;
+pub use button_props::ButtonProps;
