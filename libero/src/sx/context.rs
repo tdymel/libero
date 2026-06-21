@@ -31,7 +31,7 @@ impl Default for SxContext {
 }
 
 pub(crate) fn class_name_from_id(id: &str) -> String {
-    format!("libero-sx-{}", id)
+    format!("lsx-{}", id)
 }
 
 impl SxContext {
