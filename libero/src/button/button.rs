@@ -2,8 +2,20 @@ use dioxus::prelude::*;
 
 use crate::{SxDyn, sx as sx_builder, use_sx};
 
-#[component]
-pub fn Button(sx: Option<SxDyn>) -> Element {
+#[derive(Props, PartialEq, Clone)]
+pub struct ButtonProps {
+    #[props(default, into)]
+    sx: Option<SxDyn>,
+    #[props(default)]
+    class: Option<String>,
+    #[props(default)]
+    onclick: Option<EventHandler<MouseEvent>>,
+    #[props(extends = GlobalAttributes)]
+    attributes: Vec<Attribute>,
+    children: Element,
+}
+
+pub fn Button(props: ButtonProps) -> Element {
     let base_class = use_sx(
         sx_builder()
             .background_color("red")
@@ -11,18 +23,26 @@ pub fn Button(sx: Option<SxDyn>) -> Element {
             .height(200)
             .opacity("0.5"),
     );
-    let class = match sx {
-        Some(sx) => {
-            let override_class = use_sx(sx);
-            format!("{} {}", base_class, override_class)
-        }
-        None => base_class,
+    let sx_class = props.sx.map(use_sx);
+    let user_class = props.class.unwrap_or_default();
+
+    let class = match sx_class {
+        Some(sx_class) if user_class.is_empty() => format!("{} {}", base_class, sx_class),
+        Some(sx_class) => format!("{} {} {}", base_class, sx_class, user_class),
+        None if user_class.is_empty() => base_class,
+        None => format!("{} {}", base_class, user_class),
     };
 
     rsx! {
         button {
             class: class,
-            "Sample button"
+            onclick: move |event| {
+                if let Some(handler) = &props.onclick {
+                    handler.call(event);
+                }
+            },
+            ..props.attributes,
+            {props.children}
         }
     }
 }
