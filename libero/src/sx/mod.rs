@@ -6,4 +6,4 @@ mod sx;
 
 pub use context::{SxContext, use_sx};
 pub use declaration::{DynamicDeclaration, StaticDeclaration};
-pub use sx::{Sx, sx};
+pub use sx::{Sx, SxDyn, sx};

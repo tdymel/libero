@@ -2,28 +2,13 @@ use dioxus::prelude::*;
 use std::collections::HashMap;
 use uuid::Uuid;
 
-use crate::{LiberoContext, Sx};
+use crate::LiberoContext;
 
-use super::{DynamicDeclaration, StaticDeclaration};
-
-#[derive(Clone, PartialEq, Eq)]
-pub struct SxSnapshot {
-    declarations: Vec<StaticDeclaration>,
-    dynamic_declarations: Option<Vec<DynamicDeclaration>>,
-}
-
-impl<const N: usize> From<&Sx<N>> for SxSnapshot {
-    fn from(sx: &Sx<N>) -> Self {
-        Self {
-            declarations: sx.declarations.iter().cloned().collect(),
-            dynamic_declarations: sx.dynamic_declarations.clone(),
-        }
-    }
-}
+use super::{Sx, SxDyn};
 
 #[derive(Clone, Copy)]
 pub struct SxContext {
-    registry: Signal<HashMap<String, SxSnapshot>>,
+    registry: Signal<HashMap<String, SxDyn>>,
 }
 
 impl Default for SxContext {
@@ -35,7 +20,7 @@ impl Default for SxContext {
 }
 
 impl SxContext {
-    pub fn upsert(&self, id: String, sx: SxSnapshot) {
+    pub fn upsert(&self, id: String, sx: SxDyn) {
         let mut registry = self.registry;
         let should_update = registry.read().get(&id) != Some(&sx);
 
@@ -55,30 +40,17 @@ impl SxContext {
     }
 }
 
-impl std::fmt::Display for SxSnapshot {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        for declaration in &self.declarations {
-            write!(f, "{} ", declaration)?;
-        }
-
-        if let Some(dynamic_declarations) = &self.dynamic_declarations {
-            for declaration in dynamic_declarations {
-                write!(f, "{} ", declaration)?;
-            }
-        }
-
-        Ok(())
-    }
-}
-
 fn class_name_from_id(id: &str) -> String {
     format!("libero-sx-{}", id)
 }
 
-pub fn use_sx<const N: usize>(sx: Sx<N>) -> String {
+pub fn use_sx<S>(sx: S) -> String
+where
+    S: Into<SxDyn> + Clone + PartialEq + 'static,
+{
     let context = use_context::<LiberoContext>();
     let id = use_hook(|| Uuid::new_v4().simple().to_string()[..8].to_string());
-    let snapshot = use_memo(move || SxSnapshot::from(&sx));
+    let snapshot = use_memo(move || sx.clone().into());
 
     let id_value = id.clone();
     use_effect(move || {

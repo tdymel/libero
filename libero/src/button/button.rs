@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 
-use crate::{Sx, sx as sx_builder, use_sx};
+use crate::{SxDyn, sx as sx_builder, use_sx};
 
 #[component]
-pub fn Button(sx: Option<Sx<2>>) -> Element {
+pub fn Button(sx: Option<SxDyn>) -> Element {
     let base_class = use_sx(sx_builder().background_color("red"));
     let class = match sx {
         Some(sx) => {

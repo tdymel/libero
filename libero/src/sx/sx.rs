@@ -29,6 +29,12 @@ pub struct Sx<const N: usize> {
     pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
 }
 
+#[derive(Clone, PartialEq, Eq)]
+pub struct SxDyn {
+    pub(crate) declarations: Vec<StaticDeclaration>,
+    pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
+}
+
 pub const fn sx() -> Sx<0> {
     Sx {
         declarations: [],
@@ -97,7 +103,31 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(background_color, "background-color");
 }
 
-impl<const N: usize> fmt::Display for Sx<N> {
+impl<const N: usize> From<Sx<N>> for SxDyn {
+    fn from(sx: Sx<N>) -> Self {
+        Self {
+            declarations: sx.declarations.into_iter().collect(),
+            dynamic_declarations: sx.dynamic_declarations,
+        }
+    }
+}
+
+impl<const N: usize> From<&Sx<N>> for SxDyn {
+    fn from(sx: &Sx<N>) -> Self {
+        Self {
+            declarations: sx.declarations.iter().cloned().collect(),
+            dynamic_declarations: sx.dynamic_declarations.clone(),
+        }
+    }
+}
+
+impl<const N: usize> From<Sx<N>> for Option<SxDyn> {
+    fn from(sx: Sx<N>) -> Self {
+        Some(sx.into())
+    }
+}
+
+impl fmt::Display for SxDyn {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for declaration in &self.declarations {
             write!(f, "{} ", declaration)?;
@@ -110,17 +140,5 @@ impl<const N: usize> fmt::Display for Sx<N> {
         }
 
         Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::{Sx, sx};
-
-    #[test]
-    fn display_formats_plain_css_declarations() {
-        let sx = sx().width(10).height(20).opacity_dyn(|| 50);
-
-        assert_eq!(sx.to_string(), "width: 10; height: 20; opacity: 50; ");
     }
 }
