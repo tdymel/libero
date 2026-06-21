@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::LiberoContext;
 
-use super::{Sx, SxDyn};
+use super::{SxDyn, optimize_styles};
 
 #[derive(Clone, Copy)]
 pub struct SxContext {
@@ -19,6 +19,10 @@ impl Default for SxContext {
     }
 }
 
+pub(crate) fn class_name_from_id(id: &str) -> String {
+    format!("libero-sx-{}", id)
+}
+
 impl SxContext {
     pub fn upsert(&self, id: String, sx: SxDyn) {
         let mut registry = self.registry;
@@ -31,17 +35,12 @@ impl SxContext {
 
     pub fn stylesheet(&self) -> String {
         let registry = self.registry;
-        registry
-            .read()
-            .iter()
-            .map(|(id, sx)| format!(".{} {{ {} }}", class_name_from_id(id), sx))
+        optimize_styles(&registry.read())
+            .into_iter()
+            .map(|rule| format!("{} {{ {} }}", rule.selector, rule.sx))
             .collect::<Vec<_>>()
             .join("\n")
     }
-}
-
-fn class_name_from_id(id: &str) -> String {
-    format!("libero-sx-{}", id)
 }
 
 pub fn use_sx<S>(sx: S) -> String
