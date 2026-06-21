@@ -4,7 +4,7 @@ use crate::SxDyn;
 
 #[derive(Props, PartialEq, Clone)]
 pub struct ButtonProps {
-    #[props(default, into)]
+    #[props(default)]
     pub sx: Option<SxDyn>,
     #[props(default)]
     pub class: Option<String>,
