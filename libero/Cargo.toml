@@ -14,5 +14,6 @@ categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
 dioxus = { version = "0.7.9", default-features = false, features = ["macro", "html", "signals"] }
+indexmap = "2"
 paste = "1"
 uuid = { version = "1", features = ["v4", "js"] }

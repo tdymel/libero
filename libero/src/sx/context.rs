@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use std::collections::HashMap;
+use indexmap::IndexMap;
 use uuid::Uuid;
 
 use crate::LiberoContext;
@@ -8,13 +8,13 @@ use super::{Sx, SxDyn};
 
 #[derive(Clone, Copy)]
 pub struct SxContext {
-    registry: Signal<HashMap<String, SxDyn>>,
+    registry: Signal<IndexMap<String, SxDyn>>,
 }
 
 impl Default for SxContext {
     fn default() -> Self {
         Self {
-            registry: Signal::new(HashMap::new()),
+            registry: Signal::new(IndexMap::new()),
         }
     }
 }
