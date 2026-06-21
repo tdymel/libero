@@ -12,6 +12,8 @@ pub fn Button(props: ButtonProps) -> Element {
             .background_color("red")
             .width(200)
             .height(200)
+            .color("white")
+            .font_size("md")
             .opacity("0.5"),
         props.sx,
         props.class,

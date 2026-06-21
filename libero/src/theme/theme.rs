@@ -1,20 +1,28 @@
 use super::{Color, ColorScale, Size, Sizes};
 
 pub const SPACING_CSS_VAR: &str = "--libero-spacing";
+pub const FONT_SIZE_CSS_VAR: &str = "--libero-font-size";
 pub const PRIMARY_COLOR_CSS_VAR: &str = "--libero-color-primary";
 pub const SECONDARY_COLOR_CSS_VAR: &str = "--libero-color-secondary";
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq)]
 pub struct Theme {
     spacing: Sizes<i64>,
+    font_size: Sizes<f32>,
     primary: ColorScale,
     secondary: ColorScale,
 }
 
 impl Theme {
-    pub const fn new(spacing: Sizes<i64>, primary: ColorScale, secondary: ColorScale) -> Self {
+    pub const fn new(
+        spacing: Sizes<i64>,
+        font_size: Sizes<f32>,
+        primary: ColorScale,
+        secondary: ColorScale,
+    ) -> Self {
         Self {
             spacing,
+            font_size,
             primary,
             secondary,
         }
@@ -26,6 +34,14 @@ impl Theme {
 
     pub const fn spacing_px(&self, size: Size) -> i64 {
         self.spacing.get(size)
+    }
+
+    pub const fn font_size(&self) -> &Sizes<f32> {
+        &self.font_size
+    }
+
+    pub const fn font_size_rem(&self, size: Size) -> f32 {
+        self.font_size.get(size)
     }
 
     pub const fn primary(&self) -> &ColorScale {
@@ -45,7 +61,7 @@ impl Theme {
 
     pub fn css_variables(&self) -> String {
         let mut css = format!(
-            ":root {{ {}: {}px; {}-xs: {}px; {}-sm: {}px; {}-md: {}px; {}-lg: {}px; {}-xl: {}px;",
+            ":root {{ {}: {}px; {}-xs: {}px; {}-sm: {}px; {}-md: {}px; {}-lg: {}px; {}-xl: {}px; {}-xs: {}rem; {}-sm: {}rem; {}-md: {}rem; {}-lg: {}rem; {}-xl: {}rem;",
             SPACING_CSS_VAR,
             self.spacing_px(Size::Xs),
             SPACING_CSS_VAR,
@@ -57,7 +73,17 @@ impl Theme {
             SPACING_CSS_VAR,
             self.spacing_px(Size::Lg),
             SPACING_CSS_VAR,
-            self.spacing_px(Size::Xl)
+            self.spacing_px(Size::Xl),
+            FONT_SIZE_CSS_VAR,
+            self.font_size_rem(Size::Xs),
+            FONT_SIZE_CSS_VAR,
+            self.font_size_rem(Size::Sm),
+            FONT_SIZE_CSS_VAR,
+            self.font_size_rem(Size::Md),
+            FONT_SIZE_CSS_VAR,
+            self.font_size_rem(Size::Lg),
+            FONT_SIZE_CSS_VAR,
+            self.font_size_rem(Size::Xl)
         );
 
         for index in 0..10 {
@@ -85,6 +111,7 @@ impl Default for Theme {
     fn default() -> Self {
         Self::new(
             Sizes::new(4, 8, 12, 16, 24),
+            Sizes::new(0.75, 0.875, 1.0, 1.125, 1.25),
             ColorScale::from_anchor("#228BE6", 6),
             ColorScale::from_anchor("#7950F2", 6),
         )

@@ -99,7 +99,9 @@ impl<const N: usize> Sx<N> {
 
     css_declaration_methods!(width, "width");
     css_declaration_methods!(height, "height");
+    css_declaration_methods!(font_size, "font-size");
     css_declaration_methods!(opacity, "opacity");
+    css_declaration_methods!(color, "color");
     css_declaration_methods!(background_color, "background-color");
     css_declaration_methods!(gap, "gap");
 }

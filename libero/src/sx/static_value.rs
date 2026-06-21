@@ -1,6 +1,6 @@
 use crate::{
     Color, Size,
-    theme::{PRIMARY_COLOR_CSS_VAR, SECONDARY_COLOR_CSS_VAR, SPACING_CSS_VAR},
+    theme::{FONT_SIZE_CSS_VAR, PRIMARY_COLOR_CSS_VAR, SECONDARY_COLOR_CSS_VAR, SPACING_CSS_VAR},
 };
 use std::fmt;
 
@@ -59,13 +59,18 @@ fn uses_spacing_scale(prop_name: &str) -> bool {
     matches!(prop_name, "gap")
 }
 
-fn size_css_value(size: Size) -> String {
+fn size_css_value(prop_name: &str, size: Size) -> String {
+    let css_var = match prop_name {
+        "font-size" => FONT_SIZE_CSS_VAR,
+        _ => SPACING_CSS_VAR,
+    };
+
     match size {
-        Size::Xs => format!("var({}-xs)", SPACING_CSS_VAR),
-        Size::Sm => format!("var({}-sm)", SPACING_CSS_VAR),
-        Size::Md => format!("var({}-md)", SPACING_CSS_VAR),
-        Size::Lg => format!("var({}-lg)", SPACING_CSS_VAR),
-        Size::Xl => format!("var({}-xl)", SPACING_CSS_VAR),
+        Size::Xs => format!("var({}-xs)", css_var),
+        Size::Sm => format!("var({}-sm)", css_var),
+        Size::Md => format!("var({}-md)", css_var),
+        Size::Lg => format!("var({}-lg)", css_var),
+        Size::Xl => format!("var({}-xl)", css_var),
     }
 }
 
@@ -83,7 +88,7 @@ impl StaticValue {
                 write!(f, "calc({} * var({}))", value, SPACING_CSS_VAR)
             }
             Self::Integer(value) => write!(f, "{}px", value),
-            Self::Size(size) => write!(f, "{}", size_css_value(*size)),
+            Self::Size(size) => write!(f, "{}", size_css_value(prop_name, *size)),
             Self::Color(color) => write!(f, "{}", color_css_value(*color)),
             Self::Text(value) => write!(f, "{}", value),
         }
