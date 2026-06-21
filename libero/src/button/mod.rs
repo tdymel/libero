@@ -1,3 +1,5 @@
-mod button;
+mod component;
+mod props;
 
-pub use button::Button;
+pub use component::Button;
+pub use props::ButtonProps;

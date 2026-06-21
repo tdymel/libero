@@ -1,19 +1,8 @@
 use dioxus::prelude::*;
 
-use crate::{SxDyn, sx as sx_builder, use_sx};
+use crate::{sx as sx_builder, use_sx};
 
-#[derive(Props, PartialEq, Clone)]
-pub struct ButtonProps {
-    #[props(default, into)]
-    sx: Option<SxDyn>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default)]
-    onclick: Option<EventHandler<MouseEvent>>,
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    children: Element,
-}
+use super::props::ButtonProps;
 
 pub fn Button(props: ButtonProps) -> Element {
     let base_class = use_sx(
