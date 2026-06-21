@@ -1,9 +1,10 @@
-use crate::theme::SPACING_CSS_VAR;
+use crate::{Size, theme::SPACING_CSS_VAR};
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StaticValue {
     Integer(i64),
+    Size(Size),
     Text(&'static str),
 }
 
@@ -23,14 +24,37 @@ impl const IntoStaticValue for i64 {
     }
 }
 
+impl const IntoStaticValue for Size {
+    fn into_static_value(self) -> StaticValue {
+        StaticValue::Size(self)
+    }
+}
+
 impl const IntoStaticValue for &'static str {
     fn into_static_value(self) -> StaticValue {
-        StaticValue::Text(self)
+        match self {
+            "xs" => StaticValue::Size(Size::Xs),
+            "sm" => StaticValue::Size(Size::Sm),
+            "md" => StaticValue::Size(Size::Md),
+            "lg" => StaticValue::Size(Size::Lg),
+            "xl" => StaticValue::Size(Size::Xl),
+            _ => StaticValue::Text(self),
+        }
     }
 }
 
 fn uses_spacing_scale(prop_name: &str) -> bool {
     matches!(prop_name, "gap")
+}
+
+fn size_css_value(size: Size) -> String {
+    match size {
+        Size::Xs => format!("var({}-xs)", SPACING_CSS_VAR),
+        Size::Sm => format!("var({}-sm)", SPACING_CSS_VAR),
+        Size::Md => format!("var({}-md)", SPACING_CSS_VAR),
+        Size::Lg => format!("var({}-lg)", SPACING_CSS_VAR),
+        Size::Xl => format!("var({}-xl)", SPACING_CSS_VAR),
+    }
 }
 
 impl StaticValue {
@@ -40,6 +64,7 @@ impl StaticValue {
                 write!(f, "calc({} * var({}))", value, SPACING_CSS_VAR)
             }
             Self::Integer(value) => write!(f, "{}px", value),
+            Self::Size(size) => write!(f, "{}", size_css_value(*size)),
             Self::Text(value) => write!(f, "{}", value),
         }
     }
@@ -49,6 +74,7 @@ impl fmt::Display for StaticValue {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Integer(value) => write!(f, "{}", value),
+            Self::Size(size) => write!(f, "{:?}", size),
             Self::Text(value) => write!(f, "{}", value),
         }
     }
