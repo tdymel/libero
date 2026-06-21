@@ -1,10 +1,14 @@
-use crate::{Size, theme::SPACING_CSS_VAR};
+use crate::{
+    Color, Size,
+    theme::{PRIMARY_COLOR_CSS_VAR, SECONDARY_COLOR_CSS_VAR, SPACING_CSS_VAR},
+};
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StaticValue {
     Integer(i64),
     Size(Size),
+    Color(Color),
     Text(&'static str),
 }
 
@@ -30,6 +34,12 @@ impl const IntoStaticValue for Size {
     }
 }
 
+impl const IntoStaticValue for Color {
+    fn into_static_value(self) -> StaticValue {
+        StaticValue::Color(self)
+    }
+}
+
 impl const IntoStaticValue for &'static str {
     fn into_static_value(self) -> StaticValue {
         match self {
@@ -38,6 +48,8 @@ impl const IntoStaticValue for &'static str {
             "md" => StaticValue::Size(Size::Md),
             "lg" => StaticValue::Size(Size::Lg),
             "xl" => StaticValue::Size(Size::Xl),
+            "primary" => StaticValue::Color(Color::Primary),
+            "secondary" => StaticValue::Color(Color::Secondary),
             _ => StaticValue::Text(self),
         }
     }
@@ -57,6 +69,13 @@ fn size_css_value(size: Size) -> String {
     }
 }
 
+fn color_css_value(color: Color) -> String {
+    match color {
+        Color::Primary => format!("var({}-6)", PRIMARY_COLOR_CSS_VAR),
+        Color::Secondary => format!("var({}-6)", SECONDARY_COLOR_CSS_VAR),
+    }
+}
+
 impl StaticValue {
     pub fn fmt_for_prop(&self, prop_name: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -65,6 +84,7 @@ impl StaticValue {
             }
             Self::Integer(value) => write!(f, "{}px", value),
             Self::Size(size) => write!(f, "{}", size_css_value(*size)),
+            Self::Color(color) => write!(f, "{}", color_css_value(*color)),
             Self::Text(value) => write!(f, "{}", value),
         }
     }
@@ -75,6 +95,7 @@ impl fmt::Display for StaticValue {
         match self {
             Self::Integer(value) => write!(f, "{}", value),
             Self::Size(size) => write!(f, "{:?}", size),
+            Self::Color(color) => write!(f, "{:?}", color),
             Self::Text(value) => write!(f, "{}", value),
         }
     }

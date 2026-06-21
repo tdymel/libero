@@ -16,4 +16,4 @@ pub use common::{call_handler, use_resolved_class};
 pub use context::LiberoContext;
 pub use provider::LiberoProvider;
 pub use sx::{Sx, SxContext, SxDyn, sx, use_sx};
-pub use theme::{Size, Sizes, Theme, use_theme};
+pub use theme::{Color, ColorScale, Size, Sizes, Theme, use_theme};
