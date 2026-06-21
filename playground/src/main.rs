@@ -18,6 +18,7 @@ fn App() -> Element {
                     sx: sx().width(200)
                         .height(200)
                         .opacity("0.6")
+                        .gap(5)
                         .background_color("yellow"),
                     onclick: move |_| count += 1,
                     "Click me"

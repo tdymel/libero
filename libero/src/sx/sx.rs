@@ -101,6 +101,7 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(height, "height");
     css_declaration_methods!(opacity, "opacity");
     css_declaration_methods!(background_color, "background-color");
+    css_declaration_methods!(gap, "gap");
 }
 
 impl<const N: usize> From<Sx<N>> for SxDyn {

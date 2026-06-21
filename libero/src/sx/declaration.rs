@@ -24,12 +24,21 @@ impl StaticDeclaration {
 
 impl fmt::Display for StaticDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {};", self.key, self.value)
+        write!(f, "{}: ", self.key)?;
+        self.value.fmt_for_prop(self.key, f)?;
+        write!(f, ";")
     }
 }
 
 impl fmt::Display for DynamicDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: {};", self.key, self.value)
+        write!(f, "{}: ", self.key)?;
+
+        match &self.value {
+            DynamicValue::StaticValue(value) => value.fmt_for_prop(self.key, f)?,
+            DynamicValue::Closure(resolve) => resolve().fmt_for_prop(self.key, f)?,
+        }
+
+        write!(f, ";")
     }
 }

@@ -1,3 +1,4 @@
+use crate::theme::SPACING_CSS_VAR;
 use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -25,6 +26,22 @@ impl const IntoStaticValue for i64 {
 impl const IntoStaticValue for &'static str {
     fn into_static_value(self) -> StaticValue {
         StaticValue::Text(self)
+    }
+}
+
+fn uses_spacing_scale(prop_name: &str) -> bool {
+    matches!(prop_name, "gap")
+}
+
+impl StaticValue {
+    pub fn fmt_for_prop(&self, prop_name: &str, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Integer(value) if uses_spacing_scale(prop_name) => {
+                write!(f, "calc({} * var({}))", value, SPACING_CSS_VAR)
+            }
+            Self::Integer(value) => write!(f, "{}px", value),
+            Self::Text(value) => write!(f, "{}", value),
+        }
     }
 }
 
