@@ -11,7 +11,10 @@ fn App() -> Element {
         LiberoProvider {
             div {
                 h1 { "libero playground" }
-                Button { sx: sx().width(200).background_color("yellow") }
+                Button { sx: sx().width(200)
+                    .height(200)
+                    .opacity("0.5")
+                    .background_color("yellow") }
             }
         }
     }
