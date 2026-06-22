@@ -103,6 +103,7 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(opacity, "opacity");
     css_declaration_methods!(color, "color");
     css_declaration_methods!(background_color, "background-color");
+    css_declaration_methods!(box_shadow, "box-shadow");
     css_declaration_methods!(gap, "gap");
     css_declaration_methods!(padding, "padding");
     css_declaration_methods!(padding_top, "padding-top");
@@ -114,6 +115,15 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(margin_right, "margin-right");
     css_declaration_methods!(margin_bottom, "margin-bottom");
     css_declaration_methods!(margin_left, "margin-left");
+    css_declaration_methods!(border_radius, "border-radius");
+    css_declaration_methods!(border_top_left_radius, "border-top-left-radius");
+    css_declaration_methods!(border_top_right_radius, "border-top-right-radius");
+    css_declaration_methods!(border_bottom_right_radius, "border-bottom-right-radius");
+    css_declaration_methods!(border_bottom_left_radius, "border-bottom-left-radius");
+    css_declaration_methods!(cursor, "cursor");
+    css_declaration_methods!(user_select, "user-select");
+    css_declaration_methods!(text_transform, "text-transform");
+    css_declaration_methods!(text_align, "text-align");
 }
 
 impl<const N: usize> From<Sx<N>> for SxDyn {

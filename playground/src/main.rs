@@ -15,11 +15,6 @@ fn App() -> Element {
                 h1 { "libero playground" }
                 p { "Clicked {count} times" }
                 Button {
-                    sx: sx().width(200)
-                        .height(200)
-                        .opacity("0.6")
-                        .gap("md")
-                        .background_color("primary"),
                     onclick: move |_| count += 1,
                     "Click me"
                 }

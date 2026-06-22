@@ -2,6 +2,7 @@ use super::{Color, ColorScale, Size, Sizes};
 
 pub const SPACING_CSS_VAR: &str = "--libero-spacing";
 pub const FONT_SIZE_CSS_VAR: &str = "--libero-font-size";
+pub const BORDER_RADIUS_CSS_VAR: &str = "--libero-border-radius";
 pub const PRIMARY_COLOR_CSS_VAR: &str = "--libero-color-primary";
 pub const SECONDARY_COLOR_CSS_VAR: &str = "--libero-color-secondary";
 
@@ -9,6 +10,7 @@ pub const SECONDARY_COLOR_CSS_VAR: &str = "--libero-color-secondary";
 pub struct Theme {
     spacing: Sizes<i64>,
     font_size: Sizes<f32>,
+    border_radius: Sizes<i64>,
     primary: ColorScale,
     secondary: ColorScale,
 }
@@ -17,12 +19,14 @@ impl Theme {
     pub const fn new(
         spacing: Sizes<i64>,
         font_size: Sizes<f32>,
+        border_radius: Sizes<i64>,
         primary: ColorScale,
         secondary: ColorScale,
     ) -> Self {
         Self {
             spacing,
             font_size,
+            border_radius,
             primary,
             secondary,
         }
@@ -44,6 +48,14 @@ impl Theme {
         self.font_size.get(size)
     }
 
+    pub const fn border_radius(&self) -> &Sizes<i64> {
+        &self.border_radius
+    }
+
+    pub const fn border_radius_px(&self, size: Size) -> i64 {
+        self.border_radius.get(size)
+    }
+
     pub const fn primary(&self) -> &ColorScale {
         &self.primary
     }
@@ -61,7 +73,7 @@ impl Theme {
 
     pub fn css_variables(&self) -> String {
         let mut css = format!(
-            ":root {{ {}: {}px; {}-xs: {}px; {}-sm: {}px; {}-md: {}px; {}-lg: {}px; {}-xl: {}px; {}-xs: {}rem; {}-sm: {}rem; {}-md: {}rem; {}-lg: {}rem; {}-xl: {}rem;",
+            ":root {{ {}: {}px; {}-xs: {}px; {}-sm: {}px; {}-md: {}px; {}-lg: {}px; {}-xl: {}px; {}-xs: {}rem; {}-sm: {}rem; {}-md: {}rem; {}-lg: {}rem; {}-xl: {}rem; {}-xs: {}px; {}-sm: {}px; {}-md: {}px; {}-lg: {}px; {}-xl: {}px;",
             SPACING_CSS_VAR,
             self.spacing_px(Size::Xs),
             SPACING_CSS_VAR,
@@ -83,7 +95,17 @@ impl Theme {
             FONT_SIZE_CSS_VAR,
             self.font_size_rem(Size::Lg),
             FONT_SIZE_CSS_VAR,
-            self.font_size_rem(Size::Xl)
+            self.font_size_rem(Size::Xl),
+            BORDER_RADIUS_CSS_VAR,
+            self.border_radius_px(Size::Xs),
+            BORDER_RADIUS_CSS_VAR,
+            self.border_radius_px(Size::Sm),
+            BORDER_RADIUS_CSS_VAR,
+            self.border_radius_px(Size::Md),
+            BORDER_RADIUS_CSS_VAR,
+            self.border_radius_px(Size::Lg),
+            BORDER_RADIUS_CSS_VAR,
+            self.border_radius_px(Size::Xl)
         );
 
         for index in 0..10 {
@@ -112,6 +134,7 @@ impl Default for Theme {
         Self::new(
             Sizes::new(4, 8, 12, 16, 24),
             Sizes::new(0.75, 0.875, 1.0, 1.125, 1.25),
+            Sizes::new(2, 4, 8, 12, 16),
             ColorScale::from_anchor("#228BE6", 6),
             ColorScale::from_anchor("#7950F2", 6),
         )

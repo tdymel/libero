@@ -1,6 +1,9 @@
 use crate::{
     Color, Size,
-    theme::{FONT_SIZE_CSS_VAR, PRIMARY_COLOR_CSS_VAR, SECONDARY_COLOR_CSS_VAR, SPACING_CSS_VAR},
+    theme::{
+        BORDER_RADIUS_CSS_VAR, FONT_SIZE_CSS_VAR, PRIMARY_COLOR_CSS_VAR, SECONDARY_COLOR_CSS_VAR,
+        SPACING_CSS_VAR,
+    },
 };
 use std::fmt;
 
@@ -72,9 +75,21 @@ fn uses_spacing_scale(prop_name: &str) -> bool {
     )
 }
 
+fn uses_border_radius_scale(prop_name: &str) -> bool {
+    matches!(
+        prop_name,
+        "border-radius"
+            | "border-top-left-radius"
+            | "border-top-right-radius"
+            | "border-bottom-right-radius"
+            | "border-bottom-left-radius"
+    )
+}
+
 fn size_css_value(prop_name: &str, size: Size) -> String {
     let css_var = match prop_name {
         "font-size" => FONT_SIZE_CSS_VAR,
+        _ if uses_border_radius_scale(prop_name) => BORDER_RADIUS_CSS_VAR,
         _ => SPACING_CSS_VAR,
     };
 
