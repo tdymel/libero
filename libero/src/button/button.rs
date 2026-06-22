@@ -18,7 +18,8 @@ pub fn Button(props: ButtonProps) -> Element {
             .cursor("pointer")
             .user_select("none")
             .text_align("center")
-            .text_transform("uppercase"),
+            .text_transform("uppercase")
+            .hover(sx_builder().background_color("red")),
         props.sx,
         props.class,
     );

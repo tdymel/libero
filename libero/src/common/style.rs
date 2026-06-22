@@ -1,10 +1,14 @@
-use crate::{Sx, SxDyn, use_sx};
+use crate::{SxDyn, use_sx};
 
-pub fn use_resolved_class<const N: usize>(
-    base_sx: Sx<N>,
-    override_sx: Option<SxDyn>,
+pub fn use_resolved_class<BaseSx, OverrideSx>(
+    base_sx: BaseSx,
+    override_sx: Option<OverrideSx>,
     user_class: Option<String>,
-) -> String {
+) -> String
+where
+    BaseSx: Into<SxDyn> + Clone + PartialEq + 'static,
+    OverrideSx: Into<SxDyn> + Clone + PartialEq + 'static,
+{
     let base_class = use_sx(base_sx);
     let sx_class = override_sx.map(use_sx);
     let user_class = user_class.unwrap_or_default();

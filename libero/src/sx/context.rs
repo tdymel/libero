@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::LiberoContext;
 
-use super::{SxDyn, optimize_styles};
+use super::{NestedRule, SxDyn, optimize_styles};
 
 #[derive(Clone, Copy)]
 pub struct SxContext {
@@ -18,7 +18,7 @@ impl Default for SxContext {
         let stylesheet = Memo::new(move || {
             optimize_styles(&registry.read())
                 .into_iter()
-                .map(|rule| format!("{} {{ {} }}", rule.selector, rule.sx))
+                .flat_map(|rule| render_rule(&rule.selector, &rule.sx))
                 .collect::<Vec<_>>()
                 .join("\n")
         });
@@ -32,6 +32,48 @@ impl Default for SxContext {
 
 pub(crate) fn class_name_from_id(id: &str) -> String {
     format!("lsx-{}", id)
+}
+
+fn render_rule(selector: &str, sx: &SxDyn) -> Vec<String> {
+    render_rule_with_media(selector, sx, &[])
+}
+
+fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[&'static str]) -> Vec<String> {
+    let mut rules = Vec::new();
+
+    if !sx.declarations.is_empty()
+        || sx
+            .dynamic_declarations
+            .as_ref()
+            .is_some_and(|dynamic| !dynamic.is_empty())
+    {
+        let mut rule = format!("{} {{ {} }}", selector, sx);
+
+        for query in media_stack.iter().rev() {
+            rule = format!("@media {} {{ {} }}", query, rule);
+        }
+
+        rules.push(rule);
+    }
+
+    for nested_rule in &sx.nested_rules {
+        match nested_rule {
+            NestedRule::Selector { fragment, sx } => {
+                rules.extend(render_rule_with_media(
+                    &fragment.replace('&', selector),
+                    sx,
+                    media_stack,
+                ));
+            }
+            NestedRule::Media { query, sx } => {
+                let mut nested_media_stack = media_stack.to_vec();
+                nested_media_stack.push(query);
+                rules.extend(render_rule_with_media(selector, sx, &nested_media_stack));
+            }
+        }
+    }
+
+    rules
 }
 
 impl SxContext {

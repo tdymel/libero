@@ -24,6 +24,18 @@ macro_rules! css_declaration_methods {
 }
 
 #[derive(Clone, PartialEq, Eq)]
+pub enum NestedRule {
+    Selector {
+        fragment: &'static str,
+        sx: Box<SxDyn>,
+    },
+    Media {
+        query: &'static str,
+        sx: Box<SxDyn>,
+    },
+}
+
+#[derive(Clone, PartialEq, Eq)]
 pub struct Sx<const N: usize> {
     pub(crate) declarations: [StaticDeclaration; N],
     pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
@@ -33,6 +45,7 @@ pub struct Sx<const N: usize> {
 pub struct SxDyn {
     pub(crate) declarations: Vec<StaticDeclaration>,
     pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
+    pub(crate) nested_rules: Vec<NestedRule>,
 }
 
 pub const fn sx() -> Sx<0> {
@@ -97,6 +110,45 @@ impl<const N: usize> Sx<N> {
         self
     }
 
+    pub fn into_dyn(self) -> SxDyn {
+        self.into()
+    }
+
+    pub fn selector<S>(self, fragment: &'static str, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.into_dyn().selector(fragment, nested)
+    }
+
+    pub fn hover<S>(self, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.selector("&:hover", nested)
+    }
+
+    pub fn focus<S>(self, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.selector("&:focus", nested)
+    }
+
+    pub fn active<S>(self, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.selector("&:active", nested)
+    }
+
+    pub fn media<S>(self, query: &'static str, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.into_dyn().media(query, nested)
+    }
+
     css_declaration_methods!(width, "width");
     css_declaration_methods!(height, "height");
     css_declaration_methods!(font_size, "font-size");
@@ -126,11 +178,57 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(text_align, "text-align");
 }
 
+impl SxDyn {
+    pub fn selector<S>(mut self, fragment: &'static str, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.nested_rules.push(NestedRule::Selector {
+            fragment,
+            sx: Box::new(nested.into()),
+        });
+        self
+    }
+
+    pub fn hover<S>(self, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.selector("&:hover", nested)
+    }
+
+    pub fn focus<S>(self, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.selector("&:focus", nested)
+    }
+
+    pub fn active<S>(self, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.selector("&:active", nested)
+    }
+
+    pub fn media<S>(mut self, query: &'static str, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.nested_rules.push(NestedRule::Media {
+            query,
+            sx: Box::new(nested.into()),
+        });
+        self
+    }
+}
+
 impl<const N: usize> From<Sx<N>> for SxDyn {
     fn from(sx: Sx<N>) -> Self {
         Self {
             declarations: sx.declarations.into_iter().collect(),
             dynamic_declarations: sx.dynamic_declarations,
+            nested_rules: Vec::new(),
         }
     }
 }
@@ -140,6 +238,7 @@ impl<const N: usize> From<&Sx<N>> for SxDyn {
         Self {
             declarations: sx.declarations.iter().cloned().collect(),
             dynamic_declarations: sx.dynamic_declarations.clone(),
+            nested_rules: Vec::new(),
         }
     }
 }
@@ -159,6 +258,17 @@ impl fmt::Display for SxDyn {
         if let Some(dynamic_declarations) = &self.dynamic_declarations {
             for declaration in dynamic_declarations {
                 write!(f, "{} ", declaration)?;
+            }
+        }
+
+        for nested_rule in &self.nested_rules {
+            match nested_rule {
+                NestedRule::Selector { fragment, sx } => {
+                    write!(f, "[{} {{ {} }}] ", fragment, sx)?;
+                }
+                NestedRule::Media { query, sx } => {
+                    write!(f, "[@media {} {{ {} }}] ", query, sx)?;
+                }
             }
         }
 

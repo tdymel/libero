@@ -16,6 +16,7 @@ fn static_only_sx(declarations: Vec<StaticDeclaration>) -> SxDyn {
     SxDyn {
         declarations,
         dynamic_declarations: None,
+        nested_rules: Vec::new(),
     }
 }
 
@@ -94,6 +95,7 @@ pub fn optimize_styles(registry: &IndexMap<String, SxDyn>) -> Vec<OptimizedRule>
                 sx: SxDyn {
                     declarations,
                     dynamic_declarations: sx.dynamic_declarations,
+                    nested_rules: sx.nested_rules,
                 },
             });
         }
