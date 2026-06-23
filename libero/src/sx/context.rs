@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 use indexmap::IndexMap;
+use std::fmt;
 use uuid::Uuid;
 
 use crate::LiberoContext;
@@ -9,24 +10,13 @@ use super::{NestedRule, SxDyn, optimize_styles};
 #[derive(Clone, Copy)]
 pub struct SxContext {
     registry: Signal<IndexMap<String, SxDyn>>,
-    stylesheet: Memo<String>,
 }
 
 impl Default for SxContext {
     fn default() -> Self {
         let registry = Signal::new(IndexMap::new());
-        let stylesheet = Memo::new(move || {
-            optimize_styles(&registry.read())
-                .into_iter()
-                .flat_map(|rule| render_rule(&rule.selector, &rule.sx))
-                .collect::<Vec<_>>()
-                .join("\n")
-        });
 
-        Self {
-            registry,
-            stylesheet,
-        }
+        Self { registry }
     }
 }
 
@@ -38,7 +28,19 @@ fn render_rule(selector: &str, sx: &SxDyn) -> Vec<String> {
     render_rule_with_media(selector, sx, &[])
 }
 
-fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[&'static str]) -> Vec<String> {
+fn declarations_to_string(sx: &SxDyn) -> String {
+    struct DeclarationsOnly<'a>(&'a SxDyn);
+
+    impl fmt::Display for DeclarationsOnly<'_> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            self.0.fmt_declarations_only(f)
+        }
+    }
+
+    DeclarationsOnly(sx).to_string()
+}
+
+fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[String]) -> Vec<String> {
     let mut rules = Vec::new();
 
     if !sx.declarations.is_empty()
@@ -47,7 +49,7 @@ fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[&'static st
             .as_ref()
             .is_some_and(|dynamic| !dynamic.is_empty())
     {
-        let mut rule = format!("{} {{ {} }}", selector, sx);
+        let mut rule = format!("{} {{ {} }}", selector, declarations_to_string(sx));
 
         for query in media_stack.iter().rev() {
             rule = format!("@media {} {{ {} }}", query, rule);
@@ -67,7 +69,7 @@ fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[&'static st
             }
             NestedRule::Media { query, sx } => {
                 let mut nested_media_stack = media_stack.to_vec();
-                nested_media_stack.push(query);
+                nested_media_stack.push(query.clone());
                 rules.extend(render_rule_with_media(selector, sx, &nested_media_stack));
             }
         }
@@ -87,7 +89,11 @@ impl SxContext {
     }
 
     pub fn stylesheet(&self) -> String {
-        self.stylesheet.read().clone()
+        optimize_styles(&self.registry.read())
+            .into_iter()
+            .flat_map(|rule| render_rule(&rule.selector, &rule.sx))
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 

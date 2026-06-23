@@ -1,7 +1,10 @@
-use crate::sx::{
-    declaration::{DynamicDeclaration, StaticDeclaration},
-    dynamic_value::IntoDynamicValue,
-    static_value::IntoStaticValue,
+use crate::{
+    Size,
+    sx::{
+        declaration::{DynamicDeclaration, StaticDeclaration},
+        dynamic_value::IntoDynamicValue,
+        static_value::IntoStaticValue,
+    },
 };
 use paste::paste;
 use std::fmt;
@@ -30,7 +33,7 @@ pub enum NestedRule {
         sx: Box<SxDyn>,
     },
     Media {
-        query: &'static str,
+        query: String,
         sx: Box<SxDyn>,
     },
 }
@@ -142,11 +145,48 @@ impl<const N: usize> Sx<N> {
         self.selector("&:active", nested)
     }
 
-    pub fn media<S>(self, query: &'static str, nested: S) -> SxDyn
+    pub fn media<S>(self, query: impl Into<String>, nested: S) -> SxDyn
     where
         S: Into<SxDyn>,
     {
         self.into_dyn().media(query, nested)
+    }
+
+    pub fn media_up<S>(self, size: Size, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.media(
+            format!("(min-width: var(--libero-breakpoint-{}))", size.suffix()),
+            nested,
+        )
+    }
+
+    pub fn media_down<S>(self, size: Size, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.media(
+            format!(
+                "(max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
+                size.suffix()
+            ),
+            nested,
+        )
+    }
+
+    pub fn media_between<S>(self, min: Size, max: Size, nested: S) -> SxDyn
+    where
+        S: Into<SxDyn>,
+    {
+        self.media(
+            format!(
+                "(min-width: var(--libero-breakpoint-{})) and (max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
+                min.suffix(),
+                max.suffix()
+            ),
+            nested,
+        )
     }
 
     css_declaration_methods!(width, "width");
@@ -211,15 +251,52 @@ impl SxDyn {
         self.selector("&:active", nested)
     }
 
-    pub fn media<S>(mut self, query: &'static str, nested: S) -> Self
+    pub fn media<S>(mut self, query: impl Into<String>, nested: S) -> Self
     where
         S: Into<SxDyn>,
     {
         self.nested_rules.push(NestedRule::Media {
-            query,
+            query: query.into(),
             sx: Box::new(nested.into()),
         });
         self
+    }
+
+    pub fn media_up<S>(self, size: Size, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.media(
+            format!("(min-width: var(--libero-breakpoint-{}))", size.suffix()),
+            nested,
+        )
+    }
+
+    pub fn media_down<S>(self, size: Size, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.media(
+            format!(
+                "(max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
+                size.suffix()
+            ),
+            nested,
+        )
+    }
+
+    pub fn media_between<S>(self, min: Size, max: Size, nested: S) -> Self
+    where
+        S: Into<SxDyn>,
+    {
+        self.media(
+            format!(
+                "(min-width: var(--libero-breakpoint-{})) and (max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
+                min.suffix(),
+                max.suffix()
+            ),
+            nested,
+        )
     }
 }
 
@@ -249,8 +326,8 @@ impl<const N: usize> From<Sx<N>> for Option<SxDyn> {
     }
 }
 
-impl fmt::Display for SxDyn {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl SxDyn {
+    pub fn fmt_declarations_only(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for declaration in &self.declarations {
             write!(f, "{} ", declaration)?;
         }
@@ -260,6 +337,14 @@ impl fmt::Display for SxDyn {
                 write!(f, "{} ", declaration)?;
             }
         }
+
+        Ok(())
+    }
+}
+
+impl fmt::Display for SxDyn {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.fmt_declarations_only(f)?;
 
         for nested_rule in &self.nested_rules {
             match nested_rule {

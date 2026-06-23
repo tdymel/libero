@@ -19,6 +19,7 @@ pub fn Button(props: ButtonProps) -> Element {
             .user_select("none")
             .text_align("center")
             .text_transform("uppercase")
+            .media_up(Size::Sm, sx_builder().background_color("purple"))
             .hover(sx_builder().background_color("red")),
         props.sx,
         props.class,

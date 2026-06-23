@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use libero::{Button, LiberoProvider, sx};
+use libero::{Button, LiberoProvider};
 
 fn main() {
     dioxus::launch(App);
