@@ -36,6 +36,19 @@ pub enum NestedRule {
         query: String,
         sx: Box<SxDyn>,
     },
+    MediaUp {
+        size: Size,
+        sx: Box<SxDyn>,
+    },
+    MediaDown {
+        size: Size,
+        sx: Box<SxDyn>,
+    },
+    MediaBetween {
+        min: Size,
+        max: Size,
+        sx: Box<SxDyn>,
+    },
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -156,37 +169,21 @@ impl<const N: usize> Sx<N> {
     where
         S: Into<SxDyn>,
     {
-        self.media(
-            format!("(min-width: var(--libero-breakpoint-{}))", size.suffix()),
-            nested,
-        )
+        self.into_dyn().media_up(size, nested)
     }
 
     pub fn media_down<S>(self, size: Size, nested: S) -> SxDyn
     where
         S: Into<SxDyn>,
     {
-        self.media(
-            format!(
-                "(max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
-                size.suffix()
-            ),
-            nested,
-        )
+        self.into_dyn().media_down(size, nested)
     }
 
     pub fn media_between<S>(self, min: Size, max: Size, nested: S) -> SxDyn
     where
         S: Into<SxDyn>,
     {
-        self.media(
-            format!(
-                "(min-width: var(--libero-breakpoint-{})) and (max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
-                min.suffix(),
-                max.suffix()
-            ),
-            nested,
-        )
+        self.into_dyn().media_between(min, max, nested)
     }
 
     css_declaration_methods!(width, "width");
@@ -262,41 +259,38 @@ impl SxDyn {
         self
     }
 
-    pub fn media_up<S>(self, size: Size, nested: S) -> Self
+    pub fn media_up<S>(mut self, size: Size, nested: S) -> Self
     where
         S: Into<SxDyn>,
     {
-        self.media(
-            format!("(min-width: var(--libero-breakpoint-{}))", size.suffix()),
-            nested,
-        )
+        self.nested_rules.push(NestedRule::MediaUp {
+            size,
+            sx: Box::new(nested.into()),
+        });
+        self
     }
 
-    pub fn media_down<S>(self, size: Size, nested: S) -> Self
+    pub fn media_down<S>(mut self, size: Size, nested: S) -> Self
     where
         S: Into<SxDyn>,
     {
-        self.media(
-            format!(
-                "(max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
-                size.suffix()
-            ),
-            nested,
-        )
+        self.nested_rules.push(NestedRule::MediaDown {
+            size,
+            sx: Box::new(nested.into()),
+        });
+        self
     }
 
-    pub fn media_between<S>(self, min: Size, max: Size, nested: S) -> Self
+    pub fn media_between<S>(mut self, min: Size, max: Size, nested: S) -> Self
     where
         S: Into<SxDyn>,
     {
-        self.media(
-            format!(
-                "(min-width: var(--libero-breakpoint-{})) and (max-width: calc(var(--libero-breakpoint-{}) - 0.02px))",
-                min.suffix(),
-                max.suffix()
-            ),
-            nested,
-        )
+        self.nested_rules.push(NestedRule::MediaBetween {
+            min,
+            max,
+            sx: Box::new(nested.into()),
+        });
+        self
     }
 }
 
@@ -353,6 +347,15 @@ impl fmt::Display for SxDyn {
                 }
                 NestedRule::Media { query, sx } => {
                     write!(f, "[@media {} {{ {} }}] ", query, sx)?;
+                }
+                NestedRule::MediaUp { size, sx } => {
+                    write!(f, "[@media-up {:?} {{ {} }}] ", size, sx)?;
+                }
+                NestedRule::MediaDown { size, sx } => {
+                    write!(f, "[@media-down {:?} {{ {} }}] ", size, sx)?;
+                }
+                NestedRule::MediaBetween { min, max, sx } => {
+                    write!(f, "[@media-between {:?}-{:?} {{ {} }}] ", min, max, sx)?;
                 }
             }
         }

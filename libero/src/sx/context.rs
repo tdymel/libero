@@ -24,8 +24,8 @@ pub(crate) fn class_name_from_id(id: &str) -> String {
     format!("lsx-{}", id)
 }
 
-fn render_rule(selector: &str, sx: &SxDyn) -> Vec<String> {
-    render_rule_with_media(selector, sx, &[])
+fn render_rule(context: &LiberoContext, selector: &str, sx: &SxDyn) -> Vec<String> {
+    render_rule_with_media(context, selector, sx, &[])
 }
 
 fn declarations_to_string(sx: &SxDyn) -> String {
@@ -40,15 +40,36 @@ fn declarations_to_string(sx: &SxDyn) -> String {
     DeclarationsOnly(sx).to_string()
 }
 
-fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[String]) -> Vec<String> {
+fn resolve_media_query<'a>(
+    context: &LiberoContext,
+    nested_rule: &'a NestedRule,
+) -> Option<(String, &'a SxDyn)> {
+    match nested_rule {
+        NestedRule::Media { query, sx } => Some((query.clone(), sx)),
+        NestedRule::MediaUp { size, sx } => Some((context.theme.media_up(*size), sx)),
+        NestedRule::MediaDown { size, sx } => Some((context.theme.media_down(*size), sx)),
+        NestedRule::MediaBetween { min, max, sx } => {
+            Some((context.theme.media_between(*min, *max), sx))
+        }
+        _ => None,
+    }
+}
+
+fn render_rule_with_media(
+    context: &LiberoContext,
+    selector: &str,
+    sx: &SxDyn,
+    media_stack: &[String],
+) -> Vec<String> {
     let mut rules = Vec::new();
 
-    if !sx.declarations.is_empty()
+    let has_declarations = !sx.declarations.is_empty()
         || sx
             .dynamic_declarations
             .as_ref()
-            .is_some_and(|dynamic| !dynamic.is_empty())
-    {
+            .is_some_and(|dynamic| !dynamic.is_empty());
+
+    if has_declarations {
         let mut rule = format!("{} {{ {} }}", selector, declarations_to_string(sx));
 
         for query in media_stack.iter().rev() {
@@ -58,20 +79,33 @@ fn render_rule_with_media(selector: &str, sx: &SxDyn, media_stack: &[String]) ->
         rules.push(rule);
     }
 
+    // Reuse a single owned media stack to avoid allocating a new Vec for every nested media rule.
+    let mut owned_stack = media_stack.to_vec();
+
     for nested_rule in &sx.nested_rules {
-        match nested_rule {
-            NestedRule::Selector { fragment, sx } => {
-                rules.extend(render_rule_with_media(
-                    &fragment.replace('&', selector),
-                    sx,
-                    media_stack,
-                ));
-            }
-            NestedRule::Media { query, sx } => {
-                let mut nested_media_stack = media_stack.to_vec();
-                nested_media_stack.push(query.clone());
-                rules.extend(render_rule_with_media(selector, sx, &nested_media_stack));
-            }
+        if let NestedRule::Selector {
+            fragment,
+            sx: nested_sx,
+        } = nested_rule
+        {
+            rules.extend(render_rule_with_media(
+                context,
+                &fragment.replace('&', selector),
+                nested_sx,
+                &owned_stack,
+            ));
+            continue;
+        }
+
+        if let Some((query, nested_sx)) = resolve_media_query(context, nested_rule) {
+            owned_stack.push(query);
+            rules.extend(render_rule_with_media(
+                context,
+                selector,
+                nested_sx,
+                &owned_stack,
+            ));
+            owned_stack.pop();
         }
     }
 
@@ -88,10 +122,10 @@ impl SxContext {
         }
     }
 
-    pub fn stylesheet(&self) -> String {
+    pub fn stylesheet(&self, context: &LiberoContext) -> String {
         optimize_styles(&self.registry.read())
             .into_iter()
-            .flat_map(|rule| render_rule(&rule.selector, &rule.sx))
+            .flat_map(|rule| render_rule(context, &rule.selector, &rule.sx))
             .collect::<Vec<_>>()
             .join("\n")
     }

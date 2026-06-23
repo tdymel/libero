@@ -13,7 +13,7 @@ pub fn LiberoProvider(children: Element) -> Element {
         }
     });
     let theme_stylesheet = context.theme.css_variables();
-    let stylesheet = context.sx.stylesheet();
+    let stylesheet = context.sx.stylesheet(&context);
 
     rsx! {
         style { {theme_stylesheet} }

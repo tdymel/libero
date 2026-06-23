@@ -68,6 +68,22 @@ impl Theme {
         self.breakpoint.get(size)
     }
 
+    pub fn media_up(&self, size: Size) -> String {
+        format!("(min-width: {}px)", self.breakpoint_px(size))
+    }
+
+    pub fn media_down(&self, size: Size) -> String {
+        format!("(max-width: {}px)", self.breakpoint_px(size) as f64 - 0.02)
+    }
+
+    pub fn media_between(&self, min: Size, max: Size) -> String {
+        format!(
+            "(min-width: {}px) and (max-width: {}px)",
+            self.breakpoint_px(min),
+            self.breakpoint_px(max) as f64 - 0.02
+        )
+    }
+
     pub const fn primary(&self) -> &ColorScale {
         &self.primary
     }
