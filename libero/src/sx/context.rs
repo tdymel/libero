@@ -1,7 +1,6 @@
 use dioxus::prelude::*;
 use indexmap::IndexMap;
 use std::fmt;
-use uuid::Uuid;
 
 use crate::LiberoContext;
 
@@ -10,18 +9,29 @@ use super::{NestedRule, SxDyn, optimize_styles};
 #[derive(Clone, Copy)]
 pub struct SxContext {
     registry: Signal<IndexMap<String, SxDyn>>,
+    stylesheet: Signal<String>,
 }
 
 impl Default for SxContext {
     fn default() -> Self {
         let registry = Signal::new(IndexMap::new());
+        let stylesheet = Signal::new(String::new());
 
-        Self { registry }
+        Self {
+            registry,
+            stylesheet,
+        }
     }
 }
 
 pub(crate) fn class_name_from_id(id: &str) -> String {
     format!("lsx-{}", id)
+}
+
+fn style_id(sx: &SxDyn) -> String {
+    // TODO: Not the most efficient way!
+    let hash = blake3::hash(sx.to_string().as_bytes());
+    hash.to_hex()[..16].to_string()
 }
 
 fn render_rule(context: &LiberoContext, selector: &str, sx: &SxDyn) -> Vec<String> {
@@ -63,13 +73,7 @@ fn render_rule_with_media(
 ) -> Vec<String> {
     let mut rules = Vec::new();
 
-    let has_declarations = !sx.declarations.is_empty()
-        || sx
-            .dynamic_declarations
-            .as_ref()
-            .is_some_and(|dynamic| !dynamic.is_empty());
-
-    if has_declarations {
+    if !sx.declarations.is_empty() {
         let mut rule = format!("{} {{ {} }}", selector, declarations_to_string(sx));
 
         for query in media_stack.iter().rev() {
@@ -113,21 +117,29 @@ fn render_rule_with_media(
 }
 
 impl SxContext {
-    pub fn upsert(&self, id: String, sx: SxDyn) {
+    pub fn upsert(&self, context: &LiberoContext, id: String, sx: SxDyn) {
         let mut registry = self.registry;
         let should_update = registry.read().get(&id) != Some(&sx);
 
         if should_update {
             registry.write().insert(id, sx);
+            self.rebuild_stylesheet(context);
         }
     }
 
-    pub fn stylesheet(&self, context: &LiberoContext) -> String {
-        optimize_styles(&self.registry.read())
+    fn rebuild_stylesheet(&self, context: &LiberoContext) {
+        let stylesheet = optimize_styles(&self.registry.read())
             .into_iter()
             .flat_map(|rule| render_rule(context, &rule.selector, &rule.sx))
             .collect::<Vec<_>>()
-            .join("\n")
+            .join("\n");
+
+        let mut stylesheet_signal = self.stylesheet;
+        *stylesheet_signal.write() = stylesheet;
+    }
+
+    pub fn stylesheet(&self) -> ReadSignal<String> {
+        self.stylesheet.into()
     }
 }
 
@@ -136,13 +148,13 @@ where
     S: Into<SxDyn> + Clone + PartialEq + 'static,
 {
     let context = use_context::<LiberoContext>();
-    let id = use_hook(|| Uuid::new_v4().simple().to_string()[..8].to_string());
     let snapshot = use_memo(move || sx.clone().into());
+    let resolved_sx = snapshot.read().clone();
+    let id = style_id(&resolved_sx);
 
-    let id_value = id.clone();
-    use_effect(move || {
-        context.sx.upsert(id_value.clone(), snapshot.read().clone());
-    });
+    // TODO: avoid cloning and re-registering on every render; this is currently
+    // done synchronously so SSR/fullstack can emit styles before hydration.
+    context.sx.upsert(&context, id.clone(), resolved_sx);
 
     class_name_from_id(id.as_str())
 }

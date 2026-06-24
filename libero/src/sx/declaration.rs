@@ -1,4 +1,4 @@
-use crate::sx::{dynamic_value::DynamicValue, static_value::StaticValue};
+use crate::sx::static_value::StaticValue;
 use std::fmt;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -8,13 +8,6 @@ pub struct Declaration<Value> {
 }
 
 pub type StaticDeclaration = Declaration<StaticValue>;
-pub type DynamicDeclaration = Declaration<DynamicValue>;
-
-impl DynamicDeclaration {
-    pub const fn new(key: &'static str, value: DynamicValue) -> Self {
-        Self { key, value }
-    }
-}
 
 impl StaticDeclaration {
     pub const fn new(key: &'static str, value: StaticValue) -> Self {
@@ -26,19 +19,6 @@ impl fmt::Display for StaticDeclaration {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}: ", self.key)?;
         self.value.fmt_for_prop(self.key, f)?;
-        write!(f, ";")
-    }
-}
-
-impl fmt::Display for DynamicDeclaration {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}: ", self.key)?;
-
-        match &self.value {
-            DynamicValue::StaticValue(value) => value.fmt_for_prop(self.key, f)?,
-            DynamicValue::Closure(resolve) => resolve().fmt_for_prop(self.key, f)?,
-        }
-
         write!(f, ";")
     }
 }

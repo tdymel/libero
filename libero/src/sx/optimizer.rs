@@ -15,7 +15,6 @@ fn declaration_key(declaration: &StaticDeclaration) -> String {
 fn static_only_sx(declarations: Vec<StaticDeclaration>) -> SxDyn {
     SxDyn {
         declarations,
-        dynamic_declarations: None,
         nested_rules: Vec::new(),
     }
 }
@@ -83,18 +82,11 @@ pub fn optimize_styles(registry: &IndexMap<String, SxDyn>) -> Vec<OptimizedRule>
             .filter(|declaration| !shared_declarations.contains(declaration))
             .collect::<Vec<_>>();
 
-        let has_static_declarations = !declarations.is_empty();
-        let has_dynamic_declarations = sx
-            .dynamic_declarations
-            .as_ref()
-            .is_some_and(|dynamic| !dynamic.is_empty());
-
-        if has_static_declarations || has_dynamic_declarations {
+        if !declarations.is_empty() || !sx.nested_rules.is_empty() {
             optimized_rules.push(OptimizedRule {
                 selector: format!(".{}", class_name_from_id(&id)),
                 sx: SxDyn {
                     declarations,
-                    dynamic_declarations: sx.dynamic_declarations,
                     nested_rules: sx.nested_rules,
                 },
             });

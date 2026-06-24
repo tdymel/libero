@@ -13,11 +13,15 @@ pub fn LiberoProvider(children: Element) -> Element {
         }
     });
     let theme_stylesheet = context.theme.css_variables();
-    let stylesheet = context.sx.stylesheet(&context);
+    let stylesheet = context.sx.stylesheet().read().clone();
 
     rsx! {
-        style { {theme_stylesheet} }
-        style { {stylesheet} }
+        style {
+            dangerous_inner_html: "{theme_stylesheet}"
+        }
+        style {
+            dangerous_inner_html: "{stylesheet}"
+        }
         {children}
     }
 }

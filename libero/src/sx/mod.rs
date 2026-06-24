@@ -1,6 +1,6 @@
 mod context;
 mod declaration;
-mod dynamic_value;
+
 mod optimizer;
 mod static_value;
 mod sx;

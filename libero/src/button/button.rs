@@ -59,7 +59,7 @@ pub fn Button(props: ButtonProps) -> Element {
 
     rsx! {
         div {
-            class: class,
+            class: class.clone(),
             onclick: move |event| call_handler(&props.onclick, event),
             ..props.attributes,
             {props.children}

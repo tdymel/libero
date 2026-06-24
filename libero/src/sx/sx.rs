@@ -1,27 +1,14 @@
 use crate::{
     Size,
-    sx::{
-        declaration::{DynamicDeclaration, StaticDeclaration},
-        dynamic_value::IntoDynamicValue,
-        static_value::IntoStaticValue,
-    },
+    sx::{declaration::StaticDeclaration, static_value::IntoStaticValue},
 };
-use paste::paste;
+
 use std::fmt;
 
 macro_rules! css_declaration_methods {
     ($name:ident, $css_name:literal) => {
         pub const fn $name(self, value: impl const IntoStaticValue) -> Sx<{ N + 1 }> {
             self.other($css_name, value)
-        }
-
-        paste! {
-            pub fn [<$name _dyn>]<V>(self, value: V) -> Self
-            where
-                V: IntoDynamicValue,
-            {
-                self.other_dyn($css_name, value)
-            }
         }
     };
 }
@@ -54,21 +41,16 @@ pub enum NestedRule {
 #[derive(Clone, PartialEq, Eq)]
 pub struct Sx<const N: usize> {
     pub(crate) declarations: [StaticDeclaration; N],
-    pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
 }
 
 #[derive(Clone, PartialEq, Eq)]
 pub struct SxDyn {
     pub(crate) declarations: Vec<StaticDeclaration>,
-    pub(crate) dynamic_declarations: Option<Vec<DynamicDeclaration>>,
     pub(crate) nested_rules: Vec<NestedRule>,
 }
 
 pub const fn sx() -> Sx<0> {
-    Sx {
-        declarations: [],
-        dynamic_declarations: None,
-    }
+    Sx { declarations: [] }
 }
 
 impl<const N: usize> Sx<N> {
@@ -80,7 +62,6 @@ impl<const N: usize> Sx<N> {
 
         let this = ManuallyDrop::new(self);
         let declarations = unsafe { ptr::read(&this.declarations) };
-        let dynamic_declarations = unsafe { ptr::read(&this.dynamic_declarations) };
         let declarations = ManuallyDrop::new(declarations);
         let value = ManuallyDrop::new(value);
 
@@ -93,10 +74,7 @@ impl<const N: usize> Sx<N> {
             result.assume_init()
         };
 
-        Sx {
-            declarations,
-            dynamic_declarations,
-        }
+        Sx { declarations }
     }
 
     pub const fn other(
@@ -106,24 +84,6 @@ impl<const N: usize> Sx<N> {
     ) -> Sx<{ N + 1 }> {
         let value = value.into_static_value();
         self.push_decl(StaticDeclaration::new(key, value))
-    }
-
-    pub fn other_dyn<V>(mut self, key: &'static str, value: V) -> Self
-    where
-        V: IntoDynamicValue,
-    {
-        let value = value.into_dynamic_value();
-
-        match &mut self.dynamic_declarations {
-            Some(dynamic_declarations) => {
-                dynamic_declarations.push(DynamicDeclaration::new(key, value));
-            }
-            None => {
-                self.dynamic_declarations = Some(vec![DynamicDeclaration::new(key, value)]);
-            }
-        }
-
-        self
     }
 
     pub fn into_dyn(self) -> SxDyn {
@@ -310,7 +270,6 @@ impl<const N: usize> From<Sx<N>> for SxDyn {
     fn from(sx: Sx<N>) -> Self {
         Self {
             declarations: sx.declarations.into_iter().collect(),
-            dynamic_declarations: sx.dynamic_declarations,
             nested_rules: Vec::new(),
         }
     }
@@ -320,7 +279,6 @@ impl<const N: usize> From<&Sx<N>> for SxDyn {
     fn from(sx: &Sx<N>) -> Self {
         Self {
             declarations: sx.declarations.iter().cloned().collect(),
-            dynamic_declarations: sx.dynamic_declarations.clone(),
             nested_rules: Vec::new(),
         }
     }
@@ -336,12 +294,6 @@ impl SxDyn {
     pub fn fmt_declarations_only(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for declaration in &self.declarations {
             write!(f, "{} ", declaration)?;
-        }
-
-        if let Some(dynamic_declarations) = &self.dynamic_declarations {
-            for declaration in dynamic_declarations {
-                write!(f, "{} ", declaration)?;
-            }
         }
 
         Ok(())
