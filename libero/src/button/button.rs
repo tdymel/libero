@@ -11,15 +11,17 @@ pub fn Button(props: ButtonProps) -> Element {
         sx_builder()
             .background_color(Color::Primary.shade(5))
             .border_radius(Size::Sm)
-            .padding(Size::Md)
-            .color("white")
+            .padding(Size::Sm)
+            .color(Color::Primary.contrast_main())
             .font_size(Size::Md)
+            .font_weight("500")
+            .font_family("\"Roboto\", \"Helvetica\", \"Arial\", sans-serif")
             .box_shadow("0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12)")
             // needed for the ripple pseudo-element to be positioned and clipped
             .position("relative")
             .overflow("hidden")
-            // small transition for the pressed scale and shadow
-            .transition("transform 120ms cubic-bezier(0,0,0.2,1), box-shadow 120ms cubic-bezier(0,0,0.2,1)")
+            // small transition for the pressed shadow and active background
+            .transition("background-color 120ms cubic-bezier(0,0,0.2,1), box-shadow 120ms cubic-bezier(0,0,0.2,1)")
             .cursor("pointer")
             .user_select("none")
             .text_align("center")
@@ -34,7 +36,7 @@ pub fn Button(props: ButtonProps) -> Element {
                 .height("200%")
                 .pointer_events("none")
                 .border_radius("50%")
-                .background("rgba(255,255,255,0.3)")
+                .background("rgba(255,255,255,0.1)")
                 .opacity("0")
                 .transform("translate(-50%, -50%) scaleX(0.02) scaleY(0.6)")
                 .transform_origin("center")
@@ -45,10 +47,10 @@ pub fn Button(props: ButtonProps) -> Element {
                 .opacity("1")
                 .transition("transform 180ms cubic-bezier(0.4,0,0.2,1), opacity 180ms ease-out")
             )
-            // active pressed transform
+            .hover(sx_builder().background_color(Color::Primary.shade(9)))
+            // active pressed state
             .active(
                 sx_builder()
-                    .transform("scale(0.98)")
                     .box_shadow("0px 1px 1px -1px rgba(0, 0, 0, 0.2)")
             ),
         props.sx,
