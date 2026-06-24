@@ -213,6 +213,16 @@ impl<const N: usize> Sx<N> {
     css_declaration_methods!(user_select, "user-select");
     css_declaration_methods!(text_transform, "text-transform");
     css_declaration_methods!(text_align, "text-align");
+    css_declaration_methods!(position, "position");
+    css_declaration_methods!(overflow, "overflow");
+    css_declaration_methods!(transition, "transition");
+    css_declaration_methods!(content, "content");
+    css_declaration_methods!(left, "left");
+    css_declaration_methods!(top, "top");
+    css_declaration_methods!(pointer_events, "pointer-events");
+    css_declaration_methods!(background, "background");
+    css_declaration_methods!(transform, "transform");
+    css_declaration_methods!(transform_origin, "transform-origin");
 }
 
 impl SxDyn {
