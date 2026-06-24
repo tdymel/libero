@@ -46,6 +46,42 @@ impl ColorScale {
     pub fn colors(&self) -> &[String; 10] {
         &self.colors
     }
+
+    // return an "r,g,b" channel string for the requested shade
+    pub fn channel(&self, index: usize) -> String {
+        let hex = &self.colors[index];
+        let (r, g, b) = parse_hex_color(hex).unwrap_or((0, 0, 0));
+        format!("{}, {}, {}", r, g, b)
+    }
+
+    // compute a simple contrast color (black or white) using luminance
+    pub fn contrast(&self, index: usize) -> String {
+        let hex = &self.colors[index];
+        let (r, g, b) = parse_hex_color(hex).unwrap_or((0, 0, 0));
+
+        // relative luminance calculation (sRGB)
+        let r_lin = linearize_channel(r);
+        let g_lin = linearize_channel(g);
+        let b_lin = linearize_channel(b);
+
+        let luminance = 0.2126 * r_lin + 0.7152 * g_lin + 0.0722 * b_lin;
+
+        // use white for dark backgrounds, black for light backgrounds
+        if luminance < 0.5 {
+            "#FFFFFF".to_string()
+        } else {
+            "#000000".to_string()
+        }
+    }
+}
+
+fn linearize_channel(c: u8) -> f32 {
+    let v = c as f32 / 255.0;
+    if v <= 0.03928 {
+        v / 12.92
+    } else {
+        ((v + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 fn mix_channel(base: f32, target: f32, ratio: f32) -> u8 {

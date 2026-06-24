@@ -1,12 +1,10 @@
 mod color;
-mod color_scale;
 mod context;
 mod size;
 mod sizes;
 mod theme;
 
-pub use color::Color;
-pub use color_scale::ColorScale;
+pub use color::{Color, ColorIndex, ColorScale, IntoColorIndex, Role, ThemeColor};
 pub use context::use_theme;
 pub use size::Size;
 pub use sizes::Sizes;

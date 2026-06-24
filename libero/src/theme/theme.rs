@@ -156,6 +156,17 @@ impl Theme {
                 index,
                 self.secondary.get(index)
             ));
+
+            // emit contrast CSS variables for each shade
+            css.push_str(&format!(
+                " {}-{}-contrast: {}; {}-{}-contrast: {};",
+                PRIMARY_COLOR_CSS_VAR,
+                index,
+                self.primary.contrast(index),
+                SECONDARY_COLOR_CSS_VAR,
+                index,
+                self.secondary.contrast(index)
+            ));
         }
 
         css.push_str(" }");
@@ -164,6 +175,23 @@ impl Theme {
 
     pub fn spacing_css_value(&self, factor: i64) -> String {
         format!("calc({} * var({}))", factor, SPACING_CSS_VAR)
+    }
+
+    // helpers to format CSS var strings for ThemeColor
+    pub fn palette_var(&self, color: super::Color, index: u8) -> String {
+        match color {
+            super::Color::Primary => format!("var({}-{})", PRIMARY_COLOR_CSS_VAR, index),
+            super::Color::Secondary => format!("var({}-{})", SECONDARY_COLOR_CSS_VAR, index),
+        }
+    }
+
+    pub fn palette_contrast_var(&self, color: super::Color, index: u8) -> String {
+        match color {
+            super::Color::Primary => format!("var({}-{}-contrast)", PRIMARY_COLOR_CSS_VAR, index),
+            super::Color::Secondary => {
+                format!("var({}-{}-contrast)", SECONDARY_COLOR_CSS_VAR, index)
+            }
+        }
     }
 }
 

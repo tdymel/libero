@@ -9,7 +9,7 @@ use super::button_props::ButtonProps;
 pub fn Button(props: ButtonProps) -> Element {
     let class = use_resolved_class(
         sx_builder()
-            .background_color(Color::Primary)
+            .background_color(Color::Primary.shade(5))
             .border_radius(Size::Sm)
             .padding(Size::Md)
             .color("white")

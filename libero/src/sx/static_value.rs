@@ -1,9 +1,6 @@
 use crate::{
-    Color, Size,
-    theme::{
-        BORDER_RADIUS_CSS_VAR, FONT_SIZE_CSS_VAR, PRIMARY_COLOR_CSS_VAR, SECONDARY_COLOR_CSS_VAR,
-        SPACING_CSS_VAR,
-    },
+    Color, Size, ThemeColor,
+    theme::{BORDER_RADIUS_CSS_VAR, FONT_SIZE_CSS_VAR, SPACING_CSS_VAR},
 };
 use std::fmt;
 
@@ -11,7 +8,7 @@ use std::fmt;
 pub enum StaticValue {
     Integer(i64),
     Size(Size),
-    Color(Color),
+    Color(ThemeColor),
     Text(&'static str),
 }
 
@@ -39,22 +36,49 @@ impl const IntoStaticValue for Size {
 
 impl const IntoStaticValue for Color {
     fn into_static_value(self) -> StaticValue {
-        StaticValue::Color(self)
+        // default to shade 6 (matching current behavior)
+        StaticValue::Color(self.main())
     }
 }
 
 impl const IntoStaticValue for &'static str {
     fn into_static_value(self) -> StaticValue {
         match self {
+            "primary.0" => StaticValue::Color(Color::Primary.shade(0)),
+            "primary.1" => StaticValue::Color(Color::Primary.shade(1)),
+            "primary.2" => StaticValue::Color(Color::Primary.shade(2)),
+            "primary.3" => StaticValue::Color(Color::Primary.shade(3)),
+            "primary.4" => StaticValue::Color(Color::Primary.shade(4)),
+            "primary.5" => StaticValue::Color(Color::Primary.shade(5)),
+            "primary.6" => StaticValue::Color(Color::Primary.shade(6)),
+            "primary.7" => StaticValue::Color(Color::Primary.shade(7)),
+            "primary.8" => StaticValue::Color(Color::Primary.shade(8)),
+            "primary.9" => StaticValue::Color(Color::Primary.shade(9)),
+            "secondary.0" => StaticValue::Color(Color::Secondary.shade(0)),
+            "secondary.1" => StaticValue::Color(Color::Secondary.shade(1)),
+            "secondary.2" => StaticValue::Color(Color::Secondary.shade(2)),
+            "secondary.3" => StaticValue::Color(Color::Secondary.shade(3)),
+            "secondary.4" => StaticValue::Color(Color::Secondary.shade(4)),
+            "secondary.5" => StaticValue::Color(Color::Secondary.shade(5)),
+            "secondary.6" => StaticValue::Color(Color::Secondary.shade(6)),
+            "secondary.7" => StaticValue::Color(Color::Secondary.shade(7)),
+            "secondary.8" => StaticValue::Color(Color::Secondary.shade(8)),
+            "secondary.9" => StaticValue::Color(Color::Secondary.shade(9)),
             "xs" => StaticValue::Size(Size::Xs),
             "sm" => StaticValue::Size(Size::Sm),
             "md" => StaticValue::Size(Size::Md),
             "lg" => StaticValue::Size(Size::Lg),
             "xl" => StaticValue::Size(Size::Xl),
-            "primary" => StaticValue::Color(Color::Primary),
-            "secondary" => StaticValue::Color(Color::Secondary),
+            "primary" => StaticValue::Color(Color::Primary.main()),
+            "secondary" => StaticValue::Color(Color::Secondary.main()),
             _ => StaticValue::Text(self),
         }
+    }
+}
+
+impl const IntoStaticValue for ThemeColor {
+    fn into_static_value(self) -> StaticValue {
+        StaticValue::Color(self)
     }
 }
 
@@ -102,11 +126,8 @@ fn size_css_value(prop_name: &str, size: Size) -> String {
     }
 }
 
-fn color_css_value(color: Color) -> String {
-    match color {
-        Color::Primary => format!("var({}-6)", PRIMARY_COLOR_CSS_VAR),
-        Color::Secondary => format!("var({}-6)", SECONDARY_COLOR_CSS_VAR),
-    }
+fn color_css_value(color: ThemeColor) -> String {
+    color.to_string()
 }
 
 impl StaticValue {
@@ -128,7 +149,7 @@ impl fmt::Display for StaticValue {
         match self {
             Self::Integer(value) => write!(f, "{}", value),
             Self::Size(size) => write!(f, "{:?}", size),
-            Self::Color(color) => write!(f, "{:?}", color),
+            Self::Color(color) => write!(f, "{}", color),
             Self::Text(value) => write!(f, "{}", value),
         }
     }
