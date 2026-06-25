@@ -1,6 +1,9 @@
 use crate::{
     Size,
-    sx::{declaration::StaticDeclaration, static_value::IntoStaticValue, sx_dyn::SxDyn},
+    sx::{
+        const_arr::ConstArr, declaration::StaticDeclaration, static_value::IntoStaticValue,
+        sx_dyn::SxDyn,
+    },
 };
 
 #[derive(Clone, PartialEq, Eq)]
@@ -59,34 +62,11 @@ pub const fn sx() -> Sx<0, 0> {
 
 impl<const N: usize, const R: usize> Sx<N, R> {
     pub const fn push_decl(self, value: StaticDeclaration) -> Sx<{ N + 1 }, R> {
-        use std::{
-            mem::{ManuallyDrop, MaybeUninit},
-            ptr,
-        };
-
-        let this = ManuallyDrop::new(self);
-        let declarations = unsafe { ptr::read(&this.declarations) };
-        let nested_rules = unsafe { ptr::read(&this.nested_rules) };
-        let root_decl_len = this.root_decl_len;
-        let root_rule_len = this.root_rule_len;
-        let declarations = ManuallyDrop::new(declarations);
-        let nested_rules = ManuallyDrop::new(nested_rules);
-        let value = ManuallyDrop::new(value);
-
-        let mut result = MaybeUninit::<[StaticDeclaration; N + 1]>::uninit();
-        let ptr = result.as_mut_ptr() as *mut StaticDeclaration;
-
-        let declarations = unsafe {
-            ptr::copy_nonoverlapping(declarations.as_ptr(), ptr, N);
-            ptr::copy_nonoverlapping(&*value as *const StaticDeclaration, ptr.add(N), 1);
-            result.assume_init()
-        };
-
         Sx {
-            declarations,
-            nested_rules: ManuallyDrop::into_inner(nested_rules),
-            root_decl_len: root_decl_len + 1,
-            root_rule_len,
+            declarations: ConstArr(self.declarations).append(value).into_inner(),
+            nested_rules: self.nested_rules,
+            root_decl_len: self.root_decl_len + 1,
+            root_rule_len: self.root_rule_len,
         }
     }
 
@@ -174,61 +154,25 @@ impl<const N: usize, const R: usize> Sx<N, R> {
         kind: NestedRuleKind,
         nested: Sx<M, K>,
     ) -> Sx<{ N + M }, { R + K + 1 }> {
-        use std::{
-            mem::{ManuallyDrop, MaybeUninit},
-            ptr,
-        };
-
-        let this = ManuallyDrop::new(self);
-        let self_declarations = unsafe { ptr::read(&this.declarations) };
-        let self_nested_rules = unsafe { ptr::read(&this.nested_rules) };
-        let self_root_decl_len = this.root_decl_len;
-        let self_root_rule_len = this.root_rule_len;
-
-        let nested = ManuallyDrop::new(nested);
-        let nested_declarations = unsafe { ptr::read(&nested.declarations) };
-        let nested_rules = unsafe { ptr::read(&nested.nested_rules) };
         let nested_root_decl_len = nested.root_decl_len;
         let nested_root_rule_len = nested.root_rule_len;
-
-        let self_declarations = ManuallyDrop::new(self_declarations);
-        let self_nested_rules = ManuallyDrop::new(self_nested_rules);
-        let nested_declarations = ManuallyDrop::new(nested_declarations);
-        let nested_rules = ManuallyDrop::new(nested_rules);
-        let meta = ManuallyDrop::new(NestedRuleMeta {
+        let meta = NestedRuleMeta {
             kind,
             decl_start: N,
             decl_len: nested_root_decl_len,
             child_rule_start: R + K - nested_root_rule_len,
             child_rule_len: nested_root_rule_len,
-        });
-
-        let mut declarations_result = MaybeUninit::<[StaticDeclaration; N + M]>::uninit();
-        let declarations_ptr = declarations_result.as_mut_ptr() as *mut StaticDeclaration;
-        let declarations = unsafe {
-            ptr::copy_nonoverlapping(self_declarations.as_ptr(), declarations_ptr, N);
-            ptr::copy_nonoverlapping(nested_declarations.as_ptr(), declarations_ptr.add(N), M);
-            declarations_result.assume_init()
-        };
-
-        let mut nested_rules_result = MaybeUninit::<[NestedRuleMeta; R + K + 1]>::uninit();
-        let nested_rules_ptr = nested_rules_result.as_mut_ptr() as *mut NestedRuleMeta;
-        let nested_rules = unsafe {
-            ptr::copy_nonoverlapping(self_nested_rules.as_ptr(), nested_rules_ptr, R);
-            ptr::copy_nonoverlapping(nested_rules.as_ptr(), nested_rules_ptr.add(R), K);
-            ptr::copy_nonoverlapping(
-                &*meta as *const NestedRuleMeta,
-                nested_rules_ptr.add(R + K),
-                1,
-            );
-            nested_rules_result.assume_init()
         };
 
         Sx {
-            declarations,
-            nested_rules,
-            root_decl_len: self_root_decl_len,
-            root_rule_len: self_root_rule_len + 1,
+            declarations: ConstArr(self.declarations)
+                .concat(ConstArr(nested.declarations))
+                .into_inner(),
+            nested_rules: ConstArr(self.nested_rules)
+                .concat_append(ConstArr(nested.nested_rules), meta)
+                .into_inner(),
+            root_decl_len: self.root_decl_len,
+            root_rule_len: self.root_rule_len + 1,
         }
     }
 }

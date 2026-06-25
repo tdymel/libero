@@ -1,3 +1,4 @@
+mod const_arr;
 mod context;
 mod declaration;
 mod declaration_methods;
