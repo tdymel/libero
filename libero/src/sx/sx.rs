@@ -3,14 +3,6 @@ use crate::{
     sx::{declaration::StaticDeclaration, static_value::IntoStaticValue, sx_dyn::SxDyn},
 };
 
-macro_rules! css_declaration_methods {
-    ($name:ident, $css_name:literal) => {
-        pub const fn $name(self, value: impl const IntoStaticValue) -> Sx<{ N + 1 }, R> {
-            self.other($css_name, value)
-        }
-    };
-}
-
 #[derive(Clone, PartialEq, Eq)]
 pub enum NestedRuleKind {
     Selector { fragment: &'static str },
@@ -239,44 +231,4 @@ impl<const N: usize, const R: usize> Sx<N, R> {
             root_rule_len: self_root_rule_len + 1,
         }
     }
-
-    css_declaration_methods!(width, "width");
-    css_declaration_methods!(height, "height");
-    css_declaration_methods!(font_size, "font-size");
-    css_declaration_methods!(font_weight, "font-weight");
-    css_declaration_methods!(font_family, "font-family");
-    css_declaration_methods!(opacity, "opacity");
-    css_declaration_methods!(color, "color");
-    css_declaration_methods!(background_color, "background-color");
-    css_declaration_methods!(box_shadow, "box-shadow");
-    css_declaration_methods!(gap, "gap");
-    css_declaration_methods!(padding, "padding");
-    css_declaration_methods!(padding_top, "padding-top");
-    css_declaration_methods!(padding_right, "padding-right");
-    css_declaration_methods!(padding_bottom, "padding-bottom");
-    css_declaration_methods!(padding_left, "padding-left");
-    css_declaration_methods!(margin, "margin");
-    css_declaration_methods!(margin_top, "margin-top");
-    css_declaration_methods!(margin_right, "margin-right");
-    css_declaration_methods!(margin_bottom, "margin-bottom");
-    css_declaration_methods!(margin_left, "margin-left");
-    css_declaration_methods!(border_radius, "border-radius");
-    css_declaration_methods!(border_top_left_radius, "border-top-left-radius");
-    css_declaration_methods!(border_top_right_radius, "border-top-right-radius");
-    css_declaration_methods!(border_bottom_right_radius, "border-bottom-right-radius");
-    css_declaration_methods!(border_bottom_left_radius, "border-bottom-left-radius");
-    css_declaration_methods!(cursor, "cursor");
-    css_declaration_methods!(user_select, "user-select");
-    css_declaration_methods!(text_transform, "text-transform");
-    css_declaration_methods!(text_align, "text-align");
-    css_declaration_methods!(position, "position");
-    css_declaration_methods!(overflow, "overflow");
-    css_declaration_methods!(transition, "transition");
-    css_declaration_methods!(content, "content");
-    css_declaration_methods!(left, "left");
-    css_declaration_methods!(top, "top");
-    css_declaration_methods!(pointer_events, "pointer-events");
-    css_declaration_methods!(background, "background");
-    css_declaration_methods!(transform, "transform");
-    css_declaration_methods!(transform_origin, "transform-origin");
 }

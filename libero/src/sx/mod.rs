@@ -1,5 +1,6 @@
 mod context;
 mod declaration;
+mod declaration_methods;
 
 mod optimizer;
 mod static_value;
