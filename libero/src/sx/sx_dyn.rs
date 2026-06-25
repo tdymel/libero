@@ -2,7 +2,7 @@ use crate::{
     Size,
     sx::{
         declaration::StaticDeclaration,
-        sx::{NestedRuleKind, NestedRuleMeta, Sx},
+        sx::{NestedRuleKind, NestedRuleMeta, Sx, SxRef},
     },
 };
 use std::fmt;
@@ -184,14 +184,14 @@ fn build_nested_rule(
     }
 }
 
-impl<const N: usize, const R: usize> From<Sx<N, R>> for SxDyn {
-    fn from(sx: Sx<N, R>) -> Self {
+impl<'a> From<SxRef<'a>> for SxDyn {
+    fn from(sx: SxRef<'a>) -> Self {
         build_sx_dyn(
-            &sx.declarations,
-            &sx.nested_rules,
+            sx.declarations,
+            sx.nested_rules,
             0,
             sx.root_decl_len,
-            R - sx.root_rule_len,
+            sx.nested_rules.len() - sx.root_rule_len,
             sx.root_rule_len,
         )
     }
@@ -199,20 +199,19 @@ impl<const N: usize, const R: usize> From<Sx<N, R>> for SxDyn {
 
 impl<const N: usize, const R: usize> From<&Sx<N, R>> for SxDyn {
     fn from(sx: &Sx<N, R>) -> Self {
-        build_sx_dyn(
-            &sx.declarations,
-            &sx.nested_rules,
-            0,
-            sx.root_decl_len,
-            R - sx.root_rule_len,
-            sx.root_rule_len,
-        )
+        SxDyn::from(sx.as_ref())
+    }
+}
+
+impl<const N: usize, const R: usize> From<Sx<N, R>> for SxDyn {
+    fn from(sx: Sx<N, R>) -> Self {
+        SxDyn::from(sx.as_ref())
     }
 }
 
 impl<const N: usize, const R: usize> From<Sx<N, R>> for Option<SxDyn> {
     fn from(sx: Sx<N, R>) -> Self {
-        Some(sx.into())
+        Some(SxDyn::from(sx.as_ref()))
     }
 }
 

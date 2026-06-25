@@ -37,6 +37,25 @@ pub struct Sx<const N: usize, const R: usize> {
     pub(crate) root_rule_len: usize,
 }
 
+#[derive(Clone, Copy)]
+pub struct SxRef<'a> {
+    pub(crate) declarations: &'a [StaticDeclaration],
+    pub(crate) nested_rules: &'a [NestedRuleMeta],
+    pub(crate) root_decl_len: usize,
+    pub(crate) root_rule_len: usize,
+}
+
+impl<'a, const N: usize, const R: usize> From<&'a Sx<N, R>> for SxRef<'a> {
+    fn from(sx: &'a Sx<N, R>) -> Self {
+        Self {
+            declarations: &sx.declarations,
+            nested_rules: &sx.nested_rules,
+            root_decl_len: sx.root_decl_len,
+            root_rule_len: sx.root_rule_len,
+        }
+    }
+}
+
 pub const fn sx() -> Sx<0, 0> {
     Sx {
         declarations: [],
@@ -89,6 +108,10 @@ impl<const N: usize, const R: usize> Sx<N, R> {
     }
 
     pub fn into_dyn(self) -> SxDyn {
+        SxDyn::from(self.as_ref())
+    }
+
+    pub fn as_ref(&self) -> SxRef<'_> {
         self.into()
     }
 
