@@ -1,8 +1,8 @@
 use crate::{
     Size,
     sx::{
-        const_arr::ConstArr, declaration::StaticDeclaration, static_value::IntoStaticValue,
-        sx_dyn::SxDyn,
+        const_arr::ConstArr, declaration::StaticDeclaration, declaration_methods::StaticPropertyId,
+        static_value::IntoStaticValue, sx_dyn::SxDyn,
     },
 };
 
@@ -70,9 +70,9 @@ impl<const N: usize, const R: usize> Sx<N, R> {
         }
     }
 
-    pub const fn other(
+    pub(crate) const fn property(
         self,
-        key: &'static str,
+        key: StaticPropertyId,
         value: impl const IntoStaticValue,
     ) -> Sx<{ N + 1 }, R> {
         let value = value.into_static_value();

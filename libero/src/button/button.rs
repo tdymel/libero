@@ -7,8 +7,7 @@ use crate::{Color, Size, call_handler, sx as sx_builder, use_resolved_class};
 use super::button_props::ButtonProps;
 
 pub fn Button(props: ButtonProps) -> Element {
-    let class = use_resolved_class(
-        sx_builder()
+    let button_sx = sx_builder()
             .background_color(Color::Primary.shade(5))
             .border_radius(Size::Sm)
             .padding(Size::Sm)
@@ -52,10 +51,25 @@ pub fn Button(props: ButtonProps) -> Element {
             .active(
                 sx_builder()
                     .box_shadow("0px 1px 1px -1px rgba(0, 0, 0, 0.2)")
-            ),
-        props.sx,
-        props.class,
-    );
+            );
+
+    // #[cfg(debug_assertions)]
+    // {
+    //     let total_size = std::mem::size_of_val(&button_sx);
+    //     let declaration_count = button_sx.declarations.len();
+    //     let nested_rule_count = button_sx.nested_rules.len();
+    //     let declaration_bytes = std::mem::size_of::<crate::sx::SxStaticDeclaration>();
+    //     let nested_rule_bytes = std::mem::size_of::<crate::sx::NestedRuleMeta>();
+    //     let overhead = total_size
+    //         .saturating_sub(declaration_count * declaration_bytes)
+    //         .saturating_sub(nested_rule_count * nested_rule_bytes);
+
+    //     eprintln!(
+    //         "Button base sx size: {total_size} bytes ({declaration_count} declarations × {declaration_bytes} bytes, {nested_rule_count} nested rules × {nested_rule_bytes} bytes, {overhead} bytes overhead)"
+    //     );
+    // }
+
+    let class = use_resolved_class(button_sx, props.sx, props.class);
 
     rsx! {
         div {

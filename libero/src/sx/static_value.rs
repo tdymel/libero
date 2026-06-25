@@ -6,7 +6,7 @@ use std::fmt;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StaticValue {
-    Integer(i64),
+    Integer(i32),
     Size(Size),
     Color(ThemeColor),
     Text(&'static str),
@@ -22,9 +22,15 @@ impl const IntoStaticValue for StaticValue {
     }
 }
 
-impl const IntoStaticValue for i64 {
+impl const IntoStaticValue for i32 {
     fn into_static_value(self) -> StaticValue {
         StaticValue::Integer(self)
+    }
+}
+
+impl const IntoStaticValue for i64 {
+    fn into_static_value(self) -> StaticValue {
+        StaticValue::Integer(self as i32)
     }
 }
 

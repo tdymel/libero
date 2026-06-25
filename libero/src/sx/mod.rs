@@ -12,5 +12,5 @@ pub(crate) use context::class_name_from_id;
 pub use context::{SxContext, use_sx};
 pub use declaration::StaticDeclaration;
 pub use optimizer::optimize_styles;
-pub use sx::{Sx, sx};
+pub use sx::{NestedRuleMeta, Sx, sx};
 pub use sx_dyn::{NestedRule, SxDyn};
