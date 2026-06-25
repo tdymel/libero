@@ -1,7 +1,11 @@
-use crate::{Size, sx::declaration::StaticDeclaration};
+use crate::{
+    Size,
+    sx::{
+        declaration::StaticDeclaration,
+        sx::{NestedRuleKind, NestedRuleMeta, Sx},
+    },
+};
 use std::fmt;
-
-use super::sx::Sx;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum NestedRule {
@@ -121,26 +125,93 @@ impl SxDyn {
     }
 }
 
-impl<const N: usize> From<Sx<N>> for SxDyn {
-    fn from(sx: Sx<N>) -> Self {
-        Self {
-            declarations: sx.declarations.into_iter().collect(),
-            nested_rules: Vec::new(),
-        }
+fn build_sx_dyn(
+    all_declarations: &[StaticDeclaration],
+    all_nested_rules: &[NestedRuleMeta],
+    decl_start: usize,
+    decl_len: usize,
+    rule_start: usize,
+    rule_len: usize,
+) -> SxDyn {
+    let declarations = all_declarations[decl_start..decl_start + decl_len].to_vec();
+    let nested_rules = all_nested_rules[rule_start..rule_start + rule_len]
+        .iter()
+        .map(|meta| build_nested_rule(all_declarations, all_nested_rules, meta))
+        .collect();
+
+    SxDyn {
+        declarations,
+        nested_rules,
     }
 }
 
-impl<const N: usize> From<&Sx<N>> for SxDyn {
-    fn from(sx: &Sx<N>) -> Self {
-        Self {
-            declarations: sx.declarations.iter().cloned().collect(),
-            nested_rules: Vec::new(),
-        }
+fn build_nested_rule(
+    all_declarations: &[StaticDeclaration],
+    all_nested_rules: &[NestedRuleMeta],
+    meta: &NestedRuleMeta,
+) -> NestedRule {
+    let sx = build_sx_dyn(
+        all_declarations,
+        all_nested_rules,
+        meta.decl_start,
+        meta.decl_len,
+        meta.child_rule_start,
+        meta.child_rule_len,
+    );
+
+    match &meta.kind {
+        NestedRuleKind::Selector { fragment } => NestedRule::Selector {
+            fragment,
+            sx: Box::new(sx),
+        },
+        NestedRuleKind::Media { query } => NestedRule::Media {
+            query: (*query).to_string(),
+            sx: Box::new(sx),
+        },
+        NestedRuleKind::MediaUp { size } => NestedRule::MediaUp {
+            size: *size,
+            sx: Box::new(sx),
+        },
+        NestedRuleKind::MediaDown { size } => NestedRule::MediaDown {
+            size: *size,
+            sx: Box::new(sx),
+        },
+        NestedRuleKind::MediaBetween { min, max } => NestedRule::MediaBetween {
+            min: *min,
+            max: *max,
+            sx: Box::new(sx),
+        },
     }
 }
 
-impl<const N: usize> From<Sx<N>> for Option<SxDyn> {
-    fn from(sx: Sx<N>) -> Self {
+impl<const N: usize, const R: usize> From<Sx<N, R>> for SxDyn {
+    fn from(sx: Sx<N, R>) -> Self {
+        build_sx_dyn(
+            &sx.declarations,
+            &sx.nested_rules,
+            0,
+            sx.root_decl_len,
+            R - sx.root_rule_len,
+            sx.root_rule_len,
+        )
+    }
+}
+
+impl<const N: usize, const R: usize> From<&Sx<N, R>> for SxDyn {
+    fn from(sx: &Sx<N, R>) -> Self {
+        build_sx_dyn(
+            &sx.declarations,
+            &sx.nested_rules,
+            0,
+            sx.root_decl_len,
+            R - sx.root_rule_len,
+            sx.root_rule_len,
+        )
+    }
+}
+
+impl<const N: usize, const R: usize> From<Sx<N, R>> for Option<SxDyn> {
+    fn from(sx: Sx<N, R>) -> Self {
         Some(sx.into())
     }
 }
