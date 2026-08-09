@@ -1,6 +1,6 @@
 use crate::common::ConstStr;
 
-use crate::theme::{Color, ColorShade, ColorValue, Size};
+use crate::theme::{ColorValue, Size};
 
 use super::{declaration::Declaration, sx::Sx, sx_block::SxBlock, sx_modifier::SxModifier};
 
