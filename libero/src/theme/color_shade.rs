@@ -26,4 +26,29 @@ impl ColorShade {
             Self::S9 => "9",
         }
     }
+
+    pub const fn parse(value: &'static str, palette_len: usize) -> Self {
+        let bytes = value.as_bytes();
+        if bytes.len() == palette_len {
+            return Self::S5;
+        }
+
+        if bytes.len() == palette_len + 2 && bytes[palette_len] == b'.' {
+            let shade = bytes[palette_len + 1];
+            return match shade {
+                b'1' => Self::S1,
+                b'2' => Self::S2,
+                b'3' => Self::S3,
+                b'4' => Self::S4,
+                b'5' => Self::S5,
+                b'6' => Self::S6,
+                b'7' => Self::S7,
+                b'8' => Self::S8,
+                b'9' => Self::S9,
+                _ => panic!("invalid palette token"),
+            };
+        }
+
+        panic!("invalid palette token")
+    }
 }
