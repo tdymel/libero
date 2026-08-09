@@ -105,10 +105,7 @@ impl Sx {
         self.blocks.as_ref()
     }
 
-    pub const fn to_css(
-        &self,
-        class_name: &'static str,
-    ) -> ConstStr<{ sx_to_css::DEFAULT_SX_CSS_CAPACITY }> {
+    pub const fn to_css(&self, class_name: &'static str) -> ConstStr {
         sx_to_css::to_css(self, class_name)
     }
 }
@@ -151,7 +148,7 @@ mod tests {
                 ),
             );
 
-        const CSS: ConstStr<{ sx_to_css::DEFAULT_SX_CSS_CAPACITY }> = STYLE.to_css(".button");
+        const CSS: ConstStr = STYLE.to_css(".button");
         assert_eq!(
             CSS.as_str(),
             ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button[data-state~=\"selected\"]{background:pink;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:black;}}"
