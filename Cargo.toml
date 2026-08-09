@@ -1,0 +1,3 @@
+[workspace]
+members = ["libero", "playground"]
+resolver = "3"
