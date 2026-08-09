@@ -58,8 +58,8 @@ pub struct ColorCssVar {
 impl ColorCssVar {
     pub const PRIMARY: ColorCssVar = ColorCssVar::new("--lsx-primary-");
     pub const SECONDARY: ColorCssVar = ColorCssVar::new("--lsx-secondary-");
-    pub const PRIMARY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-primary-contrast");
-    pub const SECONDARY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-secondary-contrast");
+    pub const PRIMARY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-primary-contrast-");
+    pub const SECONDARY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-secondary-contrast-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self {
@@ -68,18 +68,10 @@ impl ColorCssVar {
     }
 
     pub const fn push_var(self, css: ConstStr, shade: ColorShade) -> ConstStr {
-        self.css_var.push_var(css, shade.as_hundreds_str())
-    }
-
-    pub const fn push_css_var(self, css: ConstStr) -> ConstStr {
-        self.css_var.push_var(css, "")
+        self.css_var.push_var(css, shade.as_str())
     }
 
     pub const fn push_name_with_shade(self, css: ConstStr, shade: ColorShade) -> ConstStr {
-        self.css_var.push_name(css, shade.as_hundreds_str())
-    }
-
-    pub const fn push_name(self, css: ConstStr) -> ConstStr {
-        self.css_var.push_name(css, "")
+        self.css_var.push_name(css, shade.as_str())
     }
 }

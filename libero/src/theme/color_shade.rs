@@ -13,17 +13,17 @@ pub enum ColorShade {
 }
 
 impl ColorShade {
-    pub const fn as_hundreds_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            Self::S1 => "100",
-            Self::S2 => "200",
-            Self::S3 => "300",
-            Self::S4 => "400",
-            Self::S5 => "500",
-            Self::S6 => "600",
-            Self::S7 => "700",
-            Self::S8 => "800",
-            Self::S9 => "900",
+            Self::S1 => "1",
+            Self::S2 => "2",
+            Self::S3 => "3",
+            Self::S4 => "4",
+            Self::S5 => "5",
+            Self::S6 => "6",
+            Self::S7 => "7",
+            Self::S8 => "8",
+            Self::S9 => "9",
         }
     }
 }

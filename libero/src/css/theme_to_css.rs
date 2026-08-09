@@ -68,7 +68,51 @@ impl Theme {
             ColorValue::Shade(color, ColorShade::S9),
             base.shade(ColorShade::S9),
         );
-        push_color_var(css, ColorValue::Contrast(color), base.contrast())
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S1),
+            base.shade(ColorShade::S1).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S2),
+            base.shade(ColorShade::S2).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S3),
+            base.shade(ColorShade::S3).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S4),
+            base.shade(ColorShade::S4).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S5),
+            base.shade(ColorShade::S5).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S6),
+            base.shade(ColorShade::S6).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S7),
+            base.shade(ColorShade::S7).contrast(),
+        );
+        css = push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S8),
+            base.shade(ColorShade::S8).contrast(),
+        );
+        push_color_var(
+            css,
+            ColorValue::Contrast(color, ColorShade::S9),
+            base.shade(ColorShade::S9).contrast(),
+        )
     }
 }
 
@@ -122,9 +166,10 @@ mod tests {
 
         assert!(CSS.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(CSS.as_str().contains("--lsx-spacing-xl:20px;"));
-        assert!(CSS.as_str().contains("--lsx-primary-100:#D2E7FA;"));
-        assert!(CSS.as_str().contains("--lsx-primary-contrast:#FFFFFF;"));
-        assert!(CSS.as_str().contains("--lsx-secondary-700:#E03131;"));
+        assert!(CSS.as_str().contains("--lsx-primary-1:#D2E7FA;"));
+        assert!(CSS.as_str().contains("--lsx-primary-contrast-1:#000000;"));
+        assert!(CSS.as_str().contains("--lsx-primary-contrast-7:#FFFFFF;"));
+        assert!(CSS.as_str().contains("--lsx-secondary-7:#E03131;"));
         assert!(CSS.as_str().starts_with(":root{"));
         assert!(CSS.as_str().ends_with("}"));
     }
