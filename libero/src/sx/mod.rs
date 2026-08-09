@@ -1,10 +1,10 @@
-pub(crate) mod css;
 mod declaration;
 mod selector_block;
 mod sx;
-mod sx_block;
-mod sx_modifier;
+pub mod sx_block;
+pub mod sx_modifier;
 
 pub use declaration::Declaration;
+pub(crate) use selector_block::ROOT_BLOCK_PARENT;
 pub use selector_block::SelectorBlock;
 pub use sx::{Sx, sx};

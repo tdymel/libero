@@ -1,6 +1,7 @@
 use crate::common::{ConstStr, ConstVec};
 
-use super::{css, declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier};
+use super::{declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier};
+use crate::css;
 use crate::theme::Size;
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
@@ -76,7 +77,7 @@ impl Sx {
             modifier,
             start,
             end,
-            parent: css::ROOT_BLOCK_PARENT,
+            parent: super::ROOT_BLOCK_PARENT,
         });
 
         let nested_blocks = nested.blocks();
@@ -87,7 +88,7 @@ impl Sx {
                 modifier: nested_block.modifier,
                 start: start + nested_block.start,
                 end: start + nested_block.end,
-                parent: if nested_block.parent == css::ROOT_BLOCK_PARENT {
+                parent: if nested_block.parent == super::ROOT_BLOCK_PARENT {
                     parent
                 } else {
                     parent + 1 + nested_block.parent

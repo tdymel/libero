@@ -12,7 +12,7 @@ impl LiberoContext {
     pub const fn new(theme: &'static Theme) -> Self {
         Self {
             theme,
-            theme_css: theme.to_css_vars(),
+            theme_css: theme.to_css(),
         }
     }
 }

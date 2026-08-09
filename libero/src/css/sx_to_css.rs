@@ -1,11 +1,12 @@
 use crate::common::ConstStr;
 use crate::theme::{ColorValue, Size};
 
-use super::css_var::CssVar;
-use crate::sx::{declaration::Declaration, sx::Sx, sx_block::SxBlock, sx_modifier::SxModifier};
+use super::css_var::SizeCssVar;
+use crate::sx::sx_block::SxBlock;
+use crate::sx::sx_modifier::SxModifier;
+use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
 
 pub(crate) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
-pub(crate) const ROOT_BLOCK_PARENT: usize = usize::MAX;
 
 pub(crate) const fn to_css(sx: &Sx, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
     let blocks = sx.blocks();
@@ -176,11 +177,11 @@ const fn push_theme_aware_value(
     value: &'static str,
 ) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
     if let Some(color_value) = ColorValue::parse(value) {
-        return color_value.push_css_var(css);
+        return color_value.push_var(css);
     }
 
     if let Some(size) = Size::parse(value) {
-        return CssVar::SPACING.push_value_with_size(css, size);
+        return SizeCssVar::SPACING.push_var(css, size);
     }
 
     css.push_str(value)

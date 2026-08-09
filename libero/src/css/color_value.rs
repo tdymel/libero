@@ -3,31 +3,31 @@ use crate::{
     theme::{Color, ColorValue},
 };
 
-use super::css_var::CssVar;
+use super::css_var::ColorCssVar;
 
 impl ColorValue {
     pub(crate) const fn push_var_name(self, css: ConstStr) -> ConstStr {
         match self {
             Self::Shade(color, shade) => match color {
-                Color::Primary => CssVar::PRIMARY.push_name_with_shade(css, shade),
-                Color::Secondary => CssVar::SECONDARY.push_name_with_shade(css, shade),
+                Color::Primary => ColorCssVar::PRIMARY.push_name_with_shade(css, shade),
+                Color::Secondary => ColorCssVar::SECONDARY.push_name_with_shade(css, shade),
             },
             Self::Contrast(color) => match color {
-                Color::Primary => CssVar::PRIMARY_CONTRAST.push_name(css),
-                Color::Secondary => CssVar::SECONDARY_CONTRAST.push_name(css),
+                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.push_name(css),
+                Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.push_name(css),
             },
         }
     }
 
-    pub(crate) const fn push_css_var(self, css: ConstStr) -> ConstStr {
+    pub(crate) const fn push_var(self, css: ConstStr) -> ConstStr {
         match self {
             Self::Shade(color, shade) => match color {
-                Color::Primary => CssVar::PRIMARY.push_value_with_shade(css, shade),
-                Color::Secondary => CssVar::SECONDARY.push_value_with_shade(css, shade),
+                Color::Primary => ColorCssVar::PRIMARY.push_var(css, shade),
+                Color::Secondary => ColorCssVar::SECONDARY.push_var(css, shade),
             },
             Self::Contrast(color) => match color {
-                Color::Primary => CssVar::PRIMARY_CONTRAST.push_value(css),
-                Color::Secondary => CssVar::SECONDARY_CONTRAST.push_value(css),
+                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.push_css_var(css),
+                Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.push_css_var(css),
             },
         }
     }
@@ -42,9 +42,9 @@ mod tests {
     #[test]
     fn color_value_happy_path() {
         const PRIMARY: ConstStr =
-            ColorValue::Shade(Color::Primary, ColorShade::S1).push_css_var(ConstStr::new());
+            ColorValue::Shade(Color::Primary, ColorShade::S1).push_var(ConstStr::new());
         const SECONDARY_CONTRAST: ConstStr =
-            ColorValue::Contrast(Color::Secondary).push_css_var(ConstStr::new());
+            ColorValue::Contrast(Color::Secondary).push_var(ConstStr::new());
         const PRIMARY_VAR: ConstStr =
             ColorValue::Shade(Color::Primary, ColorShade::S1).push_var_name(ConstStr::new());
 
