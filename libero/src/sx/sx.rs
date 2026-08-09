@@ -27,6 +27,18 @@ impl Sx {
         self
     }
 
+    pub const fn background(self, value: &'static str) -> Self {
+        self.with("background", value)
+    }
+
+    pub const fn width(self, value: &'static str) -> Self {
+        self.with("width", value)
+    }
+
+    pub const fn height(self, value: &'static str) -> Self {
+        self.with("height", value)
+    }
+
     pub const fn declarations(&self) -> &[Declaration] {
         self.declarations.as_ref()
     }
@@ -34,4 +46,27 @@ impl Sx {
 
 pub const fn sx() -> Sx {
     Sx::new()
+}
+
+#[test]
+fn builds_sx_with_common_properties_in_const_context() {
+    const STYLE: Sx = sx().background("red").width("100px").height("200px");
+
+    assert_eq!(
+        STYLE.declarations(),
+        &[
+            Declaration {
+                property: "background",
+                value: "red",
+            },
+            Declaration {
+                property: "width",
+                value: "100px",
+            },
+            Declaration {
+                property: "height",
+                value: "200px",
+            },
+        ]
+    );
 }
