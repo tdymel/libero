@@ -1,3 +1,5 @@
+use crate::theme::Size;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Breakpoint {
     XS,
@@ -8,23 +10,23 @@ pub enum Breakpoint {
 }
 
 impl Breakpoint {
-    pub const fn name(&self) -> &'static str {
+    pub const fn size(&self) -> Size {
         match self {
-            Self::XS => "xs",
-            Self::S => "s",
-            Self::M => "m",
-            Self::L => "l",
-            Self::XL => "xl",
+            Self::XS => Size::Xs,
+            Self::S => Size::Sm,
+            Self::M => Size::Md,
+            Self::L => Size::Lg,
+            Self::XL => Size::Xl,
         }
     }
 
     pub const fn value(&self) -> &'static str {
-        match self {
-            Self::XS => "36em",
-            Self::S => "48em",
-            Self::M => "62em",
-            Self::L => "75em",
-            Self::XL => "88em",
+        match self.size() {
+            Size::Xs => "36em",
+            Size::Sm => "48em",
+            Size::Md => "62em",
+            Size::Lg => "75em",
+            Size::Xl => "88em",
         }
     }
 }
