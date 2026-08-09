@@ -31,7 +31,7 @@ impl HexColor {
         self.rgb
     }
 
-    pub const fn shade(self, shade: ColorShade) -> Self {
+    pub(crate) const fn shade(self, shade: ColorShade) -> Self {
         let percent = match shade {
             ColorShade::S1 => 80,
             ColorShade::S2 => 65,
@@ -51,7 +51,7 @@ impl HexColor {
         }
     }
 
-    pub const fn contrast(self) -> Self {
+    pub(crate) const fn contrast(self) -> Self {
         if self.luminance() >= 140 {
             HexColor::new(0x00_00_00)
         } else {
@@ -59,7 +59,7 @@ impl HexColor {
         }
     }
 
-    pub const fn push_hex(self, mut css: ConstStr) -> ConstStr {
+    pub(crate) const fn push_hex(self, mut css: ConstStr) -> ConstStr {
         css = css.push_char('#');
         css = css.push_char(hex_digit(self.r() >> 4));
         css = css.push_char(hex_digit(self.r() & 0x0F));

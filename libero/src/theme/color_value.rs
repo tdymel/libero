@@ -9,7 +9,7 @@ pub enum ColorValue {
 }
 
 impl ColorValue {
-    pub const fn parse(value: &'static str) -> Option<Self> {
+    pub(crate) const fn parse(value: &'static str) -> Option<Self> {
         if starts_with(value, "primary") {
             return Some(Self::Shade(Color::Primary, parse_shade(value, 7)));
         }
@@ -21,7 +21,7 @@ impl ColorValue {
         None
     }
 
-    pub const fn push_var_name(self, mut css: ConstStr) -> ConstStr {
+    pub(crate) const fn push_var_name(self, mut css: ConstStr) -> ConstStr {
         css = css.push_str("--lsx-");
         match self {
             Self::Shade(color, shade) => {
@@ -37,7 +37,7 @@ impl ColorValue {
         css
     }
 
-    pub const fn push_css_var(self, mut css: ConstStr) -> ConstStr {
+    pub(crate) const fn push_css_var(self, mut css: ConstStr) -> ConstStr {
         css = css.push_str("var(");
         css = self.push_var_name(css);
         css.push_char(')')
