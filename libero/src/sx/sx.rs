@@ -121,8 +121,8 @@ mod tests {
     #[test]
     fn sx_happy_path() {
         const STYLE: Sx = sx()
-            .background("red")
-            .hover(sx().background("blue").width("120px"))
+            .background("primary")
+            .hover(sx().background("primary.1").width("120px"))
             .height("200px")
             .focus(sx().height("220px"))
             .selector("> .item", sx().width("20px"))
@@ -130,7 +130,7 @@ mod tests {
             .selector(" ~ .peer", sx().height("240px"))
             .selector(" + .next", sx().width("140px"))
             .selector(":has(+ .prev)", sx().background("orange"))
-            .when("selected", sx().background("pink"))
+            .when("selected", sx().background("secondary"))
             .selector(
                 " .nested",
                 sx().background("purple").selector(
@@ -144,14 +144,14 @@ mod tests {
                 sx().width("400px").breakpoint(
                     Breakpoint::L,
                     sx().height("500px")
-                        .breakpoint(Breakpoint::M, sx().background("black")),
+                        .breakpoint(Breakpoint::M, sx().background("secondary.7")),
                 ),
             );
 
         const CSS: ConstStr = STYLE.to_css(".button");
         assert_eq!(
             CSS.as_str(),
-            ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button[data-state~=\"selected\"]{background:pink;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:black;}}"
+            ".button{background:var(--lsx-primary-500);height:200px;}.button:hover{background:var(--lsx-primary-100);width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button[data-state~=\"selected\"]{background:var(--lsx-secondary-500);}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:var(--lsx-secondary-700);}}"
         );
     }
 }

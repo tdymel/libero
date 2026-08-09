@@ -121,7 +121,7 @@ const fn emit_rule(
         let declaration = declarations[declaration_index];
         css = css.push_str(declaration.property);
         css = css.push_char(':');
-        css = css.push_str(declaration.value);
+        css = push_theme_aware_value(css, declaration.value);
         css = css.push_char(';');
         declaration_index += 1;
     }
@@ -170,6 +170,83 @@ const fn declaration_belongs_to_direct_child(
         block_index += 1;
     }
     false
+}
+
+const fn push_theme_aware_value(
+    mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    value: &'static str,
+) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    if let Some((palette, shade)) = parse_palette_token(value) {
+        css = css.push_str("var(--lsx-");
+        css = css.push_str(palette);
+        css = css.push_char('-');
+        css = css.push_char(shade_hundreds_digit(shade));
+        css = css.push_char(shade_tens_digit(shade));
+        css = css.push_char('0');
+        css = css.push_char(')');
+        return css;
+    }
+
+    css.push_str(value)
+}
+
+const fn parse_palette_token(value: &'static str) -> Option<(&'static str, u8)> {
+    if starts_with(value, "primary") {
+        return Some(("primary", parse_shade(value, 7)));
+    }
+
+    if starts_with(value, "secondary") {
+        return Some(("secondary", parse_shade(value, 9)));
+    }
+
+    None
+}
+
+const fn starts_with(value: &str, prefix: &str) -> bool {
+    let value = value.as_bytes();
+    let prefix = prefix.as_bytes();
+
+    if prefix.len() > value.len() {
+        return false;
+    }
+
+    let mut i = 0;
+    while i < prefix.len() {
+        if value[i] != prefix[i] {
+            return false;
+        }
+        i += 1;
+    }
+
+    true
+}
+
+const fn parse_shade(value: &'static str, palette_len: usize) -> u8 {
+    let bytes = value.as_bytes();
+    if bytes.len() == palette_len {
+        return 5;
+    }
+
+    if bytes.len() == palette_len + 2 && bytes[palette_len] == b'.' {
+        let shade = bytes[palette_len + 1];
+        if shade >= b'0' && shade <= b'9' {
+            return shade - b'0';
+        }
+    }
+
+    panic!("invalid palette token")
+}
+
+const fn shade_hundreds_digit(shade: u8) -> char {
+    if shade == 0 {
+        '0'
+    } else {
+        ((b'0' + shade) as char)
+    }
+}
+
+const fn shade_tens_digit(shade: u8) -> char {
+    if shade == 0 { '0' } else { '0' }
 }
 
 const fn merge_breakpoint(current: Option<Breakpoint>, next: Breakpoint) -> Breakpoint {
