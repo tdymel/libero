@@ -1,13 +1,13 @@
 use crate::common::ConstStr;
+use crate::theme::{ColorValue, Size};
 
-use crate::theme::{ColorValue, SPACING_VAR_PREFIX, Size};
+use super::css_var::CssVar;
+use crate::sx::{declaration::Declaration, sx::Sx, sx_block::SxBlock, sx_modifier::SxModifier};
 
-use super::{declaration::Declaration, sx::Sx, sx_block::SxBlock, sx_modifier::SxModifier};
+pub(crate) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
+pub(crate) const ROOT_BLOCK_PARENT: usize = usize::MAX;
 
-pub(super) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
-pub(super) const ROOT_BLOCK_PARENT: usize = usize::MAX;
-
-pub(super) const fn to_css(sx: &Sx, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+pub(crate) const fn to_css(sx: &Sx, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
     let blocks = sx.blocks();
     let declarations = sx.declarations();
     let mut css = ConstStr::new();
@@ -172,7 +172,7 @@ const fn declaration_belongs_to_direct_child(
 }
 
 const fn push_theme_aware_value(
-    mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
     value: &'static str,
 ) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
     if let Some(color_value) = ColorValue::parse(value) {
@@ -180,7 +180,7 @@ const fn push_theme_aware_value(
     }
 
     if let Some(size) = Size::parse(value) {
-        return size.push_css_var(css, SPACING_VAR_PREFIX);
+        return CssVar::SPACING.push_value_with_size(css, size);
     }
 
     css.push_str(value)

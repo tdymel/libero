@@ -12,4 +12,4 @@ pub use color_value::ColorValue;
 pub use hex_color::HexColor;
 pub use size::Size;
 pub use sizes::Sizes;
-pub use theme::{SPACING_VAR_PREFIX, Theme};
+pub use theme::Theme;

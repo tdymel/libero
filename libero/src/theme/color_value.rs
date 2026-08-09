@@ -1,4 +1,4 @@
-use crate::common::ConstStr;
+use crate::{common::ConstStr, sx::css::CssVar};
 
 use super::{Color, ColorShade};
 
@@ -21,26 +21,30 @@ impl ColorValue {
         None
     }
 
-    pub(crate) const fn push_var_name(self, mut css: ConstStr) -> ConstStr {
-        css = css.push_str("--lsx-");
+    pub(crate) const fn push_var_name(self, css: ConstStr) -> ConstStr {
         match self {
-            Self::Shade(color, shade) => {
-                css = css.push_str(color.as_str());
-                css = css.push_char('-');
-                css = css.push_str(shade.as_hundreds_str());
-            }
-            Self::Contrast(color) => {
-                css = css.push_str(color.as_str());
-                css = css.push_str("-contrast");
-            }
+            Self::Shade(color, shade) => match color {
+                Color::Primary => CssVar::PRIMARY.push_name_with_shade(css, shade),
+                Color::Secondary => CssVar::SECONDARY.push_name_with_shade(css, shade),
+            },
+            Self::Contrast(color) => match color {
+                Color::Primary => CssVar::PRIMARY_CONTRAST.push_name(css),
+                Color::Secondary => CssVar::SECONDARY_CONTRAST.push_name(css),
+            },
         }
-        css
     }
 
-    pub(crate) const fn push_css_var(self, mut css: ConstStr) -> ConstStr {
-        css = css.push_str("var(");
-        css = self.push_var_name(css);
-        css.push_char(')')
+    pub(crate) const fn push_css_var(self, css: ConstStr) -> ConstStr {
+        match self {
+            Self::Shade(color, shade) => match color {
+                Color::Primary => CssVar::PRIMARY.push_value_with_shade(css, shade),
+                Color::Secondary => CssVar::SECONDARY.push_value_with_shade(css, shade),
+            },
+            Self::Contrast(color) => match color {
+                Color::Primary => CssVar::PRIMARY_CONTRAST.push_value(css),
+                Color::Secondary => CssVar::SECONDARY_CONTRAST.push_value(css),
+            },
+        }
     }
 }
 

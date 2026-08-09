@@ -1,8 +1,8 @@
 use crate::common::ConstStr;
 
-use super::{Color, ColorShade, ColorValue, HexColor, Size, Sizes};
+use crate::sx::css::CssVar;
 
-pub const SPACING_VAR_PREFIX: &str = "--lsx-spacing-";
+use super::{Color, ColorShade, ColorValue, HexColor, Size, Sizes};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Theme {
@@ -89,7 +89,7 @@ impl Theme {
 }
 
 const fn push_spacing_var(mut css: ConstStr, size: Size, value: u8) -> ConstStr {
-    css = size.push_var_name(css, SPACING_VAR_PREFIX);
+    css = CssVar::SPACING.push_name_with_size(css, size);
     css = css.push_char(':');
     css = push_u8(css, value);
     css = css.push_str("px;");
