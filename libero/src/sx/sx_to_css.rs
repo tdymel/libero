@@ -1,9 +1,8 @@
 use crate::common::ConstStr;
 
-use super::{
-    breakpoint::Breakpoint, declaration::Declaration, sx::Sx, sx_block::SxBlock,
-    sx_modifier::SxModifier,
-};
+use crate::theme::Size;
+
+use super::{declaration::Declaration, sx::Sx, sx_block::SxBlock, sx_modifier::SxModifier};
 
 pub(super) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
 pub(super) const ROOT_BLOCK_PARENT: usize = usize::MAX;
@@ -33,7 +32,7 @@ const fn emit_node(
     blocks: &[SxBlock],
     parent_block_index: usize,
     selector: &str,
-    breakpoint: Option<Breakpoint>,
+    breakpoint: Option<Size>,
     start: usize,
     end: usize,
 ) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
@@ -93,7 +92,7 @@ const fn emit_rule(
     blocks: &[SxBlock],
     parent_block_index: usize,
     selector: &str,
-    breakpoint: Option<Breakpoint>,
+    breakpoint: Option<Size>,
     start: usize,
     end: usize,
 ) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
@@ -103,7 +102,7 @@ const fn emit_rule(
 
     if let Some(breakpoint) = breakpoint {
         css = css.push_str("@media (min-width: ");
-        css = css.push_str(breakpoint.value());
+        css = css.push_str(breakpoint.breakpoint_value());
         css = css.push_char(')');
         css = css.push_char('{');
     }
@@ -249,7 +248,7 @@ const fn shade_tens_digit(shade: u8) -> char {
     if shade == 0 { '0' } else { '0' }
 }
 
-const fn merge_breakpoint(current: Option<Breakpoint>, next: Breakpoint) -> Breakpoint {
+const fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {
     match current {
         Some(current) => {
             if breakpoint_order(next) > breakpoint_order(current) {
@@ -262,12 +261,12 @@ const fn merge_breakpoint(current: Option<Breakpoint>, next: Breakpoint) -> Brea
     }
 }
 
-const fn breakpoint_order(breakpoint: Breakpoint) -> usize {
+const fn breakpoint_order(breakpoint: Size) -> usize {
     match breakpoint {
-        Breakpoint::XS => 0,
-        Breakpoint::S => 1,
-        Breakpoint::M => 2,
-        Breakpoint::L => 3,
-        Breakpoint::XL => 4,
+        Size::Xs => 0,
+        Size::Sm => 1,
+        Size::Md => 2,
+        Size::Lg => 3,
+        Size::Xl => 4,
     }
 }

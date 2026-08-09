@@ -1,9 +1,7 @@
 use crate::common::{ConstStr, ConstVec};
 
-use super::{
-    breakpoint::Breakpoint, declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier,
-    sx_to_css,
-};
+use super::{declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier, sx_to_css};
+use crate::theme::Size;
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
 const DEFAULT_SX_BLOCK_CAPACITY: usize = 32;
@@ -61,7 +59,7 @@ impl Sx {
         self.modifier(SxModifier::Selector(selector), nested)
     }
 
-    pub const fn breakpoint(self, breakpoint: Breakpoint, nested: Sx) -> Self {
+    pub const fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
         self.modifier(SxModifier::Breakpoint(breakpoint), nested)
     }
 
@@ -140,11 +138,11 @@ mod tests {
                 ),
             )
             .breakpoint(
-                Breakpoint::S,
+                Size::Sm,
                 sx().width("400px").breakpoint(
-                    Breakpoint::L,
+                    Size::Lg,
                     sx().height("500px")
-                        .breakpoint(Breakpoint::M, sx().background("secondary.7")),
+                        .breakpoint(Size::Md, sx().background("secondary.7")),
                 ),
             );
 

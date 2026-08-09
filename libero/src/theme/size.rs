@@ -18,4 +18,14 @@ impl Size {
             Self::Xl => "xl",
         }
     }
+
+    pub const fn breakpoint_value(&self) -> &'static str {
+        match self {
+            Self::Xs => "36em",
+            Self::Sm => "48em",
+            Self::Md => "62em",
+            Self::Lg => "75em",
+            Self::Xl => "88em",
+        }
+    }
 }
