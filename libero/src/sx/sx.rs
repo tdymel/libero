@@ -1,12 +1,14 @@
 use crate::common::ConstVec;
 
-use super::declaration::Declaration;
+use super::{declaration::Declaration, selector_block::SelectorBlock};
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
+const DEFAULT_SX_SELECTOR_BLOCK_CAPACITY: usize = 16;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Sx {
     declarations: ConstVec<Declaration, DEFAULT_SX_DECLARATION_CAPACITY>,
+    selector_blocks: ConstVec<SelectorBlock, DEFAULT_SX_SELECTOR_BLOCK_CAPACITY>,
 }
 
 impl Default for Sx {
@@ -19,6 +21,7 @@ impl Sx {
     pub const fn new() -> Self {
         Self {
             declarations: ConstVec::new_with_max_size(),
+            selector_blocks: ConstVec::new_with_max_size(),
         }
     }
 
@@ -39,8 +42,24 @@ impl Sx {
         self.with("height", value)
     }
 
+    pub const fn hover(mut self, nested: Sx) -> Self {
+        let start = self.declarations.len();
+        self.declarations.extend(nested.declarations());
+        let end = self.declarations.len();
+        self.selector_blocks.push(SelectorBlock {
+            selector: ":hover",
+            start,
+            end,
+        });
+        self
+    }
+
     pub const fn declarations(&self) -> &[Declaration] {
         self.declarations.as_ref()
+    }
+
+    pub const fn selector_blocks(&self) -> &[SelectorBlock] {
+        self.selector_blocks.as_ref()
     }
 }
 
@@ -48,25 +67,46 @@ pub const fn sx() -> Sx {
     Sx::new()
 }
 
-#[test]
-fn builds_sx_with_common_properties_in_const_context() {
-    const STYLE: Sx = sx().background("red").width("100px").height("200px");
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    assert_eq!(
-        STYLE.declarations(),
-        &[
-            Declaration {
-                property: "background",
-                value: "red",
-            },
-            Declaration {
-                property: "width",
-                value: "100px",
-            },
-            Declaration {
-                property: "height",
-                value: "200px",
-            },
-        ]
-    );
+    #[test]
+    fn sx_happy_path() {
+        const STYLE: Sx = sx()
+            .background("red")
+            .hover(sx().background("blue").width("120px"))
+            .height("200px");
+
+        assert_eq!(
+            STYLE.declarations(),
+            &[
+                Declaration {
+                    property: "background",
+                    value: "red",
+                },
+                Declaration {
+                    property: "background",
+                    value: "blue",
+                },
+                Declaration {
+                    property: "width",
+                    value: "120px",
+                },
+                Declaration {
+                    property: "height",
+                    value: "200px",
+                },
+            ]
+        );
+
+        assert_eq!(
+            STYLE.selector_blocks(),
+            &[SelectorBlock {
+                selector: ":hover",
+                start: 1,
+                end: 3,
+            }]
+        );
+    }
 }
