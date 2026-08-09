@@ -1,6 +1,6 @@
-use crate::common::ConstVec;
+use crate::common::{ConstStr, ConstVec};
 
-use super::{declaration::Declaration, selector_block::SelectorBlock};
+use super::{declaration::Declaration, selector_block::SelectorBlock, sx_to_css};
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
 const DEFAULT_SX_SELECTOR_BLOCK_CAPACITY: usize = 16;
@@ -52,13 +52,33 @@ impl Sx {
 
     pub const fn selector(mut self, selector: &'static str, nested: Sx) -> Self {
         let start = self.declarations.len();
+        let parent = self.selector_blocks.len();
         self.declarations.extend(nested.declarations());
         let end = self.declarations.len();
         self.selector_blocks.push(SelectorBlock {
             selector,
             start,
             end,
+            parent: sx_to_css::ROOT_SELECTOR_BLOCK_PARENT,
         });
+
+        let nested_selector_blocks = nested.selector_blocks();
+        let mut i = 0;
+        while i < nested_selector_blocks.len() {
+            let nested_selector_block = nested_selector_blocks[i];
+            self.selector_blocks.push(SelectorBlock {
+                selector: nested_selector_block.selector,
+                start: start + nested_selector_block.start,
+                end: start + nested_selector_block.end,
+                parent: if nested_selector_block.parent == sx_to_css::ROOT_SELECTOR_BLOCK_PARENT {
+                    parent
+                } else {
+                    parent + 1 + nested_selector_block.parent
+                },
+            });
+            i += 1;
+        }
+
         self
     }
 
@@ -68,6 +88,13 @@ impl Sx {
 
     pub(crate) const fn selector_blocks(&self) -> &[SelectorBlock] {
         self.selector_blocks.as_ref()
+    }
+
+    pub const fn to_css(
+        &self,
+        class_name: &'static str,
+    ) -> ConstStr<{ sx_to_css::DEFAULT_SX_CSS_CAPACITY }> {
+        sx_to_css::to_css(self, class_name)
     }
 }
 
@@ -91,102 +118,20 @@ mod tests {
             .selector(" ~ .peer", sx().height("240px"))
             .selector(" + .next", sx().width("140px"))
             .selector(":has(+ .prev)", sx().background("orange"))
-            .selector(".is-active", sx().height("260px"));
+            .selector(".is-active", sx().height("260px"))
+            .selector(
+                " .nested",
+                sx().background("purple").selector(
+                    ":hover",
+                    sx().height("280px")
+                        .selector(" .nested_nested_nested", sx().width("300px")),
+                ),
+            );
 
+        const CSS: ConstStr<{ sx_to_css::DEFAULT_SX_CSS_CAPACITY }> = STYLE.to_css(".button");
         assert_eq!(
-            STYLE.declarations(),
-            &[
-                Declaration {
-                    property: "background",
-                    value: "red",
-                },
-                Declaration {
-                    property: "background",
-                    value: "blue",
-                },
-                Declaration {
-                    property: "width",
-                    value: "120px",
-                },
-                Declaration {
-                    property: "height",
-                    value: "200px",
-                },
-                Declaration {
-                    property: "height",
-                    value: "220px",
-                },
-                Declaration {
-                    property: "width",
-                    value: "20px",
-                },
-                Declaration {
-                    property: "background",
-                    value: "green",
-                },
-                Declaration {
-                    property: "height",
-                    value: "240px",
-                },
-                Declaration {
-                    property: "width",
-                    value: "140px",
-                },
-                Declaration {
-                    property: "background",
-                    value: "orange",
-                },
-                Declaration {
-                    property: "height",
-                    value: "260px",
-                },
-            ]
-        );
-
-        assert_eq!(
-            STYLE.selector_blocks(),
-            &[
-                SelectorBlock {
-                    selector: ":hover",
-                    start: 1,
-                    end: 3,
-                },
-                SelectorBlock {
-                    selector: ":focus",
-                    start: 4,
-                    end: 5,
-                },
-                SelectorBlock {
-                    selector: "> .item",
-                    start: 5,
-                    end: 6,
-                },
-                SelectorBlock {
-                    selector: " .label",
-                    start: 6,
-                    end: 7,
-                },
-                SelectorBlock {
-                    selector: " ~ .peer",
-                    start: 7,
-                    end: 8,
-                },
-                SelectorBlock {
-                    selector: " + .next",
-                    start: 8,
-                    end: 9,
-                },
-                SelectorBlock {
-                    selector: ":has(+ .prev)",
-                    start: 9,
-                    end: 10,
-                },
-                SelectorBlock {
-                    selector: ".is-active",
-                    start: 10,
-                    end: 11,
-                },
-            ]
+            CSS.as_str(),
+            ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button.is-active{height:260px;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}"
         );
     }
 }

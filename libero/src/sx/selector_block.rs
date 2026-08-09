@@ -3,4 +3,5 @@ pub struct SelectorBlock {
     pub selector: &'static str,
     pub start: usize,
     pub end: usize,
+    pub parent: usize,
 }
