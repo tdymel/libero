@@ -60,6 +60,11 @@ const fn emit_node(
                 SxModifier::Selector(suffix) => {
                     next_selector = next_selector.push_str(suffix);
                 }
+                SxModifier::Condition(condition) => {
+                    next_selector = next_selector.push_str("[data-state~=\"");
+                    next_selector = next_selector.push_str(condition);
+                    next_selector = next_selector.push_str("\"]");
+                }
                 SxModifier::Breakpoint(value) => {
                     next_breakpoint = Some(merge_breakpoint(breakpoint, value));
                 }

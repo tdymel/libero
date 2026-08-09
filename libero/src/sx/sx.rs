@@ -53,6 +53,10 @@ impl Sx {
         self.selector(":focus", nested)
     }
 
+    pub const fn when(self, condition: &'static str, nested: Sx) -> Self {
+        self.modifier(SxModifier::Condition(condition), nested)
+    }
+
     pub const fn selector(self, selector: &'static str, nested: Sx) -> Self {
         self.modifier(SxModifier::Selector(selector), nested)
     }
@@ -129,6 +133,7 @@ mod tests {
             .selector(" ~ .peer", sx().height("240px"))
             .selector(" + .next", sx().width("140px"))
             .selector(":has(+ .prev)", sx().background("orange"))
+            .when("selected", sx().background("pink"))
             .selector(
                 " .nested",
                 sx().background("purple").selector(
@@ -149,7 +154,7 @@ mod tests {
         const CSS: ConstStr<{ sx_to_css::DEFAULT_SX_CSS_CAPACITY }> = STYLE.to_css(".button");
         assert_eq!(
             CSS.as_str(),
-            ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:black;}}"
+            ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button[data-state~=\"selected\"]{background:pink;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:black;}}"
         );
     }
 }
