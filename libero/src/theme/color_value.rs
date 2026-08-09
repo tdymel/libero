@@ -21,8 +21,8 @@ impl ColorValue {
         None
     }
 
-    pub const fn push_css_var(self, mut css: ConstStr) -> ConstStr {
-        css = css.push_str("var(--lsx-");
+    pub const fn push_var_name(self, mut css: ConstStr) -> ConstStr {
+        css = css.push_str("--lsx-");
         match self {
             Self::Shade(color, shade) => {
                 css = css.push_str(color.as_str());
@@ -34,6 +34,12 @@ impl ColorValue {
                 css = css.push_str("-contrast");
             }
         }
+        css
+    }
+
+    pub const fn push_css_var(self, mut css: ConstStr) -> ConstStr {
+        css = css.push_str("var(");
+        css = self.push_var_name(css);
         css.push_char(')')
     }
 }
@@ -94,8 +100,11 @@ mod tests {
             ColorValue::Shade(Color::Primary, ColorShade::S1).push_css_var(ConstStr::new());
         const SECONDARY_CONTRAST: ConstStr =
             ColorValue::Contrast(Color::Secondary).push_css_var(ConstStr::new());
+        const PRIMARY_VAR: ConstStr =
+            ColorValue::Shade(Color::Primary, ColorShade::S1).push_var_name(ConstStr::new());
 
         assert_eq!(PRIMARY.as_str(), "var(--lsx-primary-100)");
         assert_eq!(SECONDARY_CONTRAST.as_str(), "var(--lsx-secondary-contrast)");
+        assert_eq!(PRIMARY_VAR.as_str(), "--lsx-primary-100");
     }
 }

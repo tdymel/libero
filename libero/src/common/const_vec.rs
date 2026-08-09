@@ -478,7 +478,7 @@ fn test_const_vec() {
     assert_eq!(value, Some(1234));
     let value = vec.pop();
     assert_eq!(value, None);
-    assert_eq!(vec.as_ref(), &[]);
+    assert_eq!(vec.as_ref(), &[] as &[u32]);
 }
 
 #[test]
@@ -548,7 +548,7 @@ fn test_const_vec_remove() {
     assert_eq!(vec.as_ref(), &[5678]);
     let value = vec.remove(0);
     assert_eq!(value, Some(5678));
-    assert_eq!(vec.as_ref(), &[]);
+    assert_eq!(vec.as_ref(), &[] as &[u32]);
 }
 
 #[test]
