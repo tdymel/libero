@@ -1,6 +1,6 @@
 use crate::common::ConstStr;
 
-use crate::theme::{ColorValue, Size};
+use crate::theme::{ColorValue, SPACING_VAR_PREFIX, Size};
 
 use super::{declaration::Declaration, sx::Sx, sx_block::SxBlock, sx_modifier::SxModifier};
 
@@ -172,11 +172,15 @@ const fn declaration_belongs_to_direct_child(
 }
 
 const fn push_theme_aware_value(
-    css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
     value: &'static str,
 ) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
     if let Some(color_value) = ColorValue::parse(value) {
         return color_value.push_css_var(css);
+    }
+
+    if let Some(size) = Size::parse(value) {
+        return size.push_css_var(css, SPACING_VAR_PREFIX);
     }
 
     css.push_str(value)
@@ -185,22 +189,12 @@ const fn push_theme_aware_value(
 const fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {
     match current {
         Some(current) => {
-            if breakpoint_order(next) > breakpoint_order(current) {
+            if (next as u8) > (current as u8) {
                 next
             } else {
                 current
             }
         }
         None => next,
-    }
-}
-
-const fn breakpoint_order(breakpoint: Size) -> usize {
-    match breakpoint {
-        Size::Xs => 0,
-        Size::Sm => 1,
-        Size::Md => 2,
-        Size::Lg => 3,
-        Size::Xl => 4,
     }
 }
