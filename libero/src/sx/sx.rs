@@ -42,16 +42,24 @@ impl Sx {
         self.with("height", value)
     }
 
-    pub const fn hover(mut self, nested: Sx) -> Self {
+    pub const fn nested(mut self, selector: &'static str, nested: Sx) -> Self {
         let start = self.declarations.len();
         self.declarations.extend(nested.declarations());
         let end = self.declarations.len();
         self.selector_blocks.push(SelectorBlock {
-            selector: ":hover",
+            selector,
             start,
             end,
         });
         self
+    }
+
+    pub const fn hover(self, nested: Sx) -> Self {
+        self.nested(":hover", nested)
+    }
+
+    pub const fn focus(self, nested: Sx) -> Self {
+        self.nested(":focus", nested)
     }
 
     pub const fn declarations(&self) -> &[Declaration] {
@@ -76,7 +84,8 @@ mod tests {
         const STYLE: Sx = sx()
             .background("red")
             .hover(sx().background("blue").width("120px"))
-            .height("200px");
+            .height("200px")
+            .focus(sx().height("220px"));
 
         assert_eq!(
             STYLE.declarations(),
@@ -97,16 +106,27 @@ mod tests {
                     property: "height",
                     value: "200px",
                 },
+                Declaration {
+                    property: "height",
+                    value: "220px",
+                },
             ]
         );
 
         assert_eq!(
             STYLE.selector_blocks(),
-            &[SelectorBlock {
-                selector: ":hover",
-                start: 1,
-                end: 3,
-            }]
+            &[
+                SelectorBlock {
+                    selector: ":hover",
+                    start: 1,
+                    end: 3,
+                },
+                SelectorBlock {
+                    selector: ":focus",
+                    start: 4,
+                    end: 5,
+                },
+            ]
         );
     }
 }
