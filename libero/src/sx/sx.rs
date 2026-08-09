@@ -1,14 +1,17 @@
 use crate::common::{ConstStr, ConstVec};
 
-use super::{declaration::Declaration, selector_block::SelectorBlock, sx_to_css};
+use super::{
+    breakpoint::Breakpoint, declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier,
+    sx_to_css,
+};
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
-const DEFAULT_SX_SELECTOR_BLOCK_CAPACITY: usize = 16;
+const DEFAULT_SX_BLOCK_CAPACITY: usize = 32;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Sx {
     declarations: ConstVec<Declaration, DEFAULT_SX_DECLARATION_CAPACITY>,
-    selector_blocks: ConstVec<SelectorBlock, DEFAULT_SX_SELECTOR_BLOCK_CAPACITY>,
+    blocks: ConstVec<SxBlock, DEFAULT_SX_BLOCK_CAPACITY>,
 }
 
 impl Default for Sx {
@@ -21,7 +24,7 @@ impl Sx {
     pub const fn new() -> Self {
         Self {
             declarations: ConstVec::new_with_max_size(),
-            selector_blocks: ConstVec::new_with_max_size(),
+            blocks: ConstVec::new_with_max_size(),
         }
     }
 
@@ -50,30 +53,38 @@ impl Sx {
         self.selector(":focus", nested)
     }
 
-    pub const fn selector(mut self, selector: &'static str, nested: Sx) -> Self {
+    pub const fn selector(self, selector: &'static str, nested: Sx) -> Self {
+        self.modifier(SxModifier::Selector(selector), nested)
+    }
+
+    pub const fn breakpoint(self, breakpoint: Breakpoint, nested: Sx) -> Self {
+        self.modifier(SxModifier::Breakpoint(breakpoint), nested)
+    }
+
+    const fn modifier(mut self, modifier: SxModifier, nested: Sx) -> Self {
         let start = self.declarations.len();
-        let parent = self.selector_blocks.len();
+        let parent = self.blocks.len();
         self.declarations.extend(nested.declarations());
         let end = self.declarations.len();
-        self.selector_blocks.push(SelectorBlock {
-            selector,
+        self.blocks.push(SxBlock {
+            modifier,
             start,
             end,
-            parent: sx_to_css::ROOT_SELECTOR_BLOCK_PARENT,
+            parent: sx_to_css::ROOT_BLOCK_PARENT,
         });
 
-        let nested_selector_blocks = nested.selector_blocks();
+        let nested_blocks = nested.blocks();
         let mut i = 0;
-        while i < nested_selector_blocks.len() {
-            let nested_selector_block = nested_selector_blocks[i];
-            self.selector_blocks.push(SelectorBlock {
-                selector: nested_selector_block.selector,
-                start: start + nested_selector_block.start,
-                end: start + nested_selector_block.end,
-                parent: if nested_selector_block.parent == sx_to_css::ROOT_SELECTOR_BLOCK_PARENT {
+        while i < nested_blocks.len() {
+            let nested_block = nested_blocks[i];
+            self.blocks.push(SxBlock {
+                modifier: nested_block.modifier,
+                start: start + nested_block.start,
+                end: start + nested_block.end,
+                parent: if nested_block.parent == sx_to_css::ROOT_BLOCK_PARENT {
                     parent
                 } else {
-                    parent + 1 + nested_selector_block.parent
+                    parent + 1 + nested_block.parent
                 },
             });
             i += 1;
@@ -86,8 +97,8 @@ impl Sx {
         self.declarations.as_ref()
     }
 
-    pub(crate) const fn selector_blocks(&self) -> &[SelectorBlock] {
-        self.selector_blocks.as_ref()
+    pub(crate) const fn blocks(&self) -> &[SxBlock] {
+        self.blocks.as_ref()
     }
 
     pub const fn to_css(
@@ -118,7 +129,6 @@ mod tests {
             .selector(" ~ .peer", sx().height("240px"))
             .selector(" + .next", sx().width("140px"))
             .selector(":has(+ .prev)", sx().background("orange"))
-            .selector(".is-active", sx().height("260px"))
             .selector(
                 " .nested",
                 sx().background("purple").selector(
@@ -126,12 +136,20 @@ mod tests {
                     sx().height("280px")
                         .selector(" .nested_nested_nested", sx().width("300px")),
                 ),
+            )
+            .breakpoint(
+                Breakpoint::S,
+                sx().width("400px").breakpoint(
+                    Breakpoint::L,
+                    sx().height("500px")
+                        .breakpoint(Breakpoint::M, sx().background("black")),
+                ),
             );
 
         const CSS: ConstStr<{ sx_to_css::DEFAULT_SX_CSS_CAPACITY }> = STYLE.to_css(".button");
         assert_eq!(
             CSS.as_str(),
-            ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button.is-active{height:260px;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}"
+            ".button{background:red;height:200px;}.button:hover{background:blue;width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:black;}}"
         );
     }
 }

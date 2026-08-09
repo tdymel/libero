@@ -1,21 +1,25 @@
 use crate::common::ConstStr;
 
-use super::{declaration::Declaration, selector_block::SelectorBlock, sx::Sx};
+use super::{
+    breakpoint::Breakpoint, declaration::Declaration, sx::Sx, sx_block::SxBlock,
+    sx_modifier::SxModifier,
+};
 
 pub(super) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
-pub(super) const ROOT_SELECTOR_BLOCK_PARENT: usize = usize::MAX;
+pub(super) const ROOT_BLOCK_PARENT: usize = usize::MAX;
 
 pub(super) const fn to_css(sx: &Sx, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
-    let selector_blocks = sx.selector_blocks();
+    let blocks = sx.blocks();
     let declarations = sx.declarations();
     let mut css = ConstStr::new();
 
-    css = emit_rule(
+    css = emit_node(
         css,
-        class_name,
         declarations,
-        selector_blocks,
-        ROOT_SELECTOR_BLOCK_PARENT,
+        blocks,
+        ROOT_BLOCK_PARENT,
+        class_name,
+        None,
         0,
         declarations.len(),
     );
@@ -23,25 +27,88 @@ pub(super) const fn to_css(sx: &Sx, class_name: &'static str) -> ConstStr<DEFAUL
     css
 }
 
-const fn emit_rule(
+const fn emit_node(
     mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
-    selector: &str,
     declarations: &[Declaration],
-    selector_blocks: &[SelectorBlock],
+    blocks: &[SxBlock],
     parent_block_index: usize,
+    selector: &str,
+    breakpoint: Option<Breakpoint>,
     start: usize,
     end: usize,
 ) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    css = emit_rule(
+        css,
+        declarations,
+        blocks,
+        parent_block_index,
+        selector,
+        breakpoint,
+        start,
+        end,
+    );
+
+    let mut block_index = 0;
+    while block_index < blocks.len() {
+        let block = blocks[block_index];
+        if block.parent == parent_block_index {
+            let mut next_selector: ConstStr<DEFAULT_SX_CSS_CAPACITY> = ConstStr::new();
+            next_selector = next_selector.push_str(selector);
+            let mut next_breakpoint = breakpoint;
+
+            match block.modifier {
+                SxModifier::Selector(suffix) => {
+                    next_selector = next_selector.push_str(suffix);
+                }
+                SxModifier::Breakpoint(value) => {
+                    next_breakpoint = Some(merge_breakpoint(breakpoint, value));
+                }
+            }
+
+            css = emit_node(
+                css,
+                declarations,
+                blocks,
+                block_index,
+                next_selector.as_str(),
+                next_breakpoint,
+                block.start,
+                block.end,
+            );
+        }
+        block_index += 1;
+    }
+
+    css
+}
+
+const fn emit_rule(
+    mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    declarations: &[Declaration],
+    blocks: &[SxBlock],
+    parent_block_index: usize,
+    selector: &str,
+    breakpoint: Option<Breakpoint>,
+    start: usize,
+    end: usize,
+) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    if !has_owned_declarations(declarations, blocks, parent_block_index, start, end) {
+        return css;
+    }
+
+    if let Some(breakpoint) = breakpoint {
+        css = css.push_str("@media (min-width: ");
+        css = css.push_str(breakpoint.value());
+        css = css.push_char(')');
+        css = css.push_char('{');
+    }
+
     css = css.push_str(selector);
     css = css.push_char('{');
 
     let mut declaration_index = start;
     while declaration_index < end {
-        if declaration_belongs_to_direct_child(
-            declaration_index,
-            selector_blocks,
-            parent_block_index,
-        ) {
+        if declaration_belongs_to_direct_child(declaration_index, blocks, parent_block_index) {
             declaration_index += 1;
             continue;
         }
@@ -56,37 +123,39 @@ const fn emit_rule(
 
     css = css.push_char('}');
 
-    let mut block_index = 0;
-    while block_index < selector_blocks.len() {
-        let block = selector_blocks[block_index];
-        if block.parent == parent_block_index {
-            let mut nested_selector: ConstStr<DEFAULT_SX_CSS_CAPACITY> = ConstStr::new();
-            nested_selector = nested_selector.push_str(selector);
-            nested_selector = nested_selector.push_str(block.selector);
-            css = emit_rule(
-                css,
-                nested_selector.as_str(),
-                declarations,
-                selector_blocks,
-                block_index,
-                block.start,
-                block.end,
-            );
-        }
-        block_index += 1;
+    if breakpoint.is_some() {
+        css = css.push_char('}');
     }
 
     css
 }
 
+const fn has_owned_declarations(
+    declarations: &[Declaration],
+    blocks: &[SxBlock],
+    parent_block_index: usize,
+    start: usize,
+    end: usize,
+) -> bool {
+    let mut declaration_index = start;
+    while declaration_index < end {
+        if !declaration_belongs_to_direct_child(declaration_index, blocks, parent_block_index) {
+            let _ = declarations;
+            return true;
+        }
+        declaration_index += 1;
+    }
+    false
+}
+
 const fn declaration_belongs_to_direct_child(
     declaration_index: usize,
-    selector_blocks: &[SelectorBlock],
+    blocks: &[SxBlock],
     parent_block_index: usize,
 ) -> bool {
     let mut block_index = 0;
-    while block_index < selector_blocks.len() {
-        let block = selector_blocks[block_index];
+    while block_index < blocks.len() {
+        let block = blocks[block_index];
         if block.parent == parent_block_index
             && declaration_index >= block.start
             && declaration_index < block.end
@@ -96,4 +165,27 @@ const fn declaration_belongs_to_direct_child(
         block_index += 1;
     }
     false
+}
+
+const fn merge_breakpoint(current: Option<Breakpoint>, next: Breakpoint) -> Breakpoint {
+    match current {
+        Some(current) => {
+            if breakpoint_order(next) > breakpoint_order(current) {
+                next
+            } else {
+                current
+            }
+        }
+        None => next,
+    }
+}
+
+const fn breakpoint_order(breakpoint: Breakpoint) -> usize {
+    match breakpoint {
+        Breakpoint::XS => 0,
+        Breakpoint::S => 1,
+        Breakpoint::M => 2,
+        Breakpoint::L => 3,
+        Breakpoint::XL => 4,
+    }
 }
