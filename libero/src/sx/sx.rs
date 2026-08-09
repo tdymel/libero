@@ -42,7 +42,15 @@ impl Sx {
         self.with("height", value)
     }
 
-    pub const fn nested(mut self, selector: &'static str, nested: Sx) -> Self {
+    pub const fn hover(self, nested: Sx) -> Self {
+        self.selector(":hover", nested)
+    }
+
+    pub const fn focus(self, nested: Sx) -> Self {
+        self.selector(":focus", nested)
+    }
+
+    pub const fn selector(mut self, selector: &'static str, nested: Sx) -> Self {
         let start = self.declarations.len();
         self.declarations.extend(nested.declarations());
         let end = self.declarations.len();
@@ -54,19 +62,11 @@ impl Sx {
         self
     }
 
-    pub const fn hover(self, nested: Sx) -> Self {
-        self.nested(":hover", nested)
-    }
-
-    pub const fn focus(self, nested: Sx) -> Self {
-        self.nested(":focus", nested)
-    }
-
-    pub const fn declarations(&self) -> &[Declaration] {
+    pub(crate) const fn declarations(&self) -> &[Declaration] {
         self.declarations.as_ref()
     }
 
-    pub const fn selector_blocks(&self) -> &[SelectorBlock] {
+    pub(crate) const fn selector_blocks(&self) -> &[SelectorBlock] {
         self.selector_blocks.as_ref()
     }
 }
@@ -85,7 +85,13 @@ mod tests {
             .background("red")
             .hover(sx().background("blue").width("120px"))
             .height("200px")
-            .focus(sx().height("220px"));
+            .focus(sx().height("220px"))
+            .selector("> .item", sx().width("20px"))
+            .selector(" .label", sx().background("green"))
+            .selector(" ~ .peer", sx().height("240px"))
+            .selector(" + .next", sx().width("140px"))
+            .selector(":has(+ .prev)", sx().background("orange"))
+            .selector(".is-active", sx().height("260px"));
 
         assert_eq!(
             STYLE.declarations(),
@@ -110,6 +116,30 @@ mod tests {
                     property: "height",
                     value: "220px",
                 },
+                Declaration {
+                    property: "width",
+                    value: "20px",
+                },
+                Declaration {
+                    property: "background",
+                    value: "green",
+                },
+                Declaration {
+                    property: "height",
+                    value: "240px",
+                },
+                Declaration {
+                    property: "width",
+                    value: "140px",
+                },
+                Declaration {
+                    property: "background",
+                    value: "orange",
+                },
+                Declaration {
+                    property: "height",
+                    value: "260px",
+                },
             ]
         );
 
@@ -125,6 +155,36 @@ mod tests {
                     selector: ":focus",
                     start: 4,
                     end: 5,
+                },
+                SelectorBlock {
+                    selector: "> .item",
+                    start: 5,
+                    end: 6,
+                },
+                SelectorBlock {
+                    selector: " .label",
+                    start: 6,
+                    end: 7,
+                },
+                SelectorBlock {
+                    selector: " ~ .peer",
+                    start: 7,
+                    end: 8,
+                },
+                SelectorBlock {
+                    selector: " + .next",
+                    start: 8,
+                    end: 9,
+                },
+                SelectorBlock {
+                    selector: ":has(+ .prev)",
+                    start: 9,
+                    end: 10,
+                },
+                SelectorBlock {
+                    selector: ".is-active",
+                    start: 10,
+                    end: 11,
                 },
             ]
         );
