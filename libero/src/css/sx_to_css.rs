@@ -43,14 +43,14 @@ impl Sx {
     }
 
     pub const fn class_name(&self) -> ConstStr {
-        let mut class_name = ConstStr::from_str(".lsx-");
+        let mut class_name = ConstStr::from_str("lsx-");
         class_name = push_hex_u64(class_name, self.hash());
         class_name
     }
 
     pub const fn to_css(&self) -> Stylesheet {
         let class_name = self.class_name();
-        let css_blocks = self.to_css_blocks(class_name);
+        let css_blocks = self.to_css_blocks(class_name_to_selector(class_name));
         let css_blocks_ref = css_blocks.as_ref();
         let mut stylesheet = Stylesheet::new().with_class_name(class_name);
 
@@ -286,6 +286,10 @@ const fn hash_sx_block(mut hash: u64, block: SxBlock) -> u64 {
     hash = hash_u8(hash, (block.start & 0xFF) as u8);
     hash = hash_u8(hash, (block.end & 0xFF) as u8);
     hash_u8(hash, (block.parent & 0xFF) as u8)
+}
+
+const fn class_name_to_selector(class_name: ConstStr) -> ConstStr {
+    ConstStr::from_str(".").append(class_name)
 }
 
 const fn push_hex_u64(mut css: ConstStr, value: u64) -> ConstStr {

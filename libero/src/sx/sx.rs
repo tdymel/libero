@@ -165,7 +165,7 @@ mod tests {
         const CSS: crate::css::Stylesheet = STYLE.to_css();
         assert_eq!(
             CSS.class_name(),
-            Some(crate::common::ConstStr::from_str(".lsx-7e8a154b16ad4ac9"))
+            Some(crate::common::ConstStr::from_str("lsx-7e8a154b16ad4ac9"))
         );
         assert_eq!(
             CSS.as_str(),
