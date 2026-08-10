@@ -1,14 +1,13 @@
-use crate::{common::ConstStr, sx::DeclarationProperty};
+use crate::sx::DeclarationProperty;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CssDeclarationProperty(pub DeclarationProperty);
 
 impl CssDeclarationProperty {
-    pub(crate) const fn to_const_str(self) -> ConstStr {
+    pub(crate) fn to_string(self) -> String {
         match self.0 {
-            DeclarationProperty::Known(property) => ConstStr::from_str(property.as_str()),
-            DeclarationProperty::Raw(property) => ConstStr::from_str(property),
-            DeclarationProperty::RawConstStr(property) => property,
+            DeclarationProperty::Known(property) => property.as_str().to_string(),
+            DeclarationProperty::Raw(property) => property.to_string(),
         }
     }
 }

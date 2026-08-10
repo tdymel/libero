@@ -8,25 +8,24 @@ use super::{
 pub struct CssDeclaration(pub Declaration);
 
 impl CssDeclaration {
-    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
-        let mut css = crate::common::ConstStr::new();
-        css = css.append(CssDeclarationProperty(self.0.property).to_const_str());
-        css = css.push_char(':');
-        css = css.append(self.value_to_const_str());
-        css = css.push_char(';');
+    pub(crate) fn to_string(self) -> String {
+        let mut css = String::new();
+        css.push_str(&CssDeclarationProperty(self.0.property).to_string());
+        css.push(':');
+        css.push_str(&self.value_to_string());
+        css.push(';');
         css
     }
 
-    const fn value_to_const_str(self) -> crate::common::ConstStr {
+    fn value_to_string(self) -> String {
         match self.0.value {
-            ThemeAwareValue::Raw(value) => crate::common::ConstStr::from_str(value),
-            ThemeAwareValue::RawConstStr(value) => value,
-            ThemeAwareValue::Color(color_value) => CssColorValue(color_value).to_const_str(),
+            ThemeAwareValue::Raw(value) => value.to_string(),
+            ThemeAwareValue::Color(color_value) => CssColorValue(color_value).to_string(),
             ThemeAwareValue::Size(size) => match self.0.property {
                 DeclarationProperty::Known(Property::PaddingTop) => {
-                    SizeCssVar::SPACING.to_const_str(size)
+                    SizeCssVar::SPACING.to_string(size)
                 }
-                _ => crate::common::ConstStr::from_str(size.as_str()),
+                _ => size.as_str().to_string(),
             },
         }
     }

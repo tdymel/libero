@@ -1,36 +1,36 @@
 use crate::common::ConstVec;
 
-use super::{Stylesheet, css_scope::CssScope};
+use super::css_scope::CssScope;
 
 const DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY: usize = 64;
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub enum CssBlock {
     Scope(CssScope),
     MediaQuery(CssMediaQuery),
 }
 
 impl CssBlock {
-    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
+    pub(crate) fn to_string(self) -> String {
         match self {
-            Self::Scope(scope) => scope.to_const_str(),
-            Self::MediaQuery(media_query) => media_query.to_const_str(),
+            Self::Scope(scope) => scope.to_string(),
+            Self::MediaQuery(media_query) => media_query.to_string(),
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct CssMediaQuery {
-    condition: crate::common::ConstStr,
+    condition: String,
     scopes: ConstVec<CssScope, DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY>,
 }
 
 impl CssMediaQuery {
-    pub(crate) const fn new(condition: &'static str) -> Self {
-        Self::from_const_str(crate::common::ConstStr::from_str(condition))
+    pub(crate) fn new(condition: &'static str) -> Self {
+        Self::from_string(condition.to_string())
     }
 
-    pub(crate) const fn from_const_str(condition: crate::common::ConstStr) -> Self {
+    pub(crate) fn from_string(condition: String) -> Self {
         Self {
             condition,
             scopes: ConstVec::new_with_max_size(),
@@ -46,26 +46,29 @@ impl CssMediaQuery {
         self.scopes.as_ref()
     }
 
-    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
-        let mut css = crate::common::ConstStr::new()
-            .push_str("@media ")
-            .append(self.condition)
-            .push_char('{');
+    pub(crate) fn to_string(self) -> String {
+        let mut css = String::from("@media ");
+        css.push_str(&self.condition);
+        css.push('{');
 
         let scopes = self.scopes();
         let mut scope_index = 0;
         while scope_index < scopes.len() {
-            css = css.append(scopes[scope_index].to_const_str());
+            css.push_str(&scopes[scope_index].clone().to_string());
             scope_index += 1;
         }
 
-        css.push_char('}')
+        css.push('}');
+        css
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::sx::{Declaration, DeclarationProperty, Property, ThemeAwareValue};
+    use crate::{
+        css::Stylesheet,
+        sx::{Declaration, DeclarationProperty, Property, ThemeAwareValue},
+    };
 
     use super::*;
 
@@ -77,7 +80,7 @@ mod tests {
         });
         let media_query = CssMediaQuery::new("(min-width: 48em)").with(scope);
 
-        let stylesheet = Stylesheet::new().append(CssBlock::MediaQuery(media_query).to_const_str());
+        let stylesheet = Stylesheet::new().append(CssBlock::MediaQuery(media_query).to_string());
 
         assert_eq!(
             stylesheet.as_str(),

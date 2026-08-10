@@ -2,7 +2,7 @@ use std::{fmt::Debug, hash::Hash, mem::MaybeUninit};
 
 // Shamelessly "borrowed" from Dioxus
 
-const DEFAULT_MAX_SIZE: usize = 2usize.pow(10);
+const DEFAULT_MAX_SIZE: usize = 2usize.pow(12);
 
 /// A buffer that can be read from at compile time.
 ///

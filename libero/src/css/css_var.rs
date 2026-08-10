@@ -1,7 +1,4 @@
-use crate::{
-    common::ConstStr,
-    theme::{ColorShade, Size},
-};
+use crate::theme::{ColorShade, Size};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CssVar {
@@ -13,16 +10,12 @@ impl CssVar {
         Self { prefix }
     }
 
-    pub(crate) const fn to_const_str_name(self, suffix: &'static str) -> ConstStr {
-        ConstStr::from_str(self.prefix).push_str(suffix)
+    pub(crate) fn to_string_name(self, suffix: &'static str) -> String {
+        format!("{}{}", self.prefix, suffix)
     }
 
-    pub(crate) const fn to_const_str_var(self, suffix: &'static str) -> ConstStr {
-        ConstStr::new()
-            .push_str("var(")
-            .push_str(self.prefix)
-            .push_str(suffix)
-            .push_char(')')
+    pub(crate) fn to_string_var(self, suffix: &'static str) -> String {
+        format!("var({}{})", self.prefix, suffix)
     }
 }
 
@@ -40,12 +33,12 @@ impl SizeCssVar {
         }
     }
 
-    pub const fn to_const_str(self, size: Size) -> ConstStr {
-        self.css_var.to_const_str_var(size.as_str())
+    pub fn to_string(self, size: Size) -> String {
+        self.css_var.to_string_var(size.as_str())
     }
 
-    pub const fn to_const_str_name(self, size: Size) -> ConstStr {
-        self.css_var.to_const_str_name(size.as_str())
+    pub fn to_string_name(self, size: Size) -> String {
+        self.css_var.to_string_name(size.as_str())
     }
 }
 
@@ -66,11 +59,11 @@ impl ColorCssVar {
         }
     }
 
-    pub const fn to_const_str(self, shade: ColorShade) -> ConstStr {
-        self.css_var.to_const_str_var(shade.as_str())
+    pub fn to_string(self, shade: ColorShade) -> String {
+        self.css_var.to_string_var(shade.as_str())
     }
 
-    pub const fn to_const_str_name(self, shade: ColorShade) -> ConstStr {
-        self.css_var.to_const_str_name(shade.as_str())
+    pub fn to_string_name(self, shade: ColorShade) -> String {
+        self.css_var.to_string_name(shade.as_str())
     }
 }

@@ -2,20 +2,20 @@ use crate::{common::ConstVec, sx::Declaration};
 
 use super::css_declaration::CssDeclaration;
 
-const DEFAULT_SCOPE_DECLARATION_CAPACITY: usize = 64;
+const DEFAULT_SCOPE_DECLARATION_CAPACITY: usize = 48;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct CssScope {
-    specifier: crate::common::ConstStr,
+    specifier: String,
     declarations: ConstVec<Declaration, DEFAULT_SCOPE_DECLARATION_CAPACITY>,
 }
 
 impl CssScope {
-    pub const fn new(specifier: &'static str) -> Self {
-        Self::from_const_str(crate::common::ConstStr::from_str(specifier))
+    pub fn new(specifier: &'static str) -> Self {
+        Self::from_string(specifier.to_string())
     }
 
-    pub const fn from_const_str(specifier: crate::common::ConstStr) -> Self {
+    pub fn from_string(specifier: String) -> Self {
         Self {
             specifier,
             declarations: ConstVec::new_with_max_size(),
@@ -27,27 +27,27 @@ impl CssScope {
         self
     }
 
-    pub const fn specifier(&self) -> &str {
-        self.specifier.as_str()
+    pub fn specifier(&self) -> &str {
+        &self.specifier
     }
 
     pub const fn declarations(&self) -> &[Declaration] {
         self.declarations.as_ref()
     }
 
-    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
-        let mut css = crate::common::ConstStr::new()
-            .append(self.specifier)
-            .push_char('{');
+    pub(crate) fn to_string(self) -> String {
+        let mut css = self.specifier.clone();
+        css.push('{');
 
         let declarations = self.declarations();
         let mut declaration_index = 0;
         while declaration_index < declarations.len() {
-            css = css.append(CssDeclaration(declarations[declaration_index]).to_const_str());
+            css.push_str(&CssDeclaration(declarations[declaration_index]).to_string());
             declaration_index += 1;
         }
 
-        css.push_char('}')
+        css.push('}');
+        css
     }
 }
 
@@ -72,7 +72,7 @@ mod tests {
                 value: ThemeAwareValue::Size(crate::theme::Size::Sm),
             });
 
-        let stylesheet = Stylesheet::new().append(scope.to_const_str());
+        let stylesheet = Stylesheet::new().append(scope.clone().to_string());
 
         assert_eq!(scope.specifier(), ".wambo");
         assert_eq!(

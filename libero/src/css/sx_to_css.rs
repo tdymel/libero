@@ -1,7 +1,4 @@
-use crate::{
-    common::{ConstStr, ConstVec},
-    theme::Size,
-};
+use crate::{common::ConstVec, theme::Size};
 
 use super::{CssBlock, CssMediaQuery, CssScope, Stylesheet};
 
@@ -12,10 +9,10 @@ use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
 const DEFAULT_SX_FLATTENED_SCOPE_CAPACITY: usize = 32;
 const DEFAULT_SX_BLOCK_OUTPUT_CAPACITY: usize = 32;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 struct FlattenedScope {
     parent_block_index: usize,
-    selector: ConstStr,
+    selector: String,
     breakpoint: Option<Size>,
     start: usize,
     end: usize,
@@ -42,30 +39,28 @@ impl Sx {
         hash
     }
 
-    pub const fn class_name(&self) -> ConstStr {
-        let mut class_name = ConstStr::from_str("lsx-");
-        class_name = push_hex_u64(class_name, self.hash());
-        class_name
+    pub fn class_name(&self) -> String {
+        format!("lsx-{:016x}", self.hash())
     }
 
-    pub const fn to_css(&self) -> Stylesheet {
+    pub fn to_css(&self) -> Stylesheet {
         let class_name = self.class_name();
-        let css_blocks = self.to_css_blocks(class_name_to_selector(class_name));
+        let css_blocks = self.to_css_blocks(class_name_to_selector(&class_name));
         let css_blocks_ref = css_blocks.as_ref();
-        let mut stylesheet = Stylesheet::new().with_class_name(class_name);
+        let mut stylesheet = Stylesheet::new().with_class_name(class_name.clone());
 
         let mut index = 0;
         while index < css_blocks_ref.len() {
-            stylesheet = stylesheet.append_block(css_blocks_ref[index]);
+            stylesheet = stylesheet.append_block(css_blocks_ref[index].clone());
             index += 1;
         }
 
         stylesheet
     }
 
-    const fn to_css_blocks(
+    fn to_css_blocks(
         &self,
-        class_name: ConstStr,
+        class_name: String,
     ) -> ConstVec<CssBlock, DEFAULT_SX_BLOCK_OUTPUT_CAPACITY> {
         let flattened_scopes = self.to_flattened_scopes(class_name);
         let flattened_scopes_ref = flattened_scopes.as_ref();
@@ -74,7 +69,7 @@ impl Sx {
         let mut index = 0;
         while index < flattened_scopes_ref.len() {
             css_blocks.push(to_css_block(
-                flattened_scopes_ref[index],
+                flattened_scopes_ref[index].clone(),
                 self.declarations(),
                 self.blocks(),
             ));
@@ -84,9 +79,9 @@ impl Sx {
         css_blocks
     }
 
-    const fn to_flattened_scopes(
+    fn to_flattened_scopes(
         &self,
-        class_name: ConstStr,
+        class_name: String,
     ) -> ConstVec<FlattenedScope, DEFAULT_SX_FLATTENED_SCOPE_CAPACITY> {
         let mut flattened_scopes = ConstVec::new_with_max_size();
         flatten_node(
@@ -103,12 +98,12 @@ impl Sx {
     }
 }
 
-const fn flatten_node(
+fn flatten_node(
     flattened_scopes: &mut ConstVec<FlattenedScope, DEFAULT_SX_FLATTENED_SCOPE_CAPACITY>,
     declarations: &[Declaration],
     blocks: &[SxBlock],
     parent_block_index: usize,
-    selector: ConstStr,
+    selector: String,
     breakpoint: Option<Size>,
     start: usize,
     end: usize,
@@ -116,7 +111,7 @@ const fn flatten_node(
     if has_owned_declarations(declarations, blocks, parent_block_index, start, end) {
         flattened_scopes.push(FlattenedScope {
             parent_block_index,
-            selector,
+            selector: selector.clone(),
             breakpoint,
             start,
             end,
@@ -127,17 +122,17 @@ const fn flatten_node(
     while block_index < blocks.len() {
         let block = blocks[block_index];
         if block.parent == parent_block_index {
-            let mut next_selector = selector;
+            let mut next_selector = selector.clone();
             let mut next_breakpoint = breakpoint;
 
             match block.modifier {
                 SxModifier::Selector(suffix) => {
-                    next_selector = next_selector.push_str(suffix);
+                    next_selector.push_str(suffix);
                 }
                 SxModifier::Condition(condition) => {
-                    next_selector = next_selector.push_str("[data-state~=\"");
-                    next_selector = next_selector.push_str(condition);
-                    next_selector = next_selector.push_str("\"]");
+                    next_selector.push_str("[data-state~=\"");
+                    next_selector.push_str(condition);
+                    next_selector.push_str("\"]");
                 }
                 SxModifier::Breakpoint(value) => {
                     next_breakpoint = Some(merge_breakpoint(breakpoint, value));
@@ -159,12 +154,12 @@ const fn flatten_node(
     }
 }
 
-const fn to_css_block(
+fn to_css_block(
     flattened_scope: FlattenedScope,
     declarations: &[Declaration],
     blocks: &[SxBlock],
 ) -> CssBlock {
-    let mut scope = CssScope::from_const_str(flattened_scope.selector);
+    let mut scope = CssScope::from_string(flattened_scope.selector);
 
     let mut declaration_index = flattened_scope.start;
     while declaration_index < flattened_scope.end {
@@ -183,7 +178,7 @@ const fn to_css_block(
 
     match flattened_scope.breakpoint {
         Some(breakpoint) => CssBlock::MediaQuery(
-            CssMediaQuery::from_const_str(breakpoint_to_media_condition(breakpoint)).with(scope),
+            CssMediaQuery::from_string(breakpoint_to_media_condition(breakpoint)).with(scope),
         ),
         None => CssBlock::Scope(scope),
     }
@@ -226,10 +221,8 @@ const fn declaration_belongs_to_direct_child(
     false
 }
 
-const fn breakpoint_to_media_condition(breakpoint: Size) -> crate::common::ConstStr {
-    crate::common::ConstStr::from_str("(min-width: ")
-        .push_str(breakpoint.breakpoint_value())
-        .push_char(')')
+fn breakpoint_to_media_condition(breakpoint: Size) -> String {
+    format!("(min-width: {})", breakpoint.breakpoint_value())
 }
 
 const fn hash_u8(mut hash: u64, value: u8) -> u64 {
@@ -253,16 +246,10 @@ const fn hash_declaration(mut hash: u64, declaration: Declaration) -> u64 {
             hash_str(hash_u8(hash, 0), property.as_str())
         }
         crate::sx::DeclarationProperty::Raw(property) => hash_str(hash_u8(hash, 1), property),
-        crate::sx::DeclarationProperty::RawConstStr(property) => {
-            hash_str(hash_u8(hash, 2), property.as_str())
-        }
     };
 
     match declaration.value {
         crate::sx::ThemeAwareValue::Raw(value) => hash_str(hash_u8(hash, 3), value),
-        crate::sx::ThemeAwareValue::RawConstStr(value) => {
-            hash_str(hash_u8(hash, 4), value.as_str())
-        }
         crate::sx::ThemeAwareValue::Color(color_value) => match color_value {
             crate::theme::ColorValue::Shade(color, shade) => hash_str(
                 hash_str(hash_u8(hash_u8(hash, 5), color as u8), shade.as_str()),
@@ -288,25 +275,8 @@ const fn hash_sx_block(mut hash: u64, block: SxBlock) -> u64 {
     hash_u8(hash, (block.parent & 0xFF) as u8)
 }
 
-const fn class_name_to_selector(class_name: ConstStr) -> ConstStr {
-    ConstStr::from_str(".").append(class_name)
-}
-
-const fn push_hex_u64(mut css: ConstStr, value: u64) -> ConstStr {
-    let mut shift = 60;
-    loop {
-        let digit = ((value >> shift) & 0x0F) as u8;
-        css = css.push_char(match digit {
-            0..=9 => (b'0' + digit) as char,
-            _ => (b'a' + (digit - 10)) as char,
-        });
-
-        if shift == 0 {
-            break;
-        }
-        shift -= 4;
-    }
-    css
+fn class_name_to_selector(class_name: &str) -> String {
+    format!(".{class_name}")
 }
 
 const fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {

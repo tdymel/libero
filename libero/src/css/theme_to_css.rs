@@ -6,18 +6,18 @@ use crate::{
 use super::{CssScope, Stylesheet, css_color_value::CssColorValue};
 
 impl Theme {
-    pub const fn to_css(&self) -> Stylesheet {
+    pub fn to_css(&self) -> Stylesheet {
         Stylesheet::new().append_scope(self.to_css_scope())
     }
 
-    const fn to_css_scope(&self) -> CssScope {
+    fn to_css_scope(&self) -> CssScope {
         let mut scope = CssScope::new(":root");
         scope = self.extend_scope_with_spacing_vars(scope);
         scope = self.extend_scope_with_color_vars(scope, Color::Primary, self.primary);
         self.extend_scope_with_color_vars(scope, Color::Secondary, self.secondary)
     }
 
-    const fn extend_scope_with_spacing_vars(&self, scope: CssScope) -> CssScope {
+    fn extend_scope_with_spacing_vars(&self, scope: CssScope) -> CssScope {
         scope
             .with(to_spacing_var_declaration(Size::Xs, self.spacing.xs))
             .with(to_spacing_var_declaration(Size::Sm, self.spacing.sm))
@@ -26,7 +26,7 @@ impl Theme {
             .with(to_spacing_var_declaration(Size::Xl, self.spacing.xl))
     }
 
-    const fn extend_scope_with_color_vars(
+    fn extend_scope_with_color_vars(
         &self,
         scope: CssScope,
         color: Color,
@@ -108,41 +108,26 @@ impl Theme {
     }
 }
 
-const fn to_spacing_var_declaration(size: Size, value: u8) -> Declaration {
+fn to_spacing_var_declaration(size: Size, value: u8) -> Declaration {
     Declaration {
-        property: DeclarationProperty::RawConstStr(
-            crate::css::SizeCssVar::SPACING.to_const_str_name(size),
-        ),
-        value: ThemeAwareValue::RawConstStr(
-            append_u8(crate::common::ConstStr::new(), value).push_str("px"),
-        ),
+        property: DeclarationProperty::Raw(Box::leak(
+            crate::css::SizeCssVar::SPACING
+                .to_string_name(size)
+                .into_boxed_str(),
+        )),
+        value: ThemeAwareValue::Raw(Box::leak(format!("{}px", value).into_boxed_str())),
     }
 }
 
-const fn to_color_var_declaration(color_value: ColorValue, color: HexColor) -> Declaration {
+fn to_color_var_declaration(color_value: ColorValue, color: HexColor) -> Declaration {
     Declaration {
-        property: DeclarationProperty::RawConstStr(
-            CssColorValue(color_value).to_const_str_var_name(),
-        ),
-        value: ThemeAwareValue::RawConstStr(color.to_const_str()),
+        property: DeclarationProperty::Raw(Box::leak(
+            CssColorValue(color_value)
+                .to_string_var_name()
+                .into_boxed_str(),
+        )),
+        value: ThemeAwareValue::Raw(Box::leak(color.to_string().into_boxed_str())),
     }
-}
-
-const fn append_u8(mut css: crate::common::ConstStr, value: u8) -> crate::common::ConstStr {
-    if value >= 100 {
-        css = css.push_char((b'0' + (value / 100)) as char);
-        css = css.push_char((b'0' + ((value / 10) % 10)) as char);
-        css = css.push_char((b'0' + (value % 10)) as char);
-        return css;
-    }
-
-    if value >= 10 {
-        css = css.push_char((b'0' + (value / 10)) as char);
-        css = css.push_char((b'0' + (value % 10)) as char);
-        return css;
-    }
-
-    css.push_char((b'0' + value) as char)
 }
 
 #[cfg(test)]
@@ -158,15 +143,15 @@ mod tests {
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
         );
-        const CSS: Stylesheet = THEME.to_css();
+        let css = THEME.to_css();
 
-        assert!(CSS.as_str().contains("--lsx-spacing-xs:4px;"));
-        assert!(CSS.as_str().contains("--lsx-spacing-xl:20px;"));
-        assert!(CSS.as_str().contains("--lsx-primary-1:#D2E7FA;"));
-        assert!(CSS.as_str().contains("--lsx-primary-contrast-1:#000000;"));
-        assert!(CSS.as_str().contains("--lsx-primary-contrast-7:#FFFFFF;"));
-        assert!(CSS.as_str().contains("--lsx-secondary-7:#E03131;"));
-        assert!(CSS.as_str().starts_with(":root{"));
-        assert!(CSS.as_str().ends_with("}"));
+        assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
+        assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
+        assert!(css.as_str().contains("--lsx-primary-1:#D2E7FA;"));
+        assert!(css.as_str().contains("--lsx-primary-contrast-1:#000000;"));
+        assert!(css.as_str().contains("--lsx-primary-contrast-7:#FFFFFF;"));
+        assert!(css.as_str().contains("--lsx-secondary-7:#E03131;"));
+        assert!(css.as_str().starts_with(":root{"));
+        assert!(css.as_str().ends_with("}"));
     }
 }

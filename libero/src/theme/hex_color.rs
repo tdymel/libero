@@ -1,5 +1,3 @@
-use crate::common::ConstStr;
-
 use super::ColorShade;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,16 +57,8 @@ impl HexColor {
         }
     }
 
-    pub(crate) const fn to_const_str(self) -> ConstStr {
-        let mut css = ConstStr::new();
-        css = css.push_char('#');
-        css = css.push_char(hex_digit(self.r() >> 4));
-        css = css.push_char(hex_digit(self.r() & 0x0F));
-        css = css.push_char(hex_digit(self.g() >> 4));
-        css = css.push_char(hex_digit(self.g() & 0x0F));
-        css = css.push_char(hex_digit(self.b() >> 4));
-        css = css.push_char(hex_digit(self.b() & 0x0F));
-        css
+    pub(crate) fn to_string(self) -> String {
+        format!("#{:02X}{:02X}{:02X}", self.r(), self.g(), self.b())
     }
 
     const fn mix(self, other: Self, weight: u8) -> Self {

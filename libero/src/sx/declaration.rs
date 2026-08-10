@@ -1,5 +1,5 @@
 use crate::{
-    common::{ConstStr, eq},
+    common::eq,
     theme::{ColorValue, Size},
 };
 
@@ -47,7 +47,6 @@ impl Property {
 pub enum DeclarationProperty {
     Known(Property),
     Raw(&'static str),
-    RawConstStr(ConstStr),
 }
 
 impl DeclarationProperty {
@@ -62,7 +61,6 @@ impl DeclarationProperty {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ThemeAwareValue {
     Raw(&'static str),
-    RawConstStr(ConstStr),
     Color(ColorValue),
     Size(Size),
 }
