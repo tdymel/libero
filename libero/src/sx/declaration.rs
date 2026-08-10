@@ -1,5 +1,5 @@
 use crate::{
-    common::starts_with,
+    common::eq,
     theme::{ColorValue, Size},
 };
 
@@ -74,8 +74,4 @@ impl ThemeAwareValue {
 pub struct Declaration {
     pub property: DeclarationProperty,
     pub value: ThemeAwareValue,
-}
-
-const fn eq(value: &'static str, expected: &'static str) -> bool {
-    starts_with(value, expected) && value.len() == expected.len()
 }

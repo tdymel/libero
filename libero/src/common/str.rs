@@ -16,3 +16,7 @@ pub(crate) const fn starts_with(value: &str, prefix: &str) -> bool {
 
     true
 }
+
+pub(crate) const fn eq(value: &'static str, expected: &'static str) -> bool {
+    starts_with(value, expected) && value.len() == expected.len()
+}
