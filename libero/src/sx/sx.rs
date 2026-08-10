@@ -1,7 +1,7 @@
 use crate::common::ConstVec;
 
 use super::{
-    declaration::{Declaration, ThemeAwareValue},
+    declaration::{Declaration, DeclarationProperty, Property, ThemeAwareValue},
     sx_block::SxBlock,
     sx_modifier::SxModifier,
 };
@@ -30,7 +30,15 @@ impl Sx {
         }
     }
 
-    pub const fn with(mut self, property: &'static str, value: &'static str) -> Self {
+    pub const fn with(self, property: &'static str, value: &'static str) -> Self {
+        self.with_property(DeclarationProperty::parse(property), value)
+    }
+
+    const fn with_known_property(self, property: Property, value: &'static str) -> Self {
+        self.with_property(DeclarationProperty::Known(property), value)
+    }
+
+    const fn with_property(mut self, property: DeclarationProperty, value: &'static str) -> Self {
         self.declarations.push(Declaration {
             property,
             value: ThemeAwareValue::parse(value),
@@ -39,19 +47,19 @@ impl Sx {
     }
 
     pub const fn background(self, value: &'static str) -> Self {
-        self.with("background", value)
+        self.with_known_property(Property::Background, value)
     }
 
     pub const fn width(self, value: &'static str) -> Self {
-        self.with("width", value)
+        self.with_known_property(Property::Width, value)
     }
 
     pub const fn height(self, value: &'static str) -> Self {
-        self.with("height", value)
+        self.with_known_property(Property::Height, value)
     }
 
     pub const fn padding_top(self, value: &'static str) -> Self {
-        self.with("padding-top", value)
+        self.with_known_property(Property::PaddingTop, value)
     }
 
     pub const fn hover(self, nested: Sx) -> Self {

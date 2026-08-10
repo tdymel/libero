@@ -120,10 +120,7 @@ const fn emit_rule(
         }
 
         let declaration = declarations[declaration_index];
-        css = css.push_str(declaration.property);
-        css = css.push_char(':');
-        css = declaration.value.push(css);
-        css = css.push_char(';');
+        css = declaration.push(css);
         declaration_index += 1;
     }
 

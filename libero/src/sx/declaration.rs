@@ -1,10 +1,59 @@
-use crate::theme::{ColorValue, Size};
+use crate::{
+    common::starts_with,
+    theme::{ColorValue, Size},
+};
+
+#[repr(u16)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Property {
+    Background,
+    Width,
+    Height,
+    PaddingTop,
+}
+
+impl Property {
+    pub const fn parse(property: &'static str) -> Option<Self> {
+        if eq(property, "background") {
+            return Some(Self::Background);
+        }
+
+        if eq(property, "width") {
+            return Some(Self::Width);
+        }
+
+        if eq(property, "height") {
+            return Some(Self::Height);
+        }
+
+        if eq(property, "padding-top") {
+            return Some(Self::PaddingTop);
+        }
+
+        None
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DeclarationProperty {
+    Known(Property),
+    Raw(&'static str),
+}
+
+impl DeclarationProperty {
+    pub const fn parse(property: &'static str) -> Self {
+        match Property::parse(property) {
+            Some(property) => Self::Known(property),
+            None => Self::Raw(property),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThemeAwareValue {
     Raw(&'static str),
     Color(ColorValue),
-    Spacing(Size),
+    Size(Size),
 }
 
 impl ThemeAwareValue {
@@ -14,7 +63,7 @@ impl ThemeAwareValue {
         }
 
         if let Some(size) = Size::parse(value) {
-            return Self::Spacing(size);
+            return Self::Size(size);
         }
 
         Self::Raw(value)
@@ -23,6 +72,10 @@ impl ThemeAwareValue {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Declaration {
-    pub property: &'static str,
+    pub property: DeclarationProperty,
     pub value: ThemeAwareValue,
+}
+
+const fn eq(value: &'static str, expected: &'static str) -> bool {
+    starts_with(value, expected) && value.len() == expected.len()
 }
