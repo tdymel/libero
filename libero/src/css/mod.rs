@@ -8,5 +8,7 @@ mod stylesheet;
 mod sx_to_css;
 mod theme_to_css;
 
+pub(crate) use css_block::CssBlock;
+pub(crate) use css_scope::CssScope;
 pub(crate) use css_var::SizeCssVar;
 pub(crate) use stylesheet::Stylesheet;

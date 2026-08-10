@@ -4,7 +4,7 @@ use super::{Stylesheet, css_scope::CssScope};
 
 const DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY: usize = 64;
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy)]
 pub enum CssBlock {
     Scope(CssScope),
     MediaQuery(CssMediaQuery),
@@ -23,7 +23,7 @@ impl CssBlock {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy)]
 pub struct CssMediaQuery {
     condition: &'static str,
     scopes: ConstVec<CssScope, DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY>,

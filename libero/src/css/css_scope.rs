@@ -1,6 +1,6 @@
 use crate::{common::ConstVec, sx::Declaration};
 
-use super::{Stylesheet, css_declaration::CssDeclaration};
+use super::css_declaration::CssDeclaration;
 
 const DEFAULT_SCOPE_DECLARATION_CAPACITY: usize = 64;
 
@@ -45,15 +45,14 @@ impl CssScope {
 
         css.push_char('}')
     }
-
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str());
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::sx::{DeclarationProperty, Property, ThemeAwareValue};
+    use crate::{
+        css::Stylesheet,
+        sx::{DeclarationProperty, Property, ThemeAwareValue},
+    };
 
     use super::*;
 

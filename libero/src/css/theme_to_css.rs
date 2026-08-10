@@ -1,18 +1,22 @@
 use crate::theme::{Color, ColorShade, ColorValue, HexColor, Size, Theme};
 
-use super::{Stylesheet, css_color_value::CssColorValue};
+use super::{CssScope, Stylesheet, css_color_value::CssColorValue};
 
 impl Theme {
     pub const fn to_css(&self) -> Stylesheet {
-        let mut css = Stylesheet::new();
-        css = css.start_root();
+        Stylesheet::new().append(self.to_css_scope())
+    }
+
+    const fn to_css_scope(&self) -> crate::common::ConstStr {
+        let mut css =
+            crate::common::ConstStr::from_str(CssScope::new(":root").specifier()).push_char('{');
         css = self.push_spacing_vars(css);
         css = self.push_color_vars(css, Color::Primary, self.primary);
         css = self.push_color_vars(css, Color::Secondary, self.secondary);
-        css.end_block()
+        css.push_char('}')
     }
 
-    const fn push_spacing_vars(&self, mut css: Stylesheet) -> Stylesheet {
+    const fn push_spacing_vars(&self, mut css: crate::common::ConstStr) -> crate::common::ConstStr {
         css = push_spacing_var(css, Size::Xs, self.spacing.xs);
         css = push_spacing_var(css, Size::Sm, self.spacing.sm);
         css = push_spacing_var(css, Size::Md, self.spacing.md);
@@ -23,10 +27,10 @@ impl Theme {
 
     const fn push_color_vars(
         &self,
-        mut css: Stylesheet,
+        mut css: crate::common::ConstStr,
         color: Color,
         base: HexColor,
-    ) -> Stylesheet {
+    ) -> crate::common::ConstStr {
         css = push_color_var(
             css,
             ColorValue::Shade(color, ColorShade::S1),
@@ -120,25 +124,44 @@ impl Theme {
     }
 }
 
-const fn push_spacing_var(mut css: Stylesheet, size: Size, value: u8) -> Stylesheet {
+const fn push_spacing_var(
+    mut css: crate::common::ConstStr,
+    size: Size,
+    value: u8,
+) -> crate::common::ConstStr {
     css = css.append(crate::css::SizeCssVar::SPACING.to_const_str_name(size));
     css = css.push_char(':');
-    css = css.push_u8(value);
+    css = append_u8(css, value);
     css = css.push_str("px");
-    css = css.end_declaration();
-    css
+    css.push_char(';')
 }
 
 const fn push_color_var(
-    mut css: Stylesheet,
+    mut css: crate::common::ConstStr,
     color_value: ColorValue,
     color: HexColor,
-) -> Stylesheet {
+) -> crate::common::ConstStr {
     css = css.append(CssColorValue(color_value).to_const_str_var_name());
     css = css.push_char(':');
-    css = Stylesheet::from_const_str(color.push_hex(css.into_const_str()));
-    css = css.end_declaration();
-    css
+    css = color.push_hex(css);
+    css.push_char(';')
+}
+
+const fn append_u8(mut css: crate::common::ConstStr, value: u8) -> crate::common::ConstStr {
+    if value >= 100 {
+        css = css.push_char((b'0' + (value / 100)) as char);
+        css = css.push_char((b'0' + ((value / 10) % 10)) as char);
+        css = css.push_char((b'0' + (value % 10)) as char);
+        return css;
+    }
+
+    if value >= 10 {
+        css = css.push_char((b'0' + (value / 10)) as char);
+        css = css.push_char((b'0' + (value % 10)) as char);
+        return css;
+    }
+
+    css.push_char((b'0' + value) as char)
 }
 
 #[cfg(test)]
