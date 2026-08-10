@@ -1,30 +1,84 @@
+use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
+
 use dioxus::prelude::*;
 
-use crate::{css::Stylesheet, theme::Theme};
+use crate::{common::ConstStr, css::Stylesheet, theme::Theme};
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
+pub struct RegisteredStylesheet {
+    pub id: Rc<ConstStr>,
+    pub stylesheet: Stylesheet,
+}
+
+#[derive(Clone, Default)]
+pub struct SxRegistry {
+    // TODO: Store shared stylesheet handles (e.g. Rc<Stylesheet>) to avoid copying
+    // whole Stylesheet values when collecting active entries for rendering.
+    inner: Rc<RefCell<BTreeMap<String, RegisteredStylesheet>>>,
+}
+
+impl SxRegistry {
+    pub fn register(&self, stylesheet: Stylesheet) -> Option<Rc<ConstStr>> {
+        let Some(class_name) = stylesheet.class_name() else {
+            return None;
+        };
+
+        let key = class_name.as_str().to_string();
+        let mut registry = self.inner.borrow_mut();
+
+        if let Some(entry) = registry.get(&key) {
+            return Some(entry.id.clone());
+        }
+
+        let id = Rc::new(class_name);
+        registry.insert(
+            key,
+            RegisteredStylesheet {
+                id: id.clone(),
+                stylesheet,
+            },
+        );
+        Some(id)
+    }
+
+    pub fn stylesheets(&self) -> Vec<Stylesheet> {
+        let mut registry = self.inner.borrow_mut();
+        registry.retain(|_, entry| Rc::strong_count(&entry.id) > 1);
+
+        registry.values().map(|entry| entry.stylesheet).collect()
+    }
+}
+
+#[derive(Clone)]
 pub struct LiberoContext {
     pub theme: &'static Theme,
     pub(crate) theme_css: Stylesheet,
+    pub(crate) sx_registry: SxRegistry,
 }
 
 impl LiberoContext {
-    pub const fn new(theme: &'static Theme) -> Self {
+    pub fn new(theme: &'static Theme) -> Self {
         Self {
             theme,
             theme_css: theme.to_css(),
+            sx_registry: SxRegistry::default(),
         }
     }
 }
 
 #[component]
 pub fn LiberoProvider(theme: &'static Theme, children: Element) -> Element {
-    let context = LiberoContext::new(theme);
-    use_context_provider(|| context);
+    let context = use_context_provider(|| LiberoContext::new(theme));
+    let active_stylesheets = context.sx_registry.stylesheets();
 
     rsx! {
         style {
             dangerous_inner_html: "{context.theme_css.as_str()}"
+        }
+        for stylesheet in active_stylesheets {
+            style {
+                dangerous_inner_html: "{stylesheet.as_str()}"
+            }
         }
         {children}
     }
