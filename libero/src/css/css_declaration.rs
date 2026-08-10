@@ -1,8 +1,7 @@
 use crate::sx::{Declaration, DeclarationProperty, Property, ThemeAwareValue};
 
 use super::{
-    Stylesheet, css_color_value::CssColorValue, css_property::CssDeclarationProperty,
-    css_var::SizeCssVar,
+    css_color_value::CssColorValue, css_property::CssDeclarationProperty, css_var::SizeCssVar,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -16,10 +15,6 @@ impl CssDeclaration {
         css = css.append(self.value_to_const_str());
         css = css.push_char(';');
         css
-    }
-
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str());
     }
 
     const fn value_to_const_str(self) -> crate::common::ConstStr {

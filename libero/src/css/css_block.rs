@@ -26,27 +26,23 @@ pub struct CssMediaQuery {
 }
 
 impl CssMediaQuery {
-    pub const fn new(condition: &'static str) -> Self {
+    pub(crate) const fn new(condition: &'static str) -> Self {
         Self::from_const_str(crate::common::ConstStr::from_str(condition))
     }
 
-    pub const fn from_const_str(condition: crate::common::ConstStr) -> Self {
+    pub(crate) const fn from_const_str(condition: crate::common::ConstStr) -> Self {
         Self {
             condition,
             scopes: ConstVec::new_with_max_size(),
         }
     }
 
-    pub const fn with(mut self, scope: CssScope) -> Self {
+    pub(crate) const fn with(mut self, scope: CssScope) -> Self {
         self.scopes.push(scope);
         self
     }
 
-    pub const fn condition(&self) -> &str {
-        self.condition.as_str()
-    }
-
-    pub const fn scopes(&self) -> &[CssScope] {
+    const fn scopes(&self) -> &[CssScope] {
         self.scopes.as_ref()
     }
 
