@@ -162,10 +162,14 @@ mod tests {
                 ),
             );
 
-        const CSS: crate::css::Stylesheet = STYLE.to_css(".button");
+        const CSS: crate::css::Stylesheet = STYLE.to_css();
+        assert_eq!(
+            CSS.class_name(),
+            Some(crate::common::ConstStr::from_str(".lsx-7e8a154b16ad4ac9"))
+        );
         assert_eq!(
             CSS.as_str(),
-            ".button{background:var(--lsx-primary-5);height:200px;padding-top:var(--lsx-spacing-sm);}.button:hover{background:var(--lsx-primary-1);width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button[data-state~=\"selected\"]{background:var(--lsx-secondary-5);}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:var(--lsx-secondary-7);}}"
+            ".lsx-7e8a154b16ad4ac9{background:var(--lsx-primary-5);height:200px;padding-top:var(--lsx-spacing-sm);}.lsx-7e8a154b16ad4ac9:hover{background:var(--lsx-primary-1);width:120px;}.lsx-7e8a154b16ad4ac9:focus{height:220px;}.lsx-7e8a154b16ad4ac9> .item{width:20px;}.lsx-7e8a154b16ad4ac9 .label{background:green;}.lsx-7e8a154b16ad4ac9 ~ .peer{height:240px;}.lsx-7e8a154b16ad4ac9 + .next{width:140px;}.lsx-7e8a154b16ad4ac9:has(+ .prev){background:orange;}.lsx-7e8a154b16ad4ac9[data-state~=\"selected\"]{background:var(--lsx-secondary-5);}.lsx-7e8a154b16ad4ac9 .nested{background:purple;}.lsx-7e8a154b16ad4ac9 .nested:hover{height:280px;}.lsx-7e8a154b16ad4ac9 .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.lsx-7e8a154b16ad4ac9{width:400px;}}@media (min-width: 75em){.lsx-7e8a154b16ad4ac9{height:500px;}}@media (min-width: 75em){.lsx-7e8a154b16ad4ac9{background:var(--lsx-secondary-7);}}"
         );
     }
 }
