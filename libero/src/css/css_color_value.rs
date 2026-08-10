@@ -12,14 +12,12 @@ impl CssColorValue {
     pub(crate) const fn to_const_str(self) -> ConstStr {
         match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY.push_var(ConstStr::new(), shade),
-                Color::Secondary => ColorCssVar::SECONDARY.push_var(ConstStr::new(), shade),
+                Color::Primary => ColorCssVar::PRIMARY.to_const_str(shade),
+                Color::Secondary => ColorCssVar::SECONDARY.to_const_str(shade),
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.push_var(ConstStr::new(), shade),
-                Color::Secondary => {
-                    ColorCssVar::SECONDARY_CONTRAST.push_var(ConstStr::new(), shade)
-                }
+                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.to_const_str(shade),
+                Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.to_const_str(shade),
             },
         }
     }
@@ -27,18 +25,12 @@ impl CssColorValue {
     pub(crate) const fn to_const_str_var_name(self) -> ConstStr {
         match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY.push_name_with_shade(ConstStr::new(), shade),
-                Color::Secondary => {
-                    ColorCssVar::SECONDARY.push_name_with_shade(ConstStr::new(), shade)
-                }
+                Color::Primary => ColorCssVar::PRIMARY.to_const_str_name(shade),
+                Color::Secondary => ColorCssVar::SECONDARY.to_const_str_name(shade),
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => {
-                    ColorCssVar::PRIMARY_CONTRAST.push_name_with_shade(ConstStr::new(), shade)
-                }
-                Color::Secondary => {
-                    ColorCssVar::SECONDARY_CONTRAST.push_name_with_shade(ConstStr::new(), shade)
-                }
+                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.to_const_str_name(shade),
+                Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.to_const_str_name(shade),
             },
         }
     }

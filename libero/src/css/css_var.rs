@@ -13,17 +13,16 @@ impl CssVar {
         Self { prefix }
     }
 
-    pub(crate) const fn push_name(self, mut css: ConstStr, suffix: &'static str) -> ConstStr {
-        css = css.push_str(self.prefix);
-        css = css.push_str(suffix);
-        css
+    pub(crate) const fn to_const_str_name(self, suffix: &'static str) -> ConstStr {
+        ConstStr::from_str(self.prefix).push_str(suffix)
     }
 
-    pub(crate) const fn push_var(self, mut css: ConstStr, suffix: &'static str) -> ConstStr {
-        css = css.push_str("var(");
-        css = self.push_name(css, suffix);
-        css = css.push_char(')');
-        css
+    pub(crate) const fn to_const_str_var(self, suffix: &'static str) -> ConstStr {
+        ConstStr::new()
+            .push_str("var(")
+            .push_str(self.prefix)
+            .push_str(suffix)
+            .push_char(')')
     }
 }
 
@@ -41,12 +40,12 @@ impl SizeCssVar {
         }
     }
 
-    pub const fn push_var(self, css: ConstStr, size: Size) -> ConstStr {
-        self.css_var.push_var(css, size.as_str())
+    pub const fn to_const_str(self, size: Size) -> ConstStr {
+        self.css_var.to_const_str_var(size.as_str())
     }
 
-    pub const fn push_name(self, css: ConstStr, size: Size) -> ConstStr {
-        self.css_var.push_name(css, size.as_str())
+    pub const fn to_const_str_name(self, size: Size) -> ConstStr {
+        self.css_var.to_const_str_name(size.as_str())
     }
 }
 
@@ -67,11 +66,11 @@ impl ColorCssVar {
         }
     }
 
-    pub const fn push_var(self, css: ConstStr, shade: ColorShade) -> ConstStr {
-        self.css_var.push_var(css, shade.as_str())
+    pub const fn to_const_str(self, shade: ColorShade) -> ConstStr {
+        self.css_var.to_const_str_var(shade.as_str())
     }
 
-    pub const fn push_name_with_shade(self, css: ConstStr, shade: ColorShade) -> ConstStr {
-        self.css_var.push_name(css, shade.as_str())
+    pub const fn to_const_str_name(self, shade: ColorShade) -> ConstStr {
+        self.css_var.to_const_str_name(shade.as_str())
     }
 }

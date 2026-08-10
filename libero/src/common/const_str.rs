@@ -28,6 +28,10 @@ impl ConstStr {
         }
     }
 
+    pub const fn from_str(value: &str) -> Self {
+        Self::new().push_str(value)
+    }
+
     pub const fn push_str(mut self, value: &str) -> Self {
         self.bytes.extend(value.as_bytes());
         self
@@ -59,8 +63,7 @@ mod tests {
 
     #[test]
     fn const_str_happy_path() {
-        const VALUE: ConstStr = ConstStr::new()
-            .push_str(".button")
+        const VALUE: ConstStr = ConstStr::from_str(".button")
             .push_char('{')
             .push_str("color:red;")
             .push_char('}');

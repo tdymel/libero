@@ -28,13 +28,13 @@ impl CssDeclaration {
 
     const fn value_to_const_str(self) -> crate::common::ConstStr {
         match self.0.value {
-            ThemeAwareValue::Raw(value) => crate::common::ConstStr::new().push_str(value),
+            ThemeAwareValue::Raw(value) => crate::common::ConstStr::from_str(value),
             ThemeAwareValue::Color(color_value) => CssColorValue(color_value).to_const_str(),
             ThemeAwareValue::Size(size) => match self.0.property {
                 DeclarationProperty::Known(Property::PaddingTop) => {
-                    SizeCssVar::SPACING.push_var(crate::common::ConstStr::new(), size)
+                    SizeCssVar::SPACING.to_const_str(size)
                 }
-                _ => crate::common::ConstStr::new().push_str(size.as_str()),
+                _ => crate::common::ConstStr::from_str(size.as_str()),
             },
         }
     }

@@ -121,8 +121,10 @@ impl Theme {
 }
 
 const fn push_spacing_var(mut css: Stylesheet, size: Size, value: u8) -> Stylesheet {
-    css = Stylesheet::from_const_str(
-        crate::css::SizeCssVar::SPACING.push_name(css.into_const_str(), size),
+    css = css.append(
+        crate::css::SizeCssVar::SPACING
+            .to_const_str_name(size)
+            .as_str(),
     );
     css = css.push_char(':');
     css = css.push_u8(value);
