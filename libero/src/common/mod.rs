@@ -1,4 +1,3 @@
-mod const_str;
 mod const_vec;
 mod str;
 

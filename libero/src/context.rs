@@ -69,17 +69,17 @@ impl LiberoContext {
 #[component]
 pub fn LiberoProvider(theme: &'static Theme, children: Element) -> Element {
     let context = use_context_provider(|| LiberoContext::new(theme));
-    // let active_stylesheets = context.sx_registry.stylesheets();
+    let active_stylesheets = context.sx_registry.stylesheets();
 
     rsx! {
         style {
             dangerous_inner_html: "{context.theme_css}"
         }
-        // for stylesheet in active_stylesheets {
-        //     style {
-        //         dangerous_inner_html: "{stylesheet}"
-        //     }
-        // }
+        for stylesheet in active_stylesheets {
+            style {
+                dangerous_inner_html: "{stylesheet}"
+            }
+        }
         {children}
     }
 }

@@ -1,8 +1,4 @@
-use crate::common::ConstVec;
-
 use super::css_scope::CssScope;
-
-const DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY: usize = 64;
 
 #[derive(Clone)]
 pub enum CssBlock {
@@ -22,7 +18,7 @@ impl CssBlock {
 #[derive(Clone)]
 pub struct CssMediaQuery {
     condition: String,
-    scopes: ConstVec<CssScope, DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY>,
+    scopes: Vec<CssScope>,
 }
 
 impl CssMediaQuery {
@@ -33,17 +29,17 @@ impl CssMediaQuery {
     pub(crate) fn from_string(condition: String) -> Self {
         Self {
             condition,
-            scopes: ConstVec::new_with_max_size(),
+            scopes: Vec::new(),
         }
     }
 
-    pub(crate) const fn with(mut self, scope: CssScope) -> Self {
+    pub(crate) fn with(mut self, scope: CssScope) -> Self {
         self.scopes.push(scope);
         self
     }
 
-    const fn scopes(&self) -> &[CssScope] {
-        self.scopes.as_ref()
+    fn scopes(&self) -> &[CssScope] {
+        &self.scopes
     }
 
     pub(crate) fn to_string(self) -> String {

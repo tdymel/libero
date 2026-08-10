@@ -17,7 +17,7 @@ fn main() {
 fn App() -> Element {
     rsx! {
         LiberoProvider { theme: &THEME,
-        //     HelloWorld {}
+            HelloWorld {}
         }
     }
 }

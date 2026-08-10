@@ -1,13 +1,10 @@
-use crate::{common::ConstVec, theme::Size};
+use crate::theme::Size;
 
 use super::{CssBlock, CssMediaQuery, CssScope, Stylesheet};
 
 use crate::sx::sx_block::SxBlock;
 use crate::sx::sx_modifier::SxModifier;
 use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
-
-const DEFAULT_SX_FLATTENED_SCOPE_CAPACITY: usize = 32;
-const DEFAULT_SX_BLOCK_OUTPUT_CAPACITY: usize = 32;
 
 #[derive(Clone, Debug, PartialEq)]
 struct FlattenedScope {
@@ -46,30 +43,25 @@ impl Sx {
     pub fn to_css(&self) -> Stylesheet {
         let class_name = self.class_name();
         let css_blocks = self.to_css_blocks(class_name_to_selector(&class_name));
-        let css_blocks_ref = css_blocks.as_ref();
         let mut stylesheet = Stylesheet::new().with_class_name(class_name.clone());
 
         let mut index = 0;
-        while index < css_blocks_ref.len() {
-            stylesheet = stylesheet.append_block(css_blocks_ref[index].clone());
+        while index < css_blocks.len() {
+            stylesheet = stylesheet.append_block(css_blocks[index].clone());
             index += 1;
         }
 
         stylesheet
     }
 
-    fn to_css_blocks(
-        &self,
-        class_name: String,
-    ) -> ConstVec<CssBlock, DEFAULT_SX_BLOCK_OUTPUT_CAPACITY> {
+    fn to_css_blocks(&self, class_name: String) -> Vec<CssBlock> {
         let flattened_scopes = self.to_flattened_scopes(class_name);
-        let flattened_scopes_ref = flattened_scopes.as_ref();
-        let mut css_blocks = ConstVec::new_with_max_size();
+        let mut css_blocks = Vec::new();
 
         let mut index = 0;
-        while index < flattened_scopes_ref.len() {
+        while index < flattened_scopes.len() {
             css_blocks.push(to_css_block(
-                flattened_scopes_ref[index].clone(),
+                flattened_scopes[index].clone(),
                 self.declarations(),
                 self.blocks(),
             ));
@@ -79,11 +71,8 @@ impl Sx {
         css_blocks
     }
 
-    fn to_flattened_scopes(
-        &self,
-        class_name: String,
-    ) -> ConstVec<FlattenedScope, DEFAULT_SX_FLATTENED_SCOPE_CAPACITY> {
-        let mut flattened_scopes = ConstVec::new_with_max_size();
+    fn to_flattened_scopes(&self, class_name: String) -> Vec<FlattenedScope> {
+        let mut flattened_scopes = Vec::new();
         flatten_node(
             &mut flattened_scopes,
             self.declarations(),
@@ -99,7 +88,7 @@ impl Sx {
 }
 
 fn flatten_node(
-    flattened_scopes: &mut ConstVec<FlattenedScope, DEFAULT_SX_FLATTENED_SCOPE_CAPACITY>,
+    flattened_scopes: &mut Vec<FlattenedScope>,
     declarations: &[Declaration],
     blocks: &[SxBlock],
     parent_block_index: usize,

@@ -1,13 +1,11 @@
-use crate::{common::ConstVec, sx::Declaration};
+use crate::sx::Declaration;
 
 use super::css_declaration::CssDeclaration;
-
-const DEFAULT_SCOPE_DECLARATION_CAPACITY: usize = 48;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CssScope {
     specifier: String,
-    declarations: ConstVec<Declaration, DEFAULT_SCOPE_DECLARATION_CAPACITY>,
+    declarations: Vec<Declaration>,
 }
 
 impl CssScope {
@@ -18,11 +16,11 @@ impl CssScope {
     pub fn from_string(specifier: String) -> Self {
         Self {
             specifier,
-            declarations: ConstVec::new_with_max_size(),
+            declarations: Vec::new(),
         }
     }
 
-    pub const fn with(mut self, declaration: Declaration) -> Self {
+    pub fn with(mut self, declaration: Declaration) -> Self {
         self.declarations.push(declaration);
         self
     }
@@ -31,8 +29,8 @@ impl CssScope {
         &self.specifier
     }
 
-    pub const fn declarations(&self) -> &[Declaration] {
-        self.declarations.as_ref()
+    pub fn declarations(&self) -> &[Declaration] {
+        &self.declarations
     }
 
     pub(crate) fn to_string(self) -> String {
