@@ -121,11 +121,7 @@ impl Theme {
 }
 
 const fn push_spacing_var(mut css: Stylesheet, size: Size, value: u8) -> Stylesheet {
-    css = css.append(
-        crate::css::SizeCssVar::SPACING
-            .to_const_str_name(size)
-            .as_str(),
-    );
+    css = css.append(crate::css::SizeCssVar::SPACING.to_const_str_name(size));
     css = css.push_char(':');
     css = css.push_u8(value);
     css = css.push_str("px");
@@ -138,7 +134,7 @@ const fn push_color_var(
     color_value: ColorValue,
     color: HexColor,
 ) -> Stylesheet {
-    css = css.append(CssColorValue(color_value).to_const_str_var_name().as_str());
+    css = css.append(CssColorValue(color_value).to_const_str_var_name());
     css = css.push_char(':');
     css = Stylesheet::from_const_str(color.push_hex(css.into_const_str()));
     css = css.end_declaration();

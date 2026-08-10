@@ -32,6 +32,11 @@ impl ConstStr {
         Self::new().push_str(value)
     }
 
+    pub const fn append(mut self, value: ConstStr) -> Self {
+        self.bytes.extend(value.as_bytes());
+        self
+    }
+
     pub const fn push_str(mut self, value: &str) -> Self {
         self.bytes.extend(value.as_bytes());
         self

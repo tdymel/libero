@@ -19,7 +19,7 @@ impl CssBlock {
     }
 
     pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str().as_str());
+        *css = css.append(self.to_const_str());
     }
 }
 
@@ -59,7 +59,7 @@ impl CssMediaQuery {
         let scopes = self.scopes();
         let mut scope_index = 0;
         while scope_index < scopes.len() {
-            css = css.push_str(scopes[scope_index].to_const_str().as_str());
+            css = css.append(scopes[scope_index].to_const_str());
             scope_index += 1;
         }
 
@@ -67,7 +67,7 @@ impl CssMediaQuery {
     }
 
     pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str().as_str());
+        *css = css.append(self.to_const_str());
     }
 }
 
@@ -85,8 +85,7 @@ mod tests {
         });
         let media_query = CssMediaQuery::new("(min-width: 48em)").with(scope);
 
-        let stylesheet =
-            Stylesheet::new().append(CssBlock::MediaQuery(media_query).to_const_str().as_str());
+        let stylesheet = Stylesheet::new().append(CssBlock::MediaQuery(media_query).to_const_str());
 
         assert_eq!(
             stylesheet.as_str(),

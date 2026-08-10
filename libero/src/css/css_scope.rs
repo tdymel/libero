@@ -39,11 +39,7 @@ impl CssScope {
         let declarations = self.declarations();
         let mut declaration_index = 0;
         while declaration_index < declarations.len() {
-            css = css.push_str(
-                CssDeclaration(declarations[declaration_index])
-                    .to_const_str()
-                    .as_str(),
-            );
+            css = css.append(CssDeclaration(declarations[declaration_index]).to_const_str());
             declaration_index += 1;
         }
 
@@ -51,7 +47,7 @@ impl CssScope {
     }
 
     pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str().as_str());
+        *css = css.append(self.to_const_str());
     }
 }
 
@@ -73,7 +69,7 @@ mod tests {
                 value: ThemeAwareValue::Size(crate::theme::Size::Sm),
             });
 
-        let stylesheet = Stylesheet::new().append(scope.to_const_str().as_str());
+        let stylesheet = Stylesheet::new().append(scope.to_const_str());
 
         assert_eq!(scope.specifier(), ".wambo");
         assert_eq!(

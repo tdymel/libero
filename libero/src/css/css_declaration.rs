@@ -11,19 +11,15 @@ pub struct CssDeclaration(pub Declaration);
 impl CssDeclaration {
     pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
         let mut css = crate::common::ConstStr::new();
-        css = css.push_str(
-            CssDeclarationProperty(self.0.property)
-                .to_const_str()
-                .as_str(),
-        );
+        css = css.append(CssDeclarationProperty(self.0.property).to_const_str());
         css = css.push_char(':');
-        css = css.push_str(self.value_to_const_str().as_str());
+        css = css.append(self.value_to_const_str());
         css = css.push_char(';');
         css
     }
 
     pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str().as_str());
+        *css = css.append(self.to_const_str());
     }
 
     const fn value_to_const_str(self) -> crate::common::ConstStr {

@@ -45,21 +45,16 @@ mod tests {
     #[test]
     fn color_value_happy_path() {
         let primary = Stylesheet::new().append(
-            CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
-                .to_const_str()
-                .as_str(),
+            CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1)).to_const_str(),
         );
 
         let secondary_contrast = Stylesheet::new().append(
-            CssColorValue(ColorValue::Contrast(Color::Secondary, ColorShade::S5))
-                .to_const_str()
-                .as_str(),
+            CssColorValue(ColorValue::Contrast(Color::Secondary, ColorShade::S5)).to_const_str(),
         );
 
         let primary_var = Stylesheet::new().append(
             CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
-                .to_const_str_var_name()
-                .as_str(),
+                .to_const_str_var_name(),
         );
 
         assert_eq!(primary.as_str(), "var(--lsx-primary-1)");
