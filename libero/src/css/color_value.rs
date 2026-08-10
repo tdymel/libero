@@ -6,7 +6,10 @@ use crate::{
 use super::css_var::ColorCssVar;
 
 impl ColorValue {
-    pub(crate) const fn push_var_name(self, css: ConstStr) -> ConstStr {
+    pub(crate) const fn push_var_name<const MAX_SIZE: usize>(
+        self,
+        css: ConstStr<MAX_SIZE>,
+    ) -> ConstStr<MAX_SIZE> {
         match self {
             Self::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.push_name_with_shade(css, shade),
@@ -21,7 +24,10 @@ impl ColorValue {
         }
     }
 
-    pub(crate) const fn push_var(self, css: ConstStr) -> ConstStr {
+    pub(crate) const fn push_var<const MAX_SIZE: usize>(
+        self,
+        css: ConstStr<MAX_SIZE>,
+    ) -> ConstStr<MAX_SIZE> {
         match self {
             Self::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.push_var(css, shade),

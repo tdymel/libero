@@ -13,13 +13,21 @@ impl CssVar {
         Self { prefix }
     }
 
-    pub(crate) const fn push_name(self, mut css: ConstStr, suffix: &'static str) -> ConstStr {
+    pub(crate) const fn push_name<const MAX_SIZE: usize>(
+        self,
+        mut css: ConstStr<MAX_SIZE>,
+        suffix: &'static str,
+    ) -> ConstStr<MAX_SIZE> {
         css = css.push_str(self.prefix);
         css = css.push_str(suffix);
         css
     }
 
-    pub(crate) const fn push_var(self, mut css: ConstStr, suffix: &'static str) -> ConstStr {
+    pub(crate) const fn push_var<const MAX_SIZE: usize>(
+        self,
+        mut css: ConstStr<MAX_SIZE>,
+        suffix: &'static str,
+    ) -> ConstStr<MAX_SIZE> {
         css = css.push_str("var(");
         css = self.push_name(css, suffix);
         css = css.push_char(')');
@@ -41,11 +49,19 @@ impl SizeCssVar {
         }
     }
 
-    pub const fn push_var(self, css: ConstStr, size: Size) -> ConstStr {
+    pub const fn push_var<const MAX_SIZE: usize>(
+        self,
+        css: ConstStr<MAX_SIZE>,
+        size: Size,
+    ) -> ConstStr<MAX_SIZE> {
         self.css_var.push_var(css, size.as_str())
     }
 
-    pub const fn push_name(self, css: ConstStr, size: Size) -> ConstStr {
+    pub const fn push_name<const MAX_SIZE: usize>(
+        self,
+        css: ConstStr<MAX_SIZE>,
+        size: Size,
+    ) -> ConstStr<MAX_SIZE> {
         self.css_var.push_name(css, size.as_str())
     }
 }
@@ -67,11 +83,19 @@ impl ColorCssVar {
         }
     }
 
-    pub const fn push_var(self, css: ConstStr, shade: ColorShade) -> ConstStr {
+    pub const fn push_var<const MAX_SIZE: usize>(
+        self,
+        css: ConstStr<MAX_SIZE>,
+        shade: ColorShade,
+    ) -> ConstStr<MAX_SIZE> {
         self.css_var.push_var(css, shade.as_str())
     }
 
-    pub const fn push_name_with_shade(self, css: ConstStr, shade: ColorShade) -> ConstStr {
+    pub const fn push_name_with_shade<const MAX_SIZE: usize>(
+        self,
+        css: ConstStr<MAX_SIZE>,
+        shade: ColorShade,
+    ) -> ConstStr<MAX_SIZE> {
         self.css_var.push_name(css, shade.as_str())
     }
 }

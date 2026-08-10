@@ -1,6 +1,10 @@
 use crate::common::ConstVec;
 
-use super::{declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier};
+use super::{
+    declaration::{Declaration, ThemeAwareValue},
+    sx_block::SxBlock,
+    sx_modifier::SxModifier,
+};
 use crate::theme::Size;
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
@@ -27,7 +31,10 @@ impl Sx {
     }
 
     pub const fn with(mut self, property: &'static str, value: &'static str) -> Self {
-        self.declarations.push(Declaration { property, value });
+        self.declarations.push(Declaration {
+            property,
+            value: ThemeAwareValue::parse(value),
+        });
         self
     }
 

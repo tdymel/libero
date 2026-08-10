@@ -1,7 +1,6 @@
 use crate::common::ConstStr;
-use crate::theme::{ColorValue, Size};
+use crate::theme::Size;
 
-use super::css_var::SizeCssVar;
 use crate::sx::sx_block::SxBlock;
 use crate::sx::sx_modifier::SxModifier;
 use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
@@ -123,7 +122,7 @@ const fn emit_rule(
         let declaration = declarations[declaration_index];
         css = css.push_str(declaration.property);
         css = css.push_char(':');
-        css = push_theme_aware_value(css, declaration.value);
+        css = declaration.value.push(css);
         css = css.push_char(';');
         declaration_index += 1;
     }
@@ -172,21 +171,6 @@ const fn declaration_belongs_to_direct_child(
         block_index += 1;
     }
     false
-}
-
-const fn push_theme_aware_value(
-    css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
-    value: &'static str,
-) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
-    if let Some(color_value) = ColorValue::parse(value) {
-        return color_value.push_var(css);
-    }
-
-    if let Some(size) = Size::parse(value) {
-        return SizeCssVar::SPACING.push_var(css, size);
-    }
-
-    css.push_str(value)
 }
 
 const fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {
