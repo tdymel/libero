@@ -12,132 +12,120 @@ impl Theme {
 
     const fn to_css_scope(&self) -> CssScope {
         let mut scope = CssScope::new(":root");
-        scope = self.push_spacing_vars(scope);
-        scope = self.push_color_vars(scope, Color::Primary, self.primary);
-        self.push_color_vars(scope, Color::Secondary, self.secondary)
+        scope = self.extend_scope_with_spacing_vars(scope);
+        scope = self.extend_scope_with_color_vars(scope, Color::Primary, self.primary);
+        self.extend_scope_with_color_vars(scope, Color::Secondary, self.secondary)
     }
 
-    const fn push_spacing_vars(&self, mut scope: CssScope) -> CssScope {
-        scope = push_spacing_var(scope, Size::Xs, self.spacing.xs);
-        scope = push_spacing_var(scope, Size::Sm, self.spacing.sm);
-        scope = push_spacing_var(scope, Size::Md, self.spacing.md);
-        scope = push_spacing_var(scope, Size::Lg, self.spacing.lg);
-        scope = push_spacing_var(scope, Size::Xl, self.spacing.xl);
+    const fn extend_scope_with_spacing_vars(&self, scope: CssScope) -> CssScope {
         scope
+            .with(to_spacing_var_declaration(Size::Xs, self.spacing.xs))
+            .with(to_spacing_var_declaration(Size::Sm, self.spacing.sm))
+            .with(to_spacing_var_declaration(Size::Md, self.spacing.md))
+            .with(to_spacing_var_declaration(Size::Lg, self.spacing.lg))
+            .with(to_spacing_var_declaration(Size::Xl, self.spacing.xl))
     }
 
-    const fn push_color_vars(&self, mut scope: CssScope, color: Color, base: HexColor) -> CssScope {
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S1),
-            base.shade(ColorShade::S1),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S2),
-            base.shade(ColorShade::S2),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S3),
-            base.shade(ColorShade::S3),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S4),
-            base.shade(ColorShade::S4),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S5),
-            base.shade(ColorShade::S5),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S6),
-            base.shade(ColorShade::S6),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S7),
-            base.shade(ColorShade::S7),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S8),
-            base.shade(ColorShade::S8),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Shade(color, ColorShade::S9),
-            base.shade(ColorShade::S9),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S1),
-            base.shade(ColorShade::S1).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S2),
-            base.shade(ColorShade::S2).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S3),
-            base.shade(ColorShade::S3).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S4),
-            base.shade(ColorShade::S4).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S5),
-            base.shade(ColorShade::S5).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S6),
-            base.shade(ColorShade::S6).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S7),
-            base.shade(ColorShade::S7).contrast(),
-        );
-        scope = push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S8),
-            base.shade(ColorShade::S8).contrast(),
-        );
-        push_color_var(
-            scope,
-            ColorValue::Contrast(color, ColorShade::S9),
-            base.shade(ColorShade::S9).contrast(),
-        )
+    const fn extend_scope_with_color_vars(
+        &self,
+        scope: CssScope,
+        color: Color,
+        base: HexColor,
+    ) -> CssScope {
+        scope
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S1),
+                base.shade(ColorShade::S1),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S2),
+                base.shade(ColorShade::S2),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S3),
+                base.shade(ColorShade::S3),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S4),
+                base.shade(ColorShade::S4),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S5),
+                base.shade(ColorShade::S5),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S6),
+                base.shade(ColorShade::S6),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S7),
+                base.shade(ColorShade::S7),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S8),
+                base.shade(ColorShade::S8),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Shade(color, ColorShade::S9),
+                base.shade(ColorShade::S9),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S1),
+                base.shade(ColorShade::S1).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S2),
+                base.shade(ColorShade::S2).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S3),
+                base.shade(ColorShade::S3).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S4),
+                base.shade(ColorShade::S4).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S5),
+                base.shade(ColorShade::S5).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S6),
+                base.shade(ColorShade::S6).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S7),
+                base.shade(ColorShade::S7).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S8),
+                base.shade(ColorShade::S8).contrast(),
+            ))
+            .with(to_color_var_declaration(
+                ColorValue::Contrast(color, ColorShade::S9),
+                base.shade(ColorShade::S9).contrast(),
+            ))
     }
 }
 
-const fn push_spacing_var(scope: CssScope, size: Size, value: u8) -> CssScope {
-    scope.with(Declaration {
+const fn to_spacing_var_declaration(size: Size, value: u8) -> Declaration {
+    Declaration {
         property: DeclarationProperty::RawConstStr(
             crate::css::SizeCssVar::SPACING.to_const_str_name(size),
         ),
         value: ThemeAwareValue::RawConstStr(
             append_u8(crate::common::ConstStr::new(), value).push_str("px"),
         ),
-    })
+    }
 }
 
-const fn push_color_var(scope: CssScope, color_value: ColorValue, color: HexColor) -> CssScope {
-    scope.with(Declaration {
+const fn to_color_var_declaration(color_value: ColorValue, color: HexColor) -> Declaration {
+    Declaration {
         property: DeclarationProperty::RawConstStr(
             CssColorValue(color_value).to_const_str_var_name(),
         ),
         value: ThemeAwareValue::RawConstStr(color.to_const_str()),
-    })
+    }
 }
 
 const fn append_u8(mut css: crate::common::ConstStr, value: u8) -> crate::common::ConstStr {
