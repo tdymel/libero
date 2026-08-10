@@ -1,3 +1,4 @@
+mod css_block;
 mod css_color_value;
 mod css_declaration;
 mod css_property;

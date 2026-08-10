@@ -60,6 +60,10 @@ impl Stylesheet {
             .push_char('{')
     }
 
+    pub const fn start_at_rule(self, prefix: &str, condition: &str) -> Self {
+        self.push_str(prefix).push_str(condition).push_char('{')
+    }
+
     pub const fn end_declaration(self) -> Self {
         self.push_char(';')
     }
