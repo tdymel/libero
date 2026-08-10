@@ -136,8 +136,7 @@ const fn push_color_var(
     color_value: ColorValue,
     color: HexColor,
 ) -> Stylesheet {
-    css =
-        Stylesheet::from_const_str(CssColorValue(color_value).push_var_name(css.into_const_str()));
+    CssColorValue(color_value).extend_var_name(&mut css);
     css = css.push_char(':');
     css = Stylesheet::from_const_str(color.push_hex(css.into_const_str()));
     css = css.end_declaration();

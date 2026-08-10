@@ -14,9 +14,11 @@ impl Declaration {
     const fn push_value(self, css: Stylesheet) -> Stylesheet {
         match self.value {
             ThemeAwareValue::Raw(value) => css.push_str(value),
-            ThemeAwareValue::Color(color_value) => Stylesheet::from_const_str(
-                CssColorValue(color_value).push_var(css.into_const_str()),
-            ),
+            ThemeAwareValue::Color(color_value) => {
+                let mut css = css;
+                CssColorValue(color_value).extend_var(&mut css);
+                css
+            }
             ThemeAwareValue::Size(size) => match self.property {
                 DeclarationProperty::Known(Property::PaddingTop) => Stylesheet::from_const_str(
                     SizeCssVar::SPACING.push_var(css.into_const_str(), size),
