@@ -8,23 +8,25 @@ use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
 
 pub(crate) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
 
-pub(crate) const fn to_css(sx: &Sx, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
-    let blocks = sx.blocks();
-    let declarations = sx.declarations();
-    let mut css = ConstStr::new();
+impl Sx {
+    pub const fn to_css(&self, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+        let blocks = self.blocks();
+        let declarations = self.declarations();
+        let mut css = ConstStr::new();
 
-    css = emit_node(
-        css,
-        declarations,
-        blocks,
-        ROOT_BLOCK_PARENT,
-        class_name,
-        None,
-        0,
-        declarations.len(),
-    );
+        css = emit_node(
+            css,
+            declarations,
+            blocks,
+            ROOT_BLOCK_PARENT,
+            class_name,
+            None,
+            0,
+            declarations.len(),
+        );
 
-    css
+        css
+    }
 }
 
 const fn emit_node(

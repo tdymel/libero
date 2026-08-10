@@ -1,7 +1,6 @@
-use crate::common::{ConstStr, ConstVec};
+use crate::common::ConstVec;
 
 use super::{declaration::Declaration, sx_block::SxBlock, sx_modifier::SxModifier};
-use crate::css;
 use crate::theme::Size;
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
@@ -107,10 +106,6 @@ impl Sx {
     pub(crate) const fn blocks(&self) -> &[SxBlock] {
         self.blocks.as_ref()
     }
-
-    pub const fn to_css(&self, class_name: &'static str) -> ConstStr {
-        css::to_css(self, class_name)
-    }
 }
 
 pub const fn sx() -> Sx {
@@ -119,6 +114,8 @@ pub const fn sx() -> Sx {
 
 #[cfg(test)]
 mod tests {
+    use crate::common::ConstStr;
+
     use super::*;
 
     #[test]
