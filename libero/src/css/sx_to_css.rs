@@ -1,37 +1,52 @@
-use crate::common::ConstStr;
-use crate::theme::Size;
+use crate::{
+    common::{ConstStr, ConstVec},
+    theme::Size,
+};
 
-use super::{Stylesheet, css_declaration::CssDeclaration};
+use super::{CssBlock, CssMediaQuery, CssScope, Stylesheet};
 
 use crate::sx::sx_block::SxBlock;
 use crate::sx::sx_modifier::SxModifier;
 use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
 
-pub(crate) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
+const DEFAULT_SX_BLOCK_OUTPUT_CAPACITY: usize = 64;
 
 impl Sx {
     pub const fn to_css(&self, class_name: &'static str) -> Stylesheet {
-        let blocks = self.blocks();
-        let declarations = self.declarations();
+        let css_blocks = self.to_css_blocks(class_name);
+        let css_blocks_ref = css_blocks.as_ref();
         let mut stylesheet = Stylesheet::new();
 
-        stylesheet = emit_node(
-            stylesheet,
-            declarations,
-            blocks,
+        let mut index = 0;
+        while index < css_blocks_ref.len() {
+            stylesheet = stylesheet.append_block(css_blocks_ref[index]);
+            index += 1;
+        }
+
+        stylesheet
+    }
+
+    const fn to_css_blocks(
+        &self,
+        class_name: &'static str,
+    ) -> ConstVec<CssBlock, DEFAULT_SX_BLOCK_OUTPUT_CAPACITY> {
+        let mut css_blocks = ConstVec::new_with_max_size();
+        emit_node(
+            &mut css_blocks,
+            self.declarations(),
+            self.blocks(),
             ROOT_BLOCK_PARENT,
             class_name,
             None,
             0,
-            declarations.len(),
+            self.declarations().len(),
         );
-
-        stylesheet
+        css_blocks
     }
 }
 
 const fn emit_node(
-    mut css: Stylesheet,
+    css_blocks: &mut ConstVec<CssBlock, DEFAULT_SX_BLOCK_OUTPUT_CAPACITY>,
     declarations: &[Declaration],
     blocks: &[SxBlock],
     parent_block_index: usize,
@@ -39,9 +54,9 @@ const fn emit_node(
     breakpoint: Option<Size>,
     start: usize,
     end: usize,
-) -> Stylesheet {
-    css = emit_rule(
-        css,
+) {
+    emit_rule(
+        css_blocks,
         declarations,
         blocks,
         parent_block_index,
@@ -73,8 +88,8 @@ const fn emit_node(
                 }
             }
 
-            css = emit_node(
-                css,
+            emit_node(
+                css_blocks,
                 declarations,
                 blocks,
                 block_index,
@@ -86,12 +101,10 @@ const fn emit_node(
         }
         block_index += 1;
     }
-
-    css
 }
 
 const fn emit_rule(
-    mut css: Stylesheet,
+    css_blocks: &mut ConstVec<CssBlock, DEFAULT_SX_BLOCK_OUTPUT_CAPACITY>,
     declarations: &[Declaration],
     blocks: &[SxBlock],
     parent_block_index: usize,
@@ -99,16 +112,12 @@ const fn emit_rule(
     breakpoint: Option<Size>,
     start: usize,
     end: usize,
-) -> Stylesheet {
+) {
     if !has_owned_declarations(declarations, blocks, parent_block_index, start, end) {
-        return css;
+        return;
     }
 
-    if let Some(breakpoint) = breakpoint {
-        css = css.start_media_min_width(breakpoint.breakpoint_value());
-    }
-
-    css = css.start_block(selector);
+    let mut scope = CssScope::from_const_str(ConstStr::from_str(selector));
 
     let mut declaration_index = start;
     while declaration_index < end {
@@ -117,18 +126,21 @@ const fn emit_rule(
             continue;
         }
 
-        let declaration = declarations[declaration_index];
-        CssDeclaration(declaration).extend(&mut css);
+        scope = scope.with(declarations[declaration_index]);
         declaration_index += 1;
     }
 
-    css = css.end_block();
-
-    if breakpoint.is_some() {
-        css = css.end_block();
+    match breakpoint {
+        Some(breakpoint) => {
+            css_blocks.push(CssBlock::MediaQuery(
+                CssMediaQuery::from_const_str(breakpoint_to_media_condition(breakpoint))
+                    .with(scope),
+            ));
+        }
+        None => {
+            css_blocks.push(CssBlock::Scope(scope));
+        }
     }
-
-    css
 }
 
 const fn has_owned_declarations(
@@ -166,6 +178,12 @@ const fn declaration_belongs_to_direct_child(
         block_index += 1;
     }
     false
+}
+
+const fn breakpoint_to_media_condition(breakpoint: Size) -> crate::common::ConstStr {
+    crate::common::ConstStr::from_str("(min-width: ")
+        .push_str(breakpoint.breakpoint_value())
+        .push_char(')')
 }
 
 const fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {

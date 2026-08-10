@@ -17,20 +17,20 @@ impl CssBlock {
             Self::MediaQuery(media_query) => media_query.to_const_str(),
         }
     }
-
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str());
-    }
 }
 
 #[derive(Clone, Copy)]
 pub struct CssMediaQuery {
-    condition: &'static str,
+    condition: crate::common::ConstStr,
     scopes: ConstVec<CssScope, DEFAULT_MEDIA_QUERY_SCOPE_CAPACITY>,
 }
 
 impl CssMediaQuery {
     pub const fn new(condition: &'static str) -> Self {
+        Self::from_const_str(crate::common::ConstStr::from_str(condition))
+    }
+
+    pub const fn from_const_str(condition: crate::common::ConstStr) -> Self {
         Self {
             condition,
             scopes: ConstVec::new_with_max_size(),
@@ -42,8 +42,8 @@ impl CssMediaQuery {
         self
     }
 
-    pub const fn condition(&self) -> &'static str {
-        self.condition
+    pub const fn condition(&self) -> &str {
+        self.condition.as_str()
     }
 
     pub const fn scopes(&self) -> &[CssScope] {
@@ -53,7 +53,7 @@ impl CssMediaQuery {
     pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
         let mut css = crate::common::ConstStr::new()
             .push_str("@media ")
-            .push_str(self.condition)
+            .append(self.condition)
             .push_char('{');
 
         let scopes = self.scopes();
@@ -64,10 +64,6 @@ impl CssMediaQuery {
         }
 
         css.push_char('}')
-    }
-
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.append(self.to_const_str());
     }
 }
 

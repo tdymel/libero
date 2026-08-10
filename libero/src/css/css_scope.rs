@@ -6,12 +6,16 @@ const DEFAULT_SCOPE_DECLARATION_CAPACITY: usize = 64;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CssScope {
-    specifier: &'static str,
+    specifier: crate::common::ConstStr,
     declarations: ConstVec<Declaration, DEFAULT_SCOPE_DECLARATION_CAPACITY>,
 }
 
 impl CssScope {
     pub const fn new(specifier: &'static str) -> Self {
+        Self::from_const_str(crate::common::ConstStr::from_str(specifier))
+    }
+
+    pub const fn from_const_str(specifier: crate::common::ConstStr) -> Self {
         Self {
             specifier,
             declarations: ConstVec::new_with_max_size(),
@@ -23,8 +27,8 @@ impl CssScope {
         self
     }
 
-    pub const fn specifier(&self) -> &'static str {
-        self.specifier
+    pub const fn specifier(&self) -> &str {
+        self.specifier.as_str()
     }
 
     pub const fn declarations(&self) -> &[Declaration] {
@@ -33,7 +37,7 @@ impl CssScope {
 
     pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
         let mut css = crate::common::ConstStr::new()
-            .push_str(self.specifier)
+            .append(self.specifier)
             .push_char('{');
 
         let declarations = self.declarations();
