@@ -1,50 +1,46 @@
-use crate::theme::{Color, ColorValue};
+use crate::{
+    common::ConstStr,
+    theme::{Color, ColorValue},
+};
 
-use super::{Stylesheet, css_var::ColorCssVar};
+use super::{Stylesheet, css_var::ColorCssVar, sx_to_css::DEFAULT_SX_CSS_CAPACITY};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CssColorValue(pub ColorValue);
 
 impl CssColorValue {
-    pub(crate) const fn extend_var_name(self, css: &mut Stylesheet) {
-        *css = match self.0 {
+    pub(crate) const fn to_const_str(self) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+        match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => css
-                    .extend(ColorCssVar::PRIMARY.push_name_with_shade(css.into_const_str(), shade)),
-                Color::Secondary => css.extend(
-                    ColorCssVar::SECONDARY.push_name_with_shade(css.into_const_str(), shade),
-                ),
+                Color::Primary => ColorCssVar::PRIMARY.push_var(ConstStr::new(), shade),
+                Color::Secondary => ColorCssVar::SECONDARY.push_var(ConstStr::new(), shade),
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => css.extend(
-                    ColorCssVar::PRIMARY_CONTRAST.push_name_with_shade(css.into_const_str(), shade),
-                ),
-                Color::Secondary => css.extend(
-                    ColorCssVar::SECONDARY_CONTRAST
-                        .push_name_with_shade(css.into_const_str(), shade),
-                ),
+                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.push_var(ConstStr::new(), shade),
+                Color::Secondary => {
+                    ColorCssVar::SECONDARY_CONTRAST.push_var(ConstStr::new(), shade)
+                }
             },
-        };
+        }
     }
 
-    pub(crate) const fn extend_var(self, css: &mut Stylesheet) {
-        *css = match self.0 {
+    pub(crate) const fn to_const_str_var_name(self) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+        match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => {
-                    css.extend(ColorCssVar::PRIMARY.push_var(css.into_const_str(), shade))
-                }
+                Color::Primary => ColorCssVar::PRIMARY.push_name_with_shade(ConstStr::new(), shade),
                 Color::Secondary => {
-                    css.extend(ColorCssVar::SECONDARY.push_var(css.into_const_str(), shade))
+                    ColorCssVar::SECONDARY.push_name_with_shade(ConstStr::new(), shade)
                 }
             },
             ColorValue::Contrast(color, shade) => match color {
                 Color::Primary => {
-                    css.extend(ColorCssVar::PRIMARY_CONTRAST.push_var(css.into_const_str(), shade))
+                    ColorCssVar::PRIMARY_CONTRAST.push_name_with_shade(ConstStr::new(), shade)
                 }
-                Color::Secondary => css
-                    .extend(ColorCssVar::SECONDARY_CONTRAST.push_var(css.into_const_str(), shade)),
+                Color::Secondary => {
+                    ColorCssVar::SECONDARY_CONTRAST.push_name_with_shade(ConstStr::new(), shade)
+                }
             },
-        };
+        }
     }
 }
 
@@ -56,16 +52,23 @@ mod tests {
 
     #[test]
     fn color_value_happy_path() {
-        let mut primary = Stylesheet::new();
-        CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1)).extend_var(&mut primary);
+        let primary = Stylesheet::new().append(
+            CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
+                .to_const_str()
+                .as_str(),
+        );
 
-        let mut secondary_contrast = Stylesheet::new();
-        CssColorValue(ColorValue::Contrast(Color::Secondary, ColorShade::S5))
-            .extend_var(&mut secondary_contrast);
+        let secondary_contrast = Stylesheet::new().append(
+            CssColorValue(ColorValue::Contrast(Color::Secondary, ColorShade::S5))
+                .to_const_str()
+                .as_str(),
+        );
 
-        let mut primary_var = Stylesheet::new();
-        CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
-            .extend_var_name(&mut primary_var);
+        let primary_var = Stylesheet::new().append(
+            CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
+                .to_const_str_var_name()
+                .as_str(),
+        );
 
         assert_eq!(primary.as_str(), "var(--lsx-primary-1)");
         assert_eq!(

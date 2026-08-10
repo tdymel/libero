@@ -22,7 +22,7 @@ impl CssDeclaration {
                 *css = css.push_str(value);
             }
             ThemeAwareValue::Color(color_value) => {
-                CssColorValue(color_value).extend_var(css);
+                *css = css.append(CssColorValue(color_value).to_const_str().as_str());
             }
             ThemeAwareValue::Size(size) => match self.0.property {
                 DeclarationProperty::Known(Property::PaddingTop) => {

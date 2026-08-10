@@ -31,9 +31,13 @@ impl Stylesheet {
         self
     }
 
-    pub const fn push_str(mut self, value: &str) -> Self {
+    pub const fn append(mut self, value: &str) -> Self {
         self.css = self.css.push_str(value);
         self
+    }
+
+    pub const fn push_str(self, value: &str) -> Self {
+        self.append(value)
     }
 
     pub const fn push_char(mut self, value: char) -> Self {
