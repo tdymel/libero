@@ -5,7 +5,7 @@ use super::{
     css_var::SizeCssVar,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CssDeclaration(pub Declaration);
 
 impl CssDeclaration {
@@ -25,6 +25,7 @@ impl CssDeclaration {
     const fn value_to_const_str(self) -> crate::common::ConstStr {
         match self.0.value {
             ThemeAwareValue::Raw(value) => crate::common::ConstStr::from_str(value),
+            ThemeAwareValue::RawConstStr(value) => value,
             ThemeAwareValue::Color(color_value) => CssColorValue(color_value).to_const_str(),
             ThemeAwareValue::Size(size) => match self.0.property {
                 DeclarationProperty::Known(Property::PaddingTop) => {

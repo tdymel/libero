@@ -1,5 +1,5 @@
 use crate::{
-    common::eq,
+    common::{ConstStr, eq},
     theme::{ColorValue, Size},
 };
 
@@ -43,10 +43,11 @@ impl Property {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum DeclarationProperty {
     Known(Property),
     Raw(&'static str),
+    RawConstStr(ConstStr),
 }
 
 impl DeclarationProperty {
@@ -58,9 +59,10 @@ impl DeclarationProperty {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ThemeAwareValue {
     Raw(&'static str),
+    RawConstStr(ConstStr),
     Color(ColorValue),
     Size(Size),
 }
@@ -79,7 +81,7 @@ impl ThemeAwareValue {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Declaration {
     pub property: DeclarationProperty,
     pub value: ThemeAwareValue,

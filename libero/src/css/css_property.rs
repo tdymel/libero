@@ -1,6 +1,6 @@
 use crate::{common::ConstStr, sx::DeclarationProperty};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct CssDeclarationProperty(pub DeclarationProperty);
 
 impl CssDeclarationProperty {
@@ -8,6 +8,7 @@ impl CssDeclarationProperty {
         match self.0 {
             DeclarationProperty::Known(property) => ConstStr::from_str(property.as_str()),
             DeclarationProperty::Raw(property) => ConstStr::from_str(property),
+            DeclarationProperty::RawConstStr(property) => property,
         }
     }
 }

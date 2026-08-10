@@ -59,7 +59,8 @@ impl HexColor {
         }
     }
 
-    pub(crate) const fn push_hex(self, mut css: ConstStr) -> ConstStr {
+    pub(crate) const fn to_const_str(self) -> ConstStr {
+        let mut css = ConstStr::new();
         css = css.push_char('#');
         css = css.push_char(hex_digit(self.r() >> 4));
         css = css.push_char(hex_digit(self.r() & 0x0F));
