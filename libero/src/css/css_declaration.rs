@@ -9,28 +9,36 @@ use super::{
 pub struct CssDeclaration(pub Declaration);
 
 impl CssDeclaration {
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        CssDeclarationProperty(self.0.property).extend_name(css);
-        *css = css.push_char(':');
-        self.extend_value(css);
-        *css = css.push_char(';');
+    pub(crate) const fn to_const_str(
+        self,
+    ) -> crate::common::ConstStr<{ super::sx_to_css::DEFAULT_SX_CSS_CAPACITY }> {
+        let mut css = crate::common::ConstStr::new();
+        css = css.push_str(
+            CssDeclarationProperty(self.0.property)
+                .to_const_str()
+                .as_str(),
+        );
+        css = css.push_char(':');
+        css = css.push_str(self.value_to_const_str().as_str());
+        css = css.push_char(';');
+        css
     }
 
-    const fn extend_value(self, css: &mut Stylesheet) {
+    pub(crate) const fn extend(self, css: &mut Stylesheet) {
+        *css = css.append(self.to_const_str().as_str());
+    }
+
+    const fn value_to_const_str(
+        self,
+    ) -> crate::common::ConstStr<{ super::sx_to_css::DEFAULT_SX_CSS_CAPACITY }> {
         match self.0.value {
-            ThemeAwareValue::Raw(value) => {
-                *css = css.push_str(value);
-            }
-            ThemeAwareValue::Color(color_value) => {
-                *css = css.append(CssColorValue(color_value).to_const_str().as_str());
-            }
+            ThemeAwareValue::Raw(value) => crate::common::ConstStr::new().push_str(value),
+            ThemeAwareValue::Color(color_value) => CssColorValue(color_value).to_const_str(),
             ThemeAwareValue::Size(size) => match self.0.property {
                 DeclarationProperty::Known(Property::PaddingTop) => {
-                    *css = css.extend(SizeCssVar::SPACING.push_var(css.into_const_str(), size));
+                    SizeCssVar::SPACING.push_var(crate::common::ConstStr::new(), size)
                 }
-                _ => {
-                    *css = css.push_str(size.as_str());
-                }
+                _ => crate::common::ConstStr::new().push_str(size.as_str()),
             },
         }
     }
