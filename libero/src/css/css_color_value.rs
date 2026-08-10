@@ -3,13 +3,13 @@ use crate::{
     theme::{Color, ColorValue},
 };
 
-use super::{Stylesheet, css_var::ColorCssVar, sx_to_css::DEFAULT_SX_CSS_CAPACITY};
+use super::{Stylesheet, css_var::ColorCssVar};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CssColorValue(pub ColorValue);
 
 impl CssColorValue {
-    pub(crate) const fn to_const_str(self) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    pub(crate) const fn to_const_str(self) -> ConstStr {
         match self.0 {
             ColorValue::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.push_var(ConstStr::new(), shade),
@@ -24,7 +24,7 @@ impl CssColorValue {
         }
     }
 
-    pub(crate) const fn to_const_str_var_name(self) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    pub(crate) const fn to_const_str_var_name(self) -> ConstStr {
         match self.0 {
             ColorValue::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.push_name_with_shade(ConstStr::new(), shade),

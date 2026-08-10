@@ -5,23 +5,23 @@ use super::ConstVec;
 const DEFAULT_CONST_STR_CAPACITY: usize = 2usize.pow(12);
 
 #[derive(Clone, Copy, PartialEq, Hash)]
-pub struct ConstStr<const MAX_SIZE: usize = DEFAULT_CONST_STR_CAPACITY> {
-    bytes: ConstVec<u8, MAX_SIZE>,
+pub struct ConstStr {
+    bytes: ConstVec<u8, DEFAULT_CONST_STR_CAPACITY>,
 }
 
-impl<const MAX_SIZE: usize> Default for ConstStr<MAX_SIZE> {
+impl Default for ConstStr {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const MAX_SIZE: usize> fmt::Debug for ConstStr<MAX_SIZE> {
+impl fmt::Debug for ConstStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("ConstStr").field(&self.as_str()).finish()
     }
 }
 
-impl<const MAX_SIZE: usize> ConstStr<MAX_SIZE> {
+impl ConstStr {
     pub const fn new() -> Self {
         Self {
             bytes: ConstVec::new_with_max_size(),

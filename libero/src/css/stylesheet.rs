@@ -1,10 +1,8 @@
 use crate::common::ConstStr;
 
-use super::sx_to_css::DEFAULT_SX_CSS_CAPACITY;
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Stylesheet {
-    css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    css: ConstStr,
 }
 
 impl Stylesheet {
@@ -14,7 +12,7 @@ impl Stylesheet {
         }
     }
 
-    pub const fn from_const_str(css: ConstStr<DEFAULT_SX_CSS_CAPACITY>) -> Self {
+    pub const fn from_const_str(css: ConstStr) -> Self {
         Self { css }
     }
 
@@ -22,11 +20,11 @@ impl Stylesheet {
         self.css.as_str()
     }
 
-    pub const fn into_const_str(self) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    pub const fn into_const_str(self) -> ConstStr {
         self.css
     }
 
-    pub(crate) const fn extend(mut self, css: ConstStr<DEFAULT_SX_CSS_CAPACITY>) -> Self {
+    pub(crate) const fn extend(mut self, css: ConstStr) -> Self {
         self.css = css;
         self
     }

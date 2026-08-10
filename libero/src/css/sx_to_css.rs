@@ -55,7 +55,7 @@ const fn emit_node(
     while block_index < blocks.len() {
         let block = blocks[block_index];
         if block.parent == parent_block_index {
-            let mut next_selector: ConstStr<DEFAULT_SX_CSS_CAPACITY> = ConstStr::new();
+            let mut next_selector: ConstStr = ConstStr::new();
             next_selector = next_selector.push_str(selector);
             let mut next_breakpoint = breakpoint;
 
