@@ -11,11 +11,15 @@ pub enum CssBlock {
 }
 
 impl CssBlock {
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
+    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
         match self {
-            Self::Scope(scope) => scope.extend(css),
-            Self::MediaQuery(media_query) => media_query.extend(css),
+            Self::Scope(scope) => scope.to_const_str(),
+            Self::MediaQuery(media_query) => media_query.to_const_str(),
         }
+    }
+
+    pub(crate) const fn extend(self, css: &mut Stylesheet) {
+        *css = css.append(self.to_const_str().as_str());
     }
 }
 
@@ -46,17 +50,24 @@ impl CssMediaQuery {
         self.scopes.as_ref()
     }
 
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.start_at_rule("@media ", self.condition);
+    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
+        let mut css = crate::common::ConstStr::new()
+            .push_str("@media ")
+            .push_str(self.condition)
+            .push_char('{');
 
         let scopes = self.scopes();
         let mut scope_index = 0;
         while scope_index < scopes.len() {
-            scopes[scope_index].extend(css);
+            css = css.push_str(scopes[scope_index].to_const_str().as_str());
             scope_index += 1;
         }
 
-        *css = css.end_block();
+        css.push_char('}')
+    }
+
+    pub(crate) const fn extend(self, css: &mut Stylesheet) {
+        *css = css.append(self.to_const_str().as_str());
     }
 }
 
@@ -74,8 +85,8 @@ mod tests {
         });
         let media_query = CssMediaQuery::new("(min-width: 48em)").with(scope);
 
-        let mut stylesheet = Stylesheet::new();
-        CssBlock::MediaQuery(media_query).extend(&mut stylesheet);
+        let stylesheet =
+            Stylesheet::new().append(CssBlock::MediaQuery(media_query).to_const_str().as_str());
 
         assert_eq!(
             stylesheet.as_str(),

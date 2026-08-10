@@ -31,17 +31,27 @@ impl CssScope {
         self.declarations.as_ref()
     }
 
-    pub(crate) const fn extend(self, css: &mut Stylesheet) {
-        *css = css.start_block(self.specifier);
+    pub(crate) const fn to_const_str(self) -> crate::common::ConstStr {
+        let mut css = crate::common::ConstStr::new()
+            .push_str(self.specifier)
+            .push_char('{');
 
         let declarations = self.declarations();
         let mut declaration_index = 0;
         while declaration_index < declarations.len() {
-            CssDeclaration(declarations[declaration_index]).extend(css);
+            css = css.push_str(
+                CssDeclaration(declarations[declaration_index])
+                    .to_const_str()
+                    .as_str(),
+            );
             declaration_index += 1;
         }
 
-        *css = css.end_block();
+        css.push_char('}')
+    }
+
+    pub(crate) const fn extend(self, css: &mut Stylesheet) {
+        *css = css.append(self.to_const_str().as_str());
     }
 }
 
@@ -63,8 +73,7 @@ mod tests {
                 value: ThemeAwareValue::Size(crate::theme::Size::Sm),
             });
 
-        let mut stylesheet = Stylesheet::new();
-        scope.extend(&mut stylesheet);
+        let stylesheet = Stylesheet::new().append(scope.to_const_str().as_str());
 
         assert_eq!(scope.specifier(), ".wambo");
         assert_eq!(
