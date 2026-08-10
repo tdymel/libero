@@ -1,4 +1,4 @@
-mod color_value;
+mod css_color_value;
 mod css_var;
 mod declaration;
 mod property;

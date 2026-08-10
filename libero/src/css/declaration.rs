@@ -1,6 +1,6 @@
 use crate::sx::{Declaration, DeclarationProperty, Property, ThemeAwareValue};
 
-use super::{Stylesheet, css_var::SizeCssVar};
+use super::{Stylesheet, css_color_value::CssColorValue, css_var::SizeCssVar};
 
 impl Declaration {
     pub(crate) const fn push(self, mut css: Stylesheet) -> Stylesheet {
@@ -14,9 +14,9 @@ impl Declaration {
     const fn push_value(self, css: Stylesheet) -> Stylesheet {
         match self.value {
             ThemeAwareValue::Raw(value) => css.push_str(value),
-            ThemeAwareValue::Color(color_value) => {
-                Stylesheet::from_const_str(color_value.push_var(css.into_const_str()))
-            }
+            ThemeAwareValue::Color(color_value) => Stylesheet::from_const_str(
+                CssColorValue(color_value).push_var(css.into_const_str()),
+            ),
             ThemeAwareValue::Size(size) => match self.property {
                 DeclarationProperty::Known(Property::PaddingTop) => Stylesheet::from_const_str(
                     SizeCssVar::SPACING.push_var(css.into_const_str(), size),

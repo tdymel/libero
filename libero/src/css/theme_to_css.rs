@@ -1,9 +1,6 @@
-use crate::{
-    common::ConstStr,
-    theme::{Color, ColorShade, ColorValue, HexColor, Size, Theme},
-};
+use crate::theme::{Color, ColorShade, ColorValue, HexColor, Size, Theme};
 
-use super::Stylesheet;
+use super::{Stylesheet, css_color_value::CssColorValue};
 
 impl Theme {
     pub const fn to_css(&self) -> Stylesheet {
@@ -128,7 +125,8 @@ const fn push_spacing_var(mut css: Stylesheet, size: Size, value: u8) -> Stylesh
         crate::css::SizeCssVar::SPACING.push_name(css.into_const_str(), size),
     );
     css = css.push_char(':');
-    css = Stylesheet::from_const_str(push_u8(css.into_const_str(), value));
+    css = css.push_u8(value);
+    css = css.push_str("px");
     css = css.end_declaration();
     css
 }
@@ -138,28 +136,12 @@ const fn push_color_var(
     color_value: ColorValue,
     color: HexColor,
 ) -> Stylesheet {
-    css = Stylesheet::from_const_str(color_value.push_var_name(css.into_const_str()));
+    css =
+        Stylesheet::from_const_str(CssColorValue(color_value).push_var_name(css.into_const_str()));
     css = css.push_char(':');
     css = Stylesheet::from_const_str(color.push_hex(css.into_const_str()));
     css = css.end_declaration();
     css
-}
-
-const fn push_u8(mut css: ConstStr, value: u8) -> ConstStr {
-    if value >= 100 {
-        css = css.push_char((b'0' + (value / 100)) as char);
-        css = css.push_char((b'0' + ((value / 10) % 10)) as char);
-        css = css.push_char((b'0' + (value % 10)) as char);
-        return css;
-    }
-
-    if value >= 10 {
-        css = css.push_char((b'0' + (value / 10)) as char);
-        css = css.push_char((b'0' + (value % 10)) as char);
-        return css;
-    }
-
-    css.push_char((b'0' + value) as char)
 }
 
 #[cfg(test)]

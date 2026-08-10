@@ -5,17 +5,20 @@ use crate::{
 
 use super::css_var::ColorCssVar;
 
-impl ColorValue {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CssColorValue(pub ColorValue);
+
+impl CssColorValue {
     pub(crate) const fn push_var_name<const MAX_SIZE: usize>(
         self,
         css: ConstStr<MAX_SIZE>,
     ) -> ConstStr<MAX_SIZE> {
-        match self {
-            Self::Shade(color, shade) => match color {
+        match self.0 {
+            ColorValue::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.push_name_with_shade(css, shade),
                 Color::Secondary => ColorCssVar::SECONDARY.push_name_with_shade(css, shade),
             },
-            Self::Contrast(color, shade) => match color {
+            ColorValue::Contrast(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY_CONTRAST.push_name_with_shade(css, shade),
                 Color::Secondary => {
                     ColorCssVar::SECONDARY_CONTRAST.push_name_with_shade(css, shade)
@@ -28,12 +31,12 @@ impl ColorValue {
         self,
         css: ConstStr<MAX_SIZE>,
     ) -> ConstStr<MAX_SIZE> {
-        match self {
-            Self::Shade(color, shade) => match color {
+        match self.0 {
+            ColorValue::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.push_var(css, shade),
                 Color::Secondary => ColorCssVar::SECONDARY.push_var(css, shade),
             },
-            Self::Contrast(color, shade) => match color {
+            ColorValue::Contrast(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY_CONTRAST.push_var(css, shade),
                 Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.push_var(css, shade),
             },
@@ -49,12 +52,14 @@ mod tests {
 
     #[test]
     fn color_value_happy_path() {
-        const PRIMARY: ConstStr =
-            ColorValue::Shade(Color::Primary, ColorShade::S1).push_var(ConstStr::new());
+        const PRIMARY: ConstStr = CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
+            .push_var(ConstStr::new());
         const SECONDARY_CONTRAST: ConstStr =
-            ColorValue::Contrast(Color::Secondary, ColorShade::S5).push_var(ConstStr::new());
+            CssColorValue(ColorValue::Contrast(Color::Secondary, ColorShade::S5))
+                .push_var(ConstStr::new());
         const PRIMARY_VAR: ConstStr =
-            ColorValue::Shade(Color::Primary, ColorShade::S1).push_var_name(ConstStr::new());
+            CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1))
+                .push_var_name(ConstStr::new());
 
         assert_eq!(PRIMARY.as_str(), "var(--lsx-primary-1)");
         assert_eq!(

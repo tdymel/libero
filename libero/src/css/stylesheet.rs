@@ -58,4 +58,21 @@ impl Stylesheet {
     pub const fn end_declaration(self) -> Self {
         self.push_char(';')
     }
+
+    pub const fn push_u8(mut self, value: u8) -> Self {
+        if value >= 100 {
+            self = self.push_char((b'0' + (value / 100)) as char);
+            self = self.push_char((b'0' + ((value / 10) % 10)) as char);
+            self = self.push_char((b'0' + (value % 10)) as char);
+            return self;
+        }
+
+        if value >= 10 {
+            self = self.push_char((b'0' + (value / 10)) as char);
+            self = self.push_char((b'0' + (value % 10)) as char);
+            return self;
+        }
+
+        self.push_char((b'0' + value) as char)
+    }
 }
