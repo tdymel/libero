@@ -129,8 +129,6 @@ pub const fn sx() -> Sx {
 
 #[cfg(test)]
 mod tests {
-    use crate::common::ConstStr;
-
     use super::*;
 
     #[test]
@@ -164,7 +162,7 @@ mod tests {
                 ),
             );
 
-        const CSS: ConstStr = STYLE.to_css(".button");
+        const CSS: crate::css::Stylesheet = STYLE.to_css(".button");
         assert_eq!(
             CSS.as_str(),
             ".button{background:var(--lsx-primary-5);height:200px;padding-top:var(--lsx-spacing-sm);}.button:hover{background:var(--lsx-primary-1);width:120px;}.button:focus{height:220px;}.button> .item{width:20px;}.button .label{background:green;}.button ~ .peer{height:240px;}.button + .next{width:140px;}.button:has(+ .prev){background:orange;}.button[data-state~=\"selected\"]{background:var(--lsx-secondary-5);}.button .nested{background:purple;}.button .nested:hover{height:280px;}.button .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.button{width:400px;}}@media (min-width: 75em){.button{height:500px;}}@media (min-width: 75em){.button{background:var(--lsx-secondary-7);}}"

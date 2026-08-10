@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 
-use crate::{common::ConstStr, theme::Theme};
+use crate::{css::Stylesheet, theme::Theme};
 
 #[derive(Clone, Copy)]
 pub struct LiberoContext {
     pub theme: &'static Theme,
-    pub(crate) theme_css: ConstStr,
+    pub(crate) theme_css: Stylesheet,
 }
 
 impl LiberoContext {

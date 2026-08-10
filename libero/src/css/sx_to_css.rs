@@ -1,6 +1,8 @@
 use crate::common::ConstStr;
 use crate::theme::Size;
 
+use super::Stylesheet;
+
 use crate::sx::sx_block::SxBlock;
 use crate::sx::sx_modifier::SxModifier;
 use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
@@ -8,13 +10,13 @@ use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
 pub(crate) const DEFAULT_SX_CSS_CAPACITY: usize = 4096;
 
 impl Sx {
-    pub const fn to_css(&self, class_name: &'static str) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+    pub const fn to_css(&self, class_name: &'static str) -> Stylesheet {
         let blocks = self.blocks();
         let declarations = self.declarations();
-        let mut css = ConstStr::new();
+        let mut stylesheet = Stylesheet::new();
 
-        css = emit_node(
-            css,
+        stylesheet = emit_node(
+            stylesheet,
             declarations,
             blocks,
             ROOT_BLOCK_PARENT,
@@ -24,12 +26,12 @@ impl Sx {
             declarations.len(),
         );
 
-        css
+        stylesheet
     }
 }
 
 const fn emit_node(
-    mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    mut css: Stylesheet,
     declarations: &[Declaration],
     blocks: &[SxBlock],
     parent_block_index: usize,
@@ -37,7 +39,7 @@ const fn emit_node(
     breakpoint: Option<Size>,
     start: usize,
     end: usize,
-) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+) -> Stylesheet {
     css = emit_rule(
         css,
         declarations,
@@ -89,7 +91,7 @@ const fn emit_node(
 }
 
 const fn emit_rule(
-    mut css: ConstStr<DEFAULT_SX_CSS_CAPACITY>,
+    mut css: Stylesheet,
     declarations: &[Declaration],
     blocks: &[SxBlock],
     parent_block_index: usize,
@@ -97,20 +99,16 @@ const fn emit_rule(
     breakpoint: Option<Size>,
     start: usize,
     end: usize,
-) -> ConstStr<DEFAULT_SX_CSS_CAPACITY> {
+) -> Stylesheet {
     if !has_owned_declarations(declarations, blocks, parent_block_index, start, end) {
         return css;
     }
 
     if let Some(breakpoint) = breakpoint {
-        css = css.push_str("@media (min-width: ");
-        css = css.push_str(breakpoint.breakpoint_value());
-        css = css.push_char(')');
-        css = css.push_char('{');
+        css = css.start_media_min_width(breakpoint.breakpoint_value());
     }
 
-    css = css.push_str(selector);
-    css = css.push_char('{');
+    css = css.start_block(selector);
 
     let mut declaration_index = start;
     while declaration_index < end {
@@ -124,10 +122,10 @@ const fn emit_rule(
         declaration_index += 1;
     }
 
-    css = css.push_char('}');
+    css = css.end_block();
 
     if breakpoint.is_some() {
-        css = css.push_char('}');
+        css = css.end_block();
     }
 
     css

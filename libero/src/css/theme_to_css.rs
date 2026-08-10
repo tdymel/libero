@@ -3,17 +3,19 @@ use crate::{
     theme::{Color, ColorShade, ColorValue, HexColor, Size, Theme},
 };
 
+use super::Stylesheet;
+
 impl Theme {
-    pub const fn to_css(&self) -> ConstStr {
-        let mut css = ConstStr::new();
-        css = css.push_str(":root{");
+    pub const fn to_css(&self) -> Stylesheet {
+        let mut css = Stylesheet::new();
+        css = css.start_root();
         css = self.push_spacing_vars(css);
         css = self.push_color_vars(css, Color::Primary, self.primary);
         css = self.push_color_vars(css, Color::Secondary, self.secondary);
-        css.push_char('}')
+        css.end_block()
     }
 
-    const fn push_spacing_vars(&self, mut css: ConstStr) -> ConstStr {
+    const fn push_spacing_vars(&self, mut css: Stylesheet) -> Stylesheet {
         css = push_spacing_var(css, Size::Xs, self.spacing.xs);
         css = push_spacing_var(css, Size::Sm, self.spacing.sm);
         css = push_spacing_var(css, Size::Md, self.spacing.md);
@@ -22,7 +24,12 @@ impl Theme {
         css
     }
 
-    const fn push_color_vars(&self, mut css: ConstStr, color: Color, base: HexColor) -> ConstStr {
+    const fn push_color_vars(
+        &self,
+        mut css: Stylesheet,
+        color: Color,
+        base: HexColor,
+    ) -> Stylesheet {
         css = push_color_var(
             css,
             ColorValue::Shade(color, ColorShade::S1),
@@ -116,19 +123,25 @@ impl Theme {
     }
 }
 
-const fn push_spacing_var(mut css: ConstStr, size: Size, value: u8) -> ConstStr {
-    css = crate::css::SizeCssVar::SPACING.push_name(css, size);
+const fn push_spacing_var(mut css: Stylesheet, size: Size, value: u8) -> Stylesheet {
+    css = Stylesheet::from_const_str(
+        crate::css::SizeCssVar::SPACING.push_name(css.into_const_str(), size),
+    );
     css = css.push_char(':');
-    css = push_u8(css, value);
-    css = css.push_str("px;");
+    css = Stylesheet::from_const_str(push_u8(css.into_const_str(), value));
+    css = css.end_declaration();
     css
 }
 
-const fn push_color_var(mut css: ConstStr, color_value: ColorValue, color: HexColor) -> ConstStr {
-    css = color_value.push_var_name(css);
+const fn push_color_var(
+    mut css: Stylesheet,
+    color_value: ColorValue,
+    color: HexColor,
+) -> Stylesheet {
+    css = Stylesheet::from_const_str(color_value.push_var_name(css.into_const_str()));
     css = css.push_char(':');
-    css = color.push_hex(css);
-    css = css.push_char(';');
+    css = Stylesheet::from_const_str(color.push_hex(css.into_const_str()));
+    css = css.end_declaration();
     css
 }
 
@@ -162,7 +175,7 @@ mod tests {
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
         );
-        const CSS: ConstStr = THEME.to_css();
+        const CSS: Stylesheet = THEME.to_css();
 
         assert!(CSS.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(CSS.as_str().contains("--lsx-spacing-xl:20px;"));
