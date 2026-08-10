@@ -9,18 +9,17 @@ impl CssColorValue {
     pub(crate) const fn extend_var_name(self, css: &mut Stylesheet) {
         *css = match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => Stylesheet::from_const_str(
-                    ColorCssVar::PRIMARY.push_name_with_shade(css.into_const_str(), shade),
-                ),
-                Color::Secondary => Stylesheet::from_const_str(
+                Color::Primary => css
+                    .extend(ColorCssVar::PRIMARY.push_name_with_shade(css.into_const_str(), shade)),
+                Color::Secondary => css.extend(
                     ColorCssVar::SECONDARY.push_name_with_shade(css.into_const_str(), shade),
                 ),
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => Stylesheet::from_const_str(
+                Color::Primary => css.extend(
                     ColorCssVar::PRIMARY_CONTRAST.push_name_with_shade(css.into_const_str(), shade),
                 ),
-                Color::Secondary => Stylesheet::from_const_str(
+                Color::Secondary => css.extend(
                     ColorCssVar::SECONDARY_CONTRAST
                         .push_name_with_shade(css.into_const_str(), shade),
                 ),
@@ -31,20 +30,19 @@ impl CssColorValue {
     pub(crate) const fn extend_var(self, css: &mut Stylesheet) {
         *css = match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => Stylesheet::from_const_str(
-                    ColorCssVar::PRIMARY.push_var(css.into_const_str(), shade),
-                ),
-                Color::Secondary => Stylesheet::from_const_str(
-                    ColorCssVar::SECONDARY.push_var(css.into_const_str(), shade),
-                ),
+                Color::Primary => {
+                    css.extend(ColorCssVar::PRIMARY.push_var(css.into_const_str(), shade))
+                }
+                Color::Secondary => {
+                    css.extend(ColorCssVar::SECONDARY.push_var(css.into_const_str(), shade))
+                }
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => Stylesheet::from_const_str(
-                    ColorCssVar::PRIMARY_CONTRAST.push_var(css.into_const_str(), shade),
-                ),
-                Color::Secondary => Stylesheet::from_const_str(
-                    ColorCssVar::SECONDARY_CONTRAST.push_var(css.into_const_str(), shade),
-                ),
+                Color::Primary => {
+                    css.extend(ColorCssVar::PRIMARY_CONTRAST.push_var(css.into_const_str(), shade))
+                }
+                Color::Secondary => css
+                    .extend(ColorCssVar::SECONDARY_CONTRAST.push_var(css.into_const_str(), shade)),
             },
         };
     }

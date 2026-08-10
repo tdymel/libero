@@ -26,6 +26,11 @@ impl Stylesheet {
         self.css
     }
 
+    pub(crate) const fn extend(mut self, css: ConstStr<DEFAULT_SX_CSS_CAPACITY>) -> Self {
+        self.css = css;
+        self
+    }
+
     pub const fn push_str(mut self, value: &str) -> Self {
         self.css = self.css.push_str(value);
         self

@@ -1,7 +1,7 @@
 use crate::common::ConstStr;
 use crate::theme::Size;
 
-use super::Stylesheet;
+use super::{Stylesheet, css_declaration::CssDeclaration};
 
 use crate::sx::sx_block::SxBlock;
 use crate::sx::sx_modifier::SxModifier;
@@ -118,7 +118,7 @@ const fn emit_rule(
         }
 
         let declaration = declarations[declaration_index];
-        css = declaration.push(css);
+        CssDeclaration(declaration).extend(&mut css);
         declaration_index += 1;
     }
 

@@ -32,6 +32,15 @@ impl Property {
 
         None
     }
+
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Background => "background",
+            Self::Width => "width",
+            Self::Height => "height",
+            Self::PaddingTop => "padding-top",
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
