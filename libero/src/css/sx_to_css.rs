@@ -9,8 +9,8 @@ use crate::sx::sx_block::SxBlock;
 use crate::sx::sx_modifier::SxModifier;
 use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
 
-const DEFAULT_SX_FLATTENED_SCOPE_CAPACITY: usize = 64;
-const DEFAULT_SX_BLOCK_OUTPUT_CAPACITY: usize = 64;
+const DEFAULT_SX_FLATTENED_SCOPE_CAPACITY: usize = 32;
+const DEFAULT_SX_BLOCK_OUTPUT_CAPACITY: usize = 32;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct FlattenedScope {

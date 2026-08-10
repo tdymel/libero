@@ -87,3 +87,14 @@ pub fn LiberoProvider(theme: &'static Theme, children: Element) -> Element {
 pub fn use_theme() -> &'static Theme {
     use_context::<LiberoContext>().theme
 }
+
+pub fn use_sx(sx: &'static crate::sx::Sx) -> String {
+    let context = use_context::<LiberoContext>();
+    let stylesheet = sx.to_css();
+    let id = use_hook(|| context.sx_registry.register(stylesheet));
+
+    match id.as_ref() {
+        Some(id) => id.as_str().to_string(),
+        None => String::new(),
+    }
+}
