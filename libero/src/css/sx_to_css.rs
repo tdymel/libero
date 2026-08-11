@@ -43,7 +43,7 @@ impl Sx {
     pub fn to_css(&self) -> Stylesheet {
         let class_name = self.class_name();
         let css_blocks = self.to_css_blocks(class_name_to_selector(&class_name));
-        let mut stylesheet = Stylesheet::new().with_class_name(class_name.clone());
+        let mut stylesheet = Stylesheet::new();
 
         let mut index = 0;
         while index < css_blocks.len() {

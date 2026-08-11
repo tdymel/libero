@@ -29,6 +29,7 @@ fn App() -> Element {
             if show_hello_world() {
                 HelloWorld {}
             }
+            HelloWorld {}
         }
     }
 }

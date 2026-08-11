@@ -2,39 +2,31 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use dioxus::prelude::*;
 
-use crate::{css::Stylesheet, theme::Theme};
+use crate::{css::Stylesheet, sx::Sx, theme::Theme};
 
 #[derive(Clone)]
 pub struct RegisteredStylesheet {
-    pub id: Rc<String>,
-    pub css: String,
+    pub sx: &'static Sx,
+    pub css: Stylesheet,
+    pub registrations: Rc<()>,
 }
 
 #[derive(Clone)]
-pub struct RegisteredSxHandle {
-    id: Option<Rc<String>>,
+struct RegistrationGuard {
+    registrations: Rc<()>,
     sx_registry_version: Signal<u64>,
 }
 
-impl RegisteredSxHandle {
-    fn class_name(&self) -> String {
-        match &self.id {
-            Some(id) => id.as_str().to_string(),
-            None => String::new(),
-        }
-    }
-}
-
-impl Drop for RegisteredSxHandle {
+impl Drop for RegistrationGuard {
     fn drop(&mut self) {
-        self.id.take();
+        let _ = &self.registrations;
         *self.sx_registry_version.write() += 1;
     }
 }
 
 #[derive(Clone, Default)]
 pub struct SxRegistry {
-    inner: Rc<RefCell<BTreeMap<String, RegisteredStylesheet>>>,
+    inner: Rc<RefCell<BTreeMap<u64, RegisteredStylesheet>>>,
 }
 
 impl SxRegistry {
@@ -42,34 +34,47 @@ impl SxRegistry {
         Self::default()
     }
 
-    pub fn register(&self, stylesheet: Stylesheet) -> Option<Rc<String>> {
-        let Some(class_name) = stylesheet.class_name() else {
-            return None;
-        };
-
-        let key = class_name.to_string();
+    fn registration_token(&self, sx: &'static Sx) -> Rc<()> {
+        let key = sx.hash();
         let mut registry = self.inner.borrow_mut();
 
         if let Some(entry) = registry.get(&key) {
-            return Some(entry.id.clone());
+            return entry.registrations.clone();
         }
 
-        let id = Rc::new(class_name.to_string());
+        let registrations = Rc::new(());
         registry.insert(
             key,
             RegisteredStylesheet {
-                id: id.clone(),
-                css: stylesheet.as_str().to_string(),
+                sx,
+                css: sx.to_css(),
+                registrations: registrations.clone(),
             },
         );
 
-        Some(id)
+        registrations
+    }
+
+    fn register(&self, sx: &'static Sx, sx_registry_version: Signal<u64>) -> RegistrationGuard {
+        RegistrationGuard {
+            registrations: self.registration_token(sx),
+            sx_registry_version,
+        }
     }
 
     pub fn stylesheets(&self) -> Vec<String> {
         let mut registry = self.inner.borrow_mut();
-        registry.retain(|_, entry| Rc::strong_count(&entry.id) > 1);
-        registry.values().map(|entry| entry.css.clone()).collect()
+        registry.retain(|_, entry| Rc::strong_count(&entry.registrations) > 1);
+        registry
+            .values()
+            .map(|entry| {
+                debug_assert_eq!(
+                    entry.sx.class_name(),
+                    format!("lsx-{:016x}", entry.sx.hash())
+                );
+                entry.css.as_str().to_string()
+            })
+            .collect()
     }
 }
 
@@ -116,17 +121,12 @@ pub fn use_theme() -> &'static Theme {
     use_context::<LiberoContext>().theme
 }
 
-pub fn use_sx(sx: &'static crate::sx::Sx) -> String {
+pub fn use_sx(sx: &'static crate::sx::Sx) {
     let mut context = use_context::<LiberoContext>();
-    let stylesheet = sx.to_css();
-    let registration = use_hook(|| {
-        let id = context.sx_registry.register(stylesheet);
+    let _registration = use_hook(|| {
         *context.sx_registry_version.write() += 1;
-        RegisteredSxHandle {
-            id,
-            sx_registry_version: context.sx_registry_version,
-        }
+        context
+            .sx_registry
+            .register(sx, context.sx_registry_version)
     });
-
-    registration.class_name()
 }
