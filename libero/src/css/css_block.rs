@@ -56,7 +56,7 @@ mod tests {
     #[test]
     fn css_media_query_happy_path() {
         let scope = CssScope::new(".wambo").with(CssDeclaration::new("width", "120px"));
-        let media_query = CssMediaQuery::from_string("(min-width: 48em)".to_string()).with(scope);
+        let media_query = CssMediaQuery::from_string("(min-width: 48rem)".to_string()).with(scope);
 
         let stylesheet = Stylesheet::from(
             crate::css::StylesheetBuilder::new().with_block(CssBlock::MediaQuery(media_query)),
@@ -64,7 +64,7 @@ mod tests {
 
         assert_eq!(
             stylesheet.as_str(),
-            "@media (min-width: 48em){.wambo{width:120px;}}"
+            "@media (min-width: 48rem){.wambo{width:120px;}}"
         );
     }
 }

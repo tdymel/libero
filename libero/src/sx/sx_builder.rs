@@ -169,10 +169,10 @@ mod tests {
             .build();
 
         let css = crate::css::Stylesheet::from(&STYLE);
-        assert_eq!(STYLE.class_name(), "lsx-7e8a154b16ad4ac9");
+        assert_eq!(STYLE.class_name(), "lsx-6b3bf9b9d4bfb407");
         assert_eq!(
             css.as_str(),
-            ".lsx-7e8a154b16ad4ac9{background:var(--lsx-primary-5);height:200px;padding-top:var(--lsx-spacing-sm);}.lsx-7e8a154b16ad4ac9:hover{background:var(--lsx-primary-1);width:120px;}.lsx-7e8a154b16ad4ac9:focus{height:220px;}.lsx-7e8a154b16ad4ac9> .item{width:20px;}.lsx-7e8a154b16ad4ac9 .label{background:green;}.lsx-7e8a154b16ad4ac9 ~ .peer{height:240px;}.lsx-7e8a154b16ad4ac9 + .next{width:140px;}.lsx-7e8a154b16ad4ac9:has(+ .prev){background:orange;}.lsx-7e8a154b16ad4ac9[data-state~=\"selected\"]{background:var(--lsx-secondary-5);}.lsx-7e8a154b16ad4ac9 .nested{background:purple;}.lsx-7e8a154b16ad4ac9 .nested:hover{height:280px;}.lsx-7e8a154b16ad4ac9 .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.lsx-7e8a154b16ad4ac9{width:400px;}}@media (min-width: 75em){.lsx-7e8a154b16ad4ac9{height:500px;}}@media (min-width: 75em){.lsx-7e8a154b16ad4ac9{background:var(--lsx-secondary-7);}}"
+            ".lsx-6b3bf9b9d4bfb407{background:var(--lsx-primary-5);height:200px;padding-top:var(--lsx-spacing-sm);}.lsx-6b3bf9b9d4bfb407:hover{background:var(--lsx-primary-1);width:120px;}.lsx-6b3bf9b9d4bfb407:focus{height:220px;}.lsx-6b3bf9b9d4bfb407> .item{width:20px;}.lsx-6b3bf9b9d4bfb407 .label{background:green;}.lsx-6b3bf9b9d4bfb407 ~ .peer{height:240px;}.lsx-6b3bf9b9d4bfb407 + .next{width:140px;}.lsx-6b3bf9b9d4bfb407:has(+ .prev){background:orange;}.lsx-6b3bf9b9d4bfb407[data-state~=\"selected\"]{background:var(--lsx-secondary-5);}.lsx-6b3bf9b9d4bfb407 .nested{background:purple;}.lsx-6b3bf9b9d4bfb407 .nested:hover{height:280px;}.lsx-6b3bf9b9d4bfb407 .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48rem){.lsx-6b3bf9b9d4bfb407{width:400px;}}@media (min-width: 75rem){.lsx-6b3bf9b9d4bfb407{height:500px;}}@media (min-width: 75rem){.lsx-6b3bf9b9d4bfb407{background:var(--lsx-secondary-7);}}"
         );
     }
 }
