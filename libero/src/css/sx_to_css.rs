@@ -16,30 +16,6 @@ struct FlattenedScope {
 }
 
 impl Sx {
-    pub const fn hash(&self) -> u64 {
-        let mut hash = 0xcbf29ce484222325u64;
-
-        let declarations = self.declarations();
-        let mut declaration_index = 0;
-        while declaration_index < declarations.len() {
-            hash = hash_declaration(hash, declarations[declaration_index]);
-            declaration_index += 1;
-        }
-
-        let blocks = self.blocks();
-        let mut block_index = 0;
-        while block_index < blocks.len() {
-            hash = hash_sx_block(hash, blocks[block_index]);
-            block_index += 1;
-        }
-
-        hash
-    }
-
-    pub fn class_name(&self) -> String {
-        format!("lsx-{:016x}", self.hash())
-    }
-
     pub fn to_css(&self) -> Stylesheet {
         let class_name = self.class_name();
         let css_blocks = self.to_css_blocks(class_name_to_selector(&class_name));
@@ -212,56 +188,6 @@ const fn declaration_belongs_to_direct_child(
 
 fn breakpoint_to_media_condition(breakpoint: Size) -> String {
     format!("(min-width: {})", breakpoint.breakpoint_value())
-}
-
-const fn hash_u8(mut hash: u64, value: u8) -> u64 {
-    hash ^= value as u64;
-    hash.wrapping_mul(0x00000100000001B3)
-}
-
-const fn hash_str(mut hash: u64, value: &str) -> u64 {
-    let bytes = value.as_bytes();
-    let mut index = 0;
-    while index < bytes.len() {
-        hash = hash_u8(hash, bytes[index]);
-        index += 1;
-    }
-    hash
-}
-
-const fn hash_declaration(mut hash: u64, declaration: Declaration) -> u64 {
-    hash = match declaration.property {
-        crate::sx::DeclarationProperty::Known(property) => {
-            hash_str(hash_u8(hash, 0), property.as_str())
-        }
-        crate::sx::DeclarationProperty::Raw(property) => hash_str(hash_u8(hash, 1), property),
-    };
-
-    match declaration.value {
-        crate::sx::ThemeAwareValue::Raw(value) => hash_str(hash_u8(hash, 3), value),
-        crate::sx::ThemeAwareValue::Color(color_value) => match color_value {
-            crate::theme::ColorValue::Shade(color, shade) => hash_str(
-                hash_str(hash_u8(hash_u8(hash, 5), color as u8), shade.as_str()),
-                "",
-            ),
-            crate::theme::ColorValue::Contrast(color, shade) => hash_str(
-                hash_str(hash_u8(hash_u8(hash, 6), color as u8), shade.as_str()),
-                "",
-            ),
-        },
-        crate::sx::ThemeAwareValue::Size(size) => hash_str(hash_u8(hash, 7), size.as_str()),
-    }
-}
-
-const fn hash_sx_block(mut hash: u64, block: SxBlock) -> u64 {
-    hash = match block.modifier {
-        SxModifier::Selector(selector) => hash_str(hash_u8(hash, 8), selector),
-        SxModifier::Condition(condition) => hash_str(hash_u8(hash, 9), condition),
-        SxModifier::Breakpoint(size) => hash_str(hash_u8(hash, 10), size.breakpoint_value()),
-    };
-    hash = hash_u8(hash, (block.start & 0xFF) as u8);
-    hash = hash_u8(hash, (block.end & 0xFF) as u8);
-    hash_u8(hash, (block.parent & 0xFF) as u8)
 }
 
 fn class_name_to_selector(class_name: &str) -> String {

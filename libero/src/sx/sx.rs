@@ -1,11 +1,6 @@
 use crate::common::ConstVec;
 
-use super::{
-    declaration::{Declaration, DeclarationProperty, Property, ThemeAwareValue},
-    sx_block::SxBlock,
-    sx_modifier::SxModifier,
-};
-use crate::theme::Size;
+use super::{declaration::Declaration, sx_block::SxBlock};
 
 const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
 const DEFAULT_SX_BLOCK_CAPACITY: usize = 32;
@@ -16,102 +11,39 @@ pub struct Sx {
     blocks: ConstVec<SxBlock, DEFAULT_SX_BLOCK_CAPACITY>,
 }
 
-impl Default for Sx {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 impl Sx {
-    pub const fn new() -> Self {
+    pub const fn new(
+        declarations: ConstVec<Declaration, DEFAULT_SX_DECLARATION_CAPACITY>,
+        blocks: ConstVec<SxBlock, DEFAULT_SX_BLOCK_CAPACITY>,
+    ) -> Self {
         Self {
-            declarations: ConstVec::new_with_max_size(),
-            blocks: ConstVec::new_with_max_size(),
+            declarations,
+            blocks,
         }
     }
 
-    pub const fn with(self, property: &'static str, value: &'static str) -> Self {
-        self.with_property(DeclarationProperty::parse(property), value)
-    }
+    pub const fn hash(&self) -> u64 {
+        let mut hash = 0xcbf29ce484222325u64;
 
-    const fn with_known_property(self, property: Property, value: &'static str) -> Self {
-        self.with_property(DeclarationProperty::Known(property), value)
-    }
-
-    const fn with_property(mut self, property: DeclarationProperty, value: &'static str) -> Self {
-        self.declarations.push(Declaration {
-            property,
-            value: ThemeAwareValue::parse(value),
-        });
-        self
-    }
-
-    pub const fn background(self, value: &'static str) -> Self {
-        self.with_known_property(Property::Background, value)
-    }
-
-    pub const fn width(self, value: &'static str) -> Self {
-        self.with_known_property(Property::Width, value)
-    }
-
-    pub const fn height(self, value: &'static str) -> Self {
-        self.with_known_property(Property::Height, value)
-    }
-
-    pub const fn padding_top(self, value: &'static str) -> Self {
-        self.with_known_property(Property::PaddingTop, value)
-    }
-
-    pub const fn hover(self, nested: Sx) -> Self {
-        self.selector(":hover", nested)
-    }
-
-    pub const fn focus(self, nested: Sx) -> Self {
-        self.selector(":focus", nested)
-    }
-
-    pub const fn when(self, condition: &'static str, nested: Sx) -> Self {
-        self.modifier(SxModifier::Condition(condition), nested)
-    }
-
-    pub const fn selector(self, selector: &'static str, nested: Sx) -> Self {
-        self.modifier(SxModifier::Selector(selector), nested)
-    }
-
-    pub const fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
-        self.modifier(SxModifier::Breakpoint(breakpoint), nested)
-    }
-
-    const fn modifier(mut self, modifier: SxModifier, nested: Sx) -> Self {
-        let start = self.declarations.len();
-        let parent = self.blocks.len();
-        self.declarations.extend(nested.declarations());
-        let end = self.declarations.len();
-        self.blocks.push(SxBlock {
-            modifier,
-            start,
-            end,
-            parent: super::ROOT_BLOCK_PARENT,
-        });
-
-        let nested_blocks = nested.blocks();
-        let mut i = 0;
-        while i < nested_blocks.len() {
-            let nested_block = nested_blocks[i];
-            self.blocks.push(SxBlock {
-                modifier: nested_block.modifier,
-                start: start + nested_block.start,
-                end: start + nested_block.end,
-                parent: if nested_block.parent == super::ROOT_BLOCK_PARENT {
-                    parent
-                } else {
-                    parent + 1 + nested_block.parent
-                },
-            });
-            i += 1;
+        let declarations = self.declarations();
+        let mut declaration_index = 0;
+        while declaration_index < declarations.len() {
+            hash = declarations[declaration_index].hash(hash);
+            declaration_index += 1;
         }
 
-        self
+        let blocks = self.blocks();
+        let mut block_index = 0;
+        while block_index < blocks.len() {
+            hash = blocks[block_index].hash(hash);
+            block_index += 1;
+        }
+
+        hash
+    }
+
+    pub fn class_name(&self) -> String {
+        format!("lsx-{:016x}", self.hash())
     }
 
     pub(crate) const fn declarations(&self) -> &[Declaration] {
@@ -120,53 +52,5 @@ impl Sx {
 
     pub(crate) const fn blocks(&self) -> &[SxBlock] {
         self.blocks.as_ref()
-    }
-}
-
-pub const fn sx() -> Sx {
-    Sx::new()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn sx_happy_path() {
-        const STYLE: Sx = sx()
-            .background("primary")
-            .hover(sx().background("primary.1").width("120px"))
-            .height("200px")
-            .padding_top("sm")
-            .focus(sx().height("220px"))
-            .selector("> .item", sx().width("20px"))
-            .selector(" .label", sx().background("green"))
-            .selector(" ~ .peer", sx().height("240px"))
-            .selector(" + .next", sx().width("140px"))
-            .selector(":has(+ .prev)", sx().background("orange"))
-            .when("selected", sx().background("secondary"))
-            .selector(
-                " .nested",
-                sx().background("purple").selector(
-                    ":hover",
-                    sx().height("280px")
-                        .selector(" .nested_nested_nested", sx().width("300px")),
-                ),
-            )
-            .breakpoint(
-                Size::Sm,
-                sx().width("400px").breakpoint(
-                    Size::Lg,
-                    sx().height("500px")
-                        .breakpoint(Size::Md, sx().background("secondary.7")),
-                ),
-            );
-
-        let css = STYLE.to_css();
-        assert_eq!(STYLE.class_name(), "lsx-7e8a154b16ad4ac9");
-        assert_eq!(
-            css.as_str(),
-            ".lsx-7e8a154b16ad4ac9{background:var(--lsx-primary-5);height:200px;padding-top:var(--lsx-spacing-sm);}.lsx-7e8a154b16ad4ac9:hover{background:var(--lsx-primary-1);width:120px;}.lsx-7e8a154b16ad4ac9:focus{height:220px;}.lsx-7e8a154b16ad4ac9> .item{width:20px;}.lsx-7e8a154b16ad4ac9 .label{background:green;}.lsx-7e8a154b16ad4ac9 ~ .peer{height:240px;}.lsx-7e8a154b16ad4ac9 + .next{width:140px;}.lsx-7e8a154b16ad4ac9:has(+ .prev){background:orange;}.lsx-7e8a154b16ad4ac9[data-state~=\"selected\"]{background:var(--lsx-secondary-5);}.lsx-7e8a154b16ad4ac9 .nested{background:purple;}.lsx-7e8a154b16ad4ac9 .nested:hover{height:280px;}.lsx-7e8a154b16ad4ac9 .nested:hover .nested_nested_nested{width:300px;}@media (min-width: 48em){.lsx-7e8a154b16ad4ac9{width:400px;}}@media (min-width: 75em){.lsx-7e8a154b16ad4ac9{height:500px;}}@media (min-width: 75em){.lsx-7e8a154b16ad4ac9{background:var(--lsx-secondary-7);}}"
-        );
     }
 }

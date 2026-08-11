@@ -3,6 +3,8 @@ use crate::{
     theme::{ColorValue, Size},
 };
 
+use super::hash::{hash_str, hash_u8};
+
 #[repr(u16)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Property {
@@ -83,4 +85,28 @@ impl ThemeAwareValue {
 pub struct Declaration {
     pub property: DeclarationProperty,
     pub value: ThemeAwareValue,
+}
+
+impl Declaration {
+    pub(crate) const fn hash(self, mut hash: u64) -> u64 {
+        hash = match self.property {
+            DeclarationProperty::Known(property) => hash_str(hash_u8(hash, 0), property.as_str()),
+            DeclarationProperty::Raw(property) => hash_str(hash_u8(hash, 1), property),
+        };
+
+        match self.value {
+            ThemeAwareValue::Raw(value) => hash_str(hash_u8(hash, 3), value),
+            ThemeAwareValue::Color(color_value) => match color_value {
+                ColorValue::Shade(color, shade) => hash_str(
+                    hash_str(hash_u8(hash_u8(hash, 5), color as u8), shade.as_str()),
+                    "",
+                ),
+                ColorValue::Contrast(color, shade) => hash_str(
+                    hash_str(hash_u8(hash_u8(hash, 6), color as u8), shade.as_str()),
+                    "",
+                ),
+            },
+            ThemeAwareValue::Size(size) => hash_str(hash_u8(hash, 7), size.as_str()),
+        }
+    }
 }
