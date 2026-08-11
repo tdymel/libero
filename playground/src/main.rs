@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{Box, HelloWorld},
-    sx::sx,
+    sx::{Sx, sx},
     theme::{HexColor, Sizes, Theme},
 };
 
@@ -12,7 +12,7 @@ const THEME: Theme = Theme::new(
     HexColor::new(0xE03131),
 );
 
-const BOX_SX: libero::sx::Sx = sx().padding_top("xl").build();
+const BOX_SX: Sx = sx().padding_top("xl").build();
 
 fn main() {
     dioxus::launch(App);
@@ -25,7 +25,9 @@ fn App() -> Element {
     rsx! {
         LiberoProvider { theme: &THEME,
             button {
-                onclick: move |_| show_hello_world.toggle(),
+                onclick: move |_| {
+                    show_hello_world.toggle();
+                },
                 if show_hello_world() { "Hide Hello World" } else { "Show Hello World" }
             }
 
