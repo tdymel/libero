@@ -1,10 +1,9 @@
-use super::{GroupDefaults, HexColor, Sizes, StackDefaults};
+use super::{HexColor, Sizes, StackAxisDefaults, StackDefaults};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
     pub stack: StackDefaults,
-    pub group: GroupDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -19,8 +18,10 @@ pub struct Theme {
 impl Theme {
     pub const DEFAULT: Theme = Theme::new(
         Sizes::new(4, 8, 12, 16, 20),
-        StackDefaults::new("stretch", "flex-start", super::Size::Md),
-        GroupDefaults::new("center", "flex-start", super::Size::Md, true),
+        StackDefaults::new(
+            StackAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
+            StackAxisDefaults::new("center", "flex-start", super::Size::Md, true),
+        ),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -35,7 +36,6 @@ impl Theme {
     pub const fn new(
         spacing: Sizes<u8>,
         stack: StackDefaults,
-        group: GroupDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -49,7 +49,6 @@ impl Theme {
         Self {
             spacing,
             stack,
-            group,
             primary,
             secondary,
             error,

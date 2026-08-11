@@ -9,10 +9,11 @@ use crate::{
 
 const STACK_BASE_SX: Sx = sx()
     .display("flex")
-    .flex_direction("column")
-    .align_items("var(--lsx-stack-align)")
-    .justify_content("var(--lsx-stack-justify)")
-    .gap("var(--lsx-stack-gap)")
+    .flex_direction("var(--lsx-stack-direction, column)")
+    .flex_wrap("var(--lsx-stack-wrap, var(--lsx-stack-column-wrap))")
+    .align_items("var(--lsx-stack-align, var(--lsx-stack-column-align))")
+    .justify_content("var(--lsx-stack-justify, var(--lsx-stack-column-justify))")
+    .gap("var(--lsx-stack-spacing, var(--lsx-stack-column-spacing))")
     .build();
 
 #[derive(Props, Clone, PartialEq)]
@@ -30,7 +31,11 @@ pub struct StackProps {
     #[props(default)]
     justify: Option<String>,
     #[props(default)]
-    gap: Option<String>,
+    spacing: Option<String>,
+    #[props(default)]
+    direction: Option<String>,
+    #[props(default)]
+    wrap: Option<bool>,
     children: Element,
 }
 
@@ -39,6 +44,47 @@ pub fn Stack(props: StackProps) -> Element {
     crate::context::use_sx(&STACK_BASE_SX);
 
     let mut variables = Vec::new();
+    let is_row = matches!(props.direction.as_deref(), Some("row"));
+
+    if let Some(direction) = props.direction {
+        variables.push(("stack-direction", direction));
+        variables.push((
+            "stack-align",
+            if is_row {
+                "var(--lsx-stack-row-align)"
+            } else {
+                "var(--lsx-stack-column-align)"
+            }
+            .to_string(),
+        ));
+        variables.push((
+            "stack-justify",
+            if is_row {
+                "var(--lsx-stack-row-justify)"
+            } else {
+                "var(--lsx-stack-column-justify)"
+            }
+            .to_string(),
+        ));
+        variables.push((
+            "stack-spacing",
+            if is_row {
+                "var(--lsx-stack-row-spacing)"
+            } else {
+                "var(--lsx-stack-column-spacing)"
+            }
+            .to_string(),
+        ));
+        variables.push((
+            "stack-wrap",
+            if is_row {
+                "var(--lsx-stack-row-wrap)"
+            } else {
+                "var(--lsx-stack-column-wrap)"
+            }
+            .to_string(),
+        ));
+    }
 
     if let Some(align) = props.align {
         variables.push(("stack-align", align));
@@ -48,13 +94,20 @@ pub fn Stack(props: StackProps) -> Element {
         variables.push(("stack-justify", justify));
     }
 
-    if let Some(gap) = props.gap {
-        let gap = match Size::parse_str(gap.as_str()) {
+    if let Some(spacing) = props.spacing {
+        let spacing = match Size::parse_str(spacing.as_str()) {
             Some(size) => SizeCssVar::SPACING.value(size),
-            None => gap,
+            None => spacing,
         };
 
-        variables.push(("stack-gap", gap));
+        variables.push(("stack-spacing", spacing));
+    }
+
+    if let Some(wrap) = props.wrap {
+        variables.push((
+            "stack-wrap",
+            if wrap { "wrap" } else { "nowrap" }.to_string(),
+        ));
     }
 
     let class = classes(props.class, STACK_BASE_SX.class_name());

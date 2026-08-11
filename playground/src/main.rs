@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Group, HelloWorld, Stack},
+    components::{HelloWorld, Stack},
     sx::{Sx, sx},
 };
 
@@ -46,7 +46,7 @@ fn App() -> Element {
 
             Stack {
                 sx: &BOX_SX,
-                gap: gap.clone(),
+                spacing: gap.clone(),
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
                     HelloWorld {}
@@ -54,8 +54,9 @@ fn App() -> Element {
                 HelloWorld {}
             }
 
-            Group {
-                gap: gap,
+            Stack {
+                direction: "row",
+                spacing: gap,
                 wrap: wrap_group(),
                 for index in 1..=8 {
                     button { "Group item {index}" }

@@ -22,7 +22,6 @@ impl From<&Theme> for Stylesheet {
         let mut scope = CssScope::new(":root");
         scope = push_spacing_vars(scope, theme);
         scope = push_stack_vars(scope, theme);
-        scope = push_group_vars(scope, theme);
         scope = push_named_color_vars(scope, theme);
         scope = push_color_vars(scope, Color::Primary, theme.primary);
         scope = push_color_vars(scope, Color::Secondary, theme.secondary);
@@ -59,30 +58,45 @@ fn push_spacing_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
 }
 
 fn push_stack_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
-    scope = scope.with(CssDeclaration::new("--lsx-stack-align", theme.stack.align));
     scope = scope.with(CssDeclaration::new(
-        "--lsx-stack-justify",
-        theme.stack.justify,
+        "--lsx-stack-column-align",
+        theme.stack.column.align,
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-column-justify",
+        theme.stack.column.justify,
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-column-spacing",
+        SizeCssVar::SPACING.value(theme.stack.column.spacing),
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-column-wrap",
+        if theme.stack.column.wrap {
+            "wrap"
+        } else {
+            "nowrap"
+        },
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-row-align",
+        theme.stack.row.align,
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-row-justify",
+        theme.stack.row.justify,
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-row-spacing",
+        SizeCssVar::SPACING.value(theme.stack.row.spacing),
     ));
     scope.with(CssDeclaration::new(
-        "--lsx-stack-gap",
-        SizeCssVar::SPACING.value(theme.stack.gap),
-    ))
-}
-
-fn push_group_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
-    scope = scope.with(CssDeclaration::new("--lsx-group-align", theme.group.align));
-    scope = scope.with(CssDeclaration::new(
-        "--lsx-group-justify",
-        theme.group.justify,
-    ));
-    scope = scope.with(CssDeclaration::new(
-        "--lsx-group-gap",
-        SizeCssVar::SPACING.value(theme.group.gap),
-    ));
-    scope.with(CssDeclaration::new(
-        "--lsx-group-wrap",
-        if theme.group.wrap { "wrap" } else { "nowrap" },
+        "--lsx-stack-row-wrap",
+        if theme.stack.row.wrap {
+            "wrap"
+        } else {
+            "nowrap"
+        },
     ))
 }
 
@@ -127,8 +141,20 @@ mod tests {
     fn theme_css_happy_path() {
         const THEME: Theme = Theme::new(
             Sizes::new(4, 8, 12, 16, 20),
-            crate::theme::StackDefaults::new("stretch", "flex-start", crate::theme::Size::Md),
-            crate::theme::GroupDefaults::new("center", "flex-start", crate::theme::Size::Md, true),
+            crate::theme::StackDefaults::new(
+                crate::theme::StackAxisDefaults::new(
+                    "stretch",
+                    "flex-start",
+                    crate::theme::Size::Md,
+                    false,
+                ),
+                crate::theme::StackAxisDefaults::new(
+                    "center",
+                    "flex-start",
+                    crate::theme::Size::Md,
+                    true,
+                ),
+            ),
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
             HexColor::new(0xE03131),
@@ -143,19 +169,23 @@ mod tests {
 
         assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
-        assert!(css.as_str().contains("--lsx-stack-align:stretch;"));
-        assert!(css.as_str().contains("--lsx-stack-justify:flex-start;"));
+        assert!(css.as_str().contains("--lsx-stack-column-align:stretch;"));
         assert!(
             css.as_str()
-                .contains("--lsx-stack-gap:var(--lsx-spacing-md);")
+                .contains("--lsx-stack-column-justify:flex-start;")
         );
-        assert!(css.as_str().contains("--lsx-group-align:center;"));
-        assert!(css.as_str().contains("--lsx-group-justify:flex-start;"));
         assert!(
             css.as_str()
-                .contains("--lsx-group-gap:var(--lsx-spacing-md);")
+                .contains("--lsx-stack-column-spacing:var(--lsx-spacing-md);")
         );
-        assert!(css.as_str().contains("--lsx-group-wrap:wrap;"));
+        assert!(css.as_str().contains("--lsx-stack-column-wrap:nowrap;"));
+        assert!(css.as_str().contains("--lsx-stack-row-align:center;"));
+        assert!(css.as_str().contains("--lsx-stack-row-justify:flex-start;"));
+        assert!(
+            css.as_str()
+                .contains("--lsx-stack-row-spacing:var(--lsx-spacing-md);")
+        );
+        assert!(css.as_str().contains("--lsx-stack-row-wrap:wrap;"));
         assert!(css.as_str().contains("--lsx-primary-1:#D2E7FA;"));
         assert!(css.as_str().contains("--lsx-black:#000000;"));
         assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));

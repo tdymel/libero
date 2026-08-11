@@ -17,4 +17,6 @@ pub use sx_builder::{SxBuilder, sx};
  * TODO:
  * - Support breakpoints within individual declarations, e.g. color: { sm: "red"; md: "blue" }
  * - Support TypedValues, but this requires const traits.
+ * - Breakpoints: SmallerThan and LargerThan + Merging really required?
+ *   => Offering both will make merging more difficult.
  */
