@@ -48,7 +48,7 @@ pub fn use_theme() -> &'static Theme {
     use_context::<LiberoContext>().theme
 }
 
-pub fn use_sx(sx: &'static crate::sx::Sx) {
+pub fn use_sx(sx: &crate::sx::Sx) {
     let mut context = use_context::<LiberoContext>();
     let _registration = use_hook(|| {
         *context.sx_registry_version.write() += 1;

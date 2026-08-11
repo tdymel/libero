@@ -6,7 +6,8 @@ use crate::{css::Stylesheet, sx::Sx};
 
 #[derive(Clone)]
 pub struct RegisteredStylesheet {
-    pub sx: &'static Sx,
+    pub key: u64,
+    pub class_name: String,
     pub css: Stylesheet,
     pub registrations: Rc<()>,
 }
@@ -34,7 +35,7 @@ impl SxRegistry {
         Self::default()
     }
 
-    fn registration_token(&self, sx: &'static Sx) -> Rc<()> {
+    fn registration_token(&self, sx: &Sx) -> Rc<()> {
         let key = sx.hash();
         let mut registry = self.inner.borrow_mut();
 
@@ -46,7 +47,8 @@ impl SxRegistry {
         registry.insert(
             key,
             RegisteredStylesheet {
-                sx,
+                key,
+                class_name: sx.class_name(),
                 css: Stylesheet::from(sx),
                 registrations: registrations.clone(),
             },
@@ -55,7 +57,7 @@ impl SxRegistry {
         registrations
     }
 
-    pub fn register(&self, sx: &'static Sx, sx_registry_version: Signal<u64>) -> RegistrationGuard {
+    pub fn register(&self, sx: &Sx, sx_registry_version: Signal<u64>) -> RegistrationGuard {
         RegistrationGuard {
             registrations: self.registration_token(sx),
             sx_registry_version,
@@ -68,10 +70,7 @@ impl SxRegistry {
         registry
             .values()
             .map(|entry| {
-                debug_assert_eq!(
-                    entry.sx.class_name(),
-                    format!("lsx-{:016x}", entry.sx.hash())
-                );
+                debug_assert_eq!(entry.class_name, format!("lsx-{:016x}", entry.key));
                 entry.css.as_str().to_string()
             })
             .collect()

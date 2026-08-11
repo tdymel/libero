@@ -15,7 +15,7 @@ pub struct BoxProps {
     #[props(default)]
     class: Option<String>,
     #[props(default)]
-    sx: Option<&'static Sx>,
+    sx: Option<Sx>,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
     #[props(default)]
@@ -26,9 +26,9 @@ pub struct BoxProps {
 #[component]
 pub fn Box(props: BoxProps) -> Element {
     let sx = props.sx;
-    use_sx(sx.unwrap_or(&EMPTY_SX));
+    use_sx(sx.as_ref().unwrap_or(&EMPTY_SX));
 
-    let sx_class = sx.map(Sx::class_name);
+    let sx_class = sx.as_ref().map(Sx::class_name);
     let data_state = props
         .states
         .iter()

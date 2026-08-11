@@ -23,7 +23,7 @@ pub struct StackProps {
     #[props(default)]
     class: Option<String>,
     #[props(default)]
-    sx: Option<&'static Sx>,
+    sx: Option<Sx>,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
     #[props(default)]
