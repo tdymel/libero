@@ -3,16 +3,7 @@ use libero::{
     LiberoProvider,
     components::{HelloWorld, Stack},
     sx::{Sx, sx},
-    theme::{HexColor, Sizes, Theme},
 };
-
-const THEME: Theme = Theme::new(
-    Sizes::new(4, 8, 12, 16, 20),
-    HexColor::new(0x228BE6),
-    HexColor::new(0xE03131),
-    HexColor::new(0x000000),
-    HexColor::new(0xFFFFFF),
-);
 
 const BOX_SX: Sx = sx()
     .padding_top("xl")
@@ -30,7 +21,7 @@ fn App() -> Element {
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
 
     rsx! {
-        LiberoProvider { theme: &THEME,
+        LiberoProvider {
             button {
                 onclick: move |_| {
                     show_hello_world.toggle();

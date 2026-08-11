@@ -10,6 +10,14 @@ pub struct Theme {
 }
 
 impl Theme {
+    pub const DEFAULT: Theme = Theme::new(
+        Sizes::new(4, 8, 12, 16, 20),
+        HexColor::new(0x228BE6),
+        HexColor::new(0xE03131),
+        HexColor::new(0x000000),
+        HexColor::new(0xFFFFFF),
+    );
+
     pub const fn new(
         spacing: Sizes<u8>,
         primary: HexColor,

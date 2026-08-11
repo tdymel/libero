@@ -22,7 +22,10 @@ impl LiberoContext {
 }
 
 #[component]
-pub fn LiberoProvider(theme: &'static Theme, children: Element) -> Element {
+pub fn LiberoProvider(
+    #[props(default = &Theme::DEFAULT)] theme: &'static Theme,
+    children: Element,
+) -> Element {
     let sx_registry_version = use_signal(|| 0u64);
     let context = use_context_provider(|| LiberoContext::new(theme, sx_registry_version));
     let _registry_version = context.sx_registry_version.read();
