@@ -19,6 +19,26 @@ impl SxBuilder {
         self.with_known_property(Property::PaddingTop, value)
     }
 
+    pub const fn display(self, value: &'static str) -> Self {
+        self.with_known_property(Property::Display, value)
+    }
+
+    pub const fn flex_direction(self, value: &'static str) -> Self {
+        self.with_known_property(Property::FlexDirection, value)
+    }
+
+    pub const fn align_items(self, value: &'static str) -> Self {
+        self.with_known_property(Property::AlignItems, value)
+    }
+
+    pub const fn justify_content(self, value: &'static str) -> Self {
+        self.with_known_property(Property::JustifyContent, value)
+    }
+
+    pub const fn gap(self, value: &'static str) -> Self {
+        self.with_known_property(Property::Gap, value)
+    }
+
     pub const fn hover(self, nested: SxBuilder) -> Self {
         self.selector(":hover", nested)
     }

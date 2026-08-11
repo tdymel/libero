@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, HelloWorld},
+    components::{HelloWorld, Stack},
     sx::{Sx, sx},
     theme::{HexColor, Sizes, Theme},
 };
@@ -34,8 +34,9 @@ fn App() -> Element {
                 if show_hello_world() { "Hide Hello World" } else { "Show Hello World" }
             }
 
-            Box {
+            Stack {
                 sx: &BOX_SX,
+                gap: "xl",
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
                     HelloWorld {}

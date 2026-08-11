@@ -12,6 +12,11 @@ pub enum Property {
     Width,
     Height,
     PaddingTop,
+    Display,
+    FlexDirection,
+    AlignItems,
+    JustifyContent,
+    Gap,
 }
 
 impl Property {
@@ -32,6 +37,26 @@ impl Property {
             return Some(Self::PaddingTop);
         }
 
+        if eq(property, "display") {
+            return Some(Self::Display);
+        }
+
+        if eq(property, "flex-direction") {
+            return Some(Self::FlexDirection);
+        }
+
+        if eq(property, "align-items") {
+            return Some(Self::AlignItems);
+        }
+
+        if eq(property, "justify-content") {
+            return Some(Self::JustifyContent);
+        }
+
+        if eq(property, "gap") {
+            return Some(Self::Gap);
+        }
+
         None
     }
 
@@ -41,6 +66,11 @@ impl Property {
             Self::Width => "width",
             Self::Height => "height",
             Self::PaddingTop => "padding-top",
+            Self::Display => "display",
+            Self::FlexDirection => "flex-direction",
+            Self::AlignItems => "align-items",
+            Self::JustifyContent => "justify-content",
+            Self::Gap => "gap",
         }
     }
 }

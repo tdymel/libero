@@ -36,7 +36,7 @@ pub fn Box(props: BoxProps) -> Element {
     let data_state = (!data_state.is_empty()).then_some(data_state);
 
     let mut attributes = props.attributes;
-    if let Some(data_state) = data_state.clone() {
+    if let Some(data_state) = data_state {
         attributes.push(Attribute::new(
             "data-state",
             AttributeValue::Text(data_state.into()),
