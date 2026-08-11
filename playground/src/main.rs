@@ -36,7 +36,7 @@ fn App() -> Element {
 
             Stack {
                 sx: &BOX_SX,
-                gap: "sm",
+                gap: "xl".to_string(),
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
                     HelloWorld {}

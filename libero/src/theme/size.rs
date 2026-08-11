@@ -20,6 +20,17 @@ impl Size {
         }
     }
 
+    pub fn parse_str(value: &str) -> Option<Self> {
+        match value.as_bytes() {
+            b"xs" => Some(Self::Xs),
+            b"sm" => Some(Self::Sm),
+            b"md" => Some(Self::Md),
+            b"lg" => Some(Self::Lg),
+            b"xl" => Some(Self::Xl),
+            _ => None,
+        }
+    }
+
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Xs => "xs",

@@ -99,11 +99,11 @@ pub struct StackProps {
     #[props(default)]
     states: Vec<(&'static str, bool)>,
     #[props(default)]
-    align: Option<&'static str>,
+    align: Option<String>,
     #[props(default)]
-    justify: Option<&'static str>,
+    justify: Option<String>,
     #[props(default)]
-    gap: Option<&'static str>,
+    gap: Option<String>,
     children: Element,
 }
 
@@ -111,18 +111,21 @@ pub struct StackProps {
 pub fn Stack(props: StackProps) -> Element {
     crate::context::use_sx(&STACK_BASE_SX);
 
-    let gap = props.gap.unwrap_or("md");
+    let gap = props.gap.unwrap_or_else(|| "md".to_string());
     let variables = vec![
-        ("stack-align", props.align.unwrap_or("stretch").to_string()),
+        (
+            "stack-align",
+            props.align.unwrap_or_else(|| "stretch".to_string()),
+        ),
         (
             "stack-justify",
-            props.justify.unwrap_or("flex-start").to_string(),
+            props.justify.unwrap_or_else(|| "flex-start".to_string()),
         ),
         (
             "stack-gap",
-            match Size::parse(gap) {
+            match Size::parse_str(gap.as_str()) {
                 Some(size) => SizeCssVar::SPACING.value(size),
-                None => gap.to_string(),
+                None => gap,
             },
         ),
     ];
