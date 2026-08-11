@@ -12,3 +12,9 @@ pub(crate) use selector_block::ROOT_BLOCK_PARENT;
 pub use selector_block::SelectorBlock;
 pub use sx::Sx;
 pub use sx_builder::{SxBuilder, sx};
+
+/*
+ * TODO:
+ * - Support breakpoints within individual declarations, e.g. color: { sm: "red"; md: "blue" }
+ * - Support TypedValues, but this requires const traits.
+ */
