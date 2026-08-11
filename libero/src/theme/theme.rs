@@ -1,8 +1,9 @@
-use super::{HexColor, Sizes};
+use super::{HexColor, Sizes, StackDefaults};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
+    pub stack: StackDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -17,6 +18,7 @@ pub struct Theme {
 impl Theme {
     pub const DEFAULT: Theme = Theme::new(
         Sizes::new(4, 8, 12, 16, 20),
+        StackDefaults::new("stretch", "flex-start", super::Size::Md),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -30,6 +32,7 @@ impl Theme {
 
     pub const fn new(
         spacing: Sizes<u8>,
+        stack: StackDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -42,6 +45,7 @@ impl Theme {
     ) -> Self {
         Self {
             spacing,
+            stack,
             primary,
             secondary,
             error,

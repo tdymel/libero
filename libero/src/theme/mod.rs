@@ -4,6 +4,7 @@ mod color_value;
 mod hex_color;
 mod size;
 mod sizes;
+mod stack_defaults;
 mod theme;
 
 pub use color::Color;
@@ -12,4 +13,5 @@ pub use color_value::ColorValue;
 pub use hex_color::HexColor;
 pub use size::Size;
 pub use sizes::Sizes;
+pub use stack_defaults::StackDefaults;
 pub use theme::Theme;

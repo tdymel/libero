@@ -21,6 +21,7 @@ impl From<&Theme> for Stylesheet {
     fn from(theme: &Theme) -> Self {
         let mut scope = CssScope::new(":root");
         scope = push_spacing_vars(scope, theme);
+        scope = push_stack_vars(scope, theme);
         scope = push_named_color_vars(scope, theme);
         scope = push_color_vars(scope, Color::Primary, theme.primary);
         scope = push_color_vars(scope, Color::Secondary, theme.secondary);
@@ -53,6 +54,18 @@ fn push_spacing_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
     scope.with(CssDeclaration::new(
         SizeCssVar::SPACING.name(crate::theme::Size::Xl),
         format!("{}px", theme.spacing.xl),
+    ))
+}
+
+fn push_stack_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
+    scope = scope.with(CssDeclaration::new("--lsx-stack-align", theme.stack.align));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-stack-justify",
+        theme.stack.justify,
+    ));
+    scope.with(CssDeclaration::new(
+        "--lsx-stack-gap",
+        SizeCssVar::SPACING.value(theme.stack.gap),
     ))
 }
 
@@ -97,6 +110,7 @@ mod tests {
     fn theme_css_happy_path() {
         const THEME: Theme = Theme::new(
             Sizes::new(4, 8, 12, 16, 20),
+            crate::theme::StackDefaults::new("stretch", "flex-start", crate::theme::Size::Md),
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
             HexColor::new(0xE03131),
@@ -111,6 +125,12 @@ mod tests {
 
         assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
+        assert!(css.as_str().contains("--lsx-stack-align:stretch;"));
+        assert!(css.as_str().contains("--lsx-stack-justify:flex-start;"));
+        assert!(
+            css.as_str()
+                .contains("--lsx-stack-gap:var(--lsx-spacing-md);")
+        );
         assert!(css.as_str().contains("--lsx-primary-1:#D2E7FA;"));
         assert!(css.as_str().contains("--lsx-black:#000000;"));
         assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));
