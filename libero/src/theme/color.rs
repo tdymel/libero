@@ -3,6 +3,8 @@
 pub enum Color {
     Primary,
     Secondary,
+    Black,
+    White,
 }
 
 impl Color {
@@ -10,6 +12,8 @@ impl Color {
         match self {
             Self::Primary => "primary",
             Self::Secondary => "secondary",
+            Self::Black => "black",
+            Self::White => "white",
         }
     }
 }

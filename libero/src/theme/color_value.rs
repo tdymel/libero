@@ -1,4 +1,4 @@
-use crate::common::starts_with;
+use crate::common::{eq, starts_with};
 
 use super::{Color, ColorShade};
 
@@ -27,6 +27,14 @@ impl ColorValue {
 
         if starts_with(value, "secondary") {
             return Some(Self::Shade(Color::Secondary, ColorShade::parse(value, 9)));
+        }
+
+        if eq(value, "black") {
+            return Some(Self::Shade(Color::Black, ColorShade::S1));
+        }
+
+        if eq(value, "white") {
+            return Some(Self::Shade(Color::White, ColorShade::S1));
         }
 
         None

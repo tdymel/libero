@@ -67,3 +67,27 @@ impl ColorCssVar {
         self.css_var.name(shade.as_str())
     }
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NamedColorCssVar {
+    css_var: CssVar,
+}
+
+impl NamedColorCssVar {
+    pub const BLACK: NamedColorCssVar = NamedColorCssVar::new("--lsx-black");
+    pub const WHITE: NamedColorCssVar = NamedColorCssVar::new("--lsx-white");
+
+    pub const fn new(name: &'static str) -> Self {
+        Self {
+            css_var: CssVar::new(name),
+        }
+    }
+
+    pub fn value(self) -> String {
+        self.css_var.value("")
+    }
+
+    pub fn name(self) -> String {
+        self.css_var.name("")
+    }
+}

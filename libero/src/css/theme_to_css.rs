@@ -1,6 +1,9 @@
 use crate::theme::{Color, ColorShade, ColorValue, Theme};
 
-use super::{CssDeclaration, CssScope, Stylesheet, StylesheetBuilder, css_var::SizeCssVar};
+use super::{
+    CssDeclaration, CssScope, Stylesheet, StylesheetBuilder,
+    css_var::{NamedColorCssVar, SizeCssVar},
+};
 
 const SHADES: [ColorShade; 9] = [
     ColorShade::S1,
@@ -18,6 +21,7 @@ impl From<&Theme> for Stylesheet {
     fn from(theme: &Theme) -> Self {
         let mut scope = CssScope::new(":root");
         scope = push_spacing_vars(scope, theme);
+        scope = push_named_color_vars(scope, theme);
         scope = push_color_vars(scope, Color::Primary, theme.primary);
         scope = push_color_vars(scope, Color::Secondary, theme.secondary);
         Stylesheet::from(StylesheetBuilder::new().with_scope(scope))
@@ -47,6 +51,17 @@ fn push_spacing_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
     ))
 }
 
+fn push_named_color_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
+    scope = scope.with(CssDeclaration::new(
+        NamedColorCssVar::BLACK.name(),
+        theme.black.to_string(),
+    ));
+    scope.with(CssDeclaration::new(
+        NamedColorCssVar::WHITE.name(),
+        theme.white.to_string(),
+    ))
+}
+
 fn push_color_vars(scope: CssScope, color: Color, base: crate::theme::HexColor) -> CssScope {
     let scope = SHADES.into_iter().fold(scope, |scope, shade| {
         scope.with(CssDeclaration::new(
@@ -58,7 +73,11 @@ fn push_color_vars(scope: CssScope, color: Color, base: crate::theme::HexColor) 
     SHADES.into_iter().fold(scope, |scope, shade| {
         scope.with(CssDeclaration::new(
             ColorValue::Contrast(color, shade).css_var_name(),
-            base.shade(shade).contrast().to_string(),
+            if base.shade(shade).contrast().rgb() == 0x00_00_00 {
+                ColorValue::Shade(Color::Black, shade).css_value()
+            } else {
+                ColorValue::Shade(Color::White, shade).css_value()
+            },
         ))
     })
 }
@@ -75,14 +94,24 @@ mod tests {
             Sizes::new(4, 8, 12, 16, 20),
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
+            HexColor::new(0x000000),
+            HexColor::new(0xFFFFFF),
         );
         let css = Stylesheet::from(&THEME);
 
         assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
         assert!(css.as_str().contains("--lsx-primary-1:#D2E7FA;"));
-        assert!(css.as_str().contains("--lsx-primary-contrast-1:#000000;"));
-        assert!(css.as_str().contains("--lsx-primary-contrast-7:#FFFFFF;"));
+        assert!(css.as_str().contains("--lsx-black:#000000;"));
+        assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));
+        assert!(
+            css.as_str()
+                .contains("--lsx-primary-contrast-1:var(--lsx-black);")
+        );
+        assert!(
+            css.as_str()
+                .contains("--lsx-primary-contrast-7:var(--lsx-white);")
+        );
         assert!(css.as_str().contains("--lsx-secondary-7:#E03131;"));
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));
