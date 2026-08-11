@@ -90,7 +90,10 @@ impl SxBuilder {
     const fn modifier(mut self, modifier: SxModifier, nested: SxBuilder) -> Self {
         let start = self.declarations.len();
         let parent = self.blocks.len();
-        self.declarations.extend(nested.declarations());
+        self.declarations.extend({
+            let this = &nested;
+            this.declarations.as_ref()
+        });
         let end = self.declarations.len();
         self.blocks.push(SxBlock {
             modifier,
@@ -99,7 +102,10 @@ impl SxBuilder {
             parent: super::ROOT_BLOCK_PARENT,
         });
 
-        let nested_blocks = nested.blocks();
+        let nested_blocks = {
+            let this = &nested;
+            this.blocks.as_ref()
+        };
         let mut i = 0;
         while i < nested_blocks.len() {
             let nested_block = nested_blocks[i];
@@ -117,14 +123,6 @@ impl SxBuilder {
         }
 
         self
-    }
-
-    const fn declarations(&self) -> &[Declaration] {
-        self.declarations.as_ref()
-    }
-
-    const fn blocks(&self) -> &[SxBlock] {
-        self.blocks.as_ref()
     }
 }
 
