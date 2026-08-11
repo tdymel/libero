@@ -1,5 +1,4 @@
 use crate::common::ConstVec;
-use crate::theme::Size;
 
 use super::{
     declaration::{Declaration, DeclarationProperty, Property, ThemeAwareValue},
@@ -39,7 +38,7 @@ impl SxBuilder {
         self.with_property(DeclarationProperty::parse(property), value)
     }
 
-    const fn with_known_property(self, property: Property, value: &'static str) -> Self {
+    pub(super) const fn with_known_property(self, property: Property, value: &'static str) -> Self {
         self.with_property(DeclarationProperty::Known(property), value)
     }
 
@@ -51,43 +50,7 @@ impl SxBuilder {
         self
     }
 
-    pub const fn background(self, value: &'static str) -> Self {
-        self.with_known_property(Property::Background, value)
-    }
-
-    pub const fn width(self, value: &'static str) -> Self {
-        self.with_known_property(Property::Width, value)
-    }
-
-    pub const fn height(self, value: &'static str) -> Self {
-        self.with_known_property(Property::Height, value)
-    }
-
-    pub const fn padding_top(self, value: &'static str) -> Self {
-        self.with_known_property(Property::PaddingTop, value)
-    }
-
-    pub const fn hover(self, nested: SxBuilder) -> Self {
-        self.selector(":hover", nested)
-    }
-
-    pub const fn focus(self, nested: SxBuilder) -> Self {
-        self.selector(":focus", nested)
-    }
-
-    pub const fn when(self, condition: &'static str, nested: SxBuilder) -> Self {
-        self.modifier(SxModifier::Condition(condition), nested)
-    }
-
-    pub const fn selector(self, selector: &'static str, nested: SxBuilder) -> Self {
-        self.modifier(SxModifier::Selector(selector), nested)
-    }
-
-    pub const fn breakpoint(self, breakpoint: Size, nested: SxBuilder) -> Self {
-        self.modifier(SxModifier::Breakpoint(breakpoint), nested)
-    }
-
-    const fn modifier(mut self, modifier: SxModifier, nested: SxBuilder) -> Self {
+    pub(super) const fn modifier(mut self, modifier: SxModifier, nested: SxBuilder) -> Self {
         let start = self.declarations.len();
         let parent = self.blocks.len();
         self.declarations.extend({
@@ -132,6 +95,8 @@ pub const fn sx() -> SxBuilder {
 
 #[cfg(test)]
 mod tests {
+    use crate::theme::Size;
+
     use super::*;
 
     #[test]

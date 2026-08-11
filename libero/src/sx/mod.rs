@@ -4,6 +4,7 @@ mod selector_block;
 mod sx;
 pub mod sx_block;
 mod sx_builder;
+mod sx_builder_props;
 pub mod sx_modifier;
 
 pub use declaration::{Declaration, DeclarationProperty, Property, ThemeAwareValue};
