@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::Box,
+    css::SizeCssVar,
     sx::{Sx, sx},
     theme::Size,
 };
@@ -117,7 +118,13 @@ pub fn Stack(props: StackProps) -> Element {
             "--lsx-stack-justify:{};",
             props.justify.unwrap_or("flex-start")
         ),
-        format!("--lsx-stack-gap:{};", stack_gap_value(props.gap)),
+        format!(
+            "--lsx-stack-gap:{};",
+            match props.gap.and_then(Size::parse) {
+                Some(size) => SizeCssVar::SPACING.value(size),
+                None => props.gap.unwrap_or("0").to_string(),
+            }
+        ),
     ];
 
     attributes.push(Attribute::new(
@@ -147,16 +154,5 @@ pub fn Stack(props: StackProps) -> Element {
             states: props.states,
             {props.children}
         }
-    }
-}
-
-fn stack_gap_value(gap: Option<&'static str>) -> String {
-    match gap.and_then(Size::parse) {
-        Some(Size::Xs) => "var(--lsx-spacing-xs)".to_string(),
-        Some(Size::Sm) => "var(--lsx-spacing-sm)".to_string(),
-        Some(Size::Md) => "var(--lsx-spacing-md)".to_string(),
-        Some(Size::Lg) => "var(--lsx-spacing-lg)".to_string(),
-        Some(Size::Xl) => "var(--lsx-spacing-xl)".to_string(),
-        None => gap.unwrap_or("0").to_string(),
     }
 }
