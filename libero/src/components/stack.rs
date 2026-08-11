@@ -83,9 +83,9 @@ impl StackValue for StackGap {
 const STACK_BASE_SX: Sx = sx()
     .display("flex")
     .flex_direction("column")
-    .align_items("var(--lsx-stack-align)")
-    .justify_content("var(--lsx-stack-justify)")
-    .gap("var(--lsx-stack-gap)")
+    .align_items(crate::sx_var!("stack-align"))
+    .justify_content(crate::sx_var!("stack-justify"))
+    .gap(crate::sx_var!("stack-gap"))
     .build();
 
 #[derive(Props, Clone, PartialEq)]
