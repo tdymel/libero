@@ -10,9 +10,9 @@ use crate::{
 const STACK_BASE_SX: Sx = sx()
     .display("flex")
     .flex_direction("column")
-    .align_items(crate::sx_var!("stack-align"))
-    .justify_content(crate::sx_var!("stack-justify"))
-    .gap(crate::sx_var!("stack-gap"))
+    .align_items("var(--lsx-stack-align, stretch)")
+    .justify_content("var(--lsx-stack-justify, flex-start)")
+    .gap("var(--lsx-stack-gap, var(--lsx-spacing-md))")
     .build();
 
 #[derive(Props, Clone, PartialEq)]
@@ -38,24 +38,30 @@ pub struct StackProps {
 pub fn Stack(props: StackProps) -> Element {
     crate::context::use_sx(&STACK_BASE_SX);
 
-    let gap = props.gap.unwrap_or_else(|| "md".to_string());
-    let variables = vec![
-        (
-            "stack-align",
-            props.align.unwrap_or_else(|| "stretch".to_string()),
-        ),
-        (
-            "stack-justify",
-            props.justify.unwrap_or_else(|| "flex-start".to_string()),
-        ),
-        (
-            "stack-gap",
-            match Size::parse_str(gap.as_str()) {
-                Some(size) => SizeCssVar::SPACING.value(size),
-                None => gap,
-            },
-        ),
-    ];
+    let mut variables = Vec::new();
+
+    if let Some(align) = props.align {
+        if align != "stretch" {
+            variables.push(("stack-align", align));
+        }
+    }
+
+    if let Some(justify) = props.justify {
+        if justify != "flex-start" {
+            variables.push(("stack-justify", justify));
+        }
+    }
+
+    if let Some(gap) = props.gap {
+        let gap = match Size::parse_str(gap.as_str()) {
+            Some(size) => SizeCssVar::SPACING.value(size),
+            None => gap,
+        };
+
+        if gap != SizeCssVar::SPACING.value(Size::Md) {
+            variables.push(("stack-gap", gap));
+        }
+    }
 
     let class = classes(props.class, STACK_BASE_SX.class_name());
 

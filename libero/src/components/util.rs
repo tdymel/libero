@@ -1,3 +1,10 @@
+#[macro_export]
+macro_rules! sx_var {
+    ($name:literal) => {
+        concat!("var(--lsx-", $name, ")")
+    };
+}
+
 pub(crate) fn classes(base: Option<String>, extension: String) -> Option<String> {
     let mut classes = Vec::new();
 
