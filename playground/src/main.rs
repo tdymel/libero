@@ -12,7 +12,10 @@ const THEME: Theme = Theme::new(
     HexColor::new(0xE03131),
 );
 
-const BOX_SX: Sx = sx().padding_top("xl").build();
+const BOX_SX: Sx = sx()
+    .padding_top("xl")
+    .when("hidden", sx().background("secondary.1"))
+    .build();
 
 fn main() {
     dioxus::launch(App);
@@ -31,7 +34,9 @@ fn App() -> Element {
                 if show_hello_world() { "Hide Hello World" } else { "Show Hello World" }
             }
 
-            Box { sx: &BOX_SX,
+            Box {
+                sx: &BOX_SX,
+                states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
                     HelloWorld {}
                 }
