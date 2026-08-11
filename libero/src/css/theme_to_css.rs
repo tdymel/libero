@@ -24,6 +24,11 @@ impl From<&Theme> for Stylesheet {
         scope = push_named_color_vars(scope, theme);
         scope = push_color_vars(scope, Color::Primary, theme.primary);
         scope = push_color_vars(scope, Color::Secondary, theme.secondary);
+        scope = push_color_vars(scope, Color::Error, theme.error);
+        scope = push_color_vars(scope, Color::Warning, theme.warning);
+        scope = push_color_vars(scope, Color::Info, theme.info);
+        scope = push_color_vars(scope, Color::Success, theme.success);
+        scope = push_color_vars(scope, Color::Grey, theme.grey);
         Stylesheet::from(StylesheetBuilder::new().with_scope(scope))
     }
 }
@@ -94,6 +99,11 @@ mod tests {
             Sizes::new(4, 8, 12, 16, 20),
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
+            HexColor::new(0xE03131),
+            HexColor::new(0xF08C00),
+            HexColor::new(0x228BE6),
+            HexColor::new(0x2F9E44),
+            HexColor::new(0x868E96),
             HexColor::new(0x000000),
             HexColor::new(0xFFFFFF),
         );
@@ -113,6 +123,15 @@ mod tests {
                 .contains("--lsx-primary-contrast-7:var(--lsx-white);")
         );
         assert!(css.as_str().contains("--lsx-secondary-7:#E03131;"));
+        assert!(css.as_str().contains("--lsx-error-7:#E03131;"));
+        assert!(css.as_str().contains("--lsx-warning-7:#F08C00;"));
+        assert!(css.as_str().contains("--lsx-info-7:#228BE6;"));
+        assert!(css.as_str().contains("--lsx-success-7:#2F9E44;"));
+        assert!(css.as_str().contains("--lsx-grey-7:#868E96;"));
+        assert!(
+            css.as_str()
+                .contains("--lsx-grey-contrast-7:var(--lsx-white);")
+        );
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));
     }

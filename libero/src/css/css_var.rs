@@ -50,8 +50,18 @@ pub struct ColorCssVar {
 impl ColorCssVar {
     pub const PRIMARY: ColorCssVar = ColorCssVar::new("--lsx-primary-");
     pub const SECONDARY: ColorCssVar = ColorCssVar::new("--lsx-secondary-");
+    pub const ERROR: ColorCssVar = ColorCssVar::new("--lsx-error-");
+    pub const WARNING: ColorCssVar = ColorCssVar::new("--lsx-warning-");
+    pub const INFO: ColorCssVar = ColorCssVar::new("--lsx-info-");
+    pub const SUCCESS: ColorCssVar = ColorCssVar::new("--lsx-success-");
+    pub const GREY: ColorCssVar = ColorCssVar::new("--lsx-grey-");
     pub const PRIMARY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-primary-contrast-");
     pub const SECONDARY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-secondary-contrast-");
+    pub const ERROR_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-error-contrast-");
+    pub const WARNING_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-warning-contrast-");
+    pub const INFO_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-info-contrast-");
+    pub const SUCCESS_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-success-contrast-");
+    pub const GREY_CONTRAST: ColorCssVar = ColorCssVar::new("--lsx-grey-contrast-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self {
