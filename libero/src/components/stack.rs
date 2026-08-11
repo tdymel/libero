@@ -111,37 +111,31 @@ pub struct StackProps {
 pub fn Stack(props: StackProps) -> Element {
     crate::context::use_sx(&STACK_BASE_SX);
 
-    let mut attributes = props.attributes;
-    let style_parts = vec![
-        format!("--lsx-stack-align:{};", props.align.unwrap_or("stretch")),
-        format!(
-            "--lsx-stack-justify:{};",
-            props.justify.unwrap_or("flex-start")
+    let gap = props.gap.unwrap_or("md");
+    let variables = vec![
+        ("stack-align", props.align.unwrap_or("stretch").to_string()),
+        (
+            "stack-justify",
+            props.justify.unwrap_or("flex-start").to_string(),
         ),
-        format!(
-            "--lsx-stack-gap:{};",
-            match props.gap.and_then(Size::parse) {
+        (
+            "stack-gap",
+            match Size::parse(gap) {
                 Some(size) => SizeCssVar::SPACING.value(size),
-                None => props.gap.unwrap_or("0").to_string(),
-            }
+                None => gap.to_string(),
+            },
         ),
     ];
-
-    attributes.push(Attribute::new(
-        "style",
-        dioxus_core::AttributeValue::Text(style_parts.concat().into()),
-        None,
-        false,
-    ));
 
     let class = classes(props.class, STACK_BASE_SX.class_name());
 
     rsx! {
         Box {
-            attributes: attributes,
+            attributes: props.attributes,
             class: class,
             sx: props.sx,
             states: props.states,
+            variables: variables,
             {props.children}
         }
     }

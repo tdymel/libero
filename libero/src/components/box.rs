@@ -18,6 +18,8 @@ pub struct BoxProps {
     sx: Option<&'static Sx>,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
+    #[props(default)]
+    variables: Vec<(&'static str, String)>,
     children: Element,
 }
 
@@ -40,6 +42,39 @@ pub fn Box(props: BoxProps) -> Element {
         attributes.push(Attribute::new(
             "data-state",
             AttributeValue::Text(data_state.into()),
+            None,
+            false,
+        ));
+    }
+
+    if !props.variables.is_empty() {
+        let variables_style = props
+            .variables
+            .into_iter()
+            .map(|(name, value)| format!("--lsx-{name}:{value};"))
+            .collect::<String>();
+
+        let existing_style = attributes.iter().find_map(|attribute| {
+            if attribute.name == "style" {
+                match &attribute.value {
+                    AttributeValue::Text(value) => Some(value.to_string()),
+                    _ => None,
+                }
+            } else {
+                None
+            }
+        });
+
+        attributes.retain(|attribute| attribute.name != "style");
+
+        let style = match existing_style {
+            Some(existing_style) => format!("{existing_style}{variables_style}"),
+            None => variables_style,
+        };
+
+        attributes.push(Attribute::new(
+            "style",
+            AttributeValue::Text(style.into()),
             None,
             false,
         ));
