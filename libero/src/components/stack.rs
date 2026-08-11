@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::Box,
+    components::{Box, util::classes},
     css::SizeCssVar,
     sx::{Sx, sx},
     theme::Size,
@@ -134,17 +134,7 @@ pub fn Stack(props: StackProps) -> Element {
         false,
     ));
 
-    let mut classes = Vec::new();
-
-    if let Some(class) = props.class {
-        if !class.is_empty() {
-            classes.push(class);
-        }
-    }
-
-    classes.push(STACK_BASE_SX.class_name());
-
-    let class = Some(classes.join(" "));
+    let class = classes(props.class, STACK_BASE_SX.class_name());
 
     rsx! {
         Box {
