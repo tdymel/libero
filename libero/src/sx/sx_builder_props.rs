@@ -27,6 +27,10 @@ impl SxBuilder {
         self.with_known_property(Property::FlexDirection, value)
     }
 
+    pub const fn flex_wrap(self, value: &'static str) -> Self {
+        self.with_known_property(Property::FlexWrap, value)
+    }
+
     pub const fn align_items(self, value: &'static str) -> Self {
         self.with_known_property(Property::AlignItems, value)
     }

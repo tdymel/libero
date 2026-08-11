@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{HelloWorld, Stack},
+    components::{Group, HelloWorld, Stack},
     sx::{Sx, sx},
 };
 
@@ -18,6 +18,7 @@ fn main() {
 fn App() -> Element {
     let mut show_hello_world = use_signal(|| true);
     let mut large_gap = use_signal(|| true);
+    let mut wrap_group = use_signal(|| true);
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
 
     rsx! {
@@ -36,14 +37,29 @@ fn App() -> Element {
                 if large_gap() { "Use small gap" } else { "Use large gap" }
             }
 
+            button {
+                onclick: move |_| {
+                    wrap_group.toggle();
+                },
+                if wrap_group() { "Disable group wrap" } else { "Enable group wrap" }
+            }
+
             Stack {
                 sx: &BOX_SX,
-                gap: gap,
+                gap: gap.clone(),
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
                     HelloWorld {}
                 }
                 HelloWorld {}
+            }
+
+            Group {
+                gap: gap,
+                wrap: wrap_group(),
+                for index in 1..=8 {
+                    button { "Group item {index}" }
+                }
             }
         }
     }

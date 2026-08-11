@@ -22,6 +22,7 @@ impl From<&Theme> for Stylesheet {
         let mut scope = CssScope::new(":root");
         scope = push_spacing_vars(scope, theme);
         scope = push_stack_vars(scope, theme);
+        scope = push_group_vars(scope, theme);
         scope = push_named_color_vars(scope, theme);
         scope = push_color_vars(scope, Color::Primary, theme.primary);
         scope = push_color_vars(scope, Color::Secondary, theme.secondary);
@@ -69,6 +70,22 @@ fn push_stack_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
     ))
 }
 
+fn push_group_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
+    scope = scope.with(CssDeclaration::new("--lsx-group-align", theme.group.align));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-group-justify",
+        theme.group.justify,
+    ));
+    scope = scope.with(CssDeclaration::new(
+        "--lsx-group-gap",
+        SizeCssVar::SPACING.value(theme.group.gap),
+    ));
+    scope.with(CssDeclaration::new(
+        "--lsx-group-wrap",
+        if theme.group.wrap { "wrap" } else { "nowrap" },
+    ))
+}
+
 fn push_named_color_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
     scope = scope.with(CssDeclaration::new(
         NamedColorCssVar::BLACK.name(),
@@ -111,6 +128,7 @@ mod tests {
         const THEME: Theme = Theme::new(
             Sizes::new(4, 8, 12, 16, 20),
             crate::theme::StackDefaults::new("stretch", "flex-start", crate::theme::Size::Md),
+            crate::theme::GroupDefaults::new("center", "flex-start", crate::theme::Size::Md, true),
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
             HexColor::new(0xE03131),
@@ -131,6 +149,13 @@ mod tests {
             css.as_str()
                 .contains("--lsx-stack-gap:var(--lsx-spacing-md);")
         );
+        assert!(css.as_str().contains("--lsx-group-align:center;"));
+        assert!(css.as_str().contains("--lsx-group-justify:flex-start;"));
+        assert!(
+            css.as_str()
+                .contains("--lsx-group-gap:var(--lsx-spacing-md);")
+        );
+        assert!(css.as_str().contains("--lsx-group-wrap:wrap;"));
         assert!(css.as_str().contains("--lsx-primary-1:#D2E7FA;"));
         assert!(css.as_str().contains("--lsx-black:#000000;"));
         assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));
