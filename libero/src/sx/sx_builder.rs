@@ -168,7 +168,7 @@ mod tests {
             )
             .build();
 
-        let css = STYLE.to_css();
+        let css = crate::css::Stylesheet::from(&STYLE);
         assert_eq!(STYLE.class_name(), "lsx-7e8a154b16ad4ac9");
         assert_eq!(
             css.as_str(),

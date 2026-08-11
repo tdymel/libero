@@ -1,78 +1,55 @@
-use crate::sx::Declaration;
+use std::fmt::{self, Display, Formatter};
 
 use super::css_declaration::CssDeclaration;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CssScope {
-    specifier: String,
-    declarations: Vec<Declaration>,
+    selector: String,
+    declarations: Vec<CssDeclaration>,
 }
 
 impl CssScope {
-    pub fn new(specifier: &'static str) -> Self {
-        Self::from_string(specifier.to_string())
+    pub fn new(selector: &'static str) -> Self {
+        Self::from_string(selector.to_string())
     }
 
-    pub fn from_string(specifier: String) -> Self {
+    pub fn from_string(selector: String) -> Self {
         Self {
-            specifier,
+            selector,
             declarations: Vec::new(),
         }
     }
 
-    pub fn with(mut self, declaration: Declaration) -> Self {
+    pub fn with(mut self, declaration: CssDeclaration) -> Self {
         self.declarations.push(declaration);
         self
     }
+}
 
-    pub fn specifier(&self) -> &str {
-        &self.specifier
-    }
-
-    pub fn declarations(&self) -> &[Declaration] {
-        &self.declarations
-    }
-
-    pub(crate) fn to_string(self) -> String {
-        let mut css = self.specifier.clone();
-        css.push('{');
-
-        let declarations = self.declarations();
-        let mut declaration_index = 0;
-        while declaration_index < declarations.len() {
-            css.push_str(&CssDeclaration(declarations[declaration_index]).to_string());
-            declaration_index += 1;
+impl Display for CssScope {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}{{", self.selector)?;
+        for declaration in &self.declarations {
+            write!(f, "{declaration}")?;
         }
-
-        css.push('}');
-        css
+        write!(f, "}}")
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        css::Stylesheet,
-        sx::{DeclarationProperty, Property, ThemeAwareValue},
-    };
+    use crate::css::{Stylesheet, StylesheetBuilder};
 
     use super::*;
 
     #[test]
     fn css_scope_happy_path() {
         let scope = CssScope::new(".wambo")
-            .with(Declaration {
-                property: DeclarationProperty::Known(Property::Width),
-                value: ThemeAwareValue::Raw("120px"),
-            })
-            .with(Declaration {
-                property: DeclarationProperty::Known(Property::PaddingTop),
-                value: ThemeAwareValue::Size(crate::theme::Size::Sm),
-            });
+            .with(CssDeclaration::new("width", "120px"))
+            .with(CssDeclaration::new("padding-top", "var(--lsx-spacing-sm)"));
 
-        let stylesheet = Stylesheet::new().append(scope.clone().to_string());
+        let stylesheet = Stylesheet::from(StylesheetBuilder::new().with_scope(scope));
 
-        assert_eq!(scope.specifier(), ".wambo");
         assert_eq!(
             stylesheet.as_str(),
             ".wambo{width:120px;padding-top:var(--lsx-spacing-sm);}"

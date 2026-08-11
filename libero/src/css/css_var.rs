@@ -10,11 +10,11 @@ impl CssVar {
         Self { prefix }
     }
 
-    pub(crate) fn to_string_name(self, suffix: &'static str) -> String {
+    pub(crate) fn name(self, suffix: &'static str) -> String {
         format!("{}{}", self.prefix, suffix)
     }
 
-    pub(crate) fn to_string_var(self, suffix: &'static str) -> String {
+    pub(crate) fn value(self, suffix: &'static str) -> String {
         format!("var({}{})", self.prefix, suffix)
     }
 }
@@ -33,12 +33,12 @@ impl SizeCssVar {
         }
     }
 
-    pub fn to_string(self, size: Size) -> String {
-        self.css_var.to_string_var(size.as_str())
+    pub fn value(self, size: Size) -> String {
+        self.css_var.value(size.as_str())
     }
 
-    pub fn to_string_name(self, size: Size) -> String {
-        self.css_var.to_string_name(size.as_str())
+    pub fn name(self, size: Size) -> String {
+        self.css_var.name(size.as_str())
     }
 }
 
@@ -59,11 +59,11 @@ impl ColorCssVar {
         }
     }
 
-    pub fn to_string(self, shade: ColorShade) -> String {
-        self.css_var.to_string_var(shade.as_str())
+    pub fn value(self, shade: ColorShade) -> String {
+        self.css_var.value(shade.as_str())
     }
 
-    pub fn to_string_name(self, shade: ColorShade) -> String {
-        self.css_var.to_string_name(shade.as_str())
+    pub fn name(self, shade: ColorShade) -> String {
+        self.css_var.name(shade.as_str())
     }
 }

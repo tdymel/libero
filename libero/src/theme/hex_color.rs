@@ -77,14 +77,6 @@ const fn mix_channel(base: u8, other: u8, weight: u8) -> u8 {
     (((base as u16 * (100 - weight) as u16) + (other as u16 * weight as u16)) / 100) as u8
 }
 
-const fn hex_digit(value: u8) -> char {
-    match value {
-        0..=9 => (b'0' + value) as char,
-        10..=15 => (b'A' + (value - 10)) as char,
-        _ => panic!("invalid hex digit"),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

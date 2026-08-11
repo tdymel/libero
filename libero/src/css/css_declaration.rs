@@ -1,32 +1,22 @@
-use crate::sx::{Declaration, DeclarationProperty, Property, ThemeAwareValue};
+use std::fmt::{self, Display, Formatter};
 
-use super::{
-    css_color_value::CssColorValue, css_property::CssDeclarationProperty, css_var::SizeCssVar,
-};
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CssDeclaration(pub Declaration);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CssDeclaration {
+    property: String,
+    value: String,
+}
 
 impl CssDeclaration {
-    pub(crate) fn to_string(self) -> String {
-        let mut css = String::new();
-        css.push_str(&CssDeclarationProperty(self.0.property).to_string());
-        css.push(':');
-        css.push_str(&self.value_to_string());
-        css.push(';');
-        css
-    }
-
-    fn value_to_string(self) -> String {
-        match self.0.value {
-            ThemeAwareValue::Raw(value) => value.to_string(),
-            ThemeAwareValue::Color(color_value) => CssColorValue(color_value).to_string(),
-            ThemeAwareValue::Size(size) => match self.0.property {
-                DeclarationProperty::Known(Property::PaddingTop) => {
-                    SizeCssVar::SPACING.to_string(size)
-                }
-                _ => size.as_str().to_string(),
-            },
+    pub fn new(property: impl Into<String>, value: impl Into<String>) -> Self {
+        Self {
+            property: property.into(),
+            value: value.into(),
         }
+    }
+}
+
+impl Display for CssDeclaration {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{};", self.property, self.value)
     }
 }

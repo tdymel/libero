@@ -1,10 +1,15 @@
-use crate::theme::Size;
+use crate::{
+    sx::{
+        Declaration, DeclarationProperty, Property, ROOT_BLOCK_PARENT, Sx, ThemeAwareValue,
+        sx_block::SxBlock, sx_modifier::SxModifier,
+    },
+    theme::Size,
+};
 
-use super::{CssBlock, CssMediaQuery, CssScope, Stylesheet};
-
-use crate::sx::sx_block::SxBlock;
-use crate::sx::sx_modifier::SxModifier;
-use crate::sx::{Declaration, ROOT_BLOCK_PARENT, Sx};
+use super::{
+    CssBlock, CssDeclaration, CssMediaQuery, CssScope, Stylesheet, StylesheetBuilder,
+    css_var::SizeCssVar,
+};
 
 #[derive(Clone, Debug, PartialEq)]
 struct FlattenedScope {
@@ -15,38 +20,20 @@ struct FlattenedScope {
     end: usize,
 }
 
+impl From<&Sx> for Stylesheet {
+    fn from(sx: &Sx) -> Self {
+        let class_name = sx.class_name();
+        sx.to_flattened_scopes(format!(".{class_name}"))
+            .iter()
+            .map(|flattened_scope| to_css_block(flattened_scope, sx.declarations(), sx.blocks()))
+            .fold(StylesheetBuilder::new(), |stylesheet, block| {
+                stylesheet.with_block(block)
+            })
+            .into()
+    }
+}
+
 impl Sx {
-    pub fn to_css(&self) -> Stylesheet {
-        let class_name = self.class_name();
-        let css_blocks = self.to_css_blocks(class_name_to_selector(&class_name));
-        let mut stylesheet = Stylesheet::new();
-
-        let mut index = 0;
-        while index < css_blocks.len() {
-            stylesheet = stylesheet.append_block(css_blocks[index].clone());
-            index += 1;
-        }
-
-        stylesheet
-    }
-
-    fn to_css_blocks(&self, class_name: String) -> Vec<CssBlock> {
-        let flattened_scopes = self.to_flattened_scopes(class_name);
-        let mut css_blocks = Vec::new();
-
-        let mut index = 0;
-        while index < flattened_scopes.len() {
-            css_blocks.push(to_css_block(
-                flattened_scopes[index].clone(),
-                self.declarations(),
-                self.blocks(),
-            ));
-            index += 1;
-        }
-
-        css_blocks
-    }
-
     fn to_flattened_scopes(&self, class_name: String) -> Vec<FlattenedScope> {
         let mut flattened_scopes = Vec::new();
         flatten_node(
@@ -91,9 +78,7 @@ fn flatten_node(
             let mut next_breakpoint = breakpoint;
 
             match block.modifier {
-                SxModifier::Selector(suffix) => {
-                    next_selector.push_str(suffix);
-                }
+                SxModifier::Selector(suffix) => next_selector.push_str(suffix),
                 SxModifier::Condition(condition) => {
                     next_selector.push_str("[data-state~=\"");
                     next_selector.push_str(condition);
@@ -120,33 +105,50 @@ fn flatten_node(
 }
 
 fn to_css_block(
-    flattened_scope: FlattenedScope,
+    flattened_scope: &FlattenedScope,
     declarations: &[Declaration],
     blocks: &[SxBlock],
 ) -> CssBlock {
-    let mut scope = CssScope::from_string(flattened_scope.selector);
-
-    let mut declaration_index = flattened_scope.start;
-    while declaration_index < flattened_scope.end {
-        if declaration_belongs_to_direct_child(
-            declaration_index,
-            blocks,
-            flattened_scope.parent_block_index,
-        ) {
-            declaration_index += 1;
-            continue;
-        }
-
-        scope = scope.with(declarations[declaration_index]);
-        declaration_index += 1;
-    }
+    let scope = (flattened_scope.start..flattened_scope.end)
+        .filter(|&declaration_index| {
+            !declaration_belongs_to_direct_child(
+                declaration_index,
+                blocks,
+                flattened_scope.parent_block_index,
+            )
+        })
+        .fold(
+            CssScope::from_string(flattened_scope.selector.clone()),
+            |scope, declaration_index| {
+                scope.with(to_css_declaration(declarations[declaration_index]))
+            },
+        );
 
     match flattened_scope.breakpoint {
         Some(breakpoint) => CssBlock::MediaQuery(
-            CssMediaQuery::from_string(breakpoint_to_media_condition(breakpoint)).with(scope),
+            CssMediaQuery::from_string(format!("(min-width: {})", breakpoint.breakpoint_value()))
+                .with(scope),
         ),
         None => CssBlock::Scope(scope),
     }
+}
+
+fn to_css_declaration(declaration: Declaration) -> CssDeclaration {
+    let property = match declaration.property {
+        DeclarationProperty::Known(property) => property.as_str().to_string(),
+        DeclarationProperty::Raw(property) => property.to_string(),
+    };
+
+    let value = match declaration.value {
+        ThemeAwareValue::Raw(value) => value.to_string(),
+        ThemeAwareValue::Color(color_value) => color_value.css_value(),
+        ThemeAwareValue::Size(size) => match declaration.property {
+            DeclarationProperty::Known(Property::PaddingTop) => SizeCssVar::SPACING.value(size),
+            _ => size.as_str().to_string(),
+        },
+    };
+
+    CssDeclaration::new(property, value)
 }
 
 const fn has_owned_declarations(
@@ -184,14 +186,6 @@ const fn declaration_belongs_to_direct_child(
         block_index += 1;
     }
     false
-}
-
-fn breakpoint_to_media_condition(breakpoint: Size) -> String {
-    format!("(min-width: {})", breakpoint.breakpoint_value())
-}
-
-fn class_name_to_selector(class_name: &str) -> String {
-    format!(".{class_name}")
 }
 
 const fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {

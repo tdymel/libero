@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 
-use crate::{sx_registry::SxRegistry, theme::Theme};
+use crate::{css::Stylesheet, sx_registry::SxRegistry, theme::Theme};
 
 #[derive(Clone)]
 pub struct LiberoContext {
     pub theme: &'static Theme,
-    pub(crate) theme_css: String,
+    pub(crate) theme_css: Stylesheet,
     pub(crate) sx_registry: SxRegistry,
     pub(crate) sx_registry_version: Signal<u64>,
 }
@@ -14,7 +14,7 @@ impl LiberoContext {
     pub fn new(theme: &'static Theme, sx_registry_version: Signal<u64>) -> Self {
         Self {
             theme,
-            theme_css: theme.to_css().as_str().to_string(),
+            theme_css: Stylesheet::from(theme),
             sx_registry: SxRegistry::new(),
             sx_registry_version,
         }
@@ -30,7 +30,7 @@ pub fn LiberoProvider(theme: &'static Theme, children: Element) -> Element {
 
     rsx! {
         style {
-            dangerous_inner_html: "{context.theme_css}"
+            dangerous_inner_html: "{context.theme_css.as_str()}"
         }
         for stylesheet in active_stylesheets {
             style {

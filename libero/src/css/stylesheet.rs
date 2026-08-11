@@ -1,29 +1,49 @@
-use super::{CssBlock, CssScope};
+use std::fmt::Write;
+
+use super::{css_block::CssBlock, css_scope::CssScope};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Stylesheet {
-    css: String,
-}
+pub struct Stylesheet(String);
 
 impl Stylesheet {
-    pub fn new() -> Self {
-        Self { css: String::new() }
-    }
-
     pub fn as_str(&self) -> &str {
-        &self.css
+        &self.0
+    }
+}
+
+impl From<String> for Stylesheet {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct StylesheetBuilder {
+    blocks: Vec<CssBlock>,
+}
+
+impl StylesheetBuilder {
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub fn append(mut self, value: String) -> Self {
-        self.css.push_str(&value);
+    pub fn with_scope(mut self, scope: CssScope) -> Self {
+        self.blocks.push(CssBlock::Scope(scope));
         self
     }
 
-    pub fn append_scope(self, scope: CssScope) -> Self {
-        self.append(scope.to_string())
+    pub fn with_block(mut self, block: CssBlock) -> Self {
+        self.blocks.push(block);
+        self
     }
+}
 
-    pub fn append_block(self, block: CssBlock) -> Self {
-        self.append(block.to_string())
+impl From<StylesheetBuilder> for Stylesheet {
+    fn from(value: StylesheetBuilder) -> Self {
+        let mut css = String::new();
+        for block in value.blocks {
+            write!(&mut css, "{block}").expect("writing CSS block into String cannot fail");
+        }
+        css.into()
     }
 }

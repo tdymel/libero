@@ -47,7 +47,7 @@ impl SxRegistry {
             key,
             RegisteredStylesheet {
                 sx,
-                css: sx.to_css(),
+                css: Stylesheet::from(sx),
                 registrations: registrations.clone(),
             },
         );
