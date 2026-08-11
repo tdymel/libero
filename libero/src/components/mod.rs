@@ -6,4 +6,4 @@ mod util;
 
 pub use r#box::Box;
 pub use hello_world::HelloWorld;
-pub use stack::{Stack, StackAlign, StackGap, StackJustify, StackValue};
+pub use stack::Stack;
