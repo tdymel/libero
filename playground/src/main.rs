@@ -7,8 +7,7 @@ use libero::{
 
 const BOX_SX: Sx = sx()
     .padding_top("xl")
-    .when("hidden", sx().background("secondary.1"))
-    .build();
+    .when("hidden", sx().background("secondary.1"));
 
 fn main() {
     dioxus::launch(App);

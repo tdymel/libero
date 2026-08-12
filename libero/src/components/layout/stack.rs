@@ -13,8 +13,7 @@ const STACK_BASE_SX: Sx = sx()
     .flex_wrap("var(--lsx-stack-wrap, var(--lsx-stack-column-wrap))")
     .align_items("var(--lsx-stack-align, var(--lsx-stack-column-align))")
     .justify_content("var(--lsx-stack-justify, var(--lsx-stack-column-justify))")
-    .gap("var(--lsx-stack-spacing, var(--lsx-stack-column-spacing))")
-    .build();
+    .gap("var(--lsx-stack-spacing, var(--lsx-stack-column-spacing))");
 
 #[derive(Props, Clone, PartialEq)]
 pub struct StackProps {
@@ -41,7 +40,7 @@ pub struct StackProps {
 
 #[component]
 pub fn Stack(props: StackProps) -> Element {
-    crate::context::use_sx(&STACK_BASE_SX);
+    let stack_class = crate::context::use_sx(&STACK_BASE_SX);
 
     let mut variables = Vec::new();
     let is_row = matches!(props.direction.as_deref(), Some("row"));
@@ -110,7 +109,7 @@ pub fn Stack(props: StackProps) -> Element {
         ));
     }
 
-    let class = classes(props.class, STACK_BASE_SX.class_name());
+    let class = classes(props.class, stack_class);
 
     rsx! {
         Box {

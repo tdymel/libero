@@ -1,8 +1,8 @@
 use crate::theme::Size;
 
-use super::{declaration::Property, sx_builder::SxBuilder, sx_modifier::SxModifier};
+use super::{declaration::Property, sx::Sx, sx_modifier::SxModifier};
 
-impl SxBuilder {
+impl Sx {
     pub const fn background(self, value: &'static str) -> Self {
         self.with_known_property(Property::Background, value)
     }
@@ -43,23 +43,23 @@ impl SxBuilder {
         self.with_known_property(Property::Gap, value)
     }
 
-    pub const fn hover(self, nested: SxBuilder) -> Self {
+    pub const fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
 
-    pub const fn focus(self, nested: SxBuilder) -> Self {
+    pub const fn focus(self, nested: Sx) -> Self {
         self.selector(":focus", nested)
     }
 
-    pub const fn when(self, condition: &'static str, nested: SxBuilder) -> Self {
+    pub const fn when(self, condition: &'static str, nested: Sx) -> Self {
         self.modifier(SxModifier::Condition(condition), nested)
     }
 
-    pub const fn selector(self, selector: &'static str, nested: SxBuilder) -> Self {
+    pub const fn selector(self, selector: &'static str, nested: Sx) -> Self {
         self.modifier(SxModifier::Selector(selector), nested)
     }
 
-    pub const fn breakpoint(self, breakpoint: Size, nested: SxBuilder) -> Self {
+    pub const fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
         self.modifier(SxModifier::Breakpoint(breakpoint), nested)
     }
 }

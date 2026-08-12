@@ -6,7 +6,7 @@ use crate::{
     sx::{Sx, sx},
 };
 
-const EMPTY_SX: Sx = sx().build();
+const EMPTY_SX: Sx = sx();
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BoxProps {
