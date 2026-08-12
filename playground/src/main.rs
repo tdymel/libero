@@ -3,10 +3,11 @@ use libero::{
     LiberoProvider,
     components::{HelloWorld, Stack, props::JustifyInput},
     sx::{StaticSx, sx},
+    theme::Size,
 };
 
 static BOX_SX: StaticSx = StaticSx::new(|| {
-    sx().padding_top("xl")
+    sx().padding_top(Size::Xl)
         .when("hidden", sx().background("secondary.1"))
 });
 

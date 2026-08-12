@@ -1,5 +1,5 @@
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ColorShade {
     S1 = 1,
     S2 = 2,

@@ -1,6 +1,6 @@
 use crate::{
-    sx::{Property, Sx, SxEntry, SxModifier, SxPropertyKey},
-    theme::{ColorValue, Size},
+    sx::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue},
+    theme::Size,
 };
 
 use super::{
@@ -69,23 +69,24 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
     }
 }
 
-fn to_css_declaration(property: &SxPropertyKey, value: &str) -> CssDeclaration {
+fn to_css_declaration(property: &SxPropertyKey, value: &ThemeAwareValue) -> CssDeclaration {
     CssDeclaration::new(property.as_str(), to_css_value(property, value))
 }
 
-fn to_css_value(property: &SxPropertyKey, value: &str) -> String {
-    if let Some(color_value) = ColorValue::parse(value) {
-        return CssColorValue(color_value).value();
+fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
+    match value {
+        ThemeAwareValue::Size(size) => to_size_css_value(property, *size),
+        ThemeAwareValue::Number(value) => value.clone(),
+        ThemeAwareValue::ColorValue(value) => CssColorValue(*value).value(),
+        ThemeAwareValue::String(value) => value.clone(),
     }
+}
 
-    if let Some(size) = Size::parse_dynamic(value) {
-        return match property {
-            SxPropertyKey::Known(Property::PaddingTop) | SxPropertyKey::Known(Property::Gap) => {
-                SizeCssVar::SPACING.value(size)
-            }
-            _ => size.as_str().to_string(),
-        };
+fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
+    match property {
+        SxPropertyKey::Known(Property::PaddingTop) | SxPropertyKey::Known(Property::Gap) => {
+            SizeCssVar::SPACING.value(size)
+        }
+        _ => size.as_str().to_string(),
     }
-
-    value.to_string()
 }

@@ -1,6 +1,6 @@
 use super::{Color, ColorShade};
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ColorValue {
     Shade(Color, ColorShade),
     Contrast(Color, ColorShade),

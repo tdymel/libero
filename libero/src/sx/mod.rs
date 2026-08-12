@@ -1,11 +1,19 @@
-mod declaration;
+mod static_sx;
 mod sx;
 mod sx_builder_props;
+mod sx_entry;
+mod sx_input;
+mod sx_key;
 pub mod sx_modifier;
+mod theme_aware_value;
 
-pub use declaration::{Property, SxModifierKey, SxPropertyKey};
-pub use sx::{StaticSx, Sx, SxEntry, SxInput, sx};
+pub use static_sx::StaticSx;
+pub use sx::{Sx, sx};
+pub use sx_entry::SxEntry;
+pub use sx_input::SxInput;
+pub use sx_key::{Property, SxModifierKey, SxPropertyKey};
 pub use sx_modifier::SxModifier;
+pub use theme_aware_value::ThemeAwareValue;
 
 /*
  * TODO:

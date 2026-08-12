@@ -8,5 +8,5 @@ mod theme_to_css;
 
 pub(crate) use css_declaration::CssDeclaration;
 pub(crate) use css_scope::CssScope;
-pub(crate) use css_var::SizeCssVar;
+
 pub(crate) use stylesheet::Stylesheet;

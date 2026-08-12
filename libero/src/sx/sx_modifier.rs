@@ -1,1 +1,1 @@
-pub use super::declaration::SxModifierKey as SxModifier;
+pub use super::sx_key::SxModifierKey as SxModifier;

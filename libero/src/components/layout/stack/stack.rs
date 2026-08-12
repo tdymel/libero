@@ -6,8 +6,7 @@ use crate::{
         props::{AlignInput, JustifyInput},
         util::classes,
     },
-    css::SizeCssVar,
-    sx::{StaticSx, SxInput, sx},
+    sx::{StaticSx, SxInput, ThemeAwareValue, sx},
     theme::{Size, StackDefaults},
 };
 
@@ -23,8 +22,8 @@ fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
         })
         .apply_if(props.gap.as_deref(), |sx, gap| {
             sx.gap(match Size::parse_dynamic(gap) {
-                Some(size) => SizeCssVar::SPACING.value(size),
-                None => gap.to_string(),
+                Some(size) => ThemeAwareValue::from(size),
+                None => ThemeAwareValue::from(gap),
             })
         })
         .apply_if(props.wrap, |sx, wrap| {
