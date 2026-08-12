@@ -1,7 +1,8 @@
 use crate::theme::{Color, ColorShade, ColorValue, Theme};
 
 use super::{
-    CssDeclaration, CssScope, Stylesheet, StylesheetBuilder,
+    CssDeclaration, CssScope, Stylesheet,
+    css_color_value::CssColorValue,
     css_var::{NamedColorCssVar, SizeCssVar},
 };
 
@@ -19,58 +20,62 @@ const SHADES: [ColorShade; 9] = [
 
 impl From<&Theme> for Stylesheet {
     fn from(theme: &Theme) -> Self {
-        let mut scope = CssScope::new(":root");
-        scope = push_spacing_vars(scope, theme);
-        scope = push_stack_vars(scope, theme);
-        scope = push_named_color_vars(scope, theme);
-        scope = push_color_vars(scope, Color::Primary, theme.primary);
-        scope = push_color_vars(scope, Color::Secondary, theme.secondary);
-        scope = push_color_vars(scope, Color::Error, theme.error);
-        scope = push_color_vars(scope, Color::Warning, theme.warning);
-        scope = push_color_vars(scope, Color::Info, theme.info);
-        scope = push_color_vars(scope, Color::Success, theme.success);
-        scope = push_color_vars(scope, Color::Grey, theme.grey);
-        Stylesheet::from(StylesheetBuilder::new().with_scope(scope))
+        Stylesheet::new(vec![CssScope::new(":root", theme_declarations(theme))])
     }
 }
 
-fn push_spacing_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
-    scope = scope.with(CssDeclaration::new(
+fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
+    let mut declarations = Vec::new();
+    push_spacing_declarations(&mut declarations, theme);
+    push_stack_declarations(&mut declarations, theme);
+    push_named_color_declarations(&mut declarations, theme);
+    push_color_declarations(&mut declarations, Color::Primary, theme.primary);
+    push_color_declarations(&mut declarations, Color::Secondary, theme.secondary);
+    push_color_declarations(&mut declarations, Color::Error, theme.error);
+    push_color_declarations(&mut declarations, Color::Warning, theme.warning);
+    push_color_declarations(&mut declarations, Color::Info, theme.info);
+    push_color_declarations(&mut declarations, Color::Success, theme.success);
+    push_color_declarations(&mut declarations, Color::Grey, theme.grey);
+    declarations
+}
+
+fn push_spacing_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
         SizeCssVar::SPACING.name(crate::theme::Size::Xs),
         format!("{}px", theme.spacing.xs),
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         SizeCssVar::SPACING.name(crate::theme::Size::Sm),
         format!("{}px", theme.spacing.sm),
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         SizeCssVar::SPACING.name(crate::theme::Size::Md),
         format!("{}px", theme.spacing.md),
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         SizeCssVar::SPACING.name(crate::theme::Size::Lg),
         format!("{}px", theme.spacing.lg),
     ));
-    scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         SizeCssVar::SPACING.name(crate::theme::Size::Xl),
         format!("{}px", theme.spacing.xl),
-    ))
+    ));
 }
 
-fn push_stack_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
-    scope = scope.with(CssDeclaration::new(
+fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-column-align",
         theme.stack.column.align,
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-column-justify",
         theme.stack.column.justify,
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-column-spacing",
         SizeCssVar::SPACING.value(theme.stack.column.spacing),
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-column-wrap",
         if theme.stack.column.wrap {
             "wrap"
@@ -78,57 +83,61 @@ fn push_stack_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
             "nowrap"
         },
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-row-align",
         theme.stack.row.align,
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-row-justify",
         theme.stack.row.justify,
     ));
-    scope = scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-row-spacing",
         SizeCssVar::SPACING.value(theme.stack.row.spacing),
     ));
-    scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         "--lsx-stack-row-wrap",
         if theme.stack.row.wrap {
             "wrap"
         } else {
             "nowrap"
         },
-    ))
+    ));
 }
 
-fn push_named_color_vars(mut scope: CssScope, theme: &Theme) -> CssScope {
-    scope = scope.with(CssDeclaration::new(
+fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
         NamedColorCssVar::BLACK.name(),
         theme.black.to_string(),
     ));
-    scope.with(CssDeclaration::new(
+    declarations.push(CssDeclaration::new(
         NamedColorCssVar::WHITE.name(),
         theme.white.to_string(),
-    ))
+    ));
 }
 
-fn push_color_vars(scope: CssScope, color: Color, base: crate::theme::HexColor) -> CssScope {
-    let scope = SHADES.into_iter().fold(scope, |scope, shade| {
-        scope.with(CssDeclaration::new(
-            ColorValue::Shade(color, shade).css_var_name(),
+fn push_color_declarations(
+    declarations: &mut Vec<CssDeclaration>,
+    color: Color,
+    base: crate::theme::HexColor,
+) {
+    for shade in SHADES {
+        declarations.push(CssDeclaration::new(
+            CssColorValue(ColorValue::Shade(color, shade)).var_name(),
             base.shade(shade).to_string(),
-        ))
-    });
+        ));
+    }
 
-    SHADES.into_iter().fold(scope, |scope, shade| {
-        scope.with(CssDeclaration::new(
-            ColorValue::Contrast(color, shade).css_var_name(),
+    for shade in SHADES {
+        declarations.push(CssDeclaration::new(
+            CssColorValue(ColorValue::Contrast(color, shade)).var_name(),
             if base.shade(shade).contrast().rgb() == 0x00_00_00 {
-                ColorValue::Shade(Color::Black, shade).css_value()
+                CssColorValue(ColorValue::Shade(Color::Black, shade)).value()
             } else {
-                ColorValue::Shade(Color::White, shade).css_value()
+                CssColorValue(ColorValue::Shade(Color::White, shade)).value()
             },
-        ))
-    })
+        ));
+    }
 }
 
 #[cfg(test)]

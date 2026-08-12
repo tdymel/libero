@@ -2,9 +2,12 @@ use crate::theme::{Color, ColorValue};
 
 use super::css_var::{ColorCssVar, NamedColorCssVar};
 
-impl ColorValue {
-    pub(crate) fn css_value(self) -> String {
-        match self {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct CssColorValue(pub(crate) ColorValue);
+
+impl CssColorValue {
+    pub(crate) fn value(self) -> String {
+        match self.0 {
             ColorValue::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.value(shade),
                 Color::Secondary => ColorCssVar::SECONDARY.value(shade),
@@ -30,8 +33,8 @@ impl ColorValue {
         }
     }
 
-    pub(crate) fn css_var_name(self) -> String {
-        match self {
+    pub(crate) fn var_name(self) -> String {
+        match self.0 {
             ColorValue::Shade(color, shade) => match color {
                 Color::Primary => ColorCssVar::PRIMARY.name(shade),
                 Color::Secondary => ColorCssVar::SECONDARY.name(shade),
@@ -66,11 +69,14 @@ mod tests {
 
     #[test]
     fn color_value_happy_path() {
-        let primary = ColorValue::Shade(Color::Primary, ColorShade::S1).css_value();
-        let secondary_contrast = ColorValue::Contrast(Color::Secondary, ColorShade::S5).css_value();
-        let primary_var = ColorValue::Shade(Color::Primary, ColorShade::S1).css_var_name();
-        let error = ColorValue::Shade(Color::Error, ColorShade::S3).css_value();
-        let success_contrast = ColorValue::Contrast(Color::Success, ColorShade::S4).css_var_name();
+        let primary = CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1)).value();
+        let secondary_contrast =
+            CssColorValue(ColorValue::Contrast(Color::Secondary, ColorShade::S5)).value();
+        let primary_var =
+            CssColorValue(ColorValue::Shade(Color::Primary, ColorShade::S1)).var_name();
+        let error = CssColorValue(ColorValue::Shade(Color::Error, ColorShade::S3)).value();
+        let success_contrast =
+            CssColorValue(ColorValue::Contrast(Color::Success, ColorShade::S4)).var_name();
 
         assert_eq!(primary, "var(--lsx-primary-1)");
         assert_eq!(secondary_contrast, "var(--lsx-secondary-contrast-5)");
@@ -78,11 +84,11 @@ mod tests {
         assert_eq!(error, "var(--lsx-error-3)");
         assert_eq!(success_contrast, "--lsx-success-contrast-4");
         assert_eq!(
-            ColorValue::Shade(Color::Black, ColorShade::S7).css_value(),
+            CssColorValue(ColorValue::Shade(Color::Black, ColorShade::S7)).value(),
             "var(--lsx-black)"
         );
         assert_eq!(
-            ColorValue::Shade(Color::White, ColorShade::S7).css_var_name(),
+            CssColorValue(ColorValue::Shade(Color::White, ColorShade::S7)).var_name(),
             "--lsx-white"
         );
     }

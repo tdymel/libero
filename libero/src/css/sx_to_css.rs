@@ -4,30 +4,29 @@ use crate::{
 };
 
 use super::{
-    CssBlock, CssDeclaration, CssMediaQuery, CssScope, Stylesheet, StylesheetBuilder,
-    css_var::SizeCssVar,
+    CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue, css_var::SizeCssVar,
 };
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
     selector: String,
-    breakpoint: Option<Size>,
+    media_query: Option<String>,
 }
 
 impl From<&Sx> for Stylesheet {
     fn from(sx: &Sx) -> Self {
-        let mut builder = StylesheetBuilder::new();
+        let mut scopes = Vec::new();
         let context = CssContext {
             selector: format!(".{}", sx.class_name()),
-            breakpoint: None,
+            media_query: None,
         };
 
-        push_sx(&mut builder, sx, &context);
-        builder.into()
+        collect_scopes(&mut scopes, sx, &context);
+        Stylesheet::new(scopes)
     }
 }
 
-fn push_sx(builder: &mut StylesheetBuilder, sx: &Sx, context: &CssContext) {
+fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     let declarations = sx
         .entries()
         .iter()
@@ -38,30 +37,17 @@ fn push_sx(builder: &mut StylesheetBuilder, sx: &Sx, context: &CssContext) {
         .collect::<Vec<_>>();
 
     if !declarations.is_empty() {
-        let scope = declarations.into_iter().fold(
-            CssScope::from_string(context.selector.clone()),
-            |scope, declaration| scope.with(declaration),
-        );
-
-        let block = match context.breakpoint {
-            Some(breakpoint) => CssBlock::MediaQuery(
-                CssMediaQuery::from_string(format!(
-                    "(min-width: {})",
-                    breakpoint.breakpoint_value()
-                ))
-                .with(scope),
-            ),
-            None => CssBlock::Scope(scope),
-        };
-
-        let next_builder = std::mem::take(builder).with_block(block);
-        *builder = next_builder;
+        let mut scope = CssScope::new(context.selector.clone(), declarations);
+        if let Some(media_query) = &context.media_query {
+            scope = scope.in_media_query(media_query.clone());
+        }
+        scopes.push(scope);
     }
 
     for entry in sx.entries() {
         if let SxEntry::Nested { modifier, sx } = entry {
             let next = apply_modifier(context, modifier);
-            push_sx(builder, sx, &next);
+            collect_scopes(scopes, sx, &next);
         }
     }
 }
@@ -70,28 +56,26 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
     match modifier {
         SxModifier::Selector(suffix) => CssContext {
             selector: format!("{}{}", context.selector, suffix),
-            breakpoint: context.breakpoint,
+            media_query: context.media_query.clone(),
         },
         SxModifier::Condition(condition) => CssContext {
             selector: format!("{}[data-state~=\"{}\"]", context.selector, condition),
-            breakpoint: context.breakpoint,
+            media_query: context.media_query.clone(),
         },
         SxModifier::Breakpoint(size) => CssContext {
             selector: context.selector.clone(),
-            breakpoint: Some(merge_breakpoint(context.breakpoint, *size)),
+            media_query: Some(format!("(min-width: {})", size.breakpoint_value())),
         },
     }
 }
 
 fn to_css_declaration(property: &SxPropertyKey, value: &str) -> CssDeclaration {
-    let property_name = property.as_str().to_string();
-    let value = to_css_value(property, value);
-    CssDeclaration::new(property_name, value)
+    CssDeclaration::new(property.as_str(), to_css_value(property, value))
 }
 
 fn to_css_value(property: &SxPropertyKey, value: &str) -> String {
     if let Some(color_value) = ColorValue::parse(value) {
-        return color_value.css_value();
+        return CssColorValue(color_value).value();
     }
 
     if let Some(size) = Size::parse_dynamic(value) {
@@ -104,11 +88,4 @@ fn to_css_value(property: &SxPropertyKey, value: &str) -> String {
     }
 
     value.to_string()
-}
-
-fn merge_breakpoint(current: Option<Size>, next: Size) -> Size {
-    match current {
-        Some(current) if (next as u8) <= (current as u8) => current,
-        _ => next,
-    }
 }
