@@ -1,15 +1,13 @@
-use std::sync::LazyLock;
-
 use dioxus::prelude::*;
 
 use crate::{
     components::{Box, util::classes},
     css::SizeCssVar,
-    sx::{Sx, sx},
+    sx::{StaticSx, SxInput, sx},
     theme::Size,
 };
 
-static STACK_BASE_SX: LazyLock<Sx> = LazyLock::new(|| {
+static STACK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("var(--lsx-stack-direction, column)")
         .flex_wrap("var(--lsx-stack-wrap, var(--lsx-stack-column-wrap))")
@@ -24,8 +22,8 @@ pub struct StackProps {
     attributes: Vec<Attribute>,
     #[props(default)]
     class: Option<String>,
-    #[props(default)]
-    sx: Option<Sx>,
+    #[props(default, into)]
+    sx: SxInput,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
     #[props(default)]

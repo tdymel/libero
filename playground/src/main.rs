@@ -2,13 +2,13 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{HelloWorld, Stack},
-    sx::{Sx, sx},
+    sx::{StaticSx, sx},
 };
 
-fn box_sx() -> Sx {
+static BOX_SX: StaticSx = StaticSx::new(|| {
     sx().padding_top("xl")
         .when("hidden", sx().background("secondary.1"))
-}
+});
 
 fn main() {
     dioxus::launch(App);
@@ -45,7 +45,7 @@ fn App() -> Element {
             }
 
             Stack {
-                sx: box_sx(),
+                sx: &BOX_SX,
                 spacing: gap.clone(),
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
@@ -55,6 +55,7 @@ fn App() -> Element {
             }
 
             Stack {
+                sx: sx().background("red"),
                 direction: "row",
                 spacing: gap,
                 wrap: wrap_group(),

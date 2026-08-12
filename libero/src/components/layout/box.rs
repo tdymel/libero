@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use dioxus_core::AttributeValue;
 
-use crate::{SxLayer, context::use_sx, sx::Sx};
+use crate::{SxLayer, context::use_sx, sx::SxInput};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BoxProps {
@@ -9,8 +9,8 @@ pub struct BoxProps {
     attributes: Vec<Attribute>,
     #[props(default)]
     class: Option<String>,
-    #[props(default)]
-    sx: Option<Sx>,
+    #[props(default, into)]
+    sx: SxInput,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
     #[props(default)]
@@ -21,7 +21,7 @@ pub struct BoxProps {
 #[component]
 pub fn Box(props: BoxProps) -> Element {
     let sx = props.sx;
-    let sx_class = sx.as_ref().map(|sx| use_sx(sx, SxLayer::UserStatic));
+    let sx_class = sx.as_sx().map(|sx| use_sx(sx, SxLayer::UserStatic));
     let data_state = props
         .states
         .iter()

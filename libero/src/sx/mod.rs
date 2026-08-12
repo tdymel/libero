@@ -4,7 +4,7 @@ mod sx_builder_props;
 pub mod sx_modifier;
 
 pub use declaration::{Property, SxModifierKey, SxPropertyKey};
-pub use sx::{Sx, SxEntry, sx};
+pub use sx::{StaticSx, Sx, SxEntry, SxInput, sx};
 pub use sx_modifier::SxModifier;
 
 /*

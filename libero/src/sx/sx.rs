@@ -1,5 +1,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use std::sync::LazyLock;
 
 use super::declaration::{Property, SxModifierKey, SxPropertyKey};
 
@@ -74,4 +76,62 @@ impl Sx {
 
 pub fn sx() -> Sx {
     Sx::new()
+}
+
+pub struct StaticSx(LazyLock<Sx>);
+
+impl std::fmt::Debug for StaticSx {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("StaticSx").finish()
+    }
+}
+
+impl PartialEq for StaticSx {
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self, other)
+    }
+}
+
+impl StaticSx {
+    pub const fn new(init: fn() -> Sx) -> Self {
+        Self(LazyLock::new(init))
+    }
+}
+
+impl Deref for StaticSx {
+    type Target = Sx;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Default)]
+pub enum SxInput {
+    #[default]
+    None,
+    Owned(Sx),
+    Static(&'static StaticSx),
+}
+
+impl SxInput {
+    pub fn as_sx(&self) -> Option<&Sx> {
+        match self {
+            Self::None => None,
+            Self::Owned(sx) => Some(sx),
+            Self::Static(sx) => Some(sx),
+        }
+    }
+}
+
+impl From<Sx> for SxInput {
+    fn from(value: Sx) -> Self {
+        Self::Owned(value)
+    }
+}
+
+impl From<&'static StaticSx> for SxInput {
+    fn from(value: &'static StaticSx) -> Self {
+        Self::Static(value)
+    }
 }
