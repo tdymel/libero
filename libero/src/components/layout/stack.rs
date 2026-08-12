@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::StackDefaults,
 };
@@ -66,17 +66,21 @@ pub fn Stack(props: StackProps) -> Element {
     };
 
     let stack_class = crate::context::use_sx(stack_base_sx, crate::SxLayer::Framework);
+    let static_class = props
+        .sx
+        .as_ref()
+        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
     let dynamic_class =
         crate::context::use_sx(&stack_dynamic_sx(&props), crate::SxLayer::UserDynamic);
 
-    let class = class_list([props.class, stack_class, dynamic_class]);
+    let class = class_list([props.class, stack_class, dynamic_class, static_class]);
+    let data_state = props.states.as_ref().and_then(States::data_state);
 
     rsx! {
-        Box {
-            attributes: props.attributes,
+        div {
             class: class,
-            sx: props.sx,
-            states: props.states,
+            "data-state": data_state,
+            ..props.attributes,
             {props.children}
         }
     }

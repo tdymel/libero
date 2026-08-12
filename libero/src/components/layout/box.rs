@@ -22,14 +22,14 @@ pub struct BoxProps {
 
 #[component]
 pub fn Box(props: BoxProps) -> Element {
-    let sx_class = props
+    let static_class = props
         .sx
         .as_ref()
         .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
 
     let data_state = props.states.as_ref().and_then(States::data_state);
 
-    let class = class_list([props.class, sx_class]);
+    let class = class_list([props.class, static_class]);
 
     rsx! {
         div {
