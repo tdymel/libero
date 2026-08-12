@@ -2,7 +2,7 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
 use dioxus::prelude::*;
 
-use crate::{css::Stylesheet, sx::Sx};
+use crate::{SxLayer, css::Stylesheet, sx::Sx};
 
 #[derive(Clone)]
 pub struct RegisteredStylesheet {
@@ -27,7 +27,7 @@ impl Drop for RegistrationGuard {
 
 #[derive(Clone, Default)]
 pub struct SxRegistry {
-    inner: Rc<RefCell<BTreeMap<u64, RegisteredStylesheet>>>,
+    inner: Rc<RefCell<BTreeMap<(SxLayer, u64), RegisteredStylesheet>>>,
 }
 
 impl SxRegistry {
@@ -35,21 +35,25 @@ impl SxRegistry {
         Self::default()
     }
 
-    fn registration_token(&self, sx: &Sx) -> Rc<()> {
+    fn registration_token(&self, sx: &Sx, layer: SxLayer) -> Rc<()> {
         let key = sx.hash();
         let mut registry = self.inner.borrow_mut();
 
-        if let Some(entry) = registry.get(&key) {
+        if let Some(entry) = registry.get(&(layer, key)) {
             return entry.registrations.clone();
         }
 
         let registrations = Rc::new(());
         registry.insert(
-            key,
+            (layer, key),
             RegisteredStylesheet {
                 key,
                 class_name: sx.class_name(),
-                css: Stylesheet::from(sx),
+                css: Stylesheet::from(format!(
+                    "@layer {}{{{}}}",
+                    layer.css_name(),
+                    Stylesheet::from(sx).as_str()
+                )),
                 registrations: registrations.clone(),
             },
         );
@@ -57,9 +61,14 @@ impl SxRegistry {
         registrations
     }
 
-    pub fn register(&self, sx: &Sx, sx_registry_version: Signal<u64>) -> RegistrationGuard {
+    pub fn register(
+        &self,
+        sx: &Sx,
+        layer: SxLayer,
+        sx_registry_version: Signal<u64>,
+    ) -> RegistrationGuard {
         RegistrationGuard {
-            registrations: self.registration_token(sx),
+            registrations: self.registration_token(sx, layer),
             sx_registry_version,
         }
     }

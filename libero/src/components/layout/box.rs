@@ -1,12 +1,7 @@
 use dioxus::prelude::*;
 use dioxus_core::AttributeValue;
 
-use crate::{
-    context::use_sx,
-    sx::{Sx, sx},
-};
-
-const EMPTY_SX: Sx = sx();
+use crate::{SxLayer, context::use_sx, sx::Sx};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BoxProps {
@@ -26,9 +21,7 @@ pub struct BoxProps {
 #[component]
 pub fn Box(props: BoxProps) -> Element {
     let sx = props.sx;
-    use_sx(sx.as_ref().unwrap_or(&EMPTY_SX));
-
-    let sx_class = sx.as_ref().map(Sx::class_name);
+    let sx_class = sx.as_ref().map(|sx| use_sx(sx, SxLayer::UserStatic));
     let data_state = props
         .states
         .iter()

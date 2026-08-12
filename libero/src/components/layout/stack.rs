@@ -40,7 +40,7 @@ pub struct StackProps {
 
 #[component]
 pub fn Stack(props: StackProps) -> Element {
-    let stack_class = crate::context::use_sx(&STACK_BASE_SX);
+    let stack_class = crate::context::use_sx(&STACK_BASE_SX, crate::SxLayer::Framework);
 
     let mut variables = Vec::new();
     let is_row = matches!(props.direction.as_deref(), Some("row"));

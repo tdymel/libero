@@ -1,10 +1,11 @@
 use dioxus::prelude::*;
 
-use crate::{css::Stylesheet, sx_registry::SxRegistry, theme::Theme};
+use crate::{SxLayer, css::Stylesheet, sx_registry::SxRegistry, theme::Theme};
 
 #[derive(Clone)]
 pub struct LiberoContext {
     pub theme: &'static Theme,
+    pub(crate) layer_order_css: &'static str,
     pub(crate) theme_css: Stylesheet,
     pub(crate) sx_registry: SxRegistry,
     pub(crate) sx_registry_version: Signal<u64>,
@@ -14,6 +15,7 @@ impl LiberoContext {
     pub fn new(theme: &'static Theme, sx_registry_version: Signal<u64>) -> Self {
         Self {
             theme,
+            layer_order_css: SxLayer::order_css(),
             theme_css: Stylesheet::from(theme),
             sx_registry: SxRegistry::new(),
             sx_registry_version,
@@ -33,6 +35,9 @@ pub fn LiberoProvider(
 
     rsx! {
         style {
+            dangerous_inner_html: "{context.layer_order_css}"
+        }
+        style {
             dangerous_inner_html: "{context.theme_css.as_str()}"
         }
         for stylesheet in active_stylesheets {
@@ -48,13 +53,13 @@ pub fn use_theme() -> &'static Theme {
     use_context::<LiberoContext>().theme
 }
 
-pub fn use_sx(sx: &crate::sx::Sx) -> String {
+pub(crate) fn use_sx(sx: &crate::sx::Sx, layer: SxLayer) -> String {
     let mut context = use_context::<LiberoContext>();
     let _registration = use_hook(|| {
         *context.sx_registry_version.write() += 1;
         context
             .sx_registry
-            .register(sx, context.sx_registry_version)
+            .register(sx, layer, context.sx_registry_version)
     });
     sx.class_name()
 }
