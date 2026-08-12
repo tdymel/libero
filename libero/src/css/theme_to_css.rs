@@ -27,6 +27,7 @@ impl From<&Theme> for Stylesheet {
 fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     let mut declarations = Vec::new();
     push_spacing_declarations(&mut declarations, theme);
+    push_breakpoint_declarations(&mut declarations);
     push_stack_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
     push_color_declarations(&mut declarations, Color::Primary, theme.primary);
@@ -59,6 +60,29 @@ fn push_spacing_declarations(declarations: &mut Vec<CssDeclaration>, theme: &The
     declarations.push(CssDeclaration::new(
         SizeCss::SPACING.name(crate::theme::Size::Xl),
         format!("{}px", theme.spacing.xl),
+    ));
+}
+
+fn push_breakpoint_declarations(declarations: &mut Vec<CssDeclaration>) {
+    declarations.push(CssDeclaration::new(
+        SizeCss::BREAKPOINT.name(crate::theme::Size::Xs),
+        crate::theme::Size::Xs.breakpoint_value(),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::BREAKPOINT.name(crate::theme::Size::Sm),
+        crate::theme::Size::Sm.breakpoint_value(),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::BREAKPOINT.name(crate::theme::Size::Md),
+        crate::theme::Size::Md.breakpoint_value(),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::BREAKPOINT.name(crate::theme::Size::Lg),
+        crate::theme::Size::Lg.breakpoint_value(),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::BREAKPOINT.name(crate::theme::Size::Xl),
+        crate::theme::Size::Xl.breakpoint_value(),
     ));
 }
 
@@ -178,6 +202,8 @@ mod tests {
 
         assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
+        assert!(css.as_str().contains("--lsx-breakpoint-xs:36rem;"));
+        assert!(css.as_str().contains("--lsx-breakpoint-xl:88rem;"));
         assert!(css.as_str().contains("--lsx-stack-column-align:stretch;"));
         assert!(
             css.as_str()
