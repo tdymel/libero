@@ -1,4 +1,7 @@
-use crate::sx::{StaticSx, Sx, ThemeAwareValue};
+use crate::{
+    components::States,
+    sx::{StaticSx, Sx, ThemeAwareValue},
+};
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum Input<T: 'static> {
@@ -58,6 +61,21 @@ impl From<Option<Sx>> for Input<Sx> {
 impl From<&'static StaticSx> for Input<Sx> {
     fn from(value: &'static StaticSx) -> Self {
         Self::Static(value)
+    }
+}
+
+impl From<States> for Input<States> {
+    fn from(value: States) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<Option<States>> for Input<States> {
+    fn from(value: Option<States>) -> Self {
+        match value {
+            Some(value) => Self::Value(value),
+            None => Self::None,
+        }
     }
 }
 

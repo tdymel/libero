@@ -41,7 +41,7 @@ pub struct StackProps {
     #[props(default, into)]
     sx: Input<Sx>,
     #[props(default, into)]
-    states: States,
+    states: Input<States>,
     #[props(default, into)]
     align: Input<ThemeAwareValue>,
     #[props(default, into)]
@@ -77,7 +77,6 @@ pub fn Stack(props: StackProps) -> Element {
             class: class,
             sx: props.sx,
             states: props.states,
-            variables: Vec::new(),
             {props.children}
         }
     }
