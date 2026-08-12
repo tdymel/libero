@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{SxLayer, css::Stylesheet, sx_registry::SxRegistry, theme::Theme};
@@ -55,11 +57,38 @@ pub fn use_theme() -> &'static Theme {
 
 pub(crate) fn use_sx(sx: &crate::sx::Sx, layer: SxLayer) -> String {
     let mut context = use_context::<LiberoContext>();
-    let _registration = use_hook(|| {
-        *context.sx_registry_version.write() += 1;
-        context
-            .sx_registry
-            .register(sx, layer, context.sx_registry_version)
-    });
+    let key = (layer, sx.hash());
+    let active_registration = use_hook(|| Rc::new(RefCell::new(None::<(SxLayer, u64)>)));
+
+    {
+        let mut active_registration = active_registration.borrow_mut();
+        match *active_registration {
+            Some(active_key) if active_key == key => {}
+            Some(active_key) => {
+                context.sx_registry.release(active_key);
+                context.sx_registry.acquire(sx, layer);
+                *active_registration = Some(key);
+                *context.sx_registry_version.write() += 1;
+            }
+            None => {
+                context.sx_registry.acquire(sx, layer);
+                *active_registration = Some(key);
+                *context.sx_registry_version.write() += 1;
+            }
+        }
+    }
+
+    {
+        let active_registration = active_registration.clone();
+        let sx_registry = context.sx_registry.clone();
+        let mut sx_registry_version = context.sx_registry_version;
+        use_drop(move || {
+            if let Some(active_key) = active_registration.borrow_mut().take() {
+                sx_registry.release(active_key);
+                *sx_registry_version.write() += 1;
+            }
+        });
+    }
+
     sx.class_name()
 }

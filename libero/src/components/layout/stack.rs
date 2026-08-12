@@ -2,8 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, util::classes},
-    css::SizeCssVar,
-    sx::{StaticSx, SxInput, sx},
+    sx::{StaticSx, Sx, SxInput, sx},
     theme::Size,
 };
 
@@ -15,6 +14,50 @@ static STACK_BASE_SX: StaticSx = StaticSx::new(|| {
         .justify_content("var(--lsx-stack-justify, var(--lsx-stack-column-justify))")
         .gap("var(--lsx-stack-spacing, var(--lsx-stack-column-spacing))")
 });
+
+fn stack_dynamic_sx(props: &StackProps) -> Sx {
+    let is_row = matches!(props.direction.as_deref(), Some("row")) || props.wrap.is_some();
+    let direction = if is_row { "row" } else { "column" };
+    let align = props.align.as_deref().unwrap_or(if is_row {
+        "var(--lsx-stack-row-align)"
+    } else {
+        "var(--lsx-stack-column-align)"
+    });
+    let justify = props.justify.as_deref().unwrap_or(if is_row {
+        "var(--lsx-stack-row-justify)"
+    } else {
+        "var(--lsx-stack-column-justify)"
+    });
+    let spacing = props.spacing.as_deref().map_or_else(
+        || {
+            if is_row {
+                "var(--lsx-stack-row-spacing)".to_string()
+            } else {
+                "var(--lsx-stack-column-spacing)".to_string()
+            }
+        },
+        |spacing| match Size::parse_dynamic(spacing) {
+            Some(size) => format!("var(--lsx-spacing-{})", size.as_str()),
+            None => spacing.to_string(),
+        },
+    );
+    let wrap = props.wrap.map_or_else(
+        || {
+            if is_row {
+                "var(--lsx-stack-row-wrap)"
+            } else {
+                "var(--lsx-stack-column-wrap)"
+            }
+        },
+        |wrap| if wrap { "wrap" } else { "nowrap" },
+    );
+
+    sx().flex_direction(direction)
+        .align_items(align)
+        .justify_content(justify)
+        .gap(spacing)
+        .flex_wrap(wrap)
+}
 
 #[derive(Props, Clone, PartialEq)]
 pub struct StackProps {
@@ -42,75 +85,11 @@ pub struct StackProps {
 #[component]
 pub fn Stack(props: StackProps) -> Element {
     let stack_class = crate::context::use_sx(&STACK_BASE_SX, crate::SxLayer::Framework);
-
-    let mut variables = Vec::new();
-    let is_row = matches!(props.direction.as_deref(), Some("row"));
-
-    if let Some(direction) = props.direction {
-        variables.push(("stack-direction", direction));
-        variables.push((
-            "stack-align",
-            if is_row {
-                "var(--lsx-stack-row-align)"
-            } else {
-                "var(--lsx-stack-column-align)"
-            }
-            .to_string(),
-        ));
-        variables.push((
-            "stack-justify",
-            if is_row {
-                "var(--lsx-stack-row-justify)"
-            } else {
-                "var(--lsx-stack-column-justify)"
-            }
-            .to_string(),
-        ));
-        variables.push((
-            "stack-spacing",
-            if is_row {
-                "var(--lsx-stack-row-spacing)"
-            } else {
-                "var(--lsx-stack-column-spacing)"
-            }
-            .to_string(),
-        ));
-        variables.push((
-            "stack-wrap",
-            if is_row {
-                "var(--lsx-stack-row-wrap)"
-            } else {
-                "var(--lsx-stack-column-wrap)"
-            }
-            .to_string(),
-        ));
-    }
-
-    if let Some(align) = props.align {
-        variables.push(("stack-align", align));
-    }
-
-    if let Some(justify) = props.justify {
-        variables.push(("stack-justify", justify));
-    }
-
-    if let Some(spacing) = props.spacing {
-        let spacing = match Size::parse_str(spacing.as_str()) {
-            Some(size) => SizeCssVar::SPACING.value(size),
-            None => spacing,
-        };
-
-        variables.push(("stack-spacing", spacing));
-    }
-
-    if let Some(wrap) = props.wrap {
-        variables.push((
-            "stack-wrap",
-            if wrap { "wrap" } else { "nowrap" }.to_string(),
-        ));
-    }
+    let dynamic_class =
+        crate::context::use_sx(&stack_dynamic_sx(&props), crate::SxLayer::UserDynamic);
 
     let class = classes(props.class, stack_class);
+    let class = classes(class, dynamic_class);
 
     rsx! {
         Box {
@@ -118,7 +97,7 @@ pub fn Stack(props: StackProps) -> Element {
             class: class,
             sx: props.sx,
             states: props.states,
-            variables: variables,
+            variables: Vec::new(),
             {props.children}
         }
     }

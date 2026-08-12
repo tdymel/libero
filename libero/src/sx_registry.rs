@@ -1,28 +1,13 @@
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
-use dioxus::prelude::*;
-
 use crate::{SxLayer, css::Stylesheet, sx::Sx};
 
 #[derive(Clone)]
 pub struct RegisteredStylesheet {
-    pub key: u64,
+    pub key: (SxLayer, u64),
     pub class_name: String,
     pub css: Stylesheet,
-    pub registrations: Rc<()>,
-}
-
-#[derive(Clone)]
-pub struct RegistrationGuard {
-    registrations: Rc<()>,
-    sx_registry_version: Signal<u64>,
-}
-
-impl Drop for RegistrationGuard {
-    fn drop(&mut self) {
-        let _ = &self.registrations;
-        *self.sx_registry_version.write() += 1;
-    }
+    pub ref_count: usize,
 }
 
 #[derive(Clone, Default)]
@@ -35,51 +20,42 @@ impl SxRegistry {
         Self::default()
     }
 
-    fn registration_token(&self, sx: &Sx, layer: SxLayer) -> Rc<()> {
-        let key = sx.hash();
+    pub fn acquire(&self, sx: &Sx, layer: SxLayer) -> String {
+        let key = (layer, sx.hash());
         let mut registry = self.inner.borrow_mut();
 
-        if let Some(entry) = registry.get(&(layer, key)) {
-            return entry.registrations.clone();
-        }
+        let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
+            key,
+            class_name: sx.class_name(),
+            css: Stylesheet::from(format!(
+                "@layer {}{{{}}}",
+                layer.css_name(),
+                Stylesheet::from(sx).as_str()
+            )),
+            ref_count: 0,
+        });
 
-        let registrations = Rc::new(());
-        registry.insert(
-            (layer, key),
-            RegisteredStylesheet {
-                key,
-                class_name: sx.class_name(),
-                css: Stylesheet::from(format!(
-                    "@layer {}{{{}}}",
-                    layer.css_name(),
-                    Stylesheet::from(sx).as_str()
-                )),
-                registrations: registrations.clone(),
-            },
-        );
-
-        registrations
+        entry.ref_count += 1;
+        entry.class_name.clone()
     }
 
-    pub fn register(
-        &self,
-        sx: &Sx,
-        layer: SxLayer,
-        sx_registry_version: Signal<u64>,
-    ) -> RegistrationGuard {
-        RegistrationGuard {
-            registrations: self.registration_token(sx, layer),
-            sx_registry_version,
+    pub fn release(&self, key: (SxLayer, u64)) {
+        let mut registry = self.inner.borrow_mut();
+
+        if let Some(entry) = registry.get_mut(&key) {
+            entry.ref_count -= 1;
+            if entry.ref_count == 0 {
+                registry.remove(&key);
+            }
         }
     }
 
     pub fn stylesheets(&self) -> Vec<String> {
-        let mut registry = self.inner.borrow_mut();
-        registry.retain(|_, entry| Rc::strong_count(&entry.registrations) > 1);
-        registry
+        self.inner
+            .borrow()
             .values()
             .map(|entry| {
-                debug_assert_eq!(entry.class_name, format!("lsx-{:016x}", entry.key));
+                debug_assert_eq!(entry.class_name, format!("lsx-{:016x}", entry.key.1));
                 entry.css.as_str().to_string()
             })
             .collect()

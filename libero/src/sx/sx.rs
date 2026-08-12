@@ -27,24 +27,12 @@ impl Sx {
         Self::default()
     }
 
-    pub fn with(mut self, property: impl Into<String>, value: impl Into<String>) -> Self {
-        self.entries.push(SxEntry::Declaration {
-            property: SxPropertyKey::parse(property),
-            value: value.into(),
-        });
-        self
+    pub fn with(self, property: impl Into<String>, value: impl Into<String>) -> Self {
+        self.with_declaration(SxPropertyKey::parse(property), value.into())
     }
 
-    pub(super) fn with_known_property(
-        mut self,
-        property: Property,
-        value: impl Into<String>,
-    ) -> Self {
-        self.entries.push(SxEntry::Declaration {
-            property: SxPropertyKey::Known(property),
-            value: value.into(),
-        });
-        self
+    pub(super) fn with_known_property(self, property: Property, value: impl Into<String>) -> Self {
+        self.with_declaration(SxPropertyKey::Known(property), value.into())
     }
 
     pub(super) fn modifier(mut self, modifier: SxModifierKey, nested: Sx) -> Self {
@@ -52,6 +40,36 @@ impl Sx {
             modifier,
             sx: nested,
         });
+        self
+    }
+
+    fn with_declaration(mut self, property: SxPropertyKey, value: String) -> Self {
+        self.entries.retain(|entry| {
+            !matches!(
+                entry,
+                SxEntry::Declaration {
+                    property: existing,
+                    ..
+                } if existing == &property
+            )
+        });
+
+        self.entries.push(SxEntry::Declaration { property, value });
+        self
+    }
+
+    pub fn and(mut self, other: Sx) -> Self {
+        for entry in other.entries {
+            match entry {
+                SxEntry::Declaration { property, value } => {
+                    self = self.with_declaration(property, value);
+                }
+                SxEntry::Nested { modifier, sx } => {
+                    self.entries.push(SxEntry::Nested { modifier, sx });
+                }
+            }
+        }
+
         self
     }
 
