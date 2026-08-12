@@ -47,7 +47,7 @@ fn App() -> Element {
             Stack {
                 sx: &BOX_SX,
                 align: "start",
-                spacing: gap.clone(),
+                gap: gap.clone(),
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {
                     HelloWorld {}
@@ -58,7 +58,7 @@ fn App() -> Element {
             Stack {
                 sx: sx().background("red"),
                 direction: "row",
-                spacing: gap,
+                gap: gap,
                 justify: JustifyInput::End,
                 wrap: wrap_group(),
                 for index in 1..=8 {

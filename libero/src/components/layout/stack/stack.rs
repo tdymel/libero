@@ -21,10 +21,10 @@ fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
         .apply_if(props.justify.value(), |sx, justify| {
             sx.justify_content(justify)
         })
-        .apply_if(props.spacing.as_deref(), |sx, spacing| {
-            sx.gap(match Size::parse_dynamic(spacing) {
+        .apply_if(props.gap.as_deref(), |sx, gap| {
+            sx.gap(match Size::parse_dynamic(gap) {
                 Some(size) => SizeCssVar::SPACING.value(size),
-                None => spacing.to_string(),
+                None => gap.to_string(),
             })
         })
         .apply_if(props.wrap, |sx, wrap| {
@@ -50,7 +50,7 @@ pub struct StackProps {
     #[props(default, into)]
     justify: JustifyInput,
     #[props(default)]
-    spacing: Option<String>,
+    gap: Option<String>,
     #[props(default)]
     direction: Option<String>,
     #[props(default)]
