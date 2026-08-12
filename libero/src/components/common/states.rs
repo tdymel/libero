@@ -38,6 +38,10 @@ impl States {
 
         (!value.is_empty()).then_some(value)
     }
+
+    pub fn data_state(&self) -> Option<String> {
+        self.active_data_state()
+    }
 }
 
 impl From<Vec<(&'static str, bool)>> for States {

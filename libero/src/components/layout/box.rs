@@ -29,17 +29,10 @@ pub fn Box(props: BoxProps) -> Element {
         .sx
         .as_ref()
         .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
-    let data_state = props.states.active_data_state();
+
+    let data_state = props.states.data_state();
 
     let mut attributes = props.attributes;
-    if let Some(data_state) = data_state {
-        attributes.push(Attribute::new(
-            "data-state",
-            AttributeValue::Text(data_state.into()),
-            None,
-            false,
-        ));
-    }
 
     if !props.variables.is_empty() {
         let variables_style = props
@@ -84,6 +77,7 @@ pub fn Box(props: BoxProps) -> Element {
     rsx! {
         div {
             class: class,
+            "data-state": data_state,
             ..attributes,
             {props.children}
         }
