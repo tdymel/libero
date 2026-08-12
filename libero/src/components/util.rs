@@ -5,16 +5,16 @@ macro_rules! sx_var {
     };
 }
 
-pub(crate) fn classes(base: Option<String>, extension: String) -> Option<String> {
-    let mut classes = Vec::new();
+pub(crate) fn class_list(classes: impl IntoIterator<Item = Option<String>>) -> Option<String> {
+    let classes = classes
+        .into_iter()
+        .flatten()
+        .filter(|class| !class.is_empty())
+        .collect::<Vec<_>>();
 
-    if let Some(class) = base {
-        if !class.is_empty() {
-            classes.push(class);
-        }
+    if classes.is_empty() {
+        None
+    } else {
+        Some(classes.join(" "))
     }
-
-    classes.push(extension);
-
-    Some(classes.join(" "))
 }

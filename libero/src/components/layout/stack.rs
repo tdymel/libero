@@ -1,29 +1,28 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, util::classes},
+    components::{Box, Input, util::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::StackDefaults,
 };
 
-static STACK_BASE_SX: StaticSx = StaticSx::new(|| sx().display("flex"));
+static STACK_BASE_COLUMN_SX: StaticSx =
+    StaticSx::new(|| sx().display("flex").and(StackDefaults::default_sx(false)));
+static STACK_BASE_ROW_SX: StaticSx =
+    StaticSx::new(|| sx().display("flex").and(StackDefaults::default_sx(true)));
 
 fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
-    let is_row = matches!(props.direction.as_ref(), Some(ThemeAwareValue::String(value)) if value == "row")
-        || props.wrap.as_ref().is_some();
-
-    StackDefaults::default_sx(is_row)
-        .apply_if(props.align.as_ref(), |sx, align| {
-            sx.align_items(align.clone())
-        })
-        .apply_if(props.justify.as_ref(), |sx, justify| {
-            sx.justify_content(justify.clone())
-        })
-        .apply_if(props.gap.as_ref(), |sx, gap| sx.gap(gap.clone()))
-        .apply_if(props.wrap.as_ref(), |sx, wrap| sx.flex_wrap(wrap.clone()))
-        .apply_if(props.direction.as_ref(), |sx, direction| {
-            sx.flex_direction(direction.clone())
-        })
+    sx().apply_if(props.align.as_ref(), |sx, align| {
+        sx.align_items(align.clone())
+    })
+    .apply_if(props.justify.as_ref(), |sx, justify| {
+        sx.justify_content(justify.clone())
+    })
+    .apply_if(props.gap.as_ref(), |sx, gap| sx.gap(gap.clone()))
+    .apply_if(props.wrap.as_ref(), |sx, wrap| sx.flex_wrap(wrap.clone()))
+    .apply_if(props.direction.as_ref(), |sx, direction| {
+        sx.flex_direction(direction.clone())
+    })
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -51,12 +50,19 @@ pub struct StackProps {
 
 #[component]
 pub fn Stack(props: StackProps) -> Element {
-    let stack_class = crate::context::use_sx(&STACK_BASE_SX, crate::SxLayer::Framework);
+    let is_row =
+        matches!(props.direction.as_ref(), Some(ThemeAwareValue::String(value)) if value == "row");
+    let stack_base_sx = if is_row {
+        &STACK_BASE_ROW_SX
+    } else {
+        &STACK_BASE_COLUMN_SX
+    };
+
+    let stack_class = crate::context::use_sx(stack_base_sx, crate::SxLayer::Framework);
     let dynamic_class =
         crate::context::use_sx(&stack_dynamic_sx(&props), crate::SxLayer::UserDynamic);
 
-    let class = classes(props.class, stack_class);
-    let class = classes(class, dynamic_class);
+    let class = class_list([props.class, stack_class, dynamic_class]);
 
     rsx! {
         Box {

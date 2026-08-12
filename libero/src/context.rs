@@ -55,25 +55,33 @@ pub fn use_theme() -> &'static Theme {
     use_context::<LiberoContext>().theme
 }
 
-pub(crate) fn use_sx(sx: &crate::sx::Sx, layer: SxLayer) -> String {
+pub(crate) fn use_sx(sx: &crate::sx::Sx, layer: SxLayer) -> Option<String> {
     let mut context = use_context::<LiberoContext>();
     let key = (layer, sx.hash());
     let active_registration = use_hook(|| Rc::new(RefCell::new(None::<(SxLayer, u64)>)));
 
     {
         let mut active_registration = active_registration.borrow_mut();
-        match *active_registration {
-            Some(active_key) if active_key == key => {}
-            Some(active_key) => {
+
+        if sx.is_empty() {
+            if let Some(active_key) = active_registration.take() {
                 context.sx_registry.release(active_key);
-                context.sx_registry.acquire(sx, layer);
-                *active_registration = Some(key);
                 *context.sx_registry_version.write() += 1;
             }
-            None => {
-                context.sx_registry.acquire(sx, layer);
-                *active_registration = Some(key);
-                *context.sx_registry_version.write() += 1;
+        } else {
+            match *active_registration {
+                Some(active_key) if active_key == key => {}
+                Some(active_key) => {
+                    context.sx_registry.release(active_key);
+                    context.sx_registry.acquire(sx, layer);
+                    *active_registration = Some(key);
+                    *context.sx_registry_version.write() += 1;
+                }
+                None => {
+                    context.sx_registry.acquire(sx, layer);
+                    *active_registration = Some(key);
+                    *context.sx_registry_version.write() += 1;
+                }
             }
         }
     }
@@ -90,5 +98,9 @@ pub(crate) fn use_sx(sx: &crate::sx::Sx, layer: SxLayer) -> String {
         });
     }
 
-    sx.class_name()
+    if sx.is_empty() {
+        None
+    } else {
+        Some(sx.class_name())
+    }
 }

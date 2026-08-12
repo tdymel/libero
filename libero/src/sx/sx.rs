@@ -73,6 +73,10 @@ impl Sx {
         &self.entries
     }
 
+    pub(crate) fn is_empty(&self) -> bool {
+        self.entries.is_empty()
+    }
+
     pub(crate) fn hash(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash_into(&mut hasher);

@@ -20,7 +20,10 @@ pub struct BoxProps {
 
 #[component]
 pub fn Box(props: BoxProps) -> Element {
-    let sx_class = props.sx.as_ref().map(|sx| use_sx(sx, SxLayer::UserStatic));
+    let sx_class = props
+        .sx
+        .as_ref()
+        .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
     let data_state = props
         .states
         .iter()
