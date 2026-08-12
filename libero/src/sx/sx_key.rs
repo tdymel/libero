@@ -7,12 +7,17 @@ pub enum Property {
     Width,
     Height,
     PaddingTop,
+    PaddingLeft,
+    PaddingRight,
+    MarginLeft,
+    MarginRight,
     Display,
     FlexDirection,
     FlexWrap,
     AlignItems,
     JustifyContent,
     Gap,
+    MaxWidth,
 }
 
 impl Property {
@@ -22,12 +27,17 @@ impl Property {
             "width" => Some(Self::Width),
             "height" => Some(Self::Height),
             "padding-top" => Some(Self::PaddingTop),
+            "padding-left" => Some(Self::PaddingLeft),
+            "padding-right" => Some(Self::PaddingRight),
+            "margin-left" => Some(Self::MarginLeft),
+            "margin-right" => Some(Self::MarginRight),
             "display" => Some(Self::Display),
             "flex-direction" => Some(Self::FlexDirection),
             "flex-wrap" => Some(Self::FlexWrap),
             "align-items" => Some(Self::AlignItems),
             "justify-content" => Some(Self::JustifyContent),
             "gap" => Some(Self::Gap),
+            "max-width" => Some(Self::MaxWidth),
             _ => None,
         }
     }
@@ -38,12 +48,17 @@ impl Property {
             Self::Width => "width",
             Self::Height => "height",
             Self::PaddingTop => "padding-top",
+            Self::PaddingLeft => "padding-left",
+            Self::PaddingRight => "padding-right",
+            Self::MarginLeft => "margin-left",
+            Self::MarginRight => "margin-right",
             Self::Display => "display",
             Self::FlexDirection => "flex-direction",
             Self::FlexWrap => "flex-wrap",
             Self::AlignItems => "align-items",
             Self::JustifyContent => "justify-content",
             Self::Gap => "gap",
+            Self::MaxWidth => "max-width",
         }
     }
 }

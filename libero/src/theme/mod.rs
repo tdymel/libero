@@ -1,6 +1,7 @@
 mod color;
 mod color_shade;
 mod color_value;
+mod container_defaults;
 mod css_var;
 mod hex_color;
 mod size;
@@ -11,6 +12,7 @@ mod theme;
 pub use color::Color;
 pub use color_shade::ColorShade;
 pub use color_value::ColorValue;
+pub use container_defaults::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use hex_color::HexColor;
 pub use size::Size;

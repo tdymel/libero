@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{HelloWorld, Stack, states},
+    components::{Container, HelloWorld, Stack, states},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -65,6 +65,15 @@ fn App() -> Element {
                 for index in 1..=8 {
                     button { "Group item {index}" }
                 }
+            }
+
+            Container {
+                class: "playground-container".to_string(),
+                size: Size::Md,
+                gutters: Size::Sm,
+                sx: sx().with("border", "1px solid var(--lsx-grey-4)"),
+                p { "Container example (size: md, gutters: sm)" }
+                p { "Uses theme-aware size + gutters overrides." }
             }
         }
     }

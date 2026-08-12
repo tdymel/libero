@@ -19,8 +19,24 @@ impl Sx {
         self.with_known_property(Property::PaddingTop, value)
     }
 
+    pub fn padding_left(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::PaddingLeft, value)
+    }
+
+    pub fn padding_right(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::PaddingRight, value)
+    }
+
     pub fn display(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Display, value)
+    }
+
+    pub fn margin_left(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MarginLeft, value)
+    }
+
+    pub fn margin_right(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MarginRight, value)
     }
 
     pub fn flex_direction(self, value: impl Into<ThemeAwareValue>) -> Self {
@@ -41,6 +57,10 @@ impl Sx {
 
     pub fn gap(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Gap, value)
+    }
+
+    pub fn max_width(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MaxWidth, value)
     }
 
     pub fn hover(self, nested: Sx) -> Self {

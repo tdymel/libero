@@ -1,7 +1,7 @@
 use crate::theme::{
-    Color, ColorShade, ColorValue, NamedColorCss, STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY,
-    STACK_COLUMN_SPACING, STACK_COLUMN_WRAP, STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING,
-    STACK_ROW_WRAP, SizeCss, Theme,
+    CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, NamedColorCss,
+    STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING, STACK_COLUMN_WRAP,
+    STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, SizeCss, Theme,
 };
 
 use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
@@ -29,6 +29,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_spacing_declarations(&mut declarations, theme);
     push_breakpoint_declarations(&mut declarations);
     push_stack_declarations(&mut declarations, theme);
+    push_container_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
     push_color_declarations(&mut declarations, Color::Primary, theme.primary);
     push_color_declarations(&mut declarations, Color::Secondary, theme.secondary);
@@ -129,6 +130,17 @@ fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme
     ));
 }
 
+fn push_container_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
+        CONTAINER_SIZE.name(),
+        SizeCss::BREAKPOINT.value(theme.container.size),
+    ));
+    declarations.push(CssDeclaration::new(
+        CONTAINER_GUTTERS.name(),
+        SizeCss::SPACING.value(theme.container.gutters),
+    ));
+}
+
 fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
         NamedColorCss::BLACK.name(),
@@ -188,6 +200,7 @@ mod tests {
                     true,
                 ),
             ),
+            crate::theme::ContainerDefaults::new(crate::theme::Size::Lg, crate::theme::Size::Sm),
             HexColor::new(0x228BE6),
             HexColor::new(0xE03131),
             HexColor::new(0xE03131),
@@ -204,6 +217,14 @@ mod tests {
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
         assert!(css.as_str().contains("--lsx-breakpoint-xs:36rem;"));
         assert!(css.as_str().contains("--lsx-breakpoint-xl:88rem;"));
+        assert!(
+            css.as_str()
+                .contains("--lsx-container-size:var(--lsx-breakpoint-lg);")
+        );
+        assert!(
+            css.as_str()
+                .contains("--lsx-container-gutters:var(--lsx-spacing-sm);")
+        );
         assert!(css.as_str().contains("--lsx-stack-column-align:stretch;"));
         assert!(
             css.as_str()
