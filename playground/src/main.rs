@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{HelloWorld, Stack},
+    components::{HelloWorld, Stack, states},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -49,7 +49,7 @@ fn App() -> Element {
                 sx: &BOX_SX,
                 align: "start",
                 gap: gap.clone(),
-                states: vec![("hidden", !show_hello_world())],
+                states: states().with("hidden", !show_hello_world()),
                 if show_hello_world() {
                     HelloWorld {}
                 }

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, util::class_list},
+    components::{Box, Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::StackDefaults,
 };
@@ -40,8 +40,8 @@ pub struct StackProps {
     class: Option<String>,
     #[props(default, into)]
     sx: Input<Sx>,
-    #[props(default)]
-    states: Vec<(&'static str, bool)>,
+    #[props(default, into)]
+    states: States,
     #[props(default, into)]
     align: Input<ThemeAwareValue>,
     #[props(default, into)]
