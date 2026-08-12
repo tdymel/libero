@@ -1,15 +1,15 @@
 use crate::sx::{Sx, sx};
 
-use super::Size;
+use super::{CssVar, Size};
 
-pub const STACK_COLUMN_ALIGN_VAR: &str = "--lsx-stack-column-align";
-pub const STACK_COLUMN_JUSTIFY_VAR: &str = "--lsx-stack-column-justify";
-pub const STACK_COLUMN_SPACING_VAR: &str = "--lsx-stack-column-spacing";
-pub const STACK_COLUMN_WRAP_VAR: &str = "--lsx-stack-column-wrap";
-pub const STACK_ROW_ALIGN_VAR: &str = "--lsx-stack-row-align";
-pub const STACK_ROW_JUSTIFY_VAR: &str = "--lsx-stack-row-justify";
-pub const STACK_ROW_SPACING_VAR: &str = "--lsx-stack-row-spacing";
-pub const STACK_ROW_WRAP_VAR: &str = "--lsx-stack-row-wrap";
+pub const STACK_COLUMN_ALIGN: CssVar = CssVar::new("--lsx-stack-column-align");
+pub const STACK_COLUMN_JUSTIFY: CssVar = CssVar::new("--lsx-stack-column-justify");
+pub const STACK_COLUMN_SPACING: CssVar = CssVar::new("--lsx-stack-column-spacing");
+pub const STACK_COLUMN_WRAP: CssVar = CssVar::new("--lsx-stack-column-wrap");
+pub const STACK_ROW_ALIGN: CssVar = CssVar::new("--lsx-stack-row-align");
+pub const STACK_ROW_JUSTIFY: CssVar = CssVar::new("--lsx-stack-row-justify");
+pub const STACK_ROW_SPACING: CssVar = CssVar::new("--lsx-stack-row-spacing");
+pub const STACK_ROW_WRAP: CssVar = CssVar::new("--lsx-stack-row-wrap");
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StackAxisDefaults {
@@ -49,24 +49,24 @@ impl StackDefaults {
     pub fn default_sx(is_row: bool) -> Sx {
         let direction = if is_row { "row" } else { "column" };
         let align = if is_row {
-            format!("var({STACK_ROW_ALIGN_VAR})")
+            STACK_ROW_ALIGN.value()
         } else {
-            format!("var({STACK_COLUMN_ALIGN_VAR})")
+            STACK_COLUMN_ALIGN.value()
         };
         let justify = if is_row {
-            format!("var({STACK_ROW_JUSTIFY_VAR})")
+            STACK_ROW_JUSTIFY.value()
         } else {
-            format!("var({STACK_COLUMN_JUSTIFY_VAR})")
+            STACK_COLUMN_JUSTIFY.value()
         };
         let spacing = if is_row {
-            format!("var({STACK_ROW_SPACING_VAR})")
+            STACK_ROW_SPACING.value()
         } else {
-            format!("var({STACK_COLUMN_SPACING_VAR})")
+            STACK_COLUMN_SPACING.value()
         };
         let wrap = if is_row {
-            format!("var({STACK_ROW_WRAP_VAR})")
+            STACK_ROW_WRAP.value()
         } else {
-            format!("var({STACK_COLUMN_WRAP_VAR})")
+            STACK_COLUMN_WRAP.value()
         };
 
         sx().flex_direction(direction)

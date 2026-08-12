@@ -1,6 +1,4 @@
-use crate::theme::{Color, ColorValue};
-
-use super::css_var::{ColorCssVar, NamedColorCssVar};
+use crate::theme::{Color, ColorCss, ColorValue, NamedColorCss};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) struct CssColorValue(pub(crate) ColorValue);
@@ -9,26 +7,26 @@ impl CssColorValue {
     pub(crate) fn value(self) -> String {
         match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY.value(shade),
-                Color::Secondary => ColorCssVar::SECONDARY.value(shade),
-                Color::Error => ColorCssVar::ERROR.value(shade),
-                Color::Warning => ColorCssVar::WARNING.value(shade),
-                Color::Info => ColorCssVar::INFO.value(shade),
-                Color::Success => ColorCssVar::SUCCESS.value(shade),
-                Color::Grey => ColorCssVar::GREY.value(shade),
-                Color::Black => NamedColorCssVar::BLACK.value(),
-                Color::White => NamedColorCssVar::WHITE.value(),
+                Color::Primary => ColorCss::PRIMARY.value(shade),
+                Color::Secondary => ColorCss::SECONDARY.value(shade),
+                Color::Error => ColorCss::ERROR.value(shade),
+                Color::Warning => ColorCss::WARNING.value(shade),
+                Color::Info => ColorCss::INFO.value(shade),
+                Color::Success => ColorCss::SUCCESS.value(shade),
+                Color::Grey => ColorCss::GREY.value(shade),
+                Color::Black => NamedColorCss::BLACK.value(),
+                Color::White => NamedColorCss::WHITE.value(),
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.value(shade),
-                Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.value(shade),
-                Color::Error => ColorCssVar::ERROR_CONTRAST.value(shade),
-                Color::Warning => ColorCssVar::WARNING_CONTRAST.value(shade),
-                Color::Info => ColorCssVar::INFO_CONTRAST.value(shade),
-                Color::Success => ColorCssVar::SUCCESS_CONTRAST.value(shade),
-                Color::Grey => ColorCssVar::GREY_CONTRAST.value(shade),
-                Color::Black => NamedColorCssVar::BLACK.value(),
-                Color::White => NamedColorCssVar::WHITE.value(),
+                Color::Primary => ColorCss::PRIMARY_CONTRAST.value(shade),
+                Color::Secondary => ColorCss::SECONDARY_CONTRAST.value(shade),
+                Color::Error => ColorCss::ERROR_CONTRAST.value(shade),
+                Color::Warning => ColorCss::WARNING_CONTRAST.value(shade),
+                Color::Info => ColorCss::INFO_CONTRAST.value(shade),
+                Color::Success => ColorCss::SUCCESS_CONTRAST.value(shade),
+                Color::Grey => ColorCss::GREY_CONTRAST.value(shade),
+                Color::Black => NamedColorCss::BLACK.value(),
+                Color::White => NamedColorCss::WHITE.value(),
             },
         }
     }
@@ -36,26 +34,26 @@ impl CssColorValue {
     pub(crate) fn var_name(self) -> String {
         match self.0 {
             ColorValue::Shade(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY.name(shade),
-                Color::Secondary => ColorCssVar::SECONDARY.name(shade),
-                Color::Error => ColorCssVar::ERROR.name(shade),
-                Color::Warning => ColorCssVar::WARNING.name(shade),
-                Color::Info => ColorCssVar::INFO.name(shade),
-                Color::Success => ColorCssVar::SUCCESS.name(shade),
-                Color::Grey => ColorCssVar::GREY.name(shade),
-                Color::Black => NamedColorCssVar::BLACK.name(),
-                Color::White => NamedColorCssVar::WHITE.name(),
+                Color::Primary => ColorCss::PRIMARY.name(shade),
+                Color::Secondary => ColorCss::SECONDARY.name(shade),
+                Color::Error => ColorCss::ERROR.name(shade),
+                Color::Warning => ColorCss::WARNING.name(shade),
+                Color::Info => ColorCss::INFO.name(shade),
+                Color::Success => ColorCss::SUCCESS.name(shade),
+                Color::Grey => ColorCss::GREY.name(shade),
+                Color::Black => NamedColorCss::BLACK.name().to_string(),
+                Color::White => NamedColorCss::WHITE.name().to_string(),
             },
             ColorValue::Contrast(color, shade) => match color {
-                Color::Primary => ColorCssVar::PRIMARY_CONTRAST.name(shade),
-                Color::Secondary => ColorCssVar::SECONDARY_CONTRAST.name(shade),
-                Color::Error => ColorCssVar::ERROR_CONTRAST.name(shade),
-                Color::Warning => ColorCssVar::WARNING_CONTRAST.name(shade),
-                Color::Info => ColorCssVar::INFO_CONTRAST.name(shade),
-                Color::Success => ColorCssVar::SUCCESS_CONTRAST.name(shade),
-                Color::Grey => ColorCssVar::GREY_CONTRAST.name(shade),
-                Color::Black => NamedColorCssVar::BLACK.name(),
-                Color::White => NamedColorCssVar::WHITE.name(),
+                Color::Primary => ColorCss::PRIMARY_CONTRAST.name(shade),
+                Color::Secondary => ColorCss::SECONDARY_CONTRAST.name(shade),
+                Color::Error => ColorCss::ERROR_CONTRAST.name(shade),
+                Color::Warning => ColorCss::WARNING_CONTRAST.name(shade),
+                Color::Info => ColorCss::INFO_CONTRAST.name(shade),
+                Color::Success => ColorCss::SUCCESS_CONTRAST.name(shade),
+                Color::Grey => ColorCss::GREY_CONTRAST.name(shade),
+                Color::Black => NamedColorCss::BLACK.name().to_string(),
+                Color::White => NamedColorCss::WHITE.name().to_string(),
             },
         }
     }

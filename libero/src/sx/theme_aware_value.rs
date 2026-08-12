@@ -1,4 +1,4 @@
-use crate::theme::{ColorValue, Size};
+use crate::theme::{ColorValue, CssVar, Size};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ThemeAwareValue {
@@ -6,6 +6,7 @@ pub enum ThemeAwareValue {
     Number(String),
     Size(Size),
     ColorValue(ColorValue),
+    CssVar(CssVar),
 }
 
 impl From<String> for ThemeAwareValue {
@@ -16,6 +17,10 @@ impl From<String> for ThemeAwareValue {
 
         if let Some(color) = ColorValue::parse(value.as_str()) {
             return Self::ColorValue(color);
+        }
+
+        if let Some(css_var) = CssVar::parse(value.as_str()) {
+            return Self::CssVar(css_var);
         }
 
         Self::String(value)
@@ -37,6 +42,12 @@ impl From<Size> for ThemeAwareValue {
 impl From<ColorValue> for ThemeAwareValue {
     fn from(value: ColorValue) -> Self {
         Self::ColorValue(value)
+    }
+}
+
+impl From<CssVar> for ThemeAwareValue {
+    fn from(value: CssVar) -> Self {
+        Self::CssVar(value)
     }
 }
 

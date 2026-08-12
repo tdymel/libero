@@ -1,11 +1,9 @@
 use crate::{
     sx::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue},
-    theme::Size,
+    theme::{Size, SizeCss},
 };
 
-use super::{
-    CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue, css_var::SizeCssVar,
-};
+use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
@@ -78,6 +76,7 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
         ThemeAwareValue::Size(size) => to_size_css_value(property, *size),
         ThemeAwareValue::Number(value) => value.clone(),
         ThemeAwareValue::ColorValue(value) => CssColorValue(*value).value(),
+        ThemeAwareValue::CssVar(css_var) => css_var.value(),
         ThemeAwareValue::String(value) => value.clone(),
     }
 }
@@ -85,7 +84,7 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
 fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
     match property {
         SxPropertyKey::Known(Property::PaddingTop) | SxPropertyKey::Known(Property::Gap) => {
-            SizeCssVar::SPACING.value(size)
+            SizeCss::SPACING.value(size)
         }
         _ => size.as_str().to_string(),
     }

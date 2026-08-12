@@ -1,10 +1,10 @@
-use crate::theme::{Color, ColorShade, ColorValue, Theme};
-
-use super::{
-    CssDeclaration, CssScope, Stylesheet,
-    css_color_value::CssColorValue,
-    css_var::{NamedColorCssVar, SizeCssVar},
+use crate::theme::{
+    Color, ColorShade, ColorValue, NamedColorCss, STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY,
+    STACK_COLUMN_SPACING, STACK_COLUMN_WRAP, STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING,
+    STACK_ROW_WRAP, SizeCss, Theme,
 };
+
+use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
 
 const SHADES: [ColorShade; 9] = [
     ColorShade::S1,
@@ -41,42 +41,42 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
 
 fn push_spacing_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
-        SizeCssVar::SPACING.name(crate::theme::Size::Xs),
+        SizeCss::SPACING.name(crate::theme::Size::Xs),
         format!("{}px", theme.spacing.xs),
     ));
     declarations.push(CssDeclaration::new(
-        SizeCssVar::SPACING.name(crate::theme::Size::Sm),
+        SizeCss::SPACING.name(crate::theme::Size::Sm),
         format!("{}px", theme.spacing.sm),
     ));
     declarations.push(CssDeclaration::new(
-        SizeCssVar::SPACING.name(crate::theme::Size::Md),
+        SizeCss::SPACING.name(crate::theme::Size::Md),
         format!("{}px", theme.spacing.md),
     ));
     declarations.push(CssDeclaration::new(
-        SizeCssVar::SPACING.name(crate::theme::Size::Lg),
+        SizeCss::SPACING.name(crate::theme::Size::Lg),
         format!("{}px", theme.spacing.lg),
     ));
     declarations.push(CssDeclaration::new(
-        SizeCssVar::SPACING.name(crate::theme::Size::Xl),
+        SizeCss::SPACING.name(crate::theme::Size::Xl),
         format!("{}px", theme.spacing.xl),
     ));
 }
 
 fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_COLUMN_ALIGN_VAR,
+        STACK_COLUMN_ALIGN.name(),
         theme.stack.column.align,
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_COLUMN_JUSTIFY_VAR,
+        STACK_COLUMN_JUSTIFY.name(),
         theme.stack.column.justify,
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_COLUMN_SPACING_VAR,
-        SizeCssVar::SPACING.value(theme.stack.column.spacing),
+        STACK_COLUMN_SPACING.name(),
+        SizeCss::SPACING.value(theme.stack.column.spacing),
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_COLUMN_WRAP_VAR,
+        STACK_COLUMN_WRAP.name(),
         if theme.stack.column.wrap {
             "wrap"
         } else {
@@ -84,19 +84,19 @@ fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme
         },
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_ROW_ALIGN_VAR,
+        STACK_ROW_ALIGN.name(),
         theme.stack.row.align,
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_ROW_JUSTIFY_VAR,
+        STACK_ROW_JUSTIFY.name(),
         theme.stack.row.justify,
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_ROW_SPACING_VAR,
-        SizeCssVar::SPACING.value(theme.stack.row.spacing),
+        STACK_ROW_SPACING.name(),
+        SizeCss::SPACING.value(theme.stack.row.spacing),
     ));
     declarations.push(CssDeclaration::new(
-        crate::theme::STACK_ROW_WRAP_VAR,
+        STACK_ROW_WRAP.name(),
         if theme.stack.row.wrap {
             "wrap"
         } else {
@@ -107,11 +107,11 @@ fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme
 
 fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
-        NamedColorCssVar::BLACK.name(),
+        NamedColorCss::BLACK.name(),
         theme.black.to_string(),
     ));
     declarations.push(CssDeclaration::new(
-        NamedColorCssVar::WHITE.name(),
+        NamedColorCss::WHITE.name(),
         theme.white.to_string(),
     ));
 }
