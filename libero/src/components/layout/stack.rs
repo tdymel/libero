@@ -1,36 +1,28 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box,
-        props::{AlignInput, JustifyInput},
-        util::classes,
-    },
-    sx::{StaticSx, SxInput, ThemeAwareValue, sx},
-    theme::{Size, StackDefaults},
+    components::{Box, Input, util::classes},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::StackDefaults,
 };
 
 static STACK_BASE_SX: StaticSx = StaticSx::new(|| sx().display("flex"));
 
 fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
-    let is_row = matches!(props.direction.as_deref(), Some("row")) || props.wrap.is_some();
+    let is_row = matches!(props.direction.as_ref(), Some(ThemeAwareValue::String(value)) if value == "row")
+        || props.wrap.as_ref().is_some();
 
     StackDefaults::default_sx(is_row)
-        .apply_if(props.align.value(), |sx, align| sx.align_items(align))
-        .apply_if(props.justify.value(), |sx, justify| {
-            sx.justify_content(justify)
+        .apply_if(props.align.as_ref(), |sx, align| {
+            sx.align_items(align.clone())
         })
-        .apply_if(props.gap.as_deref(), |sx, gap| {
-            sx.gap(match Size::parse_dynamic(gap) {
-                Some(size) => ThemeAwareValue::from(size),
-                None => ThemeAwareValue::from(gap),
-            })
+        .apply_if(props.justify.as_ref(), |sx, justify| {
+            sx.justify_content(justify.clone())
         })
-        .apply_if(props.wrap, |sx, wrap| {
-            sx.flex_wrap(if wrap { "wrap" } else { "nowrap" })
-        })
-        .apply_if(props.direction.as_deref(), |sx, direction| {
-            sx.flex_direction(direction)
+        .apply_if(props.gap.as_ref(), |sx, gap| sx.gap(gap.clone()))
+        .apply_if(props.wrap.as_ref(), |sx, wrap| sx.flex_wrap(wrap.clone()))
+        .apply_if(props.direction.as_ref(), |sx, direction| {
+            sx.flex_direction(direction.clone())
         })
 }
 
@@ -41,19 +33,19 @@ pub struct StackProps {
     #[props(default)]
     class: Option<String>,
     #[props(default, into)]
-    sx: SxInput,
+    sx: Input<Sx>,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
     #[props(default, into)]
-    align: AlignInput,
+    align: Input<ThemeAwareValue>,
     #[props(default, into)]
-    justify: JustifyInput,
-    #[props(default)]
-    gap: Option<String>,
-    #[props(default)]
-    direction: Option<String>,
-    #[props(default)]
-    wrap: Option<bool>,
+    justify: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    gap: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    direction: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    wrap: Input<ThemeAwareValue>,
     children: Element,
 }
 

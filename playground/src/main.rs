@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{HelloWorld, Stack, props::JustifyInput},
+    components::{HelloWorld, Stack},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -57,10 +57,10 @@ fn App() -> Element {
             }
 
             Stack {
-                sx: sx().background("red"),
+                sx: sx().background("blue"),
                 direction: "row",
                 gap: gap,
-                justify: JustifyInput::End,
+                justify: "flex-end",
                 wrap: wrap_group(),
                 for index in 1..=8 {
                     button { "Group item {index}" }

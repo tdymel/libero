@@ -78,3 +78,13 @@ impl From<f64> for ThemeAwareValue {
         Self::Number(value.to_string())
     }
 }
+
+impl From<bool> for ThemeAwareValue {
+    fn from(value: bool) -> Self {
+        if value {
+            Self::String("wrap".to_string())
+        } else {
+            Self::String("nowrap".to_string())
+        }
+    }
+}

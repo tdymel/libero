@@ -1,8 +1,10 @@
 mod hello_world;
+mod input;
 mod layout;
 mod util;
 
 pub use hello_world::HelloWorld;
+pub use input::Input;
 pub use layout::*;
 
 /*
