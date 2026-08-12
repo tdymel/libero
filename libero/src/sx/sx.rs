@@ -43,6 +43,13 @@ impl Sx {
         self
     }
 
+    pub fn apply_if<T>(self, value: Option<T>, f: impl FnOnce(Self, T) -> Self) -> Self {
+        match value {
+            Some(value) => f(self, value),
+            None => self,
+        }
+    }
+
     fn with_declaration(mut self, property: SxPropertyKey, value: String) -> Self {
         self.entries.retain(|entry| {
             !matches!(

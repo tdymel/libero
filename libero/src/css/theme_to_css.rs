@@ -1,4 +1,8 @@
-use crate::theme::{Color, ColorShade, ColorValue, Theme};
+use crate::theme::{
+    Color, ColorShade, ColorValue, STACK_COLUMN_ALIGN_VAR, STACK_COLUMN_JUSTIFY_VAR,
+    STACK_COLUMN_SPACING_VAR, STACK_COLUMN_WRAP_VAR, STACK_ROW_ALIGN_VAR, STACK_ROW_JUSTIFY_VAR,
+    STACK_ROW_SPACING_VAR, STACK_ROW_WRAP_VAR, Theme,
+};
 
 use super::{
     CssDeclaration, CssScope, Stylesheet,
@@ -64,19 +68,19 @@ fn push_spacing_declarations(declarations: &mut Vec<CssDeclaration>, theme: &The
 
 fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-column-align",
+        STACK_COLUMN_ALIGN_VAR,
         theme.stack.column.align,
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-column-justify",
+        STACK_COLUMN_JUSTIFY_VAR,
         theme.stack.column.justify,
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-column-spacing",
+        STACK_COLUMN_SPACING_VAR,
         SizeCssVar::SPACING.value(theme.stack.column.spacing),
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-column-wrap",
+        STACK_COLUMN_WRAP_VAR,
         if theme.stack.column.wrap {
             "wrap"
         } else {
@@ -84,19 +88,19 @@ fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme
         },
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-row-align",
+        STACK_ROW_ALIGN_VAR,
         theme.stack.row.align,
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-row-justify",
+        STACK_ROW_JUSTIFY_VAR,
         theme.stack.row.justify,
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-row-spacing",
+        STACK_ROW_SPACING_VAR,
         SizeCssVar::SPACING.value(theme.stack.row.spacing),
     ));
     declarations.push(CssDeclaration::new(
-        "--lsx-stack-row-wrap",
+        STACK_ROW_WRAP_VAR,
         if theme.stack.row.wrap {
             "wrap"
         } else {
