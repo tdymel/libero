@@ -1,5 +1,5 @@
 #[repr(u8)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Size {
     Xs,
     Sm,
@@ -38,6 +38,17 @@ impl Size {
             Self::Md => "md",
             Self::Lg => "lg",
             Self::Xl => "xl",
+        }
+    }
+
+    pub fn parse_dynamic(value: &str) -> Option<Self> {
+        match value {
+            "xs" => Some(Self::Xs),
+            "sm" => Some(Self::Sm),
+            "md" => Some(Self::Md),
+            "lg" => Some(Self::Lg),
+            "xl" => Some(Self::Xl),
+            _ => None,
         }
     }
 

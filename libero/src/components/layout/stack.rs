@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -7,13 +9,14 @@ use crate::{
     theme::Size,
 };
 
-const STACK_BASE_SX: Sx = sx()
-    .display("flex")
-    .flex_direction("var(--lsx-stack-direction, column)")
-    .flex_wrap("var(--lsx-stack-wrap, var(--lsx-stack-column-wrap))")
-    .align_items("var(--lsx-stack-align, var(--lsx-stack-column-align))")
-    .justify_content("var(--lsx-stack-justify, var(--lsx-stack-column-justify))")
-    .gap("var(--lsx-stack-spacing, var(--lsx-stack-column-spacing))");
+static STACK_BASE_SX: LazyLock<Sx> = LazyLock::new(|| {
+    sx().display("flex")
+        .flex_direction("var(--lsx-stack-direction, column)")
+        .flex_wrap("var(--lsx-stack-wrap, var(--lsx-stack-column-wrap))")
+        .align_items("var(--lsx-stack-align, var(--lsx-stack-column-align))")
+        .justify_content("var(--lsx-stack-justify, var(--lsx-stack-column-justify))")
+        .gap("var(--lsx-stack-spacing, var(--lsx-stack-column-spacing))")
+});
 
 #[derive(Props, Clone, PartialEq)]
 pub struct StackProps {

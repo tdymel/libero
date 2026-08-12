@@ -1,121 +1,77 @@
-use crate::common::ConstVec;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
-use super::{
-    declaration::{Declaration, DeclarationProperty, Property, ThemeAwareValue},
-    sx_block::SxBlock,
-    sx_modifier::SxModifier,
-};
+use super::declaration::{Property, SxModifierKey, SxPropertyKey};
 
-const DEFAULT_SX_DECLARATION_CAPACITY: usize = 64;
-const DEFAULT_SX_BLOCK_CAPACITY: usize = 32;
-
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default, Hash)]
 pub struct Sx {
-    declarations: ConstVec<Declaration, DEFAULT_SX_DECLARATION_CAPACITY>,
-    blocks: ConstVec<SxBlock, DEFAULT_SX_BLOCK_CAPACITY>,
+    entries: Vec<SxEntry>,
 }
 
-impl Default for Sx {
-    fn default() -> Self {
-        Self::new()
-    }
+#[derive(Debug, Clone, PartialEq, Hash)]
+pub enum SxEntry {
+    Declaration {
+        property: SxPropertyKey,
+        value: String,
+    },
+    Nested {
+        modifier: SxModifierKey,
+        sx: Sx,
+    },
 }
 
 impl Sx {
-    pub const fn new() -> Self {
-        Self {
-            declarations: ConstVec::new_with_max_size(),
-            blocks: ConstVec::new_with_max_size(),
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
-    pub const fn with(self, property: &'static str, value: &'static str) -> Self {
-        self.with_property(DeclarationProperty::parse(property), value)
-    }
-
-    pub(super) const fn with_known_property(self, property: Property, value: &'static str) -> Self {
-        self.with_property(DeclarationProperty::Known(property), value)
-    }
-
-    const fn with_property(mut self, property: DeclarationProperty, value: &'static str) -> Self {
-        self.declarations.push(Declaration {
-            property,
-            value: ThemeAwareValue::parse(value),
+    pub fn with(mut self, property: impl Into<String>, value: impl Into<String>) -> Self {
+        self.entries.push(SxEntry::Declaration {
+            property: SxPropertyKey::parse(property),
+            value: value.into(),
         });
         self
     }
 
-    pub(super) const fn modifier(mut self, modifier: SxModifier, nested: Sx) -> Self {
-        let start = self.declarations.len();
-        let parent = self.blocks.len();
-        self.declarations.extend({
-            let this = &nested;
-            this.declarations.as_ref()
+    pub(super) fn with_known_property(
+        mut self,
+        property: Property,
+        value: impl Into<String>,
+    ) -> Self {
+        self.entries.push(SxEntry::Declaration {
+            property: SxPropertyKey::Known(property),
+            value: value.into(),
         });
-        let end = self.declarations.len();
-        self.blocks.push(SxBlock {
+        self
+    }
+
+    pub(super) fn modifier(mut self, modifier: SxModifierKey, nested: Sx) -> Self {
+        self.entries.push(SxEntry::Nested {
             modifier,
-            start,
-            end,
-            parent: super::ROOT_BLOCK_PARENT,
+            sx: nested,
         });
-
-        let nested_blocks = {
-            let this = &nested;
-            this.blocks.as_ref()
-        };
-        let mut i = 0;
-        while i < nested_blocks.len() {
-            let nested_block = nested_blocks[i];
-            self.blocks.push(SxBlock {
-                modifier: nested_block.modifier,
-                start: start + nested_block.start,
-                end: start + nested_block.end,
-                parent: if nested_block.parent == super::ROOT_BLOCK_PARENT {
-                    parent
-                } else {
-                    parent + 1 + nested_block.parent
-                },
-            });
-            i += 1;
-        }
-
         self
     }
 
-    pub const fn hash(&self) -> u64 {
-        let mut hash = 0xcbf29ce484222325u64;
+    pub(crate) fn entries(&self) -> &[SxEntry] {
+        &self.entries
+    }
 
-        let declarations = self.declarations.as_ref();
-        let mut declaration_index = 0;
-        while declaration_index < declarations.len() {
-            hash = declarations[declaration_index].hash(hash);
-            declaration_index += 1;
-        }
+    pub(crate) fn hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        self.hash_into(&mut hasher);
+        hasher.finish()
+    }
 
-        let blocks = self.blocks.as_ref();
-        let mut block_index = 0;
-        while block_index < blocks.len() {
-            hash = blocks[block_index].hash(hash);
-            block_index += 1;
-        }
-
-        hash
+    fn hash_into(&self, hasher: &mut impl Hasher) {
+        self.entries.hash(hasher);
     }
 
     pub(crate) fn class_name(&self) -> String {
         format!("lsx-{:016x}", self.hash())
     }
-
-    pub(crate) const fn declarations(&self) -> &[Declaration] {
-        self.declarations.as_ref()
-    }
-
-    pub(crate) const fn blocks(&self) -> &[SxBlock] {
-        self.blocks.as_ref()
-    }
 }
 
-pub const fn sx() -> Sx {
+pub fn sx() -> Sx {
     Sx::new()
 }

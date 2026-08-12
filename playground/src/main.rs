@@ -5,9 +5,10 @@ use libero::{
     sx::{Sx, sx},
 };
 
-const BOX_SX: Sx = sx()
-    .padding_top("xl")
-    .when("hidden", sx().background("secondary.1"));
+fn box_sx() -> Sx {
+    sx().padding_top("xl")
+        .when("hidden", sx().background("secondary.1"))
+}
 
 fn main() {
     dioxus::launch(App);
@@ -44,7 +45,7 @@ fn App() -> Element {
             }
 
             Stack {
-                sx: BOX_SX,
+                sx: box_sx(),
                 spacing: gap.clone(),
                 states: vec![("hidden", !show_hello_world())],
                 if show_hello_world() {

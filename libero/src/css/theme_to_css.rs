@@ -205,7 +205,7 @@ mod tests {
         assert!(css.as_str().contains("--lsx-grey-7:#868E96;"));
         assert!(
             css.as_str()
-                .contains("--lsx-grey-contrast-7:var(--lsx-white);")
+                .contains("--lsx-grey-contrast-7:var(--lsx-black);")
         );
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));

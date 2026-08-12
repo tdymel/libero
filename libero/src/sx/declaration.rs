@@ -1,12 +1,7 @@
-use crate::{
-    common::eq,
-    theme::{ColorValue, Size},
-};
-
-use super::hash::{hash_str, hash_u8};
+use crate::theme::Size;
 
 #[repr(u16)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Property {
     Background,
     Width,
@@ -21,48 +16,20 @@ pub enum Property {
 }
 
 impl Property {
-    pub const fn parse(property: &'static str) -> Option<Self> {
-        if eq(property, "background") {
-            return Some(Self::Background);
+    pub fn parse(property: &str) -> Option<Self> {
+        match property {
+            "background" => Some(Self::Background),
+            "width" => Some(Self::Width),
+            "height" => Some(Self::Height),
+            "padding-top" => Some(Self::PaddingTop),
+            "display" => Some(Self::Display),
+            "flex-direction" => Some(Self::FlexDirection),
+            "flex-wrap" => Some(Self::FlexWrap),
+            "align-items" => Some(Self::AlignItems),
+            "justify-content" => Some(Self::JustifyContent),
+            "gap" => Some(Self::Gap),
+            _ => None,
         }
-
-        if eq(property, "width") {
-            return Some(Self::Width);
-        }
-
-        if eq(property, "height") {
-            return Some(Self::Height);
-        }
-
-        if eq(property, "padding-top") {
-            return Some(Self::PaddingTop);
-        }
-
-        if eq(property, "display") {
-            return Some(Self::Display);
-        }
-
-        if eq(property, "flex-direction") {
-            return Some(Self::FlexDirection);
-        }
-
-        if eq(property, "flex-wrap") {
-            return Some(Self::FlexWrap);
-        }
-
-        if eq(property, "align-items") {
-            return Some(Self::AlignItems);
-        }
-
-        if eq(property, "justify-content") {
-            return Some(Self::JustifyContent);
-        }
-
-        if eq(property, "gap") {
-            return Some(Self::Gap);
-        }
-
-        None
     }
 
     pub const fn as_str(self) -> &'static str {
@@ -81,68 +48,32 @@ impl Property {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum DeclarationProperty {
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SxPropertyKey {
     Known(Property),
-    Raw(&'static str),
+    Raw(String),
 }
 
-impl DeclarationProperty {
-    pub const fn parse(property: &'static str) -> Self {
-        match Property::parse(property) {
+impl SxPropertyKey {
+    pub fn parse(property: impl Into<String>) -> Self {
+        let property = property.into();
+        match Property::parse(&property) {
             Some(property) => Self::Known(property),
             None => Self::Raw(property),
         }
     }
-}
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum ThemeAwareValue {
-    Raw(&'static str),
-    Color(ColorValue),
-    Size(Size),
-}
-
-impl ThemeAwareValue {
-    pub const fn parse(value: &'static str) -> Self {
-        if let Some(color_value) = ColorValue::parse(value) {
-            return Self::Color(color_value);
-        }
-
-        if let Some(size) = Size::parse(value) {
-            return Self::Size(size);
-        }
-
-        Self::Raw(value)
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub struct Declaration {
-    pub property: DeclarationProperty,
-    pub value: ThemeAwareValue,
-}
-
-impl Declaration {
-    pub(crate) const fn hash(self, mut hash: u64) -> u64 {
-        hash = match self.property {
-            DeclarationProperty::Known(property) => hash_str(hash_u8(hash, 0), property.as_str()),
-            DeclarationProperty::Raw(property) => hash_str(hash_u8(hash, 1), property),
-        };
-
-        match self.value {
-            ThemeAwareValue::Raw(value) => hash_str(hash_u8(hash, 3), value),
-            ThemeAwareValue::Color(color_value) => match color_value {
-                ColorValue::Shade(color, shade) => hash_str(
-                    hash_str(hash_u8(hash_u8(hash, 5), color as u8), shade.as_str()),
-                    "",
-                ),
-                ColorValue::Contrast(color, shade) => hash_str(
-                    hash_str(hash_u8(hash_u8(hash, 6), color as u8), shade.as_str()),
-                    "",
-                ),
-            },
-            ThemeAwareValue::Size(size) => hash_str(hash_u8(hash, 7), size.as_str()),
+    pub fn as_str(&self) -> &str {
+        match self {
+            Self::Known(property) => property.as_str(),
+            Self::Raw(property) => property.as_str(),
         }
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub enum SxModifierKey {
+    Selector(String),
+    Condition(String),
+    Breakpoint(Size),
 }

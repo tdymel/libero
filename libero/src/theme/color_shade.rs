@@ -13,6 +13,22 @@ pub enum ColorShade {
 }
 
 impl ColorShade {
+    pub(crate) fn parse(suffix: Option<&str>) -> Self {
+        match suffix {
+            None | Some("") => Self::S5,
+            Some("1") => Self::S1,
+            Some("2") => Self::S2,
+            Some("3") => Self::S3,
+            Some("4") => Self::S4,
+            Some("5") => Self::S5,
+            Some("6") => Self::S6,
+            Some("7") => Self::S7,
+            Some("8") => Self::S8,
+            Some("9") => Self::S9,
+            Some(_) => Self::S5,
+        }
+    }
+
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::S1 => "1",
@@ -25,30 +41,5 @@ impl ColorShade {
             Self::S8 => "8",
             Self::S9 => "9",
         }
-    }
-
-    pub const fn parse(value: &'static str, palette_len: usize) -> Self {
-        let bytes = value.as_bytes();
-        if bytes.len() == palette_len {
-            return Self::S5;
-        }
-
-        if bytes.len() == palette_len + 2 && bytes[palette_len] == b'.' {
-            let shade = bytes[palette_len + 1];
-            return match shade {
-                b'1' => Self::S1,
-                b'2' => Self::S2,
-                b'3' => Self::S3,
-                b'4' => Self::S4,
-                b'5' => Self::S5,
-                b'6' => Self::S6,
-                b'7' => Self::S7,
-                b'8' => Self::S8,
-                b'9' => Self::S9,
-                _ => panic!("invalid palette token"),
-            };
-        }
-
-        panic!("invalid palette token")
     }
 }

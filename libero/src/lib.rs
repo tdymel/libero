@@ -4,7 +4,6 @@ pub mod components;
 mod context;
 mod sx_registry;
 
-pub mod common;
 mod css;
 pub mod sx;
 mod sx_layer;
