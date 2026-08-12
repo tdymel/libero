@@ -1,5 +1,7 @@
 use crate::theme::{ColorValue, CssVar, Size};
 
+use super::BreakpointValue;
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ThemeAwareValue {
     String(String),
@@ -7,6 +9,7 @@ pub enum ThemeAwareValue {
     Size(Size),
     ColorValue(ColorValue),
     CssVar(CssVar),
+    BreakpointValue(BreakpointValue),
 }
 
 impl From<String> for ThemeAwareValue {
@@ -51,6 +54,12 @@ impl From<CssVar> for ThemeAwareValue {
     }
 }
 
+impl From<BreakpointValue> for ThemeAwareValue {
+    fn from(value: BreakpointValue) -> Self {
+        Self::BreakpointValue(value)
+    }
+}
+
 macro_rules! impl_int_into_theme_aware_value {
     ($($t:ty),* $(,)?) => {
         $(
@@ -86,5 +95,24 @@ impl From<bool> for ThemeAwareValue {
         } else {
             Self::String("nowrap".to_string())
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::theme::CssVar;
+
+    use super::*;
+
+    #[test]
+    fn theme_aware_value_parses_css_vars() {
+        assert_eq!(
+            ThemeAwareValue::from("--custom-var"),
+            ThemeAwareValue::CssVar(CssVar::Owned("--custom-var".to_string()))
+        );
+        assert_eq!(
+            ThemeAwareValue::from("var(--other-var)"),
+            ThemeAwareValue::CssVar(CssVar::Owned("--other-var".to_string()))
+        );
     }
 }

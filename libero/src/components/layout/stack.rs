@@ -6,6 +6,13 @@ use crate::{
     theme::StackDefaults,
 };
 
+/*
+ * Notes:
+ * - Mantine Group has an option to set equal group width.
+ *   We should at least provide a variable to use it on children.
+ *   Not sure if we should provide a similar API.
+ */
+
 static STACK_BASE_COLUMN_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").and(StackDefaults::default_sx(false)));
 static STACK_BASE_ROW_SX: StaticSx =
