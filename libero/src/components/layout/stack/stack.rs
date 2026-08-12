@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, util::classes},
+    components::{
+        Box,
+        props::{AlignInput, JustifyInput},
+        util::classes,
+    },
     css::SizeCssVar,
     sx::{StaticSx, SxInput, sx},
     theme::{Size, StackDefaults},
@@ -13,8 +17,8 @@ fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
     let is_row = matches!(props.direction.as_deref(), Some("row")) || props.wrap.is_some();
 
     StackDefaults::default_sx(is_row)
-        .apply_if(props.align.as_deref(), |sx, align| sx.align_items(align))
-        .apply_if(props.justify.as_deref(), |sx, justify| {
+        .apply_if(props.align.value(), |sx, align| sx.align_items(align))
+        .apply_if(props.justify.value(), |sx, justify| {
             sx.justify_content(justify)
         })
         .apply_if(props.spacing.as_deref(), |sx, spacing| {
@@ -41,10 +45,10 @@ pub struct StackProps {
     sx: SxInput,
     #[props(default)]
     states: Vec<(&'static str, bool)>,
-    #[props(default)]
-    align: Option<String>,
-    #[props(default)]
-    justify: Option<String>,
+    #[props(default, into)]
+    align: AlignInput,
+    #[props(default, into)]
+    justify: JustifyInput,
     #[props(default)]
     spacing: Option<String>,
     #[props(default)]
