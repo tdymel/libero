@@ -6,8 +6,8 @@ use crate::theme::{
     H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE, H4_FONT_WEIGHT, H4_LETTER_SPACING,
     H4_LINE_HEIGHT, H5_FONT_FAMILY, H5_FONT_SIZE, H5_FONT_WEIGHT, H5_LETTER_SPACING,
     H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE, H6_FONT_WEIGHT, H6_LETTER_SPACING,
-    H6_LINE_HEIGHT, NamedColorCss, STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING,
-    STACK_COLUMN_WRAP, STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP,
+    H6_LINE_HEIGHT, NamedColorCss, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING,
+    FLEX_COLUMN_WRAP, FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP,
     SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM,
     TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS, TEXT_FONT_WEIGHT_LG, TEXT_FONT_WEIGHT_MD,
     TEXT_FONT_WEIGHT_SM, TEXT_FONT_WEIGHT_XL, TEXT_FONT_WEIGHT_XS, TEXT_LETTER_SPACING_LG,
@@ -84,7 +84,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     let mut declarations = Vec::new();
     push_spacing_declarations(&mut declarations, theme);
     push_breakpoint_declarations(&mut declarations);
-    push_stack_declarations(&mut declarations, theme);
+    push_flex_declarations(&mut declarations, theme);
     push_container_declarations(&mut declarations, theme);
     push_divider_declarations(&mut declarations, theme);
     push_title_declarations(&mut declarations, theme);
@@ -146,42 +146,42 @@ fn push_breakpoint_declarations(declarations: &mut Vec<CssDeclaration>) {
     ));
 }
 
-fn push_stack_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+fn push_flex_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
-        STACK_COLUMN_ALIGN.name(),
-        theme.stack.column.align,
+        FLEX_COLUMN_ALIGN.name(),
+        theme.flex.column.align,
     ));
     declarations.push(CssDeclaration::new(
-        STACK_COLUMN_JUSTIFY.name(),
-        theme.stack.column.justify,
+        FLEX_COLUMN_JUSTIFY.name(),
+        theme.flex.column.justify,
     ));
     declarations.push(CssDeclaration::new(
-        STACK_COLUMN_SPACING.name(),
-        SizeCss::SPACING.value(theme.stack.column.spacing),
+        FLEX_COLUMN_SPACING.name(),
+        SizeCss::SPACING.value(theme.flex.column.spacing),
     ));
     declarations.push(CssDeclaration::new(
-        STACK_COLUMN_WRAP.name(),
-        if theme.stack.column.wrap {
+        FLEX_COLUMN_WRAP.name(),
+        if theme.flex.column.wrap {
             "wrap"
         } else {
             "nowrap"
         },
     ));
     declarations.push(CssDeclaration::new(
-        STACK_ROW_ALIGN.name(),
-        theme.stack.row.align,
+        FLEX_ROW_ALIGN.name(),
+        theme.flex.row.align,
     ));
     declarations.push(CssDeclaration::new(
-        STACK_ROW_JUSTIFY.name(),
-        theme.stack.row.justify,
+        FLEX_ROW_JUSTIFY.name(),
+        theme.flex.row.justify,
     ));
     declarations.push(CssDeclaration::new(
-        STACK_ROW_SPACING.name(),
-        SizeCss::SPACING.value(theme.stack.row.spacing),
+        FLEX_ROW_SPACING.name(),
+        SizeCss::SPACING.value(theme.flex.row.spacing),
     ));
     declarations.push(CssDeclaration::new(
-        STACK_ROW_WRAP.name(),
-        if theme.stack.row.wrap {
+        FLEX_ROW_WRAP.name(),
+        if theme.flex.row.wrap {
             "wrap"
         } else {
             "nowrap"
@@ -498,23 +498,23 @@ mod tests {
                 .contains("--lsx-container-gutters:var(--lsx-spacing-md);")
         );
         assert!(css.as_str().contains("--lsx-divider-spacing:0;"));
-        assert!(css.as_str().contains("--lsx-stack-column-align:stretch;"));
+        assert!(css.as_str().contains("--lsx-flex-column-align:stretch;"));
         assert!(
             css.as_str()
-                .contains("--lsx-stack-column-justify:flex-start;")
+                .contains("--lsx-flex-column-justify:flex-start;")
         );
         assert!(
             css.as_str()
-                .contains("--lsx-stack-column-spacing:var(--lsx-spacing-md);")
+                .contains("--lsx-flex-column-spacing:var(--lsx-spacing-md);")
         );
-        assert!(css.as_str().contains("--lsx-stack-column-wrap:nowrap;"));
-        assert!(css.as_str().contains("--lsx-stack-row-align:center;"));
-        assert!(css.as_str().contains("--lsx-stack-row-justify:flex-start;"));
+        assert!(css.as_str().contains("--lsx-flex-column-wrap:nowrap;"));
+        assert!(css.as_str().contains("--lsx-flex-row-align:center;"));
+        assert!(css.as_str().contains("--lsx-flex-row-justify:flex-start;"));
         assert!(
             css.as_str()
-                .contains("--lsx-stack-row-spacing:var(--lsx-spacing-md);")
+                .contains("--lsx-flex-row-spacing:var(--lsx-spacing-md);")
         );
-        assert!(css.as_str().contains("--lsx-stack-row-wrap:wrap;"));
+        assert!(css.as_str().contains("--lsx-flex-row-wrap:wrap;"));
         assert!(css.as_str().contains("--lsx-h1-font-size:2.125rem;"));
         assert!(css.as_str().contains("--lsx-h1-font-weight:700;"));
         assert!(css.as_str().contains("--lsx-h2-font-size:1.625rem;"));

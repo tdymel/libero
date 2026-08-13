@@ -1,12 +1,12 @@
 use super::{
-    ContainerDefaults, DividerDefaults, HexColor, Sizes, StackAxisDefaults, StackDefaults,
+    ContainerDefaults, DividerDefaults, FlexAxisDefaults, FlexDefaults, HexColor, Sizes,
     TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
-    pub stack: StackDefaults,
+    pub flex: FlexDefaults,
     pub container: ContainerDefaults,
     pub divider: DividerDefaults,
     pub titles: TitleDefaults,
@@ -26,9 +26,9 @@ pub struct Theme {
 impl Theme {
     pub const DEFAULT: Theme = Theme::new(
         Sizes::new(4, 8, 12, 16, 20),
-        StackDefaults::new(
-            StackAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
-            StackAxisDefaults::new("center", "flex-start", super::Size::Md, true),
+        FlexDefaults::new(
+            FlexAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
+            FlexAxisDefaults::new("center", "flex-start", super::Size::Md, true),
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
         DividerDefaults::new(None),
@@ -98,7 +98,7 @@ impl Theme {
 
     pub const fn new(
         spacing: Sizes<u8>,
-        stack: StackDefaults,
+        flex: FlexDefaults,
         container: ContainerDefaults,
         divider: DividerDefaults,
         titles: TitleDefaults,
@@ -116,7 +116,7 @@ impl Theme {
     ) -> Self {
         Self {
             spacing,
-            stack,
+            flex,
             container,
             divider,
             titles,

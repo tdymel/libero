@@ -1,7 +1,9 @@
 mod r#box;
 mod container;
-mod stack;
+mod divider;
+mod flex;
 
 pub use r#box::Box;
 pub use container::Container;
-pub use stack::Stack;
+pub use divider::{Divider, DividerProps, LabelPosition};
+pub use flex::Flex;

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::StackDefaults,
+    theme::FlexDefaults,
 };
 
 /*
@@ -13,12 +13,12 @@ use crate::{
  *   Not sure if we should provide a similar API.
  */
 
-static STACK_BASE_COLUMN_SX: StaticSx =
-    StaticSx::new(|| sx().display("flex").and(StackDefaults::default_sx(false)));
-static STACK_BASE_ROW_SX: StaticSx =
-    StaticSx::new(|| sx().display("flex").and(StackDefaults::default_sx(true)));
+static FLEX_BASE_COLUMN_SX: StaticSx =
+    StaticSx::new(|| sx().display("flex").and(FlexDefaults::default_sx(false)));
+static FLEX_BASE_ROW_SX: StaticSx =
+    StaticSx::new(|| sx().display("flex").and(FlexDefaults::default_sx(true)));
 
-fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
+fn flex_dynamic_sx(props: &FlexProps) -> crate::sx::Sx {
     sx().apply_if(props.align.as_ref(), |sx, align| {
         sx.align_items(align.clone())
     })
@@ -33,7 +33,7 @@ fn stack_dynamic_sx(props: &StackProps) -> crate::sx::Sx {
 }
 
 #[derive(Props, Clone, PartialEq)]
-pub struct StackProps {
+pub struct FlexProps {
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default)]
@@ -56,24 +56,24 @@ pub struct StackProps {
 }
 
 #[component]
-pub fn Stack(props: StackProps) -> Element {
+pub fn Flex(props: FlexProps) -> Element {
     let is_row =
         matches!(props.direction.as_ref(), Some(ThemeAwareValue::String(value)) if value == "row");
-    let stack_base_sx = if is_row {
-        &STACK_BASE_ROW_SX
+    let flex_base_sx = if is_row {
+        &FLEX_BASE_ROW_SX
     } else {
-        &STACK_BASE_COLUMN_SX
+        &FLEX_BASE_COLUMN_SX
     };
 
-    let stack_class = crate::context::use_sx(stack_base_sx, crate::SxLayer::Framework);
+    let flex_class = crate::context::use_sx(flex_base_sx, crate::SxLayer::Framework);
     let static_class = props
         .sx
         .as_ref()
         .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
     let dynamic_class =
-        crate::context::use_sx(&stack_dynamic_sx(&props), crate::SxLayer::UserDynamic);
+        crate::context::use_sx(&flex_dynamic_sx(&props), crate::SxLayer::UserDynamic);
 
-    let class = class_list([props.class, stack_class, dynamic_class, static_class]);
+    let class = class_list([props.class, flex_class, dynamic_class, static_class]);
     let data_state = props.states.as_ref().and_then(States::data_state);
 
     rsx! {

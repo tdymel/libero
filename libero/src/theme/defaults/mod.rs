@@ -1,15 +1,15 @@
 mod container;
 mod divider;
-mod stack;
+mod flex;
 mod text;
 mod title;
 
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use divider::{DIVIDER_SPACING, DividerDefaults};
-pub use stack::{
-    STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING, STACK_COLUMN_WRAP,
-    STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, StackAxisDefaults,
-    StackDefaults,
+pub use flex::{
+    FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP,
+    FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP, FlexAxisDefaults,
+    FlexDefaults,
 };
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM, TEXT_FONT_SIZE_XL,

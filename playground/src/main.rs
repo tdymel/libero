@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Container, Divider, HelloWorld, Image, Stack, Text, Title, TitleVariant,
+        Box, Container, Divider, Flex, HelloWorld, Image, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
@@ -48,7 +48,7 @@ fn App() -> Element {
                 if wrap_group() { "Disable group wrap" } else { "Enable group wrap" }
             }
 
-            Stack {
+            Flex {
                 sx: &BOX_SX,
                 align: "start",
                 gap: gap.clone(),
@@ -59,7 +59,7 @@ fn App() -> Element {
                 HelloWorld {}
             }
 
-            Stack {
+            Flex {
                 sx: sx().background("blue"),
                 direction: "row",
                 gap: gap,
@@ -79,7 +79,7 @@ fn App() -> Element {
                 p { "Uses theme-aware size + gutters overrides." }
             }
 
-            Stack {
+            Flex {
                 sx: sx().padding_top(Size::Xl),
                 Title {
                     variant: TitleVariant::H1,
@@ -107,7 +107,7 @@ fn App() -> Element {
                 }
             }
 
-            Stack {
+            Flex {
                 sx: sx().padding_top(Size::Xl),
                 Title {
                     variant: "h2",
@@ -121,7 +121,7 @@ fn App() -> Element {
                 }
             }
 
-            Stack {
+            Flex {
                 sx: sx().padding_top(Size::Xl),
                 Title {
                     variant: "h3",
@@ -149,7 +149,7 @@ fn App() -> Element {
                 }
             }
 
-            Stack {
+            Flex {
                 sx: sx().padding_top(Size::Xl),
                 Title {
                     variant: "h3",
@@ -165,7 +165,7 @@ fn App() -> Element {
                     " inside it."
                 }
             }
-            Stack {
+            Flex {
                 sx: sx().padding_top(Size::Xl),
                 Title {
                     variant: "h2",
@@ -198,10 +198,10 @@ fn App() -> Element {
                 p {
                     "Vertical dividers:"
                 }
-                Stack {
+                Flex {
                     direction: "row",
                     gap: "md",
-                    Stack {
+                    Flex {
                         direction: "row",
                         sx: sx().height("100px"),
                         "Left"
@@ -210,7 +210,7 @@ fn App() -> Element {
                         }
                         "Right"
                     }
-                    Stack {
+                    Flex {
                         direction: "row",
                         sx: sx().height("100px"),
                         "Left"
@@ -220,7 +220,7 @@ fn App() -> Element {
                         }
                         "Right"
                     }
-                    Stack {
+                    Flex {
                         direction: "row",
                         sx: sx().height("100px"),
                         "Left"
@@ -231,7 +231,7 @@ fn App() -> Element {
                         }
                         "Right"
                     }
-                    Stack {
+                    Flex {
                         direction: "row",
                         sx: sx().height("100px"),
                         "Left"
@@ -276,7 +276,7 @@ fn App() -> Element {
                 p {
                     "Vertical spacing (\"md\"), applied left/right instead:"
                 }
-                Stack {
+                Flex {
                     direction: "row",
                     sx: sx().height("100px"),
                     "Left"
@@ -342,7 +342,7 @@ fn App() -> Element {
                 p {
                     "Default (fills parent, object-fit: cover):"
                 }
-                Stack {
+                Flex {
                     direction: "row",
                     gap: "md",
                     Box {
