@@ -110,31 +110,37 @@ fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
     if vertical {
         match label_position {
             LabelPosition::Start => sx()
-                .selector("::before", sx().flex("0 0 8px"))
+                .selector("::before", sx().flex("0 0 10%"))
                 .selector("::after", sx().flex("1")),
             LabelPosition::End => sx()
                 .selector("::before", sx().flex("1"))
-                .selector("::after", sx().flex("0 0 8px")),
+                .selector("::after", sx().flex("0 0 10%")),
             LabelPosition::Center => sx(),
         }
     } else {
         match label_position {
             LabelPosition::Start => sx()
-                .selector("::before", sx().flex("0 0 16px"))
+                .selector("::before", sx().flex("0 0 10%"))
                 .selector("::after", sx().flex("1")),
             LabelPosition::End => sx()
                 .selector("::before", sx().flex("1"))
-                .selector("::after", sx().flex("0 0 16px")),
+                .selector("::after", sx().flex("0 0 10%")),
             LabelPosition::Center => sx(),
         }
     }
 }
 
-static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx =
-    StaticSx::new(|| sx().padding("0 12px").white_space("nowrap"));
+static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
+    sx().padding("0 12px")
+        .white_space("nowrap")
+        .with("user-select", "none")
+});
 
-static DIVIDER_LABEL_VERTICAL_SX: StaticSx =
-    StaticSx::new(|| sx().padding("8px 0").white_space("nowrap"));
+static DIVIDER_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
+    sx().padding("8px 0")
+        .white_space("nowrap")
+        .with("user-select", "none")
+});
 
 #[derive(Props, Clone, PartialEq)]
 pub struct DividerProps {
