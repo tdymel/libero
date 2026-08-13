@@ -5,6 +5,13 @@ use crate::{
     sx::{StaticSx, Sx, sx},
 };
 
+/*
+ * TODO:
+ * - Color
+ * - Divider line left of the left one, analog to mui
+ * - Use the state system of the framework sx
+ */
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LabelPosition {
     Start,
@@ -102,14 +109,22 @@ static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
 fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
     if vertical {
         match label_position {
-            LabelPosition::Start => sx().selector("::before", sx().flex("0").height("8px")),
-            LabelPosition::End => sx().selector("::after", sx().flex("0").height("8px")),
+            LabelPosition::Start => sx()
+                .selector("::before", sx().flex("0 0 8px"))
+                .selector("::after", sx().flex("1")),
+            LabelPosition::End => sx()
+                .selector("::before", sx().flex("1"))
+                .selector("::after", sx().flex("0 0 8px")),
             LabelPosition::Center => sx(),
         }
     } else {
         match label_position {
-            LabelPosition::Start => sx().selector("::before", sx().flex("0").width("16px")),
-            LabelPosition::End => sx().selector("::after", sx().flex("0").width("16px")),
+            LabelPosition::Start => sx()
+                .selector("::before", sx().flex("0 0 16px"))
+                .selector("::after", sx().flex("1")),
+            LabelPosition::End => sx()
+                .selector("::before", sx().flex("1"))
+                .selector("::after", sx().flex("0 0 16px")),
             LabelPosition::Center => sx(),
         }
     }
