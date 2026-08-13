@@ -1,7 +1,13 @@
 use crate::theme::{
-    CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, NamedColorCss,
-    STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING, STACK_COLUMN_WRAP,
-    STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, SizeCss, Theme,
+    CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, H1_FONT_FAMILY, H1_FONT_SIZE,
+    H1_FONT_WEIGHT, H1_LETTER_SPACING, H1_LINE_HEIGHT, H2_FONT_FAMILY, H2_FONT_SIZE,
+    H2_FONT_WEIGHT, H2_LETTER_SPACING, H2_LINE_HEIGHT, H3_FONT_FAMILY, H3_FONT_SIZE,
+    H3_FONT_WEIGHT, H3_LETTER_SPACING, H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE,
+    H4_FONT_WEIGHT, H4_LETTER_SPACING, H4_LINE_HEIGHT, H5_FONT_FAMILY, H5_FONT_SIZE,
+    H5_FONT_WEIGHT, H5_LETTER_SPACING, H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE,
+    H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, NamedColorCss, STACK_COLUMN_ALIGN,
+    STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING, STACK_COLUMN_WRAP, STACK_ROW_ALIGN,
+    STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, SizeCss, Theme,
 };
 
 use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
@@ -30,6 +36,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_breakpoint_declarations(&mut declarations);
     push_stack_declarations(&mut declarations, theme);
     push_container_declarations(&mut declarations, theme);
+    push_title_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
     push_color_declarations(&mut declarations, Color::Primary, theme.primary);
     push_color_declarations(&mut declarations, Color::Secondary, theme.secondary);
@@ -141,6 +148,140 @@ fn push_container_declarations(declarations: &mut Vec<CssDeclaration>, theme: &T
     ));
 }
 
+fn push_title_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    // H1
+    declarations.push(CssDeclaration::new(
+        H1_FONT_FAMILY.name(),
+        theme.titles.h1.font_family,
+    ));
+    declarations.push(CssDeclaration::new(
+        H1_FONT_WEIGHT.name(),
+        theme.titles.h1.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        H1_FONT_SIZE.name(),
+        theme.titles.h1.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        H1_LETTER_SPACING.name(),
+        theme.titles.h1.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        H1_LINE_HEIGHT.name(),
+        theme.titles.h1.line_height,
+    ));
+
+    // H2
+    declarations.push(CssDeclaration::new(
+        H2_FONT_FAMILY.name(),
+        theme.titles.h2.font_family,
+    ));
+    declarations.push(CssDeclaration::new(
+        H2_FONT_WEIGHT.name(),
+        theme.titles.h2.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        H2_FONT_SIZE.name(),
+        theme.titles.h2.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        H2_LETTER_SPACING.name(),
+        theme.titles.h2.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        H2_LINE_HEIGHT.name(),
+        theme.titles.h2.line_height,
+    ));
+
+    // H3
+    declarations.push(CssDeclaration::new(
+        H3_FONT_FAMILY.name(),
+        theme.titles.h3.font_family,
+    ));
+    declarations.push(CssDeclaration::new(
+        H3_FONT_WEIGHT.name(),
+        theme.titles.h3.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        H3_FONT_SIZE.name(),
+        theme.titles.h3.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        H3_LETTER_SPACING.name(),
+        theme.titles.h3.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        H3_LINE_HEIGHT.name(),
+        theme.titles.h3.line_height,
+    ));
+
+    // H4
+    declarations.push(CssDeclaration::new(
+        H4_FONT_FAMILY.name(),
+        theme.titles.h4.font_family,
+    ));
+    declarations.push(CssDeclaration::new(
+        H4_FONT_WEIGHT.name(),
+        theme.titles.h4.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        H4_FONT_SIZE.name(),
+        theme.titles.h4.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        H4_LETTER_SPACING.name(),
+        theme.titles.h4.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        H4_LINE_HEIGHT.name(),
+        theme.titles.h4.line_height,
+    ));
+
+    // H5
+    declarations.push(CssDeclaration::new(
+        H5_FONT_FAMILY.name(),
+        theme.titles.h5.font_family,
+    ));
+    declarations.push(CssDeclaration::new(
+        H5_FONT_WEIGHT.name(),
+        theme.titles.h5.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        H5_FONT_SIZE.name(),
+        theme.titles.h5.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        H5_LETTER_SPACING.name(),
+        theme.titles.h5.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        H5_LINE_HEIGHT.name(),
+        theme.titles.h5.line_height,
+    ));
+
+    // H6
+    declarations.push(CssDeclaration::new(
+        H6_FONT_FAMILY.name(),
+        theme.titles.h6.font_family,
+    ));
+    declarations.push(CssDeclaration::new(
+        H6_FONT_WEIGHT.name(),
+        theme.titles.h6.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        H6_FONT_SIZE.name(),
+        theme.titles.h6.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        H6_LETTER_SPACING.name(),
+        theme.titles.h6.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        H6_LINE_HEIGHT.name(),
+        theme.titles.h6.line_height,
+    ));
+}
+
 fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
     declarations.push(CssDeclaration::new(
         NamedColorCss::BLACK.name(),
@@ -178,40 +319,13 @@ fn push_color_declarations(
 
 #[cfg(test)]
 mod tests {
-    use crate::theme::{HexColor, Sizes};
 
     use super::*;
 
     #[test]
     fn theme_css_happy_path() {
-        const THEME: Theme = Theme::new(
-            Sizes::new(4, 8, 12, 16, 20),
-            crate::theme::StackDefaults::new(
-                crate::theme::StackAxisDefaults::new(
-                    "stretch",
-                    "flex-start",
-                    crate::theme::Size::Md,
-                    false,
-                ),
-                crate::theme::StackAxisDefaults::new(
-                    "center",
-                    "flex-start",
-                    crate::theme::Size::Md,
-                    true,
-                ),
-            ),
-            crate::theme::ContainerDefaults::new(crate::theme::Size::Lg, crate::theme::Size::Sm),
-            HexColor::new(0x228BE6),
-            HexColor::new(0xE03131),
-            HexColor::new(0xE03131),
-            HexColor::new(0xF08C00),
-            HexColor::new(0x228BE6),
-            HexColor::new(0x2F9E44),
-            HexColor::new(0x868E96),
-            HexColor::new(0x000000),
-            HexColor::new(0xFFFFFF),
-        );
-        let css = Stylesheet::from(&THEME);
+        let theme = &Theme::DEFAULT;
+        let css = Stylesheet::from(theme);
 
         assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
@@ -223,7 +337,7 @@ mod tests {
         );
         assert!(
             css.as_str()
-                .contains("--lsx-container-gutters:var(--lsx-spacing-sm);")
+                .contains("--lsx-container-gutters:var(--lsx-spacing-md);")
         );
         assert!(css.as_str().contains("--lsx-stack-column-align:stretch;"));
         assert!(
@@ -242,7 +356,14 @@ mod tests {
                 .contains("--lsx-stack-row-spacing:var(--lsx-spacing-md);")
         );
         assert!(css.as_str().contains("--lsx-stack-row-wrap:wrap;"));
-        assert!(css.as_str().contains("--lsx-primary-1:#D2E7FA;"));
+        assert!(css.as_str().contains("--lsx-h1-font-size:2.125rem;"));
+        assert!(css.as_str().contains("--lsx-h1-font-weight:700;"));
+        assert!(css.as_str().contains("--lsx-h2-font-size:1.625rem;"));
+        assert!(css.as_str().contains("--lsx-h3-font-size:1.375rem;"));
+        assert!(css.as_str().contains("--lsx-h4-font-size:1rem;"));
+        assert!(css.as_str().contains("--lsx-h5-font-size:0.875rem;"));
+        assert!(css.as_str().contains("--lsx-h6-font-size:0.75rem;"));
+
         assert!(css.as_str().contains("--lsx-black:#000000;"));
         assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));
         assert!(
