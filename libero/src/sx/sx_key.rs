@@ -6,6 +6,7 @@ pub enum Property {
     Background,
     Width,
     Height,
+    Padding,
     PaddingTop,
     PaddingLeft,
     PaddingRight,
@@ -24,6 +25,7 @@ pub enum Property {
     FontWeight,
     LetterSpacing,
     LineHeight,
+    TextDecoration,
 }
 
 impl Property {
@@ -32,6 +34,7 @@ impl Property {
             "background" => Some(Self::Background),
             "width" => Some(Self::Width),
             "height" => Some(Self::Height),
+            "padding" => Some(Self::Padding),
             "padding-top" => Some(Self::PaddingTop),
             "padding-left" => Some(Self::PaddingLeft),
             "padding-right" => Some(Self::PaddingRight),
@@ -50,6 +53,7 @@ impl Property {
             "font-weight" => Some(Self::FontWeight),
             "letter-spacing" => Some(Self::LetterSpacing),
             "line-height" => Some(Self::LineHeight),
+            "text-decoration" => Some(Self::TextDecoration),
             _ => None,
         }
     }
@@ -59,6 +63,7 @@ impl Property {
             Self::Background => "background",
             Self::Width => "width",
             Self::Height => "height",
+            Self::Padding => "padding",
             Self::PaddingTop => "padding-top",
             Self::PaddingLeft => "padding-left",
             Self::PaddingRight => "padding-right",
@@ -77,6 +82,7 @@ impl Property {
             Self::FontWeight => "font-weight",
             Self::LetterSpacing => "letter-spacing",
             Self::LineHeight => "line-height",
+            Self::TextDecoration => "text-decoration",
         }
     }
 }

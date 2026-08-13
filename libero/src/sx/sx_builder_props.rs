@@ -23,6 +23,10 @@ impl Sx {
         self.with_known_property(Property::PaddingLeft, value)
     }
 
+    pub fn padding(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Padding, value)
+    }
+
     pub fn padding_right(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::PaddingRight, value)
     }
@@ -85,6 +89,10 @@ impl Sx {
 
     pub fn line_height(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::LineHeight, value)
+    }
+
+    pub fn text_decoration(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::TextDecoration, value)
     }
 
     pub fn hover(self, nested: Sx) -> Self {

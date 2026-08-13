@@ -6,11 +6,36 @@ use crate::{
     theme::{Size, TextDefaults},
 };
 
-static TEXT_XS_SX: StaticSx = StaticSx::new(|| TextDefaults::xs_sx());
-static TEXT_SM_SX: StaticSx = StaticSx::new(|| TextDefaults::sm_sx());
-static TEXT_MD_SX: StaticSx = StaticSx::new(|| TextDefaults::md_sx());
-static TEXT_LG_SX: StaticSx = StaticSx::new(|| TextDefaults::lg_sx());
-static TEXT_XL_SX: StaticSx = StaticSx::new(|| TextDefaults::xl_sx());
+static TEXT_XS_SX: StaticSx = StaticSx::new(|| {
+    TextDefaults::xs_sx()
+        .margin("0")
+        .padding("0")
+        .text_decoration("none")
+});
+static TEXT_SM_SX: StaticSx = StaticSx::new(|| {
+    TextDefaults::sm_sx()
+        .margin("0")
+        .padding("0")
+        .text_decoration("none")
+});
+static TEXT_MD_SX: StaticSx = StaticSx::new(|| {
+    TextDefaults::md_sx()
+        .margin("0")
+        .padding("0")
+        .text_decoration("none")
+});
+static TEXT_LG_SX: StaticSx = StaticSx::new(|| {
+    TextDefaults::lg_sx()
+        .margin("0")
+        .padding("0")
+        .text_decoration("none")
+});
+static TEXT_XL_SX: StaticSx = StaticSx::new(|| {
+    TextDefaults::xl_sx()
+        .margin("0")
+        .padding("0")
+        .text_decoration("none")
+});
 
 fn get_size_sx(size: &ThemeAwareValue) -> &'static Sx {
     match size {
