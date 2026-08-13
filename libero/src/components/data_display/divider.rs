@@ -52,24 +52,28 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         .flex_shrink("0")
         .border_width("0")
         .border_style("solid")
-        .border_color("#e0e0e0")
+        .border_color("grey.3")
         .when(
             "vertical",
-            sx().border_right("1px solid #e0e0e0").align_self("stretch"),
+            sx().border_right("1px solid")
+                .border_right_color("grey.3")
+                .align_self("stretch"),
         )
         .when(
             "horizontal",
-            sx().border_bottom("1px solid #e0e0e0").height("1px"),
+            sx().border_bottom("1px solid")
+                .border_bottom_color("grey.3")
+                .height("1px"),
         )
         .when(
             "label",
             sx().display("flex")
                 .align_items("center")
                 .border("0")
-                .color("#6b7280")
+                .color("grey.9")
                 .selector(
                     "&::before, &::after",
-                    sx().content("\"\"").flex("1").background("#dcdcdc"),
+                    sx().content("\"\"").flex("1").background("grey.3"),
                 ),
         )
         .when(

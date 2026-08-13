@@ -143,6 +143,14 @@ impl Sx {
         self.with_known_property(Property::BorderColor, value)
     }
 
+    pub fn border_right_color(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderRightColor, value)
+    }
+
+    pub fn border_bottom_color(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderBottomColor, value)
+    }
+
     pub fn flex_shrink(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::FlexShrink, value)
     }
