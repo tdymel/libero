@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Container, Divider, HelloWorld, Stack, Text, Title, TitleVariant, states},
+    components::{
+        Container, Divider, HelloWorld, Stack, Text, Title, TitleVariant, VisuallyHidden, states,
+    },
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -310,6 +312,28 @@ fn App() -> Element {
                     "success.7"
                 }
                 "Below"
+                Title {
+                    variant: "h2",
+                    "VisuallyHidden Examples"
+                }
+                p {
+                    "Icon-only button with a visually hidden label (inspect the DOM, or use a screen reader, to see it):"
+                }
+                button {
+                    "★"
+                    VisuallyHidden {
+                        "Add to favorites"
+                    }
+                }
+                p {
+                    "Extra context appended to visible text:"
+                }
+                Text {
+                    "4.5 "
+                    VisuallyHidden {
+                        "out of 5 stars"
+                    }
+                }
             }
         }
     }

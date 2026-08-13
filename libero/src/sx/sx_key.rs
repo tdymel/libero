@@ -46,6 +46,9 @@ pub enum Property {
     AlignSelf,
     WhiteSpace,
     UserSelect,
+    Position,
+    Overflow,
+    Clip,
 }
 
 impl Property {
@@ -94,6 +97,9 @@ impl Property {
             "align-self" => Some(Self::AlignSelf),
             "white-space" => Some(Self::WhiteSpace),
             "user-select" => Some(Self::UserSelect),
+            "position" => Some(Self::Position),
+            "overflow" => Some(Self::Overflow),
+            "clip" => Some(Self::Clip),
             _ => None,
         }
     }
@@ -143,6 +149,9 @@ impl Property {
             Self::AlignSelf => "align-self",
             Self::WhiteSpace => "white-space",
             Self::UserSelect => "user-select",
+            Self::Position => "position",
+            Self::Overflow => "overflow",
+            Self::Clip => "clip",
         }
     }
 }

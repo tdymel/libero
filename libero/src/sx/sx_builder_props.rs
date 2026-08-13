@@ -175,6 +175,18 @@ impl Sx {
         self.with_known_property(Property::UserSelect, value)
     }
 
+    pub fn position(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Position, value)
+    }
+
+    pub fn overflow(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Overflow, value)
+    }
+
+    pub fn clip(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Clip, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
