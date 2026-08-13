@@ -5,13 +5,6 @@ use crate::{
     sx::{StaticSx, Sx, sx},
 };
 
-/*
- * TODO:
- * - Color
- * - Divider line left of the left one, analog to mui
- * - Use the state system of the framework sx
- */
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LabelPosition {
     Start,
@@ -54,56 +47,49 @@ impl From<String> for Input<LabelPosition> {
     }
 }
 
-static DIVIDER_HORIZONTAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
+static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
+    let line_sx = sx().content("\"\"").flex("1").background("#dcdcdc");
+
     sx().margin("0")
         .flex_shrink("0")
         .border_width("0")
         .border_style("solid")
         .border_color("#e0e0e0")
-        .border_bottom("1px solid #e0e0e0")
-});
-
-static DIVIDER_VERTICAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
-    sx().margin("0")
-        .flex_shrink("0")
-        .align_self("stretch")
-        .border_width("0")
-        .border_style("solid")
-        .border_color("#e0e0e0")
-        .border_right("1px solid #e0e0e0")
-});
-
-static DIVIDER_HORIZONTAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
-    let line_sx = sx()
-        .content("\"\"")
-        .flex("1")
-        .height("1px")
-        .background("#dcdcdc");
-
-    sx().display("flex")
-        .align_items("center")
-        .width("100%")
-        .color("#6b7280")
-        .margin("16px 0")
-        .selector("::before", line_sx.clone())
-        .selector("::after", line_sx)
-});
-
-static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
-    let line_sx = sx()
-        .content("\"\"")
-        .width("1px")
-        .flex("1")
-        .background("#dcdcdc");
-
-    sx().display("flex")
-        .flex_direction("column")
-        .align_items("center")
-        .flex_shrink("0")
-        .align_self("stretch")
-        .color("#6b7280")
-        .selector("::before", line_sx.clone())
-        .selector("::after", line_sx)
+        // Without label (simple dividers)
+        .when(
+            "vertical",
+            sx().border_right("1px solid #e0e0e0").align_self("stretch"),
+        )
+        .when(
+            "horizontal",
+            sx().border_bottom("1px solid #e0e0e0").height("1px"),
+        )
+        // With label
+        .when(
+            "label",
+            sx().display("flex")
+                .align_items("center")
+                .border("0")
+                .color("#6b7280")
+                .selector("::before", line_sx.clone())
+                .selector("::after", line_sx),
+        )
+        // Horizontal with label specific
+        .when(
+            "horizontal-label",
+            sx().width("100%")
+                .margin("16px 0")
+                .selector("::before", sx().height("1px"))
+                .selector("::after", sx().height("1px")),
+        )
+        // Vertical with label specific
+        .when(
+            "vertical-label",
+            sx().flex_direction("column")
+                .align_self("stretch")
+                .selector("::before", sx().width("1px"))
+                .selector("::after", sx().width("1px")),
+        )
 });
 
 fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
@@ -165,14 +151,19 @@ pub fn Divider(props: DividerProps) -> Element {
     let has_label = props.children.is_some();
     let label_position = props.label_position.as_ref().copied().unwrap_or_default();
 
-    let divider_base_sx = match (vertical, has_label) {
-        (false, false) => &DIVIDER_HORIZONTAL_NO_LABEL_SX,
-        (true, false) => &DIVIDER_VERTICAL_NO_LABEL_SX,
-        (false, true) => &DIVIDER_HORIZONTAL_WITH_LABEL_SX,
-        (true, true) => &DIVIDER_VERTICAL_WITH_LABEL_SX,
-    };
+    // Build states using the API
+    let divider_states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("vertical", vertical)
+        .with("label", has_label)
+        .with("horizontal-label", !vertical && has_label)
+        .with("vertical-label", vertical && has_label)
+        .with("horizontal", !vertical && !has_label);
 
-    let framework_class = crate::context::use_sx(divider_base_sx, crate::SxLayer::Framework);
+    let framework_class = crate::context::use_sx(&DIVIDER_BASE_SX, crate::SxLayer::Framework);
 
     let static_class = props
         .sx
@@ -189,7 +180,7 @@ pub fn Divider(props: DividerProps) -> Element {
     };
 
     let class = class_list([props.class, framework_class, dynamic_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
+    let data_state = divider_states.data_state();
 
     if vertical {
         rsx! {
