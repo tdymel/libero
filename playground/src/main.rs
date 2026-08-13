@@ -193,15 +193,52 @@ fn App() -> Element {
                     "Right Label"
                 }
                 p {
-                    "Vertical divider:"
+                    "Vertical dividers:"
                 }
                 Stack {
                     direction: "row",
-                    "Left side"
-                    Divider {
-                        vertical: true,
+                    gap: "md",
+                    Stack {
+                        direction: "row",
+                        sx: sx().height("100px"),
+                        "Left"
+                        Divider {
+                            vertical: true,
+                        }
+                        "Right"
                     }
-                    "Right side"
+                    Stack {
+                        direction: "row",
+                        sx: sx().height("100px"),
+                        "Left"
+                        Divider {
+                            vertical: true,
+                            "OR"
+                        }
+                        "Right"
+                    }
+                    Stack {
+                        direction: "row",
+                        sx: sx().height("100px"),
+                        "Left"
+                        Divider {
+                            vertical: true,
+                            label_position: "left",
+                            "Top"
+                        }
+                        "Right"
+                    }
+                    Stack {
+                        direction: "row",
+                        sx: sx().height("100px"),
+                        "Left"
+                        Divider {
+                            vertical: true,
+                            label_position: "right",
+                            "Bottom"
+                        }
+                        "Right"
+                    }
                 }
             }
         }

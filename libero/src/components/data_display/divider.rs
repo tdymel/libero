@@ -59,7 +59,7 @@ static DIVIDER_HORIZONTAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
 static DIVIDER_VERTICAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
     sx().margin("0")
         .flex_shrink("0")
-        .height("100%")
+        .align_self("stretch")
         .border_width("0")
         .border_style("solid")
         .border_color("#e0e0e0")
@@ -85,16 +85,16 @@ static DIVIDER_HORIZONTAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
 static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
     let line_sx = sx()
         .content("\"\"")
-        .flex("1")
         .width("1px")
+        .flex("1")
         .background("#dcdcdc");
 
     sx().display("flex")
         .flex_direction("column")
         .align_items("center")
-        .height("100%")
+        .flex_shrink("0")
+        .align_self("stretch")
         .color("#6b7280")
-        .margin("0 16px")
         .selector("::before", line_sx.clone())
         .selector("::after", line_sx)
 });
@@ -102,8 +102,8 @@ static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
 fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
     if vertical {
         match label_position {
-            LabelPosition::Left => sx().selector("::before", sx().flex("0").height("16px")),
-            LabelPosition::Right => sx().selector("::after", sx().flex("0").height("16px")),
+            LabelPosition::Left => sx().selector("::before", sx().flex("0").height("8px")),
+            LabelPosition::Right => sx().selector("::after", sx().flex("0").height("8px")),
             LabelPosition::Center => sx(),
         }
     } else {
@@ -115,7 +115,11 @@ fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
     }
 }
 
-static DIVIDER_LABEL_SX: StaticSx = StaticSx::new(|| sx().padding("0 12px").white_space("nowrap"));
+static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx =
+    StaticSx::new(|| sx().padding("0 12px").white_space("nowrap"));
+
+static DIVIDER_LABEL_VERTICAL_SX: StaticSx =
+    StaticSx::new(|| sx().padding("8px 0").white_space("nowrap"));
 
 #[derive(Props, Clone, PartialEq)]
 pub struct DividerProps {
@@ -174,7 +178,7 @@ pub fn Divider(props: DividerProps) -> Element {
                 ..props.attributes,
                 if has_label {
                     span {
-                        class: crate::context::use_sx(&DIVIDER_LABEL_SX, crate::SxLayer::Framework),
+                        class: crate::context::use_sx(&DIVIDER_LABEL_VERTICAL_SX, crate::SxLayer::Framework),
                         {props.children}
                     }
                 }
@@ -187,7 +191,7 @@ pub fn Divider(props: DividerProps) -> Element {
                 "data-state": data_state,
                 ..props.attributes,
                 span {
-                    class: crate::context::use_sx(&DIVIDER_LABEL_SX, crate::SxLayer::Framework),
+                    class: crate::context::use_sx(&DIVIDER_LABEL_HORIZONTAL_SX, crate::SxLayer::Framework),
                     {props.children}
                 }
             }
