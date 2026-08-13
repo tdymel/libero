@@ -169,13 +169,16 @@ pub fn Divider(props: DividerProps) -> Element {
 
     let class = class_list([props.class, framework_class, dynamic_class, static_class]);
     let data_state = divider_states.data_state();
+    let aria_orientation = vertical.then_some("vertical");
 
     rsx! {
-        if has_label {
-            div {
-                class: class,
-                "data-state": data_state,
-                ..props.attributes,
+        div {
+            class: class,
+            role: "separator",
+            "aria-orientation": aria_orientation,
+            "data-state": data_state,
+            ..props.attributes,
+            if has_label {
                 span {
                     class: crate::context::use_sx(
                         if vertical { &DIVIDER_LABEL_VERTICAL_SX } else { &DIVIDER_LABEL_HORIZONTAL_SX },
@@ -183,12 +186,6 @@ pub fn Divider(props: DividerProps) -> Element {
                     ),
                     {props.children}
                 }
-            }
-        } else {
-            hr {
-                class: class,
-                "data-state": data_state,
-                ..props.attributes,
             }
         }
     }
