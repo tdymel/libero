@@ -1,6 +1,6 @@
 use crate::sx::{Sx, sx};
 
-use super::{CssVar, Size};
+use crate::theme::{CssVar, Size};
 
 pub const STACK_COLUMN_ALIGN: CssVar = CssVar::new("--lsx-stack-column-align");
 pub const STACK_COLUMN_JUSTIFY: CssVar = CssVar::new("--lsx-stack-column-justify");

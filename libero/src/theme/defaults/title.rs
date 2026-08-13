@@ -1,6 +1,6 @@
 use crate::sx::{Sx, sx};
 
-use super::CssVar;
+use crate::theme::CssVar;
 
 // H1
 pub const H1_FONT_FAMILY: CssVar = CssVar::new("--lsx-h1-font-family");

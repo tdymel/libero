@@ -1,6 +1,6 @@
 use crate::sx::{Sx, sx};
 
-use super::{CssVar, Size};
+use crate::theme::{CssVar, Size};
 
 pub const CONTAINER_SIZE: CssVar = CssVar::new("--lsx-container-size");
 pub const CONTAINER_GUTTERS: CssVar = CssVar::new("--lsx-container-gutters");

@@ -1,6 +1,6 @@
 use crate::sx::{Sx, sx};
 
-use super::CssVar;
+use crate::theme::CssVar;
 
 // Font family (shared across all sizes)
 pub const TEXT_FONT_FAMILY: CssVar = CssVar::new("--lsx-text-font-family");

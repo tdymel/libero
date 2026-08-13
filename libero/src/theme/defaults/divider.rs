@@ -1,6 +1,6 @@
 use crate::sx::{Sx, sx};
 
-use super::{CssVar, Size};
+use crate::theme::{CssVar, Size};
 
 pub const DIVIDER_SPACING: CssVar = CssVar::new("--lsx-divider-spacing");
 
