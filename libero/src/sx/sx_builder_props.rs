@@ -107,6 +107,14 @@ impl Sx {
         self.with_known_property(Property::BorderRight, value)
     }
 
+    pub fn border_bottom(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderBottom, value)
+    }
+
+    pub fn border_left(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderLeft, value)
+    }
+
     pub fn color(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Color, value)
     }
@@ -141,6 +149,10 @@ impl Sx {
 
     pub fn align_self(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::AlignSelf, value)
+    }
+
+    pub fn white_space(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::WhiteSpace, value)
     }
 
     pub fn hover(self, nested: Sx) -> Self {

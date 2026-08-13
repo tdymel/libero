@@ -53,7 +53,7 @@ static DIVIDER_HORIZONTAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .border_style("solid")
         .border_color("#e0e0e0")
-        .with("border-bottom-width", "1px")
+        .border_bottom("1px solid #e0e0e0")
 });
 
 static DIVIDER_VERTICAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
@@ -63,7 +63,7 @@ static DIVIDER_VERTICAL_NO_LABEL_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .border_style("solid")
         .border_color("#e0e0e0")
-        .with("border-right-width", "1px")
+        .border_right("1px solid #e0e0e0")
 });
 
 static DIVIDER_HORIZONTAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
@@ -71,12 +71,12 @@ static DIVIDER_HORIZONTAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
         .content("\"\"")
         .flex("1")
         .height("1px")
-        .with("background", "#dcdcdc");
+        .background("#dcdcdc");
 
     sx().display("flex")
         .align_items("center")
         .width("100%")
-        .with("color", "#6b7280")
+        .color("#6b7280")
         .margin("16px 0")
         .selector("::before", line_sx.clone())
         .selector("::after", line_sx)
@@ -87,13 +87,13 @@ static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
         .content("\"\"")
         .flex("1")
         .width("1px")
-        .with("background", "#dcdcdc");
+        .background("#dcdcdc");
 
     sx().display("flex")
         .flex_direction("column")
         .align_items("center")
         .height("100%")
-        .with("color", "#6b7280")
+        .color("#6b7280")
         .margin("0 16px")
         .selector("::before", line_sx.clone())
         .selector("::after", line_sx)
@@ -102,21 +102,20 @@ static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
 fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
     if vertical {
         match label_position {
-            LabelPosition::Left => sx().selector("::before", sx().flex("0").with("height", "16px")),
-            LabelPosition::Right => sx().selector("::after", sx().flex("0").with("height", "16px")),
+            LabelPosition::Left => sx().selector("::before", sx().flex("0").height("16px")),
+            LabelPosition::Right => sx().selector("::after", sx().flex("0").height("16px")),
             LabelPosition::Center => sx(),
         }
     } else {
         match label_position {
-            LabelPosition::Left => sx().selector("::before", sx().flex("0").with("width", "16px")),
-            LabelPosition::Right => sx().selector("::after", sx().flex("0").with("width", "16px")),
+            LabelPosition::Left => sx().selector("::before", sx().flex("0").width("16px")),
+            LabelPosition::Right => sx().selector("::after", sx().flex("0").width("16px")),
             LabelPosition::Center => sx(),
         }
     }
 }
 
-static DIVIDER_LABEL_SX: StaticSx =
-    StaticSx::new(|| sx().padding("0 12px").with("white-space", "nowrap"));
+static DIVIDER_LABEL_SX: StaticSx = StaticSx::new(|| sx().padding("0 12px").white_space("nowrap"));
 
 #[derive(Props, Clone, PartialEq)]
 pub struct DividerProps {

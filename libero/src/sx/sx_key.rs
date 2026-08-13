@@ -29,6 +29,8 @@ pub enum Property {
     Border,
     BorderTop,
     BorderRight,
+    BorderBottom,
+    BorderLeft,
     Color,
     Flex,
     FlexGrow,
@@ -38,6 +40,7 @@ pub enum Property {
     BorderColor,
     FlexShrink,
     AlignSelf,
+    WhiteSpace,
 }
 
 impl Property {
@@ -69,6 +72,8 @@ impl Property {
             "border" => Some(Self::Border),
             "border-top" => Some(Self::BorderTop),
             "border-right" => Some(Self::BorderRight),
+            "border-bottom" => Some(Self::BorderBottom),
+            "border-left" => Some(Self::BorderLeft),
             "color" => Some(Self::Color),
             "flex" => Some(Self::Flex),
             "flex-grow" => Some(Self::FlexGrow),
@@ -78,6 +83,7 @@ impl Property {
             "border-color" => Some(Self::BorderColor),
             "flex-shrink" => Some(Self::FlexShrink),
             "align-self" => Some(Self::AlignSelf),
+            "white-space" => Some(Self::WhiteSpace),
             _ => None,
         }
     }
@@ -110,6 +116,8 @@ impl Property {
             Self::Border => "border",
             Self::BorderTop => "border-top",
             Self::BorderRight => "border-right",
+            Self::BorderBottom => "border-bottom",
+            Self::BorderLeft => "border-left",
             Self::Color => "color",
             Self::Flex => "flex",
             Self::FlexGrow => "flex-grow",
@@ -119,6 +127,7 @@ impl Property {
             Self::BorderColor => "border-color",
             Self::FlexShrink => "flex-shrink",
             Self::AlignSelf => "align-self",
+            Self::WhiteSpace => "white-space",
         }
     }
 }
