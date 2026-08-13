@@ -1,5 +1,6 @@
 use super::{
-    ContainerDefaults, HexColor, Sizes, StackAxisDefaults, StackDefaults, TitleDefaults, TitleLevel,
+    ContainerDefaults, HexColor, Sizes, StackAxisDefaults, StackDefaults, TextDefaults, TextSize,
+    TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -8,6 +9,7 @@ pub struct Theme {
     pub stack: StackDefaults,
     pub container: ContainerDefaults,
     pub titles: TitleDefaults,
+    pub texts: TextDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -71,6 +73,14 @@ impl Theme {
                 "1.5",
             ),
         ),
+        TextDefaults::new(
+            "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
+            TextSize::new("400", "0.75rem", "0em", "1.4"), // xs
+            TextSize::new("400", "0.875rem", "0em", "1.45"), // sm
+            TextSize::new("400", "1rem", "0em", "1.5"),    // md (default)
+            TextSize::new("400", "1.125rem", "0em", "1.55"), // lg
+            TextSize::new("400", "1.25rem", "0em", "1.6"), // xl
+        ),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -87,6 +97,7 @@ impl Theme {
         stack: StackDefaults,
         container: ContainerDefaults,
         titles: TitleDefaults,
+        texts: TextDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -102,6 +113,7 @@ impl Theme {
             stack,
             container,
             titles,
+            texts,
             primary,
             secondary,
             error,

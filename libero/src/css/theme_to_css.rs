@@ -7,7 +7,12 @@ use crate::theme::{
     H5_FONT_WEIGHT, H5_LETTER_SPACING, H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE,
     H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, NamedColorCss, STACK_COLUMN_ALIGN,
     STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING, STACK_COLUMN_WRAP, STACK_ROW_ALIGN,
-    STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, SizeCss, Theme,
+    STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, SizeCss, TEXT_FONT_FAMILY,
+    TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM, TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS,
+    TEXT_FONT_WEIGHT_LG, TEXT_FONT_WEIGHT_MD, TEXT_FONT_WEIGHT_SM, TEXT_FONT_WEIGHT_XL,
+    TEXT_FONT_WEIGHT_XS, TEXT_LETTER_SPACING_LG, TEXT_LETTER_SPACING_MD, TEXT_LETTER_SPACING_SM,
+    TEXT_LETTER_SPACING_XL, TEXT_LETTER_SPACING_XS, TEXT_LINE_HEIGHT_LG, TEXT_LINE_HEIGHT_MD,
+    TEXT_LINE_HEIGHT_SM, TEXT_LINE_HEIGHT_XL, TEXT_LINE_HEIGHT_XS, Theme,
 };
 
 use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
@@ -37,6 +42,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_stack_declarations(&mut declarations, theme);
     push_container_declarations(&mut declarations, theme);
     push_title_declarations(&mut declarations, theme);
+    push_text_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
     push_color_declarations(&mut declarations, Color::Primary, theme.primary);
     push_color_declarations(&mut declarations, Color::Secondary, theme.secondary);
@@ -145,6 +151,104 @@ fn push_container_declarations(declarations: &mut Vec<CssDeclaration>, theme: &T
     declarations.push(CssDeclaration::new(
         CONTAINER_GUTTERS.name(),
         SizeCss::SPACING.value(theme.container.gutters),
+    ));
+}
+
+fn push_text_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    // Font family (shared)
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_FAMILY.name(),
+        theme.texts.font_family,
+    ));
+
+    // XS
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_WEIGHT_XS.name(),
+        theme.texts.xs.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_SIZE_XS.name(),
+        theme.texts.xs.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LETTER_SPACING_XS.name(),
+        theme.texts.xs.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LINE_HEIGHT_XS.name(),
+        theme.texts.xs.line_height,
+    ));
+
+    // SM
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_WEIGHT_SM.name(),
+        theme.texts.sm.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_SIZE_SM.name(),
+        theme.texts.sm.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LETTER_SPACING_SM.name(),
+        theme.texts.sm.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LINE_HEIGHT_SM.name(),
+        theme.texts.sm.line_height,
+    ));
+
+    // MD
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_WEIGHT_MD.name(),
+        theme.texts.md.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_SIZE_MD.name(),
+        theme.texts.md.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LETTER_SPACING_MD.name(),
+        theme.texts.md.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LINE_HEIGHT_MD.name(),
+        theme.texts.md.line_height,
+    ));
+
+    // LG
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_WEIGHT_LG.name(),
+        theme.texts.lg.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_SIZE_LG.name(),
+        theme.texts.lg.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LETTER_SPACING_LG.name(),
+        theme.texts.lg.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LINE_HEIGHT_LG.name(),
+        theme.texts.lg.line_height,
+    ));
+
+    // XL
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_WEIGHT_XL.name(),
+        theme.texts.xl.font_weight,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_FONT_SIZE_XL.name(),
+        theme.texts.xl.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LETTER_SPACING_XL.name(),
+        theme.texts.xl.letter_spacing,
+    ));
+    declarations.push(CssDeclaration::new(
+        TEXT_LINE_HEIGHT_XL.name(),
+        theme.texts.xl.line_height,
     ));
 }
 
@@ -363,6 +467,13 @@ mod tests {
         assert!(css.as_str().contains("--lsx-h4-font-size:1rem;"));
         assert!(css.as_str().contains("--lsx-h5-font-size:0.875rem;"));
         assert!(css.as_str().contains("--lsx-h6-font-size:0.75rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-size-xs:0.75rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-size-sm:0.875rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-size-md:1rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-size-lg:1.125rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-size-xl:1.25rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-weight-xs:400;"));
+        assert!(css.as_str().contains("--lsx-text-line-height-md:1.5;"));
 
         assert!(css.as_str().contains("--lsx-black:#000000;"));
         assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));
