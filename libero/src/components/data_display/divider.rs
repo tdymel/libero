@@ -55,7 +55,6 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .border_style("solid")
         .border_color("#e0e0e0")
-        // Without label (simple dividers)
         .when(
             "vertical",
             sx().border_right("1px solid #e0e0e0").align_self("stretch"),
@@ -64,7 +63,6 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
             "horizontal",
             sx().border_bottom("1px solid #e0e0e0").height("1px"),
         )
-        // With label
         .when(
             "label",
             sx().display("flex")
@@ -92,40 +90,28 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
-    if vertical {
-        match label_position {
-            LabelPosition::Start => sx()
-                .selector("::before", sx().flex("0 0 10%"))
-                .selector("::after", sx().flex("1")),
-            LabelPosition::End => sx()
-                .selector("::before", sx().flex("1"))
-                .selector("::after", sx().flex("0 0 10%")),
-            LabelPosition::Center => sx(),
-        }
-    } else {
-        match label_position {
-            LabelPosition::Start => sx()
-                .selector("::before", sx().flex("0 0 10%"))
-                .selector("::after", sx().flex("1")),
-            LabelPosition::End => sx()
-                .selector("::before", sx().flex("1"))
-                .selector("::after", sx().flex("0 0 10%")),
-            LabelPosition::Center => sx(),
-        }
+fn divider_dynamic_sx(label_position: LabelPosition) -> Sx {
+    match label_position {
+        LabelPosition::Start => sx()
+            .selector("::before", sx().flex("0 0 10%"))
+            .selector("::after", sx().flex("1")),
+        LabelPosition::End => sx()
+            .selector("::before", sx().flex("1"))
+            .selector("::after", sx().flex("0 0 10%")),
+        LabelPosition::Center => sx(),
     }
 }
 
 static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
     sx().padding("0 12px")
         .white_space("nowrap")
-        .with("user-select", "none")
+        .user_select("none")
 });
 
 static DIVIDER_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
     sx().padding("8px 0")
         .white_space("nowrap")
-        .with("user-select", "none")
+        .user_select("none")
 });
 
 #[derive(Props, Clone, PartialEq)]
@@ -172,7 +158,7 @@ pub fn Divider(props: DividerProps) -> Element {
 
     let dynamic_class = if has_label {
         crate::context::use_sx(
-            &divider_dynamic_sx(vertical, label_position),
+            &divider_dynamic_sx(label_position),
             crate::SxLayer::UserDynamic,
         )
     } else {
@@ -182,34 +168,21 @@ pub fn Divider(props: DividerProps) -> Element {
     let class = class_list([props.class, framework_class, dynamic_class, static_class]);
     let data_state = divider_states.data_state();
 
-    if vertical {
-        rsx! {
-            div {
-                class: class,
-                "data-state": data_state,
-                ..props.attributes,
-                if has_label {
-                    span {
-                        class: crate::context::use_sx(&DIVIDER_LABEL_VERTICAL_SX, crate::SxLayer::Framework),
-                        {props.children}
-                    }
-                }
-            }
-        }
-    } else if has_label {
-        rsx! {
+    rsx! {
+        if has_label {
             div {
                 class: class,
                 "data-state": data_state,
                 ..props.attributes,
                 span {
-                    class: crate::context::use_sx(&DIVIDER_LABEL_HORIZONTAL_SX, crate::SxLayer::Framework),
+                    class: crate::context::use_sx(
+                        if vertical { &DIVIDER_LABEL_VERTICAL_SX } else { &DIVIDER_LABEL_HORIZONTAL_SX },
+                        crate::SxLayer::Framework
+                    ),
                     {props.children}
                 }
             }
-        }
-    } else {
-        rsx! {
+        } else {
             hr {
                 class: class,
                 "data-state": data_state,

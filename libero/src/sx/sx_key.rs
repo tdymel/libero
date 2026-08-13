@@ -41,6 +41,7 @@ pub enum Property {
     FlexShrink,
     AlignSelf,
     WhiteSpace,
+    UserSelect,
 }
 
 impl Property {
@@ -84,6 +85,7 @@ impl Property {
             "flex-shrink" => Some(Self::FlexShrink),
             "align-self" => Some(Self::AlignSelf),
             "white-space" => Some(Self::WhiteSpace),
+            "user-select" => Some(Self::UserSelect),
             _ => None,
         }
     }
@@ -128,6 +130,7 @@ impl Property {
             Self::FlexShrink => "flex-shrink",
             Self::AlignSelf => "align-self",
             Self::WhiteSpace => "white-space",
+            Self::UserSelect => "user-select",
         }
     }
 }
