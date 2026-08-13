@@ -1,4 +1,5 @@
 mod common;
+mod data_display;
 mod hello_world;
 mod layout;
 mod typography;
