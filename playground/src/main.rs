@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Container, HelloWorld, Stack, Title, TitleVariant, states},
+    components::{Container, HelloWorld, Stack, Text, Title, TitleVariant, states},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -115,6 +115,51 @@ fn App() -> Element {
                     variant: "h3",
                     size: "h2",
                     "H3 element with H2 styling"
+                }
+            }
+
+            Stack {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h3",
+                    "Text Sizes"
+                }
+                Text {
+                    size: "xs",
+                    "Extra small text"
+                }
+                Text {
+                    size: "sm",
+                    "Small text"
+                }
+                Text {
+                    size: "md",
+                    "Medium text (default)"
+                }
+                Text {
+                    size: "lg",
+                    "Large text"
+                }
+                Text {
+                    size: "xl",
+                    "Extra large text"
+                }
+            }
+
+            Stack {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h3",
+                    "Text with span"
+                }
+                p {
+                    "This is a paragraph with "
+                    Text {
+                        size: "lg",
+                        span: true,
+                        "highlighted text"
+                    }
+                    " inside it."
                 }
             }
         }
