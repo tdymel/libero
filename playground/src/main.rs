@@ -182,15 +182,15 @@ fn App() -> Element {
                     "Divider with label (left):"
                 }
                 Divider {
-                    label_position: "left",
-                    "Left Label"
+                    label_position: "start",
+                    "Start Label"
                 }
                 p {
-                    "Divider with label (right):"
+                    "Divider with label (end):"
                 }
                 Divider {
-                    label_position: "right",
-                    "Right Label"
+                    label_position: "end",
+                    "End Label"
                 }
                 p {
                     "Vertical dividers:"
@@ -223,7 +223,7 @@ fn App() -> Element {
                         "Left"
                         Divider {
                             vertical: true,
-                            label_position: "left",
+                            label_position: "start",
                             "Top"
                         }
                         "Right"
@@ -234,7 +234,7 @@ fn App() -> Element {
                         "Left"
                         Divider {
                             vertical: true,
-                            label_position: "right",
+                            label_position: "end",
                             "Bottom"
                         }
                         "Right"

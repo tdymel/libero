@@ -7,9 +7,9 @@ use crate::{
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LabelPosition {
-    Left,
+    Start,
     Center,
-    Right,
+    End,
 }
 
 impl Default for LabelPosition {
@@ -21,8 +21,8 @@ impl Default for LabelPosition {
 impl From<&str> for LabelPosition {
     fn from(value: &str) -> Self {
         match value.to_lowercase().as_str() {
-            "left" => Self::Left,
-            "right" => Self::Right,
+            "start" => Self::Start,
+            "end" => Self::End,
             "center" => Self::Center,
             _ => Self::Center,
         }
@@ -102,14 +102,14 @@ static DIVIDER_VERTICAL_WITH_LABEL_SX: StaticSx = StaticSx::new(|| {
 fn divider_dynamic_sx(vertical: bool, label_position: LabelPosition) -> Sx {
     if vertical {
         match label_position {
-            LabelPosition::Left => sx().selector("::before", sx().flex("0").height("8px")),
-            LabelPosition::Right => sx().selector("::after", sx().flex("0").height("8px")),
+            LabelPosition::Start => sx().selector("::before", sx().flex("0").height("8px")),
+            LabelPosition::End => sx().selector("::after", sx().flex("0").height("8px")),
             LabelPosition::Center => sx(),
         }
     } else {
         match label_position {
-            LabelPosition::Left => sx().selector("::before", sx().flex("0").width("16px")),
-            LabelPosition::Right => sx().selector("::after", sx().flex("0").width("16px")),
+            LabelPosition::Start => sx().selector("::before", sx().flex("0").width("16px")),
+            LabelPosition::End => sx().selector("::after", sx().flex("0").width("16px")),
             LabelPosition::Center => sx(),
         }
     }
