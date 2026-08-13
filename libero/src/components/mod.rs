@@ -2,6 +2,7 @@ mod a11y;
 mod common;
 mod data_display;
 mod hello_world;
+mod inputs;
 mod layout;
 mod typography;
 
