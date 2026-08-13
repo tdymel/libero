@@ -1,6 +1,6 @@
 use crate::{
     sx::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue},
-    theme::{Size, SizeCss},
+    theme::{ColorShade, ColorValue, Size, SizeCss},
 };
 
 use super::{
@@ -129,6 +129,9 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
     match value {
         ThemeAwareValue::Size(size) => to_size_css_value(property, *size),
         ThemeAwareValue::Number(value) => value.clone(),
+        ThemeAwareValue::Color(color) => {
+            CssColorValue(ColorValue::Shade(*color, ColorShade::S5)).value()
+        }
         ThemeAwareValue::ColorValue(value) => CssColorValue(*value).value(),
         ThemeAwareValue::CssVar(css_var) => css_var.value(),
         ThemeAwareValue::String(value) => value.clone(),
@@ -208,6 +211,14 @@ mod tests {
         assert!(css.contains("letter-spacing:var(--lsx-h1-letter-spacing);"));
         assert!(css.contains("line-height:var(--lsx-h1-line-height);"));
         assert!(css.contains("margin:0;"));
+    }
+
+    #[test]
+    fn sx_bare_color_defaults_to_shade_5_in_css() {
+        let stylesheet = Stylesheet::from(&sx().color("primary"));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("color:var(--lsx-primary-5);"));
     }
 
     #[test]

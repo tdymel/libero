@@ -3,8 +3,17 @@ use dioxus::prelude::*;
 use crate::{
     components::{Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::DividerDefaults,
+    theme::{ColorShade, ColorValue, DividerDefaults},
 };
+
+fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
+    match value {
+        ThemeAwareValue::Color(color) => {
+            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ColorShade::S3))
+        }
+        other => other.clone(),
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LabelPosition {
@@ -100,6 +109,7 @@ fn divider_dynamic_sx(
     has_label: bool,
     vertical: bool,
     spacing: Option<&ThemeAwareValue>,
+    color: Option<&ThemeAwareValue>,
 ) -> Sx {
     let position_sx = if has_label {
         match label_position {
@@ -115,12 +125,19 @@ fn divider_dynamic_sx(
         sx()
     };
 
-    position_sx.apply_if(spacing, |sx, spacing| {
+    let position_sx = position_sx.apply_if(spacing, |sx, spacing| {
         if vertical {
             sx.margin_left(spacing.clone()).margin_right(spacing.clone())
         } else {
             sx.margin_top(spacing.clone()).margin_bottom(spacing.clone())
         }
+    });
+
+    position_sx.apply_if(color, |base, color| {
+        base.border_color(color.clone())
+            .border_right_color(color.clone())
+            .border_bottom_color(color.clone())
+            .selector("&::before, &::after", sx().background(color.clone()))
     })
 }
 
@@ -152,6 +169,8 @@ pub struct DividerProps {
     label_position: Input<LabelPosition>,
     #[props(default, into)]
     spacing: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    color: Input<ThemeAwareValue>,
     children: Option<Element>,
 }
 
@@ -178,8 +197,16 @@ pub fn Divider(props: DividerProps) -> Element {
         .as_ref()
         .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
 
+    let color = props.color.as_ref().map(divider_color_value);
+
     let dynamic_class = crate::context::use_sx(
-        &divider_dynamic_sx(label_position, has_label, vertical, props.spacing.as_ref()),
+        &divider_dynamic_sx(
+            label_position,
+            has_label,
+            vertical,
+            props.spacing.as_ref(),
+            color.as_ref(),
+        ),
         crate::SxLayer::UserDynamic,
     );
 

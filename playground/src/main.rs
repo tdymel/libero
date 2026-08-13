@@ -289,6 +289,27 @@ fn App() -> Element {
                     }
                     "Right"
                 }
+                p {
+                    "Color: bare name defaults to shade 3, explicit shade is respected:"
+                }
+                "Above"
+                Divider {
+                    color: "primary",
+                }
+                Divider {
+                    color: "primary",
+                    "primary (shade 3)"
+                }
+                "Below"
+                "Above"
+                Divider {
+                    color: "success.7",
+                }
+                Divider {
+                    color: "success.7",
+                    "success.7"
+                }
+                "Below"
             }
         }
     }

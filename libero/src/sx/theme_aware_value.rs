@@ -1,4 +1,4 @@
-use crate::theme::{ColorValue, CssVar, Size};
+use crate::theme::{Color, ColorValue, CssVar, Size};
 
 use super::BreakpointValue;
 
@@ -7,6 +7,7 @@ pub enum ThemeAwareValue {
     String(String),
     Number(String),
     Size(Size),
+    Color(Color),
     ColorValue(ColorValue),
     CssVar(CssVar),
     BreakpointValue(BreakpointValue),
@@ -16,6 +17,10 @@ impl From<String> for ThemeAwareValue {
     fn from(value: String) -> Self {
         if let Some(size) = Size::parse_dynamic(value.as_str()) {
             return Self::Size(size);
+        }
+
+        if let Some(color) = Color::parse(value.as_str()) {
+            return Self::Color(color);
         }
 
         if let Some(color) = ColorValue::parse(value.as_str()) {
@@ -39,6 +44,12 @@ impl From<&str> for ThemeAwareValue {
 impl From<Size> for ThemeAwareValue {
     fn from(value: Size) -> Self {
         Self::Size(value)
+    }
+}
+
+impl From<Color> for ThemeAwareValue {
+    fn from(value: Color) -> Self {
+        Self::Color(value)
     }
 }
 
@@ -113,6 +124,29 @@ mod tests {
         assert_eq!(
             ThemeAwareValue::from("var(--other-var)"),
             ThemeAwareValue::CssVar(CssVar::Owned("--other-var".to_string()))
+        );
+    }
+
+    #[test]
+    fn theme_aware_value_parses_a_bare_color_name_as_color_not_color_value() {
+        assert_eq!(
+            ThemeAwareValue::from("primary"),
+            ThemeAwareValue::Color(crate::theme::Color::Primary)
+        );
+        assert_eq!(
+            ThemeAwareValue::from(crate::theme::Color::Secondary),
+            ThemeAwareValue::Color(crate::theme::Color::Secondary)
+        );
+    }
+
+    #[test]
+    fn theme_aware_value_parses_an_explicit_shade_as_color_value() {
+        assert_eq!(
+            ThemeAwareValue::from("primary.7"),
+            ThemeAwareValue::ColorValue(crate::theme::ColorValue::Shade(
+                crate::theme::Color::Primary,
+                crate::theme::ColorShade::S7
+            ))
         );
     }
 }
