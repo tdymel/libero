@@ -20,6 +20,7 @@ pub struct Theme {
     pub grey: HexColor,
     pub black: HexColor,
     pub white: HexColor,
+    pub font_smoothing: bool,
 }
 
 impl Theme {
@@ -92,6 +93,7 @@ impl Theme {
         HexColor::new(0x868E96),
         HexColor::new(0x000000),
         HexColor::new(0xFFFFFF),
+        true,
     );
 
     pub const fn new(
@@ -110,6 +112,7 @@ impl Theme {
         grey: HexColor,
         black: HexColor,
         white: HexColor,
+        font_smoothing: bool,
     ) -> Self {
         Self {
             spacing,
@@ -127,6 +130,7 @@ impl Theme {
             grey,
             black,
             white,
+            font_smoothing,
         }
     }
 }

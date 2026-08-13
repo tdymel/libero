@@ -1,19 +1,19 @@
 use crate::theme::{
     CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, DIVIDER_SPACING,
-    H1_FONT_FAMILY, H1_FONT_SIZE,
-    H1_FONT_WEIGHT, H1_LETTER_SPACING, H1_LINE_HEIGHT, H2_FONT_FAMILY, H2_FONT_SIZE,
-    H2_FONT_WEIGHT, H2_LETTER_SPACING, H2_LINE_HEIGHT, H3_FONT_FAMILY, H3_FONT_SIZE,
-    H3_FONT_WEIGHT, H3_LETTER_SPACING, H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE,
-    H4_FONT_WEIGHT, H4_LETTER_SPACING, H4_LINE_HEIGHT, H5_FONT_FAMILY, H5_FONT_SIZE,
-    H5_FONT_WEIGHT, H5_LETTER_SPACING, H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE,
-    H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, NamedColorCss, STACK_COLUMN_ALIGN,
-    STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING, STACK_COLUMN_WRAP, STACK_ROW_ALIGN,
-    STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP, SizeCss, TEXT_FONT_FAMILY,
-    TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM, TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS,
-    TEXT_FONT_WEIGHT_LG, TEXT_FONT_WEIGHT_MD, TEXT_FONT_WEIGHT_SM, TEXT_FONT_WEIGHT_XL,
-    TEXT_FONT_WEIGHT_XS, TEXT_LETTER_SPACING_LG, TEXT_LETTER_SPACING_MD, TEXT_LETTER_SPACING_SM,
-    TEXT_LETTER_SPACING_XL, TEXT_LETTER_SPACING_XS, TEXT_LINE_HEIGHT_LG, TEXT_LINE_HEIGHT_MD,
-    TEXT_LINE_HEIGHT_SM, TEXT_LINE_HEIGHT_XL, TEXT_LINE_HEIGHT_XS, Theme,
+    H1_FONT_FAMILY, H1_FONT_SIZE, H1_FONT_WEIGHT, H1_LETTER_SPACING,
+    H1_LINE_HEIGHT, H2_FONT_FAMILY, H2_FONT_SIZE, H2_FONT_WEIGHT, H2_LETTER_SPACING,
+    H2_LINE_HEIGHT, H3_FONT_FAMILY, H3_FONT_SIZE, H3_FONT_WEIGHT, H3_LETTER_SPACING,
+    H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE, H4_FONT_WEIGHT, H4_LETTER_SPACING,
+    H4_LINE_HEIGHT, H5_FONT_FAMILY, H5_FONT_SIZE, H5_FONT_WEIGHT, H5_LETTER_SPACING,
+    H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE, H6_FONT_WEIGHT, H6_LETTER_SPACING,
+    H6_LINE_HEIGHT, NamedColorCss, STACK_COLUMN_ALIGN, STACK_COLUMN_JUSTIFY, STACK_COLUMN_SPACING,
+    STACK_COLUMN_WRAP, STACK_ROW_ALIGN, STACK_ROW_JUSTIFY, STACK_ROW_SPACING, STACK_ROW_WRAP,
+    SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM,
+    TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS, TEXT_FONT_WEIGHT_LG, TEXT_FONT_WEIGHT_MD,
+    TEXT_FONT_WEIGHT_SM, TEXT_FONT_WEIGHT_XL, TEXT_FONT_WEIGHT_XS, TEXT_LETTER_SPACING_LG,
+    TEXT_LETTER_SPACING_MD, TEXT_LETTER_SPACING_SM, TEXT_LETTER_SPACING_XL, TEXT_LETTER_SPACING_XS,
+    TEXT_LINE_HEIGHT_LG, TEXT_LINE_HEIGHT_MD, TEXT_LINE_HEIGHT_SM, TEXT_LINE_HEIGHT_XL,
+    TEXT_LINE_HEIGHT_XS, Theme,
 };
 
 use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
@@ -32,8 +32,52 @@ const SHADES: [ColorShade; 9] = [
 
 impl From<&Theme> for Stylesheet {
     fn from(theme: &Theme) -> Self {
-        Stylesheet::new(vec![CssScope::new(":root", theme_declarations(theme))])
+        let mut scopes = vec![CssScope::new(":root", theme_declarations(theme))];
+        scopes.extend(global_reset_scopes(theme));
+        scopes.push(body_scope(theme));
+        Stylesheet::new(scopes)
     }
+}
+
+fn global_reset_scopes(theme: &Theme) -> Vec<CssScope> {
+    let mut html_declarations = vec![CssDeclaration::new("box-sizing", "border-box")];
+    if theme.font_smoothing {
+        html_declarations.push(CssDeclaration::new("-webkit-font-smoothing", "antialiased"));
+        html_declarations.push(CssDeclaration::new("-moz-osx-font-smoothing", "grayscale"));
+    }
+
+    vec![
+        CssScope::new("html", html_declarations),
+        CssScope::new(
+            "*, *::before, *::after",
+            vec![CssDeclaration::new("box-sizing", "inherit")],
+        ),
+    ]
+}
+
+fn body_scope(theme: &Theme) -> CssScope {
+    // Black/white have no per-shade contrast var of their own (unlike the
+    // palette colors), so the contrast is computed here the same way
+    // push_color_declarations does it for palette shades.
+    let text_color_var = if theme.white.contrast().rgb() == 0x00_00_00 {
+        NamedColorCss::BLACK.value()
+    } else {
+        NamedColorCss::WHITE.value()
+    };
+
+    CssScope::new(
+        "body",
+        vec![
+            CssDeclaration::new("margin", "0"),
+            CssDeclaration::new("background-color", NamedColorCss::WHITE.value()),
+            CssDeclaration::new("color", text_color_var),
+            CssDeclaration::new("font-family", TEXT_FONT_FAMILY.value()),
+            CssDeclaration::new("font-size", TEXT_FONT_SIZE_MD.value()),
+            CssDeclaration::new("font-weight", TEXT_FONT_WEIGHT_MD.value()),
+            CssDeclaration::new("line-height", TEXT_LINE_HEIGHT_MD.value()),
+            CssDeclaration::new("letter-spacing", TEXT_LETTER_SPACING_MD.value()),
+        ],
+    )
 }
 
 fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
@@ -508,5 +552,35 @@ mod tests {
         );
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));
+    }
+
+    #[test]
+    fn theme_css_sets_body_and_global_box_sizing_defaults() {
+        let theme = &Theme::DEFAULT;
+        let css = Stylesheet::from(theme);
+        let css = css.as_str();
+
+        assert!(css.contains("html{box-sizing:border-box;"));
+        assert!(css.contains("-webkit-font-smoothing:antialiased;"));
+        assert!(css.contains("-moz-osx-font-smoothing:grayscale;"));
+        assert!(css.contains("*, *::before, *::after{box-sizing:inherit;}"));
+
+        assert!(css.contains("body{margin:0;"));
+        assert!(css.contains("background-color:var(--lsx-white);"));
+        // Default theme's white has high luminance, so its contrast is black.
+        assert!(css.contains("color:var(--lsx-black);"));
+        assert!(css.contains("font-family:var(--lsx-text-font-family);"));
+        assert!(css.contains("font-size:var(--lsx-text-font-size-md);"));
+    }
+
+    #[test]
+    fn theme_css_omits_font_smoothing_when_disabled() {
+        let mut theme = Theme::DEFAULT;
+        theme.font_smoothing = false;
+        let css = Stylesheet::from(&theme);
+        let css = css.as_str();
+
+        assert!(css.contains("html{box-sizing:border-box;}"));
+        assert!(!css.contains("font-smoothing"));
     }
 }
