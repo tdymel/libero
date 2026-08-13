@@ -11,6 +11,7 @@ pub enum Property {
     PaddingRight,
     MarginLeft,
     MarginRight,
+    Margin,
     Display,
     FlexDirection,
     FlexWrap,
@@ -18,6 +19,11 @@ pub enum Property {
     JustifyContent,
     Gap,
     MaxWidth,
+    FontFamily,
+    FontSize,
+    FontWeight,
+    LetterSpacing,
+    LineHeight,
 }
 
 impl Property {
@@ -31,6 +37,7 @@ impl Property {
             "padding-right" => Some(Self::PaddingRight),
             "margin-left" => Some(Self::MarginLeft),
             "margin-right" => Some(Self::MarginRight),
+            "margin" => Some(Self::Margin),
             "display" => Some(Self::Display),
             "flex-direction" => Some(Self::FlexDirection),
             "flex-wrap" => Some(Self::FlexWrap),
@@ -38,6 +45,11 @@ impl Property {
             "justify-content" => Some(Self::JustifyContent),
             "gap" => Some(Self::Gap),
             "max-width" => Some(Self::MaxWidth),
+            "font-family" => Some(Self::FontFamily),
+            "font-size" => Some(Self::FontSize),
+            "font-weight" => Some(Self::FontWeight),
+            "letter-spacing" => Some(Self::LetterSpacing),
+            "line-height" => Some(Self::LineHeight),
             _ => None,
         }
     }
@@ -52,6 +64,7 @@ impl Property {
             Self::PaddingRight => "padding-right",
             Self::MarginLeft => "margin-left",
             Self::MarginRight => "margin-right",
+            Self::Margin => "margin",
             Self::Display => "display",
             Self::FlexDirection => "flex-direction",
             Self::FlexWrap => "flex-wrap",
@@ -59,6 +72,11 @@ impl Property {
             Self::JustifyContent => "justify-content",
             Self::Gap => "gap",
             Self::MaxWidth => "max-width",
+            Self::FontFamily => "font-family",
+            Self::FontSize => "font-size",
+            Self::FontWeight => "font-weight",
+            Self::LetterSpacing => "letter-spacing",
+            Self::LineHeight => "line-height",
         }
     }
 }

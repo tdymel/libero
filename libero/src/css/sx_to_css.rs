@@ -169,4 +169,25 @@ mod tests {
         assert!(css.contains("background:var(--lsx-secondary-4);"));
         assert!(!css.contains("background:var(--lsx-secondary-2);"));
     }
+
+    #[test]
+    fn sx_font_properties_emit_correctly() {
+        let stylesheet = Stylesheet::from(
+            &sx()
+                .font_family("var(--lsx-h1-font-family)")
+                .font_size("var(--lsx-h1-font-size)")
+                .font_weight("700")
+                .letter_spacing("var(--lsx-h1-letter-spacing)")
+                .line_height("var(--lsx-h1-line-height)")
+                .margin("0"),
+        );
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("font-family:var(--lsx-h1-font-family);"));
+        assert!(css.contains("font-size:var(--lsx-h1-font-size);"));
+        assert!(css.contains("font-weight:700;"));
+        assert!(css.contains("letter-spacing:var(--lsx-h1-letter-spacing);"));
+        assert!(css.contains("line-height:var(--lsx-h1-line-height);"));
+        assert!(css.contains("margin:0;"));
+    }
 }

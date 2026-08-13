@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Container, HelloWorld, Stack, states},
+    components::{Container, HelloWorld, Stack, Title, TitleVariant, states},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -74,6 +74,48 @@ fn App() -> Element {
                 sx: sx().with("border", "1px solid var(--lsx-grey-4)"),
                 p { "Container example (size: md, gutters: sm)" }
                 p { "Uses theme-aware size + gutters overrides." }
+            }
+
+            Stack {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: TitleVariant::H1,
+                    "H1 Heading"
+                }
+                Title {
+                    variant: "h2",
+                    "H2 Heading"
+                }
+                Title {
+                    variant: "h3",
+                    "H3 Heading"
+                }
+                Title {
+                    variant: "h4",
+                    "H4 Heading"
+                }
+                Title {
+                    variant: "h5",
+                    "H5 Heading"
+                }
+                Title {
+                    variant: "h6",
+                    "H6 Heading"
+                }
+            }
+
+            Stack {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    size: "h1",
+                    "H2 element with H1 styling"
+                }
+                Title {
+                    variant: "h3",
+                    size: "h2",
+                    "H3 element with H2 styling"
+                }
             }
         }
     }

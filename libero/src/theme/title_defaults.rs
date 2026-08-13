@@ -1,3 +1,5 @@
+use crate::sx::{Sx, sx};
+
 use super::CssVar;
 
 // H1
@@ -96,5 +98,53 @@ impl TitleDefaults {
             h5,
             h6,
         }
+    }
+
+    pub fn h1_sx() -> Sx {
+        sx().font_family(H1_FONT_FAMILY.value())
+            .font_size(H1_FONT_SIZE.value())
+            .font_weight(H1_FONT_WEIGHT.value())
+            .letter_spacing(H1_LETTER_SPACING.value())
+            .line_height(H1_LINE_HEIGHT.value())
+    }
+
+    pub fn h2_sx() -> Sx {
+        sx().font_family(H2_FONT_FAMILY.value())
+            .font_size(H2_FONT_SIZE.value())
+            .font_weight(H2_FONT_WEIGHT.value())
+            .letter_spacing(H2_LETTER_SPACING.value())
+            .line_height(H2_LINE_HEIGHT.value())
+    }
+
+    pub fn h3_sx() -> Sx {
+        sx().font_family(H3_FONT_FAMILY.value())
+            .font_size(H3_FONT_SIZE.value())
+            .font_weight(H3_FONT_WEIGHT.value())
+            .letter_spacing(H3_LETTER_SPACING.value())
+            .line_height(H3_LINE_HEIGHT.value())
+    }
+
+    pub fn h4_sx() -> Sx {
+        sx().font_family(H4_FONT_FAMILY.value())
+            .font_size(H4_FONT_SIZE.value())
+            .font_weight(H4_FONT_WEIGHT.value())
+            .letter_spacing(H4_LETTER_SPACING.value())
+            .line_height(H4_LINE_HEIGHT.value())
+    }
+
+    pub fn h5_sx() -> Sx {
+        sx().font_family(H5_FONT_FAMILY.value())
+            .font_size(H5_FONT_SIZE.value())
+            .font_weight(H5_FONT_WEIGHT.value())
+            .letter_spacing(H5_LETTER_SPACING.value())
+            .line_height(H5_LINE_HEIGHT.value())
+    }
+
+    pub fn h6_sx() -> Sx {
+        sx().font_family(H6_FONT_FAMILY.value())
+            .font_size(H6_FONT_SIZE.value())
+            .font_weight(H6_FONT_WEIGHT.value())
+            .letter_spacing(H6_LETTER_SPACING.value())
+            .line_height(H6_LINE_HEIGHT.value())
     }
 }

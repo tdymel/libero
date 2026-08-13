@@ -63,6 +63,30 @@ impl Sx {
         self.with_known_property(Property::MaxWidth, value)
     }
 
+    pub fn margin(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Margin, value)
+    }
+
+    pub fn font_family(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::FontFamily, value)
+    }
+
+    pub fn font_size(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::FontSize, value)
+    }
+
+    pub fn font_weight(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::FontWeight, value)
+    }
+
+    pub fn letter_spacing(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::LetterSpacing, value)
+    }
+
+    pub fn line_height(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::LineHeight, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }

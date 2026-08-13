@@ -1,7 +1,9 @@
 use crate::{
     components::States,
-    sx::{StaticSx, Sx, ThemeAwareValue},
+    sx::{StaticSx, Sx},
 };
+
+use crate::sx::ThemeAwareValue;
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub enum Input<T: 'static> {

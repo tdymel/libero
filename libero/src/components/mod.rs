@@ -6,6 +6,7 @@ mod typography;
 pub use common::{Input, States, states};
 pub use hello_world::HelloWorld;
 pub use layout::*;
+pub use typography::*;
 
 /*
  * TODOs:
