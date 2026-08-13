@@ -48,8 +48,6 @@ impl From<String> for Input<LabelPosition> {
 }
 
 static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
-    let line_sx = sx().content("\"\"").flex("1").background("#dcdcdc");
-
     sx().margin("0")
         .flex_shrink("0")
         .border_width("0")
@@ -69,8 +67,10 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .border("0")
                 .color("#6b7280")
-                .selector("::before", line_sx.clone())
-                .selector("::after", line_sx),
+                .selector(
+                    "&::before, &::after",
+                    sx().content("\"\"").flex("1").background("#dcdcdc"),
+                ),
         )
         .when(
             "horizontal && label",
@@ -80,15 +80,13 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .height("auto")
                 .width("100%")
                 .margin("16px 0")
-                .selector("::before", sx().height("1px"))
-                .selector("::after", sx().height("1px")),
+                .selector("&::before, &::after", sx().height("1px")),
         )
         .when(
             "vertical && label",
             sx().flex_direction("column")
                 .align_self("stretch")
-                .selector("::before", sx().width("1px"))
-                .selector("::after", sx().width("1px")),
+                .selector("&::before, &::after", sx().width("1px")),
         )
 });
 

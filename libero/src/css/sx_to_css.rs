@@ -5,7 +5,7 @@ use crate::{
 
 use super::{
     CssDeclaration, CssScope, Stylesheet, condition::condition_groups,
-    css_color_value::CssColorValue,
+    css_color_value::CssColorValue, selector::expand_selector,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -57,12 +57,8 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
 
 fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
     match modifier {
-        SxModifier::Selector(suffix) => CssContext {
-            selectors: context
-                .selectors
-                .iter()
-                .map(|selector| format!("{selector}{suffix}"))
-                .collect(),
+        SxModifier::Selector(pattern) => CssContext {
+            selectors: expand_selector(pattern, &context.selectors),
             media_query: context.media_query.clone(),
         },
         SxModifier::Condition(condition) => CssContext {
@@ -239,5 +235,27 @@ mod tests {
         for pair in ["a\"][data-state~=\"c", "a\"][data-state~=\"d", "b\"][data-state~=\"c", "b\"][data-state~=\"d"] {
             assert!(css.contains(&format!("[data-state~=\"{pair}\"]")), "missing combination for {pair} in {css}");
         }
+    }
+
+    #[test]
+    fn sx_selector_ampersand_shares_one_nested_sx_across_a_comma_list() {
+        let base = sx().selector("&::before, &::after", sx().height("1px"));
+        let stylesheet = Stylesheet::from(&base);
+        let css = stylesheet.as_str();
+        let class = base.class_name();
+
+        assert!(css.contains(&format!(".{class}::before, .{class}::after{{height:1px;}}")));
+    }
+
+    #[test]
+    fn sx_selector_ampersand_matches_plain_suffix_form() {
+        let ampersand_sx = sx().selector("&::before", sx().height("1px"));
+        let plain_sx = sx().selector("::before", sx().height("1px"));
+
+        let ampersand_css = Stylesheet::from(&ampersand_sx).as_str().to_string();
+        let plain_css = Stylesheet::from(&plain_sx).as_str().to_string();
+
+        assert!(ampersand_css.contains(&format!(".{}::before{{height:1px;}}", ampersand_sx.class_name())));
+        assert!(plain_css.contains(&format!(".{}::before{{height:1px;}}", plain_sx.class_name())));
     }
 }
