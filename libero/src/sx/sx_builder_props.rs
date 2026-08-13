@@ -187,6 +187,14 @@ impl Sx {
         self.with_known_property(Property::Clip, value)
     }
 
+    pub fn object_fit(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::ObjectFit, value)
+    }
+
+    pub fn border_radius(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderRadius, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }

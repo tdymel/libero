@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Container, Divider, HelloWorld, Stack, Text, Title, TitleVariant, VisuallyHidden, states,
+        Box, Container, Divider, HelloWorld, Image, Stack, Text, Title, TitleVariant,
+        VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
     theme::Size,
@@ -332,6 +333,51 @@ fn App() -> Element {
                     "4.5 "
                     VisuallyHidden {
                         "out of 5 stars"
+                    }
+                }
+                Title {
+                    variant: "h2",
+                    "Image Examples"
+                }
+                p {
+                    "Default (fills parent, object-fit: cover):"
+                }
+                Stack {
+                    direction: "row",
+                    gap: "md",
+                    Box {
+                        sx: sx().width("160px").height("120px"),
+                        Image {
+                            src: "https://picsum.photos/id/1015/400/300",
+                            alt: "A river winding through a mountain valley",
+                        }
+                    }
+                    Box {
+                        sx: sx().width("160px").height("120px"),
+                        Image {
+                            src: "https://picsum.photos/id/1025/400/300",
+                            fit: "contain",
+                            alt: "A dog",
+                        }
+                    }
+                    Box {
+                        sx: sx().width("160px").height("120px"),
+                        Image {
+                            src: "https://picsum.photos/id/1035/400/300",
+                            radius: "12px",
+                            alt: "A forest lake",
+                        }
+                    }
+                }
+                p {
+                    "Broken src falls back to fallback_src:"
+                }
+                Box {
+                    sx: sx().width("160px").height("120px"),
+                    Image {
+                        src: "https://example.com/this-image-does-not-exist.jpg",
+                        fallback_src: "https://picsum.photos/id/1043/400/300".to_string(),
+                        alt: "Fallback placeholder image",
                     }
                 }
             }

@@ -49,6 +49,8 @@ pub enum Property {
     Position,
     Overflow,
     Clip,
+    ObjectFit,
+    BorderRadius,
 }
 
 impl Property {
@@ -100,6 +102,8 @@ impl Property {
             "position" => Some(Self::Position),
             "overflow" => Some(Self::Overflow),
             "clip" => Some(Self::Clip),
+            "object-fit" => Some(Self::ObjectFit),
+            "border-radius" => Some(Self::BorderRadius),
             _ => None,
         }
     }
@@ -152,6 +156,8 @@ impl Property {
             Self::Position => "position",
             Self::Overflow => "overflow",
             Self::Clip => "clip",
+            Self::ObjectFit => "object-fit",
+            Self::BorderRadius => "border-radius",
         }
     }
 }
