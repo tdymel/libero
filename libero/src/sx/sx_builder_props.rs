@@ -43,6 +43,14 @@ impl Sx {
         self.with_known_property(Property::MarginRight, value)
     }
 
+    pub fn margin_top(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MarginTop, value)
+    }
+
+    pub fn margin_bottom(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MarginBottom, value)
+    }
+
     pub fn flex_direction(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::FlexDirection, value)
     }

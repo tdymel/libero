@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Input, States, common::class_list},
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::DividerDefaults,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -48,8 +49,7 @@ impl From<String> for Input<LabelPosition> {
 }
 
 static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().margin("0")
-        .flex_shrink("0")
+    sx().flex_shrink("0")
         .border_width("0")
         .border_style("solid")
         .border_color("grey.3")
@@ -57,13 +57,15 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
             "vertical",
             sx().border_right("1px solid")
                 .border_right_color("grey.3")
-                .align_self("stretch"),
+                .align_self("stretch")
+                .and(DividerDefaults::vertical_sx()),
         )
         .when(
             "horizontal",
             sx().border_bottom("1px solid")
                 .border_bottom_color("grey.3")
-                .height("1px"),
+                .height("1px")
+                .and(DividerDefaults::horizontal_sx()),
         )
         .when(
             "label",
@@ -83,7 +85,6 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().border_bottom("0")
                 .height("auto")
                 .width("100%")
-                .margin("16px 0")
                 .selector("&::before, &::after", sx().height("1px")),
         )
         .when(
@@ -94,16 +95,33 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-fn divider_dynamic_sx(label_position: LabelPosition) -> Sx {
-    match label_position {
-        LabelPosition::Start => sx()
-            .selector("::before", sx().flex("0 0 10%"))
-            .selector("::after", sx().flex("1")),
-        LabelPosition::End => sx()
-            .selector("::before", sx().flex("1"))
-            .selector("::after", sx().flex("0 0 10%")),
-        LabelPosition::Center => sx(),
-    }
+fn divider_dynamic_sx(
+    label_position: LabelPosition,
+    has_label: bool,
+    vertical: bool,
+    spacing: Option<&ThemeAwareValue>,
+) -> Sx {
+    let position_sx = if has_label {
+        match label_position {
+            LabelPosition::Start => sx()
+                .selector("::before", sx().flex("0 0 10%"))
+                .selector("::after", sx().flex("1")),
+            LabelPosition::End => sx()
+                .selector("::before", sx().flex("1"))
+                .selector("::after", sx().flex("0 0 10%")),
+            LabelPosition::Center => sx(),
+        }
+    } else {
+        sx()
+    };
+
+    position_sx.apply_if(spacing, |sx, spacing| {
+        if vertical {
+            sx.margin_left(spacing.clone()).margin_right(spacing.clone())
+        } else {
+            sx.margin_top(spacing.clone()).margin_bottom(spacing.clone())
+        }
+    })
 }
 
 static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
@@ -132,6 +150,8 @@ pub struct DividerProps {
     vertical: Option<bool>,
     #[props(default, into)]
     label_position: Input<LabelPosition>,
+    #[props(default, into)]
+    spacing: Input<ThemeAwareValue>,
     children: Option<Element>,
 }
 
@@ -158,14 +178,10 @@ pub fn Divider(props: DividerProps) -> Element {
         .as_ref()
         .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
 
-    let dynamic_class = if has_label {
-        crate::context::use_sx(
-            &divider_dynamic_sx(label_position),
-            crate::SxLayer::UserDynamic,
-        )
-    } else {
-        None
-    };
+    let dynamic_class = crate::context::use_sx(
+        &divider_dynamic_sx(label_position, has_label, vertical, props.spacing.as_ref()),
+        crate::SxLayer::UserDynamic,
+    );
 
     let class = class_list([props.class, framework_class, dynamic_class, static_class]);
     let data_state = divider_states.data_state();

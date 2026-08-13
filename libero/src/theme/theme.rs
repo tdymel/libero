@@ -1,6 +1,6 @@
 use super::{
-    ContainerDefaults, HexColor, Sizes, StackAxisDefaults, StackDefaults, TextDefaults, TextSize,
-    TitleDefaults, TitleLevel,
+    ContainerDefaults, DividerDefaults, HexColor, Sizes, StackAxisDefaults, StackDefaults,
+    TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -8,6 +8,7 @@ pub struct Theme {
     pub spacing: Sizes<u8>,
     pub stack: StackDefaults,
     pub container: ContainerDefaults,
+    pub divider: DividerDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
     pub primary: HexColor,
@@ -29,6 +30,7 @@ impl Theme {
             StackAxisDefaults::new("center", "flex-start", super::Size::Md, true),
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
+        DividerDefaults::new(None),
         TitleDefaults::new(
             TitleLevel::new(
                 "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
@@ -96,6 +98,7 @@ impl Theme {
         spacing: Sizes<u8>,
         stack: StackDefaults,
         container: ContainerDefaults,
+        divider: DividerDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
         primary: HexColor,
@@ -112,6 +115,7 @@ impl Theme {
             spacing,
             stack,
             container,
+            divider,
             titles,
             texts,
             primary,

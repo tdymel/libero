@@ -240,6 +240,55 @@ fn App() -> Element {
                         "Right"
                     }
                 }
+                p {
+                    "Spacing defaults to none (plain and labeled dividers now match):"
+                }
+                "Above"
+                Divider {}
+                Divider {
+                    "OR"
+                }
+                "Below"
+                p {
+                    "Horizontal spacing (\"md\"), plain and labeled alike:"
+                }
+                "Above"
+                Divider {
+                    spacing: "md",
+                }
+                Divider {
+                    spacing: "md",
+                    "OR"
+                }
+                "Below"
+                p {
+                    "Horizontal spacing (\"xl\"):"
+                }
+                "Above"
+                Divider {
+                    spacing: "xl",
+                    "OR"
+                }
+                "Below"
+                p {
+                    "Vertical spacing (\"md\"), applied left/right instead:"
+                }
+                Stack {
+                    direction: "row",
+                    sx: sx().height("100px"),
+                    "Left"
+                    Divider {
+                        vertical: true,
+                        spacing: "md",
+                    }
+                    "Middle"
+                    Divider {
+                        vertical: true,
+                        spacing: "md",
+                        "OR"
+                    }
+                    "Right"
+                }
             }
         }
     }

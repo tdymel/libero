@@ -1,5 +1,6 @@
 use crate::theme::{
-    CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, H1_FONT_FAMILY, H1_FONT_SIZE,
+    CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, DIVIDER_SPACING,
+    H1_FONT_FAMILY, H1_FONT_SIZE,
     H1_FONT_WEIGHT, H1_LETTER_SPACING, H1_LINE_HEIGHT, H2_FONT_FAMILY, H2_FONT_SIZE,
     H2_FONT_WEIGHT, H2_LETTER_SPACING, H2_LINE_HEIGHT, H3_FONT_FAMILY, H3_FONT_SIZE,
     H3_FONT_WEIGHT, H3_LETTER_SPACING, H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE,
@@ -41,6 +42,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_breakpoint_declarations(&mut declarations);
     push_stack_declarations(&mut declarations, theme);
     push_container_declarations(&mut declarations, theme);
+    push_divider_declarations(&mut declarations, theme);
     push_title_declarations(&mut declarations, theme);
     push_text_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
@@ -152,6 +154,14 @@ fn push_container_declarations(declarations: &mut Vec<CssDeclaration>, theme: &T
         CONTAINER_GUTTERS.name(),
         SizeCss::SPACING.value(theme.container.gutters),
     ));
+}
+
+fn push_divider_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    let spacing = match theme.divider.spacing {
+        Some(size) => SizeCss::SPACING.value(size),
+        None => "0".to_string(),
+    };
+    declarations.push(CssDeclaration::new(DIVIDER_SPACING.name(), spacing));
 }
 
 fn push_text_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
@@ -443,6 +453,7 @@ mod tests {
             css.as_str()
                 .contains("--lsx-container-gutters:var(--lsx-spacing-md);")
         );
+        assert!(css.as_str().contains("--lsx-divider-spacing:0;"));
         assert!(css.as_str().contains("--lsx-stack-column-align:stretch;"));
         assert!(
             css.as_str()

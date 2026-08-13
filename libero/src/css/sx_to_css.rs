@@ -143,7 +143,12 @@ fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
         SxPropertyKey::Known(Property::PaddingTop)
         | SxPropertyKey::Known(Property::PaddingLeft)
         | SxPropertyKey::Known(Property::PaddingRight)
-        | SxPropertyKey::Known(Property::Gap) => SizeCss::SPACING.value(size),
+        | SxPropertyKey::Known(Property::Gap)
+        | SxPropertyKey::Known(Property::Margin)
+        | SxPropertyKey::Known(Property::MarginTop)
+        | SxPropertyKey::Known(Property::MarginBottom)
+        | SxPropertyKey::Known(Property::MarginLeft)
+        | SxPropertyKey::Known(Property::MarginRight) => SizeCss::SPACING.value(size),
         SxPropertyKey::Known(Property::MaxWidth) => SizeCss::BREAKPOINT.value(size),
         _ => size.as_str().to_string(),
     }
