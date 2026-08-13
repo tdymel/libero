@@ -19,4 +19,5 @@ pub use theme_aware_value::ThemeAwareValue;
 /*
  * TODO:
  * - Support & in the syntax
+ * - Support multiple states in a when condition
  */
