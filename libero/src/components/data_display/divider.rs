@@ -72,17 +72,19 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .selector("::before", line_sx.clone())
                 .selector("::after", line_sx),
         )
-        // Horizontal with label specific
         .when(
-            "horizontal-label",
-            sx().width("100%")
+            "horizontal && label",
+            // "horizontal" is unconditional (see below), so it also matches here;
+            // these two properties out-specificity and override its border/height.
+            sx().border_bottom("0")
+                .height("auto")
+                .width("100%")
                 .margin("16px 0")
                 .selector("::before", sx().height("1px"))
                 .selector("::after", sx().height("1px")),
         )
-        // Vertical with label specific
         .when(
-            "vertical-label",
+            "vertical && label",
             sx().flex_direction("column")
                 .align_self("stretch")
                 .selector("::before", sx().width("1px"))
@@ -144,10 +146,8 @@ pub fn Divider(props: DividerProps) -> Element {
         .cloned()
         .unwrap_or_default()
         .with("vertical", vertical)
-        .with("label", has_label)
-        .with("horizontal-label", !vertical && has_label)
-        .with("vertical-label", vertical && has_label)
-        .with("horizontal", !vertical && !has_label);
+        .with("horizontal", !vertical)
+        .with("label", has_label);
 
     let framework_class = crate::context::use_sx(&DIVIDER_BASE_SX, crate::SxLayer::Framework);
 

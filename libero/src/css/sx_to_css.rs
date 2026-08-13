@@ -3,11 +3,14 @@ use crate::{
     theme::{Size, SizeCss},
 };
 
-use super::{CssDeclaration, CssScope, Stylesheet, css_color_value::CssColorValue};
+use super::{
+    CssDeclaration, CssScope, Stylesheet, condition::condition_groups,
+    css_color_value::CssColorValue,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
-    selector: String,
+    selectors: Vec<String>,
     media_query: Option<String>,
 }
 
@@ -15,7 +18,7 @@ impl From<&Sx> for Stylesheet {
     fn from(sx: &Sx) -> Self {
         let mut scopes = Vec::new();
         let context = CssContext {
-            selector: format!(".{}", sx.class_name()),
+            selectors: vec![format!(".{}", sx.class_name())],
             media_query: None,
         };
 
@@ -37,7 +40,7 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     }
 
     if !declarations.is_empty() {
-        let mut scope = CssScope::new(context.selector.clone(), declarations);
+        let mut scope = CssScope::new(context.selectors.join(", "), declarations);
         if let Some(media_query) = &context.media_query {
             scope = scope.in_media_query(media_query.clone());
         }
@@ -55,15 +58,30 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
 fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
     match modifier {
         SxModifier::Selector(suffix) => CssContext {
-            selector: format!("{}{}", context.selector, suffix),
+            selectors: context
+                .selectors
+                .iter()
+                .map(|selector| format!("{selector}{suffix}"))
+                .collect(),
             media_query: context.media_query.clone(),
         },
         SxModifier::Condition(condition) => CssContext {
-            selector: format!("{}[data-state~=\"{}\"]", context.selector, condition),
+            selectors: condition_groups(condition)
+                .into_iter()
+                .flat_map(|group| {
+                    context.selectors.iter().map(move |selector| {
+                        let mut selector = selector.clone();
+                        for state in &group {
+                            selector.push_str(&format!("[data-state~=\"{state}\"]"));
+                        }
+                        selector
+                    })
+                })
+                .collect(),
             media_query: context.media_query.clone(),
         },
         SxModifier::Breakpoint(size) => CssContext {
-            selector: context.selector.clone(),
+            selectors: context.selectors.clone(),
             media_query: Some(format!("(min-width: {})", size.breakpoint_value())),
         },
     }
@@ -101,7 +119,7 @@ fn push_breakpoint_declaration_scope(
     };
 
     let declaration = CssDeclaration::new(property.as_str(), to_css_value(property, value));
-    let mut scope = CssScope::new(context.selector.clone(), vec![declaration]);
+    let mut scope = CssScope::new(context.selectors.join(", "), vec![declaration]);
     let breakpoint_query = format!("(min-width: {})", size.breakpoint_value());
     let media_query = match &context.media_query {
         Some(existing) => format!("{existing} and {breakpoint_query}"),
@@ -189,5 +207,37 @@ mod tests {
         assert!(css.contains("letter-spacing:var(--lsx-h1-letter-spacing);"));
         assert!(css.contains("line-height:var(--lsx-h1-line-height);"));
         assert!(css.contains("margin:0;"));
+    }
+
+    #[test]
+    fn sx_when_and_condition_chains_attribute_selectors() {
+        let stylesheet =
+            Stylesheet::from(&sx().when("horizontal && label", sx().height("1px")));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("[data-state~=\"horizontal\"][data-state~=\"label\"]{height:1px;}"));
+    }
+
+    #[test]
+    fn sx_when_or_condition_emits_comma_separated_selectors() {
+        let stylesheet = Stylesheet::from(&sx().when("hover || focus", sx().color("red")));
+        let css = stylesheet.as_str();
+        let class = sx().when("hover || focus", sx().color("red")).class_name();
+
+        assert!(css.contains(&format!(
+            ".{class}[data-state~=\"hover\"], .{class}[data-state~=\"focus\"]{{color:red;}}"
+        )));
+    }
+
+    #[test]
+    fn sx_when_nested_conditions_distribute_over_or() {
+        let stylesheet = Stylesheet::from(
+            &sx().when("a || b", sx().when("c || d", sx().color("red"))),
+        );
+        let css = stylesheet.as_str();
+
+        for pair in ["a\"][data-state~=\"c", "a\"][data-state~=\"d", "b\"][data-state~=\"c", "b\"][data-state~=\"d"] {
+            assert!(css.contains(&format!("[data-state~=\"{pair}\"]")), "missing combination for {pair} in {css}");
+        }
     }
 }
