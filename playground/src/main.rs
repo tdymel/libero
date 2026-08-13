@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Container, HelloWorld, Stack, Text, Title, TitleVariant, states},
+    components::{Container, Divider, HelloWorld, Stack, Text, Title, TitleVariant, states},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -160,6 +160,48 @@ fn App() -> Element {
                         "highlighted text"
                     }
                     " inside it."
+                }
+            }
+            Stack {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "Divider Examples"
+                }
+                p {
+                    "Simple horizontal divider:"
+                }
+                Divider {}
+                p {
+                    "Divider with label (center):"
+                }
+                Divider {
+                    "OR"
+                }
+                p {
+                    "Divider with label (left):"
+                }
+                Divider {
+                    label_position: "left",
+                    "Left Label"
+                }
+                p {
+                    "Divider with label (right):"
+                }
+                Divider {
+                    label_position: "right",
+                    "Right Label"
+                }
+                p {
+                    "Vertical divider:"
+                }
+                Stack {
+                    direction: "row",
+                    "Left side"
+                    Divider {
+                        vertical: true,
+                    }
+                    "Right side"
                 }
             }
         }

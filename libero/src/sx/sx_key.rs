@@ -26,6 +26,18 @@ pub enum Property {
     LetterSpacing,
     LineHeight,
     TextDecoration,
+    Border,
+    BorderTop,
+    BorderRight,
+    Color,
+    Flex,
+    FlexGrow,
+    Content,
+    BorderWidth,
+    BorderStyle,
+    BorderColor,
+    FlexShrink,
+    AlignSelf,
 }
 
 impl Property {
@@ -54,6 +66,18 @@ impl Property {
             "letter-spacing" => Some(Self::LetterSpacing),
             "line-height" => Some(Self::LineHeight),
             "text-decoration" => Some(Self::TextDecoration),
+            "border" => Some(Self::Border),
+            "border-top" => Some(Self::BorderTop),
+            "border-right" => Some(Self::BorderRight),
+            "color" => Some(Self::Color),
+            "flex" => Some(Self::Flex),
+            "flex-grow" => Some(Self::FlexGrow),
+            "content" => Some(Self::Content),
+            "border-width" => Some(Self::BorderWidth),
+            "border-style" => Some(Self::BorderStyle),
+            "border-color" => Some(Self::BorderColor),
+            "flex-shrink" => Some(Self::FlexShrink),
+            "align-self" => Some(Self::AlignSelf),
             _ => None,
         }
     }
@@ -83,6 +107,18 @@ impl Property {
             Self::LetterSpacing => "letter-spacing",
             Self::LineHeight => "line-height",
             Self::TextDecoration => "text-decoration",
+            Self::Border => "border",
+            Self::BorderTop => "border-top",
+            Self::BorderRight => "border-right",
+            Self::Color => "color",
+            Self::Flex => "flex",
+            Self::FlexGrow => "flex-grow",
+            Self::Content => "content",
+            Self::BorderWidth => "border-width",
+            Self::BorderStyle => "border-style",
+            Self::BorderColor => "border-color",
+            Self::FlexShrink => "flex-shrink",
+            Self::AlignSelf => "align-self",
         }
     }
 }

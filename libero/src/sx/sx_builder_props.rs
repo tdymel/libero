@@ -95,6 +95,54 @@ impl Sx {
         self.with_known_property(Property::TextDecoration, value)
     }
 
+    pub fn border(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Border, value)
+    }
+
+    pub fn border_top(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderTop, value)
+    }
+
+    pub fn border_right(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderRight, value)
+    }
+
+    pub fn color(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Color, value)
+    }
+
+    pub fn flex(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Flex, value)
+    }
+
+    pub fn flex_grow(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::FlexGrow, value)
+    }
+
+    pub fn content(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Content, value)
+    }
+
+    pub fn border_width(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderWidth, value)
+    }
+
+    pub fn border_style(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderStyle, value)
+    }
+
+    pub fn border_color(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BorderColor, value)
+    }
+
+    pub fn flex_shrink(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::FlexShrink, value)
+    }
+
+    pub fn align_self(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::AlignSelf, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
