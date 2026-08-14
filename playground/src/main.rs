@@ -483,6 +483,25 @@ fn App() -> Element {
                     onclick: move |_| click_count += 1,
                     "Click me"
                 }
+                p {
+                    "As a link (href + target, same look as a regular button):"
+                }
+                Flex {
+                    direction: "row",
+                    gap: "md",
+                    Button {
+                        variant: "filled",
+                        href: "https://dioxuslabs.com",
+                        target: "_blank",
+                        "Open Dioxus docs"
+                    }
+                    Button {
+                        variant: "outlined",
+                        href: "https://dioxuslabs.com",
+                        disabled: true,
+                        "Disabled link"
+                    }
+                }
             }
 
             Flex {

@@ -168,6 +168,10 @@ pub struct ButtonProps {
     disabled: Option<bool>,
     #[props(default)]
     onclick: EventHandler<MouseEvent>,
+    #[props(default)]
+    href: Option<String>,
+    #[props(default)]
+    target: Option<String>,
     children: Element,
 }
 
@@ -227,27 +231,60 @@ pub fn Button(props: ButtonProps) -> Element {
         .with("disabled", disabled);
     let data_state = states.data_state();
 
-    rsx! {
-        button {
-            r#type: "button",
-            class: class,
-            disabled: disabled,
-            "data-state": data_state,
-            onclick: move |event| {
-                let point = event.element_coordinates();
-                let id = next_ripple_id();
-                next_ripple_id += 1;
-                ripple_signal.set(Some(Ripple { id, x: point.x, y: point.y }));
-                props.onclick.call(event);
-            },
-            if let Some(ripple) = ripple_signal() {
-                span {
-                    key: "{ripple.id}",
-                    style: "position:absolute;left:{ripple.x}px;top:{ripple.y}px;width:300%;height:300%;border-radius:50%;background:currentColor;opacity:0.3;transform:translate(-50%, -50%) scale(0);animation:{BUTTON_RIPPLE_ANIMATION} 550ms ease-out forwards;pointer-events:none;",
-                    onanimationend: move |_| ripple_signal.set(None),
-                }
+    let handle_click = move |event: Event<MouseData>| {
+        let point = event.element_coordinates();
+        let id = next_ripple_id();
+        next_ripple_id += 1;
+        ripple_signal.set(Some(Ripple {
+            id,
+            x: point.x,
+            y: point.y,
+        }));
+        props.onclick.call(event);
+    };
+
+    let ripple_span = rsx! {
+        if let Some(ripple) = ripple_signal() {
+            span {
+                key: "{ripple.id}",
+                style: "position:absolute;left:{ripple.x}px;top:{ripple.y}px;width:300%;height:300%;border-radius:50%;background:currentColor;opacity:0.3;transform:translate(-50%, -50%) scale(0);animation:{BUTTON_RIPPLE_ANIMATION} 550ms ease-out forwards;pointer-events:none;",
+                onanimationend: move |_| ripple_signal.set(None),
             }
-            {props.children}
+        }
+    };
+
+    // A disabled link keeps looking/behaving like a disabled control (it just
+    // doesn't natively support the `disabled` attribute like <button> does):
+    // dropping `href` stops navigation, `aria-disabled`/`tabindex` keep it out
+    // of the a11y tree and tab order.
+    if let Some(href) = props.href {
+        let href = (!disabled).then_some(href);
+        rsx! {
+            a {
+                class: class,
+                href: href,
+                target: props.target,
+                "aria-disabled": disabled.then_some("true"),
+                tabindex: disabled.then_some("-1"),
+                "data-state": data_state,
+                onclick: handle_click,
+                ..props.attributes,
+                {ripple_span}
+                {props.children}
+            }
+        }
+    } else {
+        rsx! {
+            button {
+                r#type: "button",
+                class: class,
+                disabled: disabled,
+                "data-state": data_state,
+                onclick: handle_click,
+                ..props.attributes,
+                {ripple_span}
+                {props.children}
+            }
         }
     }
 }
