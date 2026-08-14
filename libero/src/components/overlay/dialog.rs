@@ -5,6 +5,7 @@ use crate::{
     context::use_sx,
     hooks::ModalContext,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::SizeCss,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -58,19 +59,27 @@ impl From<String> for Input<DialogAlign> {
     }
 }
 
-const DIALOG_MAX_WIDTH: &str = "480px";
-
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().background("white")
         // A flex item shrinks to its content by default, so without an
         // explicit width, `max-width`/`size` only caps rather than fills.
         .width("100%")
-        .max_width(DIALOG_MAX_WIDTH)
+        .max_width(SizeCss::DIALOG_SIZE.value(crate::theme::Size::Md))
         .margin("md")
         .padding("lg")
         .border_radius("md")
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
 });
+
+/// `xs`/`sm`/`md`/`lg`/`xl` resolve through the dialog size scale (distinct
+/// from the (much larger) breakpoint scale generic `max-width` normally
+/// uses) - anything else (a raw length, percentage, CSS var) passes through.
+fn dialog_size(value: &ThemeAwareValue) -> ThemeAwareValue {
+    match value {
+        ThemeAwareValue::Size(size) => SizeCss::DIALOG_SIZE.value(*size).into(),
+        other => other.clone(),
+    }
+}
 
 fn dialog_dynamic_sx(props: &DialogProps) -> Sx {
     let vertical = props.vertical.as_ref().copied().unwrap_or_default();
@@ -79,8 +88,8 @@ fn dialog_dynamic_sx(props: &DialogProps) -> Sx {
     sx().apply_if(props.radius.as_ref(), |sx, radius| {
         sx.border_radius(radius.clone())
     })
-    .apply_if(props.size.as_ref(), |sx, size| {
-        sx.max_width(size.clone())
+    .apply_if(props.size.as_ref().map(dialog_size), |sx, size| {
+        sx.max_width(size)
     })
     .apply_if(props.z_index.as_ref(), |sx, z_index| {
         sx.z_index(z_index.clone())

@@ -1,5 +1,6 @@
 mod button;
 mod container;
+mod dialog;
 mod divider;
 mod flex;
 mod select;
@@ -14,6 +15,7 @@ pub use button::{
     BUTTON_RIPPLE_KEYFRAMES, ButtonDefaults, ButtonSizeLevel,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
+pub use dialog::DialogDefaults;
 pub use divider::{DIVIDER_SPACING, DividerDefaults};
 pub use flex::{
     FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP, FLEX_ROW_ALIGN,
