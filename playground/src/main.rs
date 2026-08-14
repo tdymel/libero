@@ -6,6 +6,7 @@ use libero::{
         HelloWorld, Image, List, ListItem, Option, Select, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
+    hooks::use_portal,
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -45,6 +46,35 @@ static BOX_SX: StaticSx = StaticSx::new(|| {
 
 fn main() {
     dioxus::launch(App);
+}
+
+#[component]
+fn PortalDemo() -> Element {
+    use_portal(|| {
+        rsx! {
+            Box {
+                sx: sx()
+                    .background("primary.6")
+                    .color("white")
+                    .padding("8px 12px")
+                    .border_radius("6px")
+                    .margin_top("8px"),
+                "Registered by PortalDemo, but rendered here at the end of the page by PortalOutlet - not inside the clipped box above."
+            }
+        }
+    });
+
+    rsx! {
+        Box {
+            sx: sx()
+                .width("240px")
+                .height("48px")
+                .overflow("hidden")
+                .border("1px solid var(--lsx-grey-4)")
+                .padding("8px"),
+            "This box clips overflow. Its portaled content isn't stuck inside it."
+        }
+    }
 }
 
 #[component]
@@ -751,6 +781,15 @@ fn App() -> Element {
                         input { placeholder: "Second input" }
                     }
                 }
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "use_portal Examples"
+                }
+                PortalDemo {}
             }
         }
     }

@@ -4,7 +4,7 @@ use crate::{
     SxLayer,
     components::{Backdrop, FocusTrap, Input, States, common::class_list},
     context::use_sx,
-    hooks::use_focus_return,
+    hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
 
@@ -213,6 +213,43 @@ pub fn Image(props: ImageProps) -> Element {
     ]);
     let overlay_image_class = use_sx(&ZOOM_OVERLAY_IMAGE_SX, SxLayer::Framework);
 
+    let portal_label = label.clone();
+    use_portal(move || {
+        let label = portal_label.clone();
+        rsx! {
+            Backdrop {
+                open: zoomed(),
+                onclick: move |_| close_zoom(),
+                div {
+                    role: "dialog",
+                    "aria-modal": "true",
+                    "aria-label": label.clone(),
+                    onkeydown: move |event: Event<KeyboardData>| {
+                        if event.key() == Key::Escape {
+                            close_zoom();
+                        }
+                    },
+                    FocusTrap {
+                        active: zoomed(),
+                        button {
+                            r#type: "button",
+                            class: overlay_button_class.clone(),
+                            "data-autofocus": true,
+                            aria_label: label.clone(),
+                            onclick: move |_| close_zoom(),
+                            img {
+                                class: overlay_image_class.clone(),
+                                src: zoomed_src.clone(),
+                                alt: "",
+                                role: "presentation",
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+
     rsx! {
         button {
             r#type: "button",
@@ -228,37 +265,6 @@ pub fn Image(props: ImageProps) -> Element {
                 alt: "",
                 role: "presentation",
                 onerror: move |_| errored_src.set(Some(on_error_src.clone())),
-            }
-        }
-        if zoomed() {
-            Backdrop {
-                open: true,
-                onclick: move |_| close_zoom(),
-                div {
-                    role: "dialog",
-                    "aria-modal": "true",
-                    "aria-label": label.clone(),
-                    onkeydown: move |event: Event<KeyboardData>| {
-                        if event.key() == Key::Escape {
-                            close_zoom();
-                        }
-                    },
-                    FocusTrap {
-                        button {
-                            r#type: "button",
-                            class: overlay_button_class,
-                            "data-autofocus": true,
-                            aria_label: label.clone(),
-                            onclick: move |_| close_zoom(),
-                            img {
-                                class: overlay_image_class,
-                                src: zoomed_src,
-                                alt: "",
-                                role: "presentation",
-                            }
-                        }
-                    }
-                }
             }
         }
     }

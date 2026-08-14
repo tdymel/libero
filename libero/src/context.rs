@@ -2,7 +2,12 @@ use std::{cell::RefCell, rc::Rc};
 
 use dioxus::prelude::*;
 
-use crate::{SxLayer, css::Stylesheet, sx_registry::SxRegistry, theme::Theme};
+use crate::{
+    SxLayer, css::Stylesheet,
+    hooks::{PortalHost, PortalOutlet},
+    sx_registry::SxRegistry,
+    theme::Theme,
+};
 
 #[derive(Clone)]
 pub struct LiberoContext {
@@ -35,6 +40,9 @@ pub fn LiberoProvider(
     let _registry_version = context.sx_registry_version.read();
     let active_stylesheets = context.sx_registry.stylesheets();
 
+    let portal_entries = use_signal(Vec::new);
+    use_context_provider(|| PortalHost::new(portal_entries));
+
     rsx! {
         style {
             dangerous_inner_html: "{context.layer_order_css}"
@@ -48,6 +56,7 @@ pub fn LiberoProvider(
             }
         }
         {children}
+        PortalOutlet {}
     }
 }
 
