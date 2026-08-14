@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Button, Container, Divider, Flex, HelloWorld, Image, List, ListItem, Text, Title,
-        TitleVariant, VisuallyHidden, states,
+        Box, Button, Container, Divider, Flex, HelloWorld, Image, List, ListItem, Option, Select,
+        Text, Title, TitleVariant, VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
     theme::Size,
@@ -52,6 +52,7 @@ fn App() -> Element {
     let mut large_gap = use_signal(|| true);
     let mut wrap_group = use_signal(|| true);
     let mut click_count = use_signal(|| 0);
+    let mut fruit = use_signal(|| "apple".to_string());
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
 
     rsx! {
@@ -602,6 +603,67 @@ fn App() -> Element {
                                 Divider {}
                         }
                     }
+                }
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "Select Examples"
+                }
+                p {
+                    "Default (with label, selected: {fruit}):"
+                }
+                Select {
+                    label: "Favorite fruit",
+                    value: fruit(),
+                    onchange: move |value| fruit.set(value),
+                    Option { value: "apple", "Apple" }
+                    Option { value: "banana", "Banana" }
+                    Option { value: "cherry", "Cherry" }
+                }
+                p {
+                    "Sizes (xs .. xl, default md):"
+                }
+                Flex {
+                    direction: "row",
+                    align: "flex-end",
+                    wrap: true,
+                    gap: "md",
+                    Select {
+                        size: "xs",
+                        value: "a",
+                        Option { value: "a", "Extra small" }
+                    }
+                    Select {
+                        size: "sm",
+                        value: "a",
+                        Option { value: "a", "Small" }
+                    }
+                    Select {
+                        size: "md",
+                        value: "a",
+                        Option { value: "a", "Medium" }
+                    }
+                    Select {
+                        size: "lg",
+                        value: "a",
+                        Option { value: "a", "Large" }
+                    }
+                    Select {
+                        size: "xl",
+                        value: "a",
+                        Option { value: "a", "Extra large" }
+                    }
+                }
+                p {
+                    "Radius override:"
+                }
+                Select {
+                    radius: "xl",
+                    value: "a",
+                    Option { value: "a", "Rounder corners" }
                 }
             }
         }

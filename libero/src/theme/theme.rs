@@ -1,6 +1,6 @@
 use super::{
     ButtonDefaults, ContainerDefaults, DividerDefaults, FlexAxisDefaults, FlexDefaults, HexColor,
-    Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -11,6 +11,7 @@ pub struct Theme {
     pub container: ContainerDefaults,
     pub divider: DividerDefaults,
     pub button: ButtonDefaults,
+    pub select: SelectDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
     pub primary: HexColor,
@@ -43,6 +44,15 @@ impl Theme {
             super::ButtonSizeLevel::new("1rem", "42px", "18px"),
             super::ButtonSizeLevel::new("1.125rem", "50px", "22px"),
             super::ButtonSizeLevel::new("1.25rem", "60px", "28px"),
+        ),
+        SelectDefaults::new(
+            super::Size::Md,
+            super::Size::Sm,
+            super::SelectSizeLevel::new("0.75rem", "28px", "8px"),
+            super::SelectSizeLevel::new("0.8125rem", "32px", "10px"),
+            super::SelectSizeLevel::new("0.875rem", "36px", "12px"),
+            super::SelectSizeLevel::new("0.9375rem", "40px", "14px"),
+            super::SelectSizeLevel::new("1rem", "44px", "16px"),
         ),
         TitleDefaults::new(
             TitleLevel::new(
@@ -115,6 +125,7 @@ impl Theme {
         container: ContainerDefaults,
         divider: DividerDefaults,
         button: ButtonDefaults,
+        select: SelectDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
         primary: HexColor,
@@ -135,6 +146,7 @@ impl Theme {
             container,
             divider,
             button,
+            select,
             titles,
             texts,
             primary,

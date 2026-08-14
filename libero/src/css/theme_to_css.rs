@@ -11,8 +11,12 @@ use crate::theme::{
     H3_FONT_WEIGHT, H3_LETTER_SPACING, H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE,
     H4_FONT_WEIGHT, H4_LETTER_SPACING, H4_LINE_HEIGHT, H5_FONT_FAMILY, H5_FONT_SIZE,
     H5_FONT_WEIGHT, H5_LETTER_SPACING, H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE,
-    H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, NamedColorCss, SizeCss, TEXT_FONT_FAMILY,
-    TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM, TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS,
+    H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, NamedColorCss, SELECT_FONT_SIZE_LG,
+    SELECT_FONT_SIZE_MD, SELECT_FONT_SIZE_SM, SELECT_FONT_SIZE_XL, SELECT_FONT_SIZE_XS,
+    SELECT_HEIGHT_LG, SELECT_HEIGHT_MD, SELECT_HEIGHT_SM, SELECT_HEIGHT_XL, SELECT_HEIGHT_XS,
+    SELECT_PADDING_X_LG, SELECT_PADDING_X_MD, SELECT_PADDING_X_SM, SELECT_PADDING_X_XL,
+    SELECT_PADDING_X_XS, SELECT_RADIUS, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE_LG,
+    TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM, TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS,
     TEXT_FONT_WEIGHT_LG, TEXT_FONT_WEIGHT_MD, TEXT_FONT_WEIGHT_SM, TEXT_FONT_WEIGHT_XL,
     TEXT_FONT_WEIGHT_XS, TEXT_LETTER_SPACING_LG, TEXT_LETTER_SPACING_MD, TEXT_LETTER_SPACING_SM,
     TEXT_LETTER_SPACING_XL, TEXT_LETTER_SPACING_XS, TEXT_LINE_HEIGHT_LG, TEXT_LINE_HEIGHT_MD,
@@ -94,6 +98,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_container_declarations(&mut declarations, theme);
     push_divider_declarations(&mut declarations, theme);
     push_button_declarations(&mut declarations, theme);
+    push_select_declarations(&mut declarations, theme);
     push_title_declarations(&mut declarations, theme);
     push_text_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
@@ -307,6 +312,78 @@ fn push_button_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Them
     declarations.push(CssDeclaration::new(
         BUTTON_PADDING_X_XL.name(),
         theme.button.xl.padding_x,
+    ));
+}
+
+fn push_select_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
+        SELECT_RADIUS.name(),
+        SizeCss::RADIUS.value(theme.select.radius),
+    ));
+
+    declarations.push(CssDeclaration::new(
+        SELECT_FONT_SIZE_XS.name(),
+        theme.select.xs.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_HEIGHT_XS.name(),
+        theme.select.xs.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_PADDING_X_XS.name(),
+        theme.select.xs.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        SELECT_FONT_SIZE_SM.name(),
+        theme.select.sm.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_HEIGHT_SM.name(),
+        theme.select.sm.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_PADDING_X_SM.name(),
+        theme.select.sm.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        SELECT_FONT_SIZE_MD.name(),
+        theme.select.md.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_HEIGHT_MD.name(),
+        theme.select.md.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_PADDING_X_MD.name(),
+        theme.select.md.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        SELECT_FONT_SIZE_LG.name(),
+        theme.select.lg.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_HEIGHT_LG.name(),
+        theme.select.lg.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_PADDING_X_LG.name(),
+        theme.select.lg.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        SELECT_FONT_SIZE_XL.name(),
+        theme.select.xl.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_HEIGHT_XL.name(),
+        theme.select.xl.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        SELECT_PADDING_X_XL.name(),
+        theme.select.xl.padding_x,
     ));
 }
 
