@@ -10,6 +10,7 @@ pub use a11y::*;
 pub use common::{Input, States, states};
 pub use data_display::*;
 pub use hello_world::HelloWorld;
+pub use inputs::*;
 pub use layout::*;
 pub use typography::*;
 

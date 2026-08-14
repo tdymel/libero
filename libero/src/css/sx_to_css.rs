@@ -215,6 +215,14 @@ mod tests {
     }
 
     #[test]
+    fn sx_border_radius_size_resolves_to_radius_css_var() {
+        let stylesheet = Stylesheet::from(&sx().border_radius(Size::Md));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("border-radius:var(--lsx-radius-md);"));
+    }
+
+    #[test]
     fn sx_bare_color_defaults_to_shade_5_in_css() {
         let stylesheet = Stylesheet::from(&sx().color("primary"));
         let css = stylesheet.as_str();
