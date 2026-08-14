@@ -10,11 +10,10 @@ static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         .list_style("none")
         .margin("0")
-        .padding("8px 0")
-        // Nested Lists (rendered inside a ListItem) are indented and lose
-        // their own top-level vertical gutter, so each nesting level only
-        // adds horizontal indent instead of stacking vertical padding.
-        .selector("& ul", sx().padding("0 0 0 16px"))
+        .padding("0")
+        // Nested Lists (rendered inside a ListItem) are indented relative to
+        // their own content.
+        .selector("& ul", sx().padding_left("16px"))
 });
 
 #[derive(Props, Clone, PartialEq)]
@@ -50,3 +49,4 @@ pub fn List(props: ListProps) -> Element {
         }
     }
 }
+

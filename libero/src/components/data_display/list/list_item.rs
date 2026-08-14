@@ -8,12 +8,7 @@ use crate::{
 static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
-        .padding("8px 16px")
-        // A ListItem whose only purpose is hosting a nested List (needed since
-        // a <ul> can only validly sit inside an <li>) shouldn't add its own
-        // gutter on top of that - the nested List already spaces its own
-        // items, so this keeps spacing uniform between nested and plain items.
-        .selector("&:has(> ul)", sx().padding("0"))
+        .padding("0")
         .focus_visible(
             sx().outline("2px solid var(--lsx-primary-6)")
                 .outline_offset("2px"),

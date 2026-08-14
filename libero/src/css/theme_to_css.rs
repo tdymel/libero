@@ -623,7 +623,7 @@ mod tests {
         );
         assert!(css.as_str().contains("--lsx-flex-row-wrap:wrap;"));
         assert!(css.as_str().contains("--lsx-h1-font-size:2.125rem;"));
-        assert!(css.as_str().contains("--lsx-h1-font-weight:700;"));
+        assert!(css.as_str().contains("--lsx-h1-font-weight:400;"));
         assert!(css.as_str().contains("--lsx-h2-font-size:1.625rem;"));
         assert!(css.as_str().contains("--lsx-h3-font-size:1.375rem;"));
         assert!(css.as_str().contains("--lsx-h4-font-size:1rem;"));
