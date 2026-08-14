@@ -23,6 +23,7 @@ fn App() -> Element {
     let mut show_hello_world = use_signal(|| true);
     let mut large_gap = use_signal(|| true);
     let mut wrap_group = use_signal(|| true);
+    let mut click_count = use_signal(|| 0);
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
 
     rsx! {
@@ -432,6 +433,27 @@ fn App() -> Element {
                     Button { variant: "filled", radius: "xs", "Radius xs" }
                     Button { variant: "filled", radius: "xl", "Radius xl" }
                     Button { variant: "filled", sx: sx().border_radius("999px"), "Pill" }
+                }
+                p {
+                    "Disabled:"
+                }
+                Flex {
+                    direction: "row",
+                    gap: "md",
+                    Button { variant: "filled", disabled: true, "Filled disabled" }
+                    Button { variant: "outlined", disabled: true, "Outlined disabled" }
+                }
+                p {
+                    "Full width:"
+                }
+                Button { variant: "filled", full_width: true, "Full width button" }
+                p {
+                    "Onclick (clicked {click_count} times):"
+                }
+                Button {
+                    variant: "filled",
+                    onclick: move |_| click_count += 1,
+                    "Click me"
                 }
             }
         }

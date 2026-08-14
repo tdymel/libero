@@ -77,6 +77,14 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .text_decoration("none")
+        .when(
+            "disabled",
+            // pointer-events: none also stops the variant's :hover styles from
+            // triggering, since a disabled button no longer receives pointer events.
+            sx().opacity("0.5")
+                .cursor("not-allowed")
+                .pointer_events("none"),
+        )
 });
 
 fn button_variant_sx(variant: ButtonVariant, color: Color, shade: ColorShade) -> Sx {
@@ -144,6 +152,12 @@ pub struct ButtonProps {
     radius: Input<ThemeAwareValue>,
     #[props(default, into)]
     size: Input<ThemeAwareValue>,
+    #[props(default)]
+    full_width: Option<bool>,
+    #[props(default)]
+    disabled: Option<bool>,
+    #[props(default)]
+    onclick: EventHandler<MouseEvent>,
     children: Element,
 }
 
@@ -152,6 +166,8 @@ pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.as_ref().copied().unwrap_or_default();
     let (color, shade) = button_color_parts(props.color.as_ref());
+    let disabled = props.disabled.unwrap_or(false);
+    let full_width = props.full_width.unwrap_or(false);
 
     let radius = match props.radius.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
@@ -165,8 +181,9 @@ pub fn Button(props: ButtonProps) -> Element {
     let size_class = crate::context::use_sx(get_size_sx(size), crate::SxLayer::Framework);
     let framework_class = crate::context::use_sx(&BUTTON_BASE_SX, crate::SxLayer::Framework);
 
-    let dynamic_sx =
-        button_variant_sx(variant, color, shade).border_radius(ThemeAwareValue::Size(radius));
+    let dynamic_sx = button_variant_sx(variant, color, shade)
+        .border_radius(ThemeAwareValue::Size(radius))
+        .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
     let dynamic_class = crate::context::use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
 
     let static_class = props
@@ -181,13 +198,22 @@ pub fn Button(props: ButtonProps) -> Element {
         dynamic_class,
         static_class,
     ]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("disabled", disabled);
+    let data_state = states.data_state();
 
     rsx! {
         button {
             r#type: "button",
             class: class,
+            disabled: disabled,
             "data-state": data_state,
+            onclick: move |event| props.onclick.call(event),
             ..props.attributes,
             {props.children}
         }

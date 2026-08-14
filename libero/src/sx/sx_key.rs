@@ -52,6 +52,8 @@ pub enum Property {
     ObjectFit,
     BorderRadius,
     Cursor,
+    Opacity,
+    PointerEvents,
 }
 
 impl Property {
@@ -106,6 +108,8 @@ impl Property {
             "object-fit" => Some(Self::ObjectFit),
             "border-radius" => Some(Self::BorderRadius),
             "cursor" => Some(Self::Cursor),
+            "opacity" => Some(Self::Opacity),
+            "pointer-events" => Some(Self::PointerEvents),
             _ => None,
         }
     }
@@ -161,6 +165,8 @@ impl Property {
             Self::ObjectFit => "object-fit",
             Self::BorderRadius => "border-radius",
             Self::Cursor => "cursor",
+            Self::Opacity => "opacity",
+            Self::PointerEvents => "pointer-events",
         }
     }
 }

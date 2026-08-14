@@ -199,6 +199,14 @@ impl Sx {
         self.with_known_property(Property::Cursor, value)
     }
 
+    pub fn opacity(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Opacity, value)
+    }
+
+    pub fn pointer_events(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::PointerEvents, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
