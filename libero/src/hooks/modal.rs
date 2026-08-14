@@ -102,20 +102,15 @@ where
     let state = use_signal(|| None::<P>);
     let handle = ModalHandle { state };
 
-    use_portal(handle.is_open(), move || {
-        // `active` and this read can observe different points in time (the
-        // close is deferred a microtask via `ModalContext::close`), so treat
-        // an already-closed state as nothing to render rather than a bug.
-        let Some(props) = state.read().clone() else {
-            return rsx! {};
-        };
+    use_portal(move || {
+        let props = state.read().clone()?;
 
-        rsx! {
+        Some(rsx! {
             Modal {
                 onclose: move |_| handle.close(),
                 {DynamicNode::Component(VComponent::new(component, props.clone(), "ModalContent"))}
             }
-        }
+        })
     });
 
     handle

@@ -213,10 +213,13 @@ pub fn Image(props: ImageProps) -> Element {
     let overlay_image_class = use_sx(&ZOOM_OVERLAY_IMAGE_SX, SxLayer::Framework);
 
     let portal_label = label.clone();
-    use_portal(zoomed(), move || {
+    use_portal(move || {
+        if !zoomed() {
+            return None;
+        }
         let label = portal_label.clone();
 
-        rsx! {
+        Some(rsx! {
             Modal {
                 aria_label: label.clone(),
                 onclose: move |_| close_zoom(),
@@ -234,7 +237,7 @@ pub fn Image(props: ImageProps) -> Element {
                     }
                 }
             }
-        }
+        })
     });
 
     rsx! {

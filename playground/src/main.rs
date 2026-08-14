@@ -50,8 +50,8 @@ fn main() {
 
 #[component]
 fn PortalDemo() -> Element {
-    use_portal(true, || {
-        rsx! {
+    use_portal(|| {
+        Some(rsx! {
             Box {
                 sx: sx()
                     .background("primary.6")
@@ -61,7 +61,7 @@ fn PortalDemo() -> Element {
                     .margin_top("8px"),
                 "Registered by PortalDemo, but rendered here at the end of the page by PortalOutlet - not inside the clipped box above."
             }
-        }
+        })
     });
 
     rsx! {
