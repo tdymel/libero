@@ -30,13 +30,22 @@ pub struct OverlayProps {
     states: Input<States>,
     #[props(default, into)]
     z_index: Input<ThemeAwareValue>,
-    #[props(default)]
-    opacity: Option<f32>,
-    #[props(default)]
-    blur: Option<f32>,
+    #[props(default, into)]
+    opacity: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    blur: Input<ThemeAwareValue>,
     #[props(default)]
     onclick: EventHandler<MouseEvent>,
     children: Option<Element>,
+}
+
+/// A CSS pixel length for values with no unit of their own (numbers), passed
+/// through unchanged otherwise (strings, CSS vars).
+fn px_value(value: &ThemeAwareValue) -> Option<String> {
+    match value {
+        ThemeAwareValue::Number(number) => Some(format!("{number}px")),
+        _ => value.raw(),
+    }
 }
 
 /// Dims/blurs whatever is behind it. Callers control whether it exists by
@@ -45,14 +54,18 @@ pub struct OverlayProps {
 pub fn Overlay(props: OverlayProps) -> Element {
     let framework_class = use_sx(&OVERLAY_BASE_SX, crate::SxLayer::Framework);
 
-    let opacity = props.opacity.unwrap_or(OVERLAY_OPACITY);
+    let opacity = props
+        .opacity
+        .as_ref()
+        .and_then(ThemeAwareValue::raw)
+        .unwrap_or_else(|| OVERLAY_OPACITY.to_string());
     let dynamic_sx = sx()
         .background(format!("rgba(0, 0, 0, {opacity})"))
         .apply_if(props.z_index.as_ref(), |sx, z_index| {
             sx.z_index(z_index.clone())
         })
-        .apply_if(props.blur, |sx, blur| {
-            sx.backdrop_filter(format!("blur({blur}px)"))
+        .apply_if(props.blur.as_ref().and_then(px_value), |sx, blur| {
+            sx.backdrop_filter(format!("blur({blur})"))
         });
     let dynamic_class = use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
 

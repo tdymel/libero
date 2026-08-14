@@ -85,6 +85,7 @@ fn App() -> Element {
     let mut click_count = use_signal(|| 0);
     let mut fruit = use_signal(|| "apple".to_string());
     let mut backdrop_open = use_signal(|| false);
+    let mut backdrop_open_stringy = use_signal(|| false);
     let mut focus_trap_active = use_signal(|| false);
     let mut focus_trap_initial_active = use_signal(|| false);
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
@@ -720,17 +721,37 @@ fn App() -> Element {
                     "Overlay Examples"
                 }
                 p {
-                    "Click to open an overlay (fades in/out, click it to close):"
+                    "Click to open an overlay, click it to close. \"opacity\" and \"blur\" accept either a bare number or a string with units:"
                 }
-                Button {
-                    variant: "filled",
-                    onclick: move |_| backdrop_open.set(true),
-                    "Open overlay"
+                Flex {
+                    gap: "sm",
+                    Button {
+                        variant: "filled",
+                        onclick: move |_| backdrop_open.set(true),
+                        "Open overlay (numbers: opacity: 0.6, blur: 4.0)"
+                    }
+                    Button {
+                        variant: "filled",
+                        onclick: move |_| backdrop_open_stringy.set(true),
+                        "Open overlay (strings: opacity: \"0.75\", blur: \"6px\")"
+                    }
                 }
                 if backdrop_open() {
                     Overlay {
+                        opacity: 0.6,
                         blur: 4.0,
                         onclick: move |_| backdrop_open.set(false),
+                        Text {
+                            sx: sx().color("white"),
+                            "Click anywhere to close"
+                        }
+                    }
+                }
+                if backdrop_open_stringy() {
+                    Overlay {
+                        opacity: "0.75",
+                        blur: "6px",
+                        onclick: move |_| backdrop_open_stringy.set(false),
                         Text {
                             sx: sx().color("white"),
                             "Click anywhere to close"
