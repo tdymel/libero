@@ -6,7 +6,7 @@ use libero::{
         Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
-    hooks::use_portal,
+    hooks::{use_modal, use_modal_context, use_portal},
     sx::{StaticSx, sx},
     theme::Size,
 };
@@ -772,17 +772,18 @@ fn App() -> Element {
                 Button {
                     variant: "filled",
                     onclick: move |_| focus_trap_active.toggle(),
-                    if focus_trap_active() { "Deactivate focus trap" } else { "Activate focus trap" }
+                    if focus_trap_active() { "Remove focus trap" } else { "Add focus trap" }
                 }
-                FocusTrap {
-                    active: focus_trap_active(),
-                    Flex {
-                        direction: "column",
-                        gap: "sm",
-                        sx: sx().padding_top(Size::Sm).max_width("300px"),
-                        input { placeholder: "First input" }
-                        input { placeholder: "Second input (autofocus)", "data-autofocus": true }
-                        input { placeholder: "Third input" }
+                if focus_trap_active() {
+                    FocusTrap {
+                        Flex {
+                            direction: "column",
+                            gap: "sm",
+                            sx: sx().padding_top(Size::Sm).max_width("300px"),
+                            input { placeholder: "First input" }
+                            input { placeholder: "Second input (autofocus)", "data-autofocus": true }
+                            input { placeholder: "Third input" }
+                        }
                     }
                 }
                 p {
@@ -791,17 +792,18 @@ fn App() -> Element {
                 Button {
                     variant: "filled",
                     onclick: move |_| focus_trap_initial_active.toggle(),
-                    if focus_trap_initial_active() { "Deactivate focus trap" } else { "Activate focus trap" }
+                    if focus_trap_initial_active() { "Remove focus trap" } else { "Add focus trap" }
                 }
-                FocusTrap {
-                    active: focus_trap_initial_active(),
-                    Flex {
-                        direction: "column",
-                        gap: "sm",
-                        sx: sx().padding_top(Size::Sm).max_width("300px"),
-                        FocusTrapInitialFocus {}
-                        input { placeholder: "First input" }
-                        input { placeholder: "Second input" }
+                if focus_trap_initial_active() {
+                    FocusTrap {
+                        Flex {
+                            direction: "column",
+                            gap: "sm",
+                            sx: sx().padding_top(Size::Sm).max_width("300px"),
+                            FocusTrapInitialFocus {}
+                            input { placeholder: "First input" }
+                            input { placeholder: "Second input" }
+                        }
                     }
                 }
             }
@@ -813,6 +815,93 @@ fn App() -> Element {
                     "use_portal Examples"
                 }
                 PortalDemo {}
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "Modal / use_modal Examples"
+                }
+                ModalDemo {}
+            }
+        }
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct ConfirmationDialogProps {
+    message: String,
+}
+
+#[allow(non_snake_case)]
+fn ConfirmationDialog(props: ConfirmationDialogProps) -> Element {
+    let modal = use_modal_context();
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "md",
+            sx: sx().background("white").padding("16px").border_radius("8px").max_width("320px"),
+            Text { "{props.message}" }
+            Flex {
+                gap: "sm",
+                Button {
+                    variant: "filled",
+                    "data-autofocus": true,
+                    onclick: move |_| modal.close(),
+                    "OK"
+                }
+                Button {
+                    variant: "outline",
+                    onclick: move |_| modal.close(),
+                    "Cancel"
+                }
+            }
+        }
+    }
+}
+
+/// A dialog with no props - opened via `.open_default()`.
+#[allow(non_snake_case)]
+fn AboutDialog(_props: ()) -> Element {
+    let modal = use_modal_context();
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "md",
+            sx: sx().background("white").padding("16px").border_radius("8px").max_width("320px"),
+            Text { "This dialog has no props - opened with handle.open_default()." }
+            Button {
+                variant: "filled",
+                "data-autofocus": true,
+                onclick: move |_| modal.close(),
+                "Close"
+            }
+        }
+    }
+}
+
+#[component]
+fn ModalDemo() -> Element {
+    let confirmation = use_modal(ConfirmationDialog);
+    let about = use_modal::<()>(AboutDialog);
+
+    rsx! {
+        Flex {
+            gap: "sm",
+            Button {
+                variant: "filled",
+                onclick: move |_| confirmation.open(ConfirmationDialogProps {
+                    message: "Are you sure you want to continue?".to_string(),
+                }),
+                "Open confirmation dialog"
+            }
+            Button {
+                variant: "filled",
+                onclick: move |_| about.open_default(),
+                "Open about dialog"
             }
         }
     }

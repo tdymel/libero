@@ -58,8 +58,6 @@ pub struct FocusTrapProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
-    #[props(default = true)]
-    active: bool,
     children: Element,
 }
 
@@ -82,18 +80,16 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
             class: class,
             "data-state": data_state,
             onkeydown: move |event: Event<KeyboardData>| {
-                if props.active && event.key() == Key::Tab {
+                if event.key() == Key::Tab {
                     event.prevent_default();
                     cycle_focus(&id(), event.modifiers().shift());
                 }
             },
             ..props.attributes,
-            if props.active {
-                span {
-                    "aria-hidden": "true",
-                    style: "display:none",
-                    onmounted: move |_| focus_first(&id()),
-                }
+            span {
+                "aria-hidden": "true",
+                style: "display:none",
+                onmounted: move |_| focus_first(&id()),
             }
             {props.children}
         }

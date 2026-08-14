@@ -4,10 +4,12 @@ use dioxus::prelude::*;
 
 use crate::{
     SxLayer, css::Stylesheet,
-    hooks::{PortalHost, PortalOutlet},
+    hooks::{MODAL_BASE_Z_INDEX, ModalHost, PortalHost, PortalOutlet},
     sx_registry::SxRegistry,
     theme::Theme,
 };
+
+const SCROLL_LOCK_CSS: &str = "body:has([data-lsx-scroll-lock]) { overflow: hidden; }";
 
 #[derive(Clone)]
 pub struct LiberoContext {
@@ -43,12 +45,18 @@ pub fn LiberoProvider(
     let portal_entries = use_signal(Vec::new);
     use_context_provider(|| PortalHost::new(portal_entries));
 
+    let modal_z_index = use_signal(|| MODAL_BASE_Z_INDEX);
+    use_context_provider(|| ModalHost::new(modal_z_index));
+
     rsx! {
         style {
             dangerous_inner_html: "{context.layer_order_css}"
         }
         style {
             dangerous_inner_html: "{context.theme_css.as_str()}"
+        }
+        style {
+            dangerous_inner_html: SCROLL_LOCK_CSS
         }
         for stylesheet in active_stylesheets {
             style {
