@@ -1,6 +1,6 @@
 [package]
 name = "libero"
-version = "0.0.2"
+version = "0.1.0"
 edition = "2024"
 authors = ["Tom Dymel <tom@dymel.dev>"]
 description = "A work in progress component library focused on DX, UX, a11y and configurability."
