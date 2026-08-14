@@ -207,6 +207,10 @@ impl Sx {
         self.with_known_property(Property::PointerEvents, value)
     }
 
+    pub fn list_style(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::ListStyle, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }

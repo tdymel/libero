@@ -295,4 +295,19 @@ mod tests {
             plain_sx.class_name()
         )));
     }
+
+    #[test]
+    fn sx_selector_ampersand_with_space_expands_to_descendant_combinator() {
+        // A plain (non-&) pattern is trimmed and then appended directly, so a
+        // leading space meant as a descendant combinator (e.g. " ul") is lost
+        // and silently produces an invalid selector. The `&`-form is not
+        // trimmed away and is the correct way to express this.
+        let descendant_sx = sx().selector("& ul", sx().height("1px"));
+        let css = Stylesheet::from(&descendant_sx).as_str().to_string();
+
+        assert!(css.contains(&format!(
+            ".{} ul{{height:1px;}}",
+            descendant_sx.class_name()
+        )));
+    }
 }

@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Button, Container, Divider, Flex, HelloWorld, Image, Text, Title, TitleVariant,
-        VisuallyHidden, states,
+        Box, Button, Container, Divider, Flex, HelloWorld, Image, List, ListItem, Text, Title,
+        TitleVariant, VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
     theme::Size,
@@ -454,6 +454,55 @@ fn App() -> Element {
                     variant: "filled",
                     onclick: move |_| click_count += 1,
                     "Click me"
+                }
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "List Examples"
+                }
+                p {
+                    "Simple list:"
+                }
+                List {
+                    ListItem { "Item one" }
+                    ListItem { "Item two" }
+                    ListItem { "Item three" }
+                }
+                p {
+                    "Nested list:"
+                }
+                List {
+                    ListItem { "Fruits" }
+                    ListItem {
+                        List {
+                            ListItem { "Apple" }
+                            ListItem { "Banana" }
+                        }
+                    }
+                    ListItem { "Vegetables" }
+                    ListItem {
+                        List {
+                            ListItem { "Carrot" }
+                            ListItem { "Potato" }
+                        }
+                    }
+                }
+                p {
+                    "List item with arbitrary content:"
+                }
+                List {
+                    ListItem {
+                        Flex {
+                            direction: "row",
+                            align: "center",
+                            gap: "sm",
+                            Text { "Custom row content" }
+                            Button { variant: "text", size: "xs", "Action" }
+                        }
+                    }
                 }
             }
         }

@@ -54,6 +54,7 @@ pub enum Property {
     Cursor,
     Opacity,
     PointerEvents,
+    ListStyle,
 }
 
 impl Property {
@@ -110,6 +111,7 @@ impl Property {
             "cursor" => Some(Self::Cursor),
             "opacity" => Some(Self::Opacity),
             "pointer-events" => Some(Self::PointerEvents),
+            "list-style" => Some(Self::ListStyle),
             _ => None,
         }
     }
@@ -167,6 +169,7 @@ impl Property {
             Self::Cursor => "cursor",
             Self::Opacity => "opacity",
             Self::PointerEvents => "pointer-events",
+            Self::ListStyle => "list-style",
         }
     }
 }
