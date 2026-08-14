@@ -55,6 +55,8 @@ pub enum Property {
     Opacity,
     PointerEvents,
     ListStyle,
+    MinWidth,
+    AspectRatio,
 }
 
 impl Property {
@@ -112,6 +114,8 @@ impl Property {
             "opacity" => Some(Self::Opacity),
             "pointer-events" => Some(Self::PointerEvents),
             "list-style" => Some(Self::ListStyle),
+            "min-width" => Some(Self::MinWidth),
+            "aspect-ratio" => Some(Self::AspectRatio),
             _ => None,
         }
     }
@@ -170,6 +174,8 @@ impl Property {
             Self::Opacity => "opacity",
             Self::PointerEvents => "pointer-events",
             Self::ListStyle => "list-style",
+            Self::MinWidth => "min-width",
+            Self::AspectRatio => "aspect-ratio",
         }
     }
 }
@@ -202,4 +208,5 @@ pub enum SxModifierKey {
     Selector(String),
     Condition(String),
     Breakpoint(Size),
+    BreakpointMax(Size),
 }

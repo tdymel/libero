@@ -211,6 +211,14 @@ impl Sx {
         self.with_known_property(Property::ListStyle, value)
     }
 
+    pub fn min_width(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MinWidth, value)
+    }
+
+    pub fn aspect_ratio(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::AspectRatio, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
@@ -229,5 +237,9 @@ impl Sx {
 
     pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
+    }
+
+    pub fn breakpoint_below(self, breakpoint: Size, nested: Sx) -> Self {
+        self.modifier(SxModifierKey::BreakpointMax(breakpoint), nested)
     }
 }

@@ -9,6 +9,34 @@ use libero::{
     theme::Size,
 };
 
+struct Article {
+    title: &'static str,
+    date: &'static str,
+    description: &'static str,
+    image: &'static str,
+}
+
+const ARTICLES: [Article; 3] = [
+    Article {
+        title: "Designing With Purpose",
+        date: "March 3, 2026",
+        description: "A look at how intentional design choices shape the way people experience software, from first impressions to daily use.",
+        image: "https://picsum.photos/id/1011/200/200",
+    },
+    Article {
+        title: "The Quiet Craft of Refactoring",
+        date: "February 18, 2026",
+        description: "Why the unglamorous work of cleaning up code is often what separates maintainable systems from fragile ones.",
+        image: "https://picsum.photos/id/1015/200/200",
+    },
+    Article {
+        title: "Notes From a Long Hike",
+        date: "January 27, 2026",
+        description: "Reflections on slowing down, paying attention, and what mountain trails can teach us about patience.",
+        image: "https://picsum.photos/id/1018/200/200",
+    },
+];
+
 static BOX_SX: StaticSx = StaticSx::new(|| {
     sx().padding_top(Size::Xl)
         .when("hidden", sx().background("secondary.1"))
@@ -501,6 +529,60 @@ fn App() -> Element {
                             gap: "sm",
                             Text { "Custom row content" }
                             Button { variant: "text", size: "xs", "Action" }
+                        }
+                    }
+                }
+                p {
+                    "Article list (image + title/description/date, separated by dividers):"
+                }
+                List {
+                    for (index , article) in ARTICLES.iter().enumerate() {
+                        ListItem {
+                            Flex {
+                                // Image-left/text-right by default. Only switch to a
+                                // stacked, top-image layout at smartphone width.
+                                sx: sx()
+                                    .width("100%")
+                                    .flex_direction("row")
+                                    .align_items("flex-start")
+                                    .gap("md")
+                                    .breakpoint_below(
+                                        Size::Xs,
+                                        sx().flex_direction("column").align_items("stretch"),
+                                    ),
+                                Box {
+                                    sx: sx()
+                                        .width("140px")
+                                        .height("100px")
+                                        .flex_shrink("0")
+                                        .breakpoint_below(
+                                            Size::Xs,
+                                            sx().width("100%").height("auto").aspect_ratio("2 / 1"),
+                                        ),
+                                    Image {
+                                        src: article.image,
+                                        radius: "sm",
+                                        alt: "Cover image for {article.title}",
+                                    }
+                                }
+                                Flex {
+                                    direction: "column",
+                                    gap: "xs",
+                                    // Lets the text column shrink below its content's natural
+                                    // width instead of overflowing/forcing the row to wrap.
+                                    sx: sx().flex("1").min_width("0"),
+                                    Title { variant: "h4", "{article.title}" }
+                                    Text {
+                                        size: "sm",
+                                        sx: sx().color("grey.6"),
+                                        "{article.date}"
+                                    }
+                                    Text { "{article.description}" }
+                                }
+                            }
+                        }
+                        if index + 1 < ARTICLES.len() {
+                                Divider {}
                         }
                     }
                 }
