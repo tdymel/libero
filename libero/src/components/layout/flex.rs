@@ -13,10 +13,23 @@ use crate::{
  *   Not sure if we should provide a similar API.
  */
 
-static FLEX_BASE_COLUMN_SX: StaticSx =
-    StaticSx::new(|| sx().display("flex").and(FlexDefaults::default_sx(false)));
-static FLEX_BASE_ROW_SX: StaticSx =
-    StaticSx::new(|| sx().display("flex").and(FlexDefaults::default_sx(true)));
+fn flex_focus_sx() -> Sx {
+    sx().focus_visible(
+        sx().outline("2px solid var(--lsx-primary-6)")
+            .outline_offset("2px"),
+    )
+}
+
+static FLEX_BASE_COLUMN_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .and(FlexDefaults::default_sx(false))
+        .and(flex_focus_sx())
+});
+static FLEX_BASE_ROW_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .and(FlexDefaults::default_sx(true))
+        .and(flex_focus_sx())
+});
 
 fn flex_dynamic_sx(props: &FlexProps) -> crate::sx::Sx {
     sx().apply_if(props.align.as_ref(), |sx, align| {
@@ -52,6 +65,8 @@ pub struct FlexProps {
     direction: Input<ThemeAwareValue>,
     #[props(default, into)]
     wrap: Input<ThemeAwareValue>,
+    #[props(default)]
+    onclick: EventHandler<MouseEvent>,
     children: Element,
 }
 
@@ -80,6 +95,7 @@ pub fn Flex(props: FlexProps) -> Element {
         div {
             class: class,
             "data-state": data_state,
+            onclick: move |event| props.onclick.call(event),
             ..props.attributes,
             {props.children}
         }

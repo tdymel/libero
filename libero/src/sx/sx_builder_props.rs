@@ -31,6 +31,10 @@ impl Sx {
         self.with_known_property(Property::PaddingRight, value)
     }
 
+    pub fn padding_bottom(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::PaddingBottom, value)
+    }
+
     pub fn display(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Display, value)
     }
@@ -73,6 +77,10 @@ impl Sx {
 
     pub fn max_width(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::MaxWidth, value)
+    }
+
+    pub fn max_height(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MaxHeight, value)
     }
 
     pub fn margin(self, value: impl Into<ThemeAwareValue>) -> Self {
@@ -219,12 +227,24 @@ impl Sx {
         self.with_known_property(Property::AspectRatio, value)
     }
 
+    pub fn outline(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Outline, value)
+    }
+
+    pub fn outline_offset(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::OutlineOffset, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
 
     pub fn focus(self, nested: Sx) -> Self {
         self.selector(":focus", nested)
+    }
+
+    pub fn focus_visible(self, nested: Sx) -> Self {
+        self.selector(":focus-visible", nested)
     }
 
     pub fn when(self, condition: impl Into<String>, nested: Sx) -> Self {

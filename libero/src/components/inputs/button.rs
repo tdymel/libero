@@ -86,6 +86,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .text_decoration("none")
+        .outline("none")
         .and(ButtonDefaults::radius_sx())
         .when(
             "disabled",
@@ -94,6 +95,12 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().opacity("0.5")
                 .cursor("not-allowed")
                 .pointer_events("none"),
+        )
+        // Only shown for keyboard focus (not on mouse click), since the base
+        // outline is suppressed above and re-added here just for :focus-visible.
+        .focus_visible(
+            sx().outline("2px solid var(--lsx-primary-6)")
+                .outline_offset("2px"),
         )
 });
 

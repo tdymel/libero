@@ -10,6 +10,7 @@ pub enum Property {
     PaddingTop,
     PaddingLeft,
     PaddingRight,
+    PaddingBottom,
     MarginLeft,
     MarginRight,
     MarginTop,
@@ -22,6 +23,7 @@ pub enum Property {
     JustifyContent,
     Gap,
     MaxWidth,
+    MaxHeight,
     FontFamily,
     FontSize,
     FontWeight,
@@ -57,6 +59,8 @@ pub enum Property {
     ListStyle,
     MinWidth,
     AspectRatio,
+    Outline,
+    OutlineOffset,
 }
 
 impl Property {
@@ -69,6 +73,7 @@ impl Property {
             "padding-top" => Some(Self::PaddingTop),
             "padding-left" => Some(Self::PaddingLeft),
             "padding-right" => Some(Self::PaddingRight),
+            "padding-bottom" => Some(Self::PaddingBottom),
             "margin-left" => Some(Self::MarginLeft),
             "margin-right" => Some(Self::MarginRight),
             "margin-top" => Some(Self::MarginTop),
@@ -81,6 +86,7 @@ impl Property {
             "justify-content" => Some(Self::JustifyContent),
             "gap" => Some(Self::Gap),
             "max-width" => Some(Self::MaxWidth),
+            "max-height" => Some(Self::MaxHeight),
             "font-family" => Some(Self::FontFamily),
             "font-size" => Some(Self::FontSize),
             "font-weight" => Some(Self::FontWeight),
@@ -116,6 +122,8 @@ impl Property {
             "list-style" => Some(Self::ListStyle),
             "min-width" => Some(Self::MinWidth),
             "aspect-ratio" => Some(Self::AspectRatio),
+            "outline" => Some(Self::Outline),
+            "outline-offset" => Some(Self::OutlineOffset),
             _ => None,
         }
     }
@@ -129,6 +137,7 @@ impl Property {
             Self::PaddingTop => "padding-top",
             Self::PaddingLeft => "padding-left",
             Self::PaddingRight => "padding-right",
+            Self::PaddingBottom => "padding-bottom",
             Self::MarginLeft => "margin-left",
             Self::MarginRight => "margin-right",
             Self::MarginTop => "margin-top",
@@ -141,6 +150,7 @@ impl Property {
             Self::JustifyContent => "justify-content",
             Self::Gap => "gap",
             Self::MaxWidth => "max-width",
+            Self::MaxHeight => "max-height",
             Self::FontFamily => "font-family",
             Self::FontSize => "font-size",
             Self::FontWeight => "font-weight",
@@ -176,6 +186,8 @@ impl Property {
             Self::ListStyle => "list-style",
             Self::MinWidth => "min-width",
             Self::AspectRatio => "aspect-ratio",
+            Self::Outline => "outline",
+            Self::OutlineOffset => "outline-offset",
         }
     }
 }

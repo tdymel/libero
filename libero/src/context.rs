@@ -55,6 +55,15 @@ pub fn use_theme() -> &'static Theme {
     use_context::<LiberoContext>().theme
 }
 
+/// Registers an [`Sx`](crate::sx::Sx) value and returns the class name to put
+/// on any element - including ones libero doesn't provide a component for
+/// (e.g. a raw `select`). Uses the `UserCustom` layer, which has priority
+/// over every other layer (including a component's own dynamic prop-driven
+/// styles), so it always wins.
+pub fn use_class(sx: &crate::sx::Sx) -> Option<String> {
+    use_sx(sx, SxLayer::UserCustom)
+}
+
 pub(crate) fn use_sx(sx: &crate::sx::Sx, layer: SxLayer) -> Option<String> {
     let mut context = use_context::<LiberoContext>();
     let key = (layer, sx.hash());

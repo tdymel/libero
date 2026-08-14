@@ -12,6 +12,10 @@ static CONTAINER_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin_left("auto")
         .margin_right("auto")
         .and(ContainerDefaults::default_sx())
+        .focus_visible(
+            sx().outline("2px solid var(--lsx-primary-6)")
+                .outline_offset("2px"),
+        )
 });
 
 fn container_dynamic_sx(props: &ContainerProps) -> Sx {
@@ -36,6 +40,8 @@ pub struct ContainerProps {
     size: Input<ThemeAwareValue>,
     #[props(default, into)]
     gutters: Input<ThemeAwareValue>,
+    #[props(default)]
+    onclick: EventHandler<MouseEvent>,
     children: Element,
 }
 
@@ -56,6 +62,7 @@ pub fn Container(props: ContainerProps) -> Element {
         div {
             class: class,
             "data-state": data_state,
+            onclick: move |event| props.onclick.call(event),
             ..props.attributes,
             {props.children}
         }

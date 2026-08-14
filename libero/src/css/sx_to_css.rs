@@ -146,6 +146,7 @@ fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
         SxPropertyKey::Known(Property::PaddingTop)
         | SxPropertyKey::Known(Property::PaddingLeft)
         | SxPropertyKey::Known(Property::PaddingRight)
+        | SxPropertyKey::Known(Property::PaddingBottom)
         | SxPropertyKey::Known(Property::Gap)
         | SxPropertyKey::Known(Property::Margin)
         | SxPropertyKey::Known(Property::MarginTop)

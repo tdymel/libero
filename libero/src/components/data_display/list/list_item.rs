@@ -14,6 +14,10 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
         // gutter on top of that - the nested List already spaces its own
         // items, so this keeps spacing uniform between nested and plain items.
         .selector("&:has(> ul)", sx().padding("0"))
+        .focus_visible(
+            sx().outline("2px solid var(--lsx-primary-6)")
+                .outline_offset("2px"),
+        )
 });
 
 #[derive(Props, Clone, PartialEq)]
@@ -26,6 +30,8 @@ pub struct ListItemProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    #[props(default)]
+    onclick: EventHandler<MouseEvent>,
     children: Element,
 }
 
@@ -44,6 +50,7 @@ pub fn ListItem(props: ListItemProps) -> Element {
         li {
             class: class,
             "data-state": data_state,
+            onclick: move |event| props.onclick.call(event),
             ..props.attributes,
             {props.children}
         }
