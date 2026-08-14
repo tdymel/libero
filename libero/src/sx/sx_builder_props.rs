@@ -238,8 +238,4 @@ impl Sx {
     pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }
-
-    pub fn breakpoint_below(self, breakpoint: Size, nested: Sx) -> Self {
-        self.modifier(SxModifierKey::BreakpointMax(breakpoint), nested)
-    }
 }

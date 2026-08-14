@@ -539,26 +539,24 @@ fn App() -> Element {
                     for (index , article) in ARTICLES.iter().enumerate() {
                         ListItem {
                             Flex {
-                                // Image-left/text-right by default. Only switch to a
-                                // stacked, top-image layout at smartphone width.
+                                // Mobile-first: stacked, top-image layout by default
+                                // (smartphone width). From the "xs" breakpoint up
+                                // (tablet and wider), switch to image-left/text-right.
                                 sx: sx()
                                     .width("100%")
-                                    .flex_direction("row")
-                                    .align_items("flex-start")
+                                    .flex_direction("column")
+                                    .align_items("stretch")
                                     .gap("md")
-                                    .breakpoint_below(
+                                    .breakpoint(
                                         Size::Xs,
-                                        sx().flex_direction("column").align_items("stretch"),
+                                        sx().flex_direction("row").align_items("flex-start"),
                                     ),
                                 Box {
                                     sx: sx()
-                                        .width("140px")
-                                        .height("100px")
+                                        .width("100%")
+                                        .aspect_ratio("2 / 1")
                                         .flex_shrink("0")
-                                        .breakpoint_below(
-                                            Size::Xs,
-                                            sx().width("100%").height("auto").aspect_ratio("2 / 1"),
-                                        ),
+                                        .breakpoint(Size::Xs, sx().width("140px").height("100px")),
                                     Image {
                                         src: article.image,
                                         radius: "sm",

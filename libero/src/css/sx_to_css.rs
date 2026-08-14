@@ -80,10 +80,6 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
             selectors: context.selectors.clone(),
             media_query: Some(format!("(min-width: {})", size.breakpoint_value())),
         },
-        SxModifier::BreakpointMax(size) => CssContext {
-            selectors: context.selectors.clone(),
-            media_query: Some(format!("(max-width: {})", size.breakpoint_value())),
-        },
     }
 }
 
@@ -197,20 +193,6 @@ mod tests {
         assert!(css.contains("@media (min-width: 62rem) and (min-width: 75rem){"));
         assert!(css.contains("background:var(--lsx-secondary-4);"));
         assert!(!css.contains("background:var(--lsx-secondary-2);"));
-    }
-
-    #[test]
-    fn sx_breakpoint_below_emits_max_width_media_scope() {
-        let stylesheet = Stylesheet::from(
-            &sx()
-                .flex_direction("row")
-                .breakpoint_below(Size::Xs, sx().flex_direction("column")),
-        );
-        let css = stylesheet.as_str();
-
-        assert!(css.contains("flex-direction:row;"));
-        assert!(css.contains("@media (max-width: 36rem){"));
-        assert!(css.contains("flex-direction:column;"));
     }
 
     #[test]

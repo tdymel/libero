@@ -208,5 +208,4 @@ pub enum SxModifierKey {
     Selector(String),
     Condition(String),
     Breakpoint(Size),
-    BreakpointMax(Size),
 }
