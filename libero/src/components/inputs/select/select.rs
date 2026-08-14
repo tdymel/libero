@@ -1,4 +1,6 @@
-use dioxus::prelude::*;
+use std::sync::atomic::{AtomicU64, Ordering};
+
+use dioxus::{document, prelude::*};
 
 use crate::{
     components::{Input, States, common::class_list},
@@ -6,6 +8,8 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SelectDefaults, Size},
 };
+
+static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 static SELECT_WRAPPER_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").flex_direction("column").gap("4px"));
@@ -71,6 +75,7 @@ pub struct SelectProps {
 #[component]
 pub fn Select(props: SelectProps) -> Element {
     let theme = use_theme();
+    let id = use_signal(|| format!("lsx-select-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
 
     let size = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
@@ -110,10 +115,18 @@ pub fn Select(props: SelectProps) -> Element {
                 span { class: label_class, {label.clone()} }
             }
             select {
+                id: "{id}",
                 class: select_class,
-                value: props.value,
+                value: props.value.clone(),
                 "data-state": data_state,
                 onchange: move |event| props.onchange.call(event.value()),
+                onmounted: move |_| {
+                    document::eval(&format!(
+                        "var el = document.getElementById({:?}); if (el) el.value = {:?};",
+                        id(),
+                        props.value,
+                    ));
+                },
                 ..props.attributes,
                 {props.children}
             }
