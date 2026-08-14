@@ -84,8 +84,6 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
 
 static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
-        .max_width("90vw")
-        .max_height("90vh")
         .padding("0")
         .border_width("0")
         .background("transparent")
@@ -98,8 +96,10 @@ static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
 
 static ZOOM_OVERLAY_IMAGE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
-        .width("100%")
-        .height("100%")
+        .width("auto")
+        .height("auto")
+        .max_width("90vw")
+        .max_height("90vh")
         .object_fit("contain")
 });
 
@@ -117,6 +117,8 @@ pub struct ImageProps {
     src: String,
     #[props(default)]
     fallback_src: Option<String>,
+    #[props(default, into)]
+    zoomed_src: Option<String>,
     #[props(default, into)]
     fit: Input<ImageFit>,
     #[props(default, into)]
@@ -178,6 +180,7 @@ pub fn Image(props: ImageProps) -> Element {
     }
 
     let img_class = class_list([framework_class, dynamic_class]);
+    let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
     let mut focus_return = use_focus_return();
     let mut close_zoom = move || {
@@ -249,7 +252,7 @@ pub fn Image(props: ImageProps) -> Element {
                             onclick: move |_| close_zoom(),
                             img {
                                 class: overlay_image_class,
-                                src: src.clone(),
+                                src: zoomed_src,
                                 alt: "",
                                 role: "presentation",
                             }
