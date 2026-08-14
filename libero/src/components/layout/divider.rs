@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, DividerDefaults},
 };
@@ -192,13 +192,6 @@ pub fn Divider(props: DividerProps) -> Element {
         .with("horizontal", !vertical)
         .with("label", has_label);
 
-    let framework_class = crate::context::use_sx(&DIVIDER_BASE_SX, crate::SxLayer::Framework);
-
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
-
     let color = props.color.as_ref().map(divider_color_value);
 
     let dynamic_class = crate::context::use_sx(
@@ -212,23 +205,23 @@ pub fn Divider(props: DividerProps) -> Element {
         crate::SxLayer::UserDynamic,
     );
 
-    let class = class_list([props.class, framework_class, dynamic_class, static_class]);
+    let class = class_list([props.class, dynamic_class]);
     let data_state = divider_states.data_state();
     let aria_orientation = vertical.then_some("vertical");
 
     rsx! {
-        div {
+        Box {
             class: class,
+            sx: props.sx,
+            framework_sx: &DIVIDER_BASE_SX,
             role: "separator",
             "aria-orientation": aria_orientation,
             "data-state": data_state,
-            ..props.attributes,
+            attributes: props.attributes,
             if has_label {
-                span {
-                    class: crate::context::use_sx(
-                        if vertical { &DIVIDER_LABEL_VERTICAL_SX } else { &DIVIDER_LABEL_HORIZONTAL_SX },
-                        crate::SxLayer::Framework
-                    ),
+                Box {
+                    component: "span",
+                    framework_sx: if vertical { &DIVIDER_LABEL_VERTICAL_SX } else { &DIVIDER_LABEL_HORIZONTAL_SX },
                     {props.children}
                 }
             }

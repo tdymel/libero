@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     SxLayer,
-    components::{Input, States, common::class_list},
+    components::{
+        HtmlTag, Input, States,
+        common::{class_list, render_polymorphic},
+    },
     context::use_sx,
     sx::{StaticSx, Sx, sx},
 };
@@ -27,6 +30,16 @@ pub struct BoxProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    /// Which element to render as - `div` (default), `span`, `a`, `button`,
+    /// or any other tag [`HtmlTag`] supports.
+    #[props(default, into)]
+    component: Input<HtmlTag>,
+    /// A framework-layer `Sx` for whatever's using `Box` as its base (e.g.
+    /// `Divider`'s own base styles) - registered alongside `Box`'s own,
+    /// rather than every caller registering its own Framework-layer `Sx`
+    /// and threading the class into `class` by hand.
+    #[props(default)]
+    framework_sx: Option<&'static StaticSx>,
     #[props(default)]
     onclick: EventHandler<MouseEvent>,
     children: Element,
@@ -35,6 +48,9 @@ pub struct BoxProps {
 #[component]
 pub fn Box(props: BoxProps) -> Element {
     let focus_class = use_sx(&BOX_FOCUS_SX, SxLayer::Framework);
+    let framework_class = props
+        .framework_sx
+        .and_then(|sx| use_sx(sx, SxLayer::Framework));
     let static_class = props
         .sx
         .as_ref()
@@ -42,15 +58,15 @@ pub fn Box(props: BoxProps) -> Element {
 
     let data_state = props.states.as_ref().and_then(States::data_state);
 
-    let class = class_list([props.class, focus_class, static_class]);
+    let class = class_list([props.class, framework_class, focus_class, static_class]);
+    let component = props.component.as_ref().copied().unwrap_or_default();
 
-    rsx! {
-        div {
-            class: class,
-            "data-state": data_state,
-            onclick: move |event| props.onclick.call(event),
-            ..props.attributes,
-            {props.children}
-        }
-    }
+    render_polymorphic(
+        component,
+        class,
+        data_state,
+        props.attributes,
+        props.onclick,
+        props.children,
+    )
 }
