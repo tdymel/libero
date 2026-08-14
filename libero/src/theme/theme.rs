@@ -1,7 +1,7 @@
 use super::{
-    ButtonDefaults, ContainerDefaults, DialogDefaults, DividerDefaults, FlexAxisDefaults,
-    FlexDefaults, HexColor, SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults,
-    TitleLevel,
+    ButtonDefaults, ContainerDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
+    FlexAxisDefaults, FlexDefaults, HexColor, SelectDefaults, Sizes, TextDefaults, TextSize,
+    TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -11,6 +11,7 @@ pub struct Theme {
     pub flex: FlexDefaults,
     pub container: ContainerDefaults,
     pub dialog: DialogDefaults,
+    pub drawer: DrawerDefaults,
     pub divider: DividerDefaults,
     pub button: ButtonDefaults,
     pub select: SelectDefaults,
@@ -38,6 +39,7 @@ impl Theme {
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
         DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750)),
+        DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400)),
         DividerDefaults::new(None),
         ButtonDefaults::new(
             super::Size::Md,
@@ -127,6 +129,7 @@ impl Theme {
         flex: FlexDefaults,
         container: ContainerDefaults,
         dialog: DialogDefaults,
+        drawer: DrawerDefaults,
         divider: DividerDefaults,
         button: ButtonDefaults,
         select: SelectDefaults,
@@ -149,6 +152,7 @@ impl Theme {
             flex,
             container,
             dialog,
+            drawer,
             divider,
             button,
             select,

@@ -11,7 +11,10 @@ static MODAL_SX: StaticSx = StaticSx::new(|| sx().position("fixed").inset("0"));
 
 // Fixed + inset (not just relative) so it spans the full viewport itself:
 // Dialog's start/end margin:auto trick needs real free space on this flex
-// container to push against, not just Modal's root.
+// container to push against, not just Modal's root. pointer-events:none so
+// clicks in its empty area (outside the actual content) fall through to
+// Overlay beneath instead of being swallowed by this full-viewport div;
+// the content itself restores pointer-events:auto.
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
@@ -19,6 +22,7 @@ static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("center")
         .justify_content("center")
+        .pointer_events("none")
 });
 
 #[derive(Props, Clone, PartialEq)]

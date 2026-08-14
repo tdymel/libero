@@ -95,6 +95,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_radius_declarations(&mut declarations, theme);
     push_breakpoint_declarations(&mut declarations);
     push_dialog_size_declarations(&mut declarations, theme);
+    push_drawer_size_declarations(&mut declarations, theme);
     push_flex_declarations(&mut declarations, theme);
     push_container_declarations(&mut declarations, theme);
     push_divider_declarations(&mut declarations, theme);
@@ -202,6 +203,29 @@ fn push_dialog_size_declarations(declarations: &mut Vec<CssDeclaration>, theme: 
     declarations.push(CssDeclaration::new(
         SizeCss::DIALOG_SIZE.name(crate::theme::Size::Xl),
         format!("{}px", theme.dialog.size.xl),
+    ));
+}
+
+fn push_drawer_size_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
+        SizeCss::DRAWER_SIZE.name(crate::theme::Size::Xs),
+        format!("{}px", theme.drawer.size.xs),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::DRAWER_SIZE.name(crate::theme::Size::Sm),
+        format!("{}px", theme.drawer.size.sm),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::DRAWER_SIZE.name(crate::theme::Size::Md),
+        format!("{}px", theme.drawer.size.md),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::DRAWER_SIZE.name(crate::theme::Size::Lg),
+        format!("{}px", theme.drawer.size.lg),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::DRAWER_SIZE.name(crate::theme::Size::Xl),
+        format!("{}px", theme.drawer.size.xl),
     ));
 }
 
@@ -698,6 +722,7 @@ mod tests {
         assert!(css.as_str().contains("--lsx-breakpoint-xs:36rem;"));
         assert!(css.as_str().contains("--lsx-breakpoint-xl:88rem;"));
         assert!(css.as_str().contains("--lsx-dialog-size-md:510px;"));
+        assert!(css.as_str().contains("--lsx-drawer-size-md:280px;"));
         assert!(
             css.as_str()
                 .contains("--lsx-container-size:var(--lsx-breakpoint-lg);")

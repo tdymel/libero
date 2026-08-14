@@ -61,6 +61,9 @@ impl From<String> for Input<DialogAlign> {
 
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().background("white")
+        // Modal's content wrapper is pointer-events:none so backdrop clicks
+        // fall through it - restore interactivity for the dialog itself.
+        .pointer_events("auto")
         // A flex item shrinks to its content by default, so without an
         // explicit width, `max-width`/`size` only caps rather than fills.
         .width("100%")
@@ -74,7 +77,7 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
 /// `xs`/`sm`/`md`/`lg`/`xl` resolve through the dialog size scale (distinct
 /// from the (much larger) breakpoint scale generic `max-width` normally
 /// uses) - anything else (a raw length, percentage, CSS var) passes through.
-fn dialog_size(value: &ThemeAwareValue) -> ThemeAwareValue {
+pub(crate) fn dialog_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     match value {
         ThemeAwareValue::Size(size) => SizeCss::DIALOG_SIZE.value(*size).into(),
         other => other.clone(),

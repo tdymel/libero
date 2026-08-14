@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Button, Container, Dialog, Divider, Flex, FocusTrap, FocusTrapInitialFocus,
+        Box, Button, Container, Dialog, Divider, Drawer, Flex, FocusTrap, FocusTrapInitialFocus,
         HelloWorld, Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
@@ -824,6 +824,90 @@ fn App() -> Element {
                     "Modal / use_modal Examples"
                 }
                 ModalDemo {}
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "Drawer Examples"
+                }
+                DrawerDemo {}
+            }
+        }
+    }
+}
+
+#[component]
+fn DrawerDemo() -> Element {
+    let mut temporary_open = use_signal(|| false);
+    let mut anchor = use_signal(|| "left");
+    let mut static_open = use_signal(|| true);
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "md",
+            p { "Temporary (modal, portaled, focus-trapped) - pick an anchor:" }
+            Flex {
+                gap: "sm",
+                for a in ["left", "right", "top", "bottom"] {
+                    Button {
+                        variant: if anchor() == a { "filled" } else { "outline" },
+                        onclick: move |_| anchor.set(a),
+                        {a}
+                    }
+                }
+                Button {
+                    variant: "filled",
+                    onclick: move |_| temporary_open.set(true),
+                    "Open drawer"
+                }
+            }
+            if temporary_open() {
+                Drawer {
+                    anchor: anchor(),
+                    size: "xl",
+                    onclose: move |_| temporary_open.set(false),
+                    Flex {
+                        direction: "column",
+                        gap: "md",
+                        sx: sx().padding("lg"),
+                        Text { "Temporary drawer, anchored: {anchor()}" }
+                        Button {
+                            variant: "filled",
+                            "data-autofocus": true,
+                            onclick: move |_| temporary_open.set(false),
+                            "Close"
+                        }
+                    }
+                }
+            }
+            p { "Static (in-flow, no portal/backdrop/focus-trap) - e.g. a desktop sidebar:" }
+            Button {
+                variant: "filled",
+                onclick: move |_| static_open.toggle(),
+                if static_open() { "Remove static drawer" } else { "Add static drawer" }
+            }
+            if static_open() {
+                Flex {
+                    sx: sx().height("200px").border("1px solid var(--lsx-grey-3)"),
+                    Drawer {
+                        variant: "static",
+                        anchor: "left",
+                        size: "xl",
+                        Flex {
+                            direction: "column",
+                            gap: "sm",
+                            sx: sx().padding("md"),
+                            Text { "Static sidebar" }
+                        }
+                    }
+                    Box {
+                        sx: sx().flex("1").padding("md"),
+                        Text { "Main content area" }
+                    }
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ mod button;
 mod container;
 mod dialog;
 mod divider;
+mod drawer;
 mod flex;
 mod select;
 mod text;
@@ -17,6 +18,7 @@ pub use button::{
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use dialog::DialogDefaults;
 pub use divider::{DIVIDER_SPACING, DividerDefaults};
+pub use drawer::DrawerDefaults;
 pub use flex::{
     FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP, FLEX_ROW_ALIGN,
     FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP, FlexAxisDefaults, FlexDefaults,
