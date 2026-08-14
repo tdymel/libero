@@ -86,6 +86,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .text_decoration("none")
+        .and(ButtonDefaults::radius_sx())
         .when(
             "disabled",
             // pointer-events: none also stops the variant's :hover styles from
@@ -182,9 +183,13 @@ pub fn Button(props: ButtonProps) -> Element {
     let mut ripple_signal = use_signal(|| None::<Ripple>);
     let mut next_ripple_id = use_signal(|| 0u64);
 
-    let radius = match props.radius.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => *size,
-        _ => theme.button.radius,
+    // The default radius/size are baked into the framework layer as theme CSS
+    // vars (see ButtonDefaults::radius_sx / get_size_sx), so a plain `sx` prop
+    // override still works. Only an explicit prop should win over that at the
+    // (higher-priority) dynamic layer.
+    let explicit_radius = match props.radius.as_ref() {
+        Some(ThemeAwareValue::Size(size)) => Some(*size),
+        _ => None,
     };
     let size = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
@@ -195,7 +200,9 @@ pub fn Button(props: ButtonProps) -> Element {
     let framework_class = crate::context::use_sx(&BUTTON_BASE_SX, crate::SxLayer::Framework);
 
     let dynamic_sx = button_variant_sx(variant, color, shade)
-        .border_radius(ThemeAwareValue::Size(radius))
+        .apply_if(explicit_radius, |sx, radius| {
+            sx.border_radius(ThemeAwareValue::Size(radius))
+        })
         .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
     let dynamic_class = crate::context::use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
 

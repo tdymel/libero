@@ -22,6 +22,8 @@ pub const BUTTON_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-button-font-size-xl")
 pub const BUTTON_HEIGHT_XL: CssVar = CssVar::new("--lsx-button-height-xl");
 pub const BUTTON_PADDING_X_XL: CssVar = CssVar::new("--lsx-button-padding-x-xl");
 
+pub const BUTTON_RADIUS: CssVar = CssVar::new("--lsx-button-radius");
+
 pub const BUTTON_RIPPLE_ANIMATION: &str = "lsx-ripple";
 pub const BUTTON_RIPPLE_KEYFRAMES: &str =
     "@keyframes lsx-ripple{to{transform:translate(-50%, -50%) scale(1);opacity:0;}}";
@@ -77,6 +79,10 @@ impl ButtonDefaults {
             lg,
             xl,
         }
+    }
+
+    pub fn radius_sx() -> Sx {
+        sx().border_radius(BUTTON_RADIUS.value())
     }
 
     pub fn xs_sx() -> Sx {
