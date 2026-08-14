@@ -1,3 +1,3 @@
-mod backdrop;
+mod overlay;
 
-pub use backdrop::Backdrop;
+pub use overlay::{Overlay, OverlayProps};

@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Backdrop, Box, Button, Container, Divider, Flex, FocusTrap, FocusTrapInitialFocus,
-        HelloWorld, Image, List, ListItem, Option, Select, Text, Title, TitleVariant,
+        Box, Button, Container, Divider, Flex, FocusTrap, FocusTrapInitialFocus, HelloWorld,
+        Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
     hooks::use_portal,
@@ -717,22 +717,24 @@ fn App() -> Element {
                 sx: sx().padding_top(Size::Xl),
                 Title {
                     variant: "h2",
-                    "Backdrop Examples"
+                    "Overlay Examples"
                 }
                 p {
-                    "Click to open a backdrop (fades in/out, click it to close):"
+                    "Click to open an overlay (fades in/out, click it to close):"
                 }
                 Button {
                     variant: "filled",
                     onclick: move |_| backdrop_open.set(true),
-                    "Open backdrop"
+                    "Open overlay"
                 }
-                Backdrop {
-                    open: backdrop_open(),
-                    onclick: move |_| backdrop_open.set(false),
-                    Text {
-                        sx: sx().color("white"),
-                        "Click anywhere to close"
+                if backdrop_open() {
+                    Overlay {
+                        blur: 4.0,
+                        onclick: move |_| backdrop_open.set(false),
+                        Text {
+                            sx: sx().color("white"),
+                            "Click anywhere to close"
+                        }
                     }
                 }
             }

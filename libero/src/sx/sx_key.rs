@@ -64,6 +64,7 @@ pub enum Property {
     Inset,
     ZIndex,
     Transition,
+    BackdropFilter,
 }
 
 impl Property {
@@ -130,6 +131,7 @@ impl Property {
             "inset" => Some(Self::Inset),
             "z-index" => Some(Self::ZIndex),
             "transition" => Some(Self::Transition),
+            "backdrop-filter" => Some(Self::BackdropFilter),
             _ => None,
         }
     }
@@ -197,6 +199,7 @@ impl Property {
             Self::Inset => "inset",
             Self::ZIndex => "z-index",
             Self::Transition => "transition",
+            Self::BackdropFilter => "backdrop-filter",
         }
     }
 }

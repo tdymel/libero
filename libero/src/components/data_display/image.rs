@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     SxLayer,
-    components::{Backdrop, FocusTrap, Input, States, common::class_list},
+    components::{FocusTrap, Input, Overlay, States, common::class_list},
     context::use_sx,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -84,6 +84,7 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
 
 static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
+        .position("relative")
         .padding("0")
         .border_width("0")
         .background("transparent")
@@ -101,6 +102,17 @@ static ZOOM_OVERLAY_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .max_width("90vw")
         .max_height("90vh")
         .object_fit("contain")
+});
+
+const ZOOM_DIALOG_Z_INDEX: &str = "100";
+
+static ZOOM_DIALOG_SX: StaticSx = StaticSx::new(|| {
+    sx().position("fixed")
+        .inset("0")
+        .display("flex")
+        .align_items("center")
+        .justify_content("center")
+        .z_index(ZOOM_DIALOG_Z_INDEX)
 });
 
 #[derive(Props, Clone, PartialEq)]
@@ -212,37 +224,41 @@ pub fn Image(props: ImageProps) -> Element {
         overlay_button_cursor_class,
     ]);
     let overlay_image_class = use_sx(&ZOOM_OVERLAY_IMAGE_SX, SxLayer::Framework);
+    let dialog_class = use_sx(&ZOOM_DIALOG_SX, SxLayer::Framework);
 
     let portal_label = label.clone();
     use_portal(move || {
+        if !zoomed() {
+            return rsx! {};
+        }
+
         let label = portal_label.clone();
+
         rsx! {
-            Backdrop {
-                open: zoomed(),
-                onclick: move |_| close_zoom(),
-                div {
-                    role: "dialog",
-                    "aria-modal": "true",
-                    "aria-label": label.clone(),
-                    onkeydown: move |event: Event<KeyboardData>| {
-                        if event.key() == Key::Escape {
-                            close_zoom();
-                        }
-                    },
-                    FocusTrap {
-                        active: zoomed(),
-                        button {
-                            r#type: "button",
-                            class: overlay_button_class.clone(),
-                            "data-autofocus": true,
-                            aria_label: label.clone(),
-                            onclick: move |_| close_zoom(),
-                            img {
-                                class: overlay_image_class.clone(),
-                                src: zoomed_src.clone(),
-                                alt: "",
-                                role: "presentation",
-                            }
+            div {
+                role: "dialog",
+                "aria-modal": "true",
+                "aria-label": label.clone(),
+                class: dialog_class.clone(),
+                onkeydown: move |event: Event<KeyboardData>| {
+                    if event.key() == Key::Escape {
+                        close_zoom();
+                    }
+                },
+                Overlay { onclick: move |_| close_zoom() }
+                FocusTrap {
+                    active: zoomed(),
+                    button {
+                        r#type: "button",
+                        class: overlay_button_class.clone(),
+                        "data-autofocus": true,
+                        aria_label: label.clone(),
+                        onclick: move |_| close_zoom(),
+                        img {
+                            class: overlay_image_class.clone(),
+                            src: zoomed_src.clone(),
+                            alt: "",
+                            role: "presentation",
                         }
                     }
                 }

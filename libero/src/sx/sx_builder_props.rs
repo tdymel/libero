@@ -247,6 +247,10 @@ impl Sx {
         self.with_known_property(Property::Transition, value)
     }
 
+    pub fn backdrop_filter(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BackdropFilter, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }

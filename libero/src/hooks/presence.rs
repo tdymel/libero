@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 /// Tracks the mount/visible lifecycle of an animated-open/close element.
 #[derive(Clone, Copy)]
-pub(crate) struct Presence {
+pub struct Presence {
     mounted: Signal<bool>,
     visible: Signal<bool>,
 }
@@ -31,7 +31,7 @@ impl Presence {
     }
 }
 
-pub(crate) fn use_presence(open: bool) -> Presence {
+pub fn use_presence(open: bool) -> Presence {
     let mut mounted = use_signal(|| open);
     let mut visible = use_signal(|| false);
 
