@@ -227,11 +227,7 @@ pub fn Image(props: ImageProps) -> Element {
     let dialog_class = use_sx(&ZOOM_DIALOG_SX, SxLayer::Framework);
 
     let portal_label = label.clone();
-    use_portal(move || {
-        if !zoomed() {
-            return rsx! {};
-        }
-
+    use_portal(zoomed(), move || {
         let label = portal_label.clone();
 
         rsx! {

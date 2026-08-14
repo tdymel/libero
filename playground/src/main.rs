@@ -50,7 +50,7 @@ fn main() {
 
 #[component]
 fn PortalDemo() -> Element {
-    use_portal(|| {
+    use_portal(true, || {
         rsx! {
             Box {
                 sx: sx()
