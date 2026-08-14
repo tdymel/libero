@@ -4,8 +4,15 @@ use crate::{
     components::{Input, States, common::class_list},
     context::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ButtonDefaults, Color, ColorShade, ColorValue, Size},
+    theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, Size},
 };
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Ripple {
+    id: u64,
+    x: f64,
+    y: f64,
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -70,6 +77,8 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("center")
         .justify_content("center")
+        .position("relative")
+        .overflow("hidden")
         .border_style("solid")
         .border_width("1px")
         .font_weight("600")
@@ -169,6 +178,10 @@ pub fn Button(props: ButtonProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
 
+    // Only one ripple is shown at a time; a new click simply overrides the last one.
+    let mut ripple_signal = use_signal(|| None::<Ripple>);
+    let mut next_ripple_id = use_signal(|| 0u64);
+
     let radius = match props.radius.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
         _ => theme.button.radius,
@@ -213,8 +226,20 @@ pub fn Button(props: ButtonProps) -> Element {
             class: class,
             disabled: disabled,
             "data-state": data_state,
-            onclick: move |event| props.onclick.call(event),
-            ..props.attributes,
+            onclick: move |event| {
+                let point = event.element_coordinates();
+                let id = next_ripple_id();
+                next_ripple_id += 1;
+                ripple_signal.set(Some(Ripple { id, x: point.x, y: point.y }));
+                props.onclick.call(event);
+            },
+            if let Some(ripple) = ripple_signal() {
+                span {
+                    key: "{ripple.id}",
+                    style: "position:absolute;left:{ripple.x}px;top:{ripple.y}px;width:300%;height:300%;border-radius:50%;background:currentColor;opacity:0.3;transform:translate(-50%, -50%) scale(0);animation:{BUTTON_RIPPLE_ANIMATION} 550ms ease-out forwards;pointer-events:none;",
+                    onanimationend: move |_| ripple_signal.set(None),
+                }
+            }
             {props.children}
         }
     }
