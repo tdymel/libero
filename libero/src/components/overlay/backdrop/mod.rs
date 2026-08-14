@@ -10,20 +10,10 @@ mod presence;
 
 use presence::use_presence;
 
-// Mirrors MUI's Fade transition: entering (fade in) is slower than leaving
-// (fade out), both on MUI's default easeInOut easing curve.
 const BACKDROP_TRANSITION_ENTER: &str = "opacity 225ms cubic-bezier(0.4, 0, 0.2, 1)";
 const BACKDROP_TRANSITION_EXIT: &str = "opacity 195ms cubic-bezier(0.4, 0, 0.2, 1)";
-// Conservative default, high enough to sit above regular page content
-// without reaching into territory reserved for things like toasts.
 const BACKDROP_Z_INDEX: &str = "100";
 
-// Mirrors MUI's Backdrop: a full-viewport, semi-transparent scrim that narrows
-// the user's focus onto whatever floats above it (a dialog, a drawer, ...).
-// It only handles the visual layer + open/close transition here - focus
-// trapping and escape/outside-click handling belong to the components that
-// use a Backdrop (e.g. a future Modal), since a bare Backdrop may have none
-// of those needs (e.g. a loading overlay).
 static BACKDROP_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")

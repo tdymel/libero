@@ -11,29 +11,14 @@ use crate::{
 
 use super::visually_hidden::VISUALLY_HIDDEN_SX;
 
-// Mirrors the selector used by most vanilla-JS focus-trap implementations:
-// anything natively focusable, or explicitly opted in via tabindex (but not
-// opted out with tabindex="-1").
 const FOCUSABLE_SELECTOR: &str = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"])";
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
-// `display: contents` keeps the wrapper out of layout entirely - it exists
-// only so we have a DOM node to scope the id-based JS queries below to.
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
-// Both scripts below start with a real `await` on a macrotask boundary, not
-// just a fire-and-forget `setTimeout(..., 0)`. Dioxus wraps every eval'd
-// script in `(async function(){ <script>; dioxus.close(); })()` and calls it
-// synchronously - so unless our own script actually suspends at an `await`,
-// `dioxus.close()` (which signals back into the Dioxus/wasm runtime) fires
-// synchronously too, on the same call stack as whatever triggered the eval
-// (an effect, a keydown handler, ...). That reentrant signal is what was
-// hanging the page - a bare `setTimeout` without `await` schedules work but
-// doesn't stop `dioxus.close()` from firing immediately regardless. Actually
-// awaiting the timeout defers the *entire* rest of the script, `dioxus.close()`
-// included, to a genuinely fresh task.
-
+// `await` a macrotask first: calling document::eval synchronously from an
+// effect/handler hangs the page (dioxus.close() reenters synchronously).
 fn focus_first(id: &str) {
     document::eval(&format!(
         r#"await new Promise(function(r) {{ setTimeout(r, 0); }});
@@ -45,12 +30,6 @@ fn focus_first(id: &str) {
     ));
 }
 
-// Handles the actual Tab/Shift+Tab move ourselves (not just the wrap-around
-// edges) so the whole thing stays synchronous on the Rust side: the keydown
-// handler always calls `event.prevent_default()` immediately, then fires
-// this off to do the real work, rather than awaiting a round trip to decide
-// whether to prevent the browser's own default action (which - for a
-// synchronous browser event like keydown - would already be too late).
 fn cycle_focus(id: &str, backwards: bool) {
     document::eval(&format!(
         r#"await new Promise(function(r) {{ setTimeout(r, 0); }});
@@ -109,10 +88,6 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
                 }
             },
             ..props.attributes,
-            // Fresh insertion each time `active` flips to `true` (Dioxus
-            // removes/re-adds this node rather than patching it in place),
-            // so `onmounted` naturally fires exactly once per activation -
-            // no manual "did we already run this" bookkeeping needed.
             if props.active {
                 span {
                     "aria-hidden": "true",
@@ -125,14 +100,9 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
     }
 }
 
-/// A visually-hidden, focusable placeholder that soaks up a [`FocusTrap`]'s
-/// initial focus instead of the first real focusable descendant - useful
-/// when you don't want anything inside the trap focused right away (e.g. a
-/// modal that shouldn't auto-focus its first input). Once it loses focus, it
-/// drops out of the tab order for good.
-///
-/// Named after Mantine's `FocusTrap.InitialFocus`, which Dioxus has no
-/// equivalent namespaced-component syntax for.
+/// Mantine's `FocusTrap.InitialFocus` equivalent: a visually-hidden
+/// focusable placeholder that soaks up initial focus, then drops out of
+/// the tab order once blurred.
 #[component]
 pub fn FocusTrapInitialFocus() -> Element {
     let mut used = use_signal(|| false);

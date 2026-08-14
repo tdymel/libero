@@ -2,6 +2,7 @@
 
 pub mod components;
 mod context;
+pub mod hooks;
 mod sx_registry;
 
 mod css;

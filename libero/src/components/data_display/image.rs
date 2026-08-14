@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     SxLayer,
-    components::{Input, States, common::class_list},
+    components::{Backdrop, FocusTrap, Input, States, common::class_list},
     context::use_sx,
+    hooks::use_focus_return,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
 
@@ -67,6 +68,41 @@ impl From<String> for Input<ImageFit> {
 static IMAGE_BASE_SX: StaticSx =
     StaticSx::new(|| sx().display("block").width("100%").height("100%"));
 
+static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
+    sx().display("block")
+        .width("100%")
+        .height("100%")
+        .padding("0")
+        .border_width("0")
+        .background("transparent")
+        .outline("none")
+        .focus_visible(
+            sx().outline("2px solid var(--lsx-primary-6)")
+                .outline_offset("2px"),
+        )
+});
+
+static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
+    sx().display("block")
+        .max_width("90vw")
+        .max_height("90vh")
+        .padding("0")
+        .border_width("0")
+        .background("transparent")
+        .outline("none")
+        .focus_visible(
+            sx().outline("2px solid var(--lsx-primary-6)")
+                .outline_offset("2px"),
+        )
+});
+
+static ZOOM_OVERLAY_IMAGE_SX: StaticSx = StaticSx::new(|| {
+    sx().display("block")
+        .width("100%")
+        .height("100%")
+        .object_fit("contain")
+});
+
 #[derive(Props, Clone, PartialEq)]
 pub struct ImageProps {
     #[props(extends = GlobalAttributes)]
@@ -87,11 +123,14 @@ pub struct ImageProps {
     radius: Input<ThemeAwareValue>,
     #[props(default, into)]
     alt: String,
+    #[props(default)]
+    zoomable: bool,
 }
 
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
+    let mut zoomed = use_signal(|| false);
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
@@ -118,23 +157,106 @@ pub fn Image(props: ImageProps) -> Element {
         .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
 
     let data_state = props.states.as_ref().and_then(States::data_state);
-    let class = class_list([props.class, framework_class, dynamic_class, static_class]);
 
     let on_error_src = props.src.clone();
 
-    // Empty/missing alt means decorative: reinforce that for assistive tech
-    // rather than relying solely on implicit alt="" semantics.
     let decorative_role = props.alt.is_empty().then_some("presentation");
 
+    if !props.zoomable {
+        let class = class_list([props.class, framework_class, dynamic_class, static_class]);
+        return rsx! {
+            img {
+                class: class,
+                "data-state": data_state,
+                src: src,
+                alt: props.alt.clone(),
+                role: decorative_role,
+                onerror: move |_| errored_src.set(Some(on_error_src.clone())),
+                ..props.attributes,
+            }
+        };
+    }
+
+    let img_class = class_list([framework_class, dynamic_class]);
+
+    let mut focus_return = use_focus_return();
+    let mut close_zoom = move || {
+        zoomed.set(false);
+        focus_return.restore();
+    };
+
+    let cursor = if zoomed() { "zoom-out" } else { "zoom-in" };
+    let button_framework_class = use_sx(&ZOOM_BUTTON_SX, SxLayer::Framework);
+    let button_dynamic_class = use_sx(&sx().cursor(cursor), SxLayer::UserDynamic);
+    let button_class = class_list([
+        props.class,
+        button_framework_class,
+        button_dynamic_class,
+        static_class,
+    ]);
+
+    let label = match (props.alt.is_empty(), zoomed()) {
+        (true, false) => "Zoom in".to_string(),
+        (true, true) => "Zoom out".to_string(),
+        (false, false) => format!("Zoom in: {}", props.alt),
+        (false, true) => format!("Zoom out: {}", props.alt),
+    };
+
+    let overlay_button_framework_class = use_sx(&ZOOM_OVERLAY_BUTTON_SX, SxLayer::Framework);
+    let overlay_button_cursor_class = use_sx(&sx().cursor("zoom-out"), SxLayer::UserDynamic);
+    let overlay_button_class = class_list([
+        overlay_button_framework_class,
+        overlay_button_cursor_class,
+    ]);
+    let overlay_image_class = use_sx(&ZOOM_OVERLAY_IMAGE_SX, SxLayer::Framework);
+
     rsx! {
-        img {
-            class: class,
+        button {
+            r#type: "button",
+            class: button_class,
             "data-state": data_state,
-            src: src,
-            alt: props.alt.clone(),
-            role: decorative_role,
-            onerror: move |_| errored_src.set(Some(on_error_src.clone())),
-            ..props.attributes,
+            "aria-pressed": zoomed().to_string(),
+            aria_label: label.clone(),
+            onmounted: move |event: Event<MountedData>| focus_return.remember(event),
+            onclick: move |_| zoomed.toggle(),
+            img {
+                class: img_class,
+                src: src.clone(),
+                alt: "",
+                role: "presentation",
+                onerror: move |_| errored_src.set(Some(on_error_src.clone())),
+            }
+        }
+        if zoomed() {
+            Backdrop {
+                open: true,
+                onclick: move |_| close_zoom(),
+                div {
+                    role: "dialog",
+                    "aria-modal": "true",
+                    "aria-label": label.clone(),
+                    onkeydown: move |event: Event<KeyboardData>| {
+                        if event.key() == Key::Escape {
+                            close_zoom();
+                        }
+                    },
+                    FocusTrap {
+                        button {
+                            r#type: "button",
+                            class: overlay_button_class,
+                            "data-autofocus": true,
+                            aria_label: label.clone(),
+                            onclick: move |_| close_zoom(),
+                            img {
+                                class: overlay_image_class,
+                                src: src.clone(),
+                                alt: "",
+                                role: "presentation",
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }

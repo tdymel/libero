@@ -414,6 +414,18 @@ fn App() -> Element {
                         alt: "Fallback placeholder image",
                     }
                 }
+                p {
+                    "Zoomable (click, or Tab to it and press Enter/Space; Escape or click again to close):"
+                }
+                Box {
+                    sx: sx().width("160px").height("120px"),
+                    Image {
+                        src: "https://picsum.photos/id/1069/1200/900",
+                        alt: "A misty pine forest",
+                        radius: "sm",
+                        zoomable: true,
+                    }
+                }
             }
 
             Flex {
