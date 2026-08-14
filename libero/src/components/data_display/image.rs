@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     SxLayer,
-    components::{Input, Modal, States, common::class_list},
+    components::{Dialog, Input, Modal, States, common::class_list},
     context::use_sx,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -221,19 +221,27 @@ pub fn Image(props: ImageProps) -> Element {
 
         Some(rsx! {
             Modal {
-                aria_label: label.clone(),
                 onclose: move |_| close_zoom(),
-                button {
-                    r#type: "button",
-                    class: overlay_button_class.clone(),
-                    "data-autofocus": true,
+                Dialog {
                     aria_label: label.clone(),
-                    onclick: move |_| close_zoom(),
-                    img {
-                        class: overlay_image_class.clone(),
-                        src: zoomed_src.clone(),
-                        alt: "",
-                        role: "presentation",
+                    size: "none",
+                    sx: sx()
+                        .background("transparent")
+                        .width("auto")
+                        .padding("0")
+                        .box_shadow("none"),
+                    button {
+                        r#type: "button",
+                        class: overlay_button_class.clone(),
+                        "data-autofocus": true,
+                        aria_label: label.clone(),
+                        onclick: move |_| close_zoom(),
+                        img {
+                            class: overlay_image_class.clone(),
+                            src: zoomed_src.clone(),
+                            alt: "",
+                            role: "presentation",
+                        }
                     }
                 }
             }

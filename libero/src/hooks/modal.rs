@@ -94,7 +94,8 @@ impl<P: Default + Clone + PartialEq + 'static> ModalHandle<P> {
 
 /// Registers `component` as a modal that can be opened from anywhere via the
 /// returned handle: `handle.open(props)`. Inside `component`, call
-/// [`use_modal_context`] to get a `.close()` handle.
+/// [`use_modal_context`] to get a `.close()` handle, and wrap its content in
+/// [`crate::components::Dialog`] to get `role="dialog"`/`aria-modal`.
 pub fn use_modal<P>(component: fn(P) -> Element) -> ModalHandle<P>
 where
     P: Properties + Clone + PartialEq + 'static,

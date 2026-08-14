@@ -7,15 +7,19 @@ use crate::{
     sx::{StaticSx, Sx, sx},
 };
 
-static MODAL_SX: StaticSx = StaticSx::new(|| {
+static MODAL_SX: StaticSx = StaticSx::new(|| sx().position("fixed").inset("0"));
+
+// Fixed + inset (not just relative) so it spans the full viewport itself:
+// Dialog's start/end margin:auto trick needs real free space on this flex
+// container to push against, not just Modal's root.
+static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
+        .z_index("1")
         .display("flex")
         .align_items("center")
         .justify_content("center")
 });
-
-static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| sx().position("relative").z_index("1"));
 
 #[derive(Props, Clone, PartialEq)]
 pub struct ModalProps {
@@ -27,19 +31,22 @@ pub struct ModalProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
-    #[props(default, into)]
-    aria_label: Option<String>,
     #[props(default)]
     onclose: EventHandler<()>,
     children: Element,
 }
 
-/// A focus-trapped, dimmed dialog on top of the page. Locks page scroll and
+/// A focus-trapped, dimmed layer on top of the page. Locks page scroll and
 /// stacks above earlier-opened modals while it exists. Callers control
 /// whether it exists by conditionally rendering it - closing (Escape,
 /// clicking the overlay) is requested via `onclose`, not by the modal
 /// removing itself. Descendants can request a close of their own via
 /// [`crate::hooks::use_modal_context`].
+///
+/// `Modal` is just the mechanism - it has no opinion on what's inside, so it
+/// doesn't set `role`/`aria-modal`/`aria-label` itself. Pass those (e.g.
+/// `role: "dialog"`, `"aria-modal": "true"`, `aria_label: "..."`) at the call
+/// site to match what the content actually is.
 #[component]
 pub fn Modal(props: ModalProps) -> Element {
     use_context_provider(|| ModalContext {
@@ -71,9 +78,6 @@ pub fn Modal(props: ModalProps) -> Element {
 
     rsx! {
         div {
-            role: "dialog",
-            "aria-modal": "true",
-            "aria-label": props.aria_label.clone(),
             "data-lsx-scroll-lock": true,
             class: class,
             "data-state": data_state,

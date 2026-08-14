@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Button, Container, Divider, Flex, FocusTrap, FocusTrapInitialFocus, HelloWorld,
-        Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant,
+        Box, Button, Container, Dialog, Divider, Flex, FocusTrap, FocusTrapInitialFocus,
+        HelloWorld, Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
     hooks::{use_modal, use_modal_context, use_portal},
@@ -839,23 +839,26 @@ fn ConfirmationDialog(props: ConfirmationDialogProps) -> Element {
     let modal = use_modal_context();
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "md",
+        Dialog {
+            aria_label: "Confirm",
             sx: sx().background("white").padding("16px").border_radius("8px").max_width("320px"),
-            Text { "{props.message}" }
             Flex {
-                gap: "sm",
-                Button {
-                    variant: "filled",
-                    "data-autofocus": true,
-                    onclick: move |_| modal.close(),
-                    "OK"
-                }
-                Button {
-                    variant: "outline",
-                    onclick: move |_| modal.close(),
-                    "Cancel"
+                direction: "column",
+                gap: "md",
+                Text { "{props.message}" }
+                Flex {
+                    gap: "sm",
+                    Button {
+                        variant: "filled",
+                        "data-autofocus": true,
+                        onclick: move |_| modal.close(),
+                        "OK"
+                    }
+                    Button {
+                        variant: "outline",
+                        onclick: move |_| modal.close(),
+                        "Cancel"
+                    }
                 }
             }
         }
@@ -868,16 +871,52 @@ fn AboutDialog(_props: ()) -> Element {
     let modal = use_modal_context();
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "md",
+        Dialog {
+            aria_label: "About",
             sx: sx().background("white").padding("16px").border_radius("8px").max_width("320px"),
-            Text { "This dialog has no props - opened with handle.open_default()." }
-            Button {
-                variant: "filled",
-                "data-autofocus": true,
-                onclick: move |_| modal.close(),
-                "Close"
+            Flex {
+                direction: "column",
+                gap: "md",
+                Text { "This dialog has no props - opened with handle.open_default()." }
+                Button {
+                    variant: "filled",
+                    "data-autofocus": true,
+                    onclick: move |_| modal.close(),
+                    "Close"
+                }
+            }
+        }
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct PositionedDialogProps {
+    label: String,
+    vertical: &'static str,
+    horizontal: &'static str,
+    size: &'static str,
+}
+
+#[allow(non_snake_case)]
+fn PositionedDialog(props: PositionedDialogProps) -> Element {
+    let modal = use_modal_context();
+
+    rsx! {
+        Dialog {
+            aria_label: props.label.clone(),
+            vertical: props.vertical,
+            horizontal: props.horizontal,
+            size: props.size,
+            Flex {
+                direction: "column",
+                gap: "md",
+                Text { "{props.label} (vertical: {props.vertical}, horizontal: {props.horizontal}, size: {props.size})" }
+                Button {
+                    variant: "filled",
+                    "data-autofocus": true,
+                    onclick: move |_| modal.close(),
+                    "Close"
+                }
             }
         }
     }
@@ -887,21 +926,65 @@ fn AboutDialog(_props: ()) -> Element {
 fn ModalDemo() -> Element {
     let confirmation = use_modal(ConfirmationDialog);
     let about = use_modal::<()>(AboutDialog);
+    let positioned = use_modal(PositionedDialog);
+
+    let open_positioned = move |label: &'static str, vertical, horizontal, size| {
+        positioned.open(PositionedDialogProps {
+            label: label.to_string(),
+            vertical,
+            horizontal,
+            size,
+        })
+    };
 
     rsx! {
         Flex {
-            gap: "sm",
-            Button {
-                variant: "filled",
-                onclick: move |_| confirmation.open(ConfirmationDialogProps {
-                    message: "Are you sure you want to continue?".to_string(),
-                }),
-                "Open confirmation dialog"
+            direction: "column",
+            gap: "md",
+            Flex {
+                gap: "sm",
+                Button {
+                    variant: "filled",
+                    onclick: move |_| confirmation.open(ConfirmationDialogProps {
+                        message: "Are you sure you want to continue?".to_string(),
+                    }),
+                    "Open confirmation dialog"
+                }
+                Button {
+                    variant: "filled",
+                    onclick: move |_| about.open_default(),
+                    "Open about dialog"
+                }
             }
-            Button {
-                variant: "filled",
-                onclick: move |_| about.open_default(),
-                "Open about dialog"
+            p { "Dialog position (vertical/horizontal) and size:" }
+            Flex {
+                gap: "sm",
+                wrap: true,
+                Button {
+                    variant: "outline",
+                    onclick: move |_| open_positioned("Centered (default)", "center", "center", "480px"),
+                    "Center / default size"
+                }
+                Button {
+                    variant: "outline",
+                    onclick: move |_| open_positioned("Top", "start", "center", "480px"),
+                    "Top / default size"
+                }
+                Button {
+                    variant: "outline",
+                    onclick: move |_| open_positioned("Bottom", "end", "center", "480px"),
+                    "Bottom / default size"
+                }
+                Button {
+                    variant: "outline",
+                    onclick: move |_| open_positioned("Top left", "start", "start", "sm"),
+                    "Top-left / size: sm (breakpoint)"
+                }
+                Button {
+                    variant: "outline",
+                    onclick: move |_| open_positioned("Bottom right", "end", "end", "lg"),
+                    "Bottom-right / size: lg (breakpoint)"
+                }
             }
         }
     }

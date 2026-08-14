@@ -65,6 +65,7 @@ pub enum Property {
     ZIndex,
     Transition,
     BackdropFilter,
+    BoxShadow,
 }
 
 impl Property {
@@ -132,6 +133,7 @@ impl Property {
             "z-index" => Some(Self::ZIndex),
             "transition" => Some(Self::Transition),
             "backdrop-filter" => Some(Self::BackdropFilter),
+            "box-shadow" => Some(Self::BoxShadow),
             _ => None,
         }
     }
@@ -200,6 +202,7 @@ impl Property {
             Self::ZIndex => "z-index",
             Self::Transition => "transition",
             Self::BackdropFilter => "backdrop-filter",
+            Self::BoxShadow => "box-shadow",
         }
     }
 }

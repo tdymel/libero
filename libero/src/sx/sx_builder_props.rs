@@ -251,6 +251,10 @@ impl Sx {
         self.with_known_property(Property::BackdropFilter, value)
     }
 
+    pub fn box_shadow(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::BoxShadow, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
