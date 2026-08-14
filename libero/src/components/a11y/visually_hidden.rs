@@ -7,7 +7,7 @@ use crate::{
     sx::{StaticSx, Sx, sx},
 };
 
-static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .width("1px")
         .height("1px")

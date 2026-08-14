@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Backdrop, Box, Button, Container, Divider, Flex, HelloWorld, Image, List, ListItem,
-        Option, Select, Text, Title, TitleVariant, VisuallyHidden, states,
+        Backdrop, Box, Button, Container, Divider, Flex, FocusTrap, FocusTrapInitialFocus,
+        HelloWorld, Image, List, ListItem, Option, Select, Text, Title, TitleVariant,
+        VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
     theme::Size,
@@ -54,6 +55,8 @@ fn App() -> Element {
     let mut click_count = use_signal(|| 0);
     let mut fruit = use_signal(|| "apple".to_string());
     let mut backdrop_open = use_signal(|| false);
+    let mut focus_trap_active = use_signal(|| false);
+    let mut focus_trap_initial_active = use_signal(|| false);
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
 
     rsx! {
@@ -688,6 +691,52 @@ fn App() -> Element {
                     Text {
                         sx: sx().color("white"),
                         "Click anywhere to close"
+                    }
+                }
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "FocusTrap Examples"
+                }
+                p {
+                    "Tab/Shift+Tab cycles only through the three inputs below while active. Second input starts focused (data-autofocus):"
+                }
+                Button {
+                    variant: "filled",
+                    onclick: move |_| focus_trap_active.toggle(),
+                    if focus_trap_active() { "Deactivate focus trap" } else { "Activate focus trap" }
+                }
+                FocusTrap {
+                    active: focus_trap_active(),
+                    Flex {
+                        direction: "column",
+                        gap: "sm",
+                        sx: sx().padding_top(Size::Sm).max_width("300px"),
+                        input { placeholder: "First input" }
+                        input { placeholder: "Second input (autofocus)", "data-autofocus": true }
+                        input { placeholder: "Third input" }
+                    }
+                }
+                p {
+                    "With FocusTrap.InitialFocus (nothing inside gets auto-focused; tabbing away from it drops it from the tab order):"
+                }
+                Button {
+                    variant: "filled",
+                    onclick: move |_| focus_trap_initial_active.toggle(),
+                    if focus_trap_initial_active() { "Deactivate focus trap" } else { "Activate focus trap" }
+                }
+                FocusTrap {
+                    active: focus_trap_initial_active(),
+                    Flex {
+                        direction: "column",
+                        gap: "sm",
+                        sx: sx().padding_top(Size::Sm).max_width("300px"),
+                        FocusTrapInitialFocus {}
+                        input { placeholder: "First input" }
+                        input { placeholder: "Second input" }
                     }
                 }
             }
