@@ -4,7 +4,7 @@ use crate::{
     SxLayer,
     components::{Input, States, common::class_list},
     context::use_sx,
-    sx::{Sx, StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -95,7 +95,10 @@ pub fn Image(props: ImageProps) -> Element {
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
-        props.fallback_src.clone().unwrap_or_else(|| props.src.clone())
+        props
+            .fallback_src
+            .clone()
+            .unwrap_or_else(|| props.src.clone())
     } else {
         props.src.clone()
     };

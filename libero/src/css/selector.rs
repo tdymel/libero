@@ -72,7 +72,10 @@ mod tests {
         assert_eq!(
             expand_selector(
                 "&::before, &::after",
-                &[".cls[data-state~=\"a\"]".to_string(), ".cls[data-state~=\"b\"]".to_string()]
+                &[
+                    ".cls[data-state~=\"a\"]".to_string(),
+                    ".cls[data-state~=\"b\"]".to_string()
+                ]
             ),
             vec![
                 ".cls[data-state~=\"a\"]::before",

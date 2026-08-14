@@ -29,6 +29,19 @@ impl ColorShade {
         }
     }
 
+    pub(crate) const fn darker(self) -> Self {
+        match self {
+            Self::S1 => Self::S2,
+            Self::S2 => Self::S3,
+            Self::S3 => Self::S4,
+            Self::S4 => Self::S5,
+            Self::S5 => Self::S6,
+            Self::S6 => Self::S7,
+            Self::S7 => Self::S8,
+            Self::S8 | Self::S9 => Self::S9,
+        }
+    }
+
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::S1 => "1",
@@ -41,5 +54,16 @@ impl ColorShade {
             Self::S8 => "8",
             Self::S9 => "9",
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn darker_steps_up_and_caps_at_s9() {
+        assert_eq!(ColorShade::S6.darker(), ColorShade::S7);
+        assert_eq!(ColorShade::S9.darker(), ColorShade::S9);
     }
 }

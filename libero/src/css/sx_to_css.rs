@@ -153,6 +153,7 @@ fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
         | SxPropertyKey::Known(Property::MarginLeft)
         | SxPropertyKey::Known(Property::MarginRight) => SizeCss::SPACING.value(size),
         SxPropertyKey::Known(Property::MaxWidth) => SizeCss::BREAKPOINT.value(size),
+        SxPropertyKey::Known(Property::BorderRadius) => SizeCss::RADIUS.value(size),
         _ => size.as_str().to_string(),
     }
 }
@@ -223,8 +224,7 @@ mod tests {
 
     #[test]
     fn sx_when_and_condition_chains_attribute_selectors() {
-        let stylesheet =
-            Stylesheet::from(&sx().when("horizontal && label", sx().height("1px")));
+        let stylesheet = Stylesheet::from(&sx().when("horizontal && label", sx().height("1px")));
         let css = stylesheet.as_str();
 
         assert!(css.contains("[data-state~=\"horizontal\"][data-state~=\"label\"]{height:1px;}"));
@@ -243,13 +243,20 @@ mod tests {
 
     #[test]
     fn sx_when_nested_conditions_distribute_over_or() {
-        let stylesheet = Stylesheet::from(
-            &sx().when("a || b", sx().when("c || d", sx().color("red"))),
-        );
+        let stylesheet =
+            Stylesheet::from(&sx().when("a || b", sx().when("c || d", sx().color("red"))));
         let css = stylesheet.as_str();
 
-        for pair in ["a\"][data-state~=\"c", "a\"][data-state~=\"d", "b\"][data-state~=\"c", "b\"][data-state~=\"d"] {
-            assert!(css.contains(&format!("[data-state~=\"{pair}\"]")), "missing combination for {pair} in {css}");
+        for pair in [
+            "a\"][data-state~=\"c",
+            "a\"][data-state~=\"d",
+            "b\"][data-state~=\"c",
+            "b\"][data-state~=\"d",
+        ] {
+            assert!(
+                css.contains(&format!("[data-state~=\"{pair}\"]")),
+                "missing combination for {pair} in {css}"
+            );
         }
     }
 
@@ -271,7 +278,13 @@ mod tests {
         let ampersand_css = Stylesheet::from(&ampersand_sx).as_str().to_string();
         let plain_css = Stylesheet::from(&plain_sx).as_str().to_string();
 
-        assert!(ampersand_css.contains(&format!(".{}::before{{height:1px;}}", ampersand_sx.class_name())));
-        assert!(plain_css.contains(&format!(".{}::before{{height:1px;}}", plain_sx.class_name())));
+        assert!(ampersand_css.contains(&format!(
+            ".{}::before{{height:1px;}}",
+            ampersand_sx.class_name()
+        )));
+        assert!(plain_css.contains(&format!(
+            ".{}::before{{height:1px;}}",
+            plain_sx.class_name()
+        )));
     }
 }

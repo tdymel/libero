@@ -1,13 +1,16 @@
 use crate::theme::{
-    CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade, ColorValue, DIVIDER_SPACING,
-    H1_FONT_FAMILY, H1_FONT_SIZE, H1_FONT_WEIGHT, H1_LETTER_SPACING,
-    H1_LINE_HEIGHT, H2_FONT_FAMILY, H2_FONT_SIZE, H2_FONT_WEIGHT, H2_LETTER_SPACING,
-    H2_LINE_HEIGHT, H3_FONT_FAMILY, H3_FONT_SIZE, H3_FONT_WEIGHT, H3_LETTER_SPACING,
-    H3_LINE_HEIGHT, H4_FONT_FAMILY, H4_FONT_SIZE, H4_FONT_WEIGHT, H4_LETTER_SPACING,
-    H4_LINE_HEIGHT, H5_FONT_FAMILY, H5_FONT_SIZE, H5_FONT_WEIGHT, H5_LETTER_SPACING,
-    H5_LINE_HEIGHT, H6_FONT_FAMILY, H6_FONT_SIZE, H6_FONT_WEIGHT, H6_LETTER_SPACING,
-    H6_LINE_HEIGHT, NamedColorCss, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING,
+    BUTTON_FONT_SIZE_LG, BUTTON_FONT_SIZE_MD, BUTTON_FONT_SIZE_SM, BUTTON_FONT_SIZE_XL,
+    BUTTON_FONT_SIZE_XS, BUTTON_HEIGHT_LG, BUTTON_HEIGHT_MD, BUTTON_HEIGHT_SM, BUTTON_HEIGHT_XL,
+    BUTTON_HEIGHT_XS, BUTTON_PADDING_X_LG, BUTTON_PADDING_X_MD, BUTTON_PADDING_X_SM,
+    BUTTON_PADDING_X_XL, BUTTON_PADDING_X_XS, CONTAINER_GUTTERS, CONTAINER_SIZE, Color, ColorShade,
+    ColorValue, DIVIDER_SPACING, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING,
     FLEX_COLUMN_WRAP, FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP,
+    H1_FONT_FAMILY, H1_FONT_SIZE, H1_FONT_WEIGHT, H1_LETTER_SPACING, H1_LINE_HEIGHT,
+    H2_FONT_FAMILY, H2_FONT_SIZE, H2_FONT_WEIGHT, H2_LETTER_SPACING, H2_LINE_HEIGHT,
+    H3_FONT_FAMILY, H3_FONT_SIZE, H3_FONT_WEIGHT, H3_LETTER_SPACING, H3_LINE_HEIGHT,
+    H4_FONT_FAMILY, H4_FONT_SIZE, H4_FONT_WEIGHT, H4_LETTER_SPACING, H4_LINE_HEIGHT,
+    H5_FONT_FAMILY, H5_FONT_SIZE, H5_FONT_WEIGHT, H5_LETTER_SPACING, H5_LINE_HEIGHT,
+    H6_FONT_FAMILY, H6_FONT_SIZE, H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, NamedColorCss,
     SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE_LG, TEXT_FONT_SIZE_MD, TEXT_FONT_SIZE_SM,
     TEXT_FONT_SIZE_XL, TEXT_FONT_SIZE_XS, TEXT_FONT_WEIGHT_LG, TEXT_FONT_WEIGHT_MD,
     TEXT_FONT_WEIGHT_SM, TEXT_FONT_WEIGHT_XL, TEXT_FONT_WEIGHT_XS, TEXT_LETTER_SPACING_LG,
@@ -83,10 +86,12 @@ fn body_scope(theme: &Theme) -> CssScope {
 fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     let mut declarations = Vec::new();
     push_spacing_declarations(&mut declarations, theme);
+    push_radius_declarations(&mut declarations, theme);
     push_breakpoint_declarations(&mut declarations);
     push_flex_declarations(&mut declarations, theme);
     push_container_declarations(&mut declarations, theme);
     push_divider_declarations(&mut declarations, theme);
+    push_button_declarations(&mut declarations, theme);
     push_title_declarations(&mut declarations, theme);
     push_text_declarations(&mut declarations, theme);
     push_named_color_declarations(&mut declarations, theme);
@@ -120,6 +125,29 @@ fn push_spacing_declarations(declarations: &mut Vec<CssDeclaration>, theme: &The
     declarations.push(CssDeclaration::new(
         SizeCss::SPACING.name(crate::theme::Size::Xl),
         format!("{}px", theme.spacing.xl),
+    ));
+}
+
+fn push_radius_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
+        SizeCss::RADIUS.name(crate::theme::Size::Xs),
+        format!("{}px", theme.radius.xs),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::RADIUS.name(crate::theme::Size::Sm),
+        format!("{}px", theme.radius.sm),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::RADIUS.name(crate::theme::Size::Md),
+        format!("{}px", theme.radius.md),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::RADIUS.name(crate::theme::Size::Lg),
+        format!("{}px", theme.radius.lg),
+    ));
+    declarations.push(CssDeclaration::new(
+        SizeCss::RADIUS.name(crate::theme::Size::Xl),
+        format!("{}px", theme.radius.xl),
     ));
 }
 
@@ -206,6 +234,73 @@ fn push_divider_declarations(declarations: &mut Vec<CssDeclaration>, theme: &The
         None => "0".to_string(),
     };
     declarations.push(CssDeclaration::new(DIVIDER_SPACING.name(), spacing));
+}
+
+fn push_button_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+    declarations.push(CssDeclaration::new(
+        BUTTON_FONT_SIZE_XS.name(),
+        theme.button.xs.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_HEIGHT_XS.name(),
+        theme.button.xs.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_PADDING_X_XS.name(),
+        theme.button.xs.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        BUTTON_FONT_SIZE_SM.name(),
+        theme.button.sm.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_HEIGHT_SM.name(),
+        theme.button.sm.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_PADDING_X_SM.name(),
+        theme.button.sm.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        BUTTON_FONT_SIZE_MD.name(),
+        theme.button.md.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_HEIGHT_MD.name(),
+        theme.button.md.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_PADDING_X_MD.name(),
+        theme.button.md.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        BUTTON_FONT_SIZE_LG.name(),
+        theme.button.lg.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_HEIGHT_LG.name(),
+        theme.button.lg.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_PADDING_X_LG.name(),
+        theme.button.lg.padding_x,
+    ));
+
+    declarations.push(CssDeclaration::new(
+        BUTTON_FONT_SIZE_XL.name(),
+        theme.button.xl.font_size,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_HEIGHT_XL.name(),
+        theme.button.xl.height,
+    ));
+    declarations.push(CssDeclaration::new(
+        BUTTON_PADDING_X_XL.name(),
+        theme.button.xl.padding_x,
+    ));
 }
 
 fn push_text_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {

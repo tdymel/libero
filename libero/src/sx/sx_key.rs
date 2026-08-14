@@ -51,6 +51,7 @@ pub enum Property {
     Clip,
     ObjectFit,
     BorderRadius,
+    Cursor,
 }
 
 impl Property {
@@ -104,6 +105,7 @@ impl Property {
             "clip" => Some(Self::Clip),
             "object-fit" => Some(Self::ObjectFit),
             "border-radius" => Some(Self::BorderRadius),
+            "cursor" => Some(Self::Cursor),
             _ => None,
         }
     }
@@ -158,6 +160,7 @@ impl Property {
             Self::Clip => "clip",
             Self::ObjectFit => "object-fit",
             Self::BorderRadius => "border-radius",
+            Self::Cursor => "cursor",
         }
     }
 }

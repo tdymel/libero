@@ -195,6 +195,10 @@ impl Sx {
         self.with_known_property(Property::BorderRadius, value)
     }
 
+    pub fn cursor(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Cursor, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }

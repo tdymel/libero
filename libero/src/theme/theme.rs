@@ -1,14 +1,16 @@
 use super::{
-    ContainerDefaults, DividerDefaults, FlexAxisDefaults, FlexDefaults, HexColor, Sizes,
-    TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    ButtonDefaults, ContainerDefaults, DividerDefaults, FlexAxisDefaults, FlexDefaults, HexColor,
+    Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
+    pub radius: Sizes<u8>,
     pub flex: FlexDefaults,
     pub container: ContainerDefaults,
     pub divider: DividerDefaults,
+    pub button: ButtonDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
     pub primary: HexColor,
@@ -26,12 +28,22 @@ pub struct Theme {
 impl Theme {
     pub const DEFAULT: Theme = Theme::new(
         Sizes::new(4, 8, 12, 16, 20),
+        Sizes::new(2, 4, 8, 16, 32),
         FlexDefaults::new(
             FlexAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
             FlexAxisDefaults::new("center", "flex-start", super::Size::Md, true),
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
         DividerDefaults::new(None),
+        ButtonDefaults::new(
+            super::Size::Md,
+            super::Size::Md,
+            super::ButtonSizeLevel::new("0.75rem", "30px", "10px"),
+            super::ButtonSizeLevel::new("0.875rem", "36px", "14px"),
+            super::ButtonSizeLevel::new("1rem", "42px", "18px"),
+            super::ButtonSizeLevel::new("1.125rem", "50px", "22px"),
+            super::ButtonSizeLevel::new("1.25rem", "60px", "28px"),
+        ),
         TitleDefaults::new(
             TitleLevel::new(
                 "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif",
@@ -98,9 +110,11 @@ impl Theme {
 
     pub const fn new(
         spacing: Sizes<u8>,
+        radius: Sizes<u8>,
         flex: FlexDefaults,
         container: ContainerDefaults,
         divider: DividerDefaults,
+        button: ButtonDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
         primary: HexColor,
@@ -116,9 +130,11 @@ impl Theme {
     ) -> Self {
         Self {
             spacing,
+            radius,
             flex,
             container,
             divider,
+            button,
             titles,
             texts,
             primary,

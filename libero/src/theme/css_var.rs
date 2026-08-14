@@ -73,6 +73,7 @@ pub struct SizeCss {
 impl SizeCss {
     pub const SPACING: SizeCss = SizeCss::new("--lsx-spacing-");
     pub const BREAKPOINT: SizeCss = SizeCss::new("--lsx-breakpoint-");
+    pub const RADIUS: SizeCss = SizeCss::new("--lsx-radius-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }

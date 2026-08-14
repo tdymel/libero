@@ -4,7 +4,7 @@ use crate::{
     SxLayer,
     components::{Input, States, common::class_list},
     context::use_sx,
-    sx::{Sx, StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
 };
 
 static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {

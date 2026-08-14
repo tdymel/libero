@@ -127,9 +127,11 @@ fn divider_dynamic_sx(
 
     let position_sx = position_sx.apply_if(spacing, |sx, spacing| {
         if vertical {
-            sx.margin_left(spacing.clone()).margin_right(spacing.clone())
+            sx.margin_left(spacing.clone())
+                .margin_right(spacing.clone())
         } else {
-            sx.margin_top(spacing.clone()).margin_bottom(spacing.clone())
+            sx.margin_top(spacing.clone())
+                .margin_bottom(spacing.clone())
         }
     });
 

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Container, Divider, Flex, HelloWorld, Image, Text, Title, TitleVariant,
+        Box, Button, Container, Divider, Flex, HelloWorld, Image, Text, Title, TitleVariant,
         VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
@@ -379,6 +379,59 @@ fn App() -> Element {
                         fallback_src: "https://picsum.photos/id/1043/400/300".to_string(),
                         alt: "Fallback placeholder image",
                     }
+                }
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "Button Examples"
+                }
+                p {
+                    "Variants (default color, default variant is outlined):"
+                }
+                Flex {
+                    direction: "row",
+                    gap: "md",
+                    Button { variant: "filled", "Filled" }
+                    Button { "Outlined" }
+                    Button { variant: "text", "Text" }
+                }
+                p {
+                    "Colors (bare color defaults to shade 6, explicit shade honored exactly):"
+                }
+                Flex {
+                    direction: "row",
+                    gap: "md",
+                    Button { variant: "filled", color: "primary", "Primary" }
+                    Button { variant: "filled", color: "secondary", "Secondary" }
+                    Button { variant: "filled", color: "success.8", "Success.8" }
+                    Button { variant: "outlined", color: "error", "Error" }
+                }
+                p {
+                    "Sizes (xs .. xl, default md):"
+                }
+                Flex {
+                    direction: "row",
+                    align: "center",
+                    gap: "md",
+                    Button { variant: "filled", size: "xs", "Extra small" }
+                    Button { variant: "filled", size: "sm", "Small" }
+                    Button { variant: "filled", size: "md", "Medium" }
+                    Button { variant: "filled", size: "lg", "Large" }
+                    Button { variant: "filled", size: "xl", "Extra large" }
+                }
+                p {
+                    "Radius (xs .. xl, default md, plus a fully round pill):"
+                }
+                Flex {
+                    direction: "row",
+                    align: "center",
+                    gap: "md",
+                    Button { variant: "filled", radius: "xs", "Radius xs" }
+                    Button { variant: "filled", radius: "xl", "Radius xl" }
+                    Button { variant: "filled", sx: sx().border_radius("999px"), "Pill" }
                 }
             }
         }
