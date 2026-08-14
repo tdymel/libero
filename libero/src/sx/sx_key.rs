@@ -61,6 +61,9 @@ pub enum Property {
     AspectRatio,
     Outline,
     OutlineOffset,
+    Inset,
+    ZIndex,
+    Transition,
 }
 
 impl Property {
@@ -124,6 +127,9 @@ impl Property {
             "aspect-ratio" => Some(Self::AspectRatio),
             "outline" => Some(Self::Outline),
             "outline-offset" => Some(Self::OutlineOffset),
+            "inset" => Some(Self::Inset),
+            "z-index" => Some(Self::ZIndex),
+            "transition" => Some(Self::Transition),
             _ => None,
         }
     }
@@ -188,6 +194,9 @@ impl Property {
             Self::AspectRatio => "aspect-ratio",
             Self::Outline => "outline",
             Self::OutlineOffset => "outline-offset",
+            Self::Inset => "inset",
+            Self::ZIndex => "z-index",
+            Self::Transition => "transition",
         }
     }
 }

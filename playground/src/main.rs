@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Button, Container, Divider, Flex, HelloWorld, Image, List, ListItem, Option, Select,
-        Text, Title, TitleVariant, VisuallyHidden, states,
+        Backdrop, Box, Button, Container, Divider, Flex, HelloWorld, Image, List, ListItem,
+        Option, Select, Text, Title, TitleVariant, VisuallyHidden, states,
     },
     sx::{StaticSx, sx},
     theme::Size,
@@ -53,6 +53,7 @@ fn App() -> Element {
     let mut wrap_group = use_signal(|| true);
     let mut click_count = use_signal(|| 0);
     let mut fruit = use_signal(|| "apple".to_string());
+    let mut backdrop_open = use_signal(|| false);
     let gap = if large_gap() { "xl" } else { "sm" }.to_string();
 
     rsx! {
@@ -664,6 +665,30 @@ fn App() -> Element {
                     radius: "xl",
                     value: "a",
                     Option { value: "a", "Rounder corners" }
+                }
+            }
+
+            Flex {
+                sx: sx().padding_top(Size::Xl),
+                Title {
+                    variant: "h2",
+                    "Backdrop Examples"
+                }
+                p {
+                    "Click to open a backdrop (fades in/out, click it to close):"
+                }
+                Button {
+                    variant: "filled",
+                    onclick: move |_| backdrop_open.set(true),
+                    "Open backdrop"
+                }
+                Backdrop {
+                    open: backdrop_open(),
+                    onclick: move |_| backdrop_open.set(false),
+                    Text {
+                        sx: sx().color("white"),
+                        "Click anywhere to close"
+                    }
                 }
             }
         }

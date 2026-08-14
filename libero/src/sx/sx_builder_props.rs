@@ -235,6 +235,18 @@ impl Sx {
         self.with_known_property(Property::OutlineOffset, value)
     }
 
+    pub fn inset(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Inset, value)
+    }
+
+    pub fn z_index(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::ZIndex, value)
+    }
+
+    pub fn transition(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Transition, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }
