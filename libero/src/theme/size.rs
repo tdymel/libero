@@ -9,6 +9,8 @@ pub enum Size {
 }
 
 impl Size {
+    pub(crate) const ALL: [Size; 5] = [Self::Xs, Self::Sm, Self::Md, Self::Lg, Self::Xl];
+
     pub const fn parse(value: &'static str) -> Option<Self> {
         match value.as_bytes() {
             b"xs" => Some(Self::Xs),

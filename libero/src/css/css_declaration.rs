@@ -20,3 +20,11 @@ impl Display for CssDeclaration {
         write!(f, "{}:{};", self.property, self.value)
     }
 }
+
+/// Implemented by theme-side types that know how to describe themselves as
+/// CSS custom-property declarations, so `theme`'s `Stylesheet` conversion can
+/// just call `.to_css_declarations()` on each theme default instead of
+/// hand-unrolling its fields.
+pub(crate) trait ToCssDeclarations {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration>;
+}

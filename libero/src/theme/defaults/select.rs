@@ -1,6 +1,7 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size};
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const SELECT_FONT_SIZE_XS: CssVar = CssVar::new("--lsx-select-font-size-xs");
 pub const SELECT_HEIGHT_XS: CssVar = CssVar::new("--lsx-select-height-xs");
@@ -24,7 +25,7 @@ pub const SELECT_PADDING_X_XL: CssVar = CssVar::new("--lsx-select-padding-x-xl")
 
 pub const SELECT_RADIUS: CssVar = CssVar::new("--lsx-select-radius");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SelectSizeLevel {
     pub font_size: &'static str,
     pub height: &'static str,
@@ -49,31 +50,15 @@ impl SelectSizeLevel {
 pub struct SelectDefaults {
     pub size: Size,
     pub radius: Size,
-    pub xs: SelectSizeLevel,
-    pub sm: SelectSizeLevel,
-    pub md: SelectSizeLevel,
-    pub lg: SelectSizeLevel,
-    pub xl: SelectSizeLevel,
+    pub sizes: Sizes<SelectSizeLevel>,
 }
 
 impl SelectDefaults {
-    pub const fn new(
-        size: Size,
-        radius: Size,
-        xs: SelectSizeLevel,
-        sm: SelectSizeLevel,
-        md: SelectSizeLevel,
-        lg: SelectSizeLevel,
-        xl: SelectSizeLevel,
-    ) -> Self {
+    pub const fn new(size: Size, radius: Size, sizes: Sizes<SelectSizeLevel>) -> Self {
         Self {
             size,
             radius,
-            xs,
-            sm,
-            md,
-            lg,
-            xl,
+            sizes,
         }
     }
 
@@ -114,5 +99,51 @@ impl SelectDefaults {
             .height(SELECT_HEIGHT_XL.value())
             .padding_left(SELECT_PADDING_X_XL.value())
             .padding_right(SELECT_PADDING_X_XL.value())
+    }
+}
+
+impl ToCssDeclarations for SelectDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let vars = [
+            (
+                Size::Xs,
+                SELECT_FONT_SIZE_XS,
+                SELECT_HEIGHT_XS,
+                SELECT_PADDING_X_XS,
+            ),
+            (
+                Size::Sm,
+                SELECT_FONT_SIZE_SM,
+                SELECT_HEIGHT_SM,
+                SELECT_PADDING_X_SM,
+            ),
+            (
+                Size::Md,
+                SELECT_FONT_SIZE_MD,
+                SELECT_HEIGHT_MD,
+                SELECT_PADDING_X_MD,
+            ),
+            (
+                Size::Lg,
+                SELECT_FONT_SIZE_LG,
+                SELECT_HEIGHT_LG,
+                SELECT_PADDING_X_LG,
+            ),
+            (
+                Size::Xl,
+                SELECT_FONT_SIZE_XL,
+                SELECT_HEIGHT_XL,
+                SELECT_PADDING_X_XL,
+            ),
+        ];
+
+        let mut declarations = vec![SELECT_RADIUS.declare(SizeCss::RADIUS.value(self.radius))];
+        for (size, font_size_var, height_var, padding_x_var) in vars {
+            let level = self.sizes.get(size);
+            declarations.push(font_size_var.declare(level.font_size));
+            declarations.push(height_var.declare(level.height));
+            declarations.push(padding_x_var.declare(level.padding_x));
+        }
+        declarations
     }
 }

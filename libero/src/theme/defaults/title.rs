@@ -1,3 +1,4 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
 use crate::theme::CssVar;
@@ -146,5 +147,70 @@ impl TitleDefaults {
             .font_weight(H6_FONT_WEIGHT.value())
             .letter_spacing(H6_LETTER_SPACING.value())
             .line_height(H6_LINE_HEIGHT.value())
+    }
+}
+
+impl ToCssDeclarations for TitleDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let levels = [
+            (
+                &self.h1,
+                H1_FONT_FAMILY,
+                H1_FONT_WEIGHT,
+                H1_FONT_SIZE,
+                H1_LETTER_SPACING,
+                H1_LINE_HEIGHT,
+            ),
+            (
+                &self.h2,
+                H2_FONT_FAMILY,
+                H2_FONT_WEIGHT,
+                H2_FONT_SIZE,
+                H2_LETTER_SPACING,
+                H2_LINE_HEIGHT,
+            ),
+            (
+                &self.h3,
+                H3_FONT_FAMILY,
+                H3_FONT_WEIGHT,
+                H3_FONT_SIZE,
+                H3_LETTER_SPACING,
+                H3_LINE_HEIGHT,
+            ),
+            (
+                &self.h4,
+                H4_FONT_FAMILY,
+                H4_FONT_WEIGHT,
+                H4_FONT_SIZE,
+                H4_LETTER_SPACING,
+                H4_LINE_HEIGHT,
+            ),
+            (
+                &self.h5,
+                H5_FONT_FAMILY,
+                H5_FONT_WEIGHT,
+                H5_FONT_SIZE,
+                H5_LETTER_SPACING,
+                H5_LINE_HEIGHT,
+            ),
+            (
+                &self.h6,
+                H6_FONT_FAMILY,
+                H6_FONT_WEIGHT,
+                H6_FONT_SIZE,
+                H6_LETTER_SPACING,
+                H6_LINE_HEIGHT,
+            ),
+        ];
+
+        let mut declarations = Vec::new();
+        for (level, family_var, weight_var, size_var, spacing_var, height_var) in levels {
+            declarations.push(family_var.declare(level.font_family));
+            declarations.push(weight_var.declare(level.font_weight));
+            declarations.push(size_var.declare(level.font_size));
+            declarations.push(spacing_var.declare(level.letter_spacing));
+            declarations.push(height_var.declare(level.line_height));
+        }
+        declarations
     }
 }

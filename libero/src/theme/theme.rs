@@ -44,20 +44,24 @@ impl Theme {
         ButtonDefaults::new(
             super::Size::Md,
             super::Size::Md,
-            super::ButtonSizeLevel::new("0.75rem", "30px", "10px"),
-            super::ButtonSizeLevel::new("0.875rem", "36px", "14px"),
-            super::ButtonSizeLevel::new("1rem", "42px", "18px"),
-            super::ButtonSizeLevel::new("1.125rem", "50px", "22px"),
-            super::ButtonSizeLevel::new("1.25rem", "60px", "28px"),
+            Sizes::new(
+                super::ButtonSizeLevel::new("0.75rem", "30px", "10px"),
+                super::ButtonSizeLevel::new("0.875rem", "36px", "14px"),
+                super::ButtonSizeLevel::new("1rem", "42px", "18px"),
+                super::ButtonSizeLevel::new("1.125rem", "50px", "22px"),
+                super::ButtonSizeLevel::new("1.25rem", "60px", "28px"),
+            ),
         ),
         SelectDefaults::new(
             super::Size::Md,
             super::Size::Sm,
-            super::SelectSizeLevel::new("0.75rem", "28px", "8px"),
-            super::SelectSizeLevel::new("0.8125rem", "32px", "10px"),
-            super::SelectSizeLevel::new("0.875rem", "36px", "12px"),
-            super::SelectSizeLevel::new("0.9375rem", "40px", "14px"),
-            super::SelectSizeLevel::new("1rem", "44px", "16px"),
+            Sizes::new(
+                super::SelectSizeLevel::new("0.75rem", "28px", "8px"),
+                super::SelectSizeLevel::new("0.8125rem", "32px", "10px"),
+                super::SelectSizeLevel::new("0.875rem", "36px", "12px"),
+                super::SelectSizeLevel::new("0.9375rem", "40px", "14px"),
+                super::SelectSizeLevel::new("1rem", "44px", "16px"),
+            ),
         ),
         TitleDefaults::new(
             TitleLevel::new(
@@ -105,11 +109,13 @@ impl Theme {
         ),
         TextDefaults::new(
             "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-            TextSize::new("400", "0.75rem", "0em", "1.4"), // xs
-            TextSize::new("400", "0.875rem", "0em", "1.45"), // sm
-            TextSize::new("400", "1rem", "0em", "1.5"),    // md (default)
-            TextSize::new("400", "1.125rem", "0em", "1.55"), // lg
-            TextSize::new("400", "1.25rem", "0em", "1.6"), // xl
+            Sizes::new(
+                TextSize::new("400", "0.75rem", "0em", "1.4"), // xs
+                TextSize::new("400", "0.875rem", "0em", "1.45"), // sm
+                TextSize::new("400", "1rem", "0em", "1.5"),    // md (default)
+                TextSize::new("400", "1.125rem", "0em", "1.55"), // lg
+                TextSize::new("400", "1.25rem", "0em", "1.6"), // xl
+            ),
         ),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),

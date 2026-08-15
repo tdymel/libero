@@ -1,6 +1,7 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::CssVar;
+use crate::theme::{CssVar, Size, Sizes};
 
 // Font family (shared across all sizes)
 pub const TEXT_FONT_FAMILY: CssVar = CssVar::new("--lsx-text-font-family");
@@ -35,7 +36,7 @@ pub const TEXT_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-text-font-size-xl");
 pub const TEXT_LETTER_SPACING_XL: CssVar = CssVar::new("--lsx-text-letter-spacing-xl");
 pub const TEXT_LINE_HEIGHT_XL: CssVar = CssVar::new("--lsx-text-line-height-xl");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextSize {
     pub font_weight: &'static str,
     pub font_size: &'static str, // in rem
@@ -62,29 +63,14 @@ impl TextSize {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TextDefaults {
     pub font_family: &'static str,
-    pub xs: TextSize,
-    pub sm: TextSize,
-    pub md: TextSize,
-    pub lg: TextSize,
-    pub xl: TextSize,
+    pub sizes: Sizes<TextSize>,
 }
 
 impl TextDefaults {
-    pub const fn new(
-        font_family: &'static str,
-        xs: TextSize,
-        sm: TextSize,
-        md: TextSize,
-        lg: TextSize,
-        xl: TextSize,
-    ) -> Self {
+    pub const fn new(font_family: &'static str, sizes: Sizes<TextSize>) -> Self {
         Self {
             font_family,
-            xs,
-            sm,
-            md,
-            lg,
-            xl,
+            sizes,
         }
     }
 
@@ -126,5 +112,57 @@ impl TextDefaults {
             .font_weight(TEXT_FONT_WEIGHT_XL.value())
             .letter_spacing(TEXT_LETTER_SPACING_XL.value())
             .line_height(TEXT_LINE_HEIGHT_XL.value())
+    }
+}
+
+impl ToCssDeclarations for TextDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let vars = [
+            (
+                Size::Xs,
+                TEXT_FONT_WEIGHT_XS,
+                TEXT_FONT_SIZE_XS,
+                TEXT_LETTER_SPACING_XS,
+                TEXT_LINE_HEIGHT_XS,
+            ),
+            (
+                Size::Sm,
+                TEXT_FONT_WEIGHT_SM,
+                TEXT_FONT_SIZE_SM,
+                TEXT_LETTER_SPACING_SM,
+                TEXT_LINE_HEIGHT_SM,
+            ),
+            (
+                Size::Md,
+                TEXT_FONT_WEIGHT_MD,
+                TEXT_FONT_SIZE_MD,
+                TEXT_LETTER_SPACING_MD,
+                TEXT_LINE_HEIGHT_MD,
+            ),
+            (
+                Size::Lg,
+                TEXT_FONT_WEIGHT_LG,
+                TEXT_FONT_SIZE_LG,
+                TEXT_LETTER_SPACING_LG,
+                TEXT_LINE_HEIGHT_LG,
+            ),
+            (
+                Size::Xl,
+                TEXT_FONT_WEIGHT_XL,
+                TEXT_FONT_SIZE_XL,
+                TEXT_LETTER_SPACING_XL,
+                TEXT_LINE_HEIGHT_XL,
+            ),
+        ];
+
+        let mut declarations = vec![TEXT_FONT_FAMILY.declare(self.font_family)];
+        for (size, weight_var, size_var, spacing_var, height_var) in vars {
+            let level = self.sizes.get(size);
+            declarations.push(weight_var.declare(level.font_weight));
+            declarations.push(size_var.declare(level.font_size));
+            declarations.push(spacing_var.declare(level.letter_spacing));
+            declarations.push(height_var.declare(level.line_height));
+        }
+        declarations
     }
 }

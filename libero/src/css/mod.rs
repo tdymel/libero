@@ -6,9 +6,9 @@ mod selector;
 
 mod stylesheet;
 mod sx_to_css;
-mod theme_to_css;
 
-pub(crate) use css_declaration::CssDeclaration;
+pub(crate) use css_color_value::CssColorValue;
+pub(crate) use css_declaration::{CssDeclaration, ToCssDeclarations};
 pub(crate) use css_scope::CssScope;
 
 pub(crate) use stylesheet::Stylesheet;

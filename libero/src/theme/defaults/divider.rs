@@ -1,6 +1,7 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size};
+use crate::theme::{CssVar, Size, SizeCss};
 
 pub const DIVIDER_SPACING: CssVar = CssVar::new("--lsx-divider-spacing");
 
@@ -22,5 +23,15 @@ impl DividerDefaults {
     pub fn vertical_sx() -> Sx {
         sx().margin_left(DIVIDER_SPACING.value())
             .margin_right(DIVIDER_SPACING.value())
+    }
+}
+
+impl ToCssDeclarations for DividerDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let spacing = match self.spacing {
+            Some(size) => SizeCss::SPACING.value(size),
+            None => "0".to_string(),
+        };
+        vec![DIVIDER_SPACING.declare(spacing)]
     }
 }

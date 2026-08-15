@@ -1,4 +1,5 @@
 use super::{ColorShade, Size};
+use crate::css::CssDeclaration;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum CssVar {
@@ -63,6 +64,10 @@ impl CssVar {
     pub fn matches_value(&self, value: &str) -> bool {
         value == self.value()
     }
+
+    pub(crate) fn declare(&self, value: impl Into<String>) -> CssDeclaration {
+        CssDeclaration::new(self.name(), value.into())
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -87,6 +92,10 @@ impl SizeCss {
 
     pub fn name(self, size: Size) -> String {
         format!("{}{}", self.prefix, size.as_str())
+    }
+
+    pub(crate) fn declare(self, size: Size, value: impl Into<String>) -> CssDeclaration {
+        CssDeclaration::new(self.name(size), value.into())
     }
 }
 

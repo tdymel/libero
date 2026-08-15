@@ -1,6 +1,7 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size};
+use crate::theme::{CssVar, Size, SizeCss};
 
 pub const FLEX_COLUMN_ALIGN: CssVar = CssVar::new("--lsx-flex-column-align");
 pub const FLEX_COLUMN_JUSTIFY: CssVar = CssVar::new("--lsx-flex-column-justify");
@@ -74,5 +75,20 @@ impl FlexDefaults {
             .justify_content(justify)
             .gap(spacing)
             .flex_wrap(wrap)
+    }
+}
+
+impl ToCssDeclarations for FlexDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        vec![
+            FLEX_COLUMN_ALIGN.declare(self.column.align),
+            FLEX_COLUMN_JUSTIFY.declare(self.column.justify),
+            FLEX_COLUMN_SPACING.declare(SizeCss::SPACING.value(self.column.spacing)),
+            FLEX_COLUMN_WRAP.declare(if self.column.wrap { "wrap" } else { "nowrap" }),
+            FLEX_ROW_ALIGN.declare(self.row.align),
+            FLEX_ROW_JUSTIFY.declare(self.row.justify),
+            FLEX_ROW_SPACING.declare(SizeCss::SPACING.value(self.row.spacing)),
+            FLEX_ROW_WRAP.declare(if self.row.wrap { "wrap" } else { "nowrap" }),
+        ]
     }
 }

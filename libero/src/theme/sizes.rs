@@ -1,4 +1,7 @@
-use super::Size;
+use std::fmt::Display;
+
+use super::{Size, SizeCss};
+use crate::css::CssDeclaration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Sizes<T> {
@@ -24,6 +27,17 @@ impl<T: Copy> Sizes<T> {
             Size::Lg => self.lg,
             Size::Xl => self.xl,
         }
+    }
+}
+
+impl<T: Display + Copy> Sizes<T> {
+    /// Renders one declaration per size, e.g. `--lsx-spacing-xs:4px;` ...
+    /// `--lsx-spacing-xl:20px;` for `css = SizeCss::SPACING, unit = "px"`.
+    pub(crate) fn to_css_declarations(&self, css: SizeCss, unit: &str) -> Vec<CssDeclaration> {
+        Size::ALL
+            .into_iter()
+            .map(|size| css.declare(size, format!("{}{unit}", self.get(size))))
+            .collect()
     }
 }
 

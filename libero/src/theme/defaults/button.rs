@@ -1,6 +1,7 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size};
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const BUTTON_FONT_SIZE_XS: CssVar = CssVar::new("--lsx-button-font-size-xs");
 pub const BUTTON_HEIGHT_XS: CssVar = CssVar::new("--lsx-button-height-xs");
@@ -28,7 +29,7 @@ pub const BUTTON_RIPPLE_ANIMATION: &str = "lsx-ripple";
 pub const BUTTON_RIPPLE_KEYFRAMES: &str =
     "@keyframes lsx-ripple{to{transform:translate(-50%, -50%) scale(1);opacity:0;}}";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ButtonSizeLevel {
     pub font_size: &'static str,
     pub height: &'static str,
@@ -53,31 +54,15 @@ impl ButtonSizeLevel {
 pub struct ButtonDefaults {
     pub size: Size,
     pub radius: Size,
-    pub xs: ButtonSizeLevel,
-    pub sm: ButtonSizeLevel,
-    pub md: ButtonSizeLevel,
-    pub lg: ButtonSizeLevel,
-    pub xl: ButtonSizeLevel,
+    pub sizes: Sizes<ButtonSizeLevel>,
 }
 
 impl ButtonDefaults {
-    pub const fn new(
-        size: Size,
-        radius: Size,
-        xs: ButtonSizeLevel,
-        sm: ButtonSizeLevel,
-        md: ButtonSizeLevel,
-        lg: ButtonSizeLevel,
-        xl: ButtonSizeLevel,
-    ) -> Self {
+    pub const fn new(size: Size, radius: Size, sizes: Sizes<ButtonSizeLevel>) -> Self {
         Self {
             size,
             radius,
-            xs,
-            sm,
-            md,
-            lg,
-            xl,
+            sizes,
         }
     }
 
@@ -118,5 +103,51 @@ impl ButtonDefaults {
             .height(BUTTON_HEIGHT_XL.value())
             .padding_left(BUTTON_PADDING_X_XL.value())
             .padding_right(BUTTON_PADDING_X_XL.value())
+    }
+}
+
+impl ToCssDeclarations for ButtonDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let vars = [
+            (
+                Size::Xs,
+                BUTTON_FONT_SIZE_XS,
+                BUTTON_HEIGHT_XS,
+                BUTTON_PADDING_X_XS,
+            ),
+            (
+                Size::Sm,
+                BUTTON_FONT_SIZE_SM,
+                BUTTON_HEIGHT_SM,
+                BUTTON_PADDING_X_SM,
+            ),
+            (
+                Size::Md,
+                BUTTON_FONT_SIZE_MD,
+                BUTTON_HEIGHT_MD,
+                BUTTON_PADDING_X_MD,
+            ),
+            (
+                Size::Lg,
+                BUTTON_FONT_SIZE_LG,
+                BUTTON_HEIGHT_LG,
+                BUTTON_PADDING_X_LG,
+            ),
+            (
+                Size::Xl,
+                BUTTON_FONT_SIZE_XL,
+                BUTTON_HEIGHT_XL,
+                BUTTON_PADDING_X_XL,
+            ),
+        ];
+
+        let mut declarations = vec![BUTTON_RADIUS.declare(SizeCss::RADIUS.value(self.radius))];
+        for (size, font_size_var, height_var, padding_x_var) in vars {
+            let level = self.sizes.get(size);
+            declarations.push(font_size_var.declare(level.font_size));
+            declarations.push(height_var.declare(level.height));
+            declarations.push(padding_x_var.declare(level.padding_x));
+        }
+        declarations
     }
 }

@@ -3,7 +3,8 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::{
-    SxLayer, css::Stylesheet,
+    SxLayer,
+    css::Stylesheet,
     hooks::{MODAL_BASE_Z_INDEX, ModalHost, PortalHost, PortalOutlet},
     sx_registry::SxRegistry,
     theme::Theme,
