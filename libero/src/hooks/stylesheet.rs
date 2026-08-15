@@ -4,20 +4,14 @@ use dioxus::prelude::*;
 
 use crate::{CssLayer, context::LiberoContext, css::Stylesheet};
 
-/// Registers anything that converts into a [`Stylesheet`] and returns the
-/// class name to put on any element - including ones libero doesn't provide
-/// a component for (e.g. a raw `select`). Uses the `UserCustom` layer, which
-/// has priority over every other layer (including a component's own dynamic
-/// prop-driven styles), so it always wins. Raw CSS built via `Stylesheet`'s
-/// `&str`/`String` escape hatch carries no class name, since it isn't scoped
-/// to a single selector.
+/// Registers anything that converts into a [`Stylesheet`] and returns its
+/// class name, on the `UserCustom` layer so it always wins the cascade. Raw
+/// `&str`/`String` CSS has no single selector, so it returns no class name.
 pub fn use_stylesheet(stylesheet: impl Into<Stylesheet>) -> Option<String> {
     use_css(stylesheet, CssLayer::UserCustom)
 }
 
-/// Same as [`use_stylesheet`], but on a caller-chosen layer instead of
-/// always `UserCustom` - used internally so component-provided styles can
-/// sit below user overrides in the cascade.
+/// Same as [`use_stylesheet`], but on a caller-chosen layer.
 pub(crate) fn use_css(stylesheet: impl Into<Stylesheet>, layer: CssLayer) -> Option<String> {
     let stylesheet = stylesheet.into();
     let is_empty = stylesheet.as_str().is_empty();

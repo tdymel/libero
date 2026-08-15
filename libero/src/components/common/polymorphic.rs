@@ -58,10 +58,8 @@ macro_rules! html_tags {
         }
 
         /// Renders `children`/`class`/`data-state`/`attributes` on whichever
-        /// element `component` selects. `component` is a runtime value
-        /// shared by every caller (not known per call site), so this is one
-        /// dispatch, not eliminated at compile time - each arm is trivial
-        /// (same attrs, different element), so that cost is negligible.
+        /// element `component` selects (a runtime value, so this dispatches
+        /// at runtime - each arm is trivial, so that cost is negligible).
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
             class: Option<String>,
@@ -91,10 +89,8 @@ macro_rules! html_tags {
     };
 }
 
-/// The event handlers [`render_polymorphic`]/[`crate::components::Box`]
-/// support explicitly - kept as one bundle since a plain element accepts any
-/// of these directly, but a component's `extends = GlobalAttributes` only
-/// forwards non-event attributes, not arbitrary event handlers.
+/// Event handlers [`render_polymorphic`]/[`crate::components::Box`] support -
+/// bundled since `extends = GlobalAttributes` doesn't forward event handlers.
 #[derive(Clone, Copy, Default)]
 pub struct BoxEvents {
     pub onclick: EventHandler<MouseEvent>,

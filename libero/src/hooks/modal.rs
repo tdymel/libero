@@ -18,8 +18,7 @@ pub fn use_modal_context() -> ModalContext {
     use_context::<ModalContext>()
 }
 
-/// Handle returned by [`use_modal`] - opens/closes a specific modal
-/// component from anywhere, without the caller managing its own signal.
+/// Opens/closes a modal registered via [`use_modal`] from anywhere.
 pub struct ModalHandle<P> {
     state: Signal<Option<P>>,
 }
@@ -49,17 +48,15 @@ impl<P: Clone + PartialEq + 'static> ModalHandle<P> {
 }
 
 impl<P: Default + Clone + PartialEq + 'static> ModalHandle<P> {
-    /// Opens with default props - the ergonomic zero-argument `.open()` for
-    /// dialogs with no meaningful props (`P = ()` included).
+    /// Opens with default props - for dialogs with no meaningful props.
     pub fn open_default(&self) {
         self.open(P::default());
     }
 }
 
-/// Registers `component` as a modal that can be opened from anywhere via the
-/// returned handle: `handle.open(props)`. Inside `component`, call
-/// [`use_modal_context`] to get a `.close()` handle, and wrap its content in
-/// [`crate::components::Dialog`] to get `role="dialog"`/`aria-modal`.
+/// Registers `component` as a modal, opened from anywhere via
+/// `handle.open(props)`. Inside `component`, use [`use_modal_context`] to
+/// close it and [`crate::components::Dialog`] for its a11y roles.
 pub fn use_modal<P>(component: fn(P) -> Element) -> ModalHandle<P>
 where
     P: Properties + Clone + PartialEq + 'static,

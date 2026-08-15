@@ -87,9 +87,8 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
     }
 }
 
-/// Mantine's `FocusTrap.InitialFocus` equivalent: a visually-hidden
-/// focusable placeholder that soaks up initial focus, then drops out of
-/// the tab order once blurred.
+/// A hidden placeholder that soaks up initial focus, then leaves the tab
+/// order once blurred. Mantine's `FocusTrap.InitialFocus` equivalent.
 #[component]
 pub fn FocusTrapInitialFocus() -> Element {
     let mut used = use_signal(|| false);

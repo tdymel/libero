@@ -40,17 +40,12 @@ pub struct ModalProps {
     children: Element,
 }
 
-/// A focus-trapped, dimmed layer on top of the page. Locks page scroll and
-/// stacks above earlier-opened modals while it exists. Callers control
-/// whether it exists by conditionally rendering it - closing (Escape,
-/// clicking the overlay) is requested via `onclose`, not by the modal
-/// removing itself. Descendants can request a close of their own via
-/// [`crate::hooks::use_modal_context`].
+/// A focus-trapped, dimmed layer that locks scroll and stacks above earlier
+/// modals. You control its existence by conditionally rendering it; closing
+/// (Escape/backdrop) is requested via `onclose`, not self-removal. Descendants
+/// close it via [`crate::hooks::use_modal_context`].
 ///
-/// `Modal` is just the mechanism - it has no opinion on what's inside, so it
-/// doesn't set `role`/`aria-modal`/`aria-label` itself. Pass those (e.g.
-/// `role: "dialog"`, `"aria-modal": "true"`, `aria_label: "..."`) at the call
-/// site to match what the content actually is.
+/// No opinion on content - pass `role`/`aria-modal`/`aria-label` yourself.
 #[component]
 pub fn Modal(props: ModalProps) -> Element {
     use_context_provider(|| ModalContext {

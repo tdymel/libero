@@ -6,13 +6,9 @@ use crate::context::{PortalEntry, PortalHost, PortalRender};
 
 static NEXT_PORTAL_ID: AtomicU64 = AtomicU64::new(0);
 
-/// Registers `render` to be rendered by the app's [`crate::context::PortalOutlet`]
-/// whenever it returns `Some` - escapes any ancestor's stacking
-/// context/clipping, the way `Overlay`/dialog content generally wants to.
-/// `render` is called fresh by `PortalOutlet` at its own render time, not
-/// snapshotted here, so "should this render" and "what to render" can never
-/// disagree. Re-registers on every call so `render` stays current;
-/// deregisters automatically on drop.
+/// Renders `render` via [`crate::context::PortalOutlet`] whenever it returns
+/// `Some`, escaping any ancestor stacking/clipping context. Re-registers each
+/// call so `render` stays current; deregisters on drop.
 pub fn use_portal(render: impl Fn() -> Option<Element> + 'static) {
     let mut host = use_context::<PortalHost>();
     let id = use_signal(|| NEXT_PORTAL_ID.fetch_add(1, Ordering::Relaxed));

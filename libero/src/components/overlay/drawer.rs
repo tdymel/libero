@@ -8,9 +8,8 @@ use crate::{
     theme::SizeCss,
 };
 
-/// `xs`/`sm`/`md`/`lg`/`xl` resolve through the drawer size scale - its own
-/// scale, distinct from `Dialog`'s (a drawer is typically a narrower nav
-/// panel, not a centered surface) - anything else passes through unchanged.
+/// `xs`-`xl` resolve through the drawer size scale, distinct from
+/// `Dialog`'s; anything else passes through unchanged.
 fn drawer_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     match value {
         ThemeAwareValue::Size(size) => SizeCss::DRAWER_SIZE.value(*size).into(),
@@ -20,12 +19,10 @@ fn drawer_size(value: &ThemeAwareValue) -> ThemeAwareValue {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DrawerVariant {
-    /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop click -
-    /// built on `Modal`. Regardless of screen size, this is the modal-like
-    /// drawer.
+    /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop - built on
+    /// `Modal`.
     Temporary,
-    /// Renders in place, no portal/backdrop/focus-trap - a plain panel that
-    /// occupies space in the layout, e.g. a desktop sidebar.
+    /// In-place plain panel, no portal/backdrop/focus-trap, e.g. a sidebar.
     Static,
 }
 
@@ -111,9 +108,8 @@ impl From<String> for Input<DrawerAnchor> {
     }
 }
 
-/// The dialog surface for `Temporary`: flush against the anchored edge and
-/// the two cross edges (no gap, square corners), sized on the main axis by
-/// `size`, filling the cross axis.
+/// `Temporary`'s surface: flush against the anchored + cross edges, sized on
+/// the main axis by `size`.
 fn temporary_dialog_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> Sx {
     let size = size
         .map(drawer_size)
@@ -144,8 +140,8 @@ fn temporary_dialog_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> 
     )
 }
 
-/// The panel itself for `Static`: sized on the main axis by `size`, a border
-/// on the edge facing the rest of the layout.
+/// `Static`'s panel: sized on the main axis by `size`, bordered on the edge
+/// facing the rest of the layout.
 fn static_dynamic_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> Sx {
     let sx = sx().apply_if(size.map(drawer_size), |sx, size| {
         if anchor.is_horizontal() {
@@ -181,21 +177,16 @@ pub struct DrawerProps {
     size: Input<ThemeAwareValue>,
     #[props(default, into)]
     z_index: Input<ThemeAwareValue>,
-    /// Requested by Escape/backdrop click on `Temporary` - `Static` never
-    /// calls this itself, it's only there for the consumer's own close
-    /// button. Doesn't imply `Drawer` tracks an open/closed state: like the
-    /// rest of the library, callers control whether it exists at all.
+    /// Requested by Escape/backdrop on `Temporary`; on `Static` it's only
+    /// for your own close button - `Drawer` tracks no open/closed state.
     #[props(default)]
     onclose: EventHandler<()>,
     children: Element,
 }
 
-/// A panel anchored to one edge - `Temporary` (default) is a modal drawer on
-/// top of the page regardless of screen size; `Static` is a plain in-flow
-/// panel (e.g. a desktop sidebar) with no portal/backdrop/focus-trap. Compose
-/// both, each hidden via CSS on the opposite side of your own breakpoint, for
-/// a responsive sidebar-that-becomes-a-drawer without detecting the
-/// breakpoint in Rust.
+/// A panel anchored to one edge - `Temporary` (default) is a modal drawer;
+/// `Static` is a plain in-flow panel (e.g. a sidebar). Compose both, hidden
+/// via CSS on opposite breakpoints, for a responsive sidebar-becomes-drawer.
 #[component]
 pub fn Drawer(props: DrawerProps) -> Element {
     let variant = props.variant.as_ref().copied().unwrap_or_default();

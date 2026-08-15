@@ -30,14 +30,11 @@ pub struct BoxProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
-    /// Which element to render as - `div` (default), `span`, `a`, `button`,
-    /// or any other tag [`HtmlTag`] supports.
+    /// Which element to render as - `div` by default.
     #[props(default, into)]
     component: Input<HtmlTag>,
-    /// A framework-layer `Sx` for whatever's using `Box` as its base (e.g.
-    /// `Divider`'s own base styles) - registered alongside `Box`'s own,
-    /// rather than every caller registering its own Framework-layer `Sx`
-    /// and threading the class into `class` by hand.
+    /// Framework-layer `Sx` for a component built on top of `Box` (e.g.
+    /// `Divider`'s own base styles), registered alongside `Box`'s own.
     #[props(default)]
     framework_sx: Option<&'static StaticSx>,
     #[props(default)]
@@ -54,11 +51,8 @@ pub struct BoxProps {
     onanimationend: EventHandler<AnimationEvent>,
     #[props(default)]
     onchange: EventHandler<FormEvent>,
-    /// Attributes that aren't part of `GlobalAttributes` (so can't be passed
-    /// via `attributes`/`extends`), only valid on some of the tags
-    /// `component` can select - e.g. `src`/`alt` on `img`, `href`/`target` on
-    /// `a`, `value`/`disabled` on form controls. Set only the ones that make
-    /// sense for whatever `component` you picked.
+    /// Non-global attributes for specific tags `component` can select -
+    /// e.g. `src`/`alt` on `img`, `href`/`target` on `a`.
     #[props(default)]
     src: Option<String>,
     #[props(default)]

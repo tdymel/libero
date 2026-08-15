@@ -14,9 +14,7 @@ pub enum ThemeAwareValue {
 }
 
 impl ThemeAwareValue {
-    /// The plain CSS text for values that don't need theme resolution
-    /// (numbers, raw strings, CSS vars) - `None` for the theme-dependent
-    /// variants (`Size`, `Color`, `ColorValue`, `BreakpointValue`).
+    /// CSS text for values needing no theme resolution; `None` otherwise.
     pub fn raw(&self) -> Option<String> {
         match self {
             Self::String(value) | Self::Number(value) => Some(value.clone()),

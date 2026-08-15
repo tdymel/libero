@@ -21,10 +21,7 @@ impl Display for CssDeclaration {
     }
 }
 
-/// Implemented by theme-side types that know how to describe themselves as
-/// CSS custom-property declarations, so `theme`'s `Stylesheet` conversion can
-/// just call `.to_css_declarations()` on each theme default instead of
-/// hand-unrolling its fields.
+/// Renders a theme default as its CSS custom-property declarations.
 pub(crate) trait ToCssDeclarations {
     fn to_css_declarations(&self) -> Vec<CssDeclaration>;
 }

@@ -1,7 +1,5 @@
 /// Splits a `when()` condition into an OR of AND-groups of state names.
-/// `&&` binds tighter than `||`, so splitting on `||` first and then on `&&`
-/// within each half already yields disjunctive-normal form (parentheses are
-/// not supported).
+/// `&&` binds tighter than `||`; no parentheses.
 pub(crate) fn condition_groups(condition: &str) -> Vec<Vec<String>> {
     condition
         .split("||")

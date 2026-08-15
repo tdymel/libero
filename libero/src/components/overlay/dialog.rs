@@ -74,9 +74,8 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
 });
 
-/// `xs`/`sm`/`md`/`lg`/`xl` resolve through the dialog size scale (distinct
-/// from the (much larger) breakpoint scale generic `max-width` normally
-/// uses) - anything else (a raw length, percentage, CSS var) passes through.
+/// `xs`-`xl` resolve through the dialog size scale, not the (much larger)
+/// breakpoint scale `max-width` normally uses; anything else passes through.
 pub(crate) fn dialog_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     match value {
         ThemeAwareValue::Size(size) => SizeCss::DIALOG_SIZE.value(*size).into(),
@@ -145,22 +144,19 @@ pub struct DialogProps {
     size: Input<ThemeAwareValue>,
     #[props(default, into)]
     z_index: Input<ThemeAwareValue>,
-    /// Position within its container's cross axis - Modal centers its
-    /// content by default, so `Start`/`End` pin the dialog to the
-    /// top/bottom instead of the vertical center.
+    /// Cross-axis position - `Start`/`End` pin to top/bottom instead of
+    /// Modal's default vertical center.
     #[props(default, into)]
     vertical: Input<DialogAlign>,
-    /// Position within its container's main axis - `Start`/`End` pin the
-    /// dialog to the left/right instead of the horizontal center.
+    /// Main-axis position - `Start`/`End` pin to left/right instead of
+    /// the default horizontal center.
     #[props(default, into)]
     horizontal: Input<DialogAlign>,
     children: Element,
 }
 
-/// Dialog surface: `role="dialog"` always, plus `aria-modal="true"` when
-/// rendered inside a [`crate::components::Modal`] - detected via
-/// [`crate::hooks::use_modal_context`]'s presence, not passed explicitly, so
-/// a standalone (non-modal) `Dialog` correctly omits it.
+/// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in
+/// a [`crate::components::Modal`] (auto-detected, not passed explicitly).
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();

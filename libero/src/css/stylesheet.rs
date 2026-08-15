@@ -4,10 +4,8 @@ use std::hash::{Hash, Hasher};
 
 use super::css_scope::CssScope;
 
-/// A block of CSS text, optionally scoped to a single class its declarations
-/// were rendered against (e.g. an [`Sx`](crate::sx::Sx) conversion). Raw text
-/// built via `From<&str>`/`From<String>` is an escape hatch for CSS that
-/// isn't produced by a scoped conversion, so it carries no class name.
+/// A block of CSS text, optionally scoped to one class (e.g. an
+/// [`Sx`](crate::sx::Sx) conversion). Raw `&str`/`String` CSS has no class.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Stylesheet {
     css: String,

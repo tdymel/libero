@@ -23,9 +23,8 @@ impl PortalHost {
     }
 }
 
-/// Renders everything registered via [`crate::hooks::use_portal`] whose
-/// `render` currently returns `Some`. [`crate::LiberoProvider`] renders
-/// exactly one of these, after its own children.
+/// Renders everything registered via [`crate::hooks::use_portal`] that
+/// currently returns `Some`. Rendered once by [`crate::LiberoProvider`].
 #[component]
 pub fn PortalOutlet() -> Element {
     let host = use_context::<PortalHost>();

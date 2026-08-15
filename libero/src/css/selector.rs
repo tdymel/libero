@@ -1,10 +1,6 @@
-/// Expands a `selector()` pattern against the current context selectors.
-///
-/// The pattern may be a comma-separated list of parts. Each part containing
-/// `&` has every `&` replaced with a current selector; a part without `&` is
-/// appended directly after a current selector (so plain suffixes like
-/// `::before` keep working as before `&` existed). The result is the cross
-/// product of parts x current selectors, e.g. `"&::before, &::after"` against
+/// Expands a comma-separated `selector()` pattern against the current
+/// selectors: `&` is replaced by each current selector, a bare suffix (e.g.
+/// `::before`) is appended to it. E.g. `"&::before, &::after"` against
 /// `[".cls"]` yields `[".cls::before", ".cls::after"]`.
 pub(crate) fn expand_selector(pattern: &str, current: &[String]) -> Vec<String> {
     pattern
