@@ -140,6 +140,9 @@ fn temporary_dialog_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> 
     )
 }
 
+// TODO: `anchor` here only picks the border/axis, not real placement - callers
+// must still order `Drawer` correctly themselves. Consider an API that also
+// positions it (e.g. order/margin-auto) so `anchor` is authoritative here too.
 /// `Static`'s panel: sized on the main axis by `size`, bordered on the edge
 /// facing the rest of the layout.
 fn static_dynamic_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> Sx {
@@ -171,6 +174,8 @@ pub struct DrawerProps {
     states: Input<States>,
     #[props(default, into)]
     variant: Input<DrawerVariant>,
+    /// On `Static`, only picks the border side/size axis, not placement -
+    /// position it yourself in your own layout. Full effect on `Temporary`.
     #[props(default, into)]
     anchor: Input<DrawerAnchor>,
     #[props(default, into)]

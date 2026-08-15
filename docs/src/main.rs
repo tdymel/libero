@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, Code, Container, Divider, Flex, List, ListItem, Text, Title},
+    components::{Box, Code, Container, Divider, Drawer, Flex, List, ListItem, Text, Title},
     sx::sx,
 };
 
@@ -23,13 +23,12 @@ fn App() -> Element {
         LiberoProvider {
             Box {
                 sx: sx().display("flex").height("100vh"),
+                Sidebar {}
                 Container {
                     size: "sm",
                     sx: sx().flex("1").padding("48px 64px").overflow("auto"),
                     GettingStarted {}
                 }
-                Divider { vertical: true }
-                Sidebar {}
             }
         }
     }
@@ -38,9 +37,12 @@ fn App() -> Element {
 #[component]
 fn Sidebar() -> Element {
     rsx! {
-        Box {
-            component: "aside",
-            sx: sx().width("240px").flex_shrink("0").padding("32px 24px"),
+        Drawer {
+            variant: "static",
+            anchor: "left",
+            size: "sm",
+            role: "navigation",
+            sx: sx().flex_shrink("0").padding("32px 24px"),
             Flex {
                 direction: "column",
                 gap: "12px",
