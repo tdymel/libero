@@ -5,6 +5,8 @@ use libero::{
     sx::sx,
 };
 
+static LOGO: Asset = asset!("/assets/logo.svg");
+
 fn main() {
     dioxus::launch(App);
 }
@@ -20,6 +22,8 @@ const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
 #[component]
 fn App() -> Element {
     rsx! {
+        document::Title { "Libero" }
+        document::Link { rel: "icon", href: LOGO }
         LiberoProvider {
             Box {
                 sx: sx().display("flex").height("100vh"),
