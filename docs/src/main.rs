@@ -1,16 +1,12 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, CodeBlock, Container, Divider, Flex, List, ListItem, Text, Title},
-    sx::{Sx, sx},
+    components::{Box, Code, Container, Divider, Flex, List, ListItem, Text, Title},
+    sx::sx,
 };
 
 fn main() {
     dioxus::launch(App);
-}
-
-fn monospace_sx() -> Sx {
-    sx().font_family("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace")
 }
 
 #[component]
@@ -79,7 +75,7 @@ fn GettingStarted() -> Element {
                 gap: "8px",
                 Title { variant: "h2", "Installation" }
                 Text { "Add Libero to your project with cargo:" }
-                CodeBlock { "cargo add libero" }
+                Code { block: true, "cargo add libero" }
             }
 
             Flex {
@@ -88,10 +84,11 @@ fn GettingStarted() -> Element {
                 Title { variant: "h2", "Quick Start" }
                 Text {
                     "Wrap your app in "
-                    Box { component: "code", sx: monospace_sx().background("grey.1").border_radius("4px").padding("2px 6px"), "LiberoProvider" }
+                    Code { "LiberoProvider" }
                     " once, at the root - it registers the theme and every style your components use."
                 }
-                CodeBlock {
+                Code {
+                    block: true,
                     "fn App() -> Element {{\n    rsx! {{\n        LiberoProvider {{\n            Text {{ \"Hello, Libero!\" }}\n        }}\n    }}\n}}"
                 }
             }

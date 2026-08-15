@@ -1,7 +1,7 @@
-mod code_block;
+mod code;
 mod text;
 mod title;
 
-pub use code_block::CodeBlock;
+pub use code::Code;
 pub use text::Text;
 pub use title::{Title, TitleVariant};
