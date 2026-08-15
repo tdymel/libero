@@ -16,9 +16,3 @@ pub use sx_entry::SxEntry;
 pub use sx_key::{Property, SxModifierKey, SxPropertyKey};
 pub use sx_modifier::SxModifier;
 pub use theme_aware_value::ThemeAwareValue;
-
-/*
- * TODO:
- * - Support & in the syntax
- * - Support multiple states in a when condition
- */
