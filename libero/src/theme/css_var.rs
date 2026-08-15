@@ -12,15 +12,6 @@ impl CssVar {
         Self::Static(name)
     }
 
-    pub fn from_name(name: impl Into<String>) -> Option<Self> {
-        let name = name.into();
-        if Self::parse_name(name.as_str()).is_some() {
-            Some(Self::Owned(name))
-        } else {
-            None
-        }
-    }
-
     pub fn name(&self) -> &str {
         match self {
             Self::Static(name) => name,
@@ -55,14 +46,6 @@ impl CssVar {
         }
 
         None
-    }
-
-    pub fn matches_name(&self, value: &str) -> bool {
-        self.name() == value
-    }
-
-    pub fn matches_value(&self, value: &str) -> bool {
-        value == self.value()
     }
 
     pub(crate) fn declare(&self, value: impl Into<String>) -> CssDeclaration {
