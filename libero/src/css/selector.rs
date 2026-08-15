@@ -6,7 +6,7 @@
 /// `::before` keep working as before `&` existed). The result is the cross
 /// product of parts x current selectors, e.g. `"&::before, &::after"` against
 /// `[".cls"]` yields `[".cls::before", ".cls::after"]`.
-pub(super) fn expand_selector(pattern: &str, current: &[String]) -> Vec<String> {
+pub(crate) fn expand_selector(pattern: &str, current: &[String]) -> Vec<String> {
     pattern
         .split(',')
         .map(str::trim)

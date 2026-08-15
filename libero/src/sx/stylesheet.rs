@@ -1,12 +1,9 @@
-use crate::{
-    sx::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue},
-    theme::{ColorShade, ColorValue, Size, SizeCss},
+use crate::css::{
+    CssColorValue, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector,
 };
+use crate::theme::{ColorShade, ColorValue, Size, SizeCss};
 
-use super::{
-    CssDeclaration, CssScope, Stylesheet, condition::condition_groups,
-    css_color_value::CssColorValue, selector::expand_selector,
-};
+use super::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {

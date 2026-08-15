@@ -2,7 +2,7 @@
 /// `&&` binds tighter than `||`, so splitting on `||` first and then on `&&`
 /// within each half already yields disjunctive-normal form (parentheses are
 /// not supported).
-pub(super) fn condition_groups(condition: &str) -> Vec<Vec<String>> {
+pub(crate) fn condition_groups(condition: &str) -> Vec<Vec<String>> {
     condition
         .split("||")
         .map(|group| {
