@@ -35,7 +35,7 @@ fn App() -> Element {
                     color: "primary",
                     sx: sx().gap("md"),
                     Box { component: "img", src: LOGO, alt: "Libero logo", sx: sx().height("28px") }
-                    Title { variant: "h5", "Libero" }
+                    Title { variant: "h5", component: "span", "Libero" }
                 }
                 Flex {
                     direction: "row",
@@ -66,7 +66,7 @@ fn Sidebar() -> Element {
             Flex {
                 direction: "column",
                 gap: "12px",
-                Title { variant: "h6", "Documentation" }
+                Title { variant: "h6", component: "p", "Documentation" }
                 List {
                     ListItem {
                         Box {

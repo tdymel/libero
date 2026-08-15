@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, HtmlTag, Input, States},
     sx::{StaticSx, Sx, ThemeAwareValue},
     theme::{Size, TextDefaults},
 };
@@ -62,8 +62,9 @@ pub struct TextProps {
     states: Input<States>,
     #[props(default, into)]
     size: Input<ThemeAwareValue>,
-    #[props(default)]
-    span: Option<bool>,
+    /// Which element to render as - `p` by default.
+    #[props(default, into)]
+    component: Input<HtmlTag>,
     children: Element,
 }
 
@@ -75,18 +76,14 @@ pub fn Text(props: TextProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::String("md".to_string()));
     let size_sx = get_size_sx(&effective_size);
-    let component = if props.span.unwrap_or(false) {
-        "span"
-    } else {
-        "p"
-    };
+    let component = props.component.as_ref().copied().unwrap_or(HtmlTag::P);
 
     rsx! {
         Box {
             class: props.class,
             sx: props.sx,
             states: props.states,
-            component: component,
+            component,
             framework_sx: size_sx,
             attributes: props.attributes,
             {props.children}

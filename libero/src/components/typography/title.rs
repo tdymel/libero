@@ -97,22 +97,29 @@ pub struct TitleProps {
     states: Input<States>,
     #[props(default, into)]
     variant: TitleVariant,
+    /// Which element to render as - defaults to `variant`'s own heading tag.
+    /// Override to keep `variant`'s visual size while using a different
+    /// semantic tag, e.g. to preserve a page's h1->h2->h3 a11y heading order.
     #[props(default, into)]
-    size: Input<TitleVariant>,
+    component: Input<HtmlTag>,
     children: Element,
 }
 
 #[component]
 pub fn Title(props: TitleProps) -> Element {
-    let effective_size = props.size.as_ref().copied().unwrap_or(props.variant);
+    let component = props
+        .component
+        .as_ref()
+        .copied()
+        .unwrap_or_else(|| HtmlTag::from(props.variant));
 
     rsx! {
         Box {
             class: props.class,
             sx: props.sx,
             states: props.states,
-            component: HtmlTag::from(props.variant),
-            framework_sx: get_size_sx(effective_size),
+            component,
+            framework_sx: get_size_sx(props.variant),
             attributes: props.attributes,
             {props.children}
         }

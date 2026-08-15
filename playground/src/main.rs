@@ -150,13 +150,13 @@ fn App() -> Element {
             Flex {
                 sx: sx().padding_top(Size::Xl),
                 Title {
-                    variant: "h2",
-                    size: "h1",
+                    variant: "h1",
+                    component: "h2",
                     "H2 element with H1 styling"
                 }
                 Title {
-                    variant: "h3",
-                    size: "h2",
+                    variant: "h2",
+                    component: "h3",
                     "H3 element with H2 styling"
                 }
             }
@@ -199,7 +199,7 @@ fn App() -> Element {
                     "This is a paragraph with "
                     Text {
                         size: "lg",
-                        span: true,
+                        component: "span",
                         "highlighted text"
                     }
                     " inside it."
