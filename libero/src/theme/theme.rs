@@ -1,7 +1,7 @@
 use super::{
-    ButtonDefaults, ContainerDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
-    FlexAxisDefaults, FlexDefaults, HexColor, SelectDefaults, Sizes, TextDefaults, TextSize,
-    TitleDefaults, TitleLevel,
+    ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults, DividerDefaults,
+    DrawerDefaults, FlexAxisDefaults, FlexDefaults, HexColor, SelectDefaults, Sizes, TextDefaults,
+    TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -17,6 +17,7 @@ pub struct Theme {
     pub select: SelectDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
+    pub code: CodeDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -117,6 +118,7 @@ impl Theme {
                 TextSize::new("400", "1.25rem", "0em", "1.6"),   // xl
             ),
         ),
+        CodeDefaults::new("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -141,6 +143,7 @@ impl Theme {
         select: SelectDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
+        code: CodeDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -164,6 +167,7 @@ impl Theme {
             select,
             titles,
             texts,
+            code,
             primary,
             secondary,
             error,

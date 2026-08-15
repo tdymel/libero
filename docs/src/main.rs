@@ -9,6 +9,14 @@ fn main() {
     dioxus::launch(App);
 }
 
+const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
+    rsx! {
+        LiberoProvider {
+            Text { "Hello, Libero!" }
+        }
+    }
+}"#;
+
 #[component]
 fn App() -> Element {
     rsx! {
@@ -87,10 +95,7 @@ fn GettingStarted() -> Element {
                     Code { "LiberoProvider" }
                     " once, at the root - it registers the theme and every style your components use."
                 }
-                Code {
-                    block: true,
-                    "fn App() -> Element {{\n    rsx! {{\n        LiberoProvider {{\n            Text {{ \"Hello, Libero!\" }}\n        }}\n    }}\n}}"
-                }
+                Code { block: true, {QUICK_START_EXAMPLE} }
             }
 
             Flex {

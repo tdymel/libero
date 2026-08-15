@@ -1,4 +1,5 @@
 mod button;
+mod code;
 mod container;
 mod dialog;
 mod divider;
@@ -15,6 +16,7 @@ pub use button::{
     BUTTON_PADDING_X_XL, BUTTON_PADDING_X_XS, BUTTON_RADIUS, BUTTON_RIPPLE_ANIMATION,
     BUTTON_RIPPLE_KEYFRAMES, ButtonDefaults, ButtonSizeLevel,
 };
+pub use code::{CODE_FONT_FAMILY, CodeDefaults};
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use dialog::DialogDefaults;
 pub use divider::{DIVIDER_SPACING, DividerDefaults};

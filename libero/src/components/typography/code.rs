@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, Input, States},
     sx::{StaticSx, Sx, sx},
+    theme::CODE_FONT_FAMILY,
 };
 
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
@@ -10,7 +11,7 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
         .background("grey.1")
         .border_radius("4px")
         .padding("2px 6px")
-        .font_family("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace")
+        .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875em")
 });
 
@@ -23,7 +24,7 @@ static CODE_BLOCK_SX: StaticSx = StaticSx::new(|| {
         .border_radius("6px")
         .padding("12px 16px")
         .overflow("auto")
-        .font_family("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace")
+        .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875rem")
 });
 
