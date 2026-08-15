@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, HtmlTag, Input, States},
     sx::{StaticSx, Sx},
     theme::TitleDefaults,
 };
@@ -54,6 +54,19 @@ impl From<String> for Input<TitleVariant> {
     }
 }
 
+impl From<TitleVariant> for HtmlTag {
+    fn from(variant: TitleVariant) -> Self {
+        match variant {
+            TitleVariant::H1 => Self::H1,
+            TitleVariant::H2 => Self::H2,
+            TitleVariant::H3 => Self::H3,
+            TitleVariant::H4 => Self::H4,
+            TitleVariant::H5 => Self::H5,
+            TitleVariant::H6 => Self::H6,
+        }
+    }
+}
+
 static TITLE_H1_SX: StaticSx = StaticSx::new(|| TitleDefaults::h1_sx().margin("0"));
 static TITLE_H2_SX: StaticSx = StaticSx::new(|| TitleDefaults::h2_sx().margin("0"));
 static TITLE_H3_SX: StaticSx = StaticSx::new(|| TitleDefaults::h3_sx().margin("0"));
@@ -61,7 +74,7 @@ static TITLE_H4_SX: StaticSx = StaticSx::new(|| TitleDefaults::h4_sx().margin("0
 static TITLE_H5_SX: StaticSx = StaticSx::new(|| TitleDefaults::h5_sx().margin("0"));
 static TITLE_H6_SX: StaticSx = StaticSx::new(|| TitleDefaults::h6_sx().margin("0"));
 
-fn get_size_sx(variant: TitleVariant) -> &'static Sx {
+fn get_size_sx(variant: TitleVariant) -> &'static StaticSx {
     match variant {
         TitleVariant::H1 => &TITLE_H1_SX,
         TitleVariant::H2 => &TITLE_H2_SX,
@@ -92,77 +105,16 @@ pub struct TitleProps {
 #[component]
 pub fn Title(props: TitleProps) -> Element {
     let effective_size = props.size.as_ref().copied().unwrap_or(props.variant);
-    let size_sx = get_size_sx(effective_size);
 
-    let framework_class = crate::context::use_sx(size_sx, crate::SxLayer::Framework);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
-
-    let class = class_list([props.class, framework_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
-    match props.variant {
-        TitleVariant::H1 => {
-            rsx! {
-                h1 {
-                    class: class,
-                    "data-state": data_state,
-                    ..props.attributes,
-                    {props.children}
-                }
-            }
-        }
-        TitleVariant::H2 => {
-            rsx! {
-                h2 {
-                    class: class,
-                    "data-state": data_state,
-                    ..props.attributes,
-                    {props.children}
-                }
-            }
-        }
-        TitleVariant::H3 => {
-            rsx! {
-                h3 {
-                    class: class,
-                    "data-state": data_state,
-                    ..props.attributes,
-                    {props.children}
-                }
-            }
-        }
-        TitleVariant::H4 => {
-            rsx! {
-                h4 {
-                    class: class,
-                    "data-state": data_state,
-                    ..props.attributes,
-                    {props.children}
-                }
-            }
-        }
-        TitleVariant::H5 => {
-            rsx! {
-                h5 {
-                    class: class,
-                    "data-state": data_state,
-                    ..props.attributes,
-                    {props.children}
-                }
-            }
-        }
-        TitleVariant::H6 => {
-            rsx! {
-                h6 {
-                    class: class,
-                    "data-state": data_state,
-                    ..props.attributes,
-                    {props.children}
-                }
-            }
+    rsx! {
+        Box {
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            component: HtmlTag::from(props.variant),
+            framework_sx: get_size_sx(effective_size),
+            attributes: props.attributes,
+            {props.children}
         }
     }
 }
