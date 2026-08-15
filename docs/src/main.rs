@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Box, Code, Container, Divider, Drawer, Flex, List, ListItem, Text, Title},
+    components::{
+        Box, Code, Container, Divider, Drawer, Flex, Header, List, ListItem, Text, Title,
+    },
     sx::sx,
 };
 
@@ -26,15 +28,26 @@ fn App() -> Element {
         document::Link { rel: "icon", href: LOGO }
         LiberoProvider {
             Flex {
-                direction: "row",
-                align: "stretch",
+                direction: "column",
                 sx: sx().height("100vh"),
-                Sidebar {}
-                Container {
-                    component: "main",
-                    size: "sm",
-                    sx: sx().flex("1").padding("48px 64px").overflow("auto"),
-                    GettingStarted {}
+                gap: "0",
+                Header {
+                    color: "primary",
+                    sx: sx().gap("md"),
+                    Box { component: "img", src: LOGO, alt: "Libero logo", sx: sx().height("28px") }
+                    Title { variant: "h5", "Libero" }
+                }
+                Flex {
+                    direction: "row",
+                    align: "stretch",
+                    sx: sx().flex("1").overflow("hidden"),
+                    Sidebar {}
+                    Container {
+                        component: "main",
+                        size: "sm",
+                        sx: sx().flex("1").padding("48px 64px").overflow("auto"),
+                        GettingStarted {}
+                    }
                 }
             }
         }

@@ -5,6 +5,7 @@ mod dialog;
 mod divider;
 mod drawer;
 mod flex;
+mod header;
 mod select;
 mod text;
 mod title;
@@ -25,6 +26,7 @@ pub use flex::{
     FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP, FLEX_ROW_ALIGN,
     FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP, FlexAxisDefaults, FlexDefaults,
 };
+pub use header::HeaderDefaults;
 pub use select::{
     SELECT_FONT_SIZE_LG, SELECT_FONT_SIZE_MD, SELECT_FONT_SIZE_SM, SELECT_FONT_SIZE_XL,
     SELECT_FONT_SIZE_XS, SELECT_HEIGHT_LG, SELECT_HEIGHT_MD, SELECT_HEIGHT_SM, SELECT_HEIGHT_XL,

@@ -1,0 +1,157 @@
+use dioxus::prelude::*;
+
+use crate::{
+    components::{Box, HtmlTag, Input, States, common::class_list},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{Color, ColorShade, ColorValue, Size, SizeCss},
+};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HeaderPosition {
+    Static,
+    Sticky,
+    Fixed,
+}
+
+impl Default for HeaderPosition {
+    fn default() -> Self {
+        Self::Sticky
+    }
+}
+
+impl From<&str> for HeaderPosition {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "static" => Self::Static,
+            "fixed" => Self::Fixed,
+            _ => Self::Sticky,
+        }
+    }
+}
+
+impl From<String> for HeaderPosition {
+    fn from(value: String) -> Self {
+        Self::from(value.as_str())
+    }
+}
+
+impl From<&str> for Input<HeaderPosition> {
+    fn from(value: &str) -> Self {
+        Input::Value(HeaderPosition::from(value))
+    }
+}
+
+impl From<String> for Input<HeaderPosition> {
+    fn from(value: String) -> Self {
+        Input::Value(HeaderPosition::from(value))
+    }
+}
+
+// Matches Button's own default shade - bold enough for a solid brand-color
+// banner rather than the library-wide default (5).
+const HEADER_DEFAULT_SHADE: ColorShade = ColorShade::S6;
+
+fn header_color_parts(value: Option<&ThemeAwareValue>) -> Option<(Color, ColorShade)> {
+    match value {
+        Some(ThemeAwareValue::Color(color)) => Some((*color, HEADER_DEFAULT_SHADE)),
+        Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => {
+            Some((*color, *shade))
+        }
+        Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(color, shade))) => {
+            Some((*color, *shade))
+        }
+        _ => None,
+    }
+}
+
+fn header_size(value: &ThemeAwareValue) -> ThemeAwareValue {
+    match value {
+        ThemeAwareValue::Size(size) => SizeCss::HEADER_HEIGHT.value(*size).into(),
+        other => other.clone(),
+    }
+}
+
+fn header_position_sx(position: HeaderPosition) -> Sx {
+    match position {
+        HeaderPosition::Static => sx().position("static"),
+        HeaderPosition::Sticky => sx().position("sticky").top("0"),
+        HeaderPosition::Fixed => sx().position("fixed").top("0"),
+    }
+}
+
+static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .align_items("center")
+        .width("100%")
+        .height(SizeCss::HEADER_HEIGHT.value(Size::Md))
+        .padding_left("md")
+        .padding_right("md")
+        .background("white")
+        .border_bottom("1px solid")
+        .border_bottom_color("grey.3")
+});
+
+fn header_dynamic_sx(props: &HeaderProps) -> Sx {
+    let position = props.position.as_ref().copied().unwrap_or_default();
+
+    header_position_sx(position)
+        .apply_if(props.size.as_ref().map(header_size), |sx, size| {
+            sx.height(size)
+        })
+        .apply_if(
+            header_color_parts(props.color.as_ref()),
+            |sx, (color, shade)| {
+                sx.background(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)))
+                    .color(ThemeAwareValue::ColorValue(ColorValue::Contrast(
+                        color, shade,
+                    )))
+            },
+        )
+        .apply_if(props.z_index.as_ref(), |sx, z_index| {
+            sx.z_index(z_index.clone())
+        })
+}
+
+#[derive(Props, Clone, PartialEq)]
+pub struct HeaderProps {
+    #[props(extends = GlobalAttributes)]
+    attributes: Vec<Attribute>,
+    #[props(default)]
+    class: Option<String>,
+    #[props(default, into)]
+    sx: Input<Sx>,
+    #[props(default, into)]
+    states: Input<States>,
+    /// `Sticky` (default) stays visible while scrolling with no offset
+    /// needed; `Fixed` is viewport-relative but requires you to offset your
+    /// own content, same caveat as `Drawer`'s `anchor`.
+    #[props(default, into)]
+    position: Input<HeaderPosition>,
+    #[props(default, into)]
+    size: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    color: Input<ThemeAwareValue>,
+    #[props(default, into)]
+    z_index: Input<ThemeAwareValue>,
+    children: Element,
+}
+
+/// The page's `banner` landmark - always renders `<header>`. Hosts a nav and
+/// actions as children rather than being scoped to either itself.
+#[component]
+pub fn Header(props: HeaderProps) -> Element {
+    let dynamic_class =
+        crate::hooks::use_css(&header_dynamic_sx(&props), crate::CssLayer::UserDynamic);
+
+    rsx! {
+        Box {
+            component: HtmlTag::Header,
+            class: class_list([props.class, dynamic_class]),
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &HEADER_BASE_SX,
+            attributes: props.attributes,
+            {props.children}
+        }
+    }
+}

@@ -64,6 +64,7 @@ impl SizeCss {
     pub const RADIUS: SizeCss = SizeCss::new("--lsx-radius-");
     pub const DIALOG_SIZE: SizeCss = SizeCss::new("--lsx-dialog-size-");
     pub const DRAWER_SIZE: SizeCss = SizeCss::new("--lsx-drawer-size-");
+    pub const HEADER_HEIGHT: SizeCss = SizeCss::new("--lsx-header-height-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }
