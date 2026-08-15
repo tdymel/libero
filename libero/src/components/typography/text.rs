@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States},
     sx::{StaticSx, Sx, ThemeAwareValue},
     theme::{Size, TextDefaults},
 };
@@ -37,7 +37,7 @@ static TEXT_XL_SX: StaticSx = StaticSx::new(|| {
         .text_decoration("none")
 });
 
-fn get_size_sx(size: &ThemeAwareValue) -> &'static Sx {
+fn get_size_sx(size: &ThemeAwareValue) -> &'static StaticSx {
     match size {
         ThemeAwareValue::Size(s) => match s {
             Size::Xs => &TEXT_XS_SX,
@@ -75,35 +75,21 @@ pub fn Text(props: TextProps) -> Element {
         .cloned()
         .unwrap_or_else(|| ThemeAwareValue::String("md".to_string()));
     let size_sx = get_size_sx(&effective_size);
-
-    let framework_class = crate::context::use_sx(size_sx, crate::SxLayer::Framework);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
-
-    let class = class_list([props.class, framework_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
-    let use_span = props.span.unwrap_or(false);
-
-    if use_span {
-        rsx! {
-            span {
-                class: class,
-                "data-state": data_state,
-                ..props.attributes,
-                {props.children}
-            }
-        }
+    let component = if props.span.unwrap_or(false) {
+        "span"
     } else {
-        rsx! {
-            p {
-                class: class,
-                "data-state": data_state,
-                ..props.attributes,
-                {props.children}
-            }
+        "p"
+    };
+
+    rsx! {
+        Box {
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            component: component,
+            framework_sx: size_sx,
+            attributes: props.attributes,
+            {props.children}
         }
     }
 }
