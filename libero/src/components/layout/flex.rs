@@ -11,6 +11,10 @@ use crate::{
  * - Mantine Group has an option to set equal group width.
  *   We should at least provide a variable to use it on children.
  *   Not sure if we should provide a similar API.
+ * - No MUI-Stack-style `divider` prop: `children: Element` is an opaque
+ *   compiled VNode, not a list we can walk and splice at runtime without
+ *   reaching into unstable dioxus_core internals. Would need a breaking
+ *   `items: Vec<Element>` prop to do safely.
  */
 
 fn flex_focus_sx() -> Sx {
