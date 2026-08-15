@@ -3,11 +3,10 @@ use libero::{
     LiberoProvider,
     components::{
         Box, Button, Container, Dialog, Divider, Drawer, Flex, FocusTrap, FocusTrapInitialFocus,
-        HelloWorld, Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant,
-        VisuallyHidden, states,
+        Image, List, ListItem, Option, Overlay, Select, Text, Title, TitleVariant, VisuallyHidden,
     },
     hooks::{use_modal, use_modal_context, use_portal},
-    sx::{StaticSx, sx},
+    sx::sx,
     theme::Size,
 };
 
@@ -38,11 +37,6 @@ const ARTICLES: [Article; 3] = [
         image: "https://picsum.photos/id/1018/200/200",
     },
 ];
-
-static BOX_SX: StaticSx = StaticSx::new(|| {
-    sx().padding_top(Size::Xl)
-        .when("hidden", sx().background("secondary.1"))
-});
 
 fn main() {
     dioxus::launch(App);
@@ -79,7 +73,6 @@ fn PortalDemo() -> Element {
 
 #[component]
 fn App() -> Element {
-    let mut show_hello_world = use_signal(|| true);
     let mut large_gap = use_signal(|| true);
     let mut wrap_group = use_signal(|| true);
     let mut click_count = use_signal(|| 0);
@@ -94,13 +87,6 @@ fn App() -> Element {
         LiberoProvider {
             button {
                 onclick: move |_| {
-                    show_hello_world.toggle();
-                },
-                if show_hello_world() { "Hide Hello World" } else { "Show Hello World" }
-            }
-
-            button {
-                onclick: move |_| {
                     large_gap.toggle();
                 },
                 if large_gap() { "Use small gap" } else { "Use large gap" }
@@ -111,17 +97,6 @@ fn App() -> Element {
                     wrap_group.toggle();
                 },
                 if wrap_group() { "Disable group wrap" } else { "Enable group wrap" }
-            }
-
-            Flex {
-                sx: &BOX_SX,
-                align: "start",
-                gap: gap.clone(),
-                states: states().with("hidden", !show_hello_world()),
-                if show_hello_world() {
-                    HelloWorld {}
-                }
-                HelloWorld {}
             }
 
             Flex {
