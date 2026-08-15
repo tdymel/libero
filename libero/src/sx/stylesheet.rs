@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
 use crate::theme::{ColorShade, ColorValue, Size, SizeCss};
 
-use super::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
+use super::{Property, StaticSx, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
@@ -18,7 +18,13 @@ impl From<&Sx> for Stylesheet {
         };
 
         collect_scopes(&mut scopes, sx, &context);
-        Stylesheet::new(scopes)
+        Stylesheet::new(scopes).with_class_name(sx.class_name())
+    }
+}
+
+impl From<&StaticSx> for Stylesheet {
+    fn from(sx: &StaticSx) -> Self {
+        Stylesheet::from(std::ops::Deref::deref(sx))
     }
 }
 

@@ -8,6 +8,7 @@ mod css;
 pub mod sx;
 pub mod theme;
 
-pub(crate) use context::SxLayer;
+pub(crate) use context::CssLayer;
 pub use context::{LiberoContext, LiberoProvider};
-pub use hooks::{use_class, use_theme};
+pub use css::Stylesheet;
+pub use hooks::{use_stylesheet, use_theme};

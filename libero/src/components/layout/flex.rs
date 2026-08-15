@@ -84,7 +84,8 @@ pub fn Flex(props: FlexProps) -> Element {
         &FLEX_BASE_COLUMN_SX
     };
 
-    let dynamic_class = crate::hooks::use_sx(&flex_dynamic_sx(&props), crate::SxLayer::UserDynamic);
+    let dynamic_class =
+        crate::hooks::use_css(&flex_dynamic_sx(&props), crate::CssLayer::UserDynamic);
 
     rsx! {
         Box {

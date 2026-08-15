@@ -1,12 +1,12 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
-pub enum SxLayer {
+pub enum CssLayer {
     Framework,
     UserStatic,
     UserDynamic,
     UserCustom,
 }
 
-impl SxLayer {
+impl CssLayer {
     pub const fn css_name(self) -> &'static str {
         match self {
             Self::Framework => "lsx-framework",

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, FocusTrap, Input, Overlay, States, common::class_list},
     context::ModalContext,
-    hooks::{use_modal_z_index, use_sx},
+    hooks::{use_css, use_modal_z_index},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -59,7 +59,7 @@ pub fn Modal(props: ModalProps) -> Element {
 
     let z_index = use_modal_z_index();
 
-    let dynamic_class = use_sx(&sx().z_index(z_index), crate::SxLayer::UserDynamic);
+    let dynamic_class = use_css(&sx().z_index(z_index), crate::CssLayer::UserDynamic);
     let class = class_list([props.class, dynamic_class]);
 
     // Deferred to the next microtask: closing synchronously (from an event

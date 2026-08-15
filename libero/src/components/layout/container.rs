@@ -48,7 +48,7 @@ pub struct ContainerProps {
 #[component]
 pub fn Container(props: ContainerProps) -> Element {
     let dynamic_class =
-        crate::hooks::use_sx(&container_dynamic_sx(&props), crate::SxLayer::UserDynamic);
+        crate::hooks::use_css(&container_dynamic_sx(&props), crate::CssLayer::UserDynamic);
 
     rsx! {
         Box {

@@ -1,14 +1,14 @@
 use dioxus::prelude::*;
 
-use sx_registry::SxRegistry;
+use stylesheet_registry::StylesheetRegistry;
 
 use super::{MODAL_BASE_Z_INDEX, ModalHost, PortalHost, PortalOutlet};
 use crate::{css::Stylesheet, theme::Theme};
 
-mod sx_layer;
-mod sx_registry;
+mod css_layer;
+mod stylesheet_registry;
 
-pub(crate) use sx_layer::SxLayer;
+pub(crate) use css_layer::CssLayer;
 
 const SCROLL_LOCK_CSS: &str = "body:has([data-lsx-scroll-lock]) { overflow: hidden; }";
 
@@ -17,18 +17,18 @@ pub struct LiberoContext {
     pub theme: &'static Theme,
     pub(crate) layer_order_css: &'static str,
     pub(crate) theme_css: Stylesheet,
-    pub(crate) sx_registry: SxRegistry,
-    pub(crate) sx_registry_version: Signal<u64>,
+    pub(crate) stylesheet_registry: StylesheetRegistry,
+    pub(crate) stylesheet_registry_version: Signal<u64>,
 }
 
 impl LiberoContext {
-    pub fn new(theme: &'static Theme, sx_registry_version: Signal<u64>) -> Self {
+    pub fn new(theme: &'static Theme, stylesheet_registry_version: Signal<u64>) -> Self {
         Self {
             theme,
-            layer_order_css: SxLayer::order_css(),
+            layer_order_css: CssLayer::order_css(),
             theme_css: Stylesheet::from(theme),
-            sx_registry: SxRegistry::new(),
-            sx_registry_version,
+            stylesheet_registry: StylesheetRegistry::new(),
+            stylesheet_registry_version,
         }
     }
 }
@@ -38,10 +38,10 @@ pub fn LiberoProvider(
     #[props(default = &Theme::DEFAULT)] theme: &'static Theme,
     children: Element,
 ) -> Element {
-    let sx_registry_version = use_signal(|| 0u64);
-    let context = use_context_provider(|| LiberoContext::new(theme, sx_registry_version));
-    let _registry_version = context.sx_registry_version.read();
-    let active_stylesheets = context.sx_registry.stylesheets();
+    let stylesheet_registry_version = use_signal(|| 0u64);
+    let context = use_context_provider(|| LiberoContext::new(theme, stylesheet_registry_version));
+    let _registry_version = context.stylesheet_registry_version.read();
+    let active_stylesheets = context.stylesheet_registry.stylesheets();
 
     let portal_entries = use_signal(Vec::new);
     use_context_provider(|| PortalHost::new(portal_entries));

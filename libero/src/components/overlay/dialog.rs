@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, Input, States, common::class_list},
     context::ModalContext,
-    hooks::use_sx,
+    hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::SizeCss,
 };
@@ -165,7 +165,7 @@ pub struct DialogProps {
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();
 
-    let dynamic_class = use_sx(&dialog_dynamic_sx(&props), crate::SxLayer::UserDynamic);
+    let dynamic_class = use_css(&dialog_dynamic_sx(&props), crate::CssLayer::UserDynamic);
     let class = class_list([props.class, dynamic_class]);
 
     rsx! {

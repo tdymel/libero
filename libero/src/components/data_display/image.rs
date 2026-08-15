@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    SxLayer,
+    CssLayer,
     components::{Box, Dialog, Input, Modal, States, common::class_list},
-    hooks::use_sx,
+    hooks::use_css,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
@@ -152,12 +152,12 @@ pub fn Image(props: ImageProps) -> Element {
             sx.border_radius(radius.clone())
         });
 
-    let framework_class = use_sx(&IMAGE_BASE_SX, SxLayer::Framework);
-    let dynamic_class = use_sx(&dynamic_sx, SxLayer::UserDynamic);
+    let framework_class = use_css(&IMAGE_BASE_SX, CssLayer::Framework);
+    let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
     let static_class = props
         .sx
         .as_ref()
-        .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
+        .and_then(|sx| use_css(sx, CssLayer::UserStatic));
 
     let on_error_src = props.src.clone();
 
@@ -189,8 +189,8 @@ pub fn Image(props: ImageProps) -> Element {
     };
 
     let cursor = if zoomed() { "zoom-out" } else { "zoom-in" };
-    let button_framework_class = use_sx(&ZOOM_BUTTON_SX, SxLayer::Framework);
-    let button_dynamic_class = use_sx(&sx().cursor(cursor), SxLayer::UserDynamic);
+    let button_framework_class = use_css(&ZOOM_BUTTON_SX, CssLayer::Framework);
+    let button_dynamic_class = use_css(&sx().cursor(cursor), CssLayer::UserDynamic);
     let button_class = class_list([
         props.class,
         button_framework_class,
@@ -205,11 +205,11 @@ pub fn Image(props: ImageProps) -> Element {
         (false, true) => format!("Zoom out: {}", props.alt),
     };
 
-    let overlay_button_framework_class = use_sx(&ZOOM_OVERLAY_BUTTON_SX, SxLayer::Framework);
-    let overlay_button_cursor_class = use_sx(&sx().cursor("zoom-out"), SxLayer::UserDynamic);
+    let overlay_button_framework_class = use_css(&ZOOM_OVERLAY_BUTTON_SX, CssLayer::Framework);
+    let overlay_button_cursor_class = use_css(&sx().cursor("zoom-out"), CssLayer::UserDynamic);
     let overlay_button_class =
         class_list([overlay_button_framework_class, overlay_button_cursor_class]);
-    let overlay_image_class = use_sx(&ZOOM_OVERLAY_IMAGE_SX, SxLayer::Framework);
+    let overlay_image_class = use_css(&ZOOM_OVERLAY_IMAGE_SX, CssLayer::Framework);
 
     let portal_label = label.clone();
     use_portal(move || {

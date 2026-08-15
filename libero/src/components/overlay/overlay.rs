@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, Input, States, common::class_list},
-    hooks::use_sx,
+    hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
 
@@ -65,7 +65,7 @@ pub fn Overlay(props: OverlayProps) -> Element {
         .apply_if(props.blur.as_ref().and_then(px_value), |sx, blur| {
             sx.backdrop_filter(format!("blur({blur})"))
         });
-    let dynamic_class = use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
+    let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
     let class = class_list([props.class, dynamic_class]);
 
     rsx! {

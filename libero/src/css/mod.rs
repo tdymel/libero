@@ -9,4 +9,4 @@ pub(crate) use css_declaration::{CssDeclaration, ToCssDeclarations};
 pub(crate) use css_scope::CssScope;
 pub(crate) use selector::expand_selector;
 
-pub(crate) use stylesheet::Stylesheet;
+pub use stylesheet::Stylesheet;

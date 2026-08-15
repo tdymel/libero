@@ -1,12 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    SxLayer,
+    CssLayer,
     components::{
         HtmlTag, Input, States,
         common::{BoxEvents, attr, class_list, render_polymorphic},
     },
-    hooks::use_sx,
+    hooks::use_css,
     sx::{StaticSx, Sx, sx},
 };
 
@@ -78,14 +78,14 @@ pub struct BoxProps {
 
 #[component]
 pub fn Box(props: BoxProps) -> Element {
-    let focus_class = use_sx(&BOX_FOCUS_SX, SxLayer::Framework);
+    let focus_class = use_css(&BOX_FOCUS_SX, CssLayer::Framework);
     let framework_class = props
         .framework_sx
-        .and_then(|sx| use_sx(sx, SxLayer::Framework));
+        .and_then(|sx| use_css(sx, CssLayer::Framework));
     let static_class = props
         .sx
         .as_ref()
-        .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
+        .and_then(|sx| use_css(sx, CssLayer::UserStatic));
 
     let data_state = props.states.as_ref().and_then(States::data_state);
 
