@@ -1,6 +1,4 @@
-use crate::css::{
-    CssColorValue, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector,
-};
+use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
 use crate::theme::{ColorShade, ColorValue, Size, SizeCss};
 
 use super::{Property, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
@@ -126,10 +124,8 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
     match value {
         ThemeAwareValue::Size(size) => to_size_css_value(property, *size),
         ThemeAwareValue::Number(value) => value.clone(),
-        ThemeAwareValue::Color(color) => {
-            CssColorValue(ColorValue::Shade(*color, ColorShade::S5)).value()
-        }
-        ThemeAwareValue::ColorValue(value) => CssColorValue(*value).value(),
+        ThemeAwareValue::Color(color) => ColorValue::Shade(*color, ColorShade::S5).value(),
+        ThemeAwareValue::ColorValue(value) => value.value(),
         ThemeAwareValue::CssVar(css_var) => css_var.value(),
         ThemeAwareValue::String(value) => value.clone(),
         ThemeAwareValue::BreakpointValue(_) => {

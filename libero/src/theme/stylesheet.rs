@@ -1,4 +1,4 @@
-use crate::css::{CssColorValue, CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
+use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
     BUTTON_RIPPLE_KEYFRAMES, Color, ColorShade, ColorValue, HexColor, NamedColorCss, SizeCss,
@@ -118,18 +118,18 @@ fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, theme: 
 fn push_color_declarations(declarations: &mut Vec<CssDeclaration>, color: Color, base: HexColor) {
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
-            CssColorValue(ColorValue::Shade(color, shade)).var_name(),
+            ColorValue::Shade(color, shade).var_name(),
             base.shade(shade).to_string(),
         ));
     }
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
-            CssColorValue(ColorValue::Contrast(color, shade)).var_name(),
+            ColorValue::Contrast(color, shade).var_name(),
             if base.shade(shade).contrast().rgb() == 0x00_00_00 {
-                CssColorValue(ColorValue::Shade(Color::Black, shade)).value()
+                ColorValue::Shade(Color::Black, shade).value()
             } else {
-                CssColorValue(ColorValue::Shade(Color::White, shade)).value()
+                ColorValue::Shade(Color::White, shade).value()
             },
         ));
     }
