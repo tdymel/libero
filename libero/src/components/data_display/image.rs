@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     SxLayer,
     components::{Box, Dialog, Input, Modal, States, common::class_list},
-    context::use_sx,
+    hooks::use_sx,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };

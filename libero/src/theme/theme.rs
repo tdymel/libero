@@ -110,11 +110,11 @@ impl Theme {
         TextDefaults::new(
             "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
             Sizes::new(
-                TextSize::new("400", "0.75rem", "0em", "1.4"), // xs
+                TextSize::new("400", "0.75rem", "0em", "1.4"),   // xs
                 TextSize::new("400", "0.875rem", "0em", "1.45"), // sm
-                TextSize::new("400", "1rem", "0em", "1.5"),    // md (default)
+                TextSize::new("400", "1rem", "0em", "1.5"),      // md (default)
                 TextSize::new("400", "1.125rem", "0em", "1.55"), // lg
-                TextSize::new("400", "1.25rem", "0em", "1.6"), // xl
+                TextSize::new("400", "1.25rem", "0em", "1.6"),   // xl
             ),
         ),
         HexColor::new(0x228BE6),

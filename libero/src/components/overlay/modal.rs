@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, FocusTrap, Input, Overlay, States, common::class_list},
-    context::use_sx,
-    hooks::{ModalContext, use_modal_z_index},
+    context::ModalContext,
+    hooks::{use_modal_z_index, use_sx},
     sx::{StaticSx, Sx, sx},
 };
 

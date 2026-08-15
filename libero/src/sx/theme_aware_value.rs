@@ -21,9 +21,7 @@ impl ThemeAwareValue {
         match self {
             Self::String(value) | Self::Number(value) => Some(value.clone()),
             Self::CssVar(css_var) => Some(css_var.value()),
-            Self::Size(_) | Self::Color(_) | Self::ColorValue(_) | Self::BreakpointValue(_) => {
-                None
-            }
+            Self::Size(_) | Self::Color(_) | Self::ColorValue(_) | Self::BreakpointValue(_) => None,
         }
     }
 }

@@ -3,51 +3,15 @@ use dioxus::{
     prelude::*,
 };
 
-use crate::{components::Modal, hooks::use_portal};
-
-pub(crate) const MODAL_BASE_Z_INDEX: i32 = 1000;
-const MODAL_Z_INDEX_STEP: i32 = 10;
-
-/// Hands out increasing z-indices so later-opened modals stack above
-/// earlier ones. Provided by [`crate::LiberoProvider`].
-#[derive(Clone, Copy)]
-pub struct ModalHost {
-    next_z_index: Signal<i32>,
-}
-
-impl ModalHost {
-    pub(crate) fn new(next_z_index: Signal<i32>) -> Self {
-        Self { next_z_index }
-    }
-
-    fn acquire_z_index(&mut self) -> i32 {
-        let z_index = (self.next_z_index)();
-        self.next_z_index.set(z_index + MODAL_Z_INDEX_STEP);
-        z_index
-    }
-}
+use crate::{
+    components::Modal,
+    context::{ModalContext, ModalHost},
+    hooks::use_portal,
+};
 
 pub(crate) fn use_modal_z_index() -> i32 {
     let mut host = use_context::<ModalHost>();
     use_hook(|| host.acquire_z_index())
-}
-
-/// Lets a dialog rendered by [`use_modal`] close itself.
-#[derive(Clone, Copy)]
-pub struct ModalContext {
-    pub(crate) onclose: EventHandler<()>,
-}
-
-impl ModalContext {
-    /// Deferred to the next microtask: closing synchronously (from a click
-    /// still bubbling through the modal being torn down) can re-enter the
-    /// same `EventHandler` and panic with `AlreadyBorrowedMut`.
-    pub fn close(&self) {
-        let onclose = self.onclose;
-        spawn(async move {
-            onclose.call(());
-        });
-    }
 }
 
 pub fn use_modal_context() -> ModalContext {

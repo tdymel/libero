@@ -61,8 +61,7 @@ pub struct FocusTrapProps {
 
 #[component]
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
-    let id =
-        use_signal(|| format!("lsx-focus-trap-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
+    let id = use_signal(|| format!("lsx-focus-trap-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
 
     rsx! {
         Box {

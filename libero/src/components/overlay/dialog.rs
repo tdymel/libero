@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, Input, States, common::class_list},
-    context::use_sx,
-    hooks::ModalContext,
+    context::ModalContext,
+    hooks::use_sx,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::SizeCss,
 };

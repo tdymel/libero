@@ -4,7 +4,7 @@ use dioxus::{document, prelude::*};
 
 use crate::{
     components::{Box, Input, States, common::class_list},
-    context::use_theme,
+    hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SelectDefaults, Size},
 };
@@ -86,12 +86,12 @@ pub fn Select(props: SelectProps) -> Element {
         _ => None,
     };
 
-    let size_class = crate::context::use_sx(get_size_sx(size), crate::SxLayer::Framework);
+    let size_class = crate::hooks::use_sx(get_size_sx(size), crate::SxLayer::Framework);
 
     let dynamic_sx = sx().apply_if(explicit_radius, |sx, radius| {
         sx.border_radius(ThemeAwareValue::Size(radius))
     });
-    let dynamic_class = crate::context::use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
+    let dynamic_class = crate::hooks::use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
 
     // `class`/`sx` land on the wrapper (the element that actually participates
     // in a parent flex/grid layout - e.g. `margin-left: auto`), not on the

@@ -194,7 +194,7 @@ pub fn Divider(props: DividerProps) -> Element {
 
     let color = props.color.as_ref().map(divider_color_value);
 
-    let dynamic_class = crate::context::use_sx(
+    let dynamic_class = crate::hooks::use_sx(
         &divider_dynamic_sx(
             label_position,
             has_label,

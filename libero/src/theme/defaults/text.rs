@@ -68,10 +68,7 @@ pub struct TextDefaults {
 
 impl TextDefaults {
     pub const fn new(font_family: &'static str, sizes: Sizes<TextSize>) -> Self {
-        Self {
-            font_family,
-            sizes,
-        }
+        Self { font_family, sizes }
     }
 
     pub fn xs_sx() -> Sx {

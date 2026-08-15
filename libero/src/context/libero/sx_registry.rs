@@ -1,6 +1,7 @@
 use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 
-use crate::{SxLayer, css::Stylesheet, sx::Sx};
+use super::SxLayer;
+use crate::{css::Stylesheet, sx::Sx};
 
 #[derive(Clone)]
 pub struct RegisteredStylesheet {

@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, Dialog, Input, Modal, States, common::class_list},
-    context::use_sx,
     hooks::use_portal,
+    hooks::use_sx,
     sx::{Sx, ThemeAwareValue, sx},
     theme::SizeCss,
 };
@@ -126,18 +126,22 @@ fn temporary_dialog_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> 
     } else {
         sx.width("100%").height(size)
     }
-    .apply_if(matches!(anchor, DrawerAnchor::Left).then_some("auto"), |sx, auto| {
-        sx.margin_right(auto)
-    })
-    .apply_if(matches!(anchor, DrawerAnchor::Right).then_some("auto"), |sx, auto| {
-        sx.margin_left(auto)
-    })
-    .apply_if(matches!(anchor, DrawerAnchor::Top).then_some("auto"), |sx, auto| {
-        sx.margin_bottom(auto)
-    })
-    .apply_if(matches!(anchor, DrawerAnchor::Bottom).then_some("auto"), |sx, auto| {
-        sx.margin_top(auto)
-    })
+    .apply_if(
+        matches!(anchor, DrawerAnchor::Left).then_some("auto"),
+        |sx, auto| sx.margin_right(auto),
+    )
+    .apply_if(
+        matches!(anchor, DrawerAnchor::Right).then_some("auto"),
+        |sx, auto| sx.margin_left(auto),
+    )
+    .apply_if(
+        matches!(anchor, DrawerAnchor::Top).then_some("auto"),
+        |sx, auto| sx.margin_bottom(auto),
+    )
+    .apply_if(
+        matches!(anchor, DrawerAnchor::Bottom).then_some("auto"),
+        |sx, auto| sx.margin_top(auto),
+    )
 }
 
 /// The panel itself for `Static`: sized on the main axis by `size`, a border
@@ -198,10 +202,10 @@ pub fn Drawer(props: DrawerProps) -> Element {
     let anchor = props.anchor.as_ref().copied().unwrap_or_default();
 
     if variant == DrawerVariant::Static {
-        let dynamic_sx = static_dynamic_sx(anchor, props.size.as_ref()).apply_if(
-            props.z_index.as_ref(),
-            |sx, z_index| sx.z_index(z_index.clone()),
-        );
+        let dynamic_sx = static_dynamic_sx(anchor, props.size.as_ref())
+            .apply_if(props.z_index.as_ref(), |sx, z_index| {
+                sx.z_index(z_index.clone())
+            });
         let dynamic_class = use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
         let class = class_list([props.class, dynamic_class]);
 

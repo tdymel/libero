@@ -6,7 +6,7 @@ use crate::{
         HtmlTag, Input, States,
         common::{BoxEvents, attr, class_list, render_polymorphic},
     },
-    context::use_sx,
+    hooks::use_sx,
     sx::{StaticSx, Sx, sx},
 };
 
