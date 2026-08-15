@@ -65,6 +65,7 @@ impl SizeCss {
     pub const DIALOG_SIZE: SizeCss = SizeCss::new("--lsx-dialog-size-");
     pub const DRAWER_SIZE: SizeCss = SizeCss::new("--lsx-drawer-size-");
     pub const HEADER_HEIGHT: SizeCss = SizeCss::new("--lsx-header-height-");
+    pub const ICON_SIZE: SizeCss = SizeCss::new("--lsx-icon-size-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }

@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Box, Code, Container, Divider, Drawer, Flex, Header, List, ListItem, Text, Title,
+        Box, Code, Container, Divider, Drawer, Flex, Header, Icon, Image, List, ListItem, Text,
+        Title,
     },
     sx::sx,
 };
@@ -34,7 +35,7 @@ fn App() -> Element {
                 Header {
                     color: "primary",
                     sx: sx().gap("md"),
-                    Box { component: "img", src: LOGO, alt: "Libero logo", sx: sx().height("28px") }
+                    Image { src: LOGO, alt: "Libero logo", sx: sx().width("auto").height("28px") }
                     Title { variant: "h5", component: "span", "Libero" }
                 }
                 Flex {
@@ -73,9 +74,26 @@ fn Sidebar() -> Element {
                             component: "a",
                             href: "#getting-started",
                             sx: sx()
+                                .display("flex")
+                                .align_items("center")
+                                .gap("6px")
                                 .color("primary.6")
                                 .font_weight("600")
                                 .text_decoration("none"),
+                            Icon {
+                                variant: "transparent",
+                                size: "xs",
+                                color: "primary",
+                                svg {
+                                    view_box: "0 0 24 24",
+                                    fill: "none",
+                                    stroke: "currentColor",
+                                    stroke_width: "2",
+                                    stroke_linecap: "round",
+                                    stroke_linejoin: "round",
+                                    path { d: "M9 18l6-6-6-6" }
+                                }
+                            }
                             "Getting Started"
                         }
                     }

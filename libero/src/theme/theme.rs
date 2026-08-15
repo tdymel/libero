@@ -1,7 +1,7 @@
 use super::{
     ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults, DividerDefaults,
-    DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor, SelectDefaults,
-    Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor, IconDefaults,
+    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -19,6 +19,7 @@ pub struct Theme {
     pub texts: TextDefaults,
     pub code: CodeDefaults,
     pub header: HeaderDefaults,
+    pub icon: IconDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -121,6 +122,7 @@ impl Theme {
         ),
         CodeDefaults::new("ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"),
         HeaderDefaults::new(Sizes::new(48, 56, 64, 72, 80)),
+        IconDefaults::new(Sizes::new(16, 20, 24, 32, 40)),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -147,6 +149,7 @@ impl Theme {
         texts: TextDefaults,
         code: CodeDefaults,
         header: HeaderDefaults,
+        icon: IconDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -172,6 +175,7 @@ impl Theme {
             texts,
             code,
             header,
+            icon,
             primary,
             secondary,
             error,
