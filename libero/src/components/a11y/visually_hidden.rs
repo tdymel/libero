@@ -1,9 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    SxLayer,
-    components::{Input, States, common::class_list},
-    context::use_sx,
+    components::{Box, Input, States},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -34,22 +32,14 @@ pub struct VisuallyHiddenProps {
 
 #[component]
 pub fn VisuallyHidden(props: VisuallyHiddenProps) -> Element {
-    let framework_class = use_sx(&VISUALLY_HIDDEN_SX, SxLayer::Framework);
-
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
-
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
-    let class = class_list([props.class, framework_class, static_class]);
-
     rsx! {
-        span {
-            class: class,
-            "data-state": data_state,
-            ..props.attributes,
+        Box {
+            component: "span",
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &VISUALLY_HIDDEN_SX,
+            attributes: props.attributes,
             {props.children}
         }
     }

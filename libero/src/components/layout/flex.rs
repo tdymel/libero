@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::FlexDefaults,
 };
@@ -80,23 +80,17 @@ pub fn Flex(props: FlexProps) -> Element {
         &FLEX_BASE_COLUMN_SX
     };
 
-    let flex_class = crate::context::use_sx(flex_base_sx, crate::SxLayer::Framework);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
     let dynamic_class =
         crate::context::use_sx(&flex_dynamic_sx(&props), crate::SxLayer::UserDynamic);
 
-    let class = class_list([props.class, flex_class, dynamic_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
     rsx! {
-        div {
-            class: class,
-            "data-state": data_state,
-            onclick: move |event| props.onclick.call(event),
-            ..props.attributes,
+        Box {
+            class: class_list([props.class, dynamic_class]),
+            sx: props.sx,
+            states: props.states,
+            framework_sx: flex_base_sx,
+            onclick: props.onclick,
+            attributes: props.attributes,
             {props.children}
         }
     }

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     SxLayer,
-    components::{Dialog, Input, Modal, States, common::class_list},
+    components::{Box, Dialog, Input, Modal, States, common::class_list},
     context::use_sx,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -159,8 +159,6 @@ pub fn Image(props: ImageProps) -> Element {
         .as_ref()
         .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
 
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
     let on_error_src = props.src.clone();
 
     let decorative_role = props.alt.is_empty().then_some("presentation");
@@ -168,14 +166,15 @@ pub fn Image(props: ImageProps) -> Element {
     if !props.zoomable {
         let class = class_list([props.class, framework_class, dynamic_class, static_class]);
         return rsx! {
-            img {
+            Box {
+                component: "img",
                 class: class,
-                "data-state": data_state,
+                states: props.states,
                 src: src,
-                alt: props.alt.clone(),
+                alt: props.alt,
                 role: decorative_role,
                 onerror: move |_| errored_src.set(Some(on_error_src.clone())),
-                ..props.attributes,
+                attributes: props.attributes,
             }
         };
     }
@@ -230,13 +229,15 @@ pub fn Image(props: ImageProps) -> Element {
                         .width("auto")
                         .padding("0")
                         .box_shadow("none"),
-                    button {
+                    Box {
+                        component: "button",
                         r#type: "button",
                         class: overlay_button_class.clone(),
                         "data-autofocus": true,
                         aria_label: label.clone(),
                         onclick: move |_| close_zoom(),
-                        img {
+                        Box {
+                            component: "img",
                             class: overlay_image_class.clone(),
                             src: zoomed_src.clone(),
                             alt: "",
@@ -249,15 +250,17 @@ pub fn Image(props: ImageProps) -> Element {
     });
 
     rsx! {
-        button {
+        Box {
+            component: "button",
             r#type: "button",
             class: button_class,
-            "data-state": data_state,
+            states: props.states,
             "aria-pressed": zoomed().to_string(),
             aria_label: label.clone(),
             onmounted: move |event: Event<MountedData>| focus_return.remember(event),
             onclick: move |_| zoomed.toggle(),
-            img {
+            Box {
+                component: "img",
                 class: img_class,
                 src: src.clone(),
                 alt: "",

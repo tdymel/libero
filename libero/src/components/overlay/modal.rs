@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{FocusTrap, Input, Overlay, States, common::class_list},
+    components::{Box, FocusTrap, Input, Overlay, States, common::class_list},
     context::use_sx,
     hooks::{ModalContext, use_modal_z_index},
     sx::{StaticSx, Sx, sx},
@@ -59,16 +59,8 @@ pub fn Modal(props: ModalProps) -> Element {
 
     let z_index = use_modal_z_index();
 
-    let framework_class = use_sx(&MODAL_SX, crate::SxLayer::Framework);
     let dynamic_class = use_sx(&sx().z_index(z_index), crate::SxLayer::UserDynamic);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_sx(sx, crate::SxLayer::UserStatic));
-    let class = class_list([props.class, framework_class, dynamic_class, static_class]);
-    let content_class = use_sx(&MODAL_CONTENT_SX, crate::SxLayer::Framework);
-
-    let data_state = props.states.as_ref().and_then(States::data_state);
+    let class = class_list([props.class, dynamic_class]);
 
     // Deferred to the next microtask: closing synchronously (from an event
     // still bubbling through the modal being torn down) can re-enter the
@@ -81,19 +73,21 @@ pub fn Modal(props: ModalProps) -> Element {
     };
 
     rsx! {
-        div {
+        Box {
             "data-lsx-scroll-lock": true,
             class: class,
-            "data-state": data_state,
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &MODAL_SX,
             onkeydown: move |event: Event<KeyboardData>| {
                 if event.key() == Key::Escape {
                     close();
                 }
             },
-            ..props.attributes,
+            attributes: props.attributes,
             Overlay { z_index: 0, onclick: move |_| close() }
-            div {
-                class: content_class,
+            Box {
+                framework_sx: &MODAL_CONTENT_SX,
                 FocusTrap { {props.children} }
             }
         }

@@ -4,7 +4,7 @@ use crate::{
     SxLayer,
     components::{
         HtmlTag, Input, States,
-        common::{class_list, render_polymorphic},
+        common::{BoxEvents, attr, class_list, render_polymorphic},
     },
     context::use_sx,
     sx::{StaticSx, Sx, sx},
@@ -42,6 +42,37 @@ pub struct BoxProps {
     framework_sx: Option<&'static StaticSx>,
     #[props(default)]
     onclick: EventHandler<MouseEvent>,
+    #[props(default)]
+    onkeydown: EventHandler<KeyboardEvent>,
+    #[props(default)]
+    onmounted: EventHandler<MountedEvent>,
+    #[props(default)]
+    onerror: EventHandler<ImageEvent>,
+    #[props(default)]
+    onblur: EventHandler<FocusEvent>,
+    #[props(default)]
+    onanimationend: EventHandler<AnimationEvent>,
+    #[props(default)]
+    onchange: EventHandler<FormEvent>,
+    /// Attributes that aren't part of `GlobalAttributes` (so can't be passed
+    /// via `attributes`/`extends`), only valid on some of the tags
+    /// `component` can select - e.g. `src`/`alt` on `img`, `href`/`target` on
+    /// `a`, `value`/`disabled` on form controls. Set only the ones that make
+    /// sense for whatever `component` you picked.
+    #[props(default)]
+    src: Option<String>,
+    #[props(default)]
+    alt: Option<String>,
+    #[props(default)]
+    href: Option<String>,
+    #[props(default)]
+    target: Option<String>,
+    #[props(default)]
+    value: Option<String>,
+    #[props(default)]
+    disabled: Option<bool>,
+    #[props(default)]
+    r#type: Option<String>,
     children: Element,
 }
 
@@ -61,12 +92,38 @@ pub fn Box(props: BoxProps) -> Element {
     let class = class_list([props.class, framework_class, focus_class, static_class]);
     let component = props.component.as_ref().copied().unwrap_or_default();
 
+    let attributes = props
+        .attributes
+        .into_iter()
+        .chain(
+            [
+                props.src.map(|value| attr("src", value)),
+                props.alt.map(|value| attr("alt", value)),
+                props.href.map(|value| attr("href", value)),
+                props.target.map(|value| attr("target", value)),
+                props.value.map(|value| attr("value", value)),
+                props.disabled.map(|value| attr("disabled", value)),
+                props.r#type.map(|value| attr("type", value)),
+            ]
+            .into_iter()
+            .flatten(),
+        )
+        .collect::<Vec<_>>();
+
     render_polymorphic(
         component,
         class,
         data_state,
-        props.attributes,
-        props.onclick,
+        attributes,
+        BoxEvents {
+            onclick: props.onclick,
+            onkeydown: props.onkeydown,
+            onmounted: props.onmounted,
+            onerror: props.onerror,
+            onblur: props.onblur,
+            onanimationend: props.onanimationend,
+            onchange: props.onchange,
+        },
         props.children,
     )
 }

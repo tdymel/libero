@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States, common::class_list},
     context::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, Size},
@@ -208,7 +208,6 @@ pub fn Button(props: ButtonProps) -> Element {
     };
 
     let size_class = crate::context::use_sx(get_size_sx(size), crate::SxLayer::Framework);
-    let framework_class = crate::context::use_sx(&BUTTON_BASE_SX, crate::SxLayer::Framework);
 
     let dynamic_sx = button_variant_sx(variant, color, shade)
         .apply_if(explicit_radius, |sx, radius| {
@@ -217,18 +216,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
     let dynamic_class = crate::context::use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
 
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
-
-    let class = class_list([
-        props.class,
-        framework_class,
-        size_class,
-        dynamic_class,
-        static_class,
-    ]);
+    let class = class_list([props.class, size_class, dynamic_class]);
 
     let states = props
         .states
@@ -236,7 +224,6 @@ pub fn Button(props: ButtonProps) -> Element {
         .cloned()
         .unwrap_or_default()
         .with("disabled", disabled);
-    let data_state = states.data_state();
 
     let handle_click = move |event: Event<MouseData>| {
         let point = event.element_coordinates();
@@ -252,7 +239,8 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let ripple_span = rsx! {
         if let Some(ripple) = ripple_signal() {
-            span {
+            Box {
+                component: "span",
                 key: "{ripple.id}",
                 style: "position:absolute;left:{ripple.x}px;top:{ripple.y}px;width:300%;height:300%;border-radius:50%;background:currentColor;opacity:0.3;transform:translate(-50%, -50%) scale(0);animation:{BUTTON_RIPPLE_ANIMATION} 550ms ease-out forwards;pointer-events:none;",
                 onanimationend: move |_| ripple_signal.set(None),
@@ -264,34 +252,34 @@ pub fn Button(props: ButtonProps) -> Element {
     // doesn't natively support the `disabled` attribute like <button> does):
     // dropping `href` stops navigation, `aria-disabled`/`tabindex` keep it out
     // of the a11y tree and tab order.
-    if let Some(href) = props.href {
-        let href = (!disabled).then_some(href);
-        rsx! {
-            a {
-                class: class,
-                href: href,
-                target: props.target,
-                "aria-disabled": disabled.then_some("true"),
-                tabindex: disabled.then_some("-1"),
-                "data-state": data_state,
-                onclick: handle_click,
-                ..props.attributes,
-                {ripple_span}
-                {props.children}
-            }
-        }
-    } else {
-        rsx! {
-            button {
-                r#type: "button",
-                class: class,
-                disabled: disabled,
-                "data-state": data_state,
-                onclick: handle_click,
-                ..props.attributes,
-                {ripple_span}
-                {props.children}
-            }
+    let is_link = props.href.is_some();
+    let component = if is_link { "a" } else { "button" };
+    let href = is_link
+        .then(|| (!disabled).then_some(props.href.unwrap()))
+        .flatten();
+    let target = is_link.then_some(props.target).flatten();
+    let aria_disabled = is_link.then(|| disabled.then_some("true")).flatten();
+    let tabindex = is_link.then(|| disabled.then_some("-1")).flatten();
+    let button_disabled = (!is_link).then_some(disabled);
+    let button_type = (!is_link).then_some("button".to_string());
+
+    rsx! {
+        Box {
+            component: component,
+            class: class,
+            sx: props.sx,
+            states: states,
+            framework_sx: &BUTTON_BASE_SX,
+            onclick: handle_click,
+            href: href,
+            target: target,
+            "aria-disabled": aria_disabled,
+            tabindex: tabindex,
+            disabled: button_disabled,
+            r#type: button_type,
+            attributes: props.attributes,
+            {ripple_span}
+            {props.children}
         }
     }
 }

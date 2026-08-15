@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States, common::class_list},
     context::use_sx,
     hooks::ModalContext,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -165,23 +165,19 @@ pub struct DialogProps {
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();
 
-    let framework_class = use_sx(&DIALOG_BASE_SX, crate::SxLayer::Framework);
     let dynamic_class = use_sx(&dialog_dynamic_sx(&props), crate::SxLayer::UserDynamic);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_sx(sx, crate::SxLayer::UserStatic));
-    let class = class_list([props.class, framework_class, dynamic_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
+    let class = class_list([props.class, dynamic_class]);
 
     rsx! {
-        div {
+        Box {
             role: "dialog",
             "aria-modal": is_modal.then_some("true"),
             "aria-label": props.aria_label.clone(),
             class: class,
-            "data-state": data_state,
-            ..props.attributes,
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &DIALOG_BASE_SX,
+            attributes: props.attributes,
             {props.children}
         }
     }

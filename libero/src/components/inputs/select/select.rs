@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use dioxus::{document, prelude::*};
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States, common::class_list},
     context::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SelectDefaults, Size},
@@ -86,40 +86,36 @@ pub fn Select(props: SelectProps) -> Element {
         _ => None,
     };
 
-    let wrapper_class = crate::context::use_sx(&SELECT_WRAPPER_SX, crate::SxLayer::Framework);
-    let label_class = crate::context::use_sx(&SELECT_LABEL_SX, crate::SxLayer::Framework);
     let size_class = crate::context::use_sx(get_size_sx(size), crate::SxLayer::Framework);
-    let framework_class = crate::context::use_sx(&SELECT_BASE_SX, crate::SxLayer::Framework);
 
     let dynamic_sx = sx().apply_if(explicit_radius, |sx, radius| {
         sx.border_radius(ThemeAwareValue::Size(radius))
     });
     let dynamic_class = crate::context::use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
 
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
-
     // `class`/`sx` land on the wrapper (the element that actually participates
     // in a parent flex/grid layout - e.g. `margin-left: auto`), not on the
     // inner select, which only ever carries its own visual chrome.
-    let wrapper_class = class_list([props.class, wrapper_class, static_class]);
-    let select_class = class_list([framework_class, size_class, dynamic_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
+    let select_class = class_list([size_class, dynamic_class]);
+    let value = props.value.clone();
 
     rsx! {
-        label {
-            class: wrapper_class,
+        Box {
+            component: "label",
+            class: props.class,
+            sx: props.sx,
+            framework_sx: &SELECT_WRAPPER_SX,
             if let Some(label) = &props.label {
-                span { class: label_class, {label.clone()} }
+                Box { component: "span", framework_sx: &SELECT_LABEL_SX, {label.clone()} }
             }
-            select {
+            Box {
+                component: "select",
                 id: "{id}",
                 class: select_class,
-                value: props.value.clone(),
-                "data-state": data_state,
-                onchange: move |event| props.onchange.call(event.value()),
+                states: props.states,
+                framework_sx: &SELECT_BASE_SX,
+                value: value,
+                onchange: move |event: FormEvent| props.onchange.call(event.value()),
                 onmounted: move |_| {
                     document::eval(&format!(
                         "var el = document.getElementById({:?}); if (el) el.value = {:?};",
@@ -127,7 +123,7 @@ pub fn Select(props: SelectProps) -> Element {
                         props.value,
                     ));
                 },
-                ..props.attributes,
+                attributes: props.attributes,
                 {props.children}
             }
         }

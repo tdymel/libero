@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Dialog, Input, Modal, States, common::class_list},
+    components::{Box, Dialog, Input, Modal, States, common::class_list},
     context::use_sx,
     hooks::use_portal,
     sx::{Sx, ThemeAwareValue, sx},
@@ -203,18 +203,14 @@ pub fn Drawer(props: DrawerProps) -> Element {
             |sx, z_index| sx.z_index(z_index.clone()),
         );
         let dynamic_class = use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
-        let static_class = props
-            .sx
-            .as_ref()
-            .and_then(|sx| use_sx(sx, crate::SxLayer::UserStatic));
-        let class = class_list([props.class, dynamic_class, static_class]);
-        let data_state = props.states.as_ref().and_then(States::data_state);
+        let class = class_list([props.class, dynamic_class]);
 
         return rsx! {
-            div {
+            Box {
                 class: class,
-                "data-state": data_state,
-                ..props.attributes,
+                sx: props.sx,
+                states: props.states,
+                attributes: props.attributes,
                 {props.children}
             }
         };

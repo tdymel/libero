@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -31,20 +31,14 @@ pub struct ListProps {
 
 #[component]
 pub fn List(props: ListProps) -> Element {
-    let framework_class = crate::context::use_sx(&LIST_BASE_SX, crate::SxLayer::Framework);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| crate::context::use_sx(sx, crate::SxLayer::UserStatic));
-
-    let class = class_list([props.class, framework_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
     rsx! {
-        ul {
-            class: class,
-            "data-state": data_state,
-            ..props.attributes,
+        Box {
+            component: "ul",
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &LIST_BASE_SX,
+            attributes: props.attributes,
             {props.children}
         }
     }

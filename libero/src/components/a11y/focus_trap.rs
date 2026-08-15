@@ -3,9 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use dioxus::{document, prelude::*};
 
 use crate::{
-    SxLayer,
-    components::{Input, States, common::class_list},
-    context::use_sx,
+    components::{Box, Input, States},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -66,26 +64,20 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
     let id =
         use_signal(|| format!("lsx-focus-trap-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
 
-    let framework_class = use_sx(&FOCUS_TRAP_SX, SxLayer::Framework);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_sx(sx, SxLayer::UserStatic));
-    let class = class_list([props.class, framework_class, static_class]);
-    let data_state = props.states.as_ref().and_then(States::data_state);
-
     rsx! {
-        div {
+        Box {
             id: "{id}",
-            class: class,
-            "data-state": data_state,
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &FOCUS_TRAP_SX,
             onkeydown: move |event: Event<KeyboardData>| {
                 if event.key() == Key::Tab {
                     event.prevent_default();
                     cycle_focus(&id(), event.modifiers().shift());
                 }
             },
-            ..props.attributes,
+            attributes: props.attributes,
             span {
                 "aria-hidden": "true",
                 style: "display:none",
@@ -102,11 +94,11 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
 #[component]
 pub fn FocusTrapInitialFocus() -> Element {
     let mut used = use_signal(|| false);
-    let framework_class = use_sx(&VISUALLY_HIDDEN_SX, SxLayer::Framework);
 
     rsx! {
-        span {
-            class: framework_class,
+        Box {
+            component: "span",
+            framework_sx: &VISUALLY_HIDDEN_SX,
             tabindex: if used() { "-1" } else { "0" },
             "data-autofocus": true,
             onblur: move |_| used.set(true),

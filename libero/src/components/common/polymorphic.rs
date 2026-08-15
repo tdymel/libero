@@ -67,7 +67,7 @@ macro_rules! html_tags {
             class: Option<String>,
             data_state: Option<String>,
             attributes: Vec<Attribute>,
-            onclick: EventHandler<MouseEvent>,
+            events: BoxEvents,
             children: Element,
         ) -> Element {
             match component {
@@ -75,7 +75,13 @@ macro_rules! html_tags {
                     $tag {
                         class: class,
                         "data-state": data_state,
-                        onclick: move |event| onclick.call(event),
+                        onclick: move |event| events.onclick.call(event),
+                        onkeydown: move |event| events.onkeydown.call(event),
+                        onmounted: move |event| events.onmounted.call(event),
+                        onerror: move |event| events.onerror.call(event),
+                        onblur: move |event| events.onblur.call(event),
+                        onanimationend: move |event| events.onanimationend.call(event),
+                        onchange: move |event| events.onchange.call(event),
                         ..attributes,
                         {children}
                     }
@@ -83,6 +89,21 @@ macro_rules! html_tags {
             }
         }
     };
+}
+
+/// The event handlers [`render_polymorphic`]/[`crate::components::Box`]
+/// support explicitly - kept as one bundle since a plain element accepts any
+/// of these directly, but a component's `extends = GlobalAttributes` only
+/// forwards non-event attributes, not arbitrary event handlers.
+#[derive(Clone, Copy, Default)]
+pub struct BoxEvents {
+    pub onclick: EventHandler<MouseEvent>,
+    pub onkeydown: EventHandler<KeyboardEvent>,
+    pub onmounted: EventHandler<MountedEvent>,
+    pub onerror: EventHandler<ImageEvent>,
+    pub onblur: EventHandler<FocusEvent>,
+    pub onanimationend: EventHandler<AnimationEvent>,
+    pub onchange: EventHandler<FormEvent>,
 }
 
 // The full HTML5 element set dioxus_elements supports, so this list never

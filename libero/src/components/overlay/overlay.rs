@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::class_list},
+    components::{Box, Input, States, common::class_list},
     context::use_sx,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
@@ -52,8 +52,6 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 /// conditionally rendering it, not by passing an `open` flag.
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
-    let framework_class = use_sx(&OVERLAY_BASE_SX, crate::SxLayer::Framework);
-
     let opacity = props
         .opacity
         .as_ref()
@@ -68,23 +66,17 @@ pub fn Overlay(props: OverlayProps) -> Element {
             sx.backdrop_filter(format!("blur({blur})"))
         });
     let dynamic_class = use_sx(&dynamic_sx, crate::SxLayer::UserDynamic);
-
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_sx(sx, crate::SxLayer::UserStatic));
-
-    let class = class_list([props.class, framework_class, dynamic_class, static_class]);
-
-    let data_state = props.states.as_ref().and_then(States::data_state);
+    let class = class_list([props.class, dynamic_class]);
 
     rsx! {
-        div {
+        Box {
             class: class,
-            "data-state": data_state,
-            onclick: move |event| props.onclick.call(event),
-            ..props.attributes,
-            {props.children}
+            sx: props.sx,
+            states: props.states,
+            framework_sx: &OVERLAY_BASE_SX,
+            onclick: props.onclick,
+            attributes: props.attributes,
+            {props.children.unwrap_or_else(|| rsx! {})}
         }
     }
 }
