@@ -4,6 +4,7 @@ mod data_display;
 mod inputs;
 mod layout;
 mod overlay;
+mod surface;
 mod typography;
 
 pub use a11y::*;
