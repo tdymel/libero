@@ -25,8 +25,10 @@ fn App() -> Element {
         document::Title { "Libero" }
         document::Link { rel: "icon", href: LOGO }
         LiberoProvider {
-            Box {
-                sx: sx().display("flex").height("100vh"),
+            Flex {
+                direction: "row",
+                align: "stretch",
+                sx: sx().height("100vh"),
                 Sidebar {}
                 Container {
                     component: "main",
