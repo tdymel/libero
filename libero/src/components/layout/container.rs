@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{Box, HtmlTag, Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::ContainerDefaults,
 };
@@ -36,6 +36,9 @@ pub struct ContainerProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    /// Which element to render as - `div` by default.
+    #[props(default, into)]
+    component: Input<HtmlTag>,
     #[props(default, into)]
     size: Input<ThemeAwareValue>,
     #[props(default, into)]
@@ -52,6 +55,7 @@ pub fn Container(props: ContainerProps) -> Element {
 
     rsx! {
         Box {
+            component: props.component,
             class: class_list([props.class, dynamic_class]),
             sx: props.sx,
             states: props.states,

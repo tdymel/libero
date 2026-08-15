@@ -29,6 +29,7 @@ fn App() -> Element {
                 sx: sx().display("flex").height("100vh"),
                 Sidebar {}
                 Container {
+                    component: "main",
                     size: "sm",
                     sx: sx().flex("1").padding("48px 64px").overflow("auto"),
                     GettingStarted {}
