@@ -182,7 +182,6 @@ pub fn Divider(props: DividerProps) -> Element {
     let has_label = props.children.is_some();
     let label_position = props.label_position.as_ref().copied().unwrap_or_default();
 
-    // Build states using the API
     let divider_states = props
         .states
         .as_ref()

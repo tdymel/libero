@@ -11,8 +11,7 @@ static LIST_BASE_SX: StaticSx = StaticSx::new(|| {
         .list_style("none")
         .margin("0")
         .padding("0")
-        // Nested Lists (rendered inside a ListItem) are indented relative to
-        // their own content.
+        // Indent nested lists relative to their own content.
         .selector("& ul", sx().padding_left("16px"))
 });
 

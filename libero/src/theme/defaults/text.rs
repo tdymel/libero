@@ -3,34 +3,28 @@ use crate::sx::{Sx, sx};
 
 use crate::theme::{CssVar, Size, Sizes};
 
-// Font family (shared across all sizes)
 pub const TEXT_FONT_FAMILY: CssVar = CssVar::new("--lsx-text-font-family");
 
-// XS
 pub const TEXT_FONT_WEIGHT_XS: CssVar = CssVar::new("--lsx-text-font-weight-xs");
 pub const TEXT_FONT_SIZE_XS: CssVar = CssVar::new("--lsx-text-font-size-xs");
 pub const TEXT_LETTER_SPACING_XS: CssVar = CssVar::new("--lsx-text-letter-spacing-xs");
 pub const TEXT_LINE_HEIGHT_XS: CssVar = CssVar::new("--lsx-text-line-height-xs");
 
-// SM
 pub const TEXT_FONT_WEIGHT_SM: CssVar = CssVar::new("--lsx-text-font-weight-sm");
 pub const TEXT_FONT_SIZE_SM: CssVar = CssVar::new("--lsx-text-font-size-sm");
 pub const TEXT_LETTER_SPACING_SM: CssVar = CssVar::new("--lsx-text-letter-spacing-sm");
 pub const TEXT_LINE_HEIGHT_SM: CssVar = CssVar::new("--lsx-text-line-height-sm");
 
-// MD
 pub const TEXT_FONT_WEIGHT_MD: CssVar = CssVar::new("--lsx-text-font-weight-md");
 pub const TEXT_FONT_SIZE_MD: CssVar = CssVar::new("--lsx-text-font-size-md");
 pub const TEXT_LETTER_SPACING_MD: CssVar = CssVar::new("--lsx-text-letter-spacing-md");
 pub const TEXT_LINE_HEIGHT_MD: CssVar = CssVar::new("--lsx-text-line-height-md");
 
-// LG
 pub const TEXT_FONT_WEIGHT_LG: CssVar = CssVar::new("--lsx-text-font-weight-lg");
 pub const TEXT_FONT_SIZE_LG: CssVar = CssVar::new("--lsx-text-font-size-lg");
 pub const TEXT_LETTER_SPACING_LG: CssVar = CssVar::new("--lsx-text-letter-spacing-lg");
 pub const TEXT_LINE_HEIGHT_LG: CssVar = CssVar::new("--lsx-text-line-height-lg");
 
-// XL
 pub const TEXT_FONT_WEIGHT_XL: CssVar = CssVar::new("--lsx-text-font-weight-xl");
 pub const TEXT_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-text-font-size-xl");
 pub const TEXT_LETTER_SPACING_XL: CssVar = CssVar::new("--lsx-text-letter-spacing-xl");
