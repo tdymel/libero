@@ -1,11 +1,20 @@
 use dioxus::prelude::*;
 use libero::{
     components::{Drawer, Flex, Icon, List, ListItem, NavLink, Title},
-    sx::sx,
+    sx::{Sx, sx},
 };
 
 use crate::Route;
 use crate::icons::ChevronIcon;
+
+// Pinned to the top of the scrolling row (AppShell, not the document, is
+// what scrolls) instead of scrolling away with the content - `height: 100%`
+// matches the row's own height, so it stays capped and its content still
+// scrolls internally (Drawer's own `Static`-variant overflow:auto) rather
+// than growing the sidebar past the row.
+fn sidebar_sticky_sx() -> Sx {
+    sx().position("sticky").top("0").height("100%")
+}
 
 // `NavLink`'s own base already sets display:flex/align-items:center - only
 // the gap/weight this sidebar wants on top needs restating here.
@@ -44,6 +53,7 @@ pub fn Sidebar() -> Element {
             anchor: "left",
             size: "sm",
             role: "navigation",
+            sx: sidebar_sticky_sx(),
             Flex {
                 direction: "column",
                 gap: "20px",
