@@ -70,6 +70,7 @@ pub enum Property {
     BackdropFilter,
     BoxShadow,
     TextAlign,
+    ScrollMargin,
 }
 
 impl Property {
@@ -142,6 +143,7 @@ impl Property {
             "backdrop-filter" => Some(Self::BackdropFilter),
             "box-shadow" => Some(Self::BoxShadow),
             "text-align" => Some(Self::TextAlign),
+            "scroll-margin" => Some(Self::ScrollMargin),
             _ => None,
         }
     }
@@ -215,6 +217,7 @@ impl Property {
             Self::BackdropFilter => "backdrop-filter",
             Self::BoxShadow => "box-shadow",
             Self::TextAlign => "text-align",
+            Self::ScrollMargin => "scroll-margin",
         }
     }
 }

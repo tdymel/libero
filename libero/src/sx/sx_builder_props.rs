@@ -271,6 +271,10 @@ impl Sx {
         self.with_known_property(Property::TextAlign, value)
     }
 
+    pub fn scroll_margin(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::ScrollMargin, value)
+    }
+
     pub fn hover(self, nested: Sx) -> Self {
         self.selector(":hover", nested)
     }

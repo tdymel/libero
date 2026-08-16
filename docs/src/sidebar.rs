@@ -15,6 +15,7 @@ fn SidebarNavLink(to: NavigationTarget, children: Element) -> Element {
         ListItem {
             NavLink {
                 to,
+                scroll_into_view: true,
                 sx: sx().gap("6px").font_weight("300"),
                 Icon { variant: "transparent", size: "xs", color: "primary", ChevronIcon {} }
                 {children}
@@ -29,7 +30,7 @@ fn NavGroup(title: &'static str, children: Element) -> Element {
         Flex {
             direction: "column",
             gap: "8px",
-            Title { variant: "h3", component: "p", sx: sx().color("grey.6"), {title} }
+            Title { variant: "h3", size: "h4", component: "p", {title} }
             List { {children} }
         }
     }

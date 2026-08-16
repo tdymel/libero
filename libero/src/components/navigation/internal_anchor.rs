@@ -32,6 +32,8 @@ pub(crate) struct InternalAnchorProps {
     to: NavigationTarget,
     #[props(default)]
     target: Option<String>,
+    #[props(default)]
+    onmounted: EventHandler<MountedEvent>,
     children: Element,
 }
 
@@ -66,6 +68,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
                 to: props.to,
                 class,
                 new_tab: is_blank,
+                onmounted: move |event| props.onmounted.call(event),
                 attributes,
                 {props.children}
             }
@@ -79,6 +82,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
             states: props.states,
             href: Some(navigation_target_href(props.to)),
             target: props.target,
+            onmounted: props.onmounted,
             attributes: props.attributes,
             {props.children}
         }

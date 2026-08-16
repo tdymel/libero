@@ -52,6 +52,11 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .color("inherit")
         .text_decoration("none")
         .cursor("pointer")
+        // Gives `scroll_into_view`'s `Nearest` some breathing room instead of
+        // stopping flush against the scroll container's edge - respected by
+        // the native `scrollIntoView` call under the hood, so it only ever
+        // affects *where* a scroll lands, never whether one happens at all.
+        .scroll_margin("8rem")
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -88,6 +93,14 @@ pub struct NavLinkProps {
     active: Option<bool>,
     #[props(default)]
     disabled: Option<bool>,
+    /// Scrolls this link into view (only if it isn't already visible)
+    /// whenever it becomes active - on mount, or later if a different link
+    /// was active first. Off by default: it's a side effect on whatever
+    /// scrollable container happens to be an ancestor, which only makes
+    /// sense for a handful of call sites (e.g. a sidebar), not every place a
+    /// `NavLink` might get used.
+    #[props(default)]
+    scroll_into_view: Option<bool>,
     children: Element,
 }
 
@@ -116,6 +129,31 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         .with("active", is_active);
     let aria_current = is_active.then_some("page");
 
+    let scroll_into_view = props.scroll_into_view.unwrap_or(false);
+    let mut mounted = use_signal(|| None::<MountedEvent>);
+
+    // Re-runs whenever `is_active` changes (`use_reactive!` - it's a plain
+    // bool, not a signal) and whenever `mounted` first becomes available
+    // (a real signal read, auto-tracked) - between the two, this covers
+    // both "already active on mount" and "became active later" without
+    // needing two separate code paths.
+    use_effect(use_reactive!(|is_active| {
+        if scroll_into_view
+            && is_active
+            && let Some(event) = mounted()
+        {
+            spawn(async move {
+                let _ = event
+                    .scroll_to_with_options(ScrollToOptions {
+                        behavior: ScrollBehavior::Smooth,
+                        vertical: ScrollLogicalPosition::Nearest,
+                        horizontal: ScrollLogicalPosition::Nearest,
+                    })
+                    .await;
+            });
+        }
+    }));
+
     if disabled {
         return rsx! {
             Box {
@@ -141,6 +179,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             framework_sx: &NAV_LINK_BASE_SX,
             states,
             "aria-current": aria_current,
+            onmounted: move |event| mounted.set(Some(event)),
             attributes: props.attributes,
             {props.children}
         }
