@@ -1,7 +1,7 @@
 use super::{
-    ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults, DividerDefaults,
-    DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor, IconDefaults,
-    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults,
+    DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor,
+    IconDefaults, SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -20,6 +20,7 @@ pub struct Theme {
     pub code: CodeDefaults,
     pub header: HeaderDefaults,
     pub icon: IconDefaults,
+    pub action_icon: ActionIconDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -139,6 +140,7 @@ impl Theme {
         ),
         HeaderDefaults::new(Sizes::new(48, 56, 64, 72, 80)),
         IconDefaults::new(Sizes::new(16, 20, 24, 32, 40)),
+        ActionIconDefaults::new(super::Size::Md, super::Size::Sm),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -166,6 +168,7 @@ impl Theme {
         code: CodeDefaults,
         header: HeaderDefaults,
         icon: IconDefaults,
+        action_icon: ActionIconDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -192,6 +195,7 @@ impl Theme {
             code,
             header,
             icon,
+            action_icon,
             primary,
             secondary,
             error,

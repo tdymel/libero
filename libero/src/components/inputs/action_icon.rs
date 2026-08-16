@@ -5,9 +5,10 @@ use crate::{
         Box, IconVariant, Input, States,
         common::class_list,
         data_display::{icon_base_color, icon_size, icon_variant_sx},
+        navigation::InternalAnchor,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, Size, SizeCss},
+    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade},
 };
 
 use super::button::{BUTTON_HOVER_TINT_SHADE, button_hover_sx};
@@ -27,9 +28,9 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .cursor("pointer")
         .outline("none")
-        .width(SizeCss::ICON_SIZE.value(Size::Md))
-        .height(SizeCss::ICON_SIZE.value(Size::Md))
-        .border_radius(SizeCss::RADIUS.value(Size::Sm))
+        .width(ACTION_ICON_SIZE.value())
+        .height(ACTION_ICON_SIZE.value())
+        .border_radius(ACTION_ICON_RADIUS.value())
         .selector("& svg", sx().width("100%").height("100%"))
         .when(
             "disabled",
@@ -112,6 +113,14 @@ pub struct ActionIconProps {
     onclick: EventHandler<MouseEvent>,
     #[props(default)]
     onmouseleave: EventHandler<MouseEvent>,
+    /// Renders as a link (router-aware, like `Anchor`/`Button`) instead of a
+    /// `<button>` when set. No `onclick`/`onmouseleave` in that case, same
+    /// tradeoff `Button` makes for its own link mode - real navigation
+    /// happens instead.
+    #[props(default, into)]
+    to: Input<NavigationTarget>,
+    #[props(default)]
+    target: Option<String>,
     children: Element,
 }
 
@@ -125,6 +134,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         &action_icon_dynamic_sx(props.variant, props.color, props.size, props.radius),
         crate::CssLayer::UserDynamic,
     );
+    let class = class_list([props.class, dynamic_class]);
     let states = props
         .states
         .as_ref()
@@ -132,10 +142,49 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .unwrap_or_default()
         .with("disabled", disabled);
 
+    if let Some(to) = props.to.as_ref().cloned() {
+        // A disabled link keeps looking/behaving like a disabled control (it
+        // just doesn't natively support the `disabled` attribute like
+        // <button> does): no `to` at all stops navigation entirely,
+        // `aria-disabled`/`tabindex` keep it out of the a11y tree and tab
+        // order. Can't go through `InternalAnchor` for this - it always
+        // resolves to a real, working link.
+        if disabled {
+            return rsx! {
+                Box {
+                    component: "a",
+                    class,
+                    sx: props.sx,
+                    states,
+                    framework_sx: &ACTION_ICON_BASE_SX,
+                    "aria-label": props.aria_label,
+                    "aria-disabled": "true",
+                    tabindex: "-1",
+                    attributes: props.attributes,
+                    {props.children}
+                }
+            };
+        }
+
+        return rsx! {
+            InternalAnchor {
+                to,
+                target: props.target,
+                class,
+                sx: props.sx,
+                framework_sx: &ACTION_ICON_BASE_SX,
+                states,
+                "aria-label": props.aria_label,
+                attributes: props.attributes,
+                {props.children}
+            }
+        };
+    }
+
     rsx! {
         Box {
             component: "button",
-            class: class_list([props.class, dynamic_class]),
+            class,
             sx: props.sx,
             states,
             framework_sx: &ACTION_ICON_BASE_SX,

@@ -1,3 +1,4 @@
+mod action_icon;
 mod button;
 mod code;
 mod container;
@@ -11,6 +12,7 @@ mod select;
 mod text;
 mod title;
 
+pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use button::{
     BUTTON_FONT_SIZE_LG, BUTTON_FONT_SIZE_MD, BUTTON_FONT_SIZE_SM, BUTTON_FONT_SIZE_XL,
     BUTTON_FONT_SIZE_XS, BUTTON_HEIGHT_LG, BUTTON_HEIGHT_MD, BUTTON_HEIGHT_SM, BUTTON_HEIGHT_XL,

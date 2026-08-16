@@ -115,6 +115,23 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
+                Title { variant: "h2", "As a link" }
+                Text {
+                    sx: sx().color("grey.6"),
+                    "Renders as a real anchor, or a router Link when to matches an internal route.",
+                }
+                ActionIcon {
+                    variant: "outlined",
+                    color: "primary",
+                    to: "https://dioxuslabs.com",
+                    target: "_blank",
+                    aria_label: "Open Dioxus docs",
+                    CheckmarkIcon {}
+                }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
                 Title { variant: "h2", "Accessible name" }
                 Text {
                     sx: sx().color("grey.6"),
