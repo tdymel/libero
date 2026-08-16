@@ -777,6 +777,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "fast_qr"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1f5ea9788036fedaf55f43a2db0ba01eedf47d26fd6852f01e5cf51952571d57"
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1181,6 +1187,7 @@ name = "libero"
 version = "0.1.0"
 dependencies = [
  "dioxus",
+ "fast_qr",
  "sha2 0.11.0",
  "syntect",
  "ureq",

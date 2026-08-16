@@ -56,6 +56,7 @@ pub fn Sidebar() -> Element {
                     NavLink { to: NavigationTarget::from(Route::IconPage {}), "Icon" }
                     NavLink { to: NavigationTarget::from(Route::ImagePage {}), "Image" }
                     NavLink { to: NavigationTarget::from(Route::ListPage {}), "List" }
+                    NavLink { to: NavigationTarget::from(Route::QrCodePage {}), "QrCode" }
                 }
                 NavGroup { title: "Inputs",
                     NavLink { to: NavigationTarget::from(Route::ActionIconPage {}), "ActionIcon" }

@@ -12,7 +12,7 @@ mod sidebar;
 use pages::{
     ActionIconPage, AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage,
     DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage,
-    ImagePage, ListPage, ModalPage, OverlayPage, SelectPage, TextPage, TitlePage,
+    ImagePage, ListPage, ModalPage, OverlayPage, QrCodePage, SelectPage, TextPage, TitlePage,
     VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
@@ -40,6 +40,8 @@ pub(crate) enum Route {
     ImagePage {},
     #[route("/data-display/list")]
     ListPage {},
+    #[route("/data-display/qr-code")]
+    QrCodePage {},
 
     #[route("/inputs/action-icon")]
     ActionIconPage {},

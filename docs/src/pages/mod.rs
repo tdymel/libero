@@ -8,7 +8,7 @@ mod overlay;
 mod typography;
 
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
-pub use data_display::{IconPage, ImagePage, ListPage};
+pub use data_display::{IconPage, ImagePage, ListPage, QrCodePage};
 pub use getting_started::GettingStarted;
 pub use inputs::{ActionIconPage, ButtonPage, SelectPage};
 pub use layout::{BoxPage, ContainerPage, DividerPage, FlexPage, HeaderPage};
