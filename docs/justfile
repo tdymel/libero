@@ -4,6 +4,9 @@
 dx := justfile_directory() / ".." / ".dioxus-fork" / "target" / "release" / "dx"
 
 start:
+    {{dx}} serve --platform web --wasm-split
+
+start_release:
     {{dx}} serve --platform web --release --debug-symbols=false --wasm-split
 
 # Rebuild the local dx binary from .dioxus-fork (branch fix/combined)
