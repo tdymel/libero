@@ -1,8 +1,8 @@
 use super::{
     ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults,
     DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor,
-    IconDefaults, KbdDefaults, MarkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes,
-    TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    IconDefaults, KbdDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness,
+    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -25,6 +25,7 @@ pub struct Theme {
     pub qr_code: QrCodeDefaults,
     pub mark: MarkDefaults,
     pub kbd: KbdDefaults,
+    pub nav_link: NavLinkDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -154,6 +155,7 @@ impl Theme {
             "#d0d7de",
             "#57606a",
         ),
+        NavLinkDefaults::new(super::Color::Primary),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -185,6 +187,7 @@ impl Theme {
         qr_code: QrCodeDefaults,
         mark: MarkDefaults,
         kbd: KbdDefaults,
+        nav_link: NavLinkDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -215,6 +218,7 @@ impl Theme {
             qr_code,
             mark,
             kbd,
+            nav_link,
             primary,
             secondary,
             error,

@@ -10,6 +10,7 @@ mod header;
 mod icon;
 mod kbd;
 mod mark;
+mod nav_link;
 mod qr_code;
 mod select;
 mod text;
@@ -40,6 +41,7 @@ pub use header::HeaderDefaults;
 pub use icon::IconDefaults;
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KbdDefaults};
 pub use mark::MarkDefaults;
+pub use nav_link::NavLinkDefaults;
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use select::{
     SELECT_FONT_SIZE_LG, SELECT_FONT_SIZE_MD, SELECT_FONT_SIZE_SM, SELECT_FONT_SIZE_XL,

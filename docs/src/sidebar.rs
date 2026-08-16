@@ -1,20 +1,21 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Drawer, Flex, Icon, List, ListItem, Title},
+    components::{Drawer, Flex, Icon, List, ListItem, NavLink, Title},
     sx::sx,
 };
 
 use crate::Route;
 use crate::icons::ChevronIcon;
 
+// `NavLink`'s own base already sets display:flex/align-items:center - only
+// the gap/weight this sidebar wants on top needs restating here.
 #[component]
-fn NavLink(to: NavigationTarget, children: Element) -> Element {
+fn SidebarNavLink(to: NavigationTarget, children: Element) -> Element {
     rsx! {
         ListItem {
-            Anchor {
+            NavLink {
                 to,
-                underline: "never",
-                sx: sx().display("flex").align_items("center").gap("6px").font_weight("600"),
+                sx: sx().gap("6px").font_weight("300"),
                 Icon { variant: "transparent", size: "xs", color: "primary", ChevronIcon {} }
                 {children}
             }
@@ -46,45 +47,46 @@ pub fn Sidebar() -> Element {
                 direction: "column",
                 gap: "20px",
                 List {
-                    NavLink { to: NavigationTarget::from(Route::GettingStarted {}), "Getting Started" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::GettingStarted {}), "Getting Started" }
                 }
                 NavGroup { title: "A11y",
-                    NavLink { to: NavigationTarget::from(Route::FocusTrapPage {}), "Focus Trap" }
-                    NavLink { to: NavigationTarget::from(Route::VisuallyHiddenPage {}), "Visually Hidden" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::FocusTrapPage {}), "Focus Trap" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::VisuallyHiddenPage {}), "Visually Hidden" }
                 }
                 NavGroup { title: "Data Display",
-                    NavLink { to: NavigationTarget::from(Route::IconPage {}), "Icon" }
-                    NavLink { to: NavigationTarget::from(Route::ImagePage {}), "Image" }
-                    NavLink { to: NavigationTarget::from(Route::ListPage {}), "List" }
-                    NavLink { to: NavigationTarget::from(Route::QrCodePage {}), "QrCode" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::IconPage {}), "Icon" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::ImagePage {}), "Image" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::ListPage {}), "List" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::QrCodePage {}), "QrCode" }
                 }
                 NavGroup { title: "Inputs",
-                    NavLink { to: NavigationTarget::from(Route::ActionIconPage {}), "ActionIcon" }
-                    NavLink { to: NavigationTarget::from(Route::ButtonPage {}), "Button" }
-                    NavLink { to: NavigationTarget::from(Route::SelectPage {}), "Select" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::ActionIconPage {}), "ActionIcon" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::ButtonPage {}), "Button" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::SelectPage {}), "Select" }
                 }
                 NavGroup { title: "Layout",
-                    NavLink { to: NavigationTarget::from(Route::BoxPage {}), "Box" }
-                    NavLink { to: NavigationTarget::from(Route::ContainerPage {}), "Container" }
-                    NavLink { to: NavigationTarget::from(Route::DividerPage {}), "Divider" }
-                    NavLink { to: NavigationTarget::from(Route::FlexPage {}), "Flex" }
-                    NavLink { to: NavigationTarget::from(Route::HeaderPage {}), "Header" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::BoxPage {}), "Box" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::ContainerPage {}), "Container" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::DividerPage {}), "Divider" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::FlexPage {}), "Flex" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::HeaderPage {}), "Header" }
                 }
                 NavGroup { title: "Navigation",
-                    NavLink { to: NavigationTarget::from(Route::AnchorPage {}), "Anchor" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::AnchorPage {}), "Anchor" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::NavLinkPage {}), "NavLink" }
                 }
                 NavGroup { title: "Overlay",
-                    NavLink { to: NavigationTarget::from(Route::DialogPage {}), "Dialog" }
-                    NavLink { to: NavigationTarget::from(Route::DrawerPage {}), "Drawer" }
-                    NavLink { to: NavigationTarget::from(Route::ModalPage {}), "Modal" }
-                    NavLink { to: NavigationTarget::from(Route::OverlayPage {}), "Overlay" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::DialogPage {}), "Dialog" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::DrawerPage {}), "Drawer" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::ModalPage {}), "Modal" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::OverlayPage {}), "Overlay" }
                 }
                 NavGroup { title: "Typography",
-                    NavLink { to: NavigationTarget::from(Route::CodePage {}), "Code" }
-                    NavLink { to: NavigationTarget::from(Route::KbdPage {}), "Kbd" }
-                    NavLink { to: NavigationTarget::from(Route::MarkPage {}), "Mark" }
-                    NavLink { to: NavigationTarget::from(Route::TextPage {}), "Text" }
-                    NavLink { to: NavigationTarget::from(Route::TitlePage {}), "Title" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::CodePage {}), "Code" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::KbdPage {}), "Kbd" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::MarkPage {}), "Mark" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::TextPage {}), "Text" }
+                    SidebarNavLink { to: NavigationTarget::from(Route::TitlePage {}), "Title" }
                 }
             }
         }
