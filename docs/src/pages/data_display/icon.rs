@@ -1,19 +1,7 @@
 use dioxus::prelude::*;
 use libero::components::{Code, Flex, Icon, Text, Title};
 
-fn checkmark() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M5 12l5 5L20 7" }
-        }
-    }
-}
+use crate::icons::CheckmarkIcon;
 
 #[component]
 pub fn IconPage() -> Element {
@@ -45,21 +33,21 @@ pub fn IconPage() -> Element {
                         direction: "column",
                         align: "center",
                         gap: "8px",
-                        Icon { variant: "filled", color: "primary", {checkmark()} }
+                        Icon { variant: "filled", color: "primary", CheckmarkIcon {} }
                         Text { size: "sm", "Filled" }
                     }
                     Flex {
                         direction: "column",
                         align: "center",
                         gap: "8px",
-                        Icon { variant: "outlined", color: "primary", {checkmark()} }
+                        Icon { variant: "outlined", color: "primary", CheckmarkIcon {} }
                         Text { size: "sm", "Outlined" }
                     }
                     Flex {
                         direction: "column",
                         align: "center",
                         gap: "8px",
-                        Icon { variant: "transparent", color: "primary", {checkmark()} }
+                        Icon { variant: "transparent", color: "primary", CheckmarkIcon {} }
                         Text { size: "sm", "Transparent" }
                     }
                 }
@@ -73,11 +61,11 @@ pub fn IconPage() -> Element {
                     direction: "row",
                     gap: "16px",
                     align: "center",
-                    Icon { size: "xs", {checkmark()} }
-                    Icon { size: "sm", {checkmark()} }
-                    Icon { size: "md", {checkmark()} }
-                    Icon { size: "lg", {checkmark()} }
-                    Icon { size: "xl", {checkmark()} }
+                    Icon { size: "xs", CheckmarkIcon {} }
+                    Icon { size: "sm", CheckmarkIcon {} }
+                    Icon { size: "md", CheckmarkIcon {} }
+                    Icon { size: "lg", CheckmarkIcon {} }
+                    Icon { size: "xl", CheckmarkIcon {} }
                 }
             }
 
@@ -88,10 +76,10 @@ pub fn IconPage() -> Element {
                 Flex {
                     direction: "row",
                     gap: "16px",
-                    Icon { color: "primary", {checkmark()} }
-                    Icon { color: "success", {checkmark()} }
-                    Icon { color: "error", {checkmark()} }
-                    Icon { color: "warning", {checkmark()} }
+                    Icon { color: "primary", CheckmarkIcon {} }
+                    Icon { color: "success", CheckmarkIcon {} }
+                    Icon { color: "error", CheckmarkIcon {} }
+                    Icon { color: "warning", CheckmarkIcon {} }
                 }
             }
         }

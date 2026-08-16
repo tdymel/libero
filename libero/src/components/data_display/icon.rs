@@ -57,7 +57,7 @@ const ICON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 // literal value like "red"/#123456/rgb(...) - passes through unchanged and
 // is resolved by the normal sx-to-css pipeline. Only a genuinely unset
 // `color` falls back to the library's default color.
-fn icon_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
+pub(crate) fn icon_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     match value {
         None => ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ICON_DEFAULT_SHADE)),
         Some(ThemeAwareValue::Color(color)) => {
@@ -78,14 +78,14 @@ fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
     }
 }
 
-fn icon_size(value: &ThemeAwareValue) -> ThemeAwareValue {
+pub(crate) fn icon_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     match value {
         ThemeAwareValue::Size(size) => SizeCss::ICON_SIZE.value(*size).into(),
         other => other.clone(),
     }
 }
 
-fn icon_variant_sx(variant: IconVariant, base: ThemeAwareValue) -> Sx {
+pub(crate) fn icon_variant_sx(variant: IconVariant, base: ThemeAwareValue) -> Sx {
     match variant {
         IconVariant::Filled => {
             let contrast = icon_contrast_color(&base);

@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
 use super::token_theme::use_token_theme;
 use crate::{
-    components::{Box, Input, States},
+    components::{ActionIcon, Box, Input, States},
     hooks::{Clipboard, use_clipboard},
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -54,15 +54,12 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .color(CODE_MUTED_TEXT.value())
 });
 
+// display/align-items/justify-content/border/background(transparent)/cursor
+// all match `ActionIcon`'s own base styling already - only what actually
+// differs from it needs restating here.
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        .align_items("center")
-        .justify_content("center")
-        .background("transparent")
-        .border("none")
-        .border_radius("6px")
+    sx().border_radius("6px")
         .padding("5px")
-        .cursor("pointer")
         .color(CODE_MUTED_TEXT.value())
         .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
 });
@@ -73,10 +70,7 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
 // minus half the button's own ~26px height (5px padding + 14px icon + 1px
 // border, both edges).
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        .align_items("center")
-        .justify_content("center")
-        .position("absolute")
+    sx().position("absolute")
         .top("9px")
         .right("8px")
         .background(CODE_BACKGROUND.value())
@@ -84,7 +78,6 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         .border_color(CODE_BORDER.value())
         .border_radius("6px")
         .padding("5px")
-        .cursor("pointer")
         .color(CODE_MUTED_TEXT.value())
         .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
 });
@@ -372,20 +365,19 @@ fn code_lines(
 #[component]
 fn CopyButton(source: String, floating: bool) -> Element {
     let mut clipboard: Clipboard = use_clipboard();
-    // Native `button`, not `Box` - needs `onmouseleave`, which isn't in
-    // `Box`'s curated event set.
-    let sx_ref: &'static StaticSx = if floating {
-        &CODE_COPY_BUTTON_FLOATING_SX
+    // Neither `variant` nor `color` is set, so `ActionIcon` contributes no
+    // background/color of its own - this `sx` (hover swap included) is the
+    // only thing controlling the button's look.
+    let button_sx = if floating {
+        CODE_COPY_BUTTON_FLOATING_SX.clone()
     } else {
-        &CODE_COPY_BUTTON_SX
+        CODE_COPY_BUTTON_SX.clone()
     };
-    let class = crate::hooks::use_css(sx_ref, crate::CssLayer::Framework);
 
     rsx! {
-        button {
-            r#type: "button",
-            "aria-label": "Copy code",
-            class,
+        ActionIcon {
+            aria_label: "Copy code",
+            sx: button_sx,
             onclick: move |_| clipboard.copy(source.clone()),
             onmouseleave: move |_| clipboard.reset(),
             if clipboard.copied() {

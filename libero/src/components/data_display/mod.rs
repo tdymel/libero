@@ -3,5 +3,8 @@ mod image;
 mod list;
 
 pub use icon::{Icon, IconVariant};
+// Shared with `ActionIcon` (inputs) so it renders/colors identically to a
+// plain `Icon` instead of duplicating the variant/color/size resolution.
+pub(crate) use icon::{icon_base_color, icon_size, icon_variant_sx};
 pub use image::{Image, ImageFit, ImageProps};
 pub use list::{List, ListItem, ListItemProps, ListProps};

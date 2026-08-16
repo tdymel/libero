@@ -10,7 +10,7 @@ mod typography;
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use data_display::{IconPage, ImagePage, ListPage};
 pub use getting_started::GettingStarted;
-pub use inputs::{ButtonPage, SelectPage};
+pub use inputs::{ActionIconPage, ButtonPage, SelectPage};
 pub use layout::{BoxPage, ContainerPage, DividerPage, FlexPage, HeaderPage};
 pub use navigation::AnchorPage;
 pub use overlay::{DialogPage, DrawerPage, ModalPage, OverlayPage};

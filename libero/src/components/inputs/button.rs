@@ -86,8 +86,9 @@ impl From<String> for Input<ButtonVariant> {
 // since buttons need to stand out more than plain text/borders do.
 const BUTTON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 // Light tint used as the hover background for the outlined/text variants,
-// mirroring Mantine's "subtle" hover treatment.
-const BUTTON_HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
+// mirroring Mantine's "subtle" hover treatment. `pub(crate)` since
+// `ActionIcon` reuses this for its own outlined/transparent hover.
+pub(crate) const BUTTON_HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
 
 // A bare theme color name (e.g. "primary") has no shade of its own, so it's
 // resolved to our own default shade here rather than the sx pipeline's
@@ -120,7 +121,8 @@ fn button_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
 
 // `shade_fn` picks the hover shade relative to the base's own shade (e.g.
 // darker for `Filled`, or a fixed light tint for `Outlined`/`Text`).
-fn button_hover_sx(
+// `pub(crate)` - `ActionIcon` reuses this for the same reason.
+pub(crate) fn button_hover_sx(
     base: &ThemeAwareValue,
     shade_fn: impl Fn(ColorShade) -> ColorShade,
 ) -> Option<Sx> {

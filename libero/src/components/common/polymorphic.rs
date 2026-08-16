@@ -80,6 +80,7 @@ macro_rules! html_tags {
                         onblur: move |event| events.onblur.call(event),
                         onanimationend: move |event| events.onanimationend.call(event),
                         onchange: move |event| events.onchange.call(event),
+                        onmouseleave: move |event| events.onmouseleave.call(event),
                         ..attributes,
                         {children}
                     }
@@ -100,6 +101,7 @@ pub struct BoxEvents {
     pub onblur: EventHandler<FocusEvent>,
     pub onanimationend: EventHandler<AnimationEvent>,
     pub onchange: EventHandler<FormEvent>,
+    pub onmouseleave: EventHandler<MouseEvent>,
 }
 
 // The full HTML5 element set dioxus_elements supports, so this list never

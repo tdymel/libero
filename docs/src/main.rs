@@ -5,13 +5,15 @@ use libero::{
     sx::sx,
 };
 
+mod icons;
 mod pages;
 mod sidebar;
 
 use pages::{
-    AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage, DividerPage, DrawerPage,
-    FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, ListPage, ModalPage,
-    OverlayPage, SelectPage, TextPage, TitlePage, VisuallyHiddenPage,
+    ActionIconPage, AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage,
+    DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage,
+    ImagePage, ListPage, ModalPage, OverlayPage, SelectPage, TextPage, TitlePage,
+    VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 
@@ -39,6 +41,8 @@ pub(crate) enum Route {
     #[route("/data-display/list")]
     ListPage {},
 
+    #[route("/inputs/action-icon")]
+    ActionIconPage {},
     #[route("/inputs/button")]
     ButtonPage {},
     #[route("/inputs/select")]

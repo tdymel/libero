@@ -51,6 +51,8 @@ pub struct BoxProps {
     onanimationend: EventHandler<AnimationEvent>,
     #[props(default)]
     onchange: EventHandler<FormEvent>,
+    #[props(default)]
+    onmouseleave: EventHandler<MouseEvent>,
     /// Non-global attributes for specific tags `component` can select -
     /// e.g. `src`/`alt` on `img`, `href`/`target` on `a`.
     #[props(default)]
@@ -117,6 +119,7 @@ pub fn Box(props: BoxProps) -> Element {
             onblur: props.onblur,
             onanimationend: props.onanimationend,
             onchange: props.onchange,
+            onmouseleave: props.onmouseleave,
         },
         props.children,
     )

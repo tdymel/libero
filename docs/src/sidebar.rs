@@ -5,20 +5,7 @@ use libero::{
 };
 
 use crate::Route;
-
-fn chevron() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M9 18l6-6-6-6" }
-        }
-    }
-}
+use crate::icons::ChevronIcon;
 
 #[component]
 fn NavLink(to: NavigationTarget, children: Element) -> Element {
@@ -28,7 +15,7 @@ fn NavLink(to: NavigationTarget, children: Element) -> Element {
                 to,
                 underline: "never",
                 sx: sx().display("flex").align_items("center").gap("6px").font_weight("600"),
-                Icon { variant: "transparent", size: "xs", color: "primary", {chevron()} }
+                Icon { variant: "transparent", size: "xs", color: "primary", ChevronIcon {} }
                 {children}
             }
         }
@@ -71,6 +58,7 @@ pub fn Sidebar() -> Element {
                     NavLink { to: NavigationTarget::from(Route::ListPage {}), "List" }
                 }
                 NavGroup { title: "Inputs",
+                    NavLink { to: NavigationTarget::from(Route::ActionIconPage {}), "ActionIcon" }
                     NavLink { to: NavigationTarget::from(Route::ButtonPage {}), "Button" }
                     NavLink { to: NavigationTarget::from(Route::SelectPage {}), "Select" }
                 }
