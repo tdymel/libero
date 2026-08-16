@@ -1,5 +1,17 @@
+mod a11y;
+mod data_display;
 mod getting_started;
-mod icon;
+mod inputs;
+mod layout;
+mod navigation;
+mod overlay;
+mod typography;
 
+pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
+pub use data_display::{IconPage, ImagePage, ListPage};
 pub use getting_started::GettingStarted;
-pub use icon::IconPage;
+pub use inputs::{ButtonPage, SelectPage};
+pub use layout::{BoxPage, ContainerPage, DividerPage, FlexPage, HeaderPage};
+pub use navigation::AnchorPage;
+pub use overlay::{DialogPage, DrawerPage, ModalPage, OverlayPage};
+pub use typography::{CodePage, TextPage, TitlePage};

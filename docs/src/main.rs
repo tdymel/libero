@@ -8,22 +8,71 @@ use libero::{
 mod pages;
 mod sidebar;
 
-use pages::{GettingStarted, IconPage};
+use pages::{
+    AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage, DividerPage, DrawerPage,
+    FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, ListPage, ModalPage,
+    OverlayPage, SelectPage, TextPage, TitlePage, VisuallyHiddenPage,
+};
 use sidebar::Sidebar;
 
-static LOGO: Asset = asset!("/assets/logo.svg");
+pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
 
 fn main() {
     dioxus::launch(App);
 }
 
 #[derive(Clone, Routable, PartialEq, Debug)]
-enum Route {
+pub(crate) enum Route {
     #[layout(AppShell)]
     #[route("/")]
     GettingStarted {},
-    #[route("/icon")]
+
+    #[route("/a11y/focus-trap")]
+    FocusTrapPage {},
+    #[route("/a11y/visually-hidden")]
+    VisuallyHiddenPage {},
+
+    #[route("/data-display/icon")]
     IconPage {},
+    #[route("/data-display/image")]
+    ImagePage {},
+    #[route("/data-display/list")]
+    ListPage {},
+
+    #[route("/inputs/button")]
+    ButtonPage {},
+    #[route("/inputs/select")]
+    SelectPage {},
+
+    #[route("/layout/box")]
+    BoxPage {},
+    #[route("/layout/container")]
+    ContainerPage {},
+    #[route("/layout/divider")]
+    DividerPage {},
+    #[route("/layout/flex")]
+    FlexPage {},
+    #[route("/layout/header")]
+    HeaderPage {},
+
+    #[route("/navigation/anchor")]
+    AnchorPage {},
+
+    #[route("/overlay/dialog")]
+    DialogPage {},
+    #[route("/overlay/drawer")]
+    DrawerPage {},
+    #[route("/overlay/modal")]
+    ModalPage {},
+    #[route("/overlay/overlay")]
+    OverlayPage {},
+
+    #[route("/typography/code")]
+    CodePage {},
+    #[route("/typography/text")]
+    TextPage {},
+    #[route("/typography/title")]
+    TitlePage {},
 }
 
 #[component]
