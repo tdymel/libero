@@ -44,6 +44,11 @@ pub struct ListProps {
     /// Item gap and nested-list indent - `theme.list.size` (`Md`) by default.
     #[props(default, into)]
     size: Input<ThemeAwareValue>,
+    /// Not needed for a plain content list - here for widgets built on
+    /// `List` (e.g. `Tree`) that delegate arrow-key navigation up to the
+    /// root instead of wiring a handler onto every item.
+    #[props(default)]
+    onkeydown: EventHandler<KeyboardEvent>,
     children: Element,
 }
 
@@ -63,6 +68,7 @@ pub fn List(props: ListProps) -> Element {
             sx: props.sx,
             states: props.states,
             framework_sx: &LIST_BASE_SX,
+            onkeydown: props.onkeydown,
             attributes: props.attributes,
             {props.children}
         }

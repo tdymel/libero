@@ -5,6 +5,7 @@ mod portal;
 mod presence;
 mod stylesheet;
 mod theme;
+mod tree;
 
 pub use clipboard::{Clipboard, use_clipboard};
 pub use focus_return::{FocusReturn, use_focus_return};
@@ -15,3 +16,4 @@ pub use presence::{Presence, use_presence};
 pub(crate) use stylesheet::use_css;
 pub use stylesheet::use_stylesheet;
 pub use theme::use_theme;
+pub use tree::{TreeState, use_tree_state};

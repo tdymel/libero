@@ -16,6 +16,7 @@ mod qr_code;
 mod select;
 mod text;
 mod title;
+mod tree;
 
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use button::{
@@ -68,3 +69,4 @@ pub use title::{
     H6_FONT_FAMILY, H6_FONT_SIZE, H6_FONT_WEIGHT, H6_LETTER_SPACING, H6_LINE_HEIGHT, TitleDefaults,
     TitleLevel,
 };
+pub use tree::TreeDefaults;

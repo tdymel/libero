@@ -1,12 +1,13 @@
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 use libero::{
-    components::{Drawer, Flex, Icon, List, ListItem, NavLink, Title},
+    components::{Drawer, Flex, Tree, TreeLabel, TreeNode},
     sx::{Sx, sx},
     theme::{Size, SizeCss},
 };
 
 use crate::Route;
-use crate::icons::ChevronIcon;
 
 // One `Drawer`, one responsive `sx` - no second drawer, no viewport
 // detection. Below the `Sm` breakpoint it's a fixed, off-canvas panel
@@ -60,37 +61,131 @@ fn sidebar_responsive_sx(open: bool) -> Sx {
         )
 }
 
-// `NavLink`'s own base already sets display:flex/align-items:center - only
-// the gap/weight this sidebar wants on top needs restating here.
-#[component]
-fn SidebarNavLink(to: NavigationTarget, children: Element) -> Element {
-    rsx! {
-        ListItem {
-            NavLink {
-                to,
-                scroll_into_view: true,
-                sx: sx().gap("6px").font_weight("300"),
-                Icon { variant: "transparent", size: "xs", color: "primary", ChevronIcon {} }
-                {children}
-            }
-        }
+#[derive(Clone, PartialEq)]
+struct SidebarEntry {
+    label: &'static str,
+}
+
+impl TreeLabel for SidebarEntry {
+    fn tree_label(&self) -> String {
+        self.label.to_string()
     }
 }
 
-#[component]
-fn NavGroup(title: &'static str, children: Element) -> Element {
-    rsx! {
-        Flex {
-            direction: "column",
-            gap: "8px",
-            Title { variant: "h3", size: "h4", component: "p", {title} }
-            List { {children} }
-        }
-    }
+fn page(route: Route, label: &'static str) -> TreeNode<SidebarEntry> {
+    TreeNode::new(route.to_string(), SidebarEntry { label })
+}
+
+// A synthetic id (never a real route path, which always starts with `/`) -
+// distinguishes a group header from a page in `onselectedchange` without
+// needing a separate lookup structure.
+fn group(
+    id: &'static str,
+    label: &'static str,
+    children: Vec<TreeNode<SidebarEntry>>,
+) -> TreeNode<SidebarEntry> {
+    TreeNode::new(format!("group:{id}"), SidebarEntry { label }).children(children)
+}
+
+fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
+    vec![
+        page(Route::GettingStarted {}, "Getting Started"),
+        group(
+            "a11y",
+            "A11y",
+            vec![
+                page(Route::FocusTrapPage {}, "Focus Trap"),
+                page(Route::VisuallyHiddenPage {}, "Visually Hidden"),
+            ],
+        ),
+        group(
+            "data-display",
+            "Data Display",
+            vec![
+                page(Route::IconPage {}, "Icon"),
+                page(Route::ImagePage {}, "Image"),
+                page(Route::ListPage {}, "List"),
+                page(Route::TreePage {}, "Tree"),
+                page(Route::QrCodePage {}, "QrCode"),
+            ],
+        ),
+        group(
+            "inputs",
+            "Inputs",
+            vec![
+                page(Route::ActionIconPage {}, "ActionIcon"),
+                page(Route::ButtonPage {}, "Button"),
+                page(Route::SelectPage {}, "Select"),
+            ],
+        ),
+        group(
+            "layout",
+            "Layout",
+            vec![
+                page(Route::BoxPage {}, "Box"),
+                page(Route::ContainerPage {}, "Container"),
+                page(Route::DividerPage {}, "Divider"),
+                page(Route::FlexPage {}, "Flex"),
+                page(Route::HeaderPage {}, "Header"),
+            ],
+        ),
+        group(
+            "navigation",
+            "Navigation",
+            vec![
+                page(Route::AnchorPage {}, "Anchor"),
+                page(Route::NavLinkPage {}, "NavLink"),
+            ],
+        ),
+        group(
+            "overlay",
+            "Overlay",
+            vec![
+                page(Route::DialogPage {}, "Dialog"),
+                page(Route::DrawerPage {}, "Drawer"),
+                page(Route::ModalPage {}, "Modal"),
+                page(Route::OverlayPage {}, "Overlay"),
+            ],
+        ),
+        group(
+            "typography",
+            "Typography",
+            vec![
+                page(Route::CodePage {}, "Code"),
+                page(Route::KbdPage {}, "Kbd"),
+                page(Route::MarkPage {}, "Mark"),
+                page(Route::TextPage {}, "Text"),
+                page(Route::TitlePage {}, "Title"),
+            ],
+        ),
+    ]
+}
+
+fn ancestor_group(data: &[TreeNode<SidebarEntry>], target: &str) -> Option<String> {
+    data.iter()
+        .find(|node| node.children.iter().any(|child| child.id == target))
+        .map(|node| node.id.clone())
 }
 
 #[component]
 pub fn Sidebar(mut open: Signal<bool>) -> Element {
+    let data = sidebar_tree();
+
+    let current_path = try_router()
+        .map(|router| router.full_route_string())
+        .unwrap_or_default();
+
+    // Seeded once from the initial route, so deep-linking to a page opens
+    // its section - after that, purely the user's own expand/collapse
+    // clicks, including collapsing the section the active page is in.
+    let mut expanded = use_signal(|| {
+        let mut set = HashSet::new();
+        if let Some(group_id) = ancestor_group(&data, &current_path) {
+            set.insert(group_id);
+        }
+        set
+    });
+
     rsx! {
         Drawer {
             variant: "static",
@@ -99,55 +194,27 @@ pub fn Sidebar(mut open: Signal<bool>) -> Element {
             sx: sidebar_responsive_sx(open()),
             Flex {
                 direction: "column",
-                gap: "20px",
+                gap: "8px",
                 // Closes on any click inside - good enough for "tap a link,
                 // the panel closes" without threading a callback through
-                // `NavLink` (which drops `onclick` in its link-navigating
-                // mode, same as `Button`). Only matters below `Sm`; at
-                // desktop widths `open` never becomes true in the first
-                // place, since the toggle that sets it is hidden there.
+                // `Tree`. Only matters below `Sm`; at desktop widths `open`
+                // never becomes true in the first place, since the toggle
+                // that sets it is hidden there.
                 onclick: move |_| open.set(false),
-                List {
-                    SidebarNavLink { to: NavigationTarget::from(Route::GettingStarted {}), "Getting Started" }
-                }
-                NavGroup { title: "A11y",
-                    SidebarNavLink { to: NavigationTarget::from(Route::FocusTrapPage {}), "Focus Trap" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::VisuallyHiddenPage {}), "Visually Hidden" }
-                }
-                NavGroup { title: "Data Display",
-                    SidebarNavLink { to: NavigationTarget::from(Route::IconPage {}), "Icon" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::ImagePage {}), "Image" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::ListPage {}), "List" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::QrCodePage {}), "QrCode" }
-                }
-                NavGroup { title: "Inputs",
-                    SidebarNavLink { to: NavigationTarget::from(Route::ActionIconPage {}), "ActionIcon" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::ButtonPage {}), "Button" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::SelectPage {}), "Select" }
-                }
-                NavGroup { title: "Layout",
-                    SidebarNavLink { to: NavigationTarget::from(Route::BoxPage {}), "Box" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::ContainerPage {}), "Container" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::DividerPage {}), "Divider" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::FlexPage {}), "Flex" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::HeaderPage {}), "Header" }
-                }
-                NavGroup { title: "Navigation",
-                    SidebarNavLink { to: NavigationTarget::from(Route::AnchorPage {}), "Anchor" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::NavLinkPage {}), "NavLink" }
-                }
-                NavGroup { title: "Overlay",
-                    SidebarNavLink { to: NavigationTarget::from(Route::DialogPage {}), "Dialog" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::DrawerPage {}), "Drawer" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::ModalPage {}), "Modal" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::OverlayPage {}), "Overlay" }
-                }
-                NavGroup { title: "Typography",
-                    SidebarNavLink { to: NavigationTarget::from(Route::CodePage {}), "Code" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::KbdPage {}), "Kbd" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::MarkPage {}), "Mark" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::TextPage {}), "Text" }
-                    SidebarNavLink { to: NavigationTarget::from(Route::TitlePage {}), "Title" }
+                Tree {
+                    aria_label: "Documentation pages",
+                    size: "xs",
+                    data,
+                    expanded: expanded(),
+                    onexpandedchange: move |next| expanded.set(next),
+                    selected: Some(current_path.clone()),
+                    onselectedchange: move |id: Option<String>| {
+                        if let Some(id) = id
+                            && !id.starts_with("group:")
+                        {
+                            navigator().push(id);
+                        }
+                    },
                 }
             }
         }

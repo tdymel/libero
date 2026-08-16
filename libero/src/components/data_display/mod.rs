@@ -2,6 +2,7 @@ mod icon;
 mod image;
 mod list;
 mod qr_code;
+mod tree;
 
 pub use icon::{Icon, IconVariant};
 // Shared with `ActionIcon` (inputs) so it renders/colors identically to a
@@ -10,3 +11,4 @@ pub(crate) use icon::{icon_base_color, icon_size, icon_variant_sx};
 pub use image::{Image, ImageFit, ImageProps};
 pub use list::{List, ListItem, ListItemProps, ListProps};
 pub use qr_code::QrCode;
+pub use tree::{Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps};

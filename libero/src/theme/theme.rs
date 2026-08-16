@@ -3,6 +3,7 @@ use super::{
     DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor,
     IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults,
     QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -17,6 +18,7 @@ pub struct Theme {
     pub button: ButtonDefaults,
     pub select: SelectDefaults,
     pub list: ListDefaults,
+    pub tree: TreeDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
     pub code: CodeDefaults,
@@ -78,6 +80,7 @@ impl Theme {
             Sizes::new(4, 8, 12, 16, 20),
             Sizes::new(8, 12, 16, 20, 24),
         ),
+        TreeDefaults::new(super::Size::Md),
         TitleDefaults::new(
             TitleLevel::new(
                 "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
@@ -185,6 +188,7 @@ impl Theme {
         button: ButtonDefaults,
         select: SelectDefaults,
         list: ListDefaults,
+        tree: TreeDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
         code: CodeDefaults,
@@ -217,6 +221,7 @@ impl Theme {
             button,
             select,
             list,
+            tree,
             titles,
             texts,
             code,

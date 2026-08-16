@@ -16,7 +16,7 @@ use pages::{
     ActionIconPage, AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage,
     DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage,
     ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, QrCodePage,
-    SelectPage, TextPage, TitlePage, VisuallyHiddenPage,
+    SelectPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 
@@ -45,6 +45,8 @@ pub(crate) enum Route {
     ListPage {},
     #[route("/data-display/qr-code")]
     QrCodePage {},
+    #[route("/data-display/tree")]
+    TreePage {},
 
     #[route("/inputs/action-icon")]
     ActionIconPage {},
