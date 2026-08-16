@@ -514,13 +514,13 @@ fn App() -> Element {
                     gap: "md",
                     Button {
                         variant: "filled",
-                        href: "https://dioxuslabs.com",
+                        to: "https://dioxuslabs.com",
                         target: "_blank",
                         "Open Dioxus docs"
                     }
                     Button {
                         variant: "outlined",
-                        href: "https://dioxuslabs.com",
+                        to: "https://dioxuslabs.com",
                         disabled: true,
                         "Disabled link"
                     }

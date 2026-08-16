@@ -1,16 +1,14 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    CssLayer,
+    components::{Input, States, common::class_list},
+    hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, TextDefaults},
 };
 
-fn navigation_target_href(to: NavigationTarget) -> String {
-    match to {
-        NavigationTarget::Internal(url) | NavigationTarget::External(url) => url,
-    }
-}
+use super::InternalAnchor;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum AnchorUnderline {
@@ -118,33 +116,17 @@ pub struct AnchorProps {
 
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
-    let dynamic_class =
-        crate::hooks::use_css(&anchor_dynamic_sx(&props), crate::CssLayer::UserDynamic);
+    let dynamic_class = use_css(&anchor_dynamic_sx(&props), CssLayer::UserDynamic);
     let class = class_list([props.class, dynamic_class]);
-    let is_blank = props.target.as_deref() == Some("_blank");
-    let router_can_handle_target = props.target.is_none() || is_blank;
-
-    if router_can_handle_target && try_router().is_some() {
-        return rsx! {
-            Link {
-                to: props.to,
-                class,
-                new_tab: is_blank,
-                attributes: props.attributes,
-                {props.children}
-            }
-        };
-    }
 
     rsx! {
-        Box {
-            component: "a",
+        InternalAnchor {
+            to: props.to,
+            target: props.target,
             class,
             sx: props.sx,
-            states: props.states,
             framework_sx: &ANCHOR_BASE_SX,
-            href: Some(navigation_target_href(props.to)),
-            target: props.target,
+            states: props.states,
             attributes: props.attributes,
             {props.children}
         }

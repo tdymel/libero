@@ -1,11 +1,36 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
-    hooks::use_theme,
+    CssLayer,
+    components::{Box, Input, States, common::class_list, navigation::InternalAnchor},
+    hooks::{use_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, Size},
 };
+
+// `Input<NavigationTarget>` rather than a bare required field (like
+// `Anchor`'s `to`), since a Button is only a link when this is actually set -
+// costs the ergonomic direct `to: Route::Foo {}` Anchor gets (needs
+// `NavigationTarget::from(Route::Foo {})` instead), since Dioxus's
+// `#[props(into)]` can't chain a foreign conversion through an `Option`/our
+// own wrapper at once.
+impl From<&str> for Input<NavigationTarget> {
+    fn from(value: &str) -> Self {
+        Input::Value(NavigationTarget::from(value))
+    }
+}
+
+impl From<String> for Input<NavigationTarget> {
+    fn from(value: String) -> Self {
+        Input::Value(NavigationTarget::from(value))
+    }
+}
+
+impl From<NavigationTarget> for Input<NavigationTarget> {
+    fn from(value: NavigationTarget) -> Self {
+        Input::Value(value)
+    }
+}
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Ripple {
@@ -175,8 +200,11 @@ pub struct ButtonProps {
     disabled: Option<bool>,
     #[props(default)]
     onclick: EventHandler<MouseEvent>,
-    #[props(default)]
-    href: Option<String>,
+    /// Renders as a link (router-aware, like `Anchor`) instead of a
+    /// `<button>` when set. No ripple/`onclick` in that case - see the note
+    /// above `is_link` below.
+    #[props(default, into)]
+    to: Input<NavigationTarget>,
     #[props(default)]
     target: Option<String>,
     children: Element,
@@ -207,15 +235,14 @@ pub fn Button(props: ButtonProps) -> Element {
         _ => theme.button.size,
     };
 
-    let size_class = crate::hooks::use_css(get_size_sx(size), crate::CssLayer::Framework);
+    let size_class = use_css(get_size_sx(size), CssLayer::Framework);
 
     let dynamic_sx = button_variant_sx(variant, color, shade)
         .apply_if(explicit_radius, |sx, radius| {
             sx.border_radius(ThemeAwareValue::Size(radius))
         })
         .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
-    let dynamic_class = crate::hooks::use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-
+    let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
     let class = class_list([props.class, size_class, dynamic_class]);
 
     let states = props
@@ -248,35 +275,56 @@ pub fn Button(props: ButtonProps) -> Element {
         }
     };
 
-    // A disabled link keeps looking/behaving like a disabled control (it just
-    // doesn't natively support the `disabled` attribute like <button> does):
-    // dropping `href` stops navigation, `aria-disabled`/`tabindex` keep it out
-    // of the a11y tree and tab order.
-    let is_link = props.href.is_some();
-    let component = if is_link { "a" } else { "button" };
-    let href = is_link
-        .then(|| (!disabled).then_some(props.href.unwrap()))
-        .flatten();
-    let target = is_link.then_some(props.target).flatten();
-    let aria_disabled = is_link.then(|| disabled.then_some("true")).flatten();
-    let tabindex = is_link.then(|| disabled.then_some("-1")).flatten();
-    let button_disabled = (!is_link).then_some(disabled);
-    let button_type = (!is_link).then_some("button".to_string());
+    // `InternalAnchor` has no `onclick`, since ripple only makes sense for a
+    // real <button> - a link-mode Button loses the ripple, and `onclick`
+    // itself is never called, only real navigation happens.
+    if let Some(to) = props.to.as_ref().cloned() {
+        // A disabled link keeps looking/behaving like a disabled control (it
+        // just doesn't natively support the `disabled` attribute like
+        // <button> does): no `to` at all stops navigation entirely,
+        // `aria-disabled`/`tabindex` keep it out of the a11y tree and tab
+        // order. Can't go through `InternalAnchor` for this - it always
+        // resolves to a real, working link.
+        if disabled {
+            return rsx! {
+                Box {
+                    component: "a",
+                    class,
+                    sx: props.sx,
+                    states,
+                    framework_sx: &BUTTON_BASE_SX,
+                    "aria-disabled": "true",
+                    tabindex: "-1",
+                    attributes: props.attributes,
+                    {props.children}
+                }
+            };
+        }
+
+        return rsx! {
+            InternalAnchor {
+                to,
+                target: props.target,
+                class,
+                sx: props.sx,
+                framework_sx: &BUTTON_BASE_SX,
+                states,
+                attributes: props.attributes,
+                {props.children}
+            }
+        };
+    }
 
     rsx! {
         Box {
-            component: component,
-            class: class,
+            component: "button",
+            class,
             sx: props.sx,
-            states: states,
+            states,
             framework_sx: &BUTTON_BASE_SX,
             onclick: handle_click,
-            href: href,
-            target: target,
-            "aria-disabled": aria_disabled,
-            tabindex: tabindex,
-            disabled: button_disabled,
-            r#type: button_type,
+            disabled,
+            r#type: "button",
             attributes: props.attributes,
             {ripple_span}
             {props.children}
