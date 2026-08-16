@@ -84,10 +84,50 @@ impl Sx {
     }
 
     pub(crate) fn class_name(&self) -> String {
-        format!("lsx-{:016x}", self.hash())
+        format!("lsx-{}", encode_base62(self.hash()))
     }
+}
+
+const BASE62_ALPHABET: &[u8; 62] =
+    b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+/// Shorter than hex (base 16) for the same hash - up to 11 chars instead of
+/// 16 for a `u64`.
+fn encode_base62(mut value: u64) -> String {
+    if value == 0 {
+        return "0".to_string();
+    }
+
+    let mut chars = Vec::new();
+    while value > 0 {
+        chars.push(BASE62_ALPHABET[(value % 62) as usize]);
+        value /= 62;
+    }
+    chars.reverse();
+
+    String::from_utf8(chars).expect("base62 alphabet is ASCII")
 }
 
 pub fn sx() -> Sx {
     Sx::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::encode_base62;
+
+    #[test]
+    fn encode_base62_roundtrips_edge_values() {
+        assert_eq!(encode_base62(0), "0");
+        assert_eq!(encode_base62(61), "z");
+        assert_eq!(encode_base62(62), "10");
+        assert_eq!(encode_base62(u64::MAX), "LygHa16AHYF");
+    }
+
+    #[test]
+    fn class_name_is_shorter_than_previous_hex_encoding() {
+        let name = super::sx().padding("lg").class_name();
+        assert!(name.starts_with("lsx-"));
+        assert!(name.len() <= "lsx-".len() + 11);
+    }
 }
