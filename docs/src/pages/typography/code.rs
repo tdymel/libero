@@ -16,6 +16,24 @@ const HTML_EXAMPLE: &str = "<div class=\"card\">\n  <h2>Title</h2>\n</div>";
 
 const CSS_EXAMPLE: &str = ".card {\n  color: red;\n  padding: 8px;\n}";
 
+const LONG_RUST_EXAMPLE: &str = r#"struct Config {
+    name: String,
+    retries: u32,
+}
+
+impl Config {
+    fn new(name: &str) -> Self {
+        Self { name: name.to_string(), retries: 3 }
+    }
+
+    fn with_retries(mut self, retries: u32) -> Self {
+        self.retries = retries;
+        self
+    }
+}"#;
+
+const LONG_LINE_EXAMPLE: &str = r#"let url = "https://example.com/api/v2/accounts/12345/transactions?from=2024-01-01&to=2024-12-31&status=settled";"#;
+
 #[component]
 pub fn CodePage() -> Element {
     rsx! {
@@ -140,6 +158,29 @@ pub fn CodePage() -> Element {
                     language: "css",
                     copyable: false,
                 }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
+                Title { variant: "h2", "Max lines" }
+                Text {
+                    Code { "max_lines" }
+                    " caps the visible height to roughly that many lines, scrolling "
+                    "vertically past it instead of growing the block forever."
+                }
+                Code {
+                    block: true,
+                    source: LONG_RUST_EXAMPLE,
+                    language: "rust",
+                    max_lines: 6,
+                }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
+                Title { variant: "h2", "Long lines" }
+                Text { "A single line wider than the block scrolls horizontally on its own." }
+                Code { block: true, source: LONG_LINE_EXAMPLE, language: "rust" }
             }
             Flex {
                 direction: "column",

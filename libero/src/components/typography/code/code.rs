@@ -18,6 +18,12 @@ const CODE_MUTED_TEXT: &str = "#57606a";
 const CODE_LINE_NUMBER: &str = "#8c959f";
 const UNRECOGNIZED_LANGUAGE_LABEL: &str = "Unrecognized language";
 
+// Shared with `max_lines`' height math below, so both stay in sync with
+// `CODE_LINES_SX`/`CODE_PLAIN_PRE_SX`'s actual line-height and padding
+// instead of a second set of hand-copied numbers.
+const CODE_LINE_HEIGHT_PX: u32 = 20;
+const CODE_LINES_VERTICAL_PADDING_PX: u32 = 24;
+
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline")
         .background("grey.1")
@@ -92,13 +98,13 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         .width("max-content")
         .min_width("100%")
-        .padding("12px 0")
+        .padding(format!("{}px 0", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875rem")
         // Explicit rather than left to the font's own metrics - the
-        // floating copy button's vertical centering is computed against
-        // this exact value.
-        .line_height("20px")
+        // floating copy button's vertical centering, and `max_lines`' scroll
+        // height, are both computed against this exact value.
+        .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
 static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| sx().display("flex").flex_direction("row"));
@@ -117,9 +123,12 @@ static CODE_LINE_CONTENT_SX: StaticSx =
 static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .margin("0")
-        .padding("12px 16px")
+        .padding(format!("{}px 16px", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875rem")
+        // Matches `CODE_LINES_SX` - keeps `max_lines`' scroll height correct
+        // for the opaque-`children` path too, not just highlighted source.
+        .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
 fn copy_icon() -> Element {
@@ -185,6 +194,12 @@ pub struct CodeProps {
     /// from `children`). Without `header`, floats in the top-right corner.
     #[props(default = true)]
     copyable: bool,
+    /// `block` only. Caps the visible height to roughly this many lines,
+    /// scrolling vertically past it - unset (the default) grows to fit all
+    /// content. Very long individual lines always scroll horizontally,
+    /// regardless of this.
+    #[props(default)]
+    max_lines: Option<u32>,
     children: Element,
 }
 
@@ -271,6 +286,13 @@ pub fn Code(props: CodeProps) -> Element {
             .map(Language::label)
             .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
         let show_copy = props.copyable && props.source.is_some();
+        let scroll_sx = match props.max_lines {
+            Some(max_lines) => sx().max_height(format!(
+                "{}px",
+                max_lines * CODE_LINE_HEIGHT_PX + CODE_LINES_VERTICAL_PADDING_PX
+            )),
+            None => sx(),
+        };
 
         return rsx! {
             Box {
@@ -295,6 +317,7 @@ pub fn Code(props: CodeProps) -> Element {
                 Box {
                     component: "div",
                     framework_sx: &CODE_BLOCK_SCROLL_SX,
+                    sx: scroll_sx,
                     if let Some(lines) = &lines {
                         {code_lines(lines)}
                     } else {
