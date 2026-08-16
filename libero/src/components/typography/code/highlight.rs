@@ -4,22 +4,35 @@ use syntect::parsing::{ParseState, Scope, ScopeStack, SyntaxSet};
 
 use crate::components::Input;
 
+/// Variants are gated by the matching `code-lang-*` Cargo feature - only
+/// languages opted into at compile time exist as constructible values, and
+/// only their grammars get fetched and embedded by `build.rs`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Language {
+    #[cfg(feature = "code-lang-rust")]
     Rust,
+    #[cfg(feature = "code-lang-shell")]
     Shell,
+    #[cfg(feature = "code-lang-markdown")]
     Markdown,
+    #[cfg(feature = "code-lang-html")]
     Html,
+    #[cfg(feature = "code-lang-css")]
     Css,
 }
 
 impl Language {
     fn parse(value: &str) -> Option<Self> {
         match value.to_lowercase().as_str() {
+            #[cfg(feature = "code-lang-rust")]
             "rust" | "rs" => Some(Self::Rust),
+            #[cfg(feature = "code-lang-shell")]
             "shell" | "sh" | "bash" => Some(Self::Shell),
+            #[cfg(feature = "code-lang-markdown")]
             "markdown" | "md" => Some(Self::Markdown),
+            #[cfg(feature = "code-lang-html")]
             "html" => Some(Self::Html),
+            #[cfg(feature = "code-lang-css")]
             "css" => Some(Self::Css),
             _ => None,
         }
@@ -29,20 +42,30 @@ impl Language {
     /// whatever alias was used to construct this `Language`.
     fn syntect_token(self) -> &'static str {
         match self {
+            #[cfg(feature = "code-lang-rust")]
             Self::Rust => "rust",
+            #[cfg(feature = "code-lang-shell")]
             Self::Shell => "sh",
+            #[cfg(feature = "code-lang-markdown")]
             Self::Markdown => "md",
+            #[cfg(feature = "code-lang-html")]
             Self::Html => "html",
+            #[cfg(feature = "code-lang-css")]
             Self::Css => "css",
         }
     }
 
     pub(crate) fn label(self) -> &'static str {
         match self {
+            #[cfg(feature = "code-lang-rust")]
             Self::Rust => "Rust",
+            #[cfg(feature = "code-lang-shell")]
             Self::Shell => "Shell",
+            #[cfg(feature = "code-lang-markdown")]
             Self::Markdown => "Markdown",
+            #[cfg(feature = "code-lang-html")]
             Self::Html => "HTML",
+            #[cfg(feature = "code-lang-css")]
             Self::Css => "CSS",
         }
     }
@@ -64,7 +87,15 @@ impl From<String> for Input<Language> {
     }
 }
 
-static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(SyntaxSet::load_defaults_newlines);
+/// Built by `build.rs` from only the languages enabled via `code-lang-*`
+/// features, instead of syntect's own ~150-language default packdump.
+static SYNTAX_SET: LazyLock<SyntaxSet> = LazyLock::new(|| {
+    syntect::dumps::from_uncompressed_data(include_bytes!(concat!(
+        env!("OUT_DIR"),
+        "/syntaxes.packdump"
+    )))
+    .expect("build.rs writes a valid dump")
+});
 
 /// TextMate scope prefixes (checked stack-top to bottom, most specific
 /// first) mapped to the token classes declared in `token_theme.rs`. Not
