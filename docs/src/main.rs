@@ -45,8 +45,6 @@ pub(crate) enum Route {
     ListPage {},
     #[route("/data-display/qr-code")]
     QrCodePage {},
-    #[route("/data-display/tree")]
-    TreePage {},
 
     #[route("/inputs/action-icon")]
     ActionIconPage {},
@@ -70,6 +68,8 @@ pub(crate) enum Route {
     AnchorPage {},
     #[route("/navigation/nav-link")]
     NavLinkPage {},
+    #[route("/navigation/tree")]
+    TreePage {},
 
     #[route("/overlay/dialog")]
     DialogPage {},

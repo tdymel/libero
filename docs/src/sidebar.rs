@@ -107,7 +107,6 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
                 page(Route::IconPage {}, "Icon"),
                 page(Route::ImagePage {}, "Image"),
                 page(Route::ListPage {}, "List"),
-                page(Route::TreePage {}, "Tree"),
                 page(Route::QrCodePage {}, "QrCode"),
             ],
         ),
@@ -137,6 +136,7 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
             vec![
                 page(Route::AnchorPage {}, "Anchor"),
                 page(Route::NavLinkPage {}, "NavLink"),
+                page(Route::TreePage {}, "Tree"),
             ],
         ),
         group(
