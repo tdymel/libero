@@ -201,6 +201,12 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     /// continuous line down a section instead of separate dashes.
     #[props(default, into)]
     gap: Input<ThemeAwareValue>,
+    /// Overrides the per-level indent at every nesting level - e.g. `"0"`
+    /// to disable it entirely and compute your own from `render_node`'s
+    /// `depth` instead, when the indent needs to interact with the content
+    /// itself (like a border lining up with an ancestor's chevron column).
+    #[props(default, into)]
+    indent: Input<ThemeAwareValue>,
     /// Required - WAI-ARIA's tree pattern needs an accessible name on the root.
     #[props(into)]
     aria_label: String,
@@ -331,6 +337,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
     };
 
     let gap = props.gap.into_option();
+    let indent = props.indent.into_option();
     let root_sx = props
         .sx
         .into_option()
@@ -353,6 +360,8 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
                     node: node.clone(),
                     size,
                     gap: gap.clone(),
+                    indent: indent.clone(),
+                    depth: 0,
                     expanded,
                     resolved_active: resolved_active.clone(),
                     active_id,
@@ -369,6 +378,8 @@ struct TreeRowProps<T: TreeLabel + Clone + PartialEq + 'static> {
     node: TreeNode<T>,
     size: Size,
     gap: Option<ThemeAwareValue>,
+    indent: Option<ThemeAwareValue>,
+    depth: usize,
     expanded: Signal<HashSet<String>>,
     resolved_active: Option<String>,
     active_id: Signal<Option<String>>,
@@ -395,6 +406,7 @@ fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeRowProps<T>) -
         expanded: is_expanded,
         disabled,
         tabindex: "-1",
+        depth: props.depth,
     });
 
     // Every row reserves the same leading width (chevron for a branch, a
@@ -459,7 +471,9 @@ fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeRowProps<T>) -
             if is_expanded == Some(true) {
                 List {
                     "role": "group",
-                    sx: sx().apply_if(props.gap.clone(), |sx, gap| sx.gap(gap)),
+                    sx: sx()
+                        .apply_if(props.gap.clone(), |sx, gap| sx.gap(gap))
+                        .apply_if(props.indent.clone(), |sx, indent| sx.padding_left(indent)),
                     size: ThemeAwareValue::Size(props.size),
                     for child in &node.children {
                         TreeRow {
@@ -467,6 +481,8 @@ fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeRowProps<T>) -
                             node: child.clone(),
                             size: props.size,
                             gap: props.gap.clone(),
+                            indent: props.indent.clone(),
+                            depth: props.depth + 1,
                             expanded: props.expanded,
                             resolved_active: props.resolved_active.clone(),
                             active_id: props.active_id,

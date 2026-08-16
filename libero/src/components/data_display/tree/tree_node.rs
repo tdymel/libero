@@ -74,6 +74,14 @@ pub struct TreeNodeRenderArgs<T> {
     /// the tree's own roving one, and the link/button's native implicit
     /// one - and arrow-key navigation only ever moves the tree's.
     pub tabindex: &'static str,
+    /// 0 for a top-level node, incrementing by one per nesting level.
+    /// `Tree`'s own indent (see `TreeProps::indent`) already uses this to
+    /// shift each level - it's exposed here so `render_node` can take over
+    /// indentation entirely instead (e.g. set `indent: "0"` on `Tree` and
+    /// compute your own left offset from this, for layouts where the
+    /// indent has to interact with the content itself, like a border that
+    /// needs to line up with an ancestor's chevron column).
+    pub depth: usize,
 }
 
 /// `Tree`'s own fallback row content - just `tree_label()` as plain text.

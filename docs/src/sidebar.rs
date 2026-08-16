@@ -207,12 +207,33 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                     // left border then reads as one continuous line down
                     // the section instead of a dashed one.
                     gap: "0",
+                    // `Tree`'s own indent shifts the whole row, which isn't
+                    // what we want here - the border should line up with
+                    // the *parent* group's own chevron column, not the
+                    // child's. Disabling it and computing indent ourselves
+                    // below (from `args.depth`) as `NavLink`'s own padding,
+                    // inside the border rather than before it.
+                    indent: "0",
                     data,
                     default_expanded,
                     render_node: move |args: TreeNodeRenderArgs<SidebarEntry>| {
                         if args.expanded.is_some() {
                             return default_tree_render(args);
                         }
+                        // `Tree` always reserves a leading column the width
+                        // of a chevron + its gap (see
+                        // `TREE_ROW_LEADING_SPACER_SX`/`TREE_ROW_CONTENT_SX`)
+                        // even for a leaf, which has none - pulling back by
+                        // that same width puts this row's own left edge (and
+                        // so its border) at the *group header's* chevron
+                        // column, one row above. `padding_left` then adds
+                        // back the same amount (plus `NavLink`'s own 12px
+                        // base inset, plus one more step per nesting level)
+                        // so the border stays put while the label text
+                        // reads as properly indented.
+                        const LEADING_COLUMN: u32 = 16 + 6; // chevron width + gap
+                        const INDENT_STEP: u32 = 16;
+                        let text_inset = 12 + LEADING_COLUMN + args.depth as u32 * INDENT_STEP;
                         rsx! {
                             NavLink {
                                 to: NavigationTarget::Internal(args.id),
@@ -233,8 +254,15 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                                 // of just its own text height - otherwise
                                 // the border would stop short top/bottom
                                 // and not read as continuous between rows.
+                                // `border-radius: 0` overrides `NavLink`'s
+                                // own rounded corners, which otherwise curve
+                                // the border away from the edge and break
+                                // that same continuity.
                                 sx: sx()
                                     .align_self("stretch")
+                                    .margin_left(format!("-{LEADING_COLUMN}px"))
+                                    .padding_left(format!("{text_inset}px"))
+                                    .border_radius("0")
                                     .border_left(format!(
                                         "2px solid {}",
                                         ColorCss::GREY.value(ColorShade::S3),
