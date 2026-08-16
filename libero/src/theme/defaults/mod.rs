@@ -8,6 +8,7 @@ mod drawer;
 mod flex;
 mod header;
 mod icon;
+mod kbd;
 mod mark;
 mod qr_code;
 mod select;
@@ -37,6 +38,7 @@ pub use flex::{
 };
 pub use header::HeaderDefaults;
 pub use icon::IconDefaults;
+pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KbdDefaults};
 pub use mark::MarkDefaults;
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use select::{

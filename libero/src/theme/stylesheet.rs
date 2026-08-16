@@ -89,6 +89,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(theme.icon.to_css_declarations());
     declarations.extend(theme.action_icon.to_css_declarations());
     declarations.extend(theme.qr_code.to_css_declarations());
+    declarations.extend(theme.kbd.to_css_declarations());
     push_named_color_declarations(&mut declarations, theme);
     push_color_declarations(&mut declarations, Color::Primary, theme.primary);
     push_color_declarations(&mut declarations, Color::Secondary, theme.secondary);

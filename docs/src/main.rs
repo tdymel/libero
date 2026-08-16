@@ -12,8 +12,8 @@ mod sidebar;
 use pages::{
     ActionIconPage, AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage,
     DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage,
-    ImagePage, ListPage, MarkPage, ModalPage, OverlayPage, QrCodePage, SelectPage, TextPage,
-    TitlePage, VisuallyHiddenPage,
+    ImagePage, KbdPage, ListPage, MarkPage, ModalPage, OverlayPage, QrCodePage, SelectPage,
+    TextPage, TitlePage, VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 
@@ -75,6 +75,8 @@ pub(crate) enum Route {
 
     #[route("/typography/code")]
     CodePage {},
+    #[route("/typography/kbd")]
+    KbdPage {},
     #[route("/typography/mark")]
     MarkPage {},
     #[route("/typography/text")]
