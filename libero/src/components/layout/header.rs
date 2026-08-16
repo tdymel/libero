@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, HtmlTag, Input, States, common::class_list},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, Size, SizeCss},
+    theme::{ColorShade, ColorValue, Size, SizeCss},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,15 +51,29 @@ impl From<String> for Input<HeaderPosition> {
 // banner rather than the library-wide default (5).
 const HEADER_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
-fn header_color_parts(value: Option<&ThemeAwareValue>) -> Option<(Color, ColorShade)> {
+// Unlike `Icon`/`Button`, an unset `color` means "leave the neutral default
+// alone" rather than falling back to a theme color - a bare theme color name
+// has no shade of its own, so it's resolved to our own default shade here;
+// anything else (an explicit shade/contrast, or a literal value like
+// "red"/#123456/rgb(...)) passes through unchanged for the sx-to-css
+// pipeline to resolve normally.
+fn header_base_color(value: Option<&ThemeAwareValue>) -> Option<ThemeAwareValue> {
     match value {
-        Some(ThemeAwareValue::Color(color)) => Some((*color, HEADER_DEFAULT_SHADE)),
-        Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => {
-            Some((*color, *shade))
-        }
-        Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(color, shade))) => {
-            Some((*color, *shade))
-        }
+        None => None,
+        Some(ThemeAwareValue::Color(color)) => Some(ThemeAwareValue::ColorValue(
+            ColorValue::Shade(*color, HEADER_DEFAULT_SHADE),
+        )),
+        Some(other) => Some(other.clone()),
+    }
+}
+
+// Only a resolved theme shade has a precomputed contrast CSS var to pair
+// with; a literal color has no such pairing available.
+fn header_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
+    match base {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
+            ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
+        ),
         _ => None,
     }
 }
@@ -98,15 +112,14 @@ fn header_dynamic_sx(props: &HeaderProps) -> Sx {
         .apply_if(props.size.as_ref().map(header_size), |sx, size| {
             sx.height(size)
         })
-        .apply_if(
-            header_color_parts(props.color.as_ref()),
-            |sx, (color, shade)| {
-                sx.background(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)))
-                    .color(ThemeAwareValue::ColorValue(ColorValue::Contrast(
-                        color, shade,
-                    )))
-            },
-        )
+        .apply_if(header_base_color(props.color.as_ref()), |sx, base| {
+            let contrast = header_contrast_color(&base);
+            let sx = sx.background(base);
+            match contrast {
+                Some(contrast) => sx.color(contrast),
+                None => sx,
+            }
+        })
         .apply_if(props.z_index.as_ref(), |sx, z_index| {
             sx.z_index(z_index.clone())
         })

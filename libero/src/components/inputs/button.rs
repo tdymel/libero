@@ -89,12 +89,46 @@ const BUTTON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 // mirroring Mantine's "subtle" hover treatment.
 const BUTTON_HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
 
-fn button_color_parts(value: Option<&ThemeAwareValue>) -> (Color, ColorShade) {
+// A bare theme color name (e.g. "primary") has no shade of its own, so it's
+// resolved to our own default shade here rather than the sx pipeline's
+// generic default (5). Anything else - an explicit shade/contrast, or a
+// literal value like "red"/#123456/rgb(...) - passes through unchanged and
+// is resolved by the normal sx-to-css pipeline. Only a genuinely unset
+// `color` falls back to the library's default color.
+fn button_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     match value {
-        Some(ThemeAwareValue::Color(color)) => (*color, BUTTON_DEFAULT_SHADE),
-        Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => (*color, *shade),
-        Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(color, shade))) => (*color, *shade),
-        _ => (Color::Primary, BUTTON_DEFAULT_SHADE),
+        None => {
+            ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, BUTTON_DEFAULT_SHADE))
+        }
+        Some(ThemeAwareValue::Color(color)) => {
+            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, BUTTON_DEFAULT_SHADE))
+        }
+        Some(other) => other.clone(),
+    }
+}
+
+// A hover darken/tint and an auto-contrast text color both need a resolved
+// theme shade to compute against; a literal color has neither available.
+fn button_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
+    match base {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
+            ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
+        ),
+        _ => None,
+    }
+}
+
+// `shade_fn` picks the hover shade relative to the base's own shade (e.g.
+// darker for `Filled`, or a fixed light tint for `Outlined`/`Text`).
+fn button_hover_sx(
+    base: &ThemeAwareValue,
+    shade_fn: impl Fn(ColorShade) -> ColorShade,
+) -> Option<Sx> {
+    match base {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(sx().background(
+            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, shade_fn(*shade))),
+        )),
+        _ => None,
     }
 }
 
@@ -129,33 +163,42 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-fn button_variant_sx(variant: ButtonVariant, color: Color, shade: ColorShade) -> Sx {
-    let base = ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade));
-
+fn button_variant_sx(variant: ButtonVariant, base: ThemeAwareValue) -> Sx {
     match variant {
         ButtonVariant::Filled => {
-            let contrast = ThemeAwareValue::ColorValue(ColorValue::Contrast(color, shade));
-            let hover_bg = ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade.darker()));
-            sx().background(base.clone())
-                .border_color(base)
-                .color(contrast)
-                .hover(sx().background(hover_bg))
+            let contrast = button_contrast_color(&base);
+            let hover = button_hover_sx(&base, ColorShade::darker);
+            let result = sx().background(base.clone()).border_color(base);
+            let result = match contrast {
+                Some(contrast) => result.color(contrast),
+                None => result,
+            };
+            match hover {
+                Some(hover) => result.hover(hover),
+                None => result,
+            }
         }
         ButtonVariant::Outlined => {
-            let tint =
-                ThemeAwareValue::ColorValue(ColorValue::Shade(color, BUTTON_HOVER_TINT_SHADE));
-            sx().background("transparent")
+            let hover = button_hover_sx(&base, |_| BUTTON_HOVER_TINT_SHADE);
+            let result = sx()
+                .background("transparent")
                 .border_color(base.clone())
-                .color(base)
-                .hover(sx().background(tint))
+                .color(base);
+            match hover {
+                Some(hover) => result.hover(hover),
+                None => result,
+            }
         }
         ButtonVariant::Text => {
-            let tint =
-                ThemeAwareValue::ColorValue(ColorValue::Shade(color, BUTTON_HOVER_TINT_SHADE));
-            sx().background("transparent")
+            let hover = button_hover_sx(&base, |_| BUTTON_HOVER_TINT_SHADE);
+            let result = sx()
+                .background("transparent")
                 .border_color("transparent")
-                .color(base)
-                .hover(sx().background(tint))
+                .color(base);
+            match hover {
+                Some(hover) => result.hover(hover),
+                None => result,
+            }
         }
     }
 }
@@ -214,7 +257,7 @@ pub struct ButtonProps {
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.as_ref().copied().unwrap_or_default();
-    let (color, shade) = button_color_parts(props.color.as_ref());
+    let color = button_base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
 
@@ -226,10 +269,6 @@ pub fn Button(props: ButtonProps) -> Element {
     // vars (see ButtonDefaults::radius_sx / get_size_sx), so a plain `sx` prop
     // override still works. Only an explicit prop should win over that at the
     // (higher-priority) dynamic layer.
-    let explicit_radius = match props.radius.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => Some(*size),
-        _ => None,
-    };
     let size = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
         _ => theme.button.size,
@@ -237,9 +276,9 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let size_class = use_css(get_size_sx(size), CssLayer::Framework);
 
-    let dynamic_sx = button_variant_sx(variant, color, shade)
-        .apply_if(explicit_radius, |sx, radius| {
-            sx.border_radius(ThemeAwareValue::Size(radius))
+    let dynamic_sx = button_variant_sx(variant, color)
+        .apply_if(props.radius.as_ref(), |sx, radius| {
+            sx.border_radius(radius.clone())
         })
         .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
     let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);

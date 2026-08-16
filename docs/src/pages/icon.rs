@@ -88,7 +88,7 @@ pub fn IconPage() -> Element {
                 Flex {
                     direction: "row",
                     gap: "16px",
-                    Icon { color: "primary", {checkmark()} }
+                    Icon { color: "red", {checkmark()} }
                     Icon { color: "success", {checkmark()} }
                     Icon { color: "error", {checkmark()} }
                     Icon { color: "warning", {checkmark()} }

@@ -51,12 +51,30 @@ impl From<String> for Input<IconVariant> {
 // rather than the library-wide default (5).
 const ICON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
-fn icon_color_parts(value: Option<&ThemeAwareValue>) -> (Color, ColorShade) {
+// A bare theme color name (e.g. "primary") has no shade of its own, so it's
+// resolved to our own default shade here rather than the sx pipeline's
+// generic default (5). Anything else - an explicit shade/contrast, or a
+// literal value like "red"/#123456/rgb(...) - passes through unchanged and
+// is resolved by the normal sx-to-css pipeline. Only a genuinely unset
+// `color` falls back to the library's default color.
+fn icon_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     match value {
-        Some(ThemeAwareValue::Color(color)) => (*color, ICON_DEFAULT_SHADE),
-        Some(ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade))) => (*color, *shade),
-        Some(ThemeAwareValue::ColorValue(ColorValue::Contrast(color, shade))) => (*color, *shade),
-        _ => (Color::Primary, ICON_DEFAULT_SHADE),
+        None => ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ICON_DEFAULT_SHADE)),
+        Some(ThemeAwareValue::Color(color)) => {
+            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ICON_DEFAULT_SHADE))
+        }
+        Some(other) => other.clone(),
+    }
+}
+
+// Only a resolved theme shade has a precomputed contrast CSS var to pair
+// with; a literal color has no such pairing available.
+fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
+    match base {
+        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
+            ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
+        ),
+        _ => None,
     }
 }
 
@@ -67,13 +85,15 @@ fn icon_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-fn icon_variant_sx(variant: IconVariant, color: Color, shade: ColorShade) -> Sx {
-    let base = ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade));
-
+fn icon_variant_sx(variant: IconVariant, base: ThemeAwareValue) -> Sx {
     match variant {
         IconVariant::Filled => {
-            let contrast = ThemeAwareValue::ColorValue(ColorValue::Contrast(color, shade));
-            sx().background(base).color(contrast)
+            let contrast = icon_contrast_color(&base);
+            let sx = sx().background(base);
+            match contrast {
+                Some(contrast) => sx.color(contrast),
+                None => sx,
+            }
         }
         IconVariant::Outlined => sx()
             .background("transparent")
@@ -97,9 +117,9 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn icon_dynamic_sx(props: &IconProps) -> Sx {
     let variant = props.variant.as_ref().copied().unwrap_or_default();
-    let (color, shade) = icon_color_parts(props.color.as_ref());
+    let base = icon_base_color(props.color.as_ref());
 
-    icon_variant_sx(variant, color, shade)
+    icon_variant_sx(variant, base)
         .apply_if(props.size.as_ref().map(icon_size), |sx, size| {
             sx.width(size.clone()).height(size)
         })

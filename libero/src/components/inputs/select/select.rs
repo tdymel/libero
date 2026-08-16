@@ -81,15 +81,10 @@ pub fn Select(props: SelectProps) -> Element {
         Some(ThemeAwareValue::Size(size)) => *size,
         _ => theme.select.size,
     };
-    let explicit_radius = match props.radius.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => Some(*size),
-        _ => None,
-    };
-
     let size_class = crate::hooks::use_css(get_size_sx(size), crate::CssLayer::Framework);
 
-    let dynamic_sx = sx().apply_if(explicit_radius, |sx, radius| {
-        sx.border_radius(ThemeAwareValue::Size(radius))
+    let dynamic_sx = sx().apply_if(props.radius.as_ref(), |sx, radius| {
+        sx.border_radius(radius.clone())
     });
     let dynamic_class = crate::hooks::use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
 
