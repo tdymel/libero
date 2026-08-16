@@ -3,7 +3,8 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Drawer, Flex, NavLink, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render,
+        Drawer, Flex, NavLink, States, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        default_tree_render,
     },
     sx::{Sx, sx},
     theme::{ColorCss, ColorShade, Size, SizeCss},
@@ -220,20 +221,7 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                         if args.expanded.is_some() {
                             return default_tree_render(args);
                         }
-                        // `Tree` always reserves a leading column the width
-                        // of a chevron + its gap (see
-                        // `TREE_ROW_LEADING_SPACER_SX`/`TREE_ROW_CONTENT_SX`)
-                        // even for a leaf, which has none - pulling back by
-                        // that same width puts this row's own left edge (and
-                        // so its border) at the *group header's* chevron
-                        // column, one row above. `padding_left` then adds
-                        // back the same amount (plus `NavLink`'s own 12px
-                        // base inset, plus one more step per nesting level)
-                        // so the border stays put while the label text
-                        // reads as properly indented.
-                        const LEADING_COLUMN: u32 = 16 + 6; // chevron width + gap
-                        const INDENT_STEP: u32 = 16;
-                        let text_inset = 12 + LEADING_COLUMN + args.depth as u32 * INDENT_STEP;
+                        let text_inset = 4 + args.depth as u32 * 16;
                         rsx! {
                             NavLink {
                                 to: NavigationTarget::Internal(args.id),
@@ -242,6 +230,7 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                                 // one; see `TreeNodeRenderArgs::tabindex`.
                                 tabindex: args.tabindex,
                                 scroll_into_view: true,
+                                states: States::new().with("leaf", args.depth > 0),
                                 // `NavLink` already knows whether it's
                                 // active (it compares `to` against the
                                 // current route itself) and sets its own
@@ -260,19 +249,21 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                                 // that same continuity.
                                 sx: sx()
                                     .align_self("stretch")
-                                    .margin_left(format!("-{LEADING_COLUMN}px"))
-                                    .padding_left(format!("{text_inset}px"))
-                                    .border_radius("0")
-                                    .border_left(format!(
-                                        "2px solid {}",
-                                        ColorCss::GREY.value(ColorShade::S3),
-                                    ))
-                                    .when(
-                                        "active",
-                                        sx().border_left(format!(
+                                    .when("leaf", sx()
+                                        .margin_left(format!("-15px"))
+                                        .padding_left(format!("{text_inset}px"))
+                                        .border_radius("0")
+                                        .border_left(format!(
                                             "2px solid {}",
-                                            ColorCss::PRIMARY.value(ColorShade::S6),
-                                        )),
+                                            ColorCss::GREY.value(ColorShade::S3),
+                                        ))
+                                        .when(
+                                            "active",
+                                            sx().border_left(format!(
+                                                "2px solid {}",
+                                                ColorCss::PRIMARY.value(ColorShade::S6),
+                                            )),
+                                        )
                                     ),
                                 "{args.data.label}"
                             }
