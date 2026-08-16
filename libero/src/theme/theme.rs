@@ -1,8 +1,8 @@
 use super::{
     ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults,
     DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor,
-    IconDefaults, KbdDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness,
-    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
+    IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults,
+    QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -16,6 +16,7 @@ pub struct Theme {
     pub divider: DividerDefaults,
     pub button: ButtonDefaults,
     pub select: SelectDefaults,
+    pub list: ListDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
     pub code: CodeDefaults,
@@ -71,6 +72,11 @@ impl Theme {
                 super::SelectSizeLevel::new("0.9375rem", "40px", "14px"),
                 super::SelectSizeLevel::new("1rem", "44px", "16px"),
             ),
+        ),
+        ListDefaults::new(
+            super::Size::Md,
+            Sizes::new(4, 8, 12, 16, 20),
+            Sizes::new(8, 12, 16, 20, 24),
         ),
         TitleDefaults::new(
             TitleLevel::new(
@@ -178,6 +184,7 @@ impl Theme {
         divider: DividerDefaults,
         button: ButtonDefaults,
         select: SelectDefaults,
+        list: ListDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
         code: CodeDefaults,
@@ -209,6 +216,7 @@ impl Theme {
             divider,
             button,
             select,
+            list,
             titles,
             texts,
             code,
