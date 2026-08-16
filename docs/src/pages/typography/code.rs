@@ -34,6 +34,18 @@ impl Config {
 
 const LONG_LINE_EXAMPLE: &str = r#"let url = "https://example.com/api/v2/accounts/12345/transactions?from=2024-01-01&to=2024-12-31&status=settled";"#;
 
+const HIGHLIGHT_LINES_EXAMPLE: &str = r#"fn divide(a: i32, b: i32) -> Option<i32> {
+    if b == 0 {
+        return None;
+    }
+    Some(a / b)
+}"#;
+
+const DIFF_EXAMPLE: &str = r#"fn greet(name: &str) -> String {
+-    format!("Hi, {}", name)
++    format!("Hello, {}!", name)
+}"#;
+
 #[component]
 pub fn CodePage() -> Element {
     rsx! {
@@ -55,7 +67,10 @@ pub fn CodePage() -> Element {
                     Code { "language" }
                     " to syntax-highlight a runtime string instead of plain "
                     Code { "children" }
-                    "."
+                    ". Every color here - background, border, line numbers, diff/highlight "
+                    "tints, and the syntax token colors - comes from "
+                    Code { "Theme.code" }
+                    " and can be overridden per-app."
                 }
             }
             Flex {
@@ -181,6 +196,53 @@ pub fn CodePage() -> Element {
                 Title { variant: "h2", "Long lines" }
                 Text { "A single line wider than the block scrolls horizontally on its own." }
                 Code { block: true, source: LONG_LINE_EXAMPLE, language: "rust" }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
+                Title { variant: "h2", "Line numbers" }
+                Text { Code { "line_numbers: false" } " drops the gutter entirely." }
+                Code {
+                    block: true,
+                    source: "console.log(\"no gutter here\")",
+                    language: "javascript",
+                    line_numbers: false,
+                }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
+                Title { variant: "h2", "Highlighted lines" }
+                Text {
+                    Code { "highlight_lines" }
+                    " emphasizes specific rows - a comma-separated list of line numbers "
+                    "and/or ranges, e.g. "
+                    Code { "\"2,4-5\"" }
+                    "."
+                }
+                Code {
+                    block: true,
+                    source: HIGHLIGHT_LINES_EXAMPLE,
+                    language: "rust",
+                    highlight_lines: "2,4-5",
+                }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
+                Title { variant: "h2", "Diff" }
+                Text {
+                    Code { "diff: true" }
+                    " reads a leading "
+                    Code { "+" }
+                    "/"
+                    Code { "-" }
+                    " on each line of "
+                    Code { "source" }
+                    " as added/removed, coloring that row - the marker itself is stripped "
+                    "from what's displayed and copied, only the color stays."
+                }
+                Code { block: true, source: DIFF_EXAMPLE, diff: true }
             }
             Flex {
                 direction: "column",

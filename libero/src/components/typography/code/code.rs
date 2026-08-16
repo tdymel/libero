@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 
 use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
@@ -6,16 +8,12 @@ use crate::{
     components::{Box, Input, States},
     hooks::{Clipboard, use_clipboard},
     sx::{StaticSx, Sx, sx},
-    theme::CODE_FONT_FAMILY,
+    theme::{
+        CODE_BACKGROUND, CODE_BORDER, CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT,
+        ColorCss, ColorShade,
+    },
 };
 
-// GitHub's own code-block palette reads much closer to white than this
-// theme's `grey.1`/`grey.3` - close enough to matter for something meant to
-// look like a code editor, so these are hardcoded rather than theme tokens.
-const CODE_BG: &str = "#f6f8fa";
-const CODE_BORDER: &str = "#d0d7de";
-const CODE_MUTED_TEXT: &str = "#57606a";
-const CODE_LINE_NUMBER: &str = "#8c959f";
 const UNRECOGNIZED_LANGUAGE_LABEL: &str = "Unrecognized language";
 
 // Shared with `max_lines`' height math below, so both stay in sync with
@@ -36,9 +34,9 @@ static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
 static CODE_BLOCK_CONTAINER_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .position("relative")
-        .background(CODE_BG)
+        .background(CODE_BACKGROUND.value())
         .border("1px solid")
-        .border_color(CODE_BORDER)
+        .border_color(CODE_BORDER.value())
         .border_radius("6px")
         .overflow("hidden")
 });
@@ -50,10 +48,10 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .gap("8px")
         .padding("4px 8px 4px 16px")
         .border_bottom("1px solid")
-        .border_color(CODE_BORDER)
+        .border_color(CODE_BORDER.value())
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.75rem")
-        .color(CODE_MUTED_TEXT)
+        .color(CODE_MUTED_TEXT.value())
 });
 
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
@@ -65,7 +63,7 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .border_radius("6px")
         .padding("5px")
         .cursor("pointer")
-        .color(CODE_MUTED_TEXT)
+        .color(CODE_MUTED_TEXT.value())
         .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
 });
 
@@ -81,13 +79,13 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         .position("absolute")
         .top("9px")
         .right("8px")
-        .background(CODE_BG)
+        .background(CODE_BACKGROUND.value())
         .border("1px solid")
-        .border_color(CODE_BORDER)
+        .border_color(CODE_BORDER.value())
         .border_radius("6px")
         .padding("5px")
         .cursor("pointer")
-        .color(CODE_MUTED_TEXT)
+        .color(CODE_MUTED_TEXT.value())
         .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
 });
 
@@ -109,12 +107,46 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
 
 static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| sx().display("flex").flex_direction("row"));
 
+// Light tint + a solid accent bar down the left edge (`box-shadow` rather
+// than `border-left`, so the bar doesn't shift content relative to
+// unmarked rows). Colors are the theme's actual primary/success/error, not
+// independent theme fields - stay in sync with them automatically.
+static CODE_LINE_ROW_HIGHLIGHTED_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_direction("row")
+        .background("primary.1")
+        .box_shadow(format!(
+            "inset 3px 0 0 {}",
+            ColorCss::PRIMARY.value(ColorShade::S5)
+        ))
+});
+
+static CODE_LINE_ROW_DIFF_ADD_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_direction("row")
+        .background("success.1")
+        .box_shadow(format!(
+            "inset 3px 0 0 {}",
+            ColorCss::SUCCESS.value(ColorShade::S5)
+        ))
+});
+
+static CODE_LINE_ROW_DIFF_REMOVE_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_direction("row")
+        .background("error.1")
+        .box_shadow(format!(
+            "inset 3px 0 0 {}",
+            ColorCss::ERROR.value(ColorShade::S5)
+        ))
+});
+
 static CODE_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")
         .user_select("none")
         .text_align("right")
         .padding("0 12px")
-        .color(CODE_LINE_NUMBER)
+        .color(CODE_LINE_NUMBER.value())
 });
 
 static CODE_LINE_CONTENT_SX: StaticSx =
@@ -200,10 +232,122 @@ pub struct CodeProps {
     /// regardless of this.
     #[props(default)]
     max_lines: Option<u32>,
+    /// `block` only, and only takes effect with `source`. Toggles the
+    /// line-number gutter.
+    #[props(default = true)]
+    line_numbers: bool,
+    /// `block` only, and only takes effect with `source`. 1-indexed lines to
+    /// visually emphasize, e.g. `"3"`, `"5-7"`, or `"1,5-7,10"`. Malformed
+    /// segments are skipped rather than rejecting the whole value.
+    #[props(default, into)]
+    highlight_lines: Option<String>,
+    /// `block` only, and only takes effect with `source`. Treats each line
+    /// of `source` as a unified diff - a leading `+`/`-` colors that line's
+    /// row (added/removed) and is itself stripped from what's displayed,
+    /// highlighted, and copied. Other lines are left exactly as they are.
+    /// Takes priority over `highlight_lines` on lines both would match.
+    #[props(default)]
+    diff: bool,
     children: Element,
 }
 
-fn code_lines(lines: &[HighlightedLine]) -> Element {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum DiffStatus {
+    Added,
+    Removed,
+}
+
+/// Based on the raw line's leading byte, not its tokenized spans - keeps
+/// diff-status detection independent of (and unaffected by) how the
+/// grammar happened to split `+`/`-` into scopes.
+fn diff_status(line: &str) -> Option<DiffStatus> {
+    match line.as_bytes().first() {
+        Some(b'+') => Some(DiffStatus::Added),
+        Some(b'-') => Some(DiffStatus::Removed),
+        _ => None,
+    }
+}
+
+/// Drops a line's leading `+`/`-` (not a leading space - only lines
+/// actually marked added/removed are touched, so `source` doesn't need to
+/// follow strict unified-diff conventions for its unchanged lines). Used
+/// for highlighting, plain rendering, and the copy button alike, so what's
+/// shown and what's copied always match.
+fn strip_diff_markers(source: &str) -> String {
+    source
+        .lines()
+        .map(|line| match line.as_bytes().first() {
+            Some(b'+') | Some(b'-') => &line[1..],
+            _ => line,
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
+}
+
+/// Parses a `"3,5-7,10"`-style spec into the 1-indexed line numbers it
+/// names. Malformed segments (empty, non-numeric, backwards ranges) are
+/// skipped rather than rejecting the whole spec.
+fn parse_highlighted_lines(spec: &str) -> HashSet<usize> {
+    let mut lines = HashSet::new();
+    for segment in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
+        match segment.split_once('-') {
+            Some((start, end)) => {
+                if let (Ok(start), Ok(end)) =
+                    (start.trim().parse::<usize>(), end.trim().parse::<usize>())
+                {
+                    lines.extend(start..=end);
+                }
+            }
+            None => {
+                if let Ok(line) = segment.parse::<usize>() {
+                    lines.insert(line);
+                }
+            }
+        }
+    }
+    lines
+}
+
+fn code_line_row(
+    index: usize,
+    line: &HighlightedLine,
+    line_numbers: bool,
+    gutter_width: &str,
+    row_sx: &'static StaticSx,
+) -> Element {
+    rsx! {
+        Box {
+            component: "div",
+            framework_sx: row_sx,
+            if line_numbers {
+                Box {
+                    component: "span",
+                    framework_sx: &CODE_LINE_NUMBER_SX,
+                    sx: sx().min_width(gutter_width.to_string()),
+                    {(index + 1).to_string()}
+                }
+            }
+            Box {
+                component: "span",
+                framework_sx: &CODE_LINE_CONTENT_SX,
+                // Without the gutter there's nothing reserving left inset -
+                // match `CODE_LINE_NUMBER_SX`'s own 12px so the block still
+                // has breathing room instead of text flush on the edge.
+                sx: if line_numbers { sx() } else { sx().padding_left("12px") },
+                for (text, class) in line.iter() {
+                    span { class: *class, {text.as_str()} }
+                }
+            }
+        }
+    }
+}
+
+fn code_lines(
+    lines: &[HighlightedLine],
+    line_numbers: bool,
+    highlighted_lines: &HashSet<usize>,
+    diff_statuses: &[Option<DiffStatus>],
+) -> Element {
     let gutter_width = format!("{}ch", lines.len().to_string().len());
 
     rsx! {
@@ -211,22 +355,14 @@ fn code_lines(lines: &[HighlightedLine]) -> Element {
             component: "div",
             framework_sx: &CODE_LINES_SX,
             for (index, line) in lines.iter().enumerate() {
-                Box {
-                    component: "div",
-                    framework_sx: &CODE_LINE_ROW_SX,
-                    Box {
-                        component: "span",
-                        framework_sx: &CODE_LINE_NUMBER_SX,
-                        sx: sx().min_width(gutter_width.clone()),
-                        {(index + 1).to_string()}
-                    }
-                    Box {
-                        component: "span",
-                        framework_sx: &CODE_LINE_CONTENT_SX,
-                        for (text, class) in line.iter() {
-                            span { class: *class, {text.as_str()} }
-                        }
-                    }
+                {
+                    let row_sx: &'static StaticSx = match diff_statuses.get(index).copied().flatten() {
+                        Some(DiffStatus::Added) => &CODE_LINE_ROW_DIFF_ADD_SX,
+                        Some(DiffStatus::Removed) => &CODE_LINE_ROW_DIFF_REMOVE_SX,
+                        None if highlighted_lines.contains(&(index + 1)) => &CODE_LINE_ROW_HIGHLIGHTED_SX,
+                        None => &CODE_LINE_ROW_SX,
+                    };
+                    code_line_row(index, line, line_numbers, &gutter_width, row_sx)
                 }
             }
         }
@@ -267,14 +403,35 @@ pub fn Code(props: CodeProps) -> Element {
 
     if props.block {
         let language = props.language.as_ref().copied();
-        let source = props.source.clone();
+        // Diff statuses come from the raw source (markers must still be
+        // there to detect); everything actually shown or copied - the
+        // highlighter, the plain fallback, the copy button - uses the
+        // marker-stripped version instead, so what you read and what you
+        // copy always match.
+        let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
+            props
+                .source
+                .as_deref()
+                .map(|source| source.lines().map(diff_status).collect())
+                .unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        let display_source = props.source.as_ref().map(|source| {
+            if props.diff {
+                strip_diff_markers(source)
+            } else {
+                source.clone()
+            }
+        });
+        let source = display_source.clone();
         let highlighted = use_resource(use_reactive!(|source, language| async move {
             match (source, language) {
                 (Some(source), Some(language)) => highlight_lazy(source, language).await,
                 _ => None,
             }
         }));
-        let lines = props.source.as_deref().map(|source| {
+        let lines = display_source.as_deref().map(|source| {
             highlighted
                 .read()
                 .clone()
@@ -286,6 +443,11 @@ pub fn Code(props: CodeProps) -> Element {
             .map(Language::label)
             .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
         let show_copy = props.copyable && props.source.is_some();
+        let highlighted_lines = props
+            .highlight_lines
+            .as_deref()
+            .map(parse_highlighted_lines)
+            .unwrap_or_default();
         let scroll_sx = match props.max_lines {
             Some(max_lines) => sx().max_height(format!(
                 "{}px",
@@ -308,18 +470,18 @@ pub fn Code(props: CodeProps) -> Element {
                         framework_sx: &CODE_BLOCK_HEADER_SX,
                         span { {label} }
                         if show_copy {
-                            CopyButton { source: props.source.clone().unwrap(), floating: false }
+                            CopyButton { source: display_source.clone().unwrap(), floating: false }
                         }
                     }
                 } else if show_copy {
-                    CopyButton { source: props.source.clone().unwrap(), floating: true }
+                    CopyButton { source: display_source.clone().unwrap(), floating: true }
                 }
                 Box {
                     component: "div",
                     framework_sx: &CODE_BLOCK_SCROLL_SX,
                     sx: scroll_sx,
                     if let Some(lines) = &lines {
-                        {code_lines(lines)}
+                        {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
                     } else {
                         Box {
                             component: "pre",
@@ -372,5 +534,65 @@ pub fn Code(props: CodeProps) -> Element {
             attributes: props.attributes,
             {props.children}
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_highlighted_lines_accepts_singles_and_ranges() {
+        assert_eq!(
+            parse_highlighted_lines("1,5-7,10"),
+            HashSet::from([1, 5, 6, 7, 10])
+        );
+    }
+
+    #[test]
+    fn parse_highlighted_lines_skips_malformed_segments() {
+        assert_eq!(
+            parse_highlighted_lines("1,,abc,5-,3"),
+            HashSet::from([1, 3])
+        );
+    }
+
+    #[test]
+    fn parse_highlighted_lines_trims_whitespace() {
+        assert_eq!(
+            parse_highlighted_lines(" 1 , 3 - 4 "),
+            HashSet::from([1, 3, 4])
+        );
+    }
+
+    #[test]
+    fn parse_highlighted_lines_empty_spec_is_empty() {
+        assert_eq!(parse_highlighted_lines(""), HashSet::new());
+    }
+
+    #[test]
+    fn diff_status_detects_added_and_removed() {
+        assert_eq!(diff_status("+ new line"), Some(DiffStatus::Added));
+        assert_eq!(diff_status("- old line"), Some(DiffStatus::Removed));
+        assert_eq!(diff_status("  unchanged"), None);
+        assert_eq!(diff_status(""), None);
+    }
+
+    #[test]
+    fn strip_diff_markers_removes_leading_plus_and_minus_only() {
+        let source = "fn greet() {\n-    old();\n+    new();\n}";
+        assert_eq!(
+            strip_diff_markers(source),
+            "fn greet() {\n    old();\n    new();\n}"
+        );
+    }
+
+    #[test]
+    fn strip_diff_markers_leaves_unmarked_lines_untouched() {
+        assert_eq!(
+            strip_diff_markers(" leading space stays"),
+            " leading space stays"
+        );
+        assert_eq!(strip_diff_markers("no marker at all"), "no marker at all");
     }
 }
