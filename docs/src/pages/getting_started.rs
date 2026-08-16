@@ -49,6 +49,31 @@ pub fn GettingStarted() -> Element {
 
             Flex {
                 direction: "column",
+                gap: "8px",
+                Title { variant: "h2", "Building for the Web" }
+                Text {
+                    "The "
+                    Code { "Code" }
+                    " component's syntax highlighting lives in its own wasm chunk, loaded only "
+                    "when a highlighted block actually renders, instead of bloating every page's "
+                    "initial bundle. This relies on Dioxus's (experimental) wasm-split support, "
+                    "which "
+                    Code { "dx" }
+                    " only enables when asked - "
+                    "always build and serve with "
+                    Code { "--wasm-split" }
+                    ", or the app will fail to load entirely (a dangling module import, not a "
+                    "graceful fallback)."
+                }
+                Code {
+                    block: true,
+                    source: "dx serve --platform web --release --debug-symbols=false --wasm-split",
+                    language: "shell",
+                }
+            }
+
+            Flex {
+                direction: "column",
                 gap: "16px",
                 Divider {}
                 Text {

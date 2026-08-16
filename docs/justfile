@@ -1,0 +1,2 @@
+start:
+    dx serve --platform web --release --debug-symbols=false --wasm-split

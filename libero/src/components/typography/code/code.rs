@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use super::highlight::{HighlightedLine, Language, highlight, plain_lines};
+use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
 use super::token_theme::use_token_theme;
 use crate::{
     components::{Box, Input, States},
@@ -251,9 +251,18 @@ pub fn Code(props: CodeProps) -> Element {
 
     if props.block {
         let language = props.language.as_ref().copied();
+        let source = props.source.clone();
+        let highlighted = use_resource(use_reactive!(|source, language| async move {
+            match (source, language) {
+                (Some(source), Some(language)) => highlight_lazy(source, language).await,
+                _ => None,
+            }
+        }));
         let lines = props.source.as_deref().map(|source| {
-            language
-                .and_then(|language| highlight(source, language))
+            highlighted
+                .read()
+                .clone()
+                .flatten()
                 .unwrap_or_else(|| plain_lines(source))
         });
         let label = language
@@ -299,11 +308,13 @@ pub fn Code(props: CodeProps) -> Element {
     }
 
     if let Some(source) = props.source.clone() {
-        let highlighted = props
-            .language
-            .as_ref()
-            .copied()
-            .and_then(|language| highlight(&source, language));
+        let language = props.language.as_ref().copied();
+        let highlighted = use_resource(use_reactive!(|source, language| async move {
+            match language {
+                Some(language) => highlight_lazy(source, language).await,
+                None => None,
+            }
+        }));
 
         return rsx! {
             Box {
@@ -313,7 +324,7 @@ pub fn Code(props: CodeProps) -> Element {
                 states: props.states,
                 framework_sx: &CODE_INLINE_SX,
                 attributes: props.attributes,
-                if let Some(lines) = highlighted {
+                if let Some(lines) = highlighted.read().clone().flatten() {
                     for line in lines.iter() {
                         for (text, class) in line.iter() {
                             span { class: *class, {text.as_str()} }

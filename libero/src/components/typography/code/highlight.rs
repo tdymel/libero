@@ -1,5 +1,6 @@
 use std::sync::LazyLock;
 
+use dioxus::wasm_split;
 use syntect::parsing::{ParseState, Scope, ScopeStack, SyntaxSet};
 
 use crate::components::Input;
@@ -180,6 +181,25 @@ pub(crate) fn highlight(source: &str, language: Language) -> Option<Vec<Highligh
     }
 
     Some(lines)
+}
+
+// `#[wasm_split]` drops the item's visibility on wasm32 (it rebuilds the fn
+// from just `item_fn.sig`, which doesn't carry `vis`), so this stays private
+// and `highlight_lazy` below re-exposes it at the visibility callers need.
+#[wasm_split::wasm_split(code_highlighting)]
+async fn highlight_split(source: String, language: Language) -> Option<Vec<HighlightedLine>> {
+    highlight(&source, language)
+}
+
+/// Same as [`highlight`], but the syntect engine itself (~2MB) lives in a
+/// separate wasm chunk fetched on first call instead of the main bundle -
+/// see `dioxus::wasm_split`. On non-wasm32 targets (native tests) this is
+/// just a plain async call with nothing split out.
+pub(crate) async fn highlight_lazy(
+    source: String,
+    language: Language,
+) -> Option<Vec<HighlightedLine>> {
+    highlight_split(source, language).await
 }
 
 fn push_span(spans: &mut HighlightedLine, text: &str, stack: &ScopeStack) {
