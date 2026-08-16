@@ -16,7 +16,7 @@ const CODE_BG: &str = "#f6f8fa";
 const CODE_BORDER: &str = "#d0d7de";
 const CODE_MUTED_TEXT: &str = "#57606a";
 const CODE_LINE_NUMBER: &str = "#8c959f";
-const UNKNOWN_LANGUAGE_LABEL: &str = "Unknown language";
+const UNRECOGNIZED_LANGUAGE_LABEL: &str = "Unrecognized language";
 
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline")
@@ -176,8 +176,9 @@ pub struct CodeProps {
     /// Unrecognized values fall back to no highlighting rather than a guess.
     #[props(default, into)]
     language: Input<Language>,
-    /// `block` only. Shows the language (or "Unknown language") in a bar
-    /// above the code.
+    /// `block` only. Shows the language (or "Unrecognized language" if the
+    /// name isn't in libero's catalog, or isn't enabled via a `code-lang-*`
+    /// feature) in a bar above the code.
     #[props(default = true)]
     header: bool,
     /// `block` only, and only takes effect with `source` (nothing to copy
@@ -266,8 +267,9 @@ pub fn Code(props: CodeProps) -> Element {
                 .unwrap_or_else(|| plain_lines(source))
         });
         let label = language
+            .filter(|language| language.is_available())
             .map(Language::label)
-            .unwrap_or(UNKNOWN_LANGUAGE_LABEL);
+            .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
         let show_copy = props.copyable && props.source.is_some();
 
         return rsx! {

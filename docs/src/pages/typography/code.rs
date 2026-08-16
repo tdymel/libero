@@ -56,6 +56,28 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
+                Title { variant: "h2", "Recognized, but not enabled" }
+                Text {
+                    "Libero recognizes far more languages than any one build compiles in - "
+                    Code { "language: \"python\"" }
+                    " is a real, known name, but this site only turns on "
+                    Code { "code-lang-rust" }
+                    ", "
+                    Code { "code-lang-bash" }
+                    ", "
+                    Code { "code-lang-markdown" }
+                    ", "
+                    Code { "code-lang-html" }
+                    ", and "
+                    Code { "code-lang-css" }
+                    " - so it still falls back to unhighlighted text, the same as an "
+                    "unrecognized name would."
+                }
+                Code { block: true, source: "print(\"hello\")", language: "python" }
+            }
+            Flex {
+                direction: "column",
+                gap: "8px",
                 Title { variant: "h2", "Highlighted - Rust" }
                 Code { block: true, source: RUST_EXAMPLE, language: "rust" }
             }
