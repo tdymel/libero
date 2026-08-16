@@ -71,6 +71,8 @@ pub enum Property {
     BoxShadow,
     TextAlign,
     ScrollMargin,
+    Transform,
+    Visibility,
 }
 
 impl Property {
@@ -144,6 +146,8 @@ impl Property {
             "box-shadow" => Some(Self::BoxShadow),
             "text-align" => Some(Self::TextAlign),
             "scroll-margin" => Some(Self::ScrollMargin),
+            "transform" => Some(Self::Transform),
+            "visibility" => Some(Self::Visibility),
             _ => None,
         }
     }
@@ -218,6 +222,8 @@ impl Property {
             Self::BoxShadow => "box-shadow",
             Self::TextAlign => "text-align",
             Self::ScrollMargin => "scroll-margin",
+            Self::Transform => "transform",
+            Self::Visibility => "visibility",
         }
     }
 }

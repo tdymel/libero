@@ -259,6 +259,14 @@ impl Sx {
         self.with_known_property(Property::Transition, value)
     }
 
+    pub fn transform(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Transform, value)
+    }
+
+    pub fn visibility(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Visibility, value)
+    }
+
     pub fn backdrop_filter(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::BackdropFilter, value)
     }

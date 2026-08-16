@@ -221,6 +221,13 @@ pub fn Drawer(props: DrawerProps) -> Element {
                 sx: props.sx,
                 states: props.states,
                 framework_sx: &DRAWER_STATIC_BASE_SX,
+                // Chromium makes a scrollable `overflow: auto` region with
+                // actual overflowing content an implicit tab stop of its own
+                // (for arrow-key/Page-Down scrolling) unless opted out -
+                // right here since this is otherwise exactly that region,
+                // and its own content (e.g. nav links) is already
+                // separately focusable, making the extra stop redundant.
+                tabindex: "-1",
                 attributes: props.attributes,
                 {props.children}
             }
