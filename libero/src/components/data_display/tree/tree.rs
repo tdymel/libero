@@ -6,10 +6,10 @@ use std::{
 use dioxus::{document, prelude::*};
 
 use crate::{
-    components::{Box, Icon, Input, List, common::focus_ring_sx},
+    components::{Box, Input, List, common::focus_ring_sx},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Size, SizeCss},
+    theme::Size,
 };
 
 use super::tree_node::{TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render};
@@ -62,27 +62,6 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .hover(sx().background("grey.1"))
 });
-
-// Reserves the same width the chevron would take, so a leaf row's content
-// aligns with its sibling branch rows instead of starting further left.
-static TREE_ROW_LEADING_SPACER_SX: StaticSx = StaticSx::new(|| {
-    sx().flex_shrink("0")
-        .width(SizeCss::ICON_SIZE.value(Size::Xs))
-});
-
-fn chevron_svg() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M9 18l6-6-6-6" }
-        }
-    }
-}
 
 struct VisibleNode {
     id: String,
@@ -400,6 +379,10 @@ fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeRowProps<T>) -
     // the active row, or that row alone gets a second tab stop again.
     let li_tabindex = if is_roving_active { "0" } else { "-1" };
 
+    // Whatever `render_node` draws is the row's entire content - `Tree`
+    // itself doesn't reserve a leading chevron column. That's
+    // `default_tree_render`'s own concern (see its doc comment); a custom
+    // `render_node` that skips the chevron gets no leftover gap to explain.
     let content = props.render_node.call(TreeNodeRenderArgs {
         id: node.id.clone(),
         data: node.data.clone(),
@@ -408,26 +391,6 @@ fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeRowProps<T>) -
         tabindex: "-1",
         depth: props.depth,
     });
-
-    // Every row reserves the same leading width (chevron for a branch, a
-    // matching spacer for a leaf) so labels line up across siblings instead
-    // of a leaf's content starting further left than its branch siblings'.
-    let leading = match is_expanded {
-        Some(expanded_flag) => rsx! {
-            Icon {
-                variant: "transparent",
-                size: "xs",
-                color: "grey.6",
-                sx: sx().flex_shrink("0")
-                    .transition("transform 120ms ease")
-                    .transform(if expanded_flag { "rotate(90deg)" } else { "rotate(0deg)" }),
-                {chevron_svg()}
-            }
-        },
-        None => rsx! {
-            Box { framework_sx: &TREE_ROW_LEADING_SPACER_SX }
-        },
-    };
 
     let mut active_id = props.active_id;
     let expanded = props.expanded;
@@ -465,7 +428,6 @@ fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeRowProps<T>) -
             Box {
                 framework_sx: &TREE_ROW_CONTENT_SX,
                 onclick,
-                {leading}
                 {content}
             }
             if is_expanded == Some(true) {

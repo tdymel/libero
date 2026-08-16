@@ -208,12 +208,13 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                     // left border then reads as one continuous line down
                     // the section instead of a dashed one.
                     gap: "0",
-                    // `Tree`'s own indent shifts the whole row, which isn't
-                    // what we want here - the border should line up with
-                    // the *parent* group's own chevron column, not the
-                    // child's. Disabling it and computing indent ourselves
-                    // below (from `args.depth`) as `NavLink`'s own padding,
-                    // inside the border rather than before it.
+                    // `Tree` no longer reserves any leading chevron column of
+                    // its own (that's purely `default_tree_render`'s thing
+                    // now) - with indent also disabled, every row, branch or
+                    // leaf, at any depth, starts at the exact same x. That's
+                    // what puts a leaf's border in line with its parent
+                    // group's own chevron with no offsetting math needed;
+                    // `args.depth` below only pads a leaf's *label* inward.
                     indent: "0",
                     data,
                     default_expanded,
@@ -221,7 +222,7 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                         if args.expanded.is_some() {
                             return default_tree_render(args);
                         }
-                        let text_inset = 4 + args.depth as u32 * 16;
+                        let padding_left = 7 + args.depth as u32 * 16;
                         rsx! {
                             NavLink {
                                 to: NavigationTarget::Internal(args.id),
@@ -230,6 +231,10 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                                 // one; see `TreeNodeRenderArgs::tabindex`.
                                 tabindex: args.tabindex,
                                 scroll_into_view: true,
+                                // Only a *nested* leaf (inside a group) gets
+                                // the connecting border - a top-level page
+                                // like "Getting Started" has no parent
+                                // chevron to line up with.
                                 states: States::new().with("leaf", args.depth > 0),
                                 // `NavLink` already knows whether it's
                                 // active (it compares `to` against the
@@ -249,10 +254,11 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                                 // that same continuity.
                                 sx: sx()
                                     .align_self("stretch")
+                                    .padding_left(0)
                                     .when("leaf", sx()
-                                        .margin_left(format!("-15px"))
-                                        .padding_left(format!("{text_inset}px"))
                                         .border_radius("0")
+                                        .margin_left("7px")
+                                        .padding_left(format!("{padding_left}px"))
                                         .border_left(format!(
                                             "2px solid {}",
                                             ColorCss::GREY.value(ColorShade::S3),

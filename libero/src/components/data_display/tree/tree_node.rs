@@ -1,6 +1,10 @@
 use dioxus::prelude::*;
 
-use crate::{components::Box, sx::sx};
+use crate::{
+    components::{Box, Icon},
+    sx::{StaticSx, sx},
+    theme::{Size, SizeCss},
+};
 
 /// Text `Tree` matches against for typeahead and falls back to rendering
 /// when no `render_node` is given - the one thing `Tree` needs to know about
@@ -78,23 +82,71 @@ pub struct TreeNodeRenderArgs<T> {
     /// `Tree`'s own indent (see `TreeProps::indent`) already uses this to
     /// shift each level - it's exposed here so `render_node` can take over
     /// indentation entirely instead (e.g. set `indent: "0"` on `Tree` and
-    /// compute your own left offset from this, for layouts where the
-    /// indent has to interact with the content itself, like a border that
-    /// needs to line up with an ancestor's chevron column).
+    /// compute your own left offset from this).
     pub depth: usize,
 }
 
-/// `Tree`'s own fallback row content - just `tree_label()` as plain text.
-/// This is what `render_node` defaults to when not given, and it's `pub` so
-/// a custom `render_node` can selectively fall back to it too (e.g. use this
-/// for branches, something custom for leaves) instead of reimplementing it.
+// Matches the chevron's own width, so `default_tree_render`'s leaves line up
+// with its branch siblings instead of starting further left. Not `Tree`'s
+// concern - a leading column is only reserved here, by the render that
+// actually draws a chevron; a custom `render_node` that skips the chevron
+// gets no reserved space unless it asks for its own.
+static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx = StaticSx::new(|| {
+    sx().flex_shrink("0")
+        .width(SizeCss::ICON_SIZE.value(Size::Xs))
+});
+
+fn chevron_svg() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M9 18l6-6-6-6" }
+        }
+    }
+}
+
+/// `Tree`'s own fallback row content - a chevron for a branch (rotating with
+/// `expanded`), a matching spacer for a leaf, then `tree_label()`. This is
+/// what `render_node` defaults to when not given, and it's `pub` so a custom
+/// `render_node` can selectively fall back to it too (e.g. use this for
+/// branches, something custom for leaves) instead of reimplementing it.
+///
+/// The chevron is entirely this function's own concern, not `Tree`'s - a
+/// custom `render_node` that wants one (or its leading space) draws it
+/// itself from `args.expanded`/`args.depth`.
 ///
 /// Provides its own vertical padding - `TreeRow`'s content wrapper
 /// deliberately has none (so a bordered, full-height `render_node` like a
 /// `NavLink` can read as continuous between rows), so plain content needs
 /// to bring its own breathing room.
 pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element {
+    let leading = match args.expanded {
+        Some(expanded) => rsx! {
+            Icon {
+                variant: "transparent",
+                size: "xs",
+                color: "grey.6",
+                sx: sx().flex_shrink("0")
+                    .transition("transform 120ms ease")
+                    .transform(if expanded { "rotate(90deg)" } else { "rotate(0deg)" }),
+                {chevron_svg()}
+            }
+        },
+        None => rsx! {
+            Box { framework_sx: &DEFAULT_RENDER_LEADING_SPACER_SX }
+        },
+    };
+
     rsx! {
-        Box { sx: sx().padding("6px 0"), "{args.data.tree_label()}" }
+        Box {
+            sx: sx().display("flex").align_items("center").gap("6px").padding("6px 0"),
+            {leading}
+            "{args.data.tree_label()}"
+        }
     }
 }
