@@ -81,6 +81,7 @@ pub fn Sidebar() -> Element {
                 }
                 NavGroup { title: "Typography",
                     NavLink { to: NavigationTarget::from(Route::CodePage {}), "Code" }
+                    NavLink { to: NavigationTarget::from(Route::MarkPage {}), "Mark" }
                     NavLink { to: NavigationTarget::from(Route::TextPage {}), "Text" }
                     NavLink { to: NavigationTarget::from(Route::TitlePage {}), "Title" }
                 }

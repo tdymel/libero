@@ -1,8 +1,8 @@
 use super::{
     ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults,
     DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor,
-    IconDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize,
-    TitleDefaults, TitleLevel,
+    IconDefaults, MarkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes, TextDefaults,
+    TextSize, TitleDefaults, TitleLevel,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -23,6 +23,7 @@ pub struct Theme {
     pub icon: IconDefaults,
     pub action_icon: ActionIconDefaults,
     pub qr_code: QrCodeDefaults,
+    pub mark: MarkDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -144,6 +145,7 @@ impl Theme {
         IconDefaults::new(Sizes::new(16, 20, 24, 32, 40)),
         ActionIconDefaults::new(super::Size::Md, super::Size::Sm),
         QrCodeDefaults::new("#FFFFFF", "#000000", QrRobustness::Medium),
+        MarkDefaults::new(super::Color::Warning),
         HexColor::new(0x228BE6),
         HexColor::new(0xE03131),
         HexColor::new(0xE03131),
@@ -173,6 +175,7 @@ impl Theme {
         icon: IconDefaults,
         action_icon: ActionIconDefaults,
         qr_code: QrCodeDefaults,
+        mark: MarkDefaults,
         primary: HexColor,
         secondary: HexColor,
         error: HexColor,
@@ -201,6 +204,7 @@ impl Theme {
             icon,
             action_icon,
             qr_code,
+            mark,
             primary,
             secondary,
             error,
