@@ -13,4 +13,4 @@ keywords = ["components", "ui", "design-system", "dioxus"]
 categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
-dioxus = { version = "0.7.10", default-features = false, features = ["macro", "html", "signals", "hooks", "document"] }
+dioxus = { version = "0.7.10", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "router"] }
