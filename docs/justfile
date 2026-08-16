@@ -1,2 +1,11 @@
+# Local patched fork (see .dioxus-fork/BUGS.md) - carries fixes not yet
+# upstream. Not checked in; rebuild with `just build-dx` after pulling fork
+# changes.
+dx := justfile_directory() / ".." / ".dioxus-fork" / "target" / "release" / "dx"
+
 start:
-    dx serve --platform web --release --debug-symbols=false --wasm-split
+    {{dx}} serve --platform web --release --debug-symbols=false --wasm-split
+
+# Rebuild the local dx binary from .dioxus-fork (branch fix/combined)
+build-dx:
+    cd {{justfile_directory() / ".." / ".dioxus-fork"}} && cargo build --release -p dioxus-cli --bin dx

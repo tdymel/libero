@@ -2,6 +2,7 @@ use std::sync::LazyLock;
 
 use crate::{
     CssLayer,
+    css::Stylesheet,
     hooks::use_css,
     theme::{
         CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION,
@@ -42,5 +43,8 @@ static TOKEN_STYLESHEET: LazyLock<String> = LazyLock::new(|| {
 });
 
 pub(crate) fn use_token_theme() {
-    use_css(TOKEN_STYLESHEET.as_str(), CssLayer::Framework);
+    use_css(
+        Stylesheet::from(TOKEN_STYLESHEET.as_str()),
+        CssLayer::Framework,
+    );
 }

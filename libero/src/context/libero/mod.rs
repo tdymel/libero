@@ -59,8 +59,9 @@ pub fn LiberoProvider(
         style {
             dangerous_inner_html: SCROLL_LOCK_CSS
         }
-        for stylesheet in active_stylesheets {
+        for (key, stylesheet) in active_stylesheets {
             style {
+                key: "{key}",
                 dangerous_inner_html: "{stylesheet}"
             }
         }

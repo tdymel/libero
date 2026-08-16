@@ -714,6 +714,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "docs_debug"
+version = "0.1.0"
+dependencies = [
+ "dioxus",
+ "libero",
+ "web-sys",
+]
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
