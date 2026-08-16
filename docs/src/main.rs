@@ -35,7 +35,7 @@ fn App() -> Element {
                 Header {
                     color: "primary",
                     sx: sx().gap("md"),
-                    Image { src: LOGO, alt: "Libero logo", sx: sx().width("auto").height("28px") }
+                    Image { src: LOGO, sx: sx().width("auto").height("28px") }
                     Title { variant: "h3", component: "span", "Libero" }
                 }
                 Flex {
