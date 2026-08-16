@@ -50,6 +50,7 @@ pub enum Property {
     UserSelect,
     Position,
     Top,
+    Right,
     Overflow,
     Clip,
     ObjectFit,
@@ -68,6 +69,7 @@ pub enum Property {
     Transition,
     BackdropFilter,
     BoxShadow,
+    TextAlign,
 }
 
 impl Property {
@@ -120,6 +122,7 @@ impl Property {
             "user-select" => Some(Self::UserSelect),
             "position" => Some(Self::Position),
             "top" => Some(Self::Top),
+            "right" => Some(Self::Right),
             "overflow" => Some(Self::Overflow),
             "clip" => Some(Self::Clip),
             "object-fit" => Some(Self::ObjectFit),
@@ -138,6 +141,7 @@ impl Property {
             "transition" => Some(Self::Transition),
             "backdrop-filter" => Some(Self::BackdropFilter),
             "box-shadow" => Some(Self::BoxShadow),
+            "text-align" => Some(Self::TextAlign),
             _ => None,
         }
     }
@@ -191,6 +195,7 @@ impl Property {
             Self::UserSelect => "user-select",
             Self::Position => "position",
             Self::Top => "top",
+            Self::Right => "right",
             Self::Overflow => "overflow",
             Self::Clip => "clip",
             Self::ObjectFit => "object-fit",
@@ -209,6 +214,7 @@ impl Property {
             Self::Transition => "transition",
             Self::BackdropFilter => "backdrop-filter",
             Self::BoxShadow => "box-shadow",
+            Self::TextAlign => "text-align",
         }
     }
 }

@@ -191,6 +191,10 @@ impl Sx {
         self.with_known_property(Property::Top, value)
     }
 
+    pub fn right(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Right, value)
+    }
+
     pub fn overflow(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Overflow, value)
     }
@@ -261,6 +265,10 @@ impl Sx {
 
     pub fn box_shadow(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::BoxShadow, value)
+    }
+
+    pub fn text_align(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::TextAlign, value)
     }
 
     pub fn hover(self, nested: Sx) -> Self {

@@ -32,7 +32,7 @@ pub fn GettingStarted() -> Element {
                 gap: "8px",
                 Title { variant: "h2", "Installation" }
                 Text { "Add Libero to your project with cargo:" }
-                Code { block: true, "cargo add libero" }
+                Code { block: true, source: "cargo add libero", language: "shell" }
             }
 
             Flex {
@@ -44,7 +44,7 @@ pub fn GettingStarted() -> Element {
                     Code { "LiberoProvider" }
                     " once, at the root - it registers the theme and every style your components use."
                 }
-                Code { block: true, {QUICK_START_EXAMPLE} }
+                Code { block: true, source: QUICK_START_EXAMPLE, language: "rust" }
             }
 
             Flex {

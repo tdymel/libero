@@ -1,3 +1,4 @@
+mod clipboard;
 mod focus_return;
 mod modal;
 mod portal;
@@ -5,6 +6,7 @@ mod presence;
 mod stylesheet;
 mod theme;
 
+pub use clipboard::{Clipboard, use_clipboard};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use modal::use_modal_z_index;
 pub use modal::{ModalHandle, use_modal, use_modal_context};
