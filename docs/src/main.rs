@@ -102,7 +102,7 @@ fn AppShell() -> Element {
             Flex {
                 direction: "row",
                 align: "stretch",
-                sx: sx().flex("1").overflow("hidden"),
+                sx: sx().flex("1").min_height("0").overflow("hidden"),
                 Sidebar {}
                 Container {
                     component: "main",

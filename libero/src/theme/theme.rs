@@ -38,7 +38,7 @@ impl Theme {
         Sizes::new(2, 4, 8, 16, 32),
         FlexDefaults::new(
             FlexAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
-            FlexAxisDefaults::new("center", "flex-start", super::Size::Md, true),
+            FlexAxisDefaults::new("center", "flex-start", super::Size::Md, false),
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
         DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750)),

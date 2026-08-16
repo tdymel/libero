@@ -184,7 +184,7 @@ mod tests {
             css.as_str()
                 .contains("--lsx-flex-row-spacing:var(--lsx-spacing-md);")
         );
-        assert!(css.as_str().contains("--lsx-flex-row-wrap:wrap;"));
+        assert!(css.as_str().contains("--lsx-flex-row-wrap:nowrap;"));
         assert!(css.as_str().contains("--lsx-h1-font-size:2.125rem;"));
         assert!(css.as_str().contains("--lsx-h1-font-weight:400;"));
         assert!(css.as_str().contains("--lsx-h2-font-size:1.625rem;"));

@@ -55,7 +55,6 @@ pub fn Sidebar() -> Element {
             anchor: "left",
             size: "sm",
             role: "navigation",
-            sx: sx().flex_shrink("0").padding("32px 24px").overflow("auto"),
             Flex {
                 direction: "column",
                 gap: "20px",

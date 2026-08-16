@@ -227,6 +227,10 @@ impl Sx {
         self.with_known_property(Property::MinWidth, value)
     }
 
+    pub fn min_height(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::MinHeight, value)
+    }
+
     pub fn aspect_ratio(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::AspectRatio, value)
     }

@@ -4,9 +4,19 @@ use crate::{
     components::{Box, Dialog, Input, Modal, States, common::class_list},
     hooks::use_css,
     hooks::use_portal,
-    sx::{Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::SizeCss,
 };
+
+// `Static` is documented as usable for a sidebar, which is almost always a
+// flex item that needs to not get squeezed and to scroll its own content
+// rather than growing past its allotted space.
+static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
+    sx().flex_shrink("0")
+        .min_height("0")
+        .padding("lg")
+        .overflow("auto")
+});
 
 /// `xs`-`xl` resolve through the drawer size scale, distinct from
 /// `Dialog`'s; anything else passes through unchanged.
@@ -210,6 +220,7 @@ pub fn Drawer(props: DrawerProps) -> Element {
                 class: class,
                 sx: props.sx,
                 states: props.states,
+                framework_sx: &DRAWER_STATIC_BASE_SX,
                 attributes: props.attributes,
                 {props.children}
             }

@@ -142,7 +142,8 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
 
 fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
     match property {
-        SxPropertyKey::Known(Property::PaddingTop)
+        SxPropertyKey::Known(Property::Padding)
+        | SxPropertyKey::Known(Property::PaddingTop)
         | SxPropertyKey::Known(Property::PaddingLeft)
         | SxPropertyKey::Known(Property::PaddingRight)
         | SxPropertyKey::Known(Property::PaddingBottom)
@@ -222,6 +223,14 @@ mod tests {
         let css = stylesheet.as_str();
 
         assert!(css.contains("border-radius:var(--lsx-radius-md);"));
+    }
+
+    #[test]
+    fn sx_bare_padding_size_resolves_to_spacing_css_var() {
+        let stylesheet = Stylesheet::from(&sx().padding(Size::Lg));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("padding:var(--lsx-spacing-lg);"));
     }
 
     #[test]
