@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::{Box, Dialog, Input, Modal, States, common::class_list},
+    components::{
+        Box, Dialog, Input, Modal, States,
+        common::{class_list, focus_ring_sx},
+    },
     hooks::use_css,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -76,10 +79,7 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .background("transparent")
         .outline("none")
-        .focus_visible(
-            sx().outline("2px solid var(--lsx-primary-6)")
-                .outline_offset("2px"),
-        )
+        .focus_visible(focus_ring_sx())
 });
 
 static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
@@ -89,10 +89,7 @@ static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .background("transparent")
         .outline("none")
-        .focus_visible(
-            sx().outline("2px solid var(--lsx-primary-6)")
-                .outline_offset("2px"),
-        )
+        .focus_visible(focus_ring_sx())
 });
 
 static ZOOM_OVERLAY_IMAGE_SX: StaticSx = StaticSx::new(|| {

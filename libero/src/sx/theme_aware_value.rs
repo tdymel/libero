@@ -1,4 +1,4 @@
-use crate::theme::{Color, ColorValue, CssVar, Size};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size};
 
 use super::BreakpointValue;
 
@@ -11,6 +11,11 @@ pub enum ThemeAwareValue {
     ColorValue(ColorValue),
     CssVar(CssVar),
     BreakpointValue(BreakpointValue),
+    /// A literal `#hex`/`rgb()`/opaque-`rgba()` color - original text (for
+    /// faithful CSS output) paired with its parsed RGB (for contrast
+    /// lookups). A translucent `rgba()` never becomes this variant (see
+    /// `HexColor::parse`) - it falls back to `String` instead.
+    RawColor(String, HexColor),
 }
 
 impl ThemeAwareValue {
@@ -19,7 +24,28 @@ impl ThemeAwareValue {
         match self {
             Self::String(value) | Self::Number(value) => Some(value.clone()),
             Self::CssVar(css_var) => Some(css_var.value()),
+            Self::RawColor(raw, _) => Some(raw.clone()),
             Self::Size(_) | Self::Color(_) | Self::ColorValue(_) | Self::BreakpointValue(_) => None,
+        }
+    }
+
+    /// The contrasting color to draw a focus ring in, when this value is
+    /// used as a `background` whose contrast can actually be determined.
+    /// `None` for anything else (raw CSS we can't parse: named colors,
+    /// `hsl()`, css vars, gradients, ...) - callers should leave the
+    /// existing/inherited value alone in that case rather than clearing it.
+    pub(crate) fn focus_contrast(&self) -> Option<String> {
+        match self {
+            Self::Color(color) => Some(ColorValue::Contrast(*color, ColorShade::S5).value()),
+            Self::ColorValue(ColorValue::Shade(color, shade)) => {
+                Some(ColorValue::Contrast(*color, *shade).value())
+            }
+            Self::RawColor(_, hex) => Some(if hex.contrast().rgb() == 0x00_00_00 {
+                NamedColorCss::BLACK.value()
+            } else {
+                NamedColorCss::WHITE.value()
+            }),
+            _ => None,
         }
     }
 }
@@ -40,6 +66,10 @@ impl From<String> for ThemeAwareValue {
 
         if let Some(css_var) = CssVar::parse(value.as_str()) {
             return Self::CssVar(css_var);
+        }
+
+        if let Some(hex) = HexColor::parse(value.as_str()) {
+            return Self::RawColor(value, hex);
         }
 
         Self::String(value)

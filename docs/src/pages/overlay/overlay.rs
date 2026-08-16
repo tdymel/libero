@@ -25,7 +25,18 @@ pub fn OverlayPage() -> Element {
                 gap: "8px",
                 Title { variant: "h2", "Example" }
                 Box {
-                    sx: sx().position("relative").height("160px").background("grey.2"),
+                    // `z-index` (any value, not just a high one) is what
+                    // actually contains the overlay here - `position` alone
+                    // doesn't start a new stacking context, so without it
+                    // the overlay's own `z-index: 100` (sized for its real
+                    // job: sit below a `Modal`, above ordinary page content)
+                    // would escape this box and compete globally, e.g.
+                    // outranking the docs site's own mobile nav drawer.
+                    sx: sx()
+                        .position("relative")
+                        .z_index("0")
+                        .height("160px")
+                        .background("grey.2"),
                     Text { sx: sx().padding("16px"), "Content behind the overlay" }
                     Overlay { sx: sx().position("absolute") }
                 }

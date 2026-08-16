@@ -127,6 +127,12 @@ pub struct NamedColorCss {
 impl NamedColorCss {
     pub const BLACK: NamedColorCss = NamedColorCss::new("--lsx-black");
     pub const WHITE: NamedColorCss = NamedColorCss::new("--lsx-white");
+    /// Published by `background()` wherever a color's contrast is known (see
+    /// `ThemeAwareValue::focus_contrast`) - focus rings read it (with a
+    /// fallback) so they contrast against whichever ancestor most recently
+    /// set a background, without either side needing to know about the
+    /// other.
+    pub const FOCUS_CONTRAST: NamedColorCss = NamedColorCss::new("--lsx-focus-contrast");
 
     pub const fn new(name: &'static str) -> Self {
         Self {

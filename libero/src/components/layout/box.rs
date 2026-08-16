@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, States,
-        common::{BoxEvents, attr, class_list, render_polymorphic},
+        common::{BoxEvents, attr, class_list, focus_ring_sx, render_polymorphic},
     },
     hooks::use_css,
     sx::{StaticSx, Sx, sx},
@@ -13,12 +13,7 @@ use crate::{
 // Only ever shows up for a Box that received a tabindex (e.g. because it was
 // made clickable via `onclick`), since a plain div isn't keyboard-focusable
 // on its own.
-static BOX_FOCUS_SX: StaticSx = StaticSx::new(|| {
-    sx().focus_visible(
-        sx().outline("2px solid var(--lsx-primary-6)")
-            .outline_offset("2px"),
-    )
-});
+static BOX_FOCUS_SX: StaticSx = StaticSx::new(|| sx().focus_visible(focus_ring_sx()));
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BoxProps {

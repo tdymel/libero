@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, Input, States, common::focus_ring_sx},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -9,10 +9,7 @@ static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .padding("0")
-        .focus_visible(
-            sx().outline("2px solid var(--lsx-primary-6)")
-                .outline_offset("2px"),
-        )
+        .focus_visible(focus_ring_sx())
 });
 
 #[derive(Props, Clone, PartialEq)]

@@ -1,6 +1,6 @@
 use super::ColorShade;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexColor {
     rgb: u32,
 }
@@ -11,6 +11,66 @@ impl HexColor {
             panic!("hex color out of range");
         }
         Self { rgb }
+    }
+
+    /// Recognizes `#rgb`/`#rrggbb`, `rgb(r, g, b)`, and fully-opaque
+    /// `rgba(r, g, b, 1)`. A translucent `rgba()` (e.g. a hover tint) is
+    /// deliberately `None` - its true visual color depends on whatever
+    /// shows through underneath it, which isn't something we can compute
+    /// here. Anything else (named colors, `hsl()`, css vars, ...) is `None`
+    /// too.
+    pub(crate) fn parse(value: &str) -> Option<Self> {
+        let value = value.trim();
+
+        if let Some(hex) = value.strip_prefix('#') {
+            return Self::parse_hex(hex);
+        }
+        if let Some(inner) = value
+            .strip_prefix("rgba(")
+            .and_then(|s| s.strip_suffix(')'))
+        {
+            return Self::parse_rgb_channels(inner, true);
+        }
+        if let Some(inner) = value.strip_prefix("rgb(").and_then(|s| s.strip_suffix(')')) {
+            return Self::parse_rgb_channels(inner, false);
+        }
+
+        None
+    }
+
+    fn parse_hex(hex: &str) -> Option<Self> {
+        let expand = |c: char| c.to_digit(16).map(|d| (d * 16 + d) as u8);
+
+        match hex.len() {
+            3 => {
+                let mut chars = hex.chars();
+                let r = expand(chars.next()?)?;
+                let g = expand(chars.next()?)?;
+                let b = expand(chars.next()?)?;
+                Some(Self::new(((r as u32) << 16) | ((g as u32) << 8) | b as u32))
+            }
+            6 => u32::from_str_radix(hex, 16).ok().map(Self::new),
+            _ => None,
+        }
+    }
+
+    fn parse_rgb_channels(inner: &str, has_alpha: bool) -> Option<Self> {
+        let parts: Vec<&str> = inner.split(',').map(str::trim).collect();
+        if parts.len() != if has_alpha { 4 } else { 3 } {
+            return None;
+        }
+
+        if has_alpha {
+            let alpha: f32 = parts[3].parse().ok()?;
+            if alpha < 1.0 {
+                return None;
+            }
+        }
+
+        let r: u8 = parts[0].parse().ok()?;
+        let g: u8 = parts[1].parse().ok()?;
+        let b: u8 = parts[2].parse().ok()?;
+        Some(Self::new(((r as u32) << 16) | ((g as u32) << 8) | b as u32))
     }
 
     pub const fn r(self) -> u8 {
@@ -99,5 +159,26 @@ mod tests {
 
         assert_eq!(SHADE.rgb(), 0xD2_E7_FA);
         assert_eq!(CONTRAST.rgb(), 0xFF_FF_FF);
+    }
+
+    #[test]
+    fn hex_color_parse_recognizes_hex_and_opaque_rgb() {
+        assert_eq!(HexColor::parse("#fff"), Some(HexColor::new(0xFF_FF_FF)));
+        assert_eq!(HexColor::parse("#228BE6"), Some(HexColor::new(0x22_8B_E6)));
+        assert_eq!(
+            HexColor::parse("rgb(34, 139, 230)"),
+            Some(HexColor::new(0x22_8B_E6))
+        );
+        assert_eq!(
+            HexColor::parse("rgba(34, 139, 230, 1)"),
+            Some(HexColor::new(0x22_8B_E6))
+        );
+    }
+
+    #[test]
+    fn hex_color_parse_rejects_translucent_rgba_and_unknown_formats() {
+        assert_eq!(HexColor::parse("rgba(255, 255, 255, 0.15)"), None);
+        assert_eq!(HexColor::parse("hsl(0, 0%, 100%)"), None);
+        assert_eq!(HexColor::parse("green"), None);
     }
 }

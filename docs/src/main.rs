@@ -128,11 +128,6 @@ fn AppShell() -> Element {
                     sx: sx()
                         .color("white")
                         .hover(sx().background("rgba(255, 255, 255, 0.15)"))
-                        // `Box`'s default focus ring is `primary.6` - the
-                        // exact color of this header's own background, so
-                        // it'd be entirely invisible here. White matches the
-                        // icon/title contrast instead.
-                        .focus_visible(sx().outline("2px solid white").outline_offset("2px"))
                         // Only relevant below `Sm` - the burger is the only
                         // way to set `open`, so hiding it here means the
                         // mobile drawer can never actually be open at

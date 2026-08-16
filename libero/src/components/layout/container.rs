@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, common::class_list},
+    components::{
+        Box, HtmlTag, Input, States,
+        common::{class_list, focus_ring_sx},
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::ContainerDefaults,
 };
@@ -12,10 +15,7 @@ static CONTAINER_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin_left("auto")
         .margin_right("auto")
         .and(ContainerDefaults::default_sx())
-        .focus_visible(
-            sx().outline("2px solid var(--lsx-primary-6)")
-                .outline_offset("2px"),
-        )
+        .focus_visible(focus_ring_sx())
 });
 
 fn container_dynamic_sx(props: &ContainerProps) -> Sx {

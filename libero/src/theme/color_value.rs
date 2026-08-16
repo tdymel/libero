@@ -20,6 +20,9 @@ impl ColorValue {
                 Color::Black => NamedColorCss::BLACK.value(),
                 Color::White => NamedColorCss::WHITE.value(),
             },
+            // Black/white have no per-shade contrast var of their own
+            // (unlike the palette colors) - their contrast is just each
+            // other, the opposite of `Shade`'s own arms above.
             Self::Contrast(color, shade) => match color {
                 Color::Primary => ColorCss::PRIMARY_CONTRAST.value(shade),
                 Color::Secondary => ColorCss::SECONDARY_CONTRAST.value(shade),
@@ -28,8 +31,8 @@ impl ColorValue {
                 Color::Info => ColorCss::INFO_CONTRAST.value(shade),
                 Color::Success => ColorCss::SUCCESS_CONTRAST.value(shade),
                 Color::Grey => ColorCss::GREY_CONTRAST.value(shade),
-                Color::Black => NamedColorCss::BLACK.value(),
-                Color::White => NamedColorCss::WHITE.value(),
+                Color::Black => NamedColorCss::WHITE.value(),
+                Color::White => NamedColorCss::BLACK.value(),
             },
         }
     }
@@ -55,8 +58,8 @@ impl ColorValue {
                 Color::Info => ColorCss::INFO_CONTRAST.name(shade),
                 Color::Success => ColorCss::SUCCESS_CONTRAST.name(shade),
                 Color::Grey => ColorCss::GREY_CONTRAST.name(shade),
-                Color::Black => NamedColorCss::BLACK.name().to_string(),
-                Color::White => NamedColorCss::WHITE.name().to_string(),
+                Color::Black => NamedColorCss::WHITE.name().to_string(),
+                Color::White => NamedColorCss::BLACK.name().to_string(),
             },
         }
     }

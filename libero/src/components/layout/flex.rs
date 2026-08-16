@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{class_list, focus_ring_sx},
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::FlexDefaults,
 };
@@ -17,22 +20,15 @@ use crate::{
  *   `items: Vec<Element>` prop to do safely.
  */
 
-fn flex_focus_sx() -> Sx {
-    sx().focus_visible(
-        sx().outline("2px solid var(--lsx-primary-6)")
-            .outline_offset("2px"),
-    )
-}
-
 static FLEX_BASE_COLUMN_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .and(FlexDefaults::default_sx(false))
-        .and(flex_focus_sx())
+        .and(sx().focus_visible(focus_ring_sx()))
 });
 static FLEX_BASE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .and(FlexDefaults::default_sx(true))
-        .and(flex_focus_sx())
+        .and(sx().focus_visible(focus_ring_sx()))
 });
 
 fn flex_dynamic_sx(props: &FlexProps) -> crate::sx::Sx {

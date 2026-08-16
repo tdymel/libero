@@ -1,5 +1,5 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
-use crate::theme::{ColorShade, ColorValue, Size, SizeCss};
+use crate::theme::{ColorShade, ColorValue, NamedColorCss, Size, SizeCss};
 
 use super::{Property, StaticSx, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
 
@@ -97,10 +97,7 @@ fn collect_declaration_scopes(
                 push_breakpoint_declaration_scope(scopes, context, property, *size, Some(value));
             }
         }
-        _ => declarations.push(CssDeclaration::new(
-            property.as_str(),
-            to_css_value(property, value),
-        )),
+        _ => declarations.extend(property_declarations(property, value)),
     }
 }
 
@@ -115,8 +112,10 @@ fn push_breakpoint_declaration_scope(
         return;
     };
 
-    let declaration = CssDeclaration::new(property.as_str(), to_css_value(property, value));
-    let mut scope = CssScope::new(context.selectors.join(", "), vec![declaration]);
+    let mut scope = CssScope::new(
+        context.selectors.join(", "),
+        property_declarations(property, value),
+    );
     let breakpoint_query = format!("(min-width: {})", size.breakpoint_value());
     let media_query = match &context.media_query {
         Some(existing) => format!("{existing} and {breakpoint_query}"),
@@ -124,6 +123,29 @@ fn push_breakpoint_declaration_scope(
     };
     scope = scope.in_media_query(media_query);
     scopes.push(scope);
+}
+
+/// `background`'s declaration doubles as the source for
+/// `--lsx-focus-contrast`, an inheriting custom property any focusable
+/// descendant's `:focus-visible` ring can read (with a fallback) to
+/// contrast against whichever ancestor most recently set a background -
+/// see `ThemeAwareValue::focus_contrast`.
+fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
+    let mut declarations = vec![CssDeclaration::new(
+        property.as_str(),
+        to_css_value(property, value),
+    )];
+
+    if matches!(property, SxPropertyKey::Known(Property::Background)) {
+        if let Some(contrast) = value.focus_contrast() {
+            declarations.push(CssDeclaration::new(
+                NamedColorCss::FOCUS_CONTRAST.name(),
+                contrast,
+            ));
+        }
+    }
+
+    declarations
 }
 
 fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
@@ -134,6 +156,7 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
         ThemeAwareValue::ColorValue(value) => value.value(),
         ThemeAwareValue::CssVar(css_var) => css_var.value(),
         ThemeAwareValue::String(value) => value.clone(),
+        ThemeAwareValue::RawColor(raw, _) => raw.clone(),
         ThemeAwareValue::BreakpointValue(_) => {
             unreachable!("breakpoint values are expanded before css value conversion")
         }

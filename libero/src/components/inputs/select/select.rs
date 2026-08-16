@@ -3,7 +3,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use dioxus::{document, prelude::*};
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{class_list, focus_ring_sx},
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SelectDefaults, Size},
@@ -27,10 +30,7 @@ static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .and(SelectDefaults::radius_sx())
         .hover(sx().border_color("grey.7"))
-        .focus_visible(
-            sx().outline("2px solid var(--lsx-primary-6)")
-                .outline_offset("2px"),
-        )
+        .focus_visible(focus_ring_sx())
 });
 
 fn get_size_sx(size: Size) -> &'static Sx {

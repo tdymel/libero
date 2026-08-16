@@ -2,7 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::{Box, Input, States, common::class_list, navigation::InternalAnchor},
+    components::{
+        Box, Input, States,
+        common::{class_list, focus_ring_sx},
+        navigation::InternalAnchor,
+    },
     hooks::{use_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, Size},
@@ -159,10 +163,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         // Only shown for keyboard focus (not on mouse click), since the base
         // outline is suppressed above and re-added here just for :focus-visible.
-        .focus_visible(
-            sx().outline("2px solid var(--lsx-primary-6)")
-                .outline_offset("2px"),
-        )
+        .focus_visible(focus_ring_sx())
 });
 
 fn button_variant_sx(variant: ButtonVariant, base: ThemeAwareValue) -> Sx {
