@@ -2,9 +2,11 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use libero::{
-    components::{Drawer, Flex, Tree, TreeLabel, TreeNode},
+    components::{
+        Drawer, Flex, NavLink, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render,
+    },
     sx::{Sx, sx},
-    theme::{Size, SizeCss},
+    theme::{ColorCss, ColorShade, Size, SizeCss},
 };
 
 use crate::Route;
@@ -77,8 +79,7 @@ fn page(route: Route, label: &'static str) -> TreeNode<SidebarEntry> {
 }
 
 // A synthetic id (never a real route path, which always starts with `/`) -
-// distinguishes a group header from a page in `onselectedchange` without
-// needing a separate lookup structure.
+// just avoids any chance of colliding with one.
 fn group(
     id: &'static str,
     label: &'static str,
@@ -168,23 +169,20 @@ fn ancestor_group(data: &[TreeNode<SidebarEntry>], target: &str) -> Option<Strin
 }
 
 #[component]
-pub fn Sidebar(mut open: Signal<bool>) -> Element {
+pub fn Sidebar(open: Signal<bool>) -> Element {
     let data = sidebar_tree();
 
     let current_path = try_router()
         .map(|router| router.full_route_string())
         .unwrap_or_default();
 
-    // Seeded once from the initial route, so deep-linking to a page opens
-    // its section - after that, purely the user's own expand/collapse
-    // clicks, including collapsing the section the active page is in.
-    let mut expanded = use_signal(|| {
-        let mut set = HashSet::new();
-        if let Some(group_id) = ancestor_group(&data, &current_path) {
-            set.insert(group_id);
-        }
-        set
-    });
+    // Only seeds which section starts open (deep-linking to a page opens
+    // its section) - after that, expand/collapse is `Tree`'s own business,
+    // including collapsing the section the active page is in.
+    let mut default_expanded = HashSet::new();
+    if let Some(group_id) = ancestor_group(&data, &current_path) {
+        default_expanded.insert(group_id);
+    }
 
     rsx! {
         Drawer {
@@ -197,22 +195,59 @@ pub fn Sidebar(mut open: Signal<bool>) -> Element {
                 gap: "8px",
                 // Closes on any click inside - good enough for "tap a link,
                 // the panel closes" without threading a callback through
-                // `Tree`. Only matters below `Sm`; at desktop widths `open`
-                // never becomes true in the first place, since the toggle
-                // that sets it is hidden there.
+                // `NavLink` (which has none, deliberately, same as
+                // `Button`'s link mode). Only matters below `Sm`; at desktop
+                // widths `open` never becomes true in the first place, since
+                // the toggle that sets it is hidden there.
                 onclick: move |_| open.set(false),
                 Tree {
                     aria_label: "Documentation pages",
                     size: "xs",
+                    // Zero gap between sibling rows - each `NavLink`'s own
+                    // left border then reads as one continuous line down
+                    // the section instead of a dashed one.
+                    gap: "0",
                     data,
-                    expanded: expanded(),
-                    onexpandedchange: move |next| expanded.set(next),
-                    selected: Some(current_path.clone()),
-                    onselectedchange: move |id: Option<String>| {
-                        if let Some(id) = id
-                            && !id.starts_with("group:")
-                        {
-                            navigator().push(id);
+                    default_expanded,
+                    render_node: move |args: TreeNodeRenderArgs<SidebarEntry>| {
+                        if args.expanded.is_some() {
+                            return default_tree_render(args);
+                        }
+                        rsx! {
+                            NavLink {
+                                to: NavigationTarget::Internal(args.id),
+                                // Suppresses the anchor's own native tab
+                                // stop - `Tree`'s roving `<li>` is the only
+                                // one; see `TreeNodeRenderArgs::tabindex`.
+                                tabindex: args.tabindex,
+                                scroll_into_view: true,
+                                // `NavLink` already knows whether it's
+                                // active (it compares `to` against the
+                                // current route itself) and sets its own
+                                // `data-state="active"` - this just adds a
+                                // border reacting to that same state,
+                                // rather than `Tree` tracking "selected"
+                                // at all. `align-self: stretch` overrides
+                                // the row's own `align-items: center`, so
+                                // this spans the row's full height instead
+                                // of just its own text height - otherwise
+                                // the border would stop short top/bottom
+                                // and not read as continuous between rows.
+                                sx: sx()
+                                    .align_self("stretch")
+                                    .border_left(format!(
+                                        "2px solid {}",
+                                        ColorCss::GREY.value(ColorShade::S3),
+                                    ))
+                                    .when(
+                                        "active",
+                                        sx().border_left(format!(
+                                            "2px solid {}",
+                                            ColorCss::PRIMARY.value(ColorShade::S6),
+                                        )),
+                                    ),
+                                "{args.data.label}"
+                            }
                         }
                     },
                 }

@@ -11,4 +11,4 @@ pub(crate) use icon::{icon_base_color, icon_size, icon_variant_sx};
 pub use image::{Image, ImageFit, ImageProps};
 pub use list::{List, ListItem, ListItemProps, ListProps};
 pub use qr_code::QrCode;
-pub use tree::{Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps};
+pub use tree::{Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps, default_tree_render};

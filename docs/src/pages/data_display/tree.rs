@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Icon, Text, Title, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs},
-    hooks::use_tree_state,
+    components::{
+        Box, Code, Flex, Icon, Text, Title, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        default_tree_render,
+    },
+    sx::sx,
 };
 
 use crate::icons::{FileIcon, FolderIcon};
@@ -107,8 +110,8 @@ fn category_tree() -> Vec<TreeNode<String>> {
 
 #[component]
 pub fn TreePage() -> Element {
-    let basic = use_tree_state();
-    let files = use_tree_state();
+    let mut basic_selected = use_signal(|| None::<String>);
+    let mut files_selected = use_signal(|| None::<String>);
 
     rsx! {
         Flex {
@@ -135,6 +138,19 @@ pub fn TreePage() -> Element {
                     " already implements it, so a plain tree needs nothing further."
                 }
                 Text {
+                    "Which nodes are expanded is "
+                    Code { "Tree" }
+                    "'s own business, not the caller's - "
+                    Code { "default_expanded" }
+                    " only seeds the initial state. Selection and what happens on click, "
+                    "though, are entirely "
+                    Code { "render_node" }
+                    "'s call: "
+                    Code { "Tree" }
+                    " doesn't assume clicking a leaf means \"select it\" - a leaf might just "
+                    "as well be a real link (see the sidebar on this page for that case)."
+                }
+                Text {
                     "Fully keyboard-navigable: arrow keys move between visible rows, "
                     Code { "Left" }
                     "/"
@@ -143,16 +159,7 @@ pub fn TreePage() -> Element {
                     Code { "Home" }
                     "/"
                     Code { "End" }
-                    " jump to the first/last row, and typing a letter jumps to the next "
-                    "match. "
-                    Code { "Tree" }
-                    " is fully controlled - "
-                    Code { "use_tree_state()" }
-                    " is a small convenience wrapper for the common case, wiring up the "
-                    Code { "expanded" }
-                    "/"
-                    Code { "selected" }
-                    " state for you."
+                    " jump to the first/last row, and typing a letter jumps to the next match."
                 }
             }
 
@@ -160,14 +167,45 @@ pub fn TreePage() -> Element {
                 direction: "column",
                 gap: "8px",
                 Title { variant: "h2", "Basic" }
-                Text { "Plain " Code { "String" } " data - no " Code { "render_node" } " needed." }
+                Text {
+                    "Plain "
+                    Code { "String" }
+                    " data. Branches use "
+                    Code { "Tree" }
+                    "'s own default rendering; leaves add a click handler that sets "
+                    Code { "basic_selected" }
+                    " - selection is this page's own state, not "
+                    Code { "Tree" }
+                    "'s."
+                }
                 Tree {
                     aria_label: "Component categories",
                     data: category_tree(),
-                    expanded: basic.expanded(),
-                    onexpandedchange: move |expanded| basic.set_expanded(expanded),
-                    selected: basic.selected(),
-                    onselectedchange: move |selected| basic.set_selected(selected),
+                    render_node: move |args: TreeNodeRenderArgs<String>| {
+                        if args.expanded.is_some() {
+                            return default_tree_render(args);
+                        }
+                        rsx! {
+                            Box {
+                                component: "button",
+                                r#type: "button",
+                                // A real `<button>`, not a `<div onclick>` -
+                                // gets real keyboard/click semantics for
+                                // free, and `Tree`'s own Enter/Space
+                                // handling looks for exactly this (an `a`
+                                // or a `button`) to trigger.
+                                sx: sx()
+                                    .border("none")
+                                    .background("none")
+                                    .padding("6px 0")
+                                    .color("inherit")
+                                    .cursor("pointer"),
+                                tabindex: args.tabindex,
+                                onclick: move |_| basic_selected.set(Some(args.id.clone())),
+                                "{args.data}"
+                            }
+                        }
+                    },
                 }
             }
 
@@ -180,17 +218,11 @@ pub fn TreePage() -> Element {
                     Code { "render_node" }
                     " closure gets the node's own data plus its live "
                     Code { "expanded" }
-                    "/"
-                    Code { "selected" }
                     " state, so content - like which folder icon to show - can react to it."
                 }
                 Tree {
                     aria_label: "Project files",
                     data: file_tree(),
-                    expanded: files.expanded(),
-                    onexpandedchange: move |expanded| files.set_expanded(expanded),
-                    selected: files.selected(),
-                    onselectedchange: move |selected| files.set_selected(selected),
                     render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
                         let icon = if args.data.kind == FileKind::Folder {
                             rsx! {
@@ -201,13 +233,29 @@ pub fn TreePage() -> Element {
                                 Icon { variant: "transparent", size: "sm", color: "grey.6", FileIcon {} }
                             }
                         };
+                        let id = args.id.clone();
                         rsx! {
-                            {icon}
-                            "{args.data.name}"
+                            Box {
+                                component: "button",
+                                r#type: "button",
+                                sx: sx()
+                                    .display("flex")
+                                    .align_items("center")
+                                    .gap("6px")
+                                    .border("none")
+                                    .background("none")
+                                    .padding("6px 0")
+                                    .color("inherit")
+                                    .cursor("pointer"),
+                                tabindex: args.tabindex,
+                                onclick: move |_| files_selected.set(Some(id.clone())),
+                                {icon}
+                                "{args.data.name}"
+                            }
                         }
                     },
                 }
-                if let Some(selected) = files.selected() {
+                if let Some(selected) = files_selected() {
                     Text { "Selected: " Code { "{selected}" } }
                 }
             }
