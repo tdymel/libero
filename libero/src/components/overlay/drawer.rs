@@ -234,8 +234,17 @@ pub fn Drawer(props: DrawerProps) -> Element {
         };
     }
 
-    let dialog_sx = temporary_dialog_sx(anchor, props.size.as_ref());
+    let dynamic_sx = temporary_dialog_sx(anchor, props.size.as_ref())
+        .apply_if(props.z_index.as_ref(), |sx, z_index| {
+            sx.z_index(z_index.clone())
+        });
+    let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
+    let class = class_list([props.class.clone(), dynamic_class]);
+
     let onclose = props.onclose;
+    let sx = props.sx.clone();
+    let states = props.states.clone();
+    let attributes = props.attributes.clone();
     let children = props.children.clone();
 
     use_portal(move || {
@@ -243,7 +252,10 @@ pub fn Drawer(props: DrawerProps) -> Element {
             Modal {
                 onclose: move |_| onclose.call(()),
                 Dialog {
-                    sx: dialog_sx.clone(),
+                    class: class.clone(),
+                    sx: sx.clone(),
+                    states: states.clone(),
+                    attributes: attributes.clone(),
                     {children.clone()}
                 }
             }
