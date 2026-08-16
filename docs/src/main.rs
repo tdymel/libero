@@ -200,7 +200,19 @@ fn AppShell() -> Element {
                         .flex("1")
                         .align_self("flex-start")
                         .height("auto")
-                        .padding("48px 64px"),
+                        // A flex item's default `min-width: auto` means "at
+                        // least my content's min-content width" - here
+                        // that's whichever single code line on the page is
+                        // longest, which can easily exceed the row's actual
+                        // available space. Without this, Container refuses
+                        // to shrink past that width, so the *row* scrolls
+                        // horizontally instead of just that one code block
+                        // scrolling internally like it's meant to.
+                        .min_width("0")
+                        // Mobile has no room to spare for the desktop
+                        // padding - shrink it there, restore it from `Sm` up.
+                        .padding("24px 16px")
+                        .breakpoint(Size::Sm, sx().padding("48px 64px")),
                     Outlet::<Route> {}
                 }
             }
