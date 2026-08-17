@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, HtmlTag, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, HtmlTag, Input, States, common::base_props},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, Size, SizeCss},
 };
@@ -155,7 +152,7 @@ pub fn Header(props: HeaderProps) -> Element {
     rsx! {
         Box {
             component: HtmlTag::Header,
-            class: class_list([props.class, dynamic_class]),
+            class: props.class.unwrap_or_default().with(dynamic_class),
             sx: props.sx,
             states: props.states,
             framework_sx: &HEADER_BASE_SX,

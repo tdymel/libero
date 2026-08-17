@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Input, States, common::base_props},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue},
@@ -64,7 +61,7 @@ pub fn Mark(props: MarkProps) -> Element {
     rsx! {
         Box {
             component: "mark",
-            class: class_list([props.class, dynamic_class]),
+            class: props.class.unwrap_or_default().with(dynamic_class),
             sx: props.sx,
             states: props.states,
             framework_sx: &MARK_BASE_SX,

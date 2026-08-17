@@ -7,7 +7,9 @@
 /// Expands at the call site (ordinary `macro_rules!` path resolution, not
 /// definition-site hygiene) - relies on `Props`/`Attribute` (from `dioxus::
 /// prelude::*`) and `Input`/`States`/`Sx` already being in scope there,
-/// which every component file needs anyway for its own fields.
+/// which every component file needs anyway for its own fields (`ClassList`
+/// is fully qualified here instead, since not every file has a reason to
+/// import it on its own).
 ///
 /// ```ignore
 /// base_props! {
@@ -48,8 +50,8 @@ macro_rules! base_props {
         $vis struct $name {
             #[props(extends = GlobalAttributes, $(extends = $extra_extends),+)]
             attributes: Vec<Attribute>,
-            #[props(default)]
-            class: Option<String>,
+            #[props(default, into)]
+            class: Input<crate::components::ClassList>,
             #[props(default, into)]
             sx: Input<Sx>,
             #[props(default, into)]
@@ -69,8 +71,8 @@ macro_rules! base_props {
         $vis struct $name {
             #[props(extends = GlobalAttributes)]
             attributes: Vec<Attribute>,
-            #[props(default)]
-            class: Option<String>,
+            #[props(default, into)]
+            class: Input<crate::components::ClassList>,
             #[props(default, into)]
             sx: Input<Sx>,
             #[props(default, into)]

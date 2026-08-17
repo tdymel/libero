@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         Box, Input, States,
-        common::{base_props, class_list, focus_ring_sx},
+        common::{base_props, focus_ring_sx},
         navigation::InternalAnchor,
     },
     hooks::{use_css, use_theme},
@@ -278,7 +278,11 @@ pub fn Button(props: ButtonProps) -> Element {
         })
         .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
     let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
-    let class = class_list([props.class, size_class, dynamic_class]);
+    let class = props
+        .class
+        .unwrap_or_default()
+        .with(size_class)
+        .with(dynamic_class);
 
     let states = props
         .states

@@ -1,5 +1,5 @@
 use crate::{
-    components::States,
+    components::{ClassList, States},
     sx::{StaticSx, Sx},
 };
 
@@ -63,6 +63,42 @@ impl From<Option<Sx>> for Input<Sx> {
 impl From<&'static StaticSx> for Input<Sx> {
     fn from(value: &'static StaticSx) -> Self {
         Self::Static(value)
+    }
+}
+
+impl From<ClassList> for Input<ClassList> {
+    fn from(value: ClassList) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<Option<ClassList>> for Input<ClassList> {
+    fn from(value: Option<ClassList>) -> Self {
+        match value {
+            Some(value) => Self::Value(value),
+            None => Self::None,
+        }
+    }
+}
+
+impl From<Option<String>> for Input<ClassList> {
+    fn from(value: Option<String>) -> Self {
+        match value {
+            Some(value) => Self::Value(ClassList::from(value)),
+            None => Self::None,
+        }
+    }
+}
+
+impl From<&str> for Input<ClassList> {
+    fn from(value: &str) -> Self {
+        Self::Value(ClassList::from(value))
+    }
+}
+
+impl From<String> for Input<ClassList> {
+    fn from(value: String) -> Self {
+        Self::Value(ClassList::from(value))
     }
 }
 

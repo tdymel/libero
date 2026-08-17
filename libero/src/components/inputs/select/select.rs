@@ -84,7 +84,7 @@ pub fn Select(props: SelectProps) -> Element {
     // `class`/`sx` land on the wrapper (the element that actually participates
     // in a parent flex/grid layout - e.g. `margin-left: auto`), not on the
     // inner select, which only ever carries its own visual chrome.
-    let select_class = class_list([size_class, dynamic_class]);
+    let select_class = class_list().with(size_class).with(dynamic_class);
 
     // `<option>`s come from `props.children` - a dynamic node mounted in the
     // same pass as `<select>` itself, so on the *creating* render there's no

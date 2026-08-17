@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, FocusTrap, Input, Overlay, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, FocusTrap, Input, Overlay, States, common::base_props},
     context::ModalContext,
     hooks::{use_css, use_modal_z_index},
     sx::{StaticSx, Sx, sx},
@@ -51,7 +48,7 @@ pub fn Modal(props: ModalProps) -> Element {
     let z_index = use_modal_z_index();
 
     let dynamic_class = use_css(&sx().z_index(z_index), crate::CssLayer::UserDynamic);
-    let class = class_list([props.class, dynamic_class]);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
 
     // Deferred to the next microtask: closing synchronously (from an event
     // still bubbling through the modal being torn down) can re-enter the

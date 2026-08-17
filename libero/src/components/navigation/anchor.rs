@@ -2,10 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::{
-        Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Input, States, common::base_props},
     hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, TextDefaults},
@@ -113,7 +110,7 @@ base_props! {
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
     let dynamic_class = use_css(&anchor_dynamic_sx(&props), CssLayer::UserDynamic);
-    let class = class_list([props.class, dynamic_class]);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
 
     rsx! {
         InternalAnchor {

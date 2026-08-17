@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         Box, Input, States,
-        common::{attr, base_props, class_list},
+        common::{attr, base_props},
     },
     hooks::use_css,
     sx::{StaticSx, Sx},
@@ -43,7 +43,11 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         .sx
         .as_ref()
         .and_then(|sx| use_css(sx, CssLayer::UserStatic));
-    let class = class_list([props.class, framework_class, static_class]);
+    let class = props
+        .class
+        .unwrap_or_default()
+        .with(framework_class)
+        .with(static_class);
 
     let is_blank = props.target.as_deref() == Some("_blank");
     let router_can_handle_target = props.target.is_none() || is_blank;
@@ -59,7 +63,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         return rsx! {
             Link {
                 to: props.to,
-                class,
+                class: Some(class.to_string()),
                 new_tab: is_blank,
                 onmounted: move |event| props.onmounted.call(event),
                 attributes,

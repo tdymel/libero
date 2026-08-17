@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Input, States, common::base_props},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, DividerDefaults},
 };
@@ -200,7 +197,7 @@ pub fn Divider(props: DividerProps) -> Element {
         crate::CssLayer::UserDynamic,
     );
 
-    let class = class_list([props.class, dynamic_class]);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
     let data_state = divider_states.data_state();
     let aria_orientation = vertical.then_some("vertical");
 

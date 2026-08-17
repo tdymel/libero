@@ -2,10 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::{
-        Box, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Input, States, common::base_props},
     hooks::{use_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, Size, SizeCss},
@@ -115,7 +112,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
 
     let dynamic_sx = nav_link_dynamic_sx(is_active, props.color.as_ref(), theme.nav_link.color);
     let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
-    let class = class_list([props.class, dynamic_class]);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
     let states = props
         .states
         .as_ref()

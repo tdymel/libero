@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Input, States, common::base_props},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ListDefaults, Size},
@@ -55,7 +52,7 @@ pub fn List(props: ListProps) -> Element {
     rsx! {
         Box {
             component: "ul",
-            class: class_list([props.class, size_class]),
+            class: props.class.unwrap_or_default().with(size_class),
             sx: props.sx,
             states: props.states,
             framework_sx: &LIST_BASE_SX,

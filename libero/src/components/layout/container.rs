@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, HtmlTag, Input, States,
-        common::{base_props, class_list, focus_ring_sx},
+        common::{base_props, focus_ring_sx},
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::ContainerDefaults,
@@ -47,7 +47,7 @@ pub fn Container(props: ContainerProps) -> Element {
     rsx! {
         Box {
             component: props.component,
-            class: class_list([props.class, dynamic_class]),
+            class: props.class.unwrap_or_default().with(dynamic_class),
             sx: props.sx,
             states: props.states,
             framework_sx: &CONTAINER_BASE_SX,

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States,
-        common::{base_props, class_list, focus_ring_sx},
+        common::{base_props, focus_ring_sx},
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::FlexDefaults,
@@ -76,7 +76,7 @@ pub fn Flex(props: FlexProps) -> Element {
 
     rsx! {
         Box {
-            class: class_list([props.class, dynamic_class]),
+            class: props.class.unwrap_or_default().with(dynamic_class),
             sx: props.sx,
             states: props.states,
             framework_sx: flex_base_sx,

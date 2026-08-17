@@ -66,11 +66,12 @@ macro_rules! html_tags {
         /// needs to spread it, not name each event it might contain.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
-            class: Option<String>,
+            class: crate::components::ClassList,
             data_state: Option<String>,
             attributes: Vec<Attribute>,
             children: Element,
         ) -> Element {
+            let class = class.to_string();
             match component {
                 $(HtmlTag::$variant => rsx! {
                     $tag {

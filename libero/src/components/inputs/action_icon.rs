@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, IconVariant, Input, States,
-        common::{base_props, class_list},
+        common::base_props,
         data_display::{icon_base_color, icon_size, icon_variant_sx},
         navigation::InternalAnchor,
     },
@@ -123,7 +123,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         &action_icon_dynamic_sx(props.variant, props.color, props.size, props.radius),
         crate::CssLayer::UserDynamic,
     );
-    let class = class_list([props.class, dynamic_class]);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
     let states = props
         .states
         .as_ref()

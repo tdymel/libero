@@ -154,7 +154,12 @@ pub fn Image(props: ImageProps) -> Element {
     let decorative_role = props.alt.is_empty().then_some("presentation");
 
     if !props.zoomable {
-        let class = class_list([props.class, framework_class, dynamic_class, static_class]);
+        let class = props
+            .class
+            .unwrap_or_default()
+            .with(framework_class)
+            .with(dynamic_class)
+            .with(static_class);
         return rsx! {
             Box {
                 component: "img",
@@ -169,7 +174,7 @@ pub fn Image(props: ImageProps) -> Element {
         };
     }
 
-    let img_class = class_list([framework_class, dynamic_class]);
+    let img_class = class_list().with(framework_class).with(dynamic_class);
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
     let mut focus_return = use_focus_return();
@@ -181,12 +186,12 @@ pub fn Image(props: ImageProps) -> Element {
     let cursor = if zoomed() { "zoom-out" } else { "zoom-in" };
     let button_framework_class = use_css(&ZOOM_BUTTON_SX, CssLayer::Framework);
     let button_dynamic_class = use_css(&sx().cursor(cursor), CssLayer::UserDynamic);
-    let button_class = class_list([
-        props.class,
-        button_framework_class,
-        button_dynamic_class,
-        static_class,
-    ]);
+    let button_class = props
+        .class
+        .unwrap_or_default()
+        .with(button_framework_class)
+        .with(button_dynamic_class)
+        .with(static_class);
 
     let label = match (props.alt.is_empty(), zoomed()) {
         (true, false) => "Zoom in".to_string(),
@@ -197,8 +202,9 @@ pub fn Image(props: ImageProps) -> Element {
 
     let overlay_button_framework_class = use_css(&ZOOM_OVERLAY_BUTTON_SX, CssLayer::Framework);
     let overlay_button_cursor_class = use_css(&sx().cursor("zoom-out"), CssLayer::UserDynamic);
-    let overlay_button_class =
-        class_list([overlay_button_framework_class, overlay_button_cursor_class]);
+    let overlay_button_class = class_list()
+        .with(overlay_button_framework_class)
+        .with(overlay_button_cursor_class);
     let overlay_image_class = use_css(&ZOOM_OVERLAY_IMAGE_SX, CssLayer::Framework);
 
     let portal_content = zoomed().then(|| {

@@ -14,20 +14,6 @@ pub(crate) fn attr<T>(
     dioxus::prelude::Attribute::new(name, value, None, false)
 }
 
-pub(crate) fn class_list(classes: impl IntoIterator<Item = Option<String>>) -> Option<String> {
-    let classes = classes
-        .into_iter()
-        .flatten()
-        .filter(|class| !class.is_empty())
-        .collect::<Vec<_>>();
-
-    if classes.is_empty() {
-        None
-    } else {
-        Some(classes.join(" "))
-    }
-}
-
 /// Standard `:focus-visible` ring - contrasts against whichever ancestor
 /// most recently set a background (via `--lsx-focus-contrast`, published by
 /// `background()`; see `ThemeAwareValue::focus_contrast`), falling back to

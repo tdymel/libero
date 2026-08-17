@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Input, States, common::base_props},
     hooks::{use_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{DataListDefaults, Size},
@@ -108,7 +105,7 @@ pub fn DataList(props: DataListProps) -> Element {
     rsx! {
         Box {
             component: "dl",
-            class: class_list([props.class, size_class, dynamic_class]),
+            class: props.class.unwrap_or_default().with(size_class).with(dynamic_class),
             sx: props.sx,
             states: props.states,
             framework_sx,

@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, States,
-        common::{attr, class_list, focus_ring_sx, render_polymorphic},
+        ClassList, HtmlTag, Input, States,
+        common::{attr, focus_ring_sx, render_polymorphic},
     },
     hooks::use_css,
     sx::{StaticSx, Sx, sx},
@@ -22,8 +22,8 @@ pub struct BoxProps {
     /// plain attributes, so `Box` doesn't curate its own allowlist of them.
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
+    #[props(default, into)]
+    class: Input<ClassList>,
     #[props(default, into)]
     sx: Input<Sx>,
     #[props(default, into)]
@@ -67,7 +67,12 @@ pub fn Box(props: BoxProps) -> Element {
 
     let data_state = props.states.as_ref().and_then(States::data_state);
 
-    let class = class_list([props.class, framework_class, focus_class, static_class]);
+    let class = props
+        .class
+        .unwrap_or_default()
+        .with(framework_class)
+        .with(focus_class)
+        .with(static_class);
     let component = props.component.as_ref().copied().unwrap_or_default();
 
     let attributes = props

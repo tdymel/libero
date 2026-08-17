@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Input, States, common::base_props},
     context::ModalContext,
     hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -158,7 +155,7 @@ pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();
 
     let dynamic_class = use_css(&dialog_dynamic_sx(&props), crate::CssLayer::UserDynamic);
-    let class = class_list([props.class, dynamic_class]);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
 
     rsx! {
         Box {

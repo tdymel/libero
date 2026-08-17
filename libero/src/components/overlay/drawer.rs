@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, Dialog, Input, Modal, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, Dialog, Input, Modal, States, common::base_props},
     hooks::use_css,
     hooks::use_portal,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -209,7 +206,7 @@ pub fn Drawer(props: DrawerProps) -> Element {
                 sx.z_index(z_index.clone())
             });
         let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-        let class = class_list([props.class, dynamic_class]);
+        let class = props.class.unwrap_or_default().with(dynamic_class);
 
         return rsx! {
             Box {
@@ -235,7 +232,7 @@ pub fn Drawer(props: DrawerProps) -> Element {
             sx.z_index(z_index.clone())
         });
     let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-    let class = class_list([props.class.clone(), dynamic_class]);
+    let class = props.class.clone().unwrap_or_default().with(dynamic_class);
 
     let onclose = props.onclose;
     let sx = props.sx.clone();

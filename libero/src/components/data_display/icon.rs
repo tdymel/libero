@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, HtmlTag, Input, States,
-        common::{base_props, class_list},
-    },
+    components::{Box, HtmlTag, Input, States, common::base_props},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, Size, SizeCss},
 };
@@ -160,7 +157,7 @@ pub fn Icon(props: IconProps) -> Element {
     rsx! {
         Box {
             component,
-            class: class_list([props.class, dynamic_class]),
+            class: props.class.unwrap_or_default().with(dynamic_class),
             sx: props.sx,
             states: props.states,
             framework_sx: &ICON_BASE_SX,
