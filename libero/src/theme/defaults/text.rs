@@ -1,34 +1,14 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size, Sizes};
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const TEXT_FONT_FAMILY: CssVar = CssVar::new("--lsx-text-font-family");
 
-pub const TEXT_FONT_WEIGHT_XS: CssVar = CssVar::new("--lsx-text-font-weight-xs");
-pub const TEXT_FONT_SIZE_XS: CssVar = CssVar::new("--lsx-text-font-size-xs");
-pub const TEXT_LETTER_SPACING_XS: CssVar = CssVar::new("--lsx-text-letter-spacing-xs");
-pub const TEXT_LINE_HEIGHT_XS: CssVar = CssVar::new("--lsx-text-line-height-xs");
-
-pub const TEXT_FONT_WEIGHT_SM: CssVar = CssVar::new("--lsx-text-font-weight-sm");
-pub const TEXT_FONT_SIZE_SM: CssVar = CssVar::new("--lsx-text-font-size-sm");
-pub const TEXT_LETTER_SPACING_SM: CssVar = CssVar::new("--lsx-text-letter-spacing-sm");
-pub const TEXT_LINE_HEIGHT_SM: CssVar = CssVar::new("--lsx-text-line-height-sm");
-
-pub const TEXT_FONT_WEIGHT_MD: CssVar = CssVar::new("--lsx-text-font-weight-md");
-pub const TEXT_FONT_SIZE_MD: CssVar = CssVar::new("--lsx-text-font-size-md");
-pub const TEXT_LETTER_SPACING_MD: CssVar = CssVar::new("--lsx-text-letter-spacing-md");
-pub const TEXT_LINE_HEIGHT_MD: CssVar = CssVar::new("--lsx-text-line-height-md");
-
-pub const TEXT_FONT_WEIGHT_LG: CssVar = CssVar::new("--lsx-text-font-weight-lg");
-pub const TEXT_FONT_SIZE_LG: CssVar = CssVar::new("--lsx-text-font-size-lg");
-pub const TEXT_LETTER_SPACING_LG: CssVar = CssVar::new("--lsx-text-letter-spacing-lg");
-pub const TEXT_LINE_HEIGHT_LG: CssVar = CssVar::new("--lsx-text-line-height-lg");
-
-pub const TEXT_FONT_WEIGHT_XL: CssVar = CssVar::new("--lsx-text-font-weight-xl");
-pub const TEXT_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-text-font-size-xl");
-pub const TEXT_LETTER_SPACING_XL: CssVar = CssVar::new("--lsx-text-letter-spacing-xl");
-pub const TEXT_LINE_HEIGHT_XL: CssVar = CssVar::new("--lsx-text-line-height-xl");
+pub const TEXT_FONT_WEIGHT: SizeCss = SizeCss::new("--lsx-text-font-weight-");
+pub const TEXT_FONT_SIZE: SizeCss = SizeCss::new("--lsx-text-font-size-");
+pub const TEXT_LETTER_SPACING: SizeCss = SizeCss::new("--lsx-text-letter-spacing-");
+pub const TEXT_LINE_HEIGHT: SizeCss = SizeCss::new("--lsx-text-line-height-");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextSize {
@@ -65,94 +45,41 @@ impl TextDefaults {
         Self { font_family, sizes }
     }
 
-    pub fn xs_sx() -> Sx {
-        sx().font_family(TEXT_FONT_FAMILY.value())
-            .font_size(TEXT_FONT_SIZE_XS.value())
-            .font_weight(TEXT_FONT_WEIGHT_XS.value())
-            .letter_spacing(TEXT_LETTER_SPACING_XS.value())
-            .line_height(TEXT_LINE_HEIGHT_XS.value())
+    /// Font-size/weight/letter-spacing/line-height for `size` - everything
+    /// about a `Text` that actually varies by size. Font-family doesn't, so
+    /// it's not part of this - see `TEXT_FONT_FAMILY`.
+    pub fn size_sx(size: Size) -> Sx {
+        sx().font_size(TEXT_FONT_SIZE.value(size))
+            .font_weight(TEXT_FONT_WEIGHT.value(size))
+            .letter_spacing(TEXT_LETTER_SPACING.value(size))
+            .line_height(TEXT_LINE_HEIGHT.value(size))
     }
 
-    pub fn sm_sx() -> Sx {
-        sx().font_family(TEXT_FONT_FAMILY.value())
-            .font_size(TEXT_FONT_SIZE_SM.value())
-            .font_weight(TEXT_FONT_WEIGHT_SM.value())
-            .letter_spacing(TEXT_LETTER_SPACING_SM.value())
-            .line_height(TEXT_LINE_HEIGHT_SM.value())
-    }
-
-    pub fn md_sx() -> Sx {
-        sx().font_family(TEXT_FONT_FAMILY.value())
-            .font_size(TEXT_FONT_SIZE_MD.value())
-            .font_weight(TEXT_FONT_WEIGHT_MD.value())
-            .letter_spacing(TEXT_LETTER_SPACING_MD.value())
-            .line_height(TEXT_LINE_HEIGHT_MD.value())
-    }
-
-    pub fn lg_sx() -> Sx {
-        sx().font_family(TEXT_FONT_FAMILY.value())
-            .font_size(TEXT_FONT_SIZE_LG.value())
-            .font_weight(TEXT_FONT_WEIGHT_LG.value())
-            .letter_spacing(TEXT_LETTER_SPACING_LG.value())
-            .line_height(TEXT_LINE_HEIGHT_LG.value())
-    }
-
-    pub fn xl_sx() -> Sx {
-        sx().font_family(TEXT_FONT_FAMILY.value())
-            .font_size(TEXT_FONT_SIZE_XL.value())
-            .font_weight(TEXT_FONT_WEIGHT_XL.value())
-            .letter_spacing(TEXT_LETTER_SPACING_XL.value())
-            .line_height(TEXT_LINE_HEIGHT_XL.value())
+    /// Font-family plus every size's declarations at once, each size gated
+    /// behind its own `[data-state~="size-md"]`-style selector (see
+    /// `Size::state_name`) - one static/framework `Sx` that every `Text`
+    /// instance shares regardless of which size it's actually using; only
+    /// the `data-state` attribute (set per-instance) picks which size block
+    /// applies, so choosing a size never costs a new dynamically-generated
+    /// CSS class.
+    pub fn theme_vars() -> Sx {
+        Size::ALL
+            .into_iter()
+            .fold(sx().font_family(TEXT_FONT_FAMILY.value()), |base, size| {
+                base.when(size.state_name(), Self::size_sx(size))
+            })
     }
 }
 
 impl ToCssDeclarations for TextDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let vars = [
-            (
-                Size::Xs,
-                TEXT_FONT_WEIGHT_XS,
-                TEXT_FONT_SIZE_XS,
-                TEXT_LETTER_SPACING_XS,
-                TEXT_LINE_HEIGHT_XS,
-            ),
-            (
-                Size::Sm,
-                TEXT_FONT_WEIGHT_SM,
-                TEXT_FONT_SIZE_SM,
-                TEXT_LETTER_SPACING_SM,
-                TEXT_LINE_HEIGHT_SM,
-            ),
-            (
-                Size::Md,
-                TEXT_FONT_WEIGHT_MD,
-                TEXT_FONT_SIZE_MD,
-                TEXT_LETTER_SPACING_MD,
-                TEXT_LINE_HEIGHT_MD,
-            ),
-            (
-                Size::Lg,
-                TEXT_FONT_WEIGHT_LG,
-                TEXT_FONT_SIZE_LG,
-                TEXT_LETTER_SPACING_LG,
-                TEXT_LINE_HEIGHT_LG,
-            ),
-            (
-                Size::Xl,
-                TEXT_FONT_WEIGHT_XL,
-                TEXT_FONT_SIZE_XL,
-                TEXT_LETTER_SPACING_XL,
-                TEXT_LINE_HEIGHT_XL,
-            ),
-        ];
-
         let mut declarations = vec![TEXT_FONT_FAMILY.declare(self.font_family)];
-        for (size, weight_var, size_var, spacing_var, height_var) in vars {
+        for size in Size::ALL {
             let level = self.sizes.get(size);
-            declarations.push(weight_var.declare(level.font_weight));
-            declarations.push(size_var.declare(level.font_size));
-            declarations.push(spacing_var.declare(level.letter_spacing));
-            declarations.push(height_var.declare(level.line_height));
+            declarations.push(TEXT_FONT_WEIGHT.declare(size, level.font_weight));
+            declarations.push(TEXT_FONT_SIZE.declare(size, level.font_size));
+            declarations.push(TEXT_LETTER_SPACING.declare(size, level.letter_spacing));
+            declarations.push(TEXT_LINE_HEIGHT.declare(size, level.line_height));
         }
         declarations
     }

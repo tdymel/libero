@@ -5,7 +5,7 @@ use crate::{
     components::{Input, States, common::base_props},
     hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Size, TextDefaults},
+    theme::{Size, TEXT_FONT_FAMILY, TextDefaults},
 };
 
 use super::InternalAnchor;
@@ -57,14 +57,13 @@ static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| sx().color("primary.6"));
 // component, since Text has no href/target/rel escape hatch to render a real
 // anchor with.
 fn anchor_size_sx(size: &ThemeAwareValue) -> Sx {
-    match size {
-        ThemeAwareValue::Size(Size::Xs) => TextDefaults::xs_sx(),
-        ThemeAwareValue::Size(Size::Sm) => TextDefaults::sm_sx(),
-        ThemeAwareValue::Size(Size::Lg) => TextDefaults::lg_sx(),
-        ThemeAwareValue::Size(Size::Xl) => TextDefaults::xl_sx(),
-        _ => TextDefaults::md_sx(),
-    }
-    .margin("0")
+    let size = match size {
+        ThemeAwareValue::Size(size) => *size,
+        _ => Size::Md,
+    };
+    TextDefaults::size_sx(size)
+        .font_family(TEXT_FONT_FAMILY.value())
+        .margin("0")
 }
 
 fn underline_sx(underline: AnchorUnderline) -> Sx {

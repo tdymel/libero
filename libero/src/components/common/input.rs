@@ -1,6 +1,7 @@
 use crate::{
     components::{ClassList, States},
     sx::{StaticSx, Sx},
+    theme::Size,
 };
 
 use crate::sx::ThemeAwareValue;
@@ -99,6 +100,24 @@ impl From<&str> for Input<ClassList> {
 impl From<String> for Input<ClassList> {
     fn from(value: String) -> Self {
         Self::Value(ClassList::from(value))
+    }
+}
+
+impl From<Size> for Input<Size> {
+    fn from(value: Size) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<&str> for Input<Size> {
+    fn from(value: &str) -> Self {
+        Self::Value(Size::from(value))
+    }
+}
+
+impl From<String> for Input<Size> {
+    fn from(value: String) -> Self {
+        Self::Value(Size::from(value))
     }
 }
 

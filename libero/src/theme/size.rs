@@ -41,4 +41,29 @@ impl Size {
             Self::Xl => "88rem",
         }
     }
+
+    /// The `data-state` token representing this size - `"size-md"` etc.
+    /// For components that gate size-specific CSS behind
+    /// `[data-state~="..."]` instead of generating a new class per size.
+    pub const fn state_name(&self) -> &'static str {
+        match self {
+            Self::Xs => "size-xs",
+            Self::Sm => "size-sm",
+            Self::Md => "size-md",
+            Self::Lg => "size-lg",
+            Self::Xl => "size-xl",
+        }
+    }
+}
+
+impl From<&str> for Size {
+    fn from(value: &str) -> Self {
+        Self::parse_dynamic(value).unwrap_or(Self::Md)
+    }
+}
+
+impl From<String> for Size {
+    fn from(value: String) -> Self {
+        Self::from(value.as_str())
+    }
 }

@@ -1,9 +1,9 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
-    BUTTON_RIPPLE_KEYFRAMES, Color, ColorShade, ColorValue, HexColor, NamedColorCss, SizeCss,
-    TEXT_FONT_FAMILY, TEXT_FONT_SIZE_MD, TEXT_FONT_WEIGHT_MD, TEXT_LETTER_SPACING_MD,
-    TEXT_LINE_HEIGHT_MD, Theme,
+    BUTTON_RIPPLE_KEYFRAMES, Color, ColorShade, ColorValue, HexColor, NamedColorCss, Size, SizeCss,
+    TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
+    Theme,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -62,10 +62,10 @@ fn body_scope(theme: &Theme) -> CssScope {
             CssDeclaration::new("background-color", NamedColorCss::WHITE.value()),
             CssDeclaration::new("color", text_color_var),
             CssDeclaration::new("font-family", TEXT_FONT_FAMILY.value()),
-            CssDeclaration::new("font-size", TEXT_FONT_SIZE_MD.value()),
-            CssDeclaration::new("font-weight", TEXT_FONT_WEIGHT_MD.value()),
-            CssDeclaration::new("line-height", TEXT_LINE_HEIGHT_MD.value()),
-            CssDeclaration::new("letter-spacing", TEXT_LETTER_SPACING_MD.value()),
+            CssDeclaration::new("font-size", TEXT_FONT_SIZE.value(Size::Md)),
+            CssDeclaration::new("font-weight", TEXT_FONT_WEIGHT.value(Size::Md)),
+            CssDeclaration::new("line-height", TEXT_LINE_HEIGHT.value(Size::Md)),
+            CssDeclaration::new("letter-spacing", TEXT_LETTER_SPACING.value(Size::Md)),
         ],
     )
 }

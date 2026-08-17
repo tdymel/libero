@@ -1,59 +1,25 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, common::base_props},
-    sx::{StaticSx, Sx, ThemeAwareValue},
+    components::{
+        Box, HtmlTag, Input, States,
+        common::{base_props, use_theme_value_context},
+    },
+    sx::{StaticSx, Sx},
     theme::{Size, TextDefaults},
 };
 
-static TEXT_XS_SX: StaticSx = StaticSx::new(|| {
-    TextDefaults::xs_sx()
+static TEXT_BASE_SX: StaticSx = StaticSx::new(|| {
+    TextDefaults::theme_vars()
         .margin("0")
         .padding("0")
         .text_decoration("none")
 });
-static TEXT_SM_SX: StaticSx = StaticSx::new(|| {
-    TextDefaults::sm_sx()
-        .margin("0")
-        .padding("0")
-        .text_decoration("none")
-});
-static TEXT_MD_SX: StaticSx = StaticSx::new(|| {
-    TextDefaults::md_sx()
-        .margin("0")
-        .padding("0")
-        .text_decoration("none")
-});
-static TEXT_LG_SX: StaticSx = StaticSx::new(|| {
-    TextDefaults::lg_sx()
-        .margin("0")
-        .padding("0")
-        .text_decoration("none")
-});
-static TEXT_XL_SX: StaticSx = StaticSx::new(|| {
-    TextDefaults::xl_sx()
-        .margin("0")
-        .padding("0")
-        .text_decoration("none")
-});
-
-fn get_size_sx(size: &ThemeAwareValue) -> &'static StaticSx {
-    match size {
-        ThemeAwareValue::Size(s) => match s {
-            Size::Xs => &TEXT_XS_SX,
-            Size::Sm => &TEXT_SM_SX,
-            Size::Md => &TEXT_MD_SX,
-            Size::Lg => &TEXT_LG_SX,
-            Size::Xl => &TEXT_XL_SX,
-        },
-        _ => &TEXT_MD_SX,
-    }
-}
 
 base_props! {
     pub struct TextProps {
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Size>,
         /// Which element to render as - `p` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
@@ -63,21 +29,28 @@ base_props! {
 
 #[component]
 pub fn Text(props: TextProps) -> Element {
-    let effective_size = props
-        .size
+    let explicit_size = props.size.as_ref().copied();
+
+    let context = use_theme_value_context();
+    let chosen_size = explicit_size.or(context.get_size()).unwrap_or(Size::Md);
+    context.size(chosen_size).provide();
+
+    let states = props
+        .states
         .as_ref()
         .cloned()
-        .unwrap_or_else(|| ThemeAwareValue::String("md".to_string()));
-    let size_sx = get_size_sx(&effective_size);
+        .unwrap_or_default()
+        .with(chosen_size.state_name(), true);
+
     let component = props.component.as_ref().copied().unwrap_or(HtmlTag::P);
 
     rsx! {
         Box {
             class: props.class,
             sx: props.sx,
-            states: props.states,
+            states,
             component,
-            framework_sx: size_sx,
+            framework_sx: &TEXT_BASE_SX,
             attributes: props.attributes,
             {props.children}
         }
