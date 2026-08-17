@@ -4,7 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-dioxus = { version = "0.7.10", default-features = true, features = ["router"] }
+# TEMPORARY: see the matching comment in libero/Cargo.toml - local path dep
+# against .dioxus-fork instead of crates.io, unwind before any real release.
+dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = true, features = ["router"] }
 libero = { path = "../libero", default-features = false, features = [
     "code-lang-rust",
     "code-lang-bash",

@@ -13,7 +13,15 @@ keywords = ["components", "ui", "design-system", "dioxus"]
 categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
-dioxus = { version = "0.7.10", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "router"] }
+# TEMPORARY: local path dep against .dioxus-fork (tracks dioxus main, plus
+# our own still-needed fixes - see .dioxus-fork/BUGS.md) instead of the
+# crates.io 0.7.10 release, so this crate and the `dx` CLI building it are
+# always built from identical source - avoids wire-protocol version-skew
+# bugs between the two (see BUGS.md, "Building docs against main's dx").
+# Unwind back to a crates.io version before any real release - a path dep
+# blocks publishing to crates.io entirely, and .dioxus-fork isn't checked
+# in, so nobody else can build this as-is.
+dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "router"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
 syntect = { version = "5.3.0", default-features = false, features = ["parsing", "regex-fancy", "dump-load"] }
 
