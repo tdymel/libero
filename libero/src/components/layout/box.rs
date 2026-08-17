@@ -80,9 +80,11 @@ pub fn Box(props: BoxProps) -> Element {
     // A caller can also set `onmounted` directly (via `extends =
     // GlobalAttributes`), which lands in `props.attributes` as its own
     // `Attribute`. Pull it out here so it can be merged with `element_ref`'s
-    // own `onmounted` below instead of the two silently overwriting each
-    // other once both are spread onto the same element (dioxus's attribute
-    // diffing keeps only the last-written value for a given name).
+    // own `onmounted` into a single closure below, attached as a real
+    // `onmounted:` field on the rendered tag (see `render_polymorphic`) -
+    // NOT built by hand as an `AttributeValue::Listener` and spread via
+    // `..attributes`, which silently dispatches with the wrong event data
+    // (a dioxus_core bug, reproduced independently of this library).
     let mut attributes = props.attributes;
     let caller_onmounted = attributes
         .iter()
@@ -93,22 +95,14 @@ pub fn Box(props: BoxProps) -> Element {
             _ => None,
         });
 
-    let onmounted = match (props.element_ref, caller_onmounted) {
-        (None, None) => None,
-        (None, Some(listener)) => Some(attr("onmounted", AttributeValue::Listener(listener))),
-        (Some(mut element_ref), None) => Some(attr(
-            "onmounted",
-            AttributeValue::listener(move |event: Event<MountedData>| {
-                element_ref.set(event.data.clone());
-            }),
-        )),
-        (Some(mut element_ref), Some(listener)) => Some(attr(
-            "onmounted",
-            AttributeValue::listener(move |event: Event<MountedData>| {
-                element_ref.set(event.data.clone());
-                listener.call(event.into_any());
-            }),
-        )),
+    let mut element_ref = props.element_ref;
+    let onmounted = move |event: Event<MountedData>| {
+        if let Some(element_ref) = element_ref.as_mut() {
+            element_ref.set(event.data.clone());
+        }
+        if let Some(listener) = &caller_onmounted {
+            listener.call(event.into_any());
+        }
     };
 
     let attributes = attributes
@@ -122,12 +116,18 @@ pub fn Box(props: BoxProps) -> Element {
                 props.value.map(|value| attr("value", value)),
                 props.disabled.map(|value| attr("disabled", value)),
                 props.r#type.map(|value| attr("type", value)),
-                onmounted,
             ]
             .into_iter()
             .flatten(),
         )
         .collect::<Vec<_>>();
 
-    render_polymorphic(component, class, data_state, attributes, props.children)
+    render_polymorphic(
+        component,
+        class,
+        data_state,
+        attributes,
+        onmounted,
+        props.children,
+    )
 }

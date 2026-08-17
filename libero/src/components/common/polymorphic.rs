@@ -57,18 +57,30 @@ macro_rules! html_tags {
             }
         }
 
-        /// Renders `children`/`class`/`data-state`/`attributes` on whichever
-        /// element `component` selects (a runtime value, so this dispatches
-        /// at runtime - each arm is trivial, so that cost is negligible).
-        /// `attributes` carries event handlers too, not just plain
-        /// attributes - `Box`'s own `extends = GlobalAttributes` captures
-        /// whatever event a caller writes generically, so every arm just
-        /// needs to spread it, not name each event it might contain.
+        /// Renders `children`/`class`/`data-state`/`attributes`/`onmounted`
+        /// on whichever element `component` selects (a runtime value, so
+        /// this dispatches at runtime - each arm is trivial, so that cost is
+        /// negligible). `attributes` carries event handlers too, not just
+        /// plain attributes - `Box`'s own `extends = GlobalAttributes`
+        /// captures whatever event a caller writes generically, so every arm
+        /// just needs to spread it, not name each event it might contain.
+        ///
+        /// `onmounted` is its own literal field rather than folded into
+        /// `attributes` - a `dioxus_core::AttributeValue::Listener` built by
+        /// hand in plain Rust code (as opposed to one the `rsx!` macro
+        /// builds itself from an `onmounted: closure` field) silently
+        /// receives the wrong event data when dispatched. Writing it as a
+        /// real field here, like any other `onmounted: closure`, goes
+        /// through the same macro-generated path as a directly-written
+        /// `onmounted:` at a normal call site (already used successfully
+        /// elsewhere - `Select`, `FocusTrap`, `NavLink`, `Image`), which
+        /// does not hit that bug.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
             class: Option<String>,
             data_state: Option<String>,
             attributes: Vec<Attribute>,
+            onmounted: impl FnMut(Event<MountedData>) + 'static,
             children: Element,
         ) -> Element {
             match component {
@@ -76,6 +88,7 @@ macro_rules! html_tags {
                     $tag {
                         class: class,
                         "data-state": data_state,
+                        onmounted: onmounted,
                         ..attributes,
                         {children}
                     }
