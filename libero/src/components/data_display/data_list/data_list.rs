@@ -39,27 +39,7 @@ static DATA_LIST_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
         .and(data_list_reset_sx())
 });
 
-fn get_size_sx(size: Size) -> &'static Sx {
-    static XS: StaticSx = StaticSx::new(DataListDefaults::xs_sx);
-    static SM: StaticSx = StaticSx::new(DataListDefaults::sm_sx);
-    static MD: StaticSx = StaticSx::new(DataListDefaults::md_sx);
-    static LG: StaticSx = StaticSx::new(DataListDefaults::lg_sx);
-    static XL: StaticSx = StaticSx::new(DataListDefaults::xl_sx);
-    static XXL: StaticSx = StaticSx::new(DataListDefaults::xxl_sx);
-
-    match size {
-        Size::Xs => &XS,
-        Size::Sm => &SM,
-        Size::Md => &MD,
-        Size::Lg => &LG,
-        Size::Xl => &XL,
-        Size::Xxl => &XXL,
-    }
-}
-
-fn data_list_dynamic_sx(props: &DataListProps) -> Sx {
-    sx().apply_if(props.gap.as_ref(), |sx, gap| sx.gap(gap.clone()))
-}
+static DATA_LIST_SIZE_SX: StaticSx = StaticSx::new(DataListDefaults::theme_vars);
 
 base_props! {
     pub struct DataListProps {
@@ -68,11 +48,10 @@ base_props! {
         /// the description below it.
         #[props(default, into)]
         orientation: Input<ThemeAwareValue>,
-        /// Overrides the gap between rows - `theme.data_list.size` by default.
+        /// The gap between rows - `theme.data_list.size` by default. For a
+        /// custom (non-scale) gap, use `sx` instead.
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
-        #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        gap: Input<Size>,
         /// [`DataListItem`](super::DataListItem)s - or anything else that
         /// renders `dt`/`dd` content.
         children: Element,
@@ -97,19 +76,22 @@ pub fn DataList(props: DataListProps) -> Element {
         &DATA_LIST_VERTICAL_SX
     };
 
-    let size = match props.size.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => *size,
-        _ => theme.data_list.size,
-    };
-    let size_class = use_css(get_size_sx(size), crate::CssLayer::Framework);
-    let dynamic_class = use_css(&data_list_dynamic_sx(&props), crate::CssLayer::UserDynamic);
+    let gap = props.gap.as_ref().copied().unwrap_or(theme.data_list.size);
+    let size_class = use_css(&DATA_LIST_SIZE_SX, crate::CssLayer::Framework);
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with(gap.state_name(), true);
 
     rsx! {
         Box {
             component: "dl",
-            class: props.class.unwrap_or_default().with(size_class).with(dynamic_class),
+            class: props.class.unwrap_or_default().with(size_class),
             sx: props.sx,
-            states: props.states,
+            states,
             framework_sx,
             attributes: props.attributes,
             {props.children}
