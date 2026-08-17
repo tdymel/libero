@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{base_props, class_list},
+    },
     hooks::{use_css, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, Size, SizeCss},
@@ -65,43 +68,36 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct NavLinkProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// A plain path/URL or a typed route, same as `Anchor::to`.
-    #[props(into)]
-    to: NavigationTarget,
-    #[props(default)]
-    target: Option<String>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    /// Highlights this link with a light background tint. Unset auto-detects
-    /// by comparing `to` against the current route - only ever true for an
-    /// `Internal` target with a router mounted. Set explicitly to override
-    /// (e.g. a parent nav item that should read as active for a whole
-    /// section, or for an `External` target/routerless usage, where
-    /// auto-detection has nothing to compare against and always reads
-    /// `false`).
-    #[props(default)]
-    active: Option<bool>,
-    #[props(default)]
-    disabled: Option<bool>,
-    /// Scrolls this link into view (only if it isn't already visible)
-    /// whenever it becomes active - on mount, or later if a different link
-    /// was active first. Off by default: it's a side effect on whatever
-    /// scrollable container happens to be an ancestor, which only makes
-    /// sense for a handful of call sites (e.g. a sidebar), not every place a
-    /// `NavLink` might get used.
-    #[props(default)]
-    scroll_into_view: Option<bool>,
-    children: Element,
+base_props! {
+    pub struct NavLinkProps {
+        /// A plain path/URL or a typed route, same as `Anchor::to`.
+        #[props(into)]
+        to: NavigationTarget,
+        #[props(default)]
+        target: Option<String>,
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        /// Highlights this link with a light background tint. Unset auto-detects
+        /// by comparing `to` against the current route - only ever true for an
+        /// `Internal` target with a router mounted. Set explicitly to override
+        /// (e.g. a parent nav item that should read as active for a whole
+        /// section, or for an `External` target/routerless usage, where
+        /// auto-detection has nothing to compare against and always reads
+        /// `false`).
+        #[props(default)]
+        active: Option<bool>,
+        #[props(default)]
+        disabled: Option<bool>,
+        /// Scrolls this link into view (only if it isn't already visible)
+        /// whenever it becomes active - on mount, or later if a different link
+        /// was active first. Off by default: it's a side effect on whatever
+        /// scrollable container happens to be an ancestor, which only makes
+        /// sense for a handful of call sites (e.g. a sidebar), not every place a
+        /// `NavLink` might get used.
+        #[props(default)]
+        scroll_into_view: Option<bool>,
+        children: Element,
+    }
 }
 
 /// A navigation list item - `Anchor` plus a themed active/hover background

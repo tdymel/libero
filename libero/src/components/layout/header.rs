@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, common::class_list},
+    components::{
+        Box, HtmlTag, Input, States,
+        common::{base_props, class_list},
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, Size, SizeCss},
 };
@@ -125,28 +128,21 @@ fn header_dynamic_sx(props: &HeaderProps) -> Sx {
         })
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct HeaderProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// `Sticky` (default) stays visible while scrolling with no offset
-    /// needed; `Fixed` is viewport-relative but requires you to offset your
-    /// own content, same caveat as `Drawer`'s `anchor`.
-    #[props(default, into)]
-    position: Input<HeaderPosition>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    z_index: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct HeaderProps {
+        /// `Sticky` (default) stays visible while scrolling with no offset
+        /// needed; `Fixed` is viewport-relative but requires you to offset your
+        /// own content, same caveat as `Drawer`'s `anchor`.
+        #[props(default, into)]
+        position: Input<HeaderPosition>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        z_index: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 /// The page's `banner` landmark - always renders `<header>`. Hosts a nav and

@@ -5,7 +5,7 @@ use fast_qr::convert::{Builder, svg::SvgBuilder};
 use fast_qr::{ECL, QRBuilder};
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, Input, States, common::base_props},
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrRobustness},
@@ -47,23 +47,16 @@ static QR_CODE_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector("& svg", sx().display("block").width("100%").height("100%"))
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct QrCodeProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// The payload encoded into the code.
-    data: String,
-    #[props(default, into)]
-    robustness: Input<QrRobustness>,
-    /// Required - a QR code conveys real information to a sighted/scanning
-    /// user, but nothing to a screen reader without one.
-    aria_label: String,
+base_props! {
+    pub struct QrCodeProps {
+        /// The payload encoded into the code.
+        data: String,
+        #[props(default, into)]
+        robustness: Input<QrRobustness>,
+        /// Required - a QR code conveys real information to a sighted/scanning
+        /// user, but nothing to a screen reader without one.
+        aria_label: String,
+    }
 }
 
 fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {

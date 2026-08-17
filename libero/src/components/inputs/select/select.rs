@@ -5,7 +5,7 @@ use dioxus::{document, prelude::*};
 use crate::{
     components::{
         Box, Input, States,
-        common::{class_list, focus_ring_sx},
+        common::{base_props, class_list, focus_ring_sx},
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -49,27 +49,20 @@ fn get_size_sx(size: Size) -> &'static Sx {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct SelectProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
-    #[props(into)]
-    value: String,
-    #[props(default)]
-    onchange: EventHandler<String>,
-    #[props(default)]
-    label: Option<String>,
-    children: Element,
+base_props! {
+    pub struct SelectProps {
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+        #[props(into)]
+        value: String,
+        #[props(default)]
+        onchange: EventHandler<String>,
+        #[props(default)]
+        label: Option<String>,
+        children: Element,
+    }
 }
 
 #[component]

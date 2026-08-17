@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, Input, States, common::base_props},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, Size, SizeCss},
 };
@@ -53,22 +53,15 @@ fn get_size_sx(size: &ThemeAwareValue) -> &'static StaticSx {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct KbdProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// Font size - `sm` by default. The rest of the look (background,
-    /// border, text color, font family) is theme-only (`Theme::kbd`);
-    /// there's no per-instance color prop.
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct KbdProps {
+        /// Font size - `sm` by default. The rest of the look (background,
+        /// border, text color, font family) is theme-only (`Theme::kbd`);
+        /// there's no per-instance color prop.
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 /// A single keyboard key, rendered as a real `<kbd>`.

@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Dialog, Input, Modal, States, common::class_list},
+    components::{
+        Box, Dialog, Input, Modal, States,
+        common::{base_props, class_list},
+    },
     hooks::use_css,
     hooks::use_portal,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -172,31 +175,24 @@ fn static_dynamic_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> Sx
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct DrawerProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    variant: Input<DrawerVariant>,
-    /// On `Static`, only picks the border side/size axis, not placement -
-    /// position it yourself in your own layout. Full effect on `Temporary`.
-    #[props(default, into)]
-    anchor: Input<DrawerAnchor>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    z_index: Input<ThemeAwareValue>,
-    /// Requested by Escape/backdrop on `Temporary`; on `Static` it's only
-    /// for your own close button - `Drawer` tracks no open/closed state.
-    #[props(default)]
-    onclose: EventHandler<()>,
-    children: Element,
+base_props! {
+    pub struct DrawerProps {
+        #[props(default, into)]
+        variant: Input<DrawerVariant>,
+        /// On `Static`, only picks the border side/size axis, not placement -
+        /// position it yourself in your own layout. Full effect on `Temporary`.
+        #[props(default, into)]
+        anchor: Input<DrawerAnchor>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        z_index: Input<ThemeAwareValue>,
+        /// Requested by Escape/backdrop on `Temporary`; on `Static` it's only
+        /// for your own close button - `Drawer` tracks no open/closed state.
+        #[props(default)]
+        onclose: EventHandler<()>,
+        children: Element,
+    }
 }
 
 /// A panel anchored to one edge - `Temporary` (default) is a modal drawer;

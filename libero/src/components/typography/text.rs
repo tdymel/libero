@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States},
+    components::{Box, HtmlTag, Input, States, common::base_props},
     sx::{StaticSx, Sx, ThemeAwareValue},
     theme::{Size, TextDefaults},
 };
@@ -50,22 +50,15 @@ fn get_size_sx(size: &ThemeAwareValue) -> &'static StaticSx {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct TextProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    /// Which element to render as - `p` by default.
-    #[props(default, into)]
-    component: Input<HtmlTag>,
-    children: Element,
+base_props! {
+    pub struct TextProps {
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        /// Which element to render as - `p` by default.
+        #[props(default, into)]
+        component: Input<HtmlTag>,
+        children: Element,
+    }
 }
 
 #[component]

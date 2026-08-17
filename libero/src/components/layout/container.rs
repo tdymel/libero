@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, HtmlTag, Input, States,
-        common::{class_list, focus_ring_sx},
+        common::{base_props, class_list, focus_ring_sx},
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::ContainerDefaults,
@@ -26,24 +26,17 @@ fn container_dynamic_sx(props: &ContainerProps) -> Sx {
         })
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ContainerProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// Which element to render as - `div` by default.
-    #[props(default, into)]
-    component: Input<HtmlTag>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    gutters: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct ContainerProps {
+        /// Which element to render as - `div` by default.
+        #[props(default, into)]
+        component: Input<HtmlTag>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        gutters: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 #[component]

@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         Box, Input, States,
-        common::{attr, class_list},
+        common::{attr, base_props, class_list},
     },
     hooks::use_css,
     sx::{StaticSx, Sx},
@@ -16,25 +16,18 @@ fn navigation_target_href(to: NavigationTarget) -> String {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub(crate) struct InternalAnchorProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default)]
-    framework_sx: Option<&'static StaticSx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(into)]
-    to: NavigationTarget,
-    #[props(default)]
-    target: Option<String>,
-    #[props(default)]
-    onmounted: EventHandler<MountedEvent>,
-    children: Element,
+base_props! {
+    pub(crate) struct InternalAnchorProps {
+        #[props(default)]
+        framework_sx: Option<&'static StaticSx>,
+        #[props(into)]
+        to: NavigationTarget,
+        #[props(default)]
+        target: Option<String>,
+        #[props(default)]
+        onmounted: EventHandler<MountedEvent>,
+        children: Element,
+    }
 }
 
 /// Renders `to` as a working link - the router's own `Link` when one is

@@ -3,7 +3,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use dioxus::{document, prelude::*};
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, Input, States, common::base_props},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -46,17 +46,10 @@ fn cycle_focus(id: &str, backwards: bool) {
     ));
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct FocusTrapProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    children: Element,
+base_props! {
+    pub struct FocusTrapProps {
+        children: Element,
+    }
 }
 
 #[component]

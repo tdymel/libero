@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{base_props, class_list},
+    },
     context::ModalContext,
     hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -126,33 +129,26 @@ fn dialog_dynamic_sx(props: &DialogProps) -> Sx {
     )
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct DialogProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    aria_label: Option<String>,
-    #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    z_index: Input<ThemeAwareValue>,
-    /// Cross-axis position - `Start`/`End` pin to top/bottom instead of
-    /// Modal's default vertical center.
-    #[props(default, into)]
-    vertical: Input<DialogAlign>,
-    /// Main-axis position - `Start`/`End` pin to left/right instead of
-    /// the default horizontal center.
-    #[props(default, into)]
-    horizontal: Input<DialogAlign>,
-    children: Element,
+base_props! {
+    pub struct DialogProps {
+        #[props(default, into)]
+        aria_label: Option<String>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        z_index: Input<ThemeAwareValue>,
+        /// Cross-axis position - `Start`/`End` pin to top/bottom instead of
+        /// Modal's default vertical center.
+        #[props(default, into)]
+        vertical: Input<DialogAlign>,
+        /// Main-axis position - `Start`/`End` pin to left/right instead of
+        /// the default horizontal center.
+        #[props(default, into)]
+        horizontal: Input<DialogAlign>,
+        children: Element,
+    }
 }
 
 /// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in

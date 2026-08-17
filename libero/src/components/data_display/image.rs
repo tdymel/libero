@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         Box, Dialog, Input, Modal, States,
-        common::{class_list, focus_ring_sx},
+        common::{base_props, class_list, focus_ring_sx},
     },
     hooks::use_css,
     hooks::{use_focus_return, use_portal},
@@ -101,30 +101,23 @@ static ZOOM_OVERLAY_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .object_fit("contain")
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ImageProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(into)]
-    src: String,
-    #[props(default)]
-    fallback_src: Option<String>,
-    #[props(default, into)]
-    zoomed_src: Option<String>,
-    #[props(default, into)]
-    fit: Input<ImageFit>,
-    #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    alt: String,
-    #[props(default)]
-    zoomable: bool,
+base_props! {
+    pub struct ImageProps {
+        #[props(into)]
+        src: String,
+        #[props(default)]
+        fallback_src: Option<String>,
+        #[props(default, into)]
+        zoomed_src: Option<String>,
+        #[props(default, into)]
+        fit: Input<ImageFit>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        alt: String,
+        #[props(default)]
+        zoomable: bool,
+    }
 }
 
 #[component]

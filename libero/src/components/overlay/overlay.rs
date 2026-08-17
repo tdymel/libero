@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{base_props, class_list},
+    },
     hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
@@ -18,23 +21,16 @@ static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
         .z_index(OVERLAY_Z_INDEX)
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct OverlayProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    z_index: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    opacity: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    blur: Input<ThemeAwareValue>,
-    children: Option<Element>,
+base_props! {
+    pub struct OverlayProps {
+        #[props(default, into)]
+        z_index: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        opacity: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        blur: Input<ThemeAwareValue>,
+        children: Option<Element>,
+    }
 }
 
 /// A CSS pixel length for values with no unit of their own (numbers), passed

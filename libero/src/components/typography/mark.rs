@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{base_props, class_list},
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue},
@@ -35,19 +38,12 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
 // leaves it untouched and only ever sets the background.
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| sx().color("inherit"));
 
-#[derive(Props, Clone, PartialEq)]
-pub struct MarkProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct MarkProps {
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 /// Highlights `children` with a themed background tint, rendered as a real

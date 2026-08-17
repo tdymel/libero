@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, FocusTrap, Input, Overlay, States, common::class_list},
+    components::{
+        Box, FocusTrap, Input, Overlay, States,
+        common::{base_props, class_list},
+    },
     context::ModalContext,
     hooks::{use_css, use_modal_z_index},
     sx::{StaticSx, Sx, sx},
@@ -25,19 +28,12 @@ static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .pointer_events("none")
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ModalProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default)]
-    onclose: EventHandler<()>,
-    children: Element,
+base_props! {
+    pub struct ModalProps {
+        #[props(default)]
+        onclose: EventHandler<()>,
+        children: Element,
+    }
 }
 
 /// A focus-trapped, dimmed layer that locks scroll and stacks above earlier

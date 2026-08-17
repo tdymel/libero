@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, Input, States, common::base_props},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -17,17 +17,10 @@ pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct VisuallyHiddenProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    children: Element,
+base_props! {
+    pub struct VisuallyHiddenProps {
+        children: Element,
+    }
 }
 
 #[component]

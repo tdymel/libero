@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, IconVariant, Input, States,
-        common::class_list,
+        common::{base_props, class_list},
         data_display::{icon_base_color, icon_size, icon_variant_sx},
         navigation::InternalAnchor,
     },
@@ -85,43 +85,36 @@ fn action_icon_dynamic_sx(
         })
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ActionIconProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    variant: Input<IconVariant>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
-    /// Required, not optional - an icon-only button has no visible text for
-    /// a screen reader to announce, so it needs an accessible name from
-    /// somewhere.
-    aria_label: String,
-    #[props(default)]
-    disabled: Option<bool>,
-    #[props(default)]
-    onclick: EventHandler<MouseEvent>,
-    #[props(default)]
-    onmouseleave: EventHandler<MouseEvent>,
-    /// Renders as a link (router-aware, like `Anchor`/`Button`) instead of a
-    /// `<button>` when set. No `onclick`/`onmouseleave` in that case, same
-    /// tradeoff `Button` makes for its own link mode - real navigation
-    /// happens instead.
-    #[props(default, into)]
-    to: Input<NavigationTarget>,
-    #[props(default)]
-    target: Option<String>,
-    children: Element,
+base_props! {
+    pub struct ActionIconProps {
+        #[props(default, into)]
+        variant: Input<IconVariant>,
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+        /// Required, not optional - an icon-only button has no visible text for
+        /// a screen reader to announce, so it needs an accessible name from
+        /// somewhere.
+        aria_label: String,
+        #[props(default)]
+        disabled: Option<bool>,
+        #[props(default)]
+        onclick: EventHandler<MouseEvent>,
+        #[props(default)]
+        onmouseleave: EventHandler<MouseEvent>,
+        /// Renders as a link (router-aware, like `Anchor`/`Button`) instead of a
+        /// `<button>` when set. No `onclick`/`onmouseleave` in that case, same
+        /// tradeoff `Button` makes for its own link mode - real navigation
+        /// happens instead.
+        #[props(default, into)]
+        to: Input<NavigationTarget>,
+        #[props(default)]
+        target: Option<String>,
+        children: Element,
+    }
 }
 
 /// `Icon`'s sized/colored/variant-shaped badge, rendered as a real `<button>`

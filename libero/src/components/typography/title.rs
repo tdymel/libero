@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States},
+    components::{Box, HtmlTag, Input, States, common::base_props},
     sx::{StaticSx, Sx},
     theme::TitleDefaults,
 };
@@ -85,24 +85,17 @@ fn get_size_sx(variant: TitleVariant) -> &'static StaticSx {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct TitleProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    variant: TitleVariant,
-    /// Which element to render as - defaults to `variant`'s own heading tag.
-    /// Override to keep `variant`'s visual size while using a different
-    /// semantic tag, e.g. to preserve a page's h1->h2->h3 a11y heading order.
-    #[props(default, into)]
-    component: Input<HtmlTag>,
-    children: Element,
+base_props! {
+    pub struct TitleProps {
+        #[props(default, into)]
+        variant: TitleVariant,
+        /// Which element to render as - defaults to `variant`'s own heading tag.
+        /// Override to keep `variant`'s visual size while using a different
+        /// semantic tag, e.g. to preserve a page's h1->h2->h3 a11y heading order.
+        #[props(default, into)]
+        component: Input<HtmlTag>,
+        children: Element,
+    }
 }
 
 #[component]

@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{base_props, class_list},
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, DividerDefaults},
 };
@@ -155,25 +158,18 @@ static DIVIDER_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
 });
 
-#[derive(Props, Clone, PartialEq)]
-pub struct DividerProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default)]
-    vertical: Option<bool>,
-    #[props(default, into)]
-    label_position: Input<LabelPosition>,
-    #[props(default, into)]
-    spacing: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    children: Option<Element>,
+base_props! {
+    pub struct DividerProps {
+        #[props(default)]
+        vertical: Option<bool>,
+        #[props(default, into)]
+        label_position: Input<LabelPosition>,
+        #[props(default, into)]
+        spacing: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        children: Option<Element>,
+    }
 }
 
 #[component]

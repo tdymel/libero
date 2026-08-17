@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    components::{Input, States, common::class_list},
+    components::{
+        Input, States,
+        common::{base_props, class_list},
+    },
     hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Size, TextDefaults},
@@ -88,30 +91,23 @@ fn anchor_dynamic_sx(props: &AnchorProps) -> Sx {
     anchor_size_sx(&size).and(underline_sx(underline))
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct AnchorProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    /// A plain path/URL or a typed route (anything `Into<NavigationTarget>`,
-    /// e.g. `Route::Foo {}`). Resolves through the app's Dioxus router when
-    /// one is mounted and `target` allows it (unset or `"_blank"`) -
-    /// internal targets then get SPA navigation instead of a full page
-    /// reload. Falls back to a plain `href` otherwise.
-    #[props(into)]
-    to: NavigationTarget,
-    #[props(default)]
-    target: Option<String>,
-    #[props(default, into)]
-    underline: Input<AnchorUnderline>,
-    children: Element,
+base_props! {
+    pub struct AnchorProps {
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        /// A plain path/URL or a typed route (anything `Into<NavigationTarget>`,
+        /// e.g. `Route::Foo {}`). Resolves through the app's Dioxus router when
+        /// one is mounted and `target` allows it (unset or `"_blank"`) -
+        /// internal targets then get SPA navigation instead of a full page
+        /// reload. Falls back to a plain `href` otherwise.
+        #[props(into)]
+        to: NavigationTarget,
+        #[props(default)]
+        target: Option<String>,
+        #[props(default, into)]
+        underline: Input<AnchorUnderline>,
+        children: Element,
+    }
 }
 
 #[component]

@@ -6,7 +6,7 @@ use std::{
 use dioxus::{document, prelude::*};
 
 use crate::{
-    components::{Input, List},
+    components::{Input, List, States},
     hooks::use_theme,
     sx::{Sx, ThemeAwareValue},
 };
@@ -128,6 +128,8 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     class: Option<String>,
     #[props(default, into)]
     sx: Input<Sx>,
+    #[props(default, into)]
+    states: Input<States>,
     #[props(default, into)]
     size: Input<ThemeAwareValue>,
     /// Overrides the gap between rows at every nesting level (indent is
@@ -283,6 +285,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
             id: "{root_id}",
             class: props.class,
             sx: root_sx,
+            states: props.states,
             size: props.size.into_option(),
             "role": "tree",
             "aria-label": props.aria_label,

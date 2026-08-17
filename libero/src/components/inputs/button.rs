@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         Box, Input, States,
-        common::{class_list, focus_ring_sx},
+        common::{base_props, class_list, focus_ring_sx},
         navigation::InternalAnchor,
     },
     hooks::{use_css, use_theme},
@@ -222,38 +222,31 @@ fn get_size_sx(size: Size) -> &'static Sx {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ButtonProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    variant: Input<ButtonVariant>,
-    #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default)]
-    full_width: Option<bool>,
-    #[props(default)]
-    disabled: Option<bool>,
-    #[props(default)]
-    onclick: EventHandler<MouseEvent>,
-    /// Renders as a link (router-aware, like `Anchor`) instead of a
-    /// `<button>` when set. No ripple/`onclick` in that case - see the note
-    /// above `is_link` below.
-    #[props(default, into)]
-    to: Input<NavigationTarget>,
-    #[props(default)]
-    target: Option<String>,
-    children: Element,
+base_props! {
+    pub struct ButtonProps {
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        variant: Input<ButtonVariant>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default)]
+        full_width: Option<bool>,
+        #[props(default)]
+        disabled: Option<bool>,
+        #[props(default)]
+        onclick: EventHandler<MouseEvent>,
+        /// Renders as a link (router-aware, like `Anchor`) instead of a
+        /// `<button>` when set. No ripple/`onclick` in that case - see the note
+        /// above `is_link` below.
+        #[props(default, into)]
+        to: Input<NavigationTarget>,
+        #[props(default)]
+        target: Option<String>,
+        children: Element,
+    }
 }
 
 #[component]

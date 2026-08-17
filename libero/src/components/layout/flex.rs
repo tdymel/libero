@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States,
-        common::{class_list, focus_ring_sx},
+        common::{base_props, class_list, focus_ring_sx},
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::FlexDefaults,
@@ -45,27 +45,20 @@ fn flex_dynamic_sx(props: &FlexProps) -> crate::sx::Sx {
     })
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct FlexProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    #[props(default, into)]
-    align: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    justify: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    gap: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    direction: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    wrap: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct FlexProps {
+        #[props(default, into)]
+        align: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        justify: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        gap: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        direction: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        wrap: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 #[component]

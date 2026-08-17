@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::class_list},
+    components::{
+        Box, Input, States,
+        common::{base_props, class_list},
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ListDefaults, Size},
@@ -31,20 +34,13 @@ fn get_size_sx(size: Size) -> &'static Sx {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ListProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// Item gap and nested-list indent - `theme.list.size` (`Md`) by default.
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct ListProps {
+        /// Item gap and nested-list indent - `theme.list.size` (`Md`) by default.
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 #[component]

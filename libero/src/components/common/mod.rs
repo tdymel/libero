@@ -1,8 +1,10 @@
+mod base_props;
 mod input;
 mod polymorphic;
 mod states;
 mod util;
 
+pub(crate) use base_props::base_props;
 pub use input::Input;
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::render_polymorphic;

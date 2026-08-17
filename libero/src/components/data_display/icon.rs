@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, common::class_list},
+    components::{
+        Box, HtmlTag, Input, States,
+        common::{base_props, class_list},
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, Size, SizeCss},
 };
@@ -128,28 +131,21 @@ fn icon_dynamic_sx(props: &IconProps) -> Sx {
         })
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct IconProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// Which element to render as - `span` by default.
-    #[props(default, into)]
-    component: Input<HtmlTag>,
-    #[props(default, into)]
-    variant: Input<IconVariant>,
-    #[props(default, into)]
-    color: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    #[props(default, into)]
-    radius: Input<ThemeAwareValue>,
-    children: Element,
+base_props! {
+    pub struct IconProps {
+        /// Which element to render as - `span` by default.
+        #[props(default, into)]
+        component: Input<HtmlTag>,
+        #[props(default, into)]
+        variant: Input<IconVariant>,
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        radius: Input<ThemeAwareValue>,
+        children: Element,
+    }
 }
 
 /// Wraps an svg child in a sized, colored badge. `color` sets the

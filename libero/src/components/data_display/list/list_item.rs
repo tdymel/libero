@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States},
+    components::{Box, Input, States, common::base_props},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -11,17 +11,10 @@ use crate::{
 // same as `NavLink` already does for itself.
 static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| sx().padding("0"));
 
-#[derive(Props, Clone, PartialEq)]
-pub struct ListItemProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    children: Element,
+base_props! {
+    pub struct ListItemProps {
+        children: Element,
+    }
 }
 
 #[component]

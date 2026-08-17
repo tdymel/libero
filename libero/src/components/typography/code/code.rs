@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
 use super::token_theme::use_token_theme;
 use crate::{
-    components::{ActionIcon, Box, Input, States},
+    components::{ActionIcon, Box, Input, States, common::base_props},
     hooks::{Clipboard, use_clipboard},
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -189,59 +189,52 @@ fn check_icon() -> Element {
     }
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct CodeProps {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// Renders as a `pre`-wrapped, multi-line block instead of inline `code`.
-    #[props(default)]
-    block: bool,
-    /// Runtime text to syntax-highlight - mutually exclusive with `children`.
-    /// Also what enables line numbers and the copy button, since those need
-    /// an actual string, not opaque `children`.
-    #[props(default, into)]
-    source: Option<String>,
-    /// Unrecognized values fall back to no highlighting rather than a guess.
-    #[props(default, into)]
-    language: Input<Language>,
-    /// `block` only. Shows the language (or "Unrecognized language" if the
-    /// name isn't in libero's catalog, or isn't enabled via a `code-lang-*`
-    /// feature) in a bar above the code.
-    #[props(default = true)]
-    header: bool,
-    /// `block` only, and only takes effect with `source` (nothing to copy
-    /// from `children`). Without `header`, floats in the top-right corner.
-    #[props(default = true)]
-    copyable: bool,
-    /// `block` only. Caps the visible height to roughly this many lines,
-    /// scrolling vertically past it - unset (the default) grows to fit all
-    /// content. Very long individual lines always scroll horizontally,
-    /// regardless of this.
-    #[props(default)]
-    max_lines: Option<u32>,
-    /// `block` only, and only takes effect with `source`. Toggles the
-    /// line-number gutter.
-    #[props(default = true)]
-    line_numbers: bool,
-    /// `block` only, and only takes effect with `source`. 1-indexed lines to
-    /// visually emphasize, e.g. `"3"`, `"5-7"`, or `"1,5-7,10"`. Malformed
-    /// segments are skipped rather than rejecting the whole value.
-    #[props(default, into)]
-    highlight_lines: Option<String>,
-    /// `block` only, and only takes effect with `source`. Treats each line
-    /// of `source` as a unified diff - a leading `+`/`-` colors that line's
-    /// row (added/removed) and is itself stripped from what's displayed,
-    /// highlighted, and copied. Other lines are left exactly as they are.
-    /// Takes priority over `highlight_lines` on lines both would match.
-    #[props(default)]
-    diff: bool,
-    children: Element,
+base_props! {
+    pub struct CodeProps {
+        /// Renders as a `pre`-wrapped, multi-line block instead of inline `code`.
+        #[props(default)]
+        block: bool,
+        /// Runtime text to syntax-highlight - mutually exclusive with `children`.
+        /// Also what enables line numbers and the copy button, since those need
+        /// an actual string, not opaque `children`.
+        #[props(default, into)]
+        source: Option<String>,
+        /// Unrecognized values fall back to no highlighting rather than a guess.
+        #[props(default, into)]
+        language: Input<Language>,
+        /// `block` only. Shows the language (or "Unrecognized language" if the
+        /// name isn't in libero's catalog, or isn't enabled via a `code-lang-*`
+        /// feature) in a bar above the code.
+        #[props(default = true)]
+        header: bool,
+        /// `block` only, and only takes effect with `source` (nothing to copy
+        /// from `children`). Without `header`, floats in the top-right corner.
+        #[props(default = true)]
+        copyable: bool,
+        /// `block` only. Caps the visible height to roughly this many lines,
+        /// scrolling vertically past it - unset (the default) grows to fit all
+        /// content. Very long individual lines always scroll horizontally,
+        /// regardless of this.
+        #[props(default)]
+        max_lines: Option<u32>,
+        /// `block` only, and only takes effect with `source`. Toggles the
+        /// line-number gutter.
+        #[props(default = true)]
+        line_numbers: bool,
+        /// `block` only, and only takes effect with `source`. 1-indexed lines to
+        /// visually emphasize, e.g. `"3"`, `"5-7"`, or `"1,5-7,10"`. Malformed
+        /// segments are skipped rather than rejecting the whole value.
+        #[props(default, into)]
+        highlight_lines: Option<String>,
+        /// `block` only, and only takes effect with `source`. Treats each line
+        /// of `source` as a unified diff - a leading `+`/`-` colors that line's
+        /// row (added/removed) and is itself stripped from what's displayed,
+        /// highlighted, and copied. Other lines are left exactly as they are.
+        /// Takes priority over `highlight_lines` on lines both would match.
+        #[props(default)]
+        diff: bool,
+        children: Element,
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
