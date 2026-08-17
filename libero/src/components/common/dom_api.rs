@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{JsCast, JsValue};
 
 use crate::components::common::ElementApi;
 
@@ -40,6 +40,44 @@ impl ElementApi for WebElementHandle {
 
     fn blur(&self) -> Result<(), DomApiError> {
         self.element.blur().map_err(|_| DomApiError::NotFound)
+    }
+
+    fn is_focused(&self) -> bool {
+        web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.active_element())
+            .is_some_and(|active| JsValue::from(active) == JsValue::from(self.element.clone()))
+    }
+
+    fn query_selector(&self, selector: Rc<str>) -> Result<Box<dyn ElementApi>, DomApiError> {
+        let element = self
+            .element
+            .query_selector(&selector)
+            .ok()
+            .flatten()
+            .ok_or(DomApiError::NotFound)?
+            .dyn_into::<web_sys::HtmlElement>()
+            .map_err(|_| DomApiError::NotFound)?;
+
+        Ok(Box::new(WebElementHandle { element }))
+    }
+
+    fn query_selector_all(
+        &self,
+        selector: Rc<str>,
+    ) -> Result<Vec<Box<dyn ElementApi>>, DomApiError> {
+        let nodes = self
+            .element
+            .query_selector_all(&selector)
+            .map_err(|_| DomApiError::NotFound)?;
+
+        let items = (0..nodes.length())
+            .filter_map(|index| nodes.get(index))
+            .filter_map(|node| node.dyn_into::<web_sys::HtmlElement>().ok())
+            .map(|element| Box::new(WebElementHandle { element }) as Box<dyn ElementApi>)
+            .collect();
+
+        Ok(items)
     }
 }
 
