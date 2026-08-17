@@ -1,11 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{Input, States, common::base_props},
-    hooks::use_css,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Size, TEXT_FONT_FAMILY, TextDefaults},
+    sx::{StaticSx, Sx, sx},
+    theme::{Size, TextDefaults},
 };
 
 use super::InternalAnchor;
@@ -51,19 +49,12 @@ impl From<String> for Input<AnchorUnderline> {
     }
 }
 
-static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| sx().color("primary.6"));
-
-// Reuses Text's own theme-level sizing (TextDefaults), not Text the
-// component, since Text has no href/target/rel escape hatch to render a real
-// anchor with.
-fn anchor_size_sx(size: &ThemeAwareValue) -> Sx {
-    let size = match size {
-        ThemeAwareValue::Size(size) => *size,
-        _ => Size::Md,
-    };
-    TextDefaults::size_sx(size)
-        .font_family(TEXT_FONT_FAMILY.value())
-        .margin("0")
+fn underline_token(underline: AnchorUnderline) -> &'static str {
+    match underline {
+        AnchorUnderline::Always => "underline-always",
+        AnchorUnderline::Hover => "underline-hover",
+        AnchorUnderline::Never => "underline-never",
+    }
 }
 
 fn underline_sx(underline: AnchorUnderline) -> Sx {
@@ -76,21 +67,27 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
     }
 }
 
-fn anchor_dynamic_sx(props: &AnchorProps) -> Sx {
-    let size = props
-        .size
-        .as_ref()
-        .cloned()
-        .unwrap_or_else(|| ThemeAwareValue::String("md".to_string()));
-    let underline = props.underline.as_ref().copied().unwrap_or_default();
+// Reuses Text's own theme-level sizing (TextDefaults::theme_vars), not Text
+// the component, since Text has no href/target/rel escape hatch to render a
+// real anchor with.
+static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
+    let base = TextDefaults::theme_vars().color("primary.6").margin("0");
 
-    anchor_size_sx(&size).and(underline_sx(underline))
-}
+    [
+        AnchorUnderline::Always,
+        AnchorUnderline::Hover,
+        AnchorUnderline::Never,
+    ]
+    .into_iter()
+    .fold(base, |base, underline| {
+        base.when(underline_token(underline), underline_sx(underline))
+    })
+});
 
 base_props! {
     pub struct AnchorProps {
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Size>,
         /// A plain path/URL or a typed route (anything `Into<NavigationTarget>`,
         /// e.g. `Route::Foo {}`). Resolves through the app's Dioxus router when
         /// one is mounted and `target` allows it (unset or `"_blank"`) -
@@ -108,17 +105,25 @@ base_props! {
 
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
-    let dynamic_class = use_css(&anchor_dynamic_sx(&props), CssLayer::UserDynamic);
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let size = props.size.as_ref().copied().unwrap_or(Size::Md);
+    let underline = props.underline.as_ref().copied().unwrap_or_default();
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with(size.state_name(), true)
+        .with(underline_token(underline), true);
 
     rsx! {
         InternalAnchor {
             to: props.to,
             target: props.target,
-            class,
+            class: props.class,
             sx: props.sx,
             framework_sx: &ANCHOR_BASE_SX,
-            states: props.states,
+            states,
             attributes: props.attributes,
             {props.children}
         }
