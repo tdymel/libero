@@ -101,10 +101,6 @@ base_props! {
         aria_label: String,
         #[props(default)]
         disabled: Option<bool>,
-        #[props(default)]
-        onclick: EventHandler<MouseEvent>,
-        #[props(default)]
-        onmouseleave: EventHandler<MouseEvent>,
         /// Renders as a link (router-aware, like `Anchor`/`Button`) instead of a
         /// `<button>` when set. No `onclick`/`onmouseleave` in that case, same
         /// tradeoff `Button` makes for its own link mode - real navigation
@@ -184,8 +180,6 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
             "aria-label": props.aria_label,
             r#type: "button",
             disabled,
-            onclick: props.onclick,
-            onmouseleave: props.onmouseleave,
             attributes: props.attributes,
             {props.children}
         }
