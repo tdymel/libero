@@ -98,40 +98,36 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
-static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| sx().display("flex").flex_direction("row"));
-
 // Light tint + a solid accent bar down the left edge (`box-shadow` rather
 // than `border-left`, so the bar doesn't shift content relative to
 // unmarked rows). Colors are the theme's actual primary/success/error, not
-// independent theme fields - stay in sync with them automatically.
-static CODE_LINE_ROW_HIGHLIGHTED_SX: StaticSx = StaticSx::new(|| {
+// independent theme fields - stay in sync with them automatically. The
+// three states are mutually exclusive (see `code_lines`'s `row_state`), so
+// a plain row simply carries none of them.
+static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("row")
-        .background("primary.1")
-        .box_shadow(format!(
-            "inset 3px 0 0 {}",
-            ColorCss::PRIMARY.value(ColorShade::S5)
-        ))
-});
-
-static CODE_LINE_ROW_DIFF_ADD_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        .flex_direction("row")
-        .background("success.1")
-        .box_shadow(format!(
-            "inset 3px 0 0 {}",
-            ColorCss::SUCCESS.value(ColorShade::S5)
-        ))
-});
-
-static CODE_LINE_ROW_DIFF_REMOVE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        .flex_direction("row")
-        .background("error.1")
-        .box_shadow(format!(
-            "inset 3px 0 0 {}",
-            ColorCss::ERROR.value(ColorShade::S5)
-        ))
+        .when(
+            "highlighted",
+            sx().background("primary.1").box_shadow(format!(
+                "inset 3px 0 0 {}",
+                ColorCss::PRIMARY.value(ColorShade::S5)
+            )),
+        )
+        .when(
+            "diff-add",
+            sx().background("success.1").box_shadow(format!(
+                "inset 3px 0 0 {}",
+                ColorCss::SUCCESS.value(ColorShade::S5)
+            )),
+        )
+        .when(
+            "diff-remove",
+            sx().background("error.1").box_shadow(format!(
+                "inset 3px 0 0 {}",
+                ColorCss::ERROR.value(ColorShade::S5)
+            )),
+        )
 });
 
 static CODE_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
@@ -299,12 +295,16 @@ fn code_line_row(
     line: &HighlightedLine,
     line_numbers: bool,
     gutter_width: &str,
-    row_sx: &'static StaticSx,
+    row_state: Option<&'static str>,
 ) -> Element {
+    let states = row_state
+        .map(|s| States::new().active(s))
+        .unwrap_or_default();
     rsx! {
         Box {
             component: "div",
-            framework_sx: row_sx,
+            framework_sx: &CODE_LINE_ROW_SX,
+            states,
             if line_numbers {
                 Box {
                     component: "span",
@@ -342,13 +342,13 @@ fn code_lines(
             framework_sx: &CODE_LINES_SX,
             for (index, line) in lines.iter().enumerate() {
                 {
-                    let row_sx: &'static StaticSx = match diff_statuses.get(index).copied().flatten() {
-                        Some(DiffStatus::Added) => &CODE_LINE_ROW_DIFF_ADD_SX,
-                        Some(DiffStatus::Removed) => &CODE_LINE_ROW_DIFF_REMOVE_SX,
-                        None if highlighted_lines.contains(&(index + 1)) => &CODE_LINE_ROW_HIGHLIGHTED_SX,
-                        None => &CODE_LINE_ROW_SX,
+                    let row_state = match diff_statuses.get(index).copied().flatten() {
+                        Some(DiffStatus::Added) => Some("diff-add"),
+                        Some(DiffStatus::Removed) => Some("diff-remove"),
+                        None if highlighted_lines.contains(&(index + 1)) => Some("highlighted"),
+                        None => None,
                     };
-                    code_line_row(index, line, line_numbers, &gutter_width, row_sx)
+                    code_line_row(index, line, line_numbers, &gutter_width, row_state)
                 }
             }
         }

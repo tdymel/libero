@@ -19,8 +19,8 @@ pub const CODE_TOK_HEADING: CssVar = CssVar::new("--lsx-code-tok-heading");
 
 // Highlighted-line and diff row colors intentionally aren't here - they're
 // derived directly from the theme's primary/success/error palette (see
-// `code.rs`'s `CODE_LINE_ROW_HIGHLIGHTED_SX`/`_DIFF_ADD_SX`/`_DIFF_REMOVE_SX`)
-// rather than being independent fields that could drift out of sync with it.
+// `code.rs`'s `CODE_LINE_ROW_SX`) rather than being independent fields that
+// could drift out of sync with it.
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CodeDefaults {
