@@ -1,0 +1,65 @@
+//! One file per ported language, each exposing a `grammar() -> Grammar`.
+//! Small hand-ports covering common syntax (not aiming for a reference
+//! implementation's full fidelity), restricted to regex features both
+//! `RegexApi` implementations support (no lookaround, no backreferences).
+
+#[cfg(feature = "code-lang-bash")]
+pub(crate) mod bash;
+#[cfg(feature = "code-lang-c")]
+pub(crate) mod c;
+#[cfg(feature = "code-lang-cpp")]
+pub(crate) mod cpp;
+#[cfg(feature = "code-lang-csharp")]
+pub(crate) mod csharp;
+#[cfg(feature = "code-lang-css")]
+pub(crate) mod css;
+#[cfg(feature = "code-lang-dart")]
+pub(crate) mod dart;
+#[cfg(feature = "code-lang-go")]
+pub(crate) mod go;
+#[cfg(feature = "code-lang-graphql")]
+pub(crate) mod graphql;
+#[cfg(feature = "code-lang-haskell")]
+pub(crate) mod haskell;
+#[cfg(feature = "code-lang-html")]
+pub(crate) mod html;
+#[cfg(feature = "code-lang-java")]
+pub(crate) mod java;
+#[cfg(feature = "code-lang-javascript")]
+pub(crate) mod javascript;
+#[cfg(feature = "code-lang-json")]
+pub(crate) mod json;
+#[cfg(feature = "code-lang-kotlin")]
+pub(crate) mod kotlin;
+#[cfg(feature = "code-lang-lua")]
+pub(crate) mod lua;
+#[cfg(feature = "code-lang-markdown")]
+pub(crate) mod markdown;
+#[cfg(feature = "code-lang-objective-c")]
+pub(crate) mod objective_c;
+#[cfg(feature = "code-lang-perl")]
+pub(crate) mod perl;
+#[cfg(feature = "code-lang-php")]
+pub(crate) mod php;
+#[cfg(feature = "code-lang-powershell")]
+pub(crate) mod powershell;
+#[cfg(feature = "code-lang-python")]
+pub(crate) mod python;
+#[cfg(feature = "code-lang-r")]
+pub(crate) mod r;
+#[cfg(feature = "code-lang-ruby")]
+pub(crate) mod ruby;
+#[cfg(feature = "code-lang-rust")]
+pub(crate) mod rust;
+#[cfg(feature = "code-lang-scala")]
+pub(crate) mod scala;
+#[cfg(feature = "code-lang-sql")]
+pub(crate) mod sql;
+#[cfg(feature = "code-lang-swift")]
+pub(crate) mod swift;
+#[cfg(feature = "code-lang-toml")]
+pub(crate) mod toml;
+#[cfg(feature = "code-lang-typescript")]
+pub(crate) mod typescript;
+#[cfg(feature = "code-lang-yaml")]
+pub(crate) mod yaml;

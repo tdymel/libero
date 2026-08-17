@@ -412,7 +412,7 @@ pub fn Code(props: CodeProps) -> Element {
         let source = display_source.clone();
         let highlighted = use_resource(use_reactive!(|source, language| async move {
             match (source, language) {
-                (Some(source), Some(language)) => highlight_lazy(source, language).await,
+                (Some(source), Some(language)) => Some(highlight_lazy(source, language).await),
                 _ => None,
             }
         }));
@@ -424,7 +424,6 @@ pub fn Code(props: CodeProps) -> Element {
                 .unwrap_or_else(|| plain_lines(source))
         });
         let label = language
-            .filter(|language| language.is_available())
             .map(Language::label)
             .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
         let show_copy = props.copyable && props.source.is_some();
@@ -483,7 +482,7 @@ pub fn Code(props: CodeProps) -> Element {
         let language = props.language.as_ref().copied();
         let highlighted = use_resource(use_reactive!(|source, language| async move {
             match language {
-                Some(language) => highlight_lazy(source, language).await,
+                Some(language) => Some(highlight_lazy(source, language).await),
                 None => None,
             }
         }));
