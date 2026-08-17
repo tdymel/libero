@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -7,7 +7,7 @@ use dioxus::{document, prelude::*};
 
 use crate::{
     components::{Input, List, States},
-    hooks::use_theme,
+    hooks::{ElementRef, use_theme},
     sx::{Sx, ThemeAwareValue},
 };
 
@@ -93,15 +93,37 @@ pub(super) fn toggle_expanded(
     onexpandedchange.call(next);
 }
 
-fn focus_tree_item(root_id: &str, target_id: &str) {
-    let selector = format!("[data-tree-id={target_id:?}]");
-    document::eval(&format!(
-        r#"await new Promise(function(r) {{ setTimeout(r, 0); }});
-        var root = document.getElementById({root_id:?});
-        if (!root) return;
-        var target = root.querySelector({selector:?});
-        if (target) target.focus();"#
-    ));
+/// Lets any `TreeRow`, at any depth, register the [`ElementRef`] its own
+/// `<li>` (the roving tab stop) is bound to, and lets `Tree`'s keyboard
+/// handler focus one of them by id - a keyed lookup over plain
+/// `ElementRef`s, replacing a `document::eval` DOM query with something
+/// that works on any renderer, not just the web one.
+///
+/// Provided once by `Tree` via `use_context_provider` rather than threaded
+/// through `TreeRowProps`, so a nested `Tree` (e.g. via a custom
+/// `render_node`) automatically gets its own registry instead of sharing
+/// its ancestor's.
+#[derive(Clone, Copy)]
+pub(super) struct TreeFocusRegistry {
+    nodes: Signal<HashMap<String, ElementRef>>,
+}
+
+impl TreeFocusRegistry {
+    fn new() -> Self {
+        Self {
+            nodes: Signal::new(HashMap::new()),
+        }
+    }
+
+    pub(super) fn register(&mut self, id: &str, element_ref: ElementRef) {
+        self.nodes.write().insert(id.to_string(), element_ref);
+    }
+
+    fn focus(&self, id: &str) {
+        if let Some(handle) = self.nodes.read().get(id) {
+            handle.focus();
+        }
+    }
 }
 
 // A leaf's own real interactive element (an `<a href>`, a `<button>`) is
@@ -172,6 +194,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
     let root_id = use_hook(|| format!("lsx-tree-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
+    let focus_registry = use_context_provider(TreeFocusRegistry::new);
 
     let size = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
@@ -205,7 +228,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
         let mut go_to = |target: Option<String>| {
             if let Some(target) = target {
                 active_id_for_keydown.set(Some(target.clone()));
-                focus_tree_item(&root_id_for_keydown, &target);
+                focus_registry.focus(&target);
             }
         };
 

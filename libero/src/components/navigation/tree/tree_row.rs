@@ -4,12 +4,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, List, common::focus_ring_sx},
+    hooks::use_element_ref,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
 };
 
 use super::{
-    tree::toggle_expanded,
+    tree::{TreeFocusRegistry, toggle_expanded},
     tree_node::{TreeLabel, TreeNode, TreeNodeRenderArgs},
 };
 
@@ -106,6 +107,12 @@ pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
     let expanded = props.expanded;
     let id = node.id.clone();
     let onexpandedchange = props.onexpandedchange;
+    let element_ref = use_element_ref();
+    let mut focus_registry = use_context::<TreeFocusRegistry>();
+    use_hook({
+        let id = node.id.clone();
+        move || focus_registry.register(&id, element_ref)
+    });
 
     let onclick = move |_| {
         if disabled {
@@ -127,6 +134,7 @@ pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
             "aria-expanded": is_expanded.map(|value| value.to_string()),
             "aria-disabled": disabled.then_some("true"),
             tabindex: li_tabindex,
+            element_ref,
             // `onclick` lives on this inner div, not the outer `<li>` - the
             // nested children `List` below is this div's *sibling*, not its
             // descendant, so a click bubbling up from a child row's own

@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{core::AttributeValue, prelude::*};
 
 use crate::{
     CssLayer,
@@ -6,7 +6,7 @@ use crate::{
         HtmlTag, Input, States,
         common::{attr, class_list, focus_ring_sx, render_polymorphic},
     },
-    hooks::use_css,
+    hooks::{ElementRef, use_css},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -51,6 +51,13 @@ pub struct BoxProps {
     disabled: Option<bool>,
     #[props(default)]
     r#type: Option<String>,
+    /// Binds this element to an [`ElementRef`] (via `use_element_ref`) - the
+    /// same role React's `ref`/Yew's `NodeRef` play. `Box` wires the
+    /// underlying `onmounted` itself. Not meant to be combined with a
+    /// caller-supplied `onmounted` on the same `Box` (extended via
+    /// `GlobalAttributes`) - only one of the two currently wins.
+    #[props(default, into)]
+    element_ref: Option<ElementRef>,
     children: Element,
 }
 
@@ -82,6 +89,14 @@ pub fn Box(props: BoxProps) -> Element {
                 props.value.map(|value| attr("value", value)),
                 props.disabled.map(|value| attr("disabled", value)),
                 props.r#type.map(|value| attr("type", value)),
+                props.element_ref.map(|mut element_ref| {
+                    attr(
+                        "onmounted",
+                        AttributeValue::listener(move |event: Event<MountedData>| {
+                            element_ref.set(event.data.clone())
+                        }),
+                    )
+                }),
             ]
             .into_iter()
             .flatten(),
