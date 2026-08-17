@@ -60,12 +60,15 @@ macro_rules! html_tags {
         /// Renders `children`/`class`/`data-state`/`attributes` on whichever
         /// element `component` selects (a runtime value, so this dispatches
         /// at runtime - each arm is trivial, so that cost is negligible).
+        /// `attributes` carries event handlers too, not just plain
+        /// attributes - `Box`'s own `extends = GlobalAttributes` captures
+        /// whatever event a caller writes generically, so every arm just
+        /// needs to spread it, not name each event it might contain.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
             class: Option<String>,
             data_state: Option<String>,
             attributes: Vec<Attribute>,
-            events: BoxEvents,
             children: Element,
         ) -> Element {
             match component {
@@ -73,14 +76,6 @@ macro_rules! html_tags {
                     $tag {
                         class: class,
                         "data-state": data_state,
-                        onclick: move |event| events.onclick.call(event),
-                        onkeydown: move |event| events.onkeydown.call(event),
-                        onmounted: move |event| events.onmounted.call(event),
-                        onerror: move |event| events.onerror.call(event),
-                        onblur: move |event| events.onblur.call(event),
-                        onanimationend: move |event| events.onanimationend.call(event),
-                        onchange: move |event| events.onchange.call(event),
-                        onmouseleave: move |event| events.onmouseleave.call(event),
                         ..attributes,
                         {children}
                     }
@@ -88,20 +83,6 @@ macro_rules! html_tags {
             }
         }
     };
-}
-
-/// Event handlers [`render_polymorphic`]/[`crate::components::Box`] support -
-/// bundled since `extends = GlobalAttributes` doesn't forward event handlers.
-#[derive(Clone, Copy, Default)]
-pub struct BoxEvents {
-    pub onclick: EventHandler<MouseEvent>,
-    pub onkeydown: EventHandler<KeyboardEvent>,
-    pub onmounted: EventHandler<MountedEvent>,
-    pub onerror: EventHandler<ImageEvent>,
-    pub onblur: EventHandler<FocusEvent>,
-    pub onanimationend: EventHandler<AnimationEvent>,
-    pub onchange: EventHandler<FormEvent>,
-    pub onmouseleave: EventHandler<MouseEvent>,
 }
 
 // The full HTML5 element set dioxus_elements supports, so this list never

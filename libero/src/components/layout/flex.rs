@@ -65,8 +65,6 @@ pub struct FlexProps {
     direction: Input<ThemeAwareValue>,
     #[props(default, into)]
     wrap: Input<ThemeAwareValue>,
-    #[props(default)]
-    onclick: EventHandler<MouseEvent>,
     children: Element,
 }
 
@@ -89,7 +87,6 @@ pub fn Flex(props: FlexProps) -> Element {
             sx: props.sx,
             states: props.states,
             framework_sx: flex_base_sx,
-            onclick: props.onclick,
             attributes: props.attributes,
             {props.children}
         }

@@ -4,7 +4,7 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, States,
-        common::{BoxEvents, attr, class_list, focus_ring_sx, render_polymorphic},
+        common::{attr, class_list, focus_ring_sx, render_polymorphic},
     },
     hooks::use_css,
     sx::{StaticSx, Sx, sx},
@@ -17,6 +17,9 @@ static BOX_FOCUS_SX: StaticSx = StaticSx::new(|| sx().focus_visible(focus_ring_s
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BoxProps {
+    /// Also carries event handlers (`onclick`, `onkeydown`, ...) - `extends
+    /// = GlobalAttributes` covers any DOM event a caller writes, not just
+    /// plain attributes, so `Box` doesn't curate its own allowlist of them.
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default)]
@@ -32,22 +35,6 @@ pub struct BoxProps {
     /// `Divider`'s own base styles), registered alongside `Box`'s own.
     #[props(default)]
     framework_sx: Option<&'static StaticSx>,
-    #[props(default)]
-    onclick: EventHandler<MouseEvent>,
-    #[props(default)]
-    onkeydown: EventHandler<KeyboardEvent>,
-    #[props(default)]
-    onmounted: EventHandler<MountedEvent>,
-    #[props(default)]
-    onerror: EventHandler<ImageEvent>,
-    #[props(default)]
-    onblur: EventHandler<FocusEvent>,
-    #[props(default)]
-    onanimationend: EventHandler<AnimationEvent>,
-    #[props(default)]
-    onchange: EventHandler<FormEvent>,
-    #[props(default)]
-    onmouseleave: EventHandler<MouseEvent>,
     /// Non-global attributes for specific tags `component` can select -
     /// e.g. `src`/`alt` on `img`, `href`/`target` on `a`.
     #[props(default)]
@@ -101,21 +88,5 @@ pub fn Box(props: BoxProps) -> Element {
         )
         .collect::<Vec<_>>();
 
-    render_polymorphic(
-        component,
-        class,
-        data_state,
-        attributes,
-        BoxEvents {
-            onclick: props.onclick,
-            onkeydown: props.onkeydown,
-            onmounted: props.onmounted,
-            onerror: props.onerror,
-            onblur: props.onblur,
-            onanimationend: props.onanimationend,
-            onchange: props.onchange,
-            onmouseleave: props.onmouseleave,
-        },
-        props.children,
-    )
+    render_polymorphic(component, class, data_state, attributes, props.children)
 }

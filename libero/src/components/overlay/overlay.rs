@@ -34,8 +34,6 @@ pub struct OverlayProps {
     opacity: Input<ThemeAwareValue>,
     #[props(default, into)]
     blur: Input<ThemeAwareValue>,
-    #[props(default)]
-    onclick: EventHandler<MouseEvent>,
     children: Option<Element>,
 }
 
@@ -74,7 +72,6 @@ pub fn Overlay(props: OverlayProps) -> Element {
             sx: props.sx,
             states: props.states,
             framework_sx: &OVERLAY_BASE_SX,
-            onclick: props.onclick,
             attributes: props.attributes,
             {props.children.unwrap_or_else(|| rsx! {})}
         }

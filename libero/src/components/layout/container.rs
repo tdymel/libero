@@ -43,8 +43,6 @@ pub struct ContainerProps {
     size: Input<ThemeAwareValue>,
     #[props(default, into)]
     gutters: Input<ThemeAwareValue>,
-    #[props(default)]
-    onclick: EventHandler<MouseEvent>,
     children: Element,
 }
 
@@ -60,7 +58,6 @@ pub fn Container(props: ContainerProps) -> Element {
             sx: props.sx,
             states: props.states,
             framework_sx: &CONTAINER_BASE_SX,
-            onclick: props.onclick,
             attributes: props.attributes,
             {props.children}
         }
