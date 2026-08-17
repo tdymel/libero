@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashSet,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -7,7 +7,7 @@ use dioxus::{document, prelude::*};
 
 use crate::{
     components::{Input, List, States},
-    hooks::{ElementRef, use_theme},
+    hooks::{FocusRegistry, use_theme},
     sx::{Sx, ThemeAwareValue},
 };
 
@@ -93,39 +93,6 @@ pub(super) fn toggle_expanded(
     onexpandedchange.call(next);
 }
 
-/// Lets any `TreeRow`, at any depth, register the [`ElementRef`] its own
-/// `<li>` (the roving tab stop) is bound to, and lets `Tree`'s keyboard
-/// handler focus one of them by id - a keyed lookup over plain
-/// `ElementRef`s, replacing a `document::eval` DOM query with something
-/// that works on any renderer, not just the web one.
-///
-/// Provided once by `Tree` via `use_context_provider` rather than threaded
-/// through `TreeRowProps`, so a nested `Tree` (e.g. via a custom
-/// `render_node`) automatically gets its own registry instead of sharing
-/// its ancestor's.
-#[derive(Clone, Copy)]
-pub(super) struct TreeFocusRegistry {
-    nodes: Signal<HashMap<String, ElementRef>>,
-}
-
-impl TreeFocusRegistry {
-    fn new() -> Self {
-        Self {
-            nodes: Signal::new(HashMap::new()),
-        }
-    }
-
-    pub(super) fn register(&mut self, id: &str, element_ref: ElementRef) {
-        self.nodes.write().insert(id.to_string(), element_ref);
-    }
-
-    fn focus(&self, id: &str) {
-        if let Some(handle) = self.nodes.read().get(id) {
-            handle.focus();
-        }
-    }
-}
-
 // A leaf's own real interactive element (an `<a href>`, a `<button>`) is
 // deliberately kept out of the tab order (see `TreeNodeRenderArgs::tabindex`)
 // so the roving `<li>` stays the only tab stop - which means activating it
@@ -194,7 +161,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
     let root_id = use_hook(|| format!("lsx-tree-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
-    let focus_registry = use_context_provider(TreeFocusRegistry::new);
+    let focus_registry = use_context_provider(FocusRegistry::<String>::new);
 
     let size = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,

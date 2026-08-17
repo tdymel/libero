@@ -1,5 +1,6 @@
 mod clipboard;
 mod element_ref;
+mod focus_registry;
 mod focus_return;
 mod modal;
 mod portal;
@@ -9,6 +10,7 @@ mod theme;
 
 pub use clipboard::{Clipboard, use_clipboard};
 pub use element_ref::{ElementRef, use_element_ref};
+pub use focus_registry::FocusRegistry;
 pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use modal::use_modal_z_index;
 pub use modal::{ModalHandle, use_modal, use_modal_context};
