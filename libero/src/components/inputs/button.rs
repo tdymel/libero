@@ -139,7 +139,8 @@ pub(crate) fn button_hover_sx(
 }
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline-flex")
+    ButtonDefaults::theme_vars()
+        .display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .position("relative")
@@ -152,7 +153,6 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
         .text_decoration("none")
         .outline("none")
-        .and(ButtonDefaults::radius_sx())
         .when(
             "disabled",
             // pointer-events: none also stops the variant's :hover styles from
@@ -206,34 +206,18 @@ fn button_variant_sx(variant: ButtonVariant, base: ThemeAwareValue) -> Sx {
     }
 }
 
-fn get_size_sx(size: Size) -> &'static Sx {
-    static XS: StaticSx = StaticSx::new(ButtonDefaults::xs_sx);
-    static SM: StaticSx = StaticSx::new(ButtonDefaults::sm_sx);
-    static MD: StaticSx = StaticSx::new(ButtonDefaults::md_sx);
-    static LG: StaticSx = StaticSx::new(ButtonDefaults::lg_sx);
-    static XL: StaticSx = StaticSx::new(ButtonDefaults::xl_sx);
-    static XXL: StaticSx = StaticSx::new(ButtonDefaults::xxl_sx);
-
-    match size {
-        Size::Xs => &XS,
-        Size::Sm => &SM,
-        Size::Md => &MD,
-        Size::Lg => &LG,
-        Size::Xl => &XL,
-        Size::Xxl => &XXL,
-    }
-}
-
 base_props! {
     pub struct ButtonProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<ButtonVariant>,
+        /// Corner radius - `theme.button.radius` by default, independent
+        /// of `size`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Size>,
         #[props(default)]
         full_width: Option<bool>,
         #[props(default)]
@@ -263,35 +247,26 @@ pub fn Button(props: ButtonProps) -> Element {
     let mut ripple_signal = use_signal(|| None::<Ripple>);
     let mut next_ripple_id = use_signal(|| 0u64);
 
-    // The default radius/size are baked into the framework layer as theme CSS
-    // vars (see ButtonDefaults::radius_sx / get_size_sx), so a plain `sx` prop
-    // override still works. Only an explicit prop should win over that at the
-    // (higher-priority) dynamic layer.
-    let size = match props.size.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => *size,
-        _ => theme.button.size,
-    };
-
-    let size_class = use_css(get_size_sx(size), CssLayer::Framework);
+    let size = props.size.as_ref().copied().unwrap_or(theme.button.size);
+    let radius = props
+        .radius
+        .as_ref()
+        .copied()
+        .unwrap_or(theme.button.radius);
 
     let dynamic_sx = button_variant_sx(variant, color)
-        .apply_if(props.radius.as_ref(), |sx, radius| {
-            sx.border_radius(radius.clone())
-        })
         .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
     let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
-    let class = props
-        .class
-        .unwrap_or_default()
-        .with(size_class)
-        .with(dynamic_class);
+    let class = props.class.unwrap_or_default().with(dynamic_class);
 
     let states = props
         .states
         .as_ref()
         .cloned()
         .unwrap_or_default()
-        .with("disabled", disabled);
+        .with("disabled", disabled)
+        .with(size.state_name(), true)
+        .with(radius.radius_state_name(), true);
 
     let handle_click = move |event: Event<MouseData>| {
         let point = event.element_coordinates();

@@ -154,10 +154,9 @@ mod tests {
         let css = Stylesheet::from(theme);
 
         assert!(css.as_str().contains(BUTTON_RIPPLE_KEYFRAMES));
-        assert!(
-            css.as_str()
-                .contains("--lsx-button-radius:var(--lsx-radius-md);")
-        );
+        assert!(css.as_str().contains("--lsx-button-font-size-md:1rem;"));
+        assert!(css.as_str().contains("--lsx-button-height-md:42px;"));
+        assert!(css.as_str().contains("--lsx-button-padding-x-md:18px;"));
         assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
         assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
         assert!(css.as_str().contains("--lsx-breakpoint-xs:36rem;"));
