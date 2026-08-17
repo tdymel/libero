@@ -15,7 +15,7 @@ pub fn DataListPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "DataList" }
+                Title { size: "xxl", "DataList" }
                 Text {
                     "Renders a "
                     Code { "dl" }
@@ -39,7 +39,7 @@ pub fn DataListPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Vertical (default)" }
+                Title { size: "xl", "Vertical (default)" }
                 DataList {
                     DataListItem { label: rsx! { "Status" }, "Active" }
                     DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
@@ -54,7 +54,7 @@ pub fn DataListPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Horizontal" }
+                Title { size: "xl", "Horizontal" }
                 Text {
                     "Terms and descriptions sit in two aligned columns. A term with several "
                     "descriptions still lines up correctly - each extra description just adds "

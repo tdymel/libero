@@ -1,63 +1,31 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::CssVar;
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
-pub const H1_FONT_FAMILY: CssVar = CssVar::new("--lsx-h1-font-family");
-pub const H1_FONT_WEIGHT: CssVar = CssVar::new("--lsx-h1-font-weight");
-pub const H1_FONT_SIZE: CssVar = CssVar::new("--lsx-h1-font-size");
-pub const H1_LETTER_SPACING: CssVar = CssVar::new("--lsx-h1-letter-spacing");
-pub const H1_LINE_HEIGHT: CssVar = CssVar::new("--lsx-h1-line-height");
+pub const TITLE_FONT_FAMILY: CssVar = CssVar::new("--lsx-title-font-family");
 
-pub const H2_FONT_FAMILY: CssVar = CssVar::new("--lsx-h2-font-family");
-pub const H2_FONT_WEIGHT: CssVar = CssVar::new("--lsx-h2-font-weight");
-pub const H2_FONT_SIZE: CssVar = CssVar::new("--lsx-h2-font-size");
-pub const H2_LETTER_SPACING: CssVar = CssVar::new("--lsx-h2-letter-spacing");
-pub const H2_LINE_HEIGHT: CssVar = CssVar::new("--lsx-h2-line-height");
+pub const TITLE_FONT_WEIGHT: SizeCss = SizeCss::new("--lsx-title-font-weight-");
+pub const TITLE_FONT_SIZE: SizeCss = SizeCss::new("--lsx-title-font-size-");
+pub const TITLE_LETTER_SPACING: SizeCss = SizeCss::new("--lsx-title-letter-spacing-");
+pub const TITLE_LINE_HEIGHT: SizeCss = SizeCss::new("--lsx-title-line-height-");
 
-pub const H3_FONT_FAMILY: CssVar = CssVar::new("--lsx-h3-font-family");
-pub const H3_FONT_WEIGHT: CssVar = CssVar::new("--lsx-h3-font-weight");
-pub const H3_FONT_SIZE: CssVar = CssVar::new("--lsx-h3-font-size");
-pub const H3_LETTER_SPACING: CssVar = CssVar::new("--lsx-h3-letter-spacing");
-pub const H3_LINE_HEIGHT: CssVar = CssVar::new("--lsx-h3-line-height");
-
-pub const H4_FONT_FAMILY: CssVar = CssVar::new("--lsx-h4-font-family");
-pub const H4_FONT_WEIGHT: CssVar = CssVar::new("--lsx-h4-font-weight");
-pub const H4_FONT_SIZE: CssVar = CssVar::new("--lsx-h4-font-size");
-pub const H4_LETTER_SPACING: CssVar = CssVar::new("--lsx-h4-letter-spacing");
-pub const H4_LINE_HEIGHT: CssVar = CssVar::new("--lsx-h4-line-height");
-
-pub const H5_FONT_FAMILY: CssVar = CssVar::new("--lsx-h5-font-family");
-pub const H5_FONT_WEIGHT: CssVar = CssVar::new("--lsx-h5-font-weight");
-pub const H5_FONT_SIZE: CssVar = CssVar::new("--lsx-h5-font-size");
-pub const H5_LETTER_SPACING: CssVar = CssVar::new("--lsx-h5-letter-spacing");
-pub const H5_LINE_HEIGHT: CssVar = CssVar::new("--lsx-h5-line-height");
-
-pub const H6_FONT_FAMILY: CssVar = CssVar::new("--lsx-h6-font-family");
-pub const H6_FONT_WEIGHT: CssVar = CssVar::new("--lsx-h6-font-weight");
-pub const H6_FONT_SIZE: CssVar = CssVar::new("--lsx-h6-font-size");
-pub const H6_LETTER_SPACING: CssVar = CssVar::new("--lsx-h6-letter-spacing");
-pub const H6_LINE_HEIGHT: CssVar = CssVar::new("--lsx-h6-line-height");
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct TitleLevel {
-    pub font_family: &'static str,
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TitleSize {
     pub font_weight: &'static str,
     pub font_size: &'static str, // in rem
     pub letter_spacing: &'static str,
     pub line_height: &'static str,
 }
 
-impl TitleLevel {
+impl TitleSize {
     pub const fn new(
-        font_family: &'static str,
         font_weight: &'static str,
         font_size: &'static str,
         letter_spacing: &'static str,
         line_height: &'static str,
     ) -> Self {
         Self {
-            font_family,
             font_weight,
             font_size,
             letter_spacing,
@@ -68,142 +36,50 @@ impl TitleLevel {
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TitleDefaults {
-    pub h1: TitleLevel,
-    pub h2: TitleLevel,
-    pub h3: TitleLevel,
-    pub h4: TitleLevel,
-    pub h5: TitleLevel,
-    pub h6: TitleLevel,
+    pub font_family: &'static str,
+    pub sizes: Sizes<TitleSize>,
 }
 
 impl TitleDefaults {
-    pub const fn new(
-        h1: TitleLevel,
-        h2: TitleLevel,
-        h3: TitleLevel,
-        h4: TitleLevel,
-        h5: TitleLevel,
-        h6: TitleLevel,
-    ) -> Self {
-        Self {
-            h1,
-            h2,
-            h3,
-            h4,
-            h5,
-            h6,
-        }
+    pub const fn new(font_family: &'static str, sizes: Sizes<TitleSize>) -> Self {
+        Self { font_family, sizes }
     }
 
-    pub fn h1_sx() -> Sx {
-        sx().font_family(H1_FONT_FAMILY.value())
-            .font_size(H1_FONT_SIZE.value())
-            .font_weight(H1_FONT_WEIGHT.value())
-            .letter_spacing(H1_LETTER_SPACING.value())
-            .line_height(H1_LINE_HEIGHT.value())
+    /// Font-size/weight/letter-spacing/line-height for `size` - everything
+    /// about a `Title` that actually varies by size. Font-family doesn't,
+    /// so it's not part of this - see `TITLE_FONT_FAMILY`.
+    pub fn size_sx(size: Size) -> Sx {
+        sx().font_size(TITLE_FONT_SIZE.value(size))
+            .font_weight(TITLE_FONT_WEIGHT.value(size))
+            .letter_spacing(TITLE_LETTER_SPACING.value(size))
+            .line_height(TITLE_LINE_HEIGHT.value(size))
     }
 
-    pub fn h2_sx() -> Sx {
-        sx().font_family(H2_FONT_FAMILY.value())
-            .font_size(H2_FONT_SIZE.value())
-            .font_weight(H2_FONT_WEIGHT.value())
-            .letter_spacing(H2_LETTER_SPACING.value())
-            .line_height(H2_LINE_HEIGHT.value())
-    }
-
-    pub fn h3_sx() -> Sx {
-        sx().font_family(H3_FONT_FAMILY.value())
-            .font_size(H3_FONT_SIZE.value())
-            .font_weight(H3_FONT_WEIGHT.value())
-            .letter_spacing(H3_LETTER_SPACING.value())
-            .line_height(H3_LINE_HEIGHT.value())
-    }
-
-    pub fn h4_sx() -> Sx {
-        sx().font_family(H4_FONT_FAMILY.value())
-            .font_size(H4_FONT_SIZE.value())
-            .font_weight(H4_FONT_WEIGHT.value())
-            .letter_spacing(H4_LETTER_SPACING.value())
-            .line_height(H4_LINE_HEIGHT.value())
-    }
-
-    pub fn h5_sx() -> Sx {
-        sx().font_family(H5_FONT_FAMILY.value())
-            .font_size(H5_FONT_SIZE.value())
-            .font_weight(H5_FONT_WEIGHT.value())
-            .letter_spacing(H5_LETTER_SPACING.value())
-            .line_height(H5_LINE_HEIGHT.value())
-    }
-
-    pub fn h6_sx() -> Sx {
-        sx().font_family(H6_FONT_FAMILY.value())
-            .font_size(H6_FONT_SIZE.value())
-            .font_weight(H6_FONT_WEIGHT.value())
-            .letter_spacing(H6_LETTER_SPACING.value())
-            .line_height(H6_LINE_HEIGHT.value())
+    /// Font-family plus every size's declarations at once, each size gated
+    /// behind its own `[data-state~="size-md"]`-style selector (see
+    /// `Size::state_name`) - one static/framework `Sx` that every `Title`
+    /// instance shares regardless of which size it's actually using; only
+    /// the `data-state` attribute (set per-instance) picks which size block
+    /// applies, so choosing a size never costs a new dynamically-generated
+    /// CSS class.
+    pub fn theme_vars() -> Sx {
+        Size::ALL
+            .into_iter()
+            .fold(sx().font_family(TITLE_FONT_FAMILY.value()), |base, size| {
+                base.when(size.state_name(), Self::size_sx(size))
+            })
     }
 }
 
 impl ToCssDeclarations for TitleDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let levels = [
-            (
-                &self.h1,
-                H1_FONT_FAMILY,
-                H1_FONT_WEIGHT,
-                H1_FONT_SIZE,
-                H1_LETTER_SPACING,
-                H1_LINE_HEIGHT,
-            ),
-            (
-                &self.h2,
-                H2_FONT_FAMILY,
-                H2_FONT_WEIGHT,
-                H2_FONT_SIZE,
-                H2_LETTER_SPACING,
-                H2_LINE_HEIGHT,
-            ),
-            (
-                &self.h3,
-                H3_FONT_FAMILY,
-                H3_FONT_WEIGHT,
-                H3_FONT_SIZE,
-                H3_LETTER_SPACING,
-                H3_LINE_HEIGHT,
-            ),
-            (
-                &self.h4,
-                H4_FONT_FAMILY,
-                H4_FONT_WEIGHT,
-                H4_FONT_SIZE,
-                H4_LETTER_SPACING,
-                H4_LINE_HEIGHT,
-            ),
-            (
-                &self.h5,
-                H5_FONT_FAMILY,
-                H5_FONT_WEIGHT,
-                H5_FONT_SIZE,
-                H5_LETTER_SPACING,
-                H5_LINE_HEIGHT,
-            ),
-            (
-                &self.h6,
-                H6_FONT_FAMILY,
-                H6_FONT_WEIGHT,
-                H6_FONT_SIZE,
-                H6_LETTER_SPACING,
-                H6_LINE_HEIGHT,
-            ),
-        ];
-
-        let mut declarations = Vec::new();
-        for (level, family_var, weight_var, size_var, spacing_var, height_var) in levels {
-            declarations.push(family_var.declare(level.font_family));
-            declarations.push(weight_var.declare(level.font_weight));
-            declarations.push(size_var.declare(level.font_size));
-            declarations.push(spacing_var.declare(level.letter_spacing));
-            declarations.push(height_var.declare(level.line_height));
+        let mut declarations = vec![TITLE_FONT_FAMILY.declare(self.font_family)];
+        for size in Size::ALL {
+            let level = self.sizes.get(size);
+            declarations.push(TITLE_FONT_WEIGHT.declare(size, level.font_weight));
+            declarations.push(TITLE_FONT_SIZE.declare(size, level.font_size));
+            declarations.push(TITLE_LETTER_SPACING.declare(size, level.letter_spacing));
+            declarations.push(TITLE_LINE_HEIGHT.declare(size, level.line_height));
         }
         declarations
     }

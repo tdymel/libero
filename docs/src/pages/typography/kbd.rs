@@ -10,7 +10,7 @@ pub fn KbdPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Kbd" }
+                Title { size: "xxl", "Kbd" }
                 Text {
                     "Save with "
                     Kbd { "Ctrl" }
@@ -27,7 +27,7 @@ pub fn KbdPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
                     gap: "16px",

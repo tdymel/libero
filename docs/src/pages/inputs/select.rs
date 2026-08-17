@@ -12,13 +12,13 @@ pub fn SelectPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Select" }
+                Title { size: "xxl", "Select" }
                 Text { "A styled native select, wrapped in its own label when label is set." }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Select {
                     label: "Size",
                     value: value(),
@@ -34,7 +34,7 @@ pub fn SelectPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
                     gap: "12px",

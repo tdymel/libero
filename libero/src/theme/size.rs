@@ -6,10 +6,11 @@ pub enum Size {
     Md,
     Lg,
     Xl,
+    Xxl,
 }
 
 impl Size {
-    pub(crate) const ALL: [Size; 5] = [Self::Xs, Self::Sm, Self::Md, Self::Lg, Self::Xl];
+    pub(crate) const ALL: [Size; 6] = [Self::Xs, Self::Sm, Self::Md, Self::Lg, Self::Xl, Self::Xxl];
 
     pub const fn as_str(&self) -> &'static str {
         match self {
@@ -18,6 +19,7 @@ impl Size {
             Self::Md => "md",
             Self::Lg => "lg",
             Self::Xl => "xl",
+            Self::Xxl => "xxl",
         }
     }
 
@@ -28,6 +30,7 @@ impl Size {
             "md" => Some(Self::Md),
             "lg" => Some(Self::Lg),
             "xl" => Some(Self::Xl),
+            "xxl" => Some(Self::Xxl),
             _ => None,
         }
     }
@@ -39,6 +42,7 @@ impl Size {
             Self::Md => "62rem",
             Self::Lg => "75rem",
             Self::Xl => "88rem",
+            Self::Xxl => "101rem",
         }
     }
 
@@ -52,6 +56,7 @@ impl Size {
             Self::Md => "size-md",
             Self::Lg => "size-lg",
             Self::Xl => "size-xl",
+            Self::Xxl => "size-xxl",
         }
     }
 }

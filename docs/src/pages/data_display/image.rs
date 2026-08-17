@@ -13,7 +13,7 @@ pub fn ImagePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Image" }
+                Title { size: "xxl", "Image" }
                 Text {
                     "An img with a fallback source on load error, optional rounded corners, "
                     "and an optional click-to-zoom overlay."
@@ -22,7 +22,7 @@ pub fn ImagePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Fit & radius" }
+                Title { size: "xl", "Fit & radius" }
                 Flex {
                     direction: "row",
                     gap: "16px",
@@ -44,7 +44,7 @@ pub fn ImagePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Zoomable" }
+                Title { size: "xl", "Zoomable" }
                 Text { sx: sx().color("grey.6"), "Click to open a zoomed overlay." }
                 Image {
                     src: crate::LOGO,

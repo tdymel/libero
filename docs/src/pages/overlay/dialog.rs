@@ -13,7 +13,7 @@ pub fn DialogPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Dialog" }
+                Title { size: "xxl", "Dialog" }
                 Text {
                     "The dialog surface itself - padding, radius, shadow, and the role/"
                     "aria-modal wiring. Pair it with Modal for the portaled, backdrop-"
@@ -23,11 +23,11 @@ pub fn DialogPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Dialog {
                     size: "sm",
                     sx: sx().margin("0"),
-                    Title { variant: "h3", "Dialog surface" }
+                    Title { size: "lg", "Dialog surface" }
                     Text { "This is Dialog rendered inline, without Modal's portal/backdrop." }
                 }
             }

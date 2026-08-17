@@ -13,13 +13,13 @@ pub fn TextPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Text" }
+                Title { size: "xxl", "Text" }
                 Text { "Body copy - renders a p by default, sized via the theme's text scale." }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "column",
                     gap: "8px",
@@ -33,7 +33,7 @@ pub fn TextPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "As a span" }
+                Title { size: "xl", "As a span" }
                 Text {
                     "Inline text with "
                     Text { component: "span", sx: sx().font_weight("700"), "bold inline text" }

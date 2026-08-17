@@ -144,7 +144,7 @@ fn AppShell() -> Element {
                     align: "center",
                     sx: sx().gap("md"),
                     Image { src: LOGO, sx: sx().width("auto").height("28px") }
-                    Title { variant: "h3", component: "span", "Libero" }
+                    Title { size: "lg", component: "span", "Libero" }
                 }
             }
             // This row - not the document - is the scrolling element, so its

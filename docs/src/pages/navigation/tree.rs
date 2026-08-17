@@ -120,7 +120,7 @@ pub fn TreePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Tree" }
+                Title { size: "xxl", "Tree" }
                 Text {
                     "Data-driven, not composed via children - pass "
                     Code { "Vec<TreeNode<T>>" }
@@ -166,7 +166,7 @@ pub fn TreePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Basic" }
+                Title { size: "xl", "Basic" }
                 Text {
                     "Plain "
                     Code { "String" }
@@ -212,7 +212,7 @@ pub fn TreePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Custom rendering" }
+                Title { size: "xl", "Custom rendering" }
                 Text {
                     "A "
                     Code { "render_node" }

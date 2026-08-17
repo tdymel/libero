@@ -12,7 +12,7 @@ pub fn IconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Icon" }
+                Title { size: "xxl", "Icon" }
                 Text {
                     "Wraps an svg child in a sized, colored badge. "
                     Code { "color" }
@@ -25,7 +25,7 @@ pub fn IconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Variants" }
+                Title { size: "xl", "Variants" }
                 Flex {
                     direction: "row",
                     gap: "24px",
@@ -56,7 +56,7 @@ pub fn IconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
                     gap: "16px",
@@ -72,7 +72,7 @@ pub fn IconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Colors" }
+                Title { size: "xl", "Colors" }
                 Flex {
                     direction: "row",
                     gap: "16px",

@@ -10,7 +10,7 @@ pub fn VisuallyHiddenPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Visually Hidden" }
+                Title { size: "xxl", "Visually Hidden" }
                 Text {
                     "Content available to screen readers but removed from sighted layout - "
                     "e.g. extra context for a link that's ambiguous out of context."
@@ -19,7 +19,7 @@ pub fn VisuallyHiddenPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Text {
                     Anchor {
                         to: "https://example.com",

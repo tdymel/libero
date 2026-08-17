@@ -13,7 +13,7 @@ pub fn OverlayPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Overlay" }
+                Title { size: "xxl", "Overlay" }
                 Text {
                     "Dims/blurs whatever is behind it - Modal renders one behind its content. "
                     "Defaults to position: fixed, spanning the whole viewport; overridden to "
@@ -23,7 +23,7 @@ pub fn OverlayPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Box {
                     // `z-index` (any value, not just a high one) is what
                     // actually contains the overlay here - `position` alone

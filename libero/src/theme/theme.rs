@@ -3,7 +3,7 @@ use super::{
     DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults,
     HeaderDefaults, HexColor, IconDefaults, KbdDefaults, ListDefaults, MarkDefaults,
     NavLinkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize,
-    TitleDefaults, TitleLevel, TreeDefaults,
+    TitleDefaults, TitleSize, TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -44,15 +44,15 @@ pub struct Theme {
 
 impl Theme {
     pub const DEFAULT: Theme = Theme::new(
-        Sizes::new(4, 8, 12, 16, 20),
-        Sizes::new(2, 4, 8, 16, 32),
+        Sizes::new(4, 8, 12, 16, 20, 24),
+        Sizes::new(2, 4, 8, 16, 32, 64),
         FlexDefaults::new(
             FlexAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
             FlexAxisDefaults::new("center", "flex-start", super::Size::Md, false),
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
-        DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750)),
-        DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400)),
+        DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750, 900)),
+        DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400, 480)),
         DividerDefaults::new(None),
         ButtonDefaults::new(
             super::Size::Md,
@@ -63,6 +63,7 @@ impl Theme {
                 super::ButtonSizeLevel::new("1rem", "42px", "18px"),
                 super::ButtonSizeLevel::new("1.125rem", "50px", "22px"),
                 super::ButtonSizeLevel::new("1.25rem", "60px", "28px"),
+                super::ButtonSizeLevel::new("1.375rem", "72px", "34px"),
             ),
         ),
         SelectDefaults::new(
@@ -74,57 +75,25 @@ impl Theme {
                 super::SelectSizeLevel::new("0.875rem", "36px", "12px"),
                 super::SelectSizeLevel::new("0.9375rem", "40px", "14px"),
                 super::SelectSizeLevel::new("1rem", "44px", "16px"),
+                super::SelectSizeLevel::new("1.0625rem", "48px", "18px"),
             ),
         ),
         ListDefaults::new(
             super::Size::Md,
-            Sizes::new(4, 8, 12, 16, 20),
-            Sizes::new(8, 12, 16, 20, 24),
+            Sizes::new(4, 8, 12, 16, 20, 24),
+            Sizes::new(8, 12, 16, 20, 24, 28),
         ),
-        DataListDefaults::new(super::Size::Md, Sizes::new(6, 8, 12, 16, 20)),
+        DataListDefaults::new(super::Size::Md, Sizes::new(6, 8, 12, 16, 20, 24)),
         TreeDefaults::new(super::Size::Md),
         TitleDefaults::new(
-            TitleLevel::new(
-                "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-                "400",
-                "2.125rem",
-                "-0.01em",
-                "1.3",
-            ),
-            TitleLevel::new(
-                "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-                "400",
-                "1.625rem",
-                "-0.005em",
-                "1.35",
-            ),
-            TitleLevel::new(
-                "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-                "400",
-                "1.375rem",
-                "0em",
-                "1.4",
-            ),
-            TitleLevel::new(
-                "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-                "400",
-                "1rem",
-                "0em",
-                "1.45",
-            ),
-            TitleLevel::new(
-                "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-                "400",
-                "0.875rem",
-                "0em",
-                "1.5",
-            ),
-            TitleLevel::new(
-                "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-                "400",
-                "0.75rem",
-                "0em",
-                "1.5",
+            "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
+            Sizes::new(
+                TitleSize::new("400", "0.75rem", "0em", "1.5"), // xs (h6)
+                TitleSize::new("400", "0.875rem", "0em", "1.5"), // sm (h5)
+                TitleSize::new("400", "1rem", "0em", "1.45"),   // md (h4)
+                TitleSize::new("400", "1.375rem", "0em", "1.4"), // lg (h3)
+                TitleSize::new("400", "1.625rem", "-0.005em", "1.35"), // xl (h2)
+                TitleSize::new("400", "2.125rem", "-0.01em", "1.3"), // xxl (h1, default)
             ),
         ),
         TextDefaults::new(
@@ -135,6 +104,7 @@ impl Theme {
                 TextSize::new("400", "1rem", "0em", "1.5"),      // md (default)
                 TextSize::new("400", "1.125rem", "0em", "1.55"), // lg
                 TextSize::new("400", "1.25rem", "0em", "1.6"),   // xl
+                TextSize::new("400", "1.375rem", "0em", "1.65"), // xxl
             ),
         ),
         CodeDefaults::new(
@@ -154,13 +124,13 @@ impl Theme {
             "#0969da",
             "#cf222e",
         ),
-        HeaderDefaults::new(Sizes::new(48, 56, 64, 72, 80)),
-        IconDefaults::new(Sizes::new(16, 20, 24, 32, 40)),
+        HeaderDefaults::new(Sizes::new(48, 56, 64, 72, 80, 88)),
+        IconDefaults::new(Sizes::new(16, 20, 24, 32, 40, 48)),
         ActionIconDefaults::new(super::Size::Md, super::Size::Sm),
         QrCodeDefaults::new("#FFFFFF", "#000000", QrRobustness::Medium),
         MarkDefaults::new(super::Color::Warning),
         KbdDefaults::new(
-            Sizes::new(10, 12, 14, 16, 20),
+            Sizes::new(10, 12, 14, 16, 20, 24),
             "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
             "#f6f8fa",
             "#d0d7de",

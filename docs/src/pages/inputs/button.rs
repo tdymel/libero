@@ -13,7 +13,7 @@ pub fn ButtonPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Button" }
+                Title { size: "xxl", "Button" }
                 Text {
                     "A clickable control, or a router-aware link when "
                     Code { "to" }
@@ -23,7 +23,7 @@ pub fn ButtonPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Variants" }
+                Title { size: "xl", "Variants" }
                 Flex {
                     direction: "row",
                     gap: "12px",
@@ -35,7 +35,7 @@ pub fn ButtonPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
                     gap: "12px",
@@ -50,7 +50,7 @@ pub fn ButtonPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Colors" }
+                Title { size: "xl", "Colors" }
                 Flex {
                     direction: "row",
                     gap: "12px",
@@ -63,7 +63,7 @@ pub fn ButtonPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Disabled" }
+                Title { size: "xl", "Disabled" }
                 Flex {
                     direction: "row",
                     gap: "12px",
@@ -74,7 +74,7 @@ pub fn ButtonPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "As a link" }
+                Title { size: "xl", "As a link" }
                 Text {
                     sx: sx().color("grey.6"),
                     "Renders as a real anchor, or a router Link when to matches an internal route.",

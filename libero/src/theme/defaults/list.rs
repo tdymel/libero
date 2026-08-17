@@ -38,6 +38,10 @@ impl ListDefaults {
     pub fn xl_sx() -> Sx {
         Self::size_sx(Size::Xl)
     }
+
+    pub fn xxl_sx() -> Sx {
+        Self::size_sx(Size::Xxl)
+    }
 }
 
 impl ToCssDeclarations for ListDefaults {

@@ -12,7 +12,7 @@ pub fn ModalPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Modal" }
+                Title { size: "xxl", "Modal" }
                 Text {
                     "A focus-trapped, dimmed layer that locks scroll. No opinion on content - "
                     "pair it with Dialog for role/aria-modal semantics."
@@ -21,14 +21,14 @@ pub fn ModalPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Button { variant: "outlined", onclick: move |_| open.set(true), "Open modal" }
                 if open() {
                     Modal {
                         onclose: move |_| open.set(false),
                         Dialog {
                             aria_label: "Example modal",
-                            Title { variant: "h3", "Example modal" }
+                            Title { size: "lg", "Example modal" }
                             Text { "Closes on Escape or by clicking the backdrop." }
                             Button { variant: "outlined", onclick: move |_| open.set(false), "Close" }
                         }

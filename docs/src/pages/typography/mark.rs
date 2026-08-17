@@ -10,7 +10,7 @@ pub fn MarkPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Mark" }
+                Title { size: "xxl", "Mark" }
                 Text {
                     "Highlight "
                     Mark { "this chunk" }
@@ -25,7 +25,7 @@ pub fn MarkPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Colors" }
+                Title { size: "xl", "Colors" }
                 Text {
                     "Default: "
                     Mark { "warning" }

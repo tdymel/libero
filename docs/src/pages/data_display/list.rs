@@ -57,7 +57,7 @@ pub fn ListPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "List" }
+                Title { size: "xxl", "List" }
                 Text {
                     "Renders a "
                     Code { "ul" }
@@ -74,7 +74,7 @@ pub fn ListPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 List {
                     ListItem { "First item" }
                     ListItem { "Second item" }
@@ -90,7 +90,7 @@ pub fn ListPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "File tree" }
+                Title { size: "xl", "File tree" }
                 Text {
                     "Purely visual - no interactivity or state, just "
                     Code { "List" }

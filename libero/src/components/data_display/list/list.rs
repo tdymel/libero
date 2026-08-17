@@ -21,6 +21,7 @@ fn get_size_sx(size: Size) -> &'static Sx {
     static MD: StaticSx = StaticSx::new(ListDefaults::md_sx);
     static LG: StaticSx = StaticSx::new(ListDefaults::lg_sx);
     static XL: StaticSx = StaticSx::new(ListDefaults::xl_sx);
+    static XXL: StaticSx = StaticSx::new(ListDefaults::xxl_sx);
 
     match size {
         Size::Xs => &XS,
@@ -28,6 +29,7 @@ fn get_size_sx(size: Size) -> &'static Sx {
         Size::Md => &MD,
         Size::Lg => &LG,
         Size::Xl => &XL,
+        Size::Xxl => &XXL,
     }
 }
 

@@ -13,7 +13,7 @@ pub fn ContainerPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Container" }
+                Title { size: "xxl", "Container" }
                 Text {
                     "Centers content and caps its width at a breakpoint - wraps your main "
                     "content, not the whole page shell."
@@ -22,7 +22,7 @@ pub fn ContainerPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Container {
                     size: "sm",
                     sx: sx().background("grey.1").padding("16px"),

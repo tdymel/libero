@@ -23,6 +23,10 @@ pub const SELECT_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-select-font-size-xl")
 pub const SELECT_HEIGHT_XL: CssVar = CssVar::new("--lsx-select-height-xl");
 pub const SELECT_PADDING_X_XL: CssVar = CssVar::new("--lsx-select-padding-x-xl");
 
+pub const SELECT_FONT_SIZE_XXL: CssVar = CssVar::new("--lsx-select-font-size-xxl");
+pub const SELECT_HEIGHT_XXL: CssVar = CssVar::new("--lsx-select-height-xxl");
+pub const SELECT_PADDING_X_XXL: CssVar = CssVar::new("--lsx-select-padding-x-xxl");
+
 pub const SELECT_RADIUS: CssVar = CssVar::new("--lsx-select-radius");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -100,6 +104,13 @@ impl SelectDefaults {
             .padding_left(SELECT_PADDING_X_XL.value())
             .padding_right(SELECT_PADDING_X_XL.value())
     }
+
+    pub fn xxl_sx() -> Sx {
+        sx().font_size(SELECT_FONT_SIZE_XXL.value())
+            .height(SELECT_HEIGHT_XXL.value())
+            .padding_left(SELECT_PADDING_X_XXL.value())
+            .padding_right(SELECT_PADDING_X_XXL.value())
+    }
 }
 
 impl ToCssDeclarations for SelectDefaults {
@@ -134,6 +145,12 @@ impl ToCssDeclarations for SelectDefaults {
                 SELECT_FONT_SIZE_XL,
                 SELECT_HEIGHT_XL,
                 SELECT_PADDING_X_XL,
+            ),
+            (
+                Size::Xxl,
+                SELECT_FONT_SIZE_XXL,
+                SELECT_HEIGHT_XXL,
+                SELECT_PADDING_X_XXL,
             ),
         ];
 

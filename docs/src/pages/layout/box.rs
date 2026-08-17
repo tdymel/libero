@@ -13,7 +13,7 @@ pub fn BoxPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Box" }
+                Title { size: "xxl", "Box" }
                 Text {
                     "The polymorphic primitive every other component is built on - renders "
                     "as any tag via "
@@ -32,7 +32,7 @@ pub fn BoxPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Box {
                     component: "section",
                     sx: sx().padding("16px").background("grey.1").border_radius("md"),
@@ -42,7 +42,7 @@ pub fn BoxPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "As a link" }
+                Title { size: "xl", "As a link" }
                 Box {
                     component: "a",
                     href: "https://dioxuslabs.com",

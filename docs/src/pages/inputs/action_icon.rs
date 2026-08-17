@@ -15,7 +15,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "ActionIcon" }
+                Title { size: "xxl", "ActionIcon" }
                 Text {
                     Code { "Icon" }
                     "'s sizing, color, and variant system, rendered as a real "
@@ -27,7 +27,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Variants" }
+                Title { size: "xl", "Variants" }
                 Flex {
                     direction: "row",
                     gap: "24px",
@@ -57,7 +57,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "No variant or color" }
+                Title { size: "xl", "No variant or color" }
                 Text {
                     "With neither set, "
                     Code { "ActionIcon" }
@@ -75,7 +75,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
                     gap: "16px",
@@ -90,7 +90,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Colors" }
+                Title { size: "xl", "Colors" }
                 Flex {
                     direction: "row",
                     gap: "16px",
@@ -103,7 +103,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Disabled" }
+                Title { size: "xl", "Disabled" }
                 ActionIcon {
                     variant: "filled",
                     color: "primary",
@@ -115,7 +115,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "As a link" }
+                Title { size: "xl", "As a link" }
                 Text {
                     sx: sx().color("grey.6"),
                     "Renders as a real anchor, or a router Link when to matches an internal route.",
@@ -132,7 +132,7 @@ pub fn ActionIconPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Accessible name" }
+                Title { size: "xl", "Accessible name" }
                 Text {
                     sx: sx().color("grey.6"),
                     "aria_label is required, not optional - an icon-only button has no visible "

@@ -15,7 +15,7 @@ pub fn DrawerPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Drawer" }
+                Title { size: "xxl", "Drawer" }
                 Text {
                     "A panel anchored to one edge - Temporary is a modal drawer (portaled, "
                     "dimmed, focus-trapped); Static is a plain in-flow panel, e.g. a sidebar."
@@ -24,7 +24,7 @@ pub fn DrawerPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Static" }
+                Title { size: "xl", "Static" }
                 Flex {
                     direction: "row",
                     sx: sx().height("120px").border("1px solid").border_color("grey.3"),
@@ -45,14 +45,14 @@ pub fn DrawerPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Temporary" }
+                Title { size: "xl", "Temporary" }
                 Button { variant: "outlined", onclick: move |_| open.set(true), "Open drawer" }
                 if open() {
                     Drawer {
                         anchor: "right",
                         onclose: move |_| open.set(false),
                         sx: sx().padding("16px"),
-                        Title { variant: "h3", "Temporary drawer" }
+                        Title { size: "lg", "Temporary drawer" }
                         Text { "Closes on Escape or backdrop click." }
                         Button { variant: "outlined", onclick: move |_| open.set(false), "Close" }
                     }

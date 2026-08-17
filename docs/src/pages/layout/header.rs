@@ -13,13 +13,13 @@ pub fn HeaderPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Header" }
+                Title { size: "xxl", "Header" }
                 Text { "The page's banner landmark - always renders header. This page's own header uses one." }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Colors" }
+                Title { size: "xl", "Colors" }
                 Flex {
                     direction: "column",
                     gap: "8px",

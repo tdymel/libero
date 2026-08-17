@@ -190,18 +190,19 @@ mod tests {
                 .contains("--lsx-flex-row-spacing:var(--lsx-spacing-md);")
         );
         assert!(css.as_str().contains("--lsx-flex-row-wrap:nowrap;"));
-        assert!(css.as_str().contains("--lsx-h1-font-size:2.125rem;"));
-        assert!(css.as_str().contains("--lsx-h1-font-weight:400;"));
-        assert!(css.as_str().contains("--lsx-h2-font-size:1.625rem;"));
-        assert!(css.as_str().contains("--lsx-h3-font-size:1.375rem;"));
-        assert!(css.as_str().contains("--lsx-h4-font-size:1rem;"));
-        assert!(css.as_str().contains("--lsx-h5-font-size:0.875rem;"));
-        assert!(css.as_str().contains("--lsx-h6-font-size:0.75rem;"));
+        assert!(css.as_str().contains("--lsx-title-font-size-xxl:2.125rem;"));
+        assert!(css.as_str().contains("--lsx-title-font-weight-xxl:400;"));
+        assert!(css.as_str().contains("--lsx-title-font-size-xl:1.625rem;"));
+        assert!(css.as_str().contains("--lsx-title-font-size-lg:1.375rem;"));
+        assert!(css.as_str().contains("--lsx-title-font-size-md:1rem;"));
+        assert!(css.as_str().contains("--lsx-title-font-size-sm:0.875rem;"));
+        assert!(css.as_str().contains("--lsx-title-font-size-xs:0.75rem;"));
         assert!(css.as_str().contains("--lsx-text-font-size-xs:0.75rem;"));
         assert!(css.as_str().contains("--lsx-text-font-size-sm:0.875rem;"));
         assert!(css.as_str().contains("--lsx-text-font-size-md:1rem;"));
         assert!(css.as_str().contains("--lsx-text-font-size-lg:1.125rem;"));
         assert!(css.as_str().contains("--lsx-text-font-size-xl:1.25rem;"));
+        assert!(css.as_str().contains("--lsx-text-font-size-xxl:1.375rem;"));
         assert!(css.as_str().contains("--lsx-text-font-weight-xs:400;"));
         assert!(css.as_str().contains("--lsx-text-line-height-md:1.5;"));
 

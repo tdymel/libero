@@ -3,95 +3,34 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, HtmlTag, Input, States, common::base_props},
     sx::{StaticSx, Sx},
-    theme::TitleDefaults,
+    theme::{Size, TitleDefaults},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TitleVariant {
-    H1,
-    H2,
-    H3,
-    H4,
-    H5,
-    H6,
-}
+static TITLE_BASE_SX: StaticSx = StaticSx::new(|| TitleDefaults::theme_vars().margin("0"));
 
-impl Default for TitleVariant {
-    fn default() -> Self {
-        Self::H1
-    }
-}
-
-impl From<&str> for TitleVariant {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "h1" => Self::H1,
-            "h2" => Self::H2,
-            "h3" => Self::H3,
-            "h4" => Self::H4,
-            "h5" => Self::H5,
-            "h6" => Self::H6,
-            _ => Self::H1,
-        }
-    }
-}
-
-impl From<String> for TitleVariant {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<TitleVariant> {
-    fn from(value: &str) -> Self {
-        Input::Value(TitleVariant::from(value))
-    }
-}
-
-impl From<String> for Input<TitleVariant> {
-    fn from(value: String) -> Self {
-        Input::Value(TitleVariant::from(value))
-    }
-}
-
-impl From<TitleVariant> for HtmlTag {
-    fn from(variant: TitleVariant) -> Self {
-        match variant {
-            TitleVariant::H1 => Self::H1,
-            TitleVariant::H2 => Self::H2,
-            TitleVariant::H3 => Self::H3,
-            TitleVariant::H4 => Self::H4,
-            TitleVariant::H5 => Self::H5,
-            TitleVariant::H6 => Self::H6,
-        }
-    }
-}
-
-static TITLE_H1_SX: StaticSx = StaticSx::new(|| TitleDefaults::h1_sx().margin("0"));
-static TITLE_H2_SX: StaticSx = StaticSx::new(|| TitleDefaults::h2_sx().margin("0"));
-static TITLE_H3_SX: StaticSx = StaticSx::new(|| TitleDefaults::h3_sx().margin("0"));
-static TITLE_H4_SX: StaticSx = StaticSx::new(|| TitleDefaults::h4_sx().margin("0"));
-static TITLE_H5_SX: StaticSx = StaticSx::new(|| TitleDefaults::h5_sx().margin("0"));
-static TITLE_H6_SX: StaticSx = StaticSx::new(|| TitleDefaults::h6_sx().margin("0"));
-
-fn get_size_sx(variant: TitleVariant) -> &'static StaticSx {
-    match variant {
-        TitleVariant::H1 => &TITLE_H1_SX,
-        TitleVariant::H2 => &TITLE_H2_SX,
-        TitleVariant::H3 => &TITLE_H3_SX,
-        TitleVariant::H4 => &TITLE_H4_SX,
-        TitleVariant::H5 => &TITLE_H5_SX,
-        TitleVariant::H6 => &TITLE_H6_SX,
+/// The heading tag `size` implies by default - `Xxl` is h1 (the largest,
+/// most prominent), down to `Xs` as h6. Override via `component` to keep a
+/// size's visual weight while using a different semantic tag, e.g. to
+/// preserve a page's h1->h2->h3 a11y heading order.
+fn default_component(size: Size) -> HtmlTag {
+    match size {
+        Size::Xxl => HtmlTag::H1,
+        Size::Xl => HtmlTag::H2,
+        Size::Lg => HtmlTag::H3,
+        Size::Md => HtmlTag::H4,
+        Size::Sm => HtmlTag::H5,
+        Size::Xs => HtmlTag::H6,
     }
 }
 
 base_props! {
     pub struct TitleProps {
         #[props(default, into)]
-        variant: TitleVariant,
-        /// Which element to render as - defaults to `variant`'s own heading tag.
-        /// Override to keep `variant`'s visual size while using a different
-        /// semantic tag, e.g. to preserve a page's h1->h2->h3 a11y heading order.
+        size: Input<Size>,
+        /// Which element to render as - defaults to `size`'s own heading tag
+        /// (see `default_component`). Override to keep `size`'s visual
+        /// weight while using a different semantic tag, e.g. to preserve a
+        /// page's h1->h2->h3 a11y heading order.
         #[props(default, into)]
         component: Input<HtmlTag>,
         children: Element,
@@ -100,19 +39,28 @@ base_props! {
 
 #[component]
 pub fn Title(props: TitleProps) -> Element {
+    let chosen_size = props.size.as_ref().copied().unwrap_or(Size::Xxl);
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with(chosen_size.state_name(), true);
+
     let component = props
         .component
         .as_ref()
         .copied()
-        .unwrap_or_else(|| HtmlTag::from(props.variant));
+        .unwrap_or_else(|| default_component(chosen_size));
 
     rsx! {
         Box {
             class: props.class,
             sx: props.sx,
-            states: props.states,
+            states,
             component,
-            framework_sx: get_size_sx(props.variant),
+            framework_sx: &TITLE_BASE_SX,
             attributes: props.attributes,
             {props.children}
         }

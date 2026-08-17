@@ -13,7 +13,7 @@ pub fn NavLinkPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "NavLink" }
+                Title { size: "xxl", "NavLink" }
                 Text {
                     "A navigation list item - "
                     Code { "Anchor" }
@@ -28,7 +28,7 @@ pub fn NavLinkPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Active state" }
+                Title { size: "xl", "Active state" }
                 Text {
                     sx: sx().color("grey.6"),
                     "Auto-detected by comparing "
@@ -56,7 +56,7 @@ pub fn NavLinkPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Colors" }
+                Title { size: "xl", "Colors" }
                 Text {
                     sx: sx().color("grey.6"),
                     "Forced active here to show the tint - color only shows once a link is "
@@ -76,7 +76,7 @@ pub fn NavLinkPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Disabled" }
+                Title { size: "xl", "Disabled" }
                 Flex {
                     direction: "column",
                     gap: "4px",

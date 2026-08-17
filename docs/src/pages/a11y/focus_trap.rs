@@ -10,7 +10,7 @@ pub fn FocusTrapPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Focus Trap" }
+                Title { size: "xxl", "Focus Trap" }
                 Text {
                     "Confines Tab/Shift+Tab cycling to its children - the same mechanism "
                     "Modal uses internally to keep keyboard focus inside an open dialog."
@@ -19,7 +19,7 @@ pub fn FocusTrapPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Example" }
+                Title { size: "xl", "Example" }
                 Text { "Tab through these buttons - focus stays inside the trap and wraps around." }
                 FocusTrap {
                     Flex {

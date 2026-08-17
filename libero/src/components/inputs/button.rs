@@ -212,6 +212,7 @@ fn get_size_sx(size: Size) -> &'static Sx {
     static MD: StaticSx = StaticSx::new(ButtonDefaults::md_sx);
     static LG: StaticSx = StaticSx::new(ButtonDefaults::lg_sx);
     static XL: StaticSx = StaticSx::new(ButtonDefaults::xl_sx);
+    static XXL: StaticSx = StaticSx::new(ButtonDefaults::xxl_sx);
 
     match size {
         Size::Xs => &XS,
@@ -219,6 +220,7 @@ fn get_size_sx(size: Size) -> &'static Sx {
         Size::Md => &MD,
         Size::Lg => &LG,
         Size::Xl => &XL,
+        Size::Xxl => &XXL,
     }
 }
 

@@ -55,7 +55,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Code" }
+                Title { size: "xxl", "Code" }
                 Text {
                     "Inline "
                     Code { "code" }
@@ -76,7 +76,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "No language" }
+                Title { size: "xl", "No language" }
                 Text {
                     "No "
                     Code { "language" }
@@ -89,7 +89,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Recognized, but not enabled" }
+                Title { size: "xl", "Recognized, but not enabled" }
                 Text {
                     "Libero recognizes far more languages than any one build compiles in - "
                     Code { "language: \"python\"" }
@@ -111,37 +111,37 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Highlighted - Rust" }
+                Title { size: "xl", "Highlighted - Rust" }
                 Code { block: true, source: RUST_EXAMPLE, language: "rust" }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Highlighted - Shell" }
+                Title { size: "xl", "Highlighted - Shell" }
                 Code { block: true, source: SHELL_EXAMPLE, language: "shell" }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Highlighted - Markdown" }
+                Title { size: "xl", "Highlighted - Markdown" }
                 Code { block: true, source: MARKDOWN_EXAMPLE, language: "markdown" }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Highlighted - HTML" }
+                Title { size: "xl", "Highlighted - HTML" }
                 Code { block: true, source: HTML_EXAMPLE, language: "html" }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Highlighted - CSS" }
+                Title { size: "xl", "Highlighted - CSS" }
                 Code { block: true, source: CSS_EXAMPLE, language: "css" }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Inline highlighting" }
+                Title { size: "xl", "Inline highlighting" }
                 Text {
                     "Works inline too - "
                     Code { source: "let x: u32 = 5;", language: "rust" }
@@ -151,7 +151,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Without a header" }
+                Title { size: "xl", "Without a header" }
                 Text {
                     Code { "header: false" }
                     " drops the bar - the copy button (if "
@@ -165,7 +165,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Without a copy button" }
+                Title { size: "xl", "Without a copy button" }
                 Text { Code { "copyable: false" } " keeps the header, drops the button." }
                 Code {
                     block: true,
@@ -177,7 +177,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Max lines" }
+                Title { size: "xl", "Max lines" }
                 Text {
                     Code { "max_lines" }
                     " caps the visible height to roughly that many lines, scrolling "
@@ -193,14 +193,14 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Long lines" }
+                Title { size: "xl", "Long lines" }
                 Text { "A single line wider than the block scrolls horizontally on its own." }
                 Code { block: true, source: LONG_LINE_EXAMPLE, language: "rust" }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Line numbers" }
+                Title { size: "xl", "Line numbers" }
                 Text { Code { "line_numbers: false" } " drops the gutter entirely." }
                 Code {
                     block: true,
@@ -212,7 +212,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Highlighted lines" }
+                Title { size: "xl", "Highlighted lines" }
                 Text {
                     Code { "highlight_lines" }
                     " emphasizes specific rows - a comma-separated list of line numbers "
@@ -230,7 +230,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Diff" }
+                Title { size: "xl", "Diff" }
                 Text {
                     Code { "diff: true" }
                     " reads a leading "
@@ -247,7 +247,7 @@ pub fn CodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Opaque children" }
+                Title { size: "xl", "Opaque children" }
                 Text {
                     "Without "
                     Code { "source" }

@@ -13,13 +13,13 @@ pub fn FlexPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Flex" }
+                Title { size: "xxl", "Flex" }
                 Text { "A flexbox container - direction, gap, align, justify and wrap, all theme-aware." }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Row with gap" }
+                Title { size: "xl", "Row with gap" }
                 Flex {
                     direction: "row",
                     gap: "12px",
@@ -31,7 +31,7 @@ pub fn FlexPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Column" }
+                Title { size: "xl", "Column" }
                 Flex {
                     direction: "column",
                     gap: "8px",

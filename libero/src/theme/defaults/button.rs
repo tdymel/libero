@@ -23,6 +23,10 @@ pub const BUTTON_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-button-font-size-xl")
 pub const BUTTON_HEIGHT_XL: CssVar = CssVar::new("--lsx-button-height-xl");
 pub const BUTTON_PADDING_X_XL: CssVar = CssVar::new("--lsx-button-padding-x-xl");
 
+pub const BUTTON_FONT_SIZE_XXL: CssVar = CssVar::new("--lsx-button-font-size-xxl");
+pub const BUTTON_HEIGHT_XXL: CssVar = CssVar::new("--lsx-button-height-xxl");
+pub const BUTTON_PADDING_X_XXL: CssVar = CssVar::new("--lsx-button-padding-x-xxl");
+
 pub const BUTTON_RADIUS: CssVar = CssVar::new("--lsx-button-radius");
 
 pub const BUTTON_RIPPLE_ANIMATION: &str = "lsx-ripple";
@@ -104,6 +108,13 @@ impl ButtonDefaults {
             .padding_left(BUTTON_PADDING_X_XL.value())
             .padding_right(BUTTON_PADDING_X_XL.value())
     }
+
+    pub fn xxl_sx() -> Sx {
+        sx().font_size(BUTTON_FONT_SIZE_XXL.value())
+            .height(BUTTON_HEIGHT_XXL.value())
+            .padding_left(BUTTON_PADDING_X_XXL.value())
+            .padding_right(BUTTON_PADDING_X_XXL.value())
+    }
 }
 
 impl ToCssDeclarations for ButtonDefaults {
@@ -138,6 +149,12 @@ impl ToCssDeclarations for ButtonDefaults {
                 BUTTON_FONT_SIZE_XL,
                 BUTTON_HEIGHT_XL,
                 BUTTON_PADDING_X_XL,
+            ),
+            (
+                Size::Xxl,
+                BUTTON_FONT_SIZE_XXL,
+                BUTTON_HEIGHT_XXL,
+                BUTTON_PADDING_X_XXL,
             ),
         ];
 

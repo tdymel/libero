@@ -10,7 +10,7 @@ pub fn TitlePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Title" }
+                Title { size: "xxl", "Title" }
                 Text {
                     "A heading, h1 through h6 - "
                     Code { "component" }
@@ -20,24 +20,24 @@ pub fn TitlePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Variants" }
+                Title { size: "xl", "Variants" }
                 Flex {
                     direction: "column",
                     gap: "8px",
-                    Title { variant: "h1", "Heading one" }
-                    Title { variant: "h2", "Heading two" }
-                    Title { variant: "h3", "Heading three" }
-                    Title { variant: "h4", "Heading four" }
-                    Title { variant: "h5", "Heading five" }
-                    Title { variant: "h6", "Heading six" }
+                    Title { size: "xxl", "Heading one" }
+                    Title { size: "xl", "Heading two" }
+                    Title { size: "lg", "Heading three" }
+                    Title { size: "md", "Heading four" }
+                    Title { size: "sm", "Heading five" }
+                    Title { size: "xs", "Heading six" }
                 }
             }
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Decoupled tag" }
+                Title { size: "xl", "Decoupled tag" }
                 Text { "Sized like h1, but rendered as a p - doesn't affect the page's heading order." }
-                Title { variant: "h1", component: "p", "Looks like h1, isn't one" }
+                Title { size: "xxl", component: "p", "Looks like h1, isn't one" }
             }
         }
     }

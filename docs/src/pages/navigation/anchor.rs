@@ -13,7 +13,7 @@ pub fn AnchorPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "Anchor" }
+                Title { size: "xxl", "Anchor" }
                 Text {
                     "Text styled and sized like Text, rendered as a real link - router-aware "
                     "via to, falling back to a plain href when no router is mounted."
@@ -22,7 +22,7 @@ pub fn AnchorPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Underline" }
+                Title { size: "xl", "Underline" }
                 Flex {
                     direction: "row",
                     gap: "16px",
@@ -34,7 +34,7 @@ pub fn AnchorPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Sizes" }
+                Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
                     gap: "16px",
@@ -47,7 +47,7 @@ pub fn AnchorPage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Internal navigation" }
+                Title { size: "xl", "Internal navigation" }
                 Text {
                     sx: sx().color("grey.6"),
                     "Uses the app's router directly - clicking this is a client-side navigation, not a full page reload.",

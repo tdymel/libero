@@ -38,6 +38,8 @@ static KBD_LG_SX: StaticSx =
     StaticSx::new(|| kbd_chrome_sx().font_size(SizeCss::KBD_FONT_SIZE.value(Size::Lg)));
 static KBD_XL_SX: StaticSx =
     StaticSx::new(|| kbd_chrome_sx().font_size(SizeCss::KBD_FONT_SIZE.value(Size::Xl)));
+static KBD_XXL_SX: StaticSx =
+    StaticSx::new(|| kbd_chrome_sx().font_size(SizeCss::KBD_FONT_SIZE.value(Size::Xxl)));
 
 fn get_size_sx(size: &ThemeAwareValue) -> &'static StaticSx {
     match size {
@@ -47,6 +49,7 @@ fn get_size_sx(size: &ThemeAwareValue) -> &'static StaticSx {
             Size::Md => &KBD_MD_SX,
             Size::Lg => &KBD_LG_SX,
             Size::Xl => &KBD_XL_SX,
+            Size::Xxl => &KBD_XXL_SX,
         },
         // Matches Mantine's own default.
         _ => &KBD_SM_SX,

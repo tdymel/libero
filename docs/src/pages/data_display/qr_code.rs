@@ -13,7 +13,7 @@ pub fn QrCodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "16px",
-                Title { variant: "h1", "QrCode" }
+                Title { size: "xxl", "QrCode" }
                 Text {
                     "Encodes "
                     Code { "data" }
@@ -29,7 +29,7 @@ pub fn QrCodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Basic usage" }
+                Title { size: "xl", "Basic usage" }
                 QrCode {
                     data: "https://github.com/tdymel/libero",
                     aria_label: "QR code linking to the libero GitHub repository",
@@ -40,7 +40,7 @@ pub fn QrCodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Robustness" }
+                Title { size: "xl", "Robustness" }
                 Text {
                     sx: sx().color("grey.6"),
                     "Error-correction level - higher levels tolerate more damage/"
@@ -106,7 +106,7 @@ pub fn QrCodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Scalable" }
+                Title { size: "xl", "Scalable" }
                 Text {
                     sx: sx().color("grey.6"),
                     "The generated SVG has no fixed width/height, just a square "
@@ -126,7 +126,7 @@ pub fn QrCodePage() -> Element {
             Flex {
                 direction: "column",
                 gap: "8px",
-                Title { variant: "h2", "Accessible name" }
+                Title { size: "xl", "Accessible name" }
                 Text {
                     sx: sx().color("grey.6"),
                     "aria_label is required, not optional - a QR code conveys real "
