@@ -1,33 +1,10 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
+use crate::theme::{Size, SizeCss, Sizes};
 
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
-
-pub const SELECT_FONT_SIZE_XS: CssVar = CssVar::new("--lsx-select-font-size-xs");
-pub const SELECT_HEIGHT_XS: CssVar = CssVar::new("--lsx-select-height-xs");
-pub const SELECT_PADDING_X_XS: CssVar = CssVar::new("--lsx-select-padding-x-xs");
-
-pub const SELECT_FONT_SIZE_SM: CssVar = CssVar::new("--lsx-select-font-size-sm");
-pub const SELECT_HEIGHT_SM: CssVar = CssVar::new("--lsx-select-height-sm");
-pub const SELECT_PADDING_X_SM: CssVar = CssVar::new("--lsx-select-padding-x-sm");
-
-pub const SELECT_FONT_SIZE_MD: CssVar = CssVar::new("--lsx-select-font-size-md");
-pub const SELECT_HEIGHT_MD: CssVar = CssVar::new("--lsx-select-height-md");
-pub const SELECT_PADDING_X_MD: CssVar = CssVar::new("--lsx-select-padding-x-md");
-
-pub const SELECT_FONT_SIZE_LG: CssVar = CssVar::new("--lsx-select-font-size-lg");
-pub const SELECT_HEIGHT_LG: CssVar = CssVar::new("--lsx-select-height-lg");
-pub const SELECT_PADDING_X_LG: CssVar = CssVar::new("--lsx-select-padding-x-lg");
-
-pub const SELECT_FONT_SIZE_XL: CssVar = CssVar::new("--lsx-select-font-size-xl");
-pub const SELECT_HEIGHT_XL: CssVar = CssVar::new("--lsx-select-height-xl");
-pub const SELECT_PADDING_X_XL: CssVar = CssVar::new("--lsx-select-padding-x-xl");
-
-pub const SELECT_FONT_SIZE_XXL: CssVar = CssVar::new("--lsx-select-font-size-xxl");
-pub const SELECT_HEIGHT_XXL: CssVar = CssVar::new("--lsx-select-height-xxl");
-pub const SELECT_PADDING_X_XXL: CssVar = CssVar::new("--lsx-select-padding-x-xxl");
-
-pub const SELECT_RADIUS: CssVar = CssVar::new("--lsx-select-radius");
+pub const SELECT_FONT_SIZE: SizeCss = SizeCss::new("--lsx-select-font-size-");
+pub const SELECT_HEIGHT: SizeCss = SizeCss::new("--lsx-select-height-");
+pub const SELECT_PADDING_X: SizeCss = SizeCss::new("--lsx-select-padding-x-");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SelectSizeLevel {
@@ -66,100 +43,38 @@ impl SelectDefaults {
         }
     }
 
-    pub fn radius_sx() -> Sx {
-        sx().border_radius(SELECT_RADIUS.value())
+    pub fn size_sx(size: Size) -> Sx {
+        sx().font_size(SELECT_FONT_SIZE.value(size))
+            .height(SELECT_HEIGHT.value(size))
+            .padding_left(SELECT_PADDING_X.value(size))
+            .padding_right(SELECT_PADDING_X.value(size))
     }
 
-    pub fn xs_sx() -> Sx {
-        sx().font_size(SELECT_FONT_SIZE_XS.value())
-            .height(SELECT_HEIGHT_XS.value())
-            .padding_left(SELECT_PADDING_X_XS.value())
-            .padding_right(SELECT_PADDING_X_XS.value())
+    // Radius reads off the shared global radius scale rather than its own
+    // - it's keyed by its own `radius-{size}` token (not `size-{size}`) so
+    // it can be set independently of the select's own `size`.
+    pub fn radius_sx(radius: Size) -> Sx {
+        sx().border_radius(SizeCss::RADIUS.value(radius))
     }
 
-    pub fn sm_sx() -> Sx {
-        sx().font_size(SELECT_FONT_SIZE_SM.value())
-            .height(SELECT_HEIGHT_SM.value())
-            .padding_left(SELECT_PADDING_X_SM.value())
-            .padding_right(SELECT_PADDING_X_SM.value())
-    }
-
-    pub fn md_sx() -> Sx {
-        sx().font_size(SELECT_FONT_SIZE_MD.value())
-            .height(SELECT_HEIGHT_MD.value())
-            .padding_left(SELECT_PADDING_X_MD.value())
-            .padding_right(SELECT_PADDING_X_MD.value())
-    }
-
-    pub fn lg_sx() -> Sx {
-        sx().font_size(SELECT_FONT_SIZE_LG.value())
-            .height(SELECT_HEIGHT_LG.value())
-            .padding_left(SELECT_PADDING_X_LG.value())
-            .padding_right(SELECT_PADDING_X_LG.value())
-    }
-
-    pub fn xl_sx() -> Sx {
-        sx().font_size(SELECT_FONT_SIZE_XL.value())
-            .height(SELECT_HEIGHT_XL.value())
-            .padding_left(SELECT_PADDING_X_XL.value())
-            .padding_right(SELECT_PADDING_X_XL.value())
-    }
-
-    pub fn xxl_sx() -> Sx {
-        sx().font_size(SELECT_FONT_SIZE_XXL.value())
-            .height(SELECT_HEIGHT_XXL.value())
-            .padding_left(SELECT_PADDING_X_XXL.value())
-            .padding_right(SELECT_PADDING_X_XXL.value())
+    pub fn theme_vars() -> Sx {
+        let base = Size::ALL.into_iter().fold(sx(), |base, size| {
+            base.when(size.state_name(), Self::size_sx(size))
+        });
+        Size::ALL.into_iter().fold(base, |base, radius| {
+            base.when(radius.radius_state_name(), Self::radius_sx(radius))
+        })
     }
 }
 
 impl ToCssDeclarations for SelectDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let vars = [
-            (
-                Size::Xs,
-                SELECT_FONT_SIZE_XS,
-                SELECT_HEIGHT_XS,
-                SELECT_PADDING_X_XS,
-            ),
-            (
-                Size::Sm,
-                SELECT_FONT_SIZE_SM,
-                SELECT_HEIGHT_SM,
-                SELECT_PADDING_X_SM,
-            ),
-            (
-                Size::Md,
-                SELECT_FONT_SIZE_MD,
-                SELECT_HEIGHT_MD,
-                SELECT_PADDING_X_MD,
-            ),
-            (
-                Size::Lg,
-                SELECT_FONT_SIZE_LG,
-                SELECT_HEIGHT_LG,
-                SELECT_PADDING_X_LG,
-            ),
-            (
-                Size::Xl,
-                SELECT_FONT_SIZE_XL,
-                SELECT_HEIGHT_XL,
-                SELECT_PADDING_X_XL,
-            ),
-            (
-                Size::Xxl,
-                SELECT_FONT_SIZE_XXL,
-                SELECT_HEIGHT_XXL,
-                SELECT_PADDING_X_XXL,
-            ),
-        ];
-
-        let mut declarations = vec![SELECT_RADIUS.declare(SizeCss::RADIUS.value(self.radius))];
-        for (size, font_size_var, height_var, padding_x_var) in vars {
+        let mut declarations = Vec::new();
+        for size in Size::ALL {
             let level = self.sizes.get(size);
-            declarations.push(font_size_var.declare(level.font_size));
-            declarations.push(height_var.declare(level.height));
-            declarations.push(padding_x_var.declare(level.padding_x));
+            declarations.push(SELECT_FONT_SIZE.declare(size, level.font_size));
+            declarations.push(SELECT_HEIGHT.declare(size, level.height));
+            declarations.push(SELECT_PADDING_X.declare(size, level.padding_x));
         }
         declarations
     }

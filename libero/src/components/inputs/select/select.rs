@@ -1,18 +1,14 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         Box, Input, States,
-        common::{base_props, class_list, focus_ring_sx},
+        common::{base_props, focus_ring_sx},
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{SelectDefaults, Size},
 };
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 static SELECT_WRAPPER_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").flex_direction("column").gap("4px"));
@@ -20,7 +16,8 @@ static SELECT_WRAPPER_SX: StaticSx =
 static SELECT_LABEL_SX: StaticSx = StaticSx::new(|| sx().font_size("0.75rem").color("grey.7"));
 
 static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("block")
+    SelectDefaults::theme_vars()
+        .display("block")
         .width("100%")
         .border_style("solid")
         .border_width("1px")
@@ -28,35 +25,18 @@ static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
         .background("white")
         .color("black")
         .cursor("pointer")
-        .and(SelectDefaults::radius_sx())
         .hover(sx().border_color("grey.7"))
         .focus_visible(focus_ring_sx())
 });
 
-fn get_size_sx(size: Size) -> &'static Sx {
-    static XS: StaticSx = StaticSx::new(SelectDefaults::xs_sx);
-    static SM: StaticSx = StaticSx::new(SelectDefaults::sm_sx);
-    static MD: StaticSx = StaticSx::new(SelectDefaults::md_sx);
-    static LG: StaticSx = StaticSx::new(SelectDefaults::lg_sx);
-    static XL: StaticSx = StaticSx::new(SelectDefaults::xl_sx);
-    static XXL: StaticSx = StaticSx::new(SelectDefaults::xxl_sx);
-
-    match size {
-        Size::Xs => &XS,
-        Size::Sm => &SM,
-        Size::Md => &MD,
-        Size::Lg => &LG,
-        Size::Xl => &XL,
-        Size::Xxl => &XXL,
-    }
-}
-
 base_props! {
     pub struct SelectProps {
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Size>,
+        /// Corner radius - `theme.select.radius` by default, independent
+        /// of `size`.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         #[props(into)]
         value: String,
         #[props(default)]
@@ -70,23 +50,21 @@ base_props! {
 #[component]
 pub fn Select(props: SelectProps) -> Element {
     let theme = use_theme();
-    let id = use_signal(|| format!("lsx-select-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
 
-    let size = match props.size.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => *size,
-        _ => theme.select.size,
-    };
-    let size_class = crate::hooks::use_css(get_size_sx(size), crate::CssLayer::Framework);
+    let size = props.size.as_ref().copied().unwrap_or(theme.select.size);
+    let radius = props
+        .radius
+        .as_ref()
+        .copied()
+        .unwrap_or(theme.select.radius);
 
-    let dynamic_sx = sx().apply_if(props.radius.as_ref(), |sx, radius| {
-        sx.border_radius(radius.clone())
-    });
-    let dynamic_class = crate::hooks::use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-
-    // `class`/`sx` land on the wrapper (the element that actually participates
-    // in a parent flex/grid layout - e.g. `margin-left: auto`), not on the
-    // inner select, which only ever carries its own visual chrome.
-    let select_class = class_list().with(size_class).with(dynamic_class);
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with(size.state_name(), true)
+        .with(radius.radius_state_name(), true);
 
     // `<option>`s come from `props.children` - a dynamic node mounted in the
     // same pass as `<select>` itself, so on the *creating* render there's no
@@ -115,9 +93,7 @@ pub fn Select(props: SelectProps) -> Element {
             }
             Box {
                 component: "select",
-                id: "{id}",
-                class: select_class,
-                states: props.states,
+                states,
                 framework_sx: &SELECT_BASE_SX,
                 value: value,
                 onchange: move |event: FormEvent| props.onchange.call(event.value()),

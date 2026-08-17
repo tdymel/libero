@@ -59,6 +59,22 @@ impl Size {
             Self::Xxl => "size-xxl",
         }
     }
+
+    /// Same as [`state_name`](Self::state_name), but for a `radius` prop
+    /// that scales independently of a component's own `size` (e.g.
+    /// `Select`'s `radius` defaults to matching `size` but can be
+    /// overridden separately) - a distinct token namespace so both can be
+    /// present on the same element without colliding.
+    pub const fn radius_state_name(&self) -> &'static str {
+        match self {
+            Self::Xs => "radius-xs",
+            Self::Sm => "radius-sm",
+            Self::Md => "radius-md",
+            Self::Lg => "radius-lg",
+            Self::Xl => "radius-xl",
+            Self::Xxl => "radius-xxl",
+        }
+    }
 }
 
 impl From<&str> for Size {
