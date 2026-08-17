@@ -9,10 +9,10 @@ pub fn ContainerPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Container" }
                 Text {
                     "Centers content and caps its width at a breakpoint - wraps your main "
@@ -21,7 +21,7 @@ pub fn ContainerPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Sizes" }
                 Container {
                     size: "sm",

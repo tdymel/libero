@@ -17,10 +17,10 @@ pub fn GettingStarted() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Getting Started" }
                 Text {
                     "Libero is a Dioxus component library focused on developer experience, UX, accessibility, and configurability."
@@ -29,7 +29,7 @@ pub fn GettingStarted() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Installation" }
                 Text { "Add Libero to your project with cargo:" }
                 Code { block: true, source: "cargo add libero", language: "shell" }
@@ -37,7 +37,7 @@ pub fn GettingStarted() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Quick Start" }
                 Text {
                     "Wrap your app in "
@@ -49,7 +49,7 @@ pub fn GettingStarted() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Building for the Web" }
                 Text {
                     "Libero's "
@@ -91,7 +91,7 @@ pub fn GettingStarted() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Divider {}
                 Text {
                     sx: sx().color("grey.6"),

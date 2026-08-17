@@ -11,10 +11,10 @@ pub fn DataListPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "DataList" }
                 Text {
                     "Renders a "
@@ -38,7 +38,7 @@ pub fn DataListPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Vertical (default)" }
                 DataList {
                     DataListItem { label: rsx! { "Status" }, "Active" }
@@ -53,7 +53,7 @@ pub fn DataListPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Horizontal" }
                 Text {
                     "Terms and descriptions sit in two aligned columns. A term with several "

@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, Text, Title},
+    components::{Box, Divider, Flex, Text, Title},
     sx::sx,
 };
 
@@ -9,20 +9,20 @@ pub fn FlexPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Flex" }
                 Text { "A flexbox container - direction, gap, align, justify and wrap, all theme-aware." }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Row with gap" }
                 Flex {
                     direction: "row",
-                    gap: "12px",
+                    gap: "md",
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
@@ -30,13 +30,27 @@ pub fn FlexPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Column" }
                 Flex {
                     direction: "column",
-                    gap: "8px",
+                    gap: "sm",
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
+                }
+            }
+            Flex {
+                direction: "column",
+                gap: "sm",
+                Title { size: "xl", "Divider" }
+                Text { "Rendered between each child - not before the first or after the last." }
+                Flex {
+                    direction: "column",
+                    gap: "sm",
+                    divider: rsx! { Divider {} },
+                    Text { "First section" }
+                    Text { "Second section" }
+                    Text { "Third section" }
                 }
             }
         }

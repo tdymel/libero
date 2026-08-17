@@ -9,22 +9,22 @@ pub fn DividerPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Divider" }
                 Text { "A horizontal or vertical rule, with an optional centered/positioned label." }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Horizontal" }
                 Divider {}
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "With a label" }
                 Divider { "OR" }
                 Divider { label_position: "start", "Start" }
@@ -32,11 +32,11 @@ pub fn DividerPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Vertical" }
                 Flex {
                     direction: "row",
-                    gap: "12px",
+                    gap: "md",
                     sx: sx().height("48px"),
                     Text { "Left" }
                     Divider { orientation: "vertical" }

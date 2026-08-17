@@ -6,10 +6,10 @@ pub fn MarkPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Mark" }
                 Text {
                     "Highlight "
@@ -24,7 +24,7 @@ pub fn MarkPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Colors" }
                 Text {
                     "Default: "

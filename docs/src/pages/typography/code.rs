@@ -51,10 +51,10 @@ pub fn CodePage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Code" }
                 Text {
                     "Inline "
@@ -75,7 +75,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "No language" }
                 Text {
                     "No "
@@ -88,7 +88,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Recognized, but not enabled" }
                 Text {
                     "Libero recognizes far more languages than any one build compiles in - "
@@ -110,37 +110,37 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Highlighted - Rust" }
                 Code { block: true, source: RUST_EXAMPLE, language: "rust" }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Highlighted - Shell" }
                 Code { block: true, source: SHELL_EXAMPLE, language: "shell" }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Highlighted - Markdown" }
                 Code { block: true, source: MARKDOWN_EXAMPLE, language: "markdown" }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Highlighted - HTML" }
                 Code { block: true, source: HTML_EXAMPLE, language: "html" }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Highlighted - CSS" }
                 Code { block: true, source: CSS_EXAMPLE, language: "css" }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Inline highlighting" }
                 Text {
                     "Works inline too - "
@@ -150,7 +150,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Without a header" }
                 Text {
                     Code { "header: false" }
@@ -164,7 +164,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Without a copy button" }
                 Text { Code { "copyable: false" } " keeps the header, drops the button." }
                 Code {
@@ -176,7 +176,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Max lines" }
                 Text {
                     Code { "max_lines" }
@@ -192,14 +192,14 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Long lines" }
                 Text { "A single line wider than the block scrolls horizontally on its own." }
                 Code { block: true, source: LONG_LINE_EXAMPLE, language: "rust" }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Line numbers" }
                 Text { Code { "line_numbers: false" } " drops the gutter entirely." }
                 Code {
@@ -211,7 +211,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Highlighted lines" }
                 Text {
                     Code { "highlight_lines" }
@@ -229,7 +229,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Diff" }
                 Text {
                     Code { "diff: true" }
@@ -246,7 +246,7 @@ pub fn CodePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Opaque children" }
                 Text {
                     "Without "

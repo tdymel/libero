@@ -9,10 +9,10 @@ pub fn NavLinkPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "NavLink" }
                 Text {
                     "A navigation list item - "
@@ -27,7 +27,7 @@ pub fn NavLinkPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Active state" }
                 Text {
                     sx: sx().color("grey.6"),
@@ -40,7 +40,7 @@ pub fn NavLinkPage() -> Element {
                 }
                 Flex {
                     direction: "column",
-                    gap: "4px",
+                    gap: "xs",
                     sx: sx().width("240px"),
                     NavLink { to: crate::Route::NavLinkPage {}, "This page (auto-active)" }
                     NavLink { to: crate::Route::GettingStarted {}, "Another page" }
@@ -55,7 +55,7 @@ pub fn NavLinkPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Colors" }
                 Text {
                     sx: sx().color("grey.6"),
@@ -64,7 +64,7 @@ pub fn NavLinkPage() -> Element {
                 }
                 Flex {
                     direction: "column",
-                    gap: "4px",
+                    gap: "xs",
                     sx: sx().width("240px"),
                     NavLink { to: "#", active: true, "Primary (default)" }
                     NavLink { to: "#", active: true, color: "success", "Success" }
@@ -75,11 +75,11 @@ pub fn NavLinkPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Disabled" }
                 Flex {
                     direction: "column",
-                    gap: "4px",
+                    gap: "xs",
                     sx: sx().width("240px"),
                     NavLink { to: "#", disabled: true, "Disabled" }
                 }

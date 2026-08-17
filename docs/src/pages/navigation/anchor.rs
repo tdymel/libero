@@ -9,10 +9,10 @@ pub fn AnchorPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Anchor" }
                 Text {
                     "Text styled and sized like Text, rendered as a real link - router-aware "
@@ -21,11 +21,11 @@ pub fn AnchorPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Underline" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     Anchor { to: "https://dioxuslabs.com", underline: "always", "Always" }
                     Anchor { to: "https://dioxuslabs.com", underline: "hover", "Hover (default)" }
                     Anchor { to: "https://dioxuslabs.com", underline: "never", "Never" }
@@ -33,11 +33,11 @@ pub fn AnchorPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     align: "baseline",
                     Anchor { to: "https://dioxuslabs.com", size: "xs", "Extra small" }
                     Anchor { to: "https://dioxuslabs.com", size: "md", "Medium" }
@@ -46,7 +46,7 @@ pub fn AnchorPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Internal navigation" }
                 Text {
                     sx: sx().color("grey.6"),

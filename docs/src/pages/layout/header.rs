@@ -9,20 +9,20 @@ pub fn HeaderPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Header" }
                 Text { "The page's banner landmark - always renders header. This page's own header uses one." }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Colors" }
                 Flex {
                     direction: "column",
-                    gap: "8px",
+                    gap: "sm",
                     Header { position: "static", color: "primary", Text { sx: sx().color("white"), "Primary" } }
                     Header { position: "static", color: "success", Text { sx: sx().color("white"), "Success" } }
                     Header { position: "static", "Neutral (default)" }

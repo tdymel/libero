@@ -9,10 +9,10 @@ pub fn DialogPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Dialog" }
                 Text {
                     "The dialog surface itself - padding, radius, shadow, and the role/"
@@ -22,7 +22,7 @@ pub fn DialogPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Example" }
                 Dialog {
                     size: "sm",

@@ -11,10 +11,10 @@ pub fn ActionIconPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "ActionIcon" }
                 Text {
                     Code { "Icon" }
@@ -26,29 +26,29 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Variants" }
                 Flex {
                     direction: "row",
-                    gap: "24px",
+                    gap: "xxl",
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         ActionIcon { variant: "filled", color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
                         Text { size: "sm", "Filled" }
                     }
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         ActionIcon { variant: "outlined", color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
                         Text { size: "sm", "Outlined" }
                     }
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         ActionIcon { variant: "transparent", color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
                         Text { size: "sm", "Transparent" }
                     }
@@ -56,7 +56,7 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "No variant or color" }
                 Text {
                     "With neither set, "
@@ -74,11 +74,11 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     align: "center",
                     ActionIcon { color: "primary", size: "xs", aria_label: "Confirm", CheckmarkIcon {} }
                     ActionIcon { color: "primary", size: "sm", aria_label: "Confirm", CheckmarkIcon {} }
@@ -89,11 +89,11 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Colors" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     ActionIcon { color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
                     ActionIcon { color: "success", aria_label: "Confirm", CheckmarkIcon {} }
                     ActionIcon { color: "error", aria_label: "Confirm", CheckmarkIcon {} }
@@ -102,7 +102,7 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Disabled" }
                 ActionIcon {
                     variant: "filled",
@@ -114,7 +114,7 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "As a link" }
                 Text {
                     sx: sx().color("grey.6"),
@@ -131,7 +131,7 @@ pub fn ActionIconPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Accessible name" }
                 Text {
                     sx: sx().color("grey.6"),

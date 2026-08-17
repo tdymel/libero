@@ -9,10 +9,10 @@ pub fn BoxPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Box" }
                 Text {
                     "The polymorphic primitive every other component is built on - renders "
@@ -31,7 +31,7 @@ pub fn BoxPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Example" }
                 Box {
                     component: "section",
@@ -41,7 +41,7 @@ pub fn BoxPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "As a link" }
                 Box {
                     component: "a",

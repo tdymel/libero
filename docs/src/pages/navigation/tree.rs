@@ -116,10 +116,10 @@ pub fn TreePage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Tree" }
                 Text {
                     "Data-driven, not composed via children - pass "
@@ -165,7 +165,7 @@ pub fn TreePage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Basic" }
                 Text {
                     "Plain "
@@ -211,7 +211,7 @@ pub fn TreePage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Custom rendering" }
                 Text {
                     "A "

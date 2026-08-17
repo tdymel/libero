@@ -194,7 +194,7 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
             sx: sidebar_responsive_sx(open()),
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 // Closes on any click inside - good enough for "tap a link,
                 // the panel closes" without threading a callback through
                 // `NavLink` (which has none, deliberately, same as

@@ -14,7 +14,7 @@ use crate::icons::{ChevronIcon, FileIcon, FolderIcon};
 fn TreeFolder(label: &'static str, expanded: bool, children: Element) -> Element {
     rsx! {
         ListItem {
-            Flex { direction: "row", align: "center", gap: "6px",
+            Flex { direction: "row", align: "center", gap: "sm",
                 Icon {
                     variant: "transparent",
                     size: "xs",
@@ -37,7 +37,7 @@ fn TreeFolder(label: &'static str, expanded: bool, children: Element) -> Element
 fn TreeFile(label: &'static str) -> Element {
     rsx! {
         ListItem {
-            Flex { direction: "row", align: "center", gap: "6px",
+            Flex { direction: "row", align: "center", gap: "sm",
                 // Matches the chevron's reserved width so file labels align
                 // under folder labels, not under the chevron.
                 Box { sx: sx().flex_shrink("0").width(SizeCss::ICON_SIZE.value(Size::Xs)) }
@@ -53,10 +53,10 @@ pub fn ListPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "List" }
                 Text {
                     "Renders a "
@@ -73,7 +73,7 @@ pub fn ListPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Example" }
                 List {
                     ListItem { "First item" }
@@ -89,7 +89,7 @@ pub fn ListPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "File tree" }
                 Text {
                     "Purely visual - no interactivity or state, just "

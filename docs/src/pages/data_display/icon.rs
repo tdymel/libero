@@ -8,10 +8,10 @@ pub fn IconPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Icon" }
                 Text {
                     "Wraps an svg child in a sized, colored badge. "
@@ -24,29 +24,29 @@ pub fn IconPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Variants" }
                 Flex {
                     direction: "row",
-                    gap: "24px",
+                    gap: "xxl",
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         Icon { variant: "filled", color: "primary", CheckmarkIcon {} }
                         Text { size: "sm", "Filled" }
                     }
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         Icon { variant: "outlined", color: "primary", CheckmarkIcon {} }
                         Text { size: "sm", "Outlined" }
                     }
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         Icon { variant: "transparent", color: "primary", CheckmarkIcon {} }
                         Text { size: "sm", "Transparent" }
                     }
@@ -55,11 +55,11 @@ pub fn IconPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     align: "center",
                     Icon { size: "xs", CheckmarkIcon {} }
                     Icon { size: "sm", CheckmarkIcon {} }
@@ -71,11 +71,11 @@ pub fn IconPage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Colors" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     Icon { color: "primary", CheckmarkIcon {} }
                     Icon { color: "success", CheckmarkIcon {} }
                     Icon { color: "error", CheckmarkIcon {} }

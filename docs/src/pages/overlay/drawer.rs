@@ -11,10 +11,10 @@ pub fn DrawerPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Drawer" }
                 Text {
                     "A panel anchored to one edge - Temporary is a modal drawer (portaled, "
@@ -23,7 +23,7 @@ pub fn DrawerPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Static" }
                 Flex {
                     direction: "row",
@@ -44,7 +44,7 @@ pub fn DrawerPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Temporary" }
                 Button { variant: "outlined", onclick: move |_| open.set(true), "Open drawer" }
                 if open() {

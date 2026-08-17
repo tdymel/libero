@@ -9,20 +9,20 @@ pub fn TextPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Text" }
                 Text { "Body copy - renders a p by default, sized via the theme's text scale." }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "column",
-                    gap: "8px",
+                    gap: "sm",
                     Text { size: "xs", "Extra small" }
                     Text { size: "sm", "Small" }
                     Text { size: "md", "Medium (default)" }
@@ -32,7 +32,7 @@ pub fn TextPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "As a span" }
                 Text {
                     "Inline text with "

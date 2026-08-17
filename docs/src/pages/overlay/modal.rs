@@ -8,10 +8,10 @@ pub fn ModalPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Modal" }
                 Text {
                     "A focus-trapped, dimmed layer that locks scroll. No opinion on content - "
@@ -20,7 +20,7 @@ pub fn ModalPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Example" }
                 Button { variant: "outlined", onclick: move |_| open.set(true), "Open modal" }
                 if open() {

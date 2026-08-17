@@ -6,10 +6,10 @@ pub fn TitlePage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Title" }
                 Text {
                     "A heading, h1 through h6 - "
@@ -19,11 +19,11 @@ pub fn TitlePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Variants" }
                 Flex {
                     direction: "column",
-                    gap: "8px",
+                    gap: "sm",
                     Title { size: "xxl", "Heading one" }
                     Title { size: "xl", "Heading two" }
                     Title { size: "lg", "Heading three" }
@@ -34,7 +34,7 @@ pub fn TitlePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Decoupled tag" }
                 Text { "Sized like h1, but rendered as a p - doesn't affect the page's heading order." }
                 Title { size: "xxl", component: "p", "Looks like h1, isn't one" }

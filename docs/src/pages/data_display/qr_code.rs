@@ -9,10 +9,10 @@ pub fn QrCodePage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "QrCode" }
                 Text {
                     "Encodes "
@@ -28,7 +28,7 @@ pub fn QrCodePage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Basic usage" }
                 QrCode {
                     data: "https://github.com/tdymel/libero",
@@ -39,7 +39,7 @@ pub fn QrCodePage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Robustness" }
                 Text {
                     sx: sx().color("grey.6"),
@@ -51,11 +51,11 @@ pub fn QrCodePage() -> Element {
                 }
                 Flex {
                     direction: "row",
-                    gap: "24px",
+                    gap: "xxl",
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         QrCode {
                             data: "https://github.com/tdymel/libero",
                             robustness: "low",
@@ -67,7 +67,7 @@ pub fn QrCodePage() -> Element {
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         QrCode {
                             data: "https://github.com/tdymel/libero",
                             robustness: "medium",
@@ -79,7 +79,7 @@ pub fn QrCodePage() -> Element {
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         QrCode {
                             data: "https://github.com/tdymel/libero",
                             robustness: "quartile",
@@ -91,7 +91,7 @@ pub fn QrCodePage() -> Element {
                     Flex {
                         direction: "column",
                         align: "center",
-                        gap: "8px",
+                        gap: "sm",
                         QrCode {
                             data: "https://github.com/tdymel/libero",
                             robustness: "high",
@@ -105,7 +105,7 @@ pub fn QrCodePage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Scalable" }
                 Text {
                     sx: sx().color("grey.6"),
@@ -125,7 +125,7 @@ pub fn QrCodePage() -> Element {
 
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Accessible name" }
                 Text {
                     sx: sx().color("grey.6"),

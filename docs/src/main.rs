@@ -112,7 +112,9 @@ fn AppShell() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "0",
+            // Header sits flush against the content below - no rounding to
+            // the nearest Size step here, this needs to stay exactly 0.
+            sx: sx().gap("0"),
             Header {
                 color: "primary",
                 sx: sx().gap("md"),

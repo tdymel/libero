@@ -9,10 +9,10 @@ pub fn OverlayPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Overlay" }
                 Text {
                     "Dims/blurs whatever is behind it - Modal renders one behind its content. "
@@ -22,7 +22,7 @@ pub fn OverlayPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Example" }
                 Box {
                     // `z-index` (any value, not just a high one) is what

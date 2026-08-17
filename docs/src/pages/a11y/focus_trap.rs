@@ -6,10 +6,10 @@ pub fn FocusTrapPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Focus Trap" }
                 Text {
                     "Confines Tab/Shift+Tab cycling to its children - the same mechanism "
@@ -18,13 +18,13 @@ pub fn FocusTrapPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Example" }
                 Text { "Tab through these buttons - focus stays inside the trap and wraps around." }
                 FocusTrap {
                     Flex {
                         direction: "row",
-                        gap: "8px",
+                        gap: "sm",
                         Button { variant: "outlined", "First" }
                         Button { variant: "outlined", "Second" }
                         Button { variant: "outlined", "Third" }

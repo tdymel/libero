@@ -9,10 +9,10 @@ pub fn ImagePage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Image" }
                 Text {
                     "An img with a fallback source on load error, optional rounded corners, "
@@ -21,11 +21,11 @@ pub fn ImagePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Fit & radius" }
                 Flex {
                     direction: "row",
-                    gap: "16px",
+                    gap: "lg",
                     Image {
                         src: crate::LOGO,
                         alt: "Libero logo",
@@ -43,7 +43,7 @@ pub fn ImagePage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Zoomable" }
                 Text { sx: sx().color("grey.6"), "Click to open a zoomed overlay." }
                 Image {

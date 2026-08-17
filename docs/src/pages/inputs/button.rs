@@ -9,10 +9,10 @@ pub fn ButtonPage() -> Element {
     rsx! {
         Flex {
             direction: "column",
-            gap: "32px",
+            gap: "xxl",
             Flex {
                 direction: "column",
-                gap: "16px",
+                gap: "lg",
                 Title { size: "xxl", "Button" }
                 Text {
                     "A clickable control, or a router-aware link when "
@@ -22,11 +22,11 @@ pub fn ButtonPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Variants" }
                 Flex {
                     direction: "row",
-                    gap: "12px",
+                    gap: "md",
                     Button { variant: "filled", "Filled" }
                     Button { variant: "outlined", "Outlined" }
                     Button { variant: "text", "Text" }
@@ -34,11 +34,11 @@ pub fn ButtonPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Sizes" }
                 Flex {
                     direction: "row",
-                    gap: "12px",
+                    gap: "md",
                     align: "center",
                     Button { variant: "filled", size: "xs", "Extra small" }
                     Button { variant: "filled", size: "sm", "Small" }
@@ -49,11 +49,11 @@ pub fn ButtonPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Colors" }
                 Flex {
                     direction: "row",
-                    gap: "12px",
+                    gap: "md",
                     Button { variant: "filled", color: "primary", "Primary" }
                     Button { variant: "filled", color: "success", "Success" }
                     Button { variant: "filled", color: "error", "Error" }
@@ -62,18 +62,18 @@ pub fn ButtonPage() -> Element {
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "Disabled" }
                 Flex {
                     direction: "row",
-                    gap: "12px",
+                    gap: "md",
                     Button { variant: "filled", disabled: true, "Filled" }
                     Button { variant: "outlined", disabled: true, "Outlined" }
                 }
             }
             Flex {
                 direction: "column",
-                gap: "8px",
+                gap: "sm",
                 Title { size: "xl", "As a link" }
                 Text {
                     sx: sx().color("grey.6"),
