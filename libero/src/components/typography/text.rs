@@ -1,10 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        Box, HtmlTag, Input, States,
-        common::{base_props, use_theme_value_context},
-    },
+    components::{Box, HtmlTag, Input, States, common::base_props},
     sx::{StaticSx, Sx},
     theme::{Size, TextDefaults},
 };
@@ -29,11 +26,7 @@ base_props! {
 
 #[component]
 pub fn Text(props: TextProps) -> Element {
-    let explicit_size = props.size.as_ref().copied();
-
-    let context = use_theme_value_context();
-    let chosen_size = explicit_size.or(context.get_size()).unwrap_or(Size::Md);
-    context.size(chosen_size).provide();
+    let chosen_size = props.size.as_ref().copied().unwrap_or(Size::Md);
 
     let states = props
         .states

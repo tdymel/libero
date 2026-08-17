@@ -5,7 +5,6 @@ mod element_api;
 mod input;
 mod polymorphic;
 mod states;
-mod theme_value_context;
 mod util;
 
 pub(crate) use base_props::base_props;
@@ -16,5 +15,4 @@ pub use input::Input;
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::render_polymorphic;
 pub use states::{States, states};
-pub use theme_value_context::{ThemeValueContext, use_theme_value_context};
 pub(crate) use util::{attr, focus_ring_sx};
