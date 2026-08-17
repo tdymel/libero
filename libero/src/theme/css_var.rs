@@ -62,6 +62,7 @@ impl SizeCss {
     pub const SPACING: SizeCss = SizeCss::new("--lsx-spacing-");
     pub const BREAKPOINT: SizeCss = SizeCss::new("--lsx-breakpoint-");
     pub const RADIUS: SizeCss = SizeCss::new("--lsx-radius-");
+    pub const DATA_LIST_GAP: SizeCss = SizeCss::new("--lsx-data-list-gap-");
     pub const DIALOG_SIZE: SizeCss = SizeCss::new("--lsx-dialog-size-");
     pub const DRAWER_SIZE: SizeCss = SizeCss::new("--lsx-drawer-size-");
     pub const HEADER_HEIGHT: SizeCss = SizeCss::new("--lsx-header-height-");

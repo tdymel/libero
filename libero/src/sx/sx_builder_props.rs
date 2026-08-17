@@ -75,6 +75,14 @@ impl Sx {
         self.with_known_property(Property::Gap, value)
     }
 
+    pub fn grid_template_columns(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::GridTemplateColumns, value)
+    }
+
+    pub fn grid_column(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::GridColumn, value)
+    }
+
     pub fn max_width(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::MaxWidth, value)
     }

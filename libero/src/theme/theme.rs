@@ -1,9 +1,9 @@
 use super::{
-    ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DialogDefaults,
-    DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor,
-    IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults,
-    QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleLevel,
-    TreeDefaults,
+    ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DataListDefaults,
+    DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults,
+    HeaderDefaults, HexColor, IconDefaults, KbdDefaults, ListDefaults, MarkDefaults,
+    NavLinkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize,
+    TitleDefaults, TitleLevel, TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -18,6 +18,7 @@ pub struct Theme {
     pub button: ButtonDefaults,
     pub select: SelectDefaults,
     pub list: ListDefaults,
+    pub data_list: DataListDefaults,
     pub tree: TreeDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
@@ -80,6 +81,7 @@ impl Theme {
             Sizes::new(4, 8, 12, 16, 20),
             Sizes::new(8, 12, 16, 20, 24),
         ),
+        DataListDefaults::new(super::Size::Md, Sizes::new(6, 8, 12, 16, 20)),
         TreeDefaults::new(super::Size::Md),
         TitleDefaults::new(
             TitleLevel::new(
@@ -188,6 +190,7 @@ impl Theme {
         button: ButtonDefaults,
         select: SelectDefaults,
         list: ListDefaults,
+        data_list: DataListDefaults,
         tree: TreeDefaults,
         titles: TitleDefaults,
         texts: TextDefaults,
@@ -221,6 +224,7 @@ impl Theme {
             button,
             select,
             list,
+            data_list,
             tree,
             titles,
             texts,

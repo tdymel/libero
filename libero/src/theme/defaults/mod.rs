@@ -2,6 +2,7 @@ mod action_icon;
 mod button;
 mod code;
 mod container;
+mod data_list;
 mod dialog;
 mod divider;
 mod drawer;
@@ -32,6 +33,7 @@ pub use code::{
     CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, CodeDefaults,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
+pub use data_list::DataListDefaults;
 pub use dialog::DialogDefaults;
 pub use divider::{DIVIDER_SPACING, DividerDefaults};
 pub use drawer::DrawerDefaults;

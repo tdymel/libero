@@ -104,6 +104,7 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
             "data-display",
             "Data Display",
             vec![
+                page(Route::DataListPage {}, "DataList"),
                 page(Route::IconPage {}, "Icon"),
                 page(Route::ImagePage {}, "Image"),
                 page(Route::ListPage {}, "List"),

@@ -13,10 +13,10 @@ mod sidebar;
 use icons::BurgerIcon;
 
 use pages::{
-    ActionIconPage, AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DialogPage,
-    DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage,
-    ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, QrCodePage,
-    SelectPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
+    ActionIconPage, AnchorPage, BoxPage, ButtonPage, CodePage, ContainerPage, DataListPage,
+    DialogPage, DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted, HeaderPage,
+    IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage,
+    QrCodePage, SelectPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 
@@ -37,6 +37,8 @@ pub(crate) enum Route {
     #[route("/a11y/visually-hidden")]
     VisuallyHiddenPage {},
 
+    #[route("/data-display/data-list")]
+    DataListPage {},
     #[route("/data-display/icon")]
     IconPage {},
     #[route("/data-display/image")]
