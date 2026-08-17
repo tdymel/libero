@@ -52,15 +52,18 @@ pub fn GettingStarted() -> Element {
                 gap: "8px",
                 Title { variant: "h2", "Building for the Web" }
                 Text {
-                    "The "
+                    "Libero's "
+                    Code { "wasm-split" }
+                    " feature (on by default) puts the "
                     Code { "Code" }
-                    " component's syntax highlighting lives in its own wasm chunk, loaded only "
-                    "when a highlighted block actually renders, instead of bloating every page's "
-                    "initial bundle. This relies on Dioxus's (experimental) wasm-split support, "
-                    "which "
+                    " component's syntax highlighting and "
+                    Code { "QrCode" }
+                    "'s encoding into their own wasm chunks, loaded only when one actually "
+                    "renders, instead of bloating every page's initial bundle. This relies on "
+                    "Dioxus's (experimental) wasm-split support, which "
                     Code { "dx" }
-                    " only enables when asked - "
-                    "always build and serve with "
+                    " only enables when asked - if the feature is on, always build and serve "
+                    "with "
                     Code { "--wasm-split" }
                     ", or the app will fail to load entirely (a dangling module import, not a "
                     "graceful fallback)."
@@ -69,6 +72,20 @@ pub fn GettingStarted() -> Element {
                     block: true,
                     source: "dx serve --platform web --release --debug-symbols=false --wasm-split",
                     language: "shell",
+                }
+                Text {
+                    "Don't need the lazy-loading? Turn the feature off in "
+                    Code { "Cargo.toml" }
+                    " and skip "
+                    Code { "--wasm-split" }
+                    " entirely - both components render identically either way, just from the "
+                    "main bundle instead of a lazy-loaded one. This docs site does exactly that, "
+                    "keeping only the languages its own examples use:"
+                }
+                Code {
+                    block: true,
+                    source: "libero = {{ version = \"*\", default-features = false, features = [\"code-lang-rust\"] }}",
+                    language: "toml",
                 }
             }
 

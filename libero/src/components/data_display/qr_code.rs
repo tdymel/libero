@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+#[cfg(feature = "wasm-split")]
 use dioxus::wasm_split;
 use fast_qr::convert::{Builder, svg::SvgBuilder};
 use fast_qr::{ECL, QRBuilder};
@@ -82,17 +83,24 @@ fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {
 // `#[wasm_split]` drops the item's visibility on wasm32 (it rebuilds the fn
 // from just `item_fn.sig`, which doesn't carry `vis`), so this stays private
 // and `generate_svg_lazy` below re-exposes it at the visibility callers need.
+#[cfg(feature = "wasm-split")]
 #[wasm_split::wasm_split(qr_code)]
 async fn generate_svg_split(data: String, robustness: QrRobustness) -> Option<String> {
     generate_svg(data, robustness)
 }
 
-/// Same as [`generate_svg`], but `fast_qr` itself lives in a separate wasm
-/// chunk fetched on first call instead of the main bundle - see
-/// `dioxus::wasm_split`. On non-wasm32 targets (native tests) this is just a
-/// plain async call with nothing split out.
+/// Same as [`generate_svg`], but with the `wasm-split` feature on, `fast_qr`
+/// itself lives in a separate wasm chunk fetched on first call instead of
+/// the main bundle - see `dioxus::wasm_split`. Without that feature (or on
+/// non-wasm32 targets) this is just a plain async call with nothing split
+/// out, so it works with a plain `dx serve`/`dx build`, no `--wasm-split`
+/// cooperation required.
 async fn generate_svg_lazy(data: String, robustness: QrRobustness) -> Option<String> {
-    generate_svg_split(data, robustness).await
+    #[cfg(feature = "wasm-split")]
+    return generate_svg_split(data, robustness).await;
+
+    #[cfg(not(feature = "wasm-split"))]
+    return generate_svg(data, robustness);
 }
 
 /// Renders `data` as a scalable QR code SVG. Colors come from the theme

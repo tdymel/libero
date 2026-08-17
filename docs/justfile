@@ -4,13 +4,13 @@
 dx := justfile_directory() / ".." / ".dioxus-fork" / "target" / "release" / "dx"
 
 start:
-    {{dx}} serve --platform web --debug-symbols=false --wasm-split
+    {{dx}} serve --platform web --debug-symbols=false --hotpatch
 
 start_release:
    just start --release
 
 build:
-    {{dx}} build --platform web --debug-symbols=false --wasm-split
+    {{dx}} build --platform web --debug-symbols=false
 
 build_release:
     just build --release
