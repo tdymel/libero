@@ -1,6 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use dioxus::{document, prelude::*};
+use dioxus::prelude::*;
 
 use crate::{
     components::{
@@ -85,7 +85,22 @@ pub fn Select(props: SelectProps) -> Element {
     // in a parent flex/grid layout - e.g. `margin-left: auto`), not on the
     // inner select, which only ever carries its own visual chrome.
     let select_class = class_list([size_class, dynamic_class]);
-    let value = props.value.clone();
+
+    // `<option>`s come from `props.children` - a dynamic node mounted in the
+    // same pass as `<select>` itself, so on the *creating* render there's no
+    // matching option yet for the browser to select against `value` (it
+    // silently falls back to the first option instead). Rendering no
+    // `value` attribute at all on that first render, then flipping
+    // `mounted` true in `use_effect` (which only runs once the whole
+    // subtree - options included - is actually committed), defers the real
+    // value application to a subsequent *update*, where the plain `value:`
+    // attribute path already works correctly (dioxus-web's own
+    // `set_attribute.js` sets `.value` as a DOM property, not just an
+    // attribute - it just needs the options to already exist, which they do
+    // by then).
+    let mut mounted = use_signal(|| false);
+    use_effect(move || mounted.set(true));
+    let value = mounted().then(|| props.value.clone());
 
     rsx! {
         Box {
@@ -104,13 +119,6 @@ pub fn Select(props: SelectProps) -> Element {
                 framework_sx: &SELECT_BASE_SX,
                 value: value,
                 onchange: move |event: FormEvent| props.onchange.call(event.value()),
-                onmounted: move |_| {
-                    document::eval(&format!(
-                        "var el = document.getElementById({:?}); if (el) el.value = {:?};",
-                        id(),
-                        props.value,
-                    ));
-                },
                 attributes: props.attributes,
                 {props.children}
             }
