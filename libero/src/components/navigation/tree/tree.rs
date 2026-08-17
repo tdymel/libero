@@ -4,7 +4,7 @@ use std::{
     sync::atomic::{AtomicU64, Ordering},
 };
 
-use dioxus::{document, prelude::*};
+use dioxus::prelude::*;
 
 use crate::{
     components::{Input, List, States, common::dom_api},
@@ -101,13 +101,12 @@ pub(super) fn toggle_expanded(
 // link/button responds to Enter" behavior, since it's never actually
 // focused. This triggers it the same way a real click would instead.
 fn click_tree_item(root_id: &str, target_id: &str) {
-    let selector = format!("[data-tree-id={target_id:?}] a, [data-tree-id={target_id:?}] button");
-    document::eval(&format!(
-        r#"var root = document.getElementById({root_id:?});
-        if (!root) return;
-        var target = root.querySelector({selector:?});
-        if (target) target.click();"#
-    ));
+    let Ok(root) = dom_api().query_selector(format!("#{root_id}").into()) else {
+        return;
+    };
+    let selector: Rc<str> =
+        format!("[data-tree-id={target_id:?}] a, [data-tree-id={target_id:?}] button").into();
+    let _ = root.query_selector(selector).and_then(|el| el.click());
 }
 
 // Scoped to `root_id` the same way `click_tree_item` is, so multiple `Tree`

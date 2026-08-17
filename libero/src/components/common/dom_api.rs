@@ -42,6 +42,11 @@ impl ElementApi for WebElementHandle {
         self.element.blur().map_err(|_| DomApiError::NotFound)
     }
 
+    fn click(&self) -> Result<(), DomApiError> {
+        self.element.click();
+        Ok(())
+    }
+
     fn is_focused(&self) -> bool {
         web_sys::window()
             .and_then(|window| window.document())

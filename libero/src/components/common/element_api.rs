@@ -9,6 +9,7 @@ use crate::components::common::DomApiError;
 pub trait ElementApi {
     fn focus(&self) -> Result<(), DomApiError>;
     fn blur(&self) -> Result<(), DomApiError>;
+    fn click(&self) -> Result<(), DomApiError>;
 
     /// Whether this is the currently focused element.
     fn is_focused(&self) -> bool;
