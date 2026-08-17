@@ -39,7 +39,7 @@ pub fn DividerPage() -> Element {
                     gap: "12px",
                     sx: sx().height("48px"),
                     Text { "Left" }
-                    Divider { vertical: true }
+                    Divider { orientation: "vertical" }
                     Text { "Right" }
                 }
             }

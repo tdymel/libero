@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{Box, Input, Orientation, States, common::base_props},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, DividerDefaults},
 };
@@ -157,8 +157,9 @@ static DIVIDER_LABEL_VERTICAL_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct DividerProps {
-        #[props(default)]
-        vertical: Option<bool>,
+        /// `"horizontal"` (the default) or `"vertical"`.
+        #[props(default, into)]
+        orientation: Input<Orientation>,
         #[props(default, into)]
         label_position: Input<LabelPosition>,
         #[props(default, into)]
@@ -171,7 +172,12 @@ base_props! {
 
 #[component]
 pub fn Divider(props: DividerProps) -> Element {
-    let vertical = props.vertical.unwrap_or(false);
+    let orientation = props
+        .orientation
+        .as_ref()
+        .copied()
+        .unwrap_or(Orientation::Horizontal);
+    let vertical = orientation == Orientation::Vertical;
     let has_label = props.children.is_some();
     let label_position = props.label_position.as_ref().copied().unwrap_or_default();
 
