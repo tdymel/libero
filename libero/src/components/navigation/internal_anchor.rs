@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        Box, Input, States,
+        Box, Input, States, Variables,
         common::{attr, base_props},
     },
     hooks::use_css,
@@ -24,6 +24,8 @@ base_props! {
         to: NavigationTarget,
         #[props(default)]
         target: Option<String>,
+        #[props(default, into)]
+        variables: Input<Variables>,
         #[props(default)]
         onmounted: EventHandler<MountedEvent>,
         children: Element,
@@ -52,12 +54,18 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     let is_blank = props.target.as_deref() == Some("_blank");
     let router_can_handle_target = props.target.is_none() || is_blank;
     let data_state = props.states.as_ref().and_then(States::data_state);
+    let style = props
+        .variables
+        .as_ref()
+        .map(Variables::to_string)
+        .filter(|style| !style.is_empty());
 
     if router_can_handle_target && try_router().is_some() {
         let attributes = props
             .attributes
             .into_iter()
             .chain(data_state.map(|value| attr("data-state", value)))
+            .chain(style.map(|value| attr("style", value)))
             .collect::<Vec<_>>();
 
         return rsx! {
@@ -77,6 +85,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
             component: "a",
             class,
             states: props.states,
+            variables: props.variables,
             href: Some(navigation_target_href(props.to)),
             target: props.target,
             onmounted: props.onmounted,

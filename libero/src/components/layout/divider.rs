@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, Orientation, States, common::base_props},
+    components::{Box, Input, Orientation, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, DividerDefaults},
+    theme::{ColorShade, ColorValue, DividerDefaults, SizeCss},
 };
 
 fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
@@ -11,6 +11,13 @@ fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
         ThemeAwareValue::Color(color) => {
             ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ColorShade::S3))
         }
+        other => other.clone(),
+    }
+}
+
+fn divider_spacing(value: &ThemeAwareValue) -> ThemeAwareValue {
+    match value {
+        ThemeAwareValue::Size(size) => SizeCss::SPACING.value(*size).into(),
         other => other.clone(),
     }
 }
@@ -57,24 +64,33 @@ impl From<String> for Input<LabelPosition> {
     }
 }
 
+const DIVIDER_COLOR_VAR: &str = "--lsx-divider-color";
+const DIVIDER_SPACING_VAR: &str = "--lsx-divider-spacing";
+
 static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")
         .border_width("0")
         .border_style("solid")
-        .border_color("grey.3")
+        .border_color(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"))
         .when(
             "vertical",
-            sx().border_right("1px solid")
-                .border_right_color("grey.3")
-                .align_self("stretch")
-                .and(DividerDefaults::vertical_sx()),
+            sx().border_right(format!(
+                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"
+            ))
+            .align_self("stretch")
+            .margin_left(format!("var({DIVIDER_SPACING_VAR}, 0)"))
+            .margin_right(format!("var({DIVIDER_SPACING_VAR}, 0)"))
+            .and(DividerDefaults::vertical_sx()),
         )
         .when(
             "horizontal",
-            sx().border_bottom("1px solid")
-                .border_bottom_color("grey.3")
-                .height("1px")
-                .and(DividerDefaults::horizontal_sx()),
+            sx().border_bottom(format!(
+                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"
+            ))
+            .height("1px")
+            .margin_top(format!("var({DIVIDER_SPACING_VAR}, 0)"))
+            .margin_bottom(format!("var({DIVIDER_SPACING_VAR}, 0)"))
+            .and(DividerDefaults::horizontal_sx()),
         )
         .when(
             "label",
@@ -84,7 +100,9 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .color("grey.9")
                 .selector(
                     "&::before, &::after",
-                    sx().content("\"\"").flex("1").background("grey.3"),
+                    sx().content("\"\"")
+                        .flex("1")
+                        .background(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))")),
                 ),
         )
         .when(
@@ -102,45 +120,33 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_self("stretch")
                 .selector("&::before, &::after", sx().width("1px")),
         )
+        // Only meaningful together with "label" - out-specificities the
+        // "label" block's own even-flex ::before/::after above.
+        .when(
+            "label && label-start",
+            sx().selector("&::before", sx().flex("0 0 10%"))
+                .selector("&::after", sx().flex("1")),
+        )
+        .when(
+            "label && label-end",
+            sx().selector("&::before", sx().flex("1"))
+                .selector("&::after", sx().flex("0 0 10%")),
+        )
 });
 
-fn divider_dynamic_sx(
-    label_position: LabelPosition,
-    has_label: bool,
-    vertical: bool,
-    spacing: Option<&ThemeAwareValue>,
+fn divider_variables(
     color: Option<&ThemeAwareValue>,
-) -> Sx {
-    let position_sx = if has_label {
-        match label_position {
-            LabelPosition::Start => sx()
-                .selector("::before", sx().flex("0 0 10%"))
-                .selector("::after", sx().flex("1")),
-            LabelPosition::End => sx()
-                .selector("::before", sx().flex("1"))
-                .selector("::after", sx().flex("0 0 10%")),
-            LabelPosition::Center => sx(),
-        }
-    } else {
-        sx()
-    };
-
-    let position_sx = position_sx.apply_if(spacing, |sx, spacing| {
-        if vertical {
-            sx.margin_left(spacing.clone())
-                .margin_right(spacing.clone())
-        } else {
-            sx.margin_top(spacing.clone())
-                .margin_bottom(spacing.clone())
-        }
-    });
-
-    position_sx.apply_if(color, |base, color| {
-        base.border_color(color.clone())
-            .border_right_color(color.clone())
-            .border_bottom_color(color.clone())
-            .selector("&::before, &::after", sx().background(color.clone()))
-    })
+    spacing: Option<&ThemeAwareValue>,
+) -> Variables {
+    variables()
+        .with(
+            DIVIDER_COLOR_VAR,
+            color.map(divider_color_value).and_then(|v| v.resolved()),
+        )
+        .with(
+            DIVIDER_SPACING_VAR,
+            spacing.map(divider_spacing).and_then(|v| v.raw()),
+        )
 }
 
 static DIVIDER_LABEL_HORIZONTAL_SX: StaticSx = StaticSx::new(|| {
@@ -188,29 +194,19 @@ pub fn Divider(props: DividerProps) -> Element {
         .unwrap_or_default()
         .with("vertical", vertical)
         .with("horizontal", !vertical)
-        .with("label", has_label);
+        .with("label", has_label)
+        .with("label-start", label_position == LabelPosition::Start)
+        .with("label-end", label_position == LabelPosition::End);
 
-    let color = props.color.as_ref().map(divider_color_value);
-
-    let dynamic_class = crate::hooks::use_css(
-        &divider_dynamic_sx(
-            label_position,
-            has_label,
-            vertical,
-            props.spacing.as_ref(),
-            color.as_ref(),
-        ),
-        crate::CssLayer::UserDynamic,
-    );
-
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let variables = divider_variables(props.color.as_ref(), props.spacing.as_ref());
     let data_state = divider_states.data_state();
     let aria_orientation = vertical.then_some("vertical");
 
     rsx! {
         Box {
-            class: class,
+            class: props.class,
             sx: props.sx,
+            variables,
             framework_sx: &DIVIDER_BASE_SX,
             role: "separator",
             "aria-orientation": aria_orientation,

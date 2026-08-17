@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, common::base_props},
+    components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, Size, SizeCss},
 };
@@ -85,44 +85,53 @@ fn header_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-fn header_position_sx(position: HeaderPosition) -> Sx {
-    match position {
-        HeaderPosition::Static => sx().position("static"),
-        HeaderPosition::Sticky => sx().position("sticky").top("0"),
-        HeaderPosition::Fixed => sx().position("fixed").top("0"),
-    }
-}
+const HEADER_HEIGHT_VAR: &str = "--lsx-header-height-override";
+const HEADER_BACKGROUND_VAR: &str = "--lsx-header-background";
+const HEADER_COLOR_VAR: &str = "--lsx-header-color";
+const HEADER_Z_INDEX_VAR: &str = "--lsx-header-z-index";
 
 static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .width("100%")
-        .height(SizeCss::HEADER_HEIGHT.value(Size::Md))
+        .height(format!(
+            "var({HEADER_HEIGHT_VAR}, {})",
+            SizeCss::HEADER_HEIGHT.value(Size::Md)
+        ))
         .padding_left("md")
         .padding_right("md")
-        .background("white")
+        .background(format!("var({HEADER_BACKGROUND_VAR}, white)"))
+        .color(format!("var({HEADER_COLOR_VAR}, inherit)"))
         .border_bottom("1px solid")
         .border_bottom_color("grey.3")
+        .z_index(format!("var({HEADER_Z_INDEX_VAR}, auto)"))
+        .position("sticky")
+        .top("0")
+        .when("static", sx().position("static"))
+        .when("fixed", sx().position("fixed").top("0"))
 });
 
-fn header_dynamic_sx(props: &HeaderProps) -> Sx {
-    let position = props.position.as_ref().copied().unwrap_or_default();
+fn header_variables(props: &HeaderProps) -> Variables {
+    let base = header_base_color(props.color.as_ref());
+    let contrast = base.as_ref().and_then(header_contrast_color);
 
-    header_position_sx(position)
-        .apply_if(props.size.as_ref().map(header_size), |sx, size| {
-            sx.height(size)
-        })
-        .apply_if(header_base_color(props.color.as_ref()), |sx, base| {
-            let contrast = header_contrast_color(&base);
-            let sx = sx.background(base);
-            match contrast {
-                Some(contrast) => sx.color(contrast),
-                None => sx,
-            }
-        })
-        .apply_if(props.z_index.as_ref(), |sx, z_index| {
-            sx.z_index(z_index.clone())
-        })
+    variables()
+        .with(
+            HEADER_HEIGHT_VAR,
+            props.size.as_ref().map(header_size).and_then(|v| v.raw()),
+        )
+        .with(
+            HEADER_BACKGROUND_VAR,
+            base.as_ref().and_then(ThemeAwareValue::resolved),
+        )
+        .with(
+            HEADER_COLOR_VAR,
+            contrast.as_ref().and_then(ThemeAwareValue::resolved),
+        )
+        .with(
+            HEADER_Z_INDEX_VAR,
+            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+        )
 }
 
 base_props! {
@@ -146,15 +155,24 @@ base_props! {
 /// actions as children rather than being scoped to either itself.
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
-    let dynamic_class =
-        crate::hooks::use_css(&header_dynamic_sx(&props), crate::CssLayer::UserDynamic);
+    let position = props.position.as_ref().copied().unwrap_or_default();
+    let variables = header_variables(&props);
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("static", position == HeaderPosition::Static)
+        .with("fixed", position == HeaderPosition::Fixed);
 
     rsx! {
         Box {
             component: HtmlTag::Header,
-            class: props.class.unwrap_or_default().with(dynamic_class),
+            class: props.class,
             sx: props.sx,
-            states: props.states,
+            states,
+            variables,
             framework_sx: &HEADER_BASE_SX,
             attributes: props.attributes,
             {props.children}

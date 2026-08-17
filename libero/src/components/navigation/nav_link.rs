@@ -1,9 +1,8 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
-    components::{Box, Input, States, common::base_props},
-    hooks::{use_css, use_theme},
+    components::{Box, Input, States, Variables, common::base_props, variables},
+    hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, Size, SizeCss},
 };
@@ -23,24 +22,13 @@ fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     }
 }
 
-// Active gets a light tint of the resolved color, same convention as
-// `Mark`/`ActionIcon`'s outlined hover. A non-active link only tints on
-// hover, and with a neutral grey rather than `color` - hovering shouldn't
-// preview the "selected" look before it's actually selected.
-fn nav_link_dynamic_sx(
-    is_active: bool,
-    color: Option<&ThemeAwareValue>,
-    default_color: Color,
-) -> Sx {
-    if is_active {
-        let base = nav_link_color(color).unwrap_or(default_color);
-        sx().background(ThemeAwareValue::ColorValue(ColorValue::Shade(
-            base,
-            ColorShade::S1,
-        )))
-    } else {
-        sx().hover(sx().background("grey.1"))
-    }
+const NAV_LINK_ACTIVE_BACKGROUND_VAR: &str = "--lsx-nav-link-active-background";
+
+fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
+    let base = nav_link_color(color).unwrap_or(default_color);
+    let background = ThemeAwareValue::ColorValue(ColorValue::Shade(base, ColorShade::S1));
+
+    variables().with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolved())
 }
 
 static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
@@ -57,6 +45,17 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // the native `scrollIntoView` call under the hood, so it only ever
         // affects *where* a scroll lands, never whether one happens at all.
         .scroll_margin("8rem")
+        // A non-active link only tints on hover, and with a neutral grey
+        // rather than `color` - hovering shouldn't preview the "selected"
+        // look before it's actually selected. Active gets a light tint of
+        // the resolved color instead, same convention as `Mark`/
+        // `ActionIcon`'s outlined hover.
+        .hover(sx().background("grey.1"))
+        .when(
+            "active",
+            sx().background(format!("var({NAV_LINK_ACTIVE_BACKGROUND_VAR})"))
+                .hover(sx().background(format!("var({NAV_LINK_ACTIVE_BACKGROUND_VAR})"))),
+        )
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -110,9 +109,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         NavigationTarget::External(_) => false,
     });
 
-    let dynamic_sx = nav_link_dynamic_sx(is_active, props.color.as_ref(), theme.nav_link.color);
-    let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let variables = nav_link_variables(props.color.as_ref(), theme.nav_link.color);
     let states = props
         .states
         .as_ref()
@@ -151,9 +148,10 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         return rsx! {
             Box {
                 component: "a",
-                class,
+                class: props.class,
                 sx: props.sx,
                 states,
+                variables,
                 framework_sx: &NAV_LINK_BASE_SX,
                 "aria-disabled": "true",
                 tabindex: "-1",
@@ -167,10 +165,11 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         InternalAnchor {
             to: props.to,
             target: props.target,
-            class,
+            class: props.class,
             sx: props.sx,
             framework_sx: &NAV_LINK_BASE_SX,
             states,
+            variables,
             "aria-current": aria_current,
             onmounted: move |event| mounted.set(Some(event)),
             attributes: props.attributes,

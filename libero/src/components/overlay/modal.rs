@@ -1,13 +1,19 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, FocusTrap, Input, Overlay, States, common::base_props},
+    components::{Box, FocusTrap, Input, Overlay, States, common::base_props, variables},
     context::ModalContext,
-    hooks::{use_css, use_modal_z_index},
+    hooks::use_modal_z_index,
     sx::{StaticSx, Sx, sx},
 };
 
-static MODAL_SX: StaticSx = StaticSx::new(|| sx().position("fixed").inset("0"));
+const MODAL_Z_INDEX_VAR: &str = "--lsx-modal-z-index";
+
+static MODAL_SX: StaticSx = StaticSx::new(|| {
+    sx().position("fixed")
+        .inset("0")
+        .z_index(format!("var({MODAL_Z_INDEX_VAR})"))
+});
 
 // Fixed + inset (not just relative) so it spans the full viewport itself:
 // Dialog's start/end margin:auto trick needs real free space on this flex
@@ -46,9 +52,7 @@ pub fn Modal(props: ModalProps) -> Element {
     });
 
     let z_index = use_modal_z_index();
-
-    let dynamic_class = use_css(&sx().z_index(z_index), crate::CssLayer::UserDynamic);
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let variables = variables().with(MODAL_Z_INDEX_VAR, z_index.to_string());
 
     // Deferred to the next microtask: closing synchronously (from an event
     // still bubbling through the modal being torn down) can re-enter the
@@ -63,9 +67,10 @@ pub fn Modal(props: ModalProps) -> Element {
     rsx! {
         Box {
             "data-lsx-scroll-lock": true,
-            class: class,
+            class: props.class,
             sx: props.sx,
             states: props.states,
+            variables,
             framework_sx: &MODAL_SX,
             onkeydown: move |event: Event<KeyboardData>| {
                 if event.key() == Key::Escape {

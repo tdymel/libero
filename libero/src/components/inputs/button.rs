@@ -1,13 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{
-        Box, Input, States,
-        common::{base_props, focus_ring_sx},
+        Box, Input, States, Variables,
+        common::{base_props, focus_ring_sx, variables},
         navigation::InternalAnchor,
     },
-    hooks::{use_css, use_theme},
+    hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, Size},
 };
@@ -124,17 +123,50 @@ fn button_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
 }
 
 // `shade_fn` picks the hover shade relative to the base's own shade (e.g.
-// darker for `Filled`, or a fixed light tint for `Outlined`/`Text`).
+// darker for `Filled`, or a fixed light tint for `Outlined`/`Text`). `None`
+// for a literal/raw base - it has no theme shade to derive a hover from.
 // `pub(crate)` - `ActionIcon` reuses this for the same reason.
-pub(crate) fn button_hover_sx(
+pub(crate) fn hover_color(
     base: &ThemeAwareValue,
     shade_fn: impl Fn(ColorShade) -> ColorShade,
-) -> Option<Sx> {
+) -> Option<String> {
     match base {
-        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(sx().background(
-            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, shade_fn(*shade))),
-        )),
+        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => {
+            Some(ColorValue::Shade(*color, shade_fn(*shade)).value())
+        }
         _ => None,
+    }
+}
+
+pub(crate) const BUTTON_COLOR_VAR: &str = "--lsx-button-color";
+pub(crate) const BUTTON_CONTRAST_VAR: &str = "--lsx-button-contrast";
+pub(crate) const BUTTON_HOVER_VAR: &str = "--lsx-button-hover";
+
+/// Structural chrome for `variant`, referencing `color_var`/`contrast_var`/
+/// `hover_var` (a `var()` name each, not a resolved value) - shared with
+/// `ActionIcon`, which reuses this exact shape under its own var names.
+pub(crate) fn button_variant_sx(
+    variant: ButtonVariant,
+    color_var: &str,
+    contrast_var: &str,
+    hover_var: &str,
+) -> Sx {
+    match variant {
+        ButtonVariant::Filled => sx()
+            .background(format!("var({color_var})"))
+            .border_color(format!("var({color_var})"))
+            .color(format!("var({contrast_var}, inherit)"))
+            .hover(sx().background(format!("var({hover_var}, var({color_var}))"))),
+        ButtonVariant::Outlined => sx()
+            .background("transparent")
+            .border_color(format!("var({color_var})"))
+            .color(format!("var({color_var})"))
+            .hover(sx().background(format!("var({hover_var}, transparent)"))),
+        ButtonVariant::Text => sx()
+            .background("transparent")
+            .border_color("transparent")
+            .color(format!("var({color_var})"))
+            .hover(sx().background(format!("var({hover_var}, transparent)"))),
     }
 }
 
@@ -154,6 +186,33 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .text_decoration("none")
         .outline("none")
         .when(
+            "filled",
+            button_variant_sx(
+                ButtonVariant::Filled,
+                BUTTON_COLOR_VAR,
+                BUTTON_CONTRAST_VAR,
+                BUTTON_HOVER_VAR,
+            ),
+        )
+        .when(
+            "outlined",
+            button_variant_sx(
+                ButtonVariant::Outlined,
+                BUTTON_COLOR_VAR,
+                BUTTON_CONTRAST_VAR,
+                BUTTON_HOVER_VAR,
+            ),
+        )
+        .when(
+            "text",
+            button_variant_sx(
+                ButtonVariant::Text,
+                BUTTON_COLOR_VAR,
+                BUTTON_CONTRAST_VAR,
+                BUTTON_HOVER_VAR,
+            ),
+        )
+        .when(
             "disabled",
             // pointer-events: none also stops the variant's :hover styles from
             // triggering, since a disabled button no longer receives pointer events.
@@ -161,49 +220,33 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .cursor("not-allowed")
                 .pointer_events("none"),
         )
+        .when("full-width", sx().width("100%"))
         // Only shown for keyboard focus (not on mouse click), since the base
         // outline is suppressed above and re-added here just for :focus-visible.
         .focus_visible(focus_ring_sx())
 });
 
-fn button_variant_sx(variant: ButtonVariant, base: ThemeAwareValue) -> Sx {
+pub(crate) fn variant_token(variant: ButtonVariant) -> &'static str {
     match variant {
-        ButtonVariant::Filled => {
-            let contrast = button_contrast_color(&base);
-            let hover = button_hover_sx(&base, ColorShade::darker);
-            let result = sx().background(base.clone()).border_color(base);
-            let result = match contrast {
-                Some(contrast) => result.color(contrast),
-                None => result,
-            };
-            match hover {
-                Some(hover) => result.hover(hover),
-                None => result,
-            }
-        }
-        ButtonVariant::Outlined => {
-            let hover = button_hover_sx(&base, |_| BUTTON_HOVER_TINT_SHADE);
-            let result = sx()
-                .background("transparent")
-                .border_color(base.clone())
-                .color(base);
-            match hover {
-                Some(hover) => result.hover(hover),
-                None => result,
-            }
-        }
-        ButtonVariant::Text => {
-            let hover = button_hover_sx(&base, |_| BUTTON_HOVER_TINT_SHADE);
-            let result = sx()
-                .background("transparent")
-                .border_color("transparent")
-                .color(base);
-            match hover {
-                Some(hover) => result.hover(hover),
-                None => result,
-            }
-        }
+        ButtonVariant::Filled => "filled",
+        ButtonVariant::Outlined => "outlined",
+        ButtonVariant::Text => "text",
     }
+}
+
+fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> Variables {
+    let contrast = button_contrast_color(base);
+    let hover = match variant {
+        ButtonVariant::Filled => hover_color(base, ColorShade::darker),
+        ButtonVariant::Outlined | ButtonVariant::Text => {
+            hover_color(base, |_| BUTTON_HOVER_TINT_SHADE)
+        }
+    };
+
+    variables()
+        .with(BUTTON_COLOR_VAR, base.resolved())
+        .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolved()))
+        .with(BUTTON_HOVER_VAR, hover)
 }
 
 base_props! {
@@ -254,10 +297,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .copied()
         .unwrap_or(theme.button.radius);
 
-    let dynamic_sx = button_variant_sx(variant, color)
-        .apply_if(full_width.then_some(()), |sx, ()| sx.width("100%"));
-    let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let variables = button_variables(variant, &color);
 
     let states = props
         .states
@@ -265,6 +305,8 @@ pub fn Button(props: ButtonProps) -> Element {
         .cloned()
         .unwrap_or_default()
         .with("disabled", disabled)
+        .with("full-width", full_width)
+        .with(variant_token(variant), true)
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true);
 
@@ -305,9 +347,10 @@ pub fn Button(props: ButtonProps) -> Element {
             return rsx! {
                 Box {
                     component: "a",
-                    class,
+                    class: props.class,
                     sx: props.sx,
                     states,
+                    variables,
                     framework_sx: &BUTTON_BASE_SX,
                     "aria-disabled": "true",
                     tabindex: "-1",
@@ -321,10 +364,11 @@ pub fn Button(props: ButtonProps) -> Element {
             InternalAnchor {
                 to,
                 target: props.target,
-                class,
+                class: props.class,
                 sx: props.sx,
                 framework_sx: &BUTTON_BASE_SX,
                 states,
+                variables,
                 attributes: props.attributes,
                 {props.children}
             }
@@ -334,9 +378,10 @@ pub fn Button(props: ButtonProps) -> Element {
     rsx! {
         Box {
             component: "button",
-            class,
+            class: props.class,
             sx: props.sx,
             states,
+            variables,
             framework_sx: &BUTTON_BASE_SX,
             onclick: handle_click,
             disabled,

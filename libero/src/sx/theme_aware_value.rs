@@ -1,4 +1,4 @@
-use crate::theme::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss};
 
 use super::BreakpointValue;
 
@@ -26,6 +26,36 @@ impl ThemeAwareValue {
             Self::CssVar(css_var) => Some(css_var.value()),
             Self::RawColor(raw, _) => Some(raw.clone()),
             Self::Size(_) | Self::Color(_) | Self::ColorValue(_) | Self::BreakpointValue(_) => None,
+        }
+    }
+
+    /// Like [`raw`](Self::raw), but also resolves a themed `Color`/
+    /// `ColorValue` (via their own `.value()`) instead of punting on them -
+    /// for building a [`crate::components::Variables`] entry outside the Sx
+    /// pipeline, where that resolution would otherwise happen. Still `None`
+    /// for `Size`/`BreakpointValue`, which need a property-aware scale a
+    /// caller must resolve itself first (see e.g. `icon_size`/
+    /// `header_size`/`dialog_size`/`drawer_size`). A bare `Color` falls back
+    /// to the library-wide default shade (5), same as the Sx pipeline's own
+    /// generic default - in practice every caller normalizes a bare `Color`
+    /// to its own default shade before this point, so this is a safety net,
+    /// not the common path.
+    pub(crate) fn resolved(&self) -> Option<String> {
+        match self {
+            Self::ColorValue(color_value) => Some(color_value.value()),
+            Self::Color(color) => Some(ColorValue::Shade(*color, ColorShade::S5).value()),
+            _ => self.raw(),
+        }
+    }
+
+    /// Like [`resolved`](Self::resolved), but for a `radius` override
+    /// specifically - a `Size` resolves through the shared global radius
+    /// scale (the same one every migrated component's own theme default
+    /// already reads from), instead of `resolved`'s `None`.
+    pub(crate) fn radius(&self) -> Option<String> {
+        match self {
+            Self::Size(size) => Some(SizeCss::RADIUS.value(*size)),
+            _ => self.resolved(),
         }
     }
 

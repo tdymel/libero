@@ -1,12 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{
-        Box, Dialog, Input, Modal, States,
-        common::{base_props, class_list, focus_ring_sx},
+        Box, Dialog, Input, Modal, States, Variables,
+        common::{base_props, focus_ring_sx, states, variables},
     },
-    hooks::use_css,
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
@@ -68,8 +66,33 @@ impl From<String> for Input<ImageFit> {
     }
 }
 
-static IMAGE_BASE_SX: StaticSx =
-    StaticSx::new(|| sx().display("block").width("100%").height("100%"));
+fn fit_token(fit: ImageFit) -> &'static str {
+    match fit {
+        ImageFit::Fill => "fit-fill",
+        ImageFit::Contain => "fit-contain",
+        ImageFit::Cover => "fit-cover",
+        ImageFit::None => "fit-none",
+        ImageFit::ScaleDown => "fit-scale-down",
+    }
+}
+
+const IMAGE_RADIUS_VAR: &str = "--lsx-image-radius";
+
+fn image_variables(radius: Option<&ThemeAwareValue>) -> Variables {
+    variables().with(IMAGE_RADIUS_VAR, radius.and_then(ThemeAwareValue::radius))
+}
+
+static IMAGE_BASE_SX: StaticSx = StaticSx::new(|| {
+    sx().display("block")
+        .width("100%")
+        .height("100%")
+        .border_radius(format!("var({IMAGE_RADIUS_VAR}, 0)"))
+        .when("fit-fill", sx().object_fit("fill"))
+        .when("fit-contain", sx().object_fit("contain"))
+        .when("fit-cover", sx().object_fit("cover"))
+        .when("fit-none", sx().object_fit("none"))
+        .when("fit-scale-down", sx().object_fit("scale-down"))
+});
 
 static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
@@ -79,9 +102,14 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .background("transparent")
         .outline("none")
+        .cursor("zoom-in")
+        .when("zoomed", sx().cursor("zoom-out"))
         .focus_visible(focus_ring_sx())
 });
 
+// Only ever rendered while `zoomed` is true (it's the button inside the
+// zoomed overlay itself), so its cursor is a fixed "zoom-out" - not a
+// per-instance dynamic value.
 static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .position("relative")
@@ -89,6 +117,7 @@ static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .background("transparent")
         .outline("none")
+        .cursor("zoom-out")
         .focus_visible(focus_ring_sx())
 });
 
@@ -136,35 +165,27 @@ pub fn Image(props: ImageProps) -> Element {
     };
 
     let fit = props.fit.as_ref().copied().unwrap_or_default();
-    let dynamic_sx = sx()
-        .object_fit(fit.as_str())
-        .apply_if(props.radius.as_ref(), |sx, radius| {
-            sx.border_radius(radius.clone())
-        });
-
-    let framework_class = use_css(&IMAGE_BASE_SX, CssLayer::Framework);
-    let dynamic_class = use_css(&dynamic_sx, CssLayer::UserDynamic);
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_css(sx, CssLayer::UserStatic));
+    let variables = image_variables(props.radius.as_ref());
 
     let on_error_src = props.src.clone();
 
     let decorative_role = props.alt.is_empty().then_some("presentation");
 
     if !props.zoomable {
-        let class = props
-            .class
+        let states = props
+            .states
+            .as_ref()
+            .cloned()
             .unwrap_or_default()
-            .with(framework_class)
-            .with(dynamic_class)
-            .with(static_class);
+            .with(fit_token(fit), true);
         return rsx! {
             Box {
                 component: "img",
-                class: class,
-                states: props.states,
+                class: props.class,
+                sx: props.sx,
+                states,
+                variables,
+                framework_sx: &IMAGE_BASE_SX,
                 src: src,
                 alt: props.alt,
                 role: decorative_role,
@@ -174,7 +195,7 @@ pub fn Image(props: ImageProps) -> Element {
         };
     }
 
-    let img_class = class_list().with(framework_class).with(dynamic_class);
+    let img_states = states().with(fit_token(fit), true);
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
     let mut focus_return = use_focus_return();
@@ -183,15 +204,12 @@ pub fn Image(props: ImageProps) -> Element {
         focus_return.restore();
     };
 
-    let cursor = if zoomed() { "zoom-out" } else { "zoom-in" };
-    let button_framework_class = use_css(&ZOOM_BUTTON_SX, CssLayer::Framework);
-    let button_dynamic_class = use_css(&sx().cursor(cursor), CssLayer::UserDynamic);
-    let button_class = props
-        .class
+    let button_states = props
+        .states
+        .as_ref()
+        .cloned()
         .unwrap_or_default()
-        .with(button_framework_class)
-        .with(button_dynamic_class)
-        .with(static_class);
+        .with("zoomed", zoomed());
 
     let label = match (props.alt.is_empty(), zoomed()) {
         (true, false) => "Zoom in".to_string(),
@@ -199,13 +217,6 @@ pub fn Image(props: ImageProps) -> Element {
         (false, false) => format!("Zoom in: {}", props.alt),
         (false, true) => format!("Zoom out: {}", props.alt),
     };
-
-    let overlay_button_framework_class = use_css(&ZOOM_OVERLAY_BUTTON_SX, CssLayer::Framework);
-    let overlay_button_cursor_class = use_css(&sx().cursor("zoom-out"), CssLayer::UserDynamic);
-    let overlay_button_class = class_list()
-        .with(overlay_button_framework_class)
-        .with(overlay_button_cursor_class);
-    let overlay_image_class = use_css(&ZOOM_OVERLAY_IMAGE_SX, CssLayer::Framework);
 
     let portal_content = zoomed().then(|| {
         rsx! {
@@ -222,13 +233,13 @@ pub fn Image(props: ImageProps) -> Element {
                     Box {
                         component: "button",
                         r#type: "button",
-                        class: overlay_button_class.clone(),
+                        framework_sx: &ZOOM_OVERLAY_BUTTON_SX,
                         "data-autofocus": true,
                         aria_label: label.clone(),
                         onclick: move |_| close_zoom(),
                         Box {
                             component: "img",
-                            class: overlay_image_class.clone(),
+                            framework_sx: &ZOOM_OVERLAY_IMAGE_SX,
                             src: zoomed_src.clone(),
                             alt: "",
                             role: "presentation",
@@ -244,15 +255,19 @@ pub fn Image(props: ImageProps) -> Element {
         Box {
             component: "button",
             r#type: "button",
-            class: button_class,
-            states: props.states,
+            class: props.class,
+            sx: props.sx,
+            states: button_states,
+            framework_sx: &ZOOM_BUTTON_SX,
             "aria-pressed": zoomed().to_string(),
             aria_label: label.clone(),
             onmounted: move |event: Event<MountedData>| focus_return.remember(event),
             onclick: move |_| zoomed.toggle(),
             Box {
                 component: "img",
-                class: img_class,
+                states: img_states,
+                variables,
+                framework_sx: &IMAGE_BASE_SX,
                 src: src.clone(),
                 alt: "",
                 role: "presentation",

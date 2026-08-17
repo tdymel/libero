@@ -2,7 +2,6 @@
 pub enum CssLayer {
     Framework,
     UserStatic,
-    UserDynamic,
     UserCustom,
 }
 
@@ -11,12 +10,11 @@ impl CssLayer {
         match self {
             Self::Framework => "lsx-framework",
             Self::UserStatic => "lsx-user-static",
-            Self::UserDynamic => "lsx-user-dynamic",
             Self::UserCustom => "lsx-user-custom",
         }
     }
 
     pub const fn order_css() -> &'static str {
-        "@layer lsx-framework, lsx-user-static, lsx-user-dynamic, lsx-user-custom;"
+        "@layer lsx-framework, lsx-user-static, lsx-user-custom;"
     }
 }

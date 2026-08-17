@@ -1,11 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{Box, Input, States, Variables, common::base_props, variables},
     context::ModalContext,
-    hooks::use_css,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::SizeCss,
+    theme::{Size, SizeCss},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -59,6 +58,10 @@ impl From<String> for Input<DialogAlign> {
     }
 }
 
+const DIALOG_RADIUS_VAR: &str = "--lsx-dialog-radius";
+const DIALOG_SIZE_VAR: &str = "--lsx-dialog-size-override";
+const DIALOG_Z_INDEX_VAR: &str = "--lsx-dialog-z-index";
+
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().background("white")
         // Modal's content wrapper is pointer-events:none so backdrop clicks
@@ -67,11 +70,22 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         // A flex item shrinks to its content by default, so without an
         // explicit width, `max-width`/`size` only caps rather than fills.
         .width("100%")
-        .max_width(SizeCss::DIALOG_SIZE.value(crate::theme::Size::Md))
+        .max_width(format!(
+            "var({DIALOG_SIZE_VAR}, {})",
+            SizeCss::DIALOG_SIZE.value(Size::Md)
+        ))
         .margin("md")
         .padding("lg")
-        .border_radius("md")
+        .border_radius(format!(
+            "var({DIALOG_RADIUS_VAR}, {})",
+            SizeCss::RADIUS.value(Size::Md)
+        ))
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
+        .z_index(format!("var({DIALOG_Z_INDEX_VAR}, auto)"))
+        .when("vertical-start", sx().margin_bottom("auto"))
+        .when("vertical-end", sx().margin_top("auto"))
+        .when("horizontal-start", sx().margin_right("auto"))
+        .when("horizontal-end", sx().margin_left("auto"))
 });
 
 /// `xs`-`xl` resolve through the dialog size scale, not the (much larger)
@@ -83,47 +97,20 @@ pub(crate) fn dialog_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-fn dialog_dynamic_sx(props: &DialogProps) -> Sx {
-    let vertical = props.vertical.as_ref().copied().unwrap_or_default();
-    let horizontal = props.horizontal.as_ref().copied().unwrap_or_default();
-
-    sx().apply_if(props.radius.as_ref(), |sx, radius| {
-        sx.border_radius(radius.clone())
-    })
-    .apply_if(props.size.as_ref().map(dialog_size), |sx, size| {
-        sx.max_width(size)
-    })
-    .apply_if(props.z_index.as_ref(), |sx, z_index| {
-        sx.z_index(z_index.clone())
-    })
-    .apply_if(
-        match vertical {
-            DialogAlign::Start => Some("auto"),
-            _ => None,
-        },
-        |sx, auto| sx.margin_bottom(auto),
-    )
-    .apply_if(
-        match vertical {
-            DialogAlign::End => Some("auto"),
-            _ => None,
-        },
-        |sx, auto| sx.margin_top(auto),
-    )
-    .apply_if(
-        match horizontal {
-            DialogAlign::Start => Some("auto"),
-            _ => None,
-        },
-        |sx, auto| sx.margin_right(auto),
-    )
-    .apply_if(
-        match horizontal {
-            DialogAlign::End => Some("auto"),
-            _ => None,
-        },
-        |sx, auto| sx.margin_left(auto),
-    )
+fn dialog_variables(props: &DialogProps) -> Variables {
+    variables()
+        .with(
+            DIALOG_RADIUS_VAR,
+            props.radius.as_ref().and_then(ThemeAwareValue::radius),
+        )
+        .with(
+            DIALOG_SIZE_VAR,
+            props.size.as_ref().map(dialog_size).and_then(|v| v.raw()),
+        )
+        .with(
+            DIALOG_Z_INDEX_VAR,
+            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+        )
 }
 
 base_props! {
@@ -136,6 +123,10 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
+        /// Forwarded alongside Dialog's own - e.g. `Drawer` layers its
+        /// own anchor/size variables onto Dialog's rendered surface.
+        #[props(default, into)]
+        variables: Input<Variables>,
         /// Cross-axis position - `Start`/`End` pin to top/bottom instead of
         /// Modal's default vertical center.
         #[props(default, into)]
@@ -153,18 +144,29 @@ base_props! {
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();
+    let vertical = props.vertical.as_ref().copied().unwrap_or_default();
+    let horizontal = props.horizontal.as_ref().copied().unwrap_or_default();
+    let variables = dialog_variables(&props).merge(props.variables.unwrap_or_default());
 
-    let dynamic_class = use_css(&dialog_dynamic_sx(&props), crate::CssLayer::UserDynamic);
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("vertical-start", vertical == DialogAlign::Start)
+        .with("vertical-end", vertical == DialogAlign::End)
+        .with("horizontal-start", horizontal == DialogAlign::Start)
+        .with("horizontal-end", horizontal == DialogAlign::End);
 
     rsx! {
         Box {
             role: "dialog",
             "aria-modal": is_modal.then_some("true"),
             "aria-label": props.aria_label.clone(),
-            class: class,
+            class: props.class,
             sx: props.sx,
-            states: props.states,
+            states,
+            variables,
             framework_sx: &DIALOG_BASE_SX,
             attributes: props.attributes,
             {props.children}

@@ -1,13 +1,16 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
-    hooks::use_css,
+    components::{Box, Input, States, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
 
 const OVERLAY_Z_INDEX: &str = "100";
 const OVERLAY_OPACITY: f32 = 0.6;
+
+const OVERLAY_OPACITY_VAR: &str = "--lsx-overlay-opacity";
+const OVERLAY_Z_INDEX_VAR: &str = "--lsx-overlay-z-index";
+const OVERLAY_BLUR_VAR: &str = "--lsx-overlay-blur";
 
 static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
@@ -15,7 +18,11 @@ static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("center")
         .justify_content("center")
-        .z_index(OVERLAY_Z_INDEX)
+        .z_index(format!("var({OVERLAY_Z_INDEX_VAR}, {OVERLAY_Z_INDEX})"))
+        .background(format!(
+            "rgba(0, 0, 0, var({OVERLAY_OPACITY_VAR}, {OVERLAY_OPACITY}))"
+        ))
+        .backdrop_filter(format!("var({OVERLAY_BLUR_VAR}, none)"))
 });
 
 base_props! {
@@ -43,27 +50,30 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 /// conditionally rendering it, not by passing an `open` flag.
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
-    let opacity = props
-        .opacity
-        .as_ref()
-        .and_then(ThemeAwareValue::raw)
-        .unwrap_or_else(|| OVERLAY_OPACITY.to_string());
-    let dynamic_sx = sx()
-        .background(format!("rgba(0, 0, 0, {opacity})"))
-        .apply_if(props.z_index.as_ref(), |sx, z_index| {
-            sx.z_index(z_index.clone())
-        })
-        .apply_if(props.blur.as_ref().and_then(px_value), |sx, blur| {
-            sx.backdrop_filter(format!("blur({blur})"))
-        });
-    let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-    let class = props.class.unwrap_or_default().with(dynamic_class);
+    let variables = variables()
+        .with(
+            OVERLAY_OPACITY_VAR,
+            props.opacity.as_ref().and_then(ThemeAwareValue::raw),
+        )
+        .with(
+            OVERLAY_Z_INDEX_VAR,
+            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+        )
+        .with(
+            OVERLAY_BLUR_VAR,
+            props
+                .blur
+                .as_ref()
+                .and_then(px_value)
+                .map(|blur| format!("blur({blur})")),
+        );
 
     rsx! {
         Box {
-            class: class,
+            class: props.class,
             sx: props.sx,
             states: props.states,
+            variables,
             framework_sx: &OVERLAY_BASE_SX,
             attributes: props.attributes,
             {props.children.unwrap_or_else(|| rsx! {})}

@@ -24,6 +24,17 @@ impl Variables {
         }
         self
     }
+
+    /// Adds every entry from `other` on top of `self` (each still replaces
+    /// any existing entry of the same name) - for a component that forwards
+    /// a caller-supplied `Variables` alongside its own internally-computed
+    /// ones (e.g. `Dialog` forwarding `Drawer`'s).
+    pub fn merge(mut self, other: Self) -> Self {
+        for (name, value) in other.0 {
+            self = self.with(name, value);
+        }
+        self
+    }
 }
 
 impl Display for Variables {

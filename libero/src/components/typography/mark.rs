@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{Box, Input, States, Variables, common::base_props, variables},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue},
@@ -12,6 +12,8 @@ use crate::{
 // tinted by default lives in `Theme::mark` (see `MarkDefaults`); only the
 // shade itself is fixed here.
 const MARK_TINT_SHADE: ColorShade = ColorShade::S1;
+
+const MARK_BACKGROUND_VAR: &str = "--lsx-mark-background";
 
 // A bare theme color name (e.g. "primary") has no shade of its own, so it's
 // resolved to our own tint shade here rather than the sx pipeline's generic
@@ -32,8 +34,21 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
 // The browser's own UA stylesheet forces `<mark>` to black text, which would
 // stay illegible against a dark caller-supplied background - `color:inherit`
 // hands text color back to the surrounding context, same as Mantine's Mark
-// leaves it untouched and only ever sets the background.
-static MARK_BASE_SX: StaticSx = StaticSx::new(|| sx().color("inherit"));
+// leaves it untouched and only ever sets the background. The background
+// itself always resolves to *some* value (default or override), so no
+// fallback is needed on the `var()` reference here - `mark_variables` always
+// sets it.
+static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
+    sx().color("inherit")
+        .background(format!("var({MARK_BACKGROUND_VAR})"))
+});
+
+fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
+    variables().with(
+        MARK_BACKGROUND_VAR,
+        mark_background_color(color, default_color).resolved(),
+    )
+}
 
 base_props! {
     pub struct MarkProps {
@@ -50,20 +65,15 @@ base_props! {
 #[component]
 pub fn Mark(props: MarkProps) -> Element {
     let theme = use_theme();
-    let dynamic_class = crate::hooks::use_css(
-        &sx().background(mark_background_color(
-            props.color.as_ref(),
-            theme.mark.color,
-        )),
-        crate::CssLayer::UserDynamic,
-    );
+    let variables = mark_variables(props.color.as_ref(), theme.mark.color);
 
     rsx! {
         Box {
             component: "mark",
-            class: props.class.unwrap_or_default().with(dynamic_class),
+            class: props.class,
             sx: props.sx,
             states: props.states,
+            variables,
             framework_sx: &MARK_BASE_SX,
             attributes: props.attributes,
             {props.children}

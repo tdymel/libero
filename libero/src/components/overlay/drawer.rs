@@ -1,12 +1,15 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Dialog, Input, Modal, States, common::base_props},
+    components::{Box, Dialog, Input, Modal, States, Variables, common::base_props, variables},
     hooks::use_css,
     hooks::use_portal,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::SizeCss,
+    theme::{Size, SizeCss},
 };
+
+const DRAWER_SIZE_VAR: &str = "--lsx-drawer-size-override";
+const DRAWER_Z_INDEX_VAR: &str = "--lsx-drawer-z-index";
 
 // `Static` is documented as usable for a sidebar, which is almost always a
 // flex item that needs to not get squeezed and to scroll its own content
@@ -16,6 +19,63 @@ static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
         .min_height("0")
         .padding("lg")
         .overflow("auto")
+        .z_index(format!("var({DRAWER_Z_INDEX_VAR}, auto)"))
+        .when(
+            "anchor-left",
+            sx().width(format!("var({DRAWER_SIZE_VAR}, auto)"))
+                .border_right("1px solid var(--lsx-grey-3)"),
+        )
+        .when(
+            "anchor-right",
+            sx().width(format!("var({DRAWER_SIZE_VAR}, auto)"))
+                .border_left("1px solid var(--lsx-grey-3)"),
+        )
+        .when(
+            "anchor-top",
+            sx().height(format!("var({DRAWER_SIZE_VAR}, auto)"))
+                .border_bottom("1px solid var(--lsx-grey-3)"),
+        )
+        .when(
+            "anchor-bottom",
+            sx().height(format!("var({DRAWER_SIZE_VAR}, auto)"))
+                .border_top("1px solid var(--lsx-grey-3)"),
+        )
+});
+
+// `Temporary`'s surface, layered onto `Dialog`'s own class/vars (Dialog owns
+// its own `framework_sx`, so this rides along as an extra class rather than
+// replacing it).
+static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
+    let default_size = SizeCss::DRAWER_SIZE.value(Size::Md);
+
+    sx().margin("0")
+        .border_radius("0")
+        .max_width("none")
+        .z_index(format!("var({DRAWER_Z_INDEX_VAR}, auto)"))
+        .when(
+            "anchor-left",
+            sx().height("100%")
+                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
+                .margin_right("auto"),
+        )
+        .when(
+            "anchor-right",
+            sx().height("100%")
+                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
+                .margin_left("auto"),
+        )
+        .when(
+            "anchor-top",
+            sx().width("100%")
+                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
+                .margin_bottom("auto"),
+        )
+        .when(
+            "anchor-bottom",
+            sx().width("100%")
+                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
+                .margin_top("auto"),
+        )
 });
 
 /// `xs`-`xl` resolve through the drawer size scale, distinct from
@@ -83,12 +143,6 @@ impl Default for DrawerAnchor {
     }
 }
 
-impl DrawerAnchor {
-    const fn is_horizontal(self) -> bool {
-        matches!(self, Self::Left | Self::Right)
-    }
-}
-
 impl From<&str> for DrawerAnchor {
     fn from(value: &str) -> Self {
         match value.to_lowercase().as_str() {
@@ -118,58 +172,20 @@ impl From<String> for Input<DrawerAnchor> {
     }
 }
 
-/// `Temporary`'s surface: flush against the anchored + cross edges, sized on
-/// the main axis by `size`.
-fn temporary_dialog_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> Sx {
-    let size = size
-        .map(drawer_size)
-        .unwrap_or_else(|| drawer_size(&ThemeAwareValue::from("md")));
-
-    let sx = sx().margin("0").border_radius("0").max_width("none");
-
-    if anchor.is_horizontal() {
-        sx.height("100%").width(size)
-    } else {
-        sx.width("100%").height(size)
-    }
-    .apply_if(
-        matches!(anchor, DrawerAnchor::Left).then_some("auto"),
-        |sx, auto| sx.margin_right(auto),
-    )
-    .apply_if(
-        matches!(anchor, DrawerAnchor::Right).then_some("auto"),
-        |sx, auto| sx.margin_left(auto),
-    )
-    .apply_if(
-        matches!(anchor, DrawerAnchor::Top).then_some("auto"),
-        |sx, auto| sx.margin_bottom(auto),
-    )
-    .apply_if(
-        matches!(anchor, DrawerAnchor::Bottom).then_some("auto"),
-        |sx, auto| sx.margin_top(auto),
-    )
-}
-
 // TODO: `anchor` here only picks the border/axis, not real placement - callers
 // must still order `Drawer` correctly themselves. Consider an API that also
 // positions it (e.g. order/margin-auto) so `anchor` is authoritative here too.
-/// `Static`'s panel: sized on the main axis by `size`, bordered on the edge
-/// facing the rest of the layout.
-fn static_dynamic_sx(anchor: DrawerAnchor, size: Option<&ThemeAwareValue>) -> Sx {
-    let sx = sx().apply_if(size.map(drawer_size), |sx, size| {
-        if anchor.is_horizontal() {
-            sx.width(size)
-        } else {
-            sx.height(size)
-        }
-    });
 
-    match anchor {
-        DrawerAnchor::Left => sx.border_right("1px solid var(--lsx-grey-3)"),
-        DrawerAnchor::Right => sx.border_left("1px solid var(--lsx-grey-3)"),
-        DrawerAnchor::Top => sx.border_bottom("1px solid var(--lsx-grey-3)"),
-        DrawerAnchor::Bottom => sx.border_top("1px solid var(--lsx-grey-3)"),
-    }
+fn drawer_variables(props: &DrawerProps) -> Variables {
+    variables()
+        .with(
+            DRAWER_SIZE_VAR,
+            props.size.as_ref().map(drawer_size).and_then(|v| v.raw()),
+        )
+        .with(
+            DRAWER_Z_INDEX_VAR,
+            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+        )
 }
 
 base_props! {
@@ -199,20 +215,25 @@ base_props! {
 pub fn Drawer(props: DrawerProps) -> Element {
     let variant = props.variant.as_ref().copied().unwrap_or_default();
     let anchor = props.anchor.as_ref().copied().unwrap_or_default();
+    let variables = drawer_variables(&props);
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("anchor-left", anchor == DrawerAnchor::Left)
+        .with("anchor-right", anchor == DrawerAnchor::Right)
+        .with("anchor-top", anchor == DrawerAnchor::Top)
+        .with("anchor-bottom", anchor == DrawerAnchor::Bottom);
 
     if variant == DrawerVariant::Static {
-        let dynamic_sx = static_dynamic_sx(anchor, props.size.as_ref())
-            .apply_if(props.z_index.as_ref(), |sx, z_index| {
-                sx.z_index(z_index.clone())
-            });
-        let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-        let class = props.class.unwrap_or_default().with(dynamic_class);
-
         return rsx! {
             Box {
-                class: class,
+                class: props.class,
                 sx: props.sx,
-                states: props.states,
+                states,
+                variables,
                 framework_sx: &DRAWER_STATIC_BASE_SX,
                 // Chromium makes a scrollable `overflow: auto` region with
                 // actual overflowing content an implicit tab stop of its own
@@ -227,16 +248,11 @@ pub fn Drawer(props: DrawerProps) -> Element {
         };
     }
 
-    let dynamic_sx = temporary_dialog_sx(anchor, props.size.as_ref())
-        .apply_if(props.z_index.as_ref(), |sx, z_index| {
-            sx.z_index(z_index.clone())
-        });
-    let dynamic_class = use_css(&dynamic_sx, crate::CssLayer::UserDynamic);
-    let class = props.class.clone().unwrap_or_default().with(dynamic_class);
+    let drawer_class = use_css(&DRAWER_TEMPORARY_SX, crate::CssLayer::Framework);
+    let class = props.class.clone().unwrap_or_default().with(drawer_class);
 
     let onclose = props.onclose;
     let sx = props.sx.clone();
-    let states = props.states.clone();
     let attributes = props.attributes.clone();
     let children = props.children.clone();
 
@@ -247,6 +263,7 @@ pub fn Drawer(props: DrawerProps) -> Element {
                 class: class.clone(),
                 sx: sx.clone(),
                 states: states.clone(),
+                variables: variables.clone(),
                 attributes: attributes.clone(),
                 {children.clone()}
             }

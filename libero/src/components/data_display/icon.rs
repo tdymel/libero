@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, common::base_props},
+    components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, Size, SizeCss},
 };
@@ -69,7 +69,7 @@ pub(crate) fn icon_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValu
 
 // Only a resolved theme shade has a precomputed contrast CSS var to pair
 // with; a literal color has no such pairing available.
-fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
+pub(crate) fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
     match base {
         ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
             ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
@@ -85,47 +85,86 @@ pub(crate) fn icon_size(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-pub(crate) fn icon_variant_sx(variant: IconVariant, base: ThemeAwareValue) -> Sx {
+/// Structural chrome for `variant`, referencing `color_var`/`contrast_var`
+/// (a `var()` name each, not a resolved value) - shared with `ActionIcon`,
+/// which reuses this exact shape under its own var names since it builds
+/// directly on `Icon`'s own variant styling.
+pub(crate) fn icon_variant_sx(variant: IconVariant, color_var: &str, contrast_var: &str) -> Sx {
     match variant {
-        IconVariant::Filled => {
-            let contrast = icon_contrast_color(&base);
-            let sx = sx().background(base);
-            match contrast {
-                Some(contrast) => sx.color(contrast),
-                None => sx,
-            }
-        }
+        IconVariant::Filled => sx()
+            .background(format!("var({color_var})"))
+            .color(format!("var({contrast_var}, inherit)")),
         IconVariant::Outlined => sx()
             .background("transparent")
             .border("1px solid")
-            .border_color(base.clone())
-            .color(base),
-        IconVariant::Transparent => sx().background("transparent").color(base),
+            .border_color(format!("var({color_var})"))
+            .color(format!("var({color_var})")),
+        IconVariant::Transparent => sx()
+            .background("transparent")
+            .color(format!("var({color_var})")),
     }
 }
+
+pub(crate) const ICON_COLOR_VAR: &str = "--lsx-icon-color";
+pub(crate) const ICON_CONTRAST_VAR: &str = "--lsx-icon-contrast";
+const ICON_SIZE_VAR: &str = "--lsx-icon-size-override";
+const ICON_RADIUS_VAR: &str = "--lsx-icon-radius";
 
 static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
-        .width(SizeCss::ICON_SIZE.value(Size::Md))
-        .height(SizeCss::ICON_SIZE.value(Size::Md))
-        .border_radius(SizeCss::RADIUS.value(Size::Sm))
+        .width(format!(
+            "var({ICON_SIZE_VAR}, {})",
+            SizeCss::ICON_SIZE.value(Size::Md)
+        ))
+        .height(format!(
+            "var({ICON_SIZE_VAR}, {})",
+            SizeCss::ICON_SIZE.value(Size::Md)
+        ))
+        .border_radius(format!(
+            "var({ICON_RADIUS_VAR}, {})",
+            SizeCss::RADIUS.value(Size::Sm)
+        ))
         .selector("& svg", sx().width("100%").height("100%"))
+        .when(
+            "filled",
+            icon_variant_sx(IconVariant::Filled, ICON_COLOR_VAR, ICON_CONTRAST_VAR),
+        )
+        .when(
+            "outlined",
+            icon_variant_sx(IconVariant::Outlined, ICON_COLOR_VAR, ICON_CONTRAST_VAR),
+        )
+        .when(
+            "transparent",
+            icon_variant_sx(IconVariant::Transparent, ICON_COLOR_VAR, ICON_CONTRAST_VAR),
+        )
 });
 
-fn icon_dynamic_sx(props: &IconProps) -> Sx {
-    let variant = props.variant.as_ref().copied().unwrap_or_default();
-    let base = icon_base_color(props.color.as_ref());
+pub(crate) fn variant_token(variant: IconVariant) -> &'static str {
+    match variant {
+        IconVariant::Filled => "filled",
+        IconVariant::Outlined => "outlined",
+        IconVariant::Transparent => "transparent",
+    }
+}
 
-    icon_variant_sx(variant, base)
-        .apply_if(props.size.as_ref().map(icon_size), |sx, size| {
-            sx.width(size.clone()).height(size)
-        })
-        .apply_if(props.radius.as_ref(), |sx, radius| {
-            sx.border_radius(radius.clone())
-        })
+fn icon_variables(props: &IconProps) -> Variables {
+    let base = icon_base_color(props.color.as_ref());
+    let contrast = icon_contrast_color(&base);
+
+    variables()
+        .with(ICON_COLOR_VAR, base.resolved())
+        .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolved()))
+        .with(
+            ICON_SIZE_VAR,
+            props.size.as_ref().map(icon_size).and_then(|v| v.raw()),
+        )
+        .with(
+            ICON_RADIUS_VAR,
+            props.radius.as_ref().and_then(ThemeAwareValue::radius),
+        )
 }
 
 base_props! {
@@ -151,15 +190,23 @@ base_props! {
 #[component]
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.as_ref().copied().unwrap_or(HtmlTag::Span);
-    let dynamic_class =
-        crate::hooks::use_css(&icon_dynamic_sx(&props), crate::CssLayer::UserDynamic);
+    let variant = props.variant.as_ref().copied().unwrap_or_default();
+    let variables = icon_variables(&props);
+
+    let states = props
+        .states
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with(variant_token(variant), true);
 
     rsx! {
         Box {
             component,
-            class: props.class.unwrap_or_default().with(dynamic_class),
+            class: props.class,
             sx: props.sx,
-            states: props.states,
+            states,
+            variables,
             framework_sx: &ICON_BASE_SX,
             attributes: props.attributes,
             {props.children}
