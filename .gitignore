@@ -2,3 +2,15 @@ target
 .claude
 .dioxus-fork
 writeups
+feature_creep
+
+# added by gcma: paths removed from history
+.agents/*
+.claude/*
+CLAUDE.md
+AGENTS.md
+memory/*
+brain/*
+feature_creep/*
+.qmd/*
+gcma.yml
