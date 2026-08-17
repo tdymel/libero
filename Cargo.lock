@@ -1134,6 +1134,7 @@ dependencies = [
  "syntect",
  "ureq",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "web-sys",
 ]
 
