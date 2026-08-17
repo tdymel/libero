@@ -243,20 +243,18 @@ pub fn Drawer(props: DrawerProps) -> Element {
     let attributes = props.attributes.clone();
     let children = props.children.clone();
 
-    use_portal(move || {
-        Some(rsx! {
-            Modal {
-                onclose: move |_| onclose.call(()),
-                Dialog {
-                    class: class.clone(),
-                    sx: sx.clone(),
-                    states: states.clone(),
-                    attributes: attributes.clone(),
-                    {children.clone()}
-                }
+    use_portal(Some(rsx! {
+        Modal {
+            onclose: move |_| onclose.call(()),
+            Dialog {
+                class: class.clone(),
+                sx: sx.clone(),
+                states: states.clone(),
+                attributes: attributes.clone(),
+                {children.clone()}
             }
-        })
-    });
+        }
+    }));
 
     rsx! {}
 }

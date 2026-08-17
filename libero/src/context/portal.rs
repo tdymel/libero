@@ -1,12 +1,15 @@
-use std::rc::Rc;
-
 use dioxus::prelude::*;
-
-pub(crate) type PortalRender = Rc<dyn Fn() -> Option<Element>>;
 
 pub(crate) struct PortalEntry {
     pub(crate) id: u64,
-    pub(crate) render: PortalRender,
+    /// The already-rendered content, computed by the registering component
+    /// in its own scope (via `use_portal`) - not a closure `PortalOutlet`
+    /// would call from its own, unrelated scope. Reading a signal owned by
+    /// another, non-ancestor scope at call time is exactly what
+    /// `dioxus_signals`' "used in a scope that is not a descendant of the
+    /// owning scope" warning flags, so the value has to already be resolved
+    /// by the time it lands here.
+    pub(crate) render: Option<Element>,
 }
 
 pub(crate) type PortalEntries = Signal<Vec<PortalEntry>>;
@@ -35,7 +38,7 @@ pub fn PortalOutlet() -> Element {
                 .entries
                 .read()
                 .iter()
-                .filter_map(|entry| Some((entry.id, (entry.render)()?)))
+                .filter_map(|entry| Some((entry.id, entry.render.clone()?)))
             {
                 Fragment {
                     key: "{id}",

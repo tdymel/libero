@@ -201,14 +201,8 @@ pub fn Image(props: ImageProps) -> Element {
         class_list([overlay_button_framework_class, overlay_button_cursor_class]);
     let overlay_image_class = use_css(&ZOOM_OVERLAY_IMAGE_SX, CssLayer::Framework);
 
-    let portal_label = label.clone();
-    use_portal(move || {
-        if !zoomed() {
-            return None;
-        }
-        let label = portal_label.clone();
-
-        Some(rsx! {
+    let portal_content = zoomed().then(|| {
+        rsx! {
             Modal {
                 onclose: move |_| close_zoom(),
                 Dialog {
@@ -236,8 +230,9 @@ pub fn Image(props: ImageProps) -> Element {
                     }
                 }
             }
-        })
+        }
     });
+    use_portal(portal_content);
 
     rsx! {
         Box {

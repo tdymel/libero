@@ -64,16 +64,15 @@ where
     let state = use_signal(|| None::<P>);
     let handle = ModalHandle { state };
 
-    use_portal(move || {
-        let props = state.read().clone()?;
-
-        Some(rsx! {
+    let content = state.read().clone().map(|props| {
+        rsx! {
             Modal {
                 onclose: move |_| handle.close(),
-                {DynamicNode::Component(VComponent::new(component, props.clone(), "ModalContent"))}
+                {DynamicNode::Component(VComponent::new(component, props, "ModalContent"))}
             }
-        })
+        }
     });
+    use_portal(content);
 
     handle
 }
