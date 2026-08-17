@@ -1133,6 +1133,8 @@ dependencies = [
  "sha2 0.11.0",
  "syntect",
  "ureq",
+ "wasm-bindgen",
+ "web-sys",
 ]
 
 [[package]]

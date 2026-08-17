@@ -6,7 +6,7 @@ use crate::{
         HtmlTag, Input, States,
         common::{attr, class_list, focus_ring_sx, render_polymorphic},
     },
-    hooks::{ElementRef, use_css},
+    hooks::use_css,
     sx::{StaticSx, Sx, sx},
 };
 
@@ -51,23 +51,6 @@ pub struct BoxProps {
     disabled: Option<bool>,
     #[props(default)]
     r#type: Option<String>,
-    /// Binds this element to an [`ElementRef`] (via `use_element_ref`) - the
-    /// same role React's `ref`/Yew's `NodeRef` play. `Box` wires the
-    /// underlying `onmounted` itself, merging it with `onmounted` below if
-    /// the caller also sets that - both run, `element_ref` first.
-    #[props(default, into)]
-    element_ref: Option<ElementRef>,
-    /// Declared explicitly (rather than left to `extends = GlobalAttributes`
-    /// above) so `Box` can merge it with `element_ref`'s own listener via a
-    /// plain `EventHandler::call` - forwarding a caller's `onmounted`
-    /// obtained any other way (extracted from a `Vec<Attribute>` as a raw
-    /// `ListenerCallback`, invoked directly) silently receives the wrong
-    /// event data, a dioxus_core footgun reproduced independently of this
-    /// library. An explicit field of this name here takes priority over
-    /// `extends` for the same attribute, so this doesn't change how callers
-    /// already write `onmounted:` at a `Box` call site.
-    #[props(default)]
-    onmounted: EventHandler<MountedEvent>,
     children: Element,
 }
 
@@ -87,15 +70,6 @@ pub fn Box(props: BoxProps) -> Element {
     let class = class_list([props.class, framework_class, focus_class, static_class]);
     let component = props.component.as_ref().copied().unwrap_or_default();
 
-    let mut element_ref = props.element_ref;
-    let caller_onmounted = props.onmounted;
-    let onmounted = move |event: Event<MountedData>| {
-        if let Some(element_ref) = element_ref.as_mut() {
-            element_ref.set(event.data.clone());
-        }
-        caller_onmounted.call(event);
-    };
-
     let attributes = props
         .attributes
         .into_iter()
@@ -114,12 +88,5 @@ pub fn Box(props: BoxProps) -> Element {
         )
         .collect::<Vec<_>>();
 
-    render_polymorphic(
-        component,
-        class,
-        data_state,
-        attributes,
-        onmounted,
-        props.children,
-    )
+    render_polymorphic(component, class, data_state, attributes, props.children)
 }

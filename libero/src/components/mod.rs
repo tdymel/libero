@@ -9,7 +9,7 @@ mod surface;
 mod typography;
 
 pub use a11y::*;
-pub use common::{HtmlTag, Input, States, states};
+pub use common::{DomApi, DomApiError, ElementApi, HtmlTag, Input, States, dom_api, states};
 pub use data_display::*;
 pub use inputs::*;
 pub use layout::*;

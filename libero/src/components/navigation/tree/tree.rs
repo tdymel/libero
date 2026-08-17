@@ -1,13 +1,14 @@
 use std::{
     collections::HashSet,
+    rc::Rc,
     sync::atomic::{AtomicU64, Ordering},
 };
 
 use dioxus::{document, prelude::*};
 
 use crate::{
-    components::{Input, List, States},
-    hooks::{FocusRegistry, use_theme},
+    components::{Input, List, States, common::dom_api},
+    hooks::use_theme,
     sx::{Sx, ThemeAwareValue},
 };
 
@@ -109,6 +110,13 @@ fn click_tree_item(root_id: &str, target_id: &str) {
     ));
 }
 
+// Scoped to `root_id` the same way `click_tree_item` is, so multiple `Tree`
+// instances on one page can reuse the same node ids without colliding.
+fn focus_tree_item(root_id: &str, target_id: &str) {
+    let selector: Rc<str> = format!("#{root_id} [data-tree-id={target_id:?}]").into();
+    let _ = dom_api().query_selector(selector).and_then(|el| el.focus());
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     #[props(extends = GlobalAttributes)]
@@ -161,7 +169,6 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
     let root_id = use_hook(|| format!("lsx-tree-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
-    let focus_registry = use_context_provider(FocusRegistry::<String>::new);
 
     let size = match props.size.as_ref() {
         Some(ThemeAwareValue::Size(size)) => *size,
@@ -195,7 +202,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
         let mut go_to = |target: Option<String>| {
             if let Some(target) = target {
                 active_id_for_keydown.set(Some(target.clone()));
-                focus_registry.focus(&target);
+                focus_tree_item(&root_id_for_keydown, &target);
             }
         };
 
