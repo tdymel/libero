@@ -113,6 +113,10 @@ pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
         let id = node.id.clone();
         move || focus_registry.register(id, element_ref)
     });
+    use_drop({
+        let id = node.id.clone();
+        move || focus_registry.deregister(&id)
+    });
 
     let onclick = move |_| {
         if disabled {

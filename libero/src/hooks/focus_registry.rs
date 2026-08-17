@@ -48,6 +48,13 @@ impl<K: Eq + Hash + 'static> FocusRegistry<K> {
         self.nodes.write().insert(key, element_ref);
     }
 
+    /// Removes the registration for `key` - callers must invoke this (e.g.
+    /// via `use_drop`) when the registering component unmounts, since a
+    /// stale entry points at an `ElementRef` whose owning scope is gone.
+    pub fn deregister(&mut self, key: &K) {
+        self.nodes.write().remove(key);
+    }
+
     /// Focuses the element registered under `key`, if any.
     pub fn focus(&self, key: &K) {
         if let Some(element_ref) = self.nodes.read().get(key) {
