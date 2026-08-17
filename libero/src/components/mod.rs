@@ -10,7 +10,8 @@ mod typography;
 
 pub use a11y::*;
 pub use common::{
-    ClassList, DomApi, DomApiError, ElementApi, HtmlTag, Input, States, class_list, dom_api, states,
+    ClassList, DomApi, DomApiError, ElementApi, HtmlTag, Input, Orientation, States, class_list,
+    dom_api, states,
 };
 pub use data_display::*;
 pub use inputs::*;
