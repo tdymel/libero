@@ -1,5 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
-use crate::theme::{CssVar, SizeCss, Sizes};
+use crate::sx::{Sx, sx};
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const KBD_FONT_FAMILY: CssVar = CssVar::new("--lsx-kbd-font-family");
 pub const KBD_BACKGROUND: CssVar = CssVar::new("--lsx-kbd-background");
@@ -30,6 +31,31 @@ impl KbdDefaults {
             border,
             color,
         }
+    }
+
+    fn size_sx(size: Size) -> Sx {
+        sx().font_size(SizeCss::KBD_FONT_SIZE.value(size))
+    }
+
+    pub fn theme_vars() -> Sx {
+        let border = format!("1px solid {}", KBD_BORDER.value());
+        let border_bottom = format!("3px solid {}", KBD_BORDER.value());
+
+        let base = sx()
+            .font_family(KBD_FONT_FAMILY.value())
+            .background(KBD_BACKGROUND.value())
+            .color(KBD_COLOR.value())
+            .border_top(border.clone())
+            .border_left(border.clone())
+            .border_right(border)
+            // A touch thicker than the other 3 sides - reads as a keycap
+            // with some depth instead of a flat pill.
+            .border_bottom(border_bottom)
+            .border_radius(SizeCss::RADIUS.value(Size::Sm));
+
+        Size::ALL.into_iter().fold(base, |base, size| {
+            base.when(size.state_name(), Self::size_sx(size))
+        })
     }
 }
 
