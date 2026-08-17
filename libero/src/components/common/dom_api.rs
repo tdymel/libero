@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use wasm_bindgen::{JsCast, JsValue};
 
 use crate::components::common::ElementApi;
@@ -11,16 +9,16 @@ pub enum DomApiError {
 
 /// Resolves selectors into [`ElementApi`]s - the only way to get one.
 pub trait DomApi {
-    fn query_selector(&self, selector: Rc<str>) -> Result<Box<dyn ElementApi>, DomApiError>;
+    fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError>;
 }
 
 struct WebDomHandle;
 
 impl DomApi for WebDomHandle {
-    fn query_selector(&self, selector: Rc<str>) -> Result<Box<dyn ElementApi>, DomApiError> {
+    fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError> {
         let element = web_sys::window()
             .and_then(|window| window.document())
-            .and_then(|document| document.query_selector(&selector).ok().flatten())
+            .and_then(|document| document.query_selector(selector).ok().flatten())
             .ok_or(DomApiError::NotFound)?
             .dyn_into::<web_sys::HtmlElement>()
             .map_err(|_| DomApiError::NotFound)?;
@@ -54,10 +52,10 @@ impl ElementApi for WebElementHandle {
             .is_some_and(|active| JsValue::from(active) == JsValue::from(self.element.clone()))
     }
 
-    fn query_selector(&self, selector: Rc<str>) -> Result<Box<dyn ElementApi>, DomApiError> {
+    fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError> {
         let element = self
             .element
-            .query_selector(&selector)
+            .query_selector(selector)
             .ok()
             .flatten()
             .ok_or(DomApiError::NotFound)?
@@ -67,13 +65,10 @@ impl ElementApi for WebElementHandle {
         Ok(Box::new(WebElementHandle { element }))
     }
 
-    fn query_selector_all(
-        &self,
-        selector: Rc<str>,
-    ) -> Result<Vec<Box<dyn ElementApi>>, DomApiError> {
+    fn query_selector_all(&self, selector: &str) -> Result<Vec<Box<dyn ElementApi>>, DomApiError> {
         let nodes = self
             .element
-            .query_selector_all(&selector)
+            .query_selector_all(selector)
             .map_err(|_| DomApiError::NotFound)?;
 
         let items = (0..nodes.length())

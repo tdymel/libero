@@ -16,22 +16,22 @@ static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
 fn focus_first(id: &str) {
-    let Ok(root) = dom_api().query_selector(format!("#{id}").into()) else {
+    let Ok(root) = dom_api().query_selector(&format!("#{id}")) else {
         return;
     };
     let target = root
-        .query_selector("[data-autofocus]".into())
-        .or_else(|_| root.query_selector(FOCUSABLE_SELECTOR.into()));
+        .query_selector("[data-autofocus]")
+        .or_else(|_| root.query_selector(FOCUSABLE_SELECTOR));
     if let Ok(target) = target {
         let _ = target.focus();
     }
 }
 
 fn cycle_focus(id: &str, backwards: bool) {
-    let Ok(root) = dom_api().query_selector(format!("#{id}").into()) else {
+    let Ok(root) = dom_api().query_selector(&format!("#{id}")) else {
         return;
     };
-    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR.into()) else {
+    let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
         return;
     };
     if items.is_empty() {

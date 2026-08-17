@@ -1,5 +1,3 @@
-use std::rc::Rc;
-
 use crate::components::common::DomApiError;
 
 /// A single resolved, currently-valid element - obtained only via
@@ -16,12 +14,9 @@ pub trait ElementApi {
 
     /// Finds the first descendant matching `selector`, scoped to this
     /// element's own subtree.
-    fn query_selector(&self, selector: Rc<str>) -> Result<Box<dyn ElementApi>, DomApiError>;
+    fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError>;
 
     /// Finds every descendant matching `selector`, in DOM order, scoped to
     /// this element's own subtree.
-    fn query_selector_all(
-        &self,
-        selector: Rc<str>,
-    ) -> Result<Vec<Box<dyn ElementApi>>, DomApiError>;
+    fn query_selector_all(&self, selector: &str) -> Result<Vec<Box<dyn ElementApi>>, DomApiError>;
 }

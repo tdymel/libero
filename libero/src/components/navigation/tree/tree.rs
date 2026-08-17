@@ -1,6 +1,5 @@
 use std::{
     collections::HashSet,
-    rc::Rc,
     sync::atomic::{AtomicU64, Ordering},
 };
 
@@ -101,19 +100,20 @@ pub(super) fn toggle_expanded(
 // link/button responds to Enter" behavior, since it's never actually
 // focused. This triggers it the same way a real click would instead.
 fn click_tree_item(root_id: &str, target_id: &str) {
-    let Ok(root) = dom_api().query_selector(format!("#{root_id}").into()) else {
+    let Ok(root) = dom_api().query_selector(&format!("#{root_id}")) else {
         return;
     };
-    let selector: Rc<str> =
-        format!("[data-tree-id={target_id:?}] a, [data-tree-id={target_id:?}] button").into();
-    let _ = root.query_selector(selector).and_then(|el| el.click());
+    let selector = format!("[data-tree-id={target_id:?}] a, [data-tree-id={target_id:?}] button");
+    let _ = root.query_selector(&selector).and_then(|el| el.click());
 }
 
 // Scoped to `root_id` the same way `click_tree_item` is, so multiple `Tree`
 // instances on one page can reuse the same node ids without colliding.
 fn focus_tree_item(root_id: &str, target_id: &str) {
-    let selector: Rc<str> = format!("#{root_id} [data-tree-id={target_id:?}]").into();
-    let _ = dom_api().query_selector(selector).and_then(|el| el.focus());
+    let selector = format!("#{root_id} [data-tree-id={target_id:?}]");
+    let _ = dom_api()
+        .query_selector(&selector)
+        .and_then(|el| el.focus());
 }
 
 #[derive(Props, Clone, PartialEq)]
