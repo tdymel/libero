@@ -53,9 +53,9 @@ pub struct BoxProps {
     r#type: Option<String>,
     /// Binds this element to an [`ElementRef`] (via `use_element_ref`) - the
     /// same role React's `ref`/Yew's `NodeRef` play. `Box` wires the
-    /// underlying `onmounted` itself. Not meant to be combined with a
-    /// caller-supplied `onmounted` on the same `Box` (extended via
-    /// `GlobalAttributes`) - only one of the two currently wins.
+    /// underlying `onmounted` itself, merging it with a caller-supplied
+    /// `onmounted` (extended via `GlobalAttributes`) if there is one -
+    /// both run, `element_ref` first.
     #[props(default, into)]
     element_ref: Option<ElementRef>,
     children: Element,
@@ -77,8 +77,41 @@ pub fn Box(props: BoxProps) -> Element {
     let class = class_list([props.class, framework_class, focus_class, static_class]);
     let component = props.component.as_ref().copied().unwrap_or_default();
 
-    let attributes = props
-        .attributes
+    // A caller can also set `onmounted` directly (via `extends =
+    // GlobalAttributes`), which lands in `props.attributes` as its own
+    // `Attribute`. Pull it out here so it can be merged with `element_ref`'s
+    // own `onmounted` below instead of the two silently overwriting each
+    // other once both are spread onto the same element (dioxus's attribute
+    // diffing keeps only the last-written value for a given name).
+    let mut attributes = props.attributes;
+    let caller_onmounted = attributes
+        .iter()
+        .position(|attribute| attribute.name == "onmounted")
+        .map(|index| attributes.remove(index))
+        .and_then(|attribute| match attribute.value {
+            AttributeValue::Listener(listener) => Some(listener),
+            _ => None,
+        });
+
+    let onmounted = match (props.element_ref, caller_onmounted) {
+        (None, None) => None,
+        (None, Some(listener)) => Some(attr("onmounted", AttributeValue::Listener(listener))),
+        (Some(mut element_ref), None) => Some(attr(
+            "onmounted",
+            AttributeValue::listener(move |event: Event<MountedData>| {
+                element_ref.set(event.data.clone());
+            }),
+        )),
+        (Some(mut element_ref), Some(listener)) => Some(attr(
+            "onmounted",
+            AttributeValue::listener(move |event: Event<MountedData>| {
+                element_ref.set(event.data.clone());
+                listener.call(event.into_any());
+            }),
+        )),
+    };
+
+    let attributes = attributes
         .into_iter()
         .chain(
             [
@@ -89,14 +122,7 @@ pub fn Box(props: BoxProps) -> Element {
                 props.value.map(|value| attr("value", value)),
                 props.disabled.map(|value| attr("disabled", value)),
                 props.r#type.map(|value| attr("type", value)),
-                props.element_ref.map(|mut element_ref| {
-                    attr(
-                        "onmounted",
-                        AttributeValue::listener(move |event: Event<MountedData>| {
-                            element_ref.set(event.data.clone())
-                        }),
-                    )
-                }),
+                onmounted,
             ]
             .into_iter()
             .flatten(),
