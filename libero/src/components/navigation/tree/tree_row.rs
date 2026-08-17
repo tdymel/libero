@@ -146,7 +146,7 @@ pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
                     sx: sx()
                         .apply_if(props.gap.clone(), |sx, gap| sx.gap(gap))
                         .apply_if(props.indent.clone(), |sx, indent| sx.padding_left(indent)),
-                    size: ThemeAwareValue::Size(props.size),
+                    size: props.size,
                     for child in &node.children {
                         TreeRow {
                             key: "{child.id}",

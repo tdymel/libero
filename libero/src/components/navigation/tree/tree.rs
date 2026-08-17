@@ -282,7 +282,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
             class: props.class,
             sx: root_sx,
             states: props.states,
-            size: props.size.into_option(),
+            size,
             "role": "tree",
             "aria-label": props.aria_label,
             onkeydown,

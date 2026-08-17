@@ -66,7 +66,7 @@ pub fn ListPage() -> Element {
                     " pair with the browser's default list styling removed - nested lists "
                     "indent relative to their own content. "
                     Code { "size" }
-                    " (xs-xl, default "
+                    " (xs-xxl, default "
                     Code { "md" }
                     ") controls item gap and nested-list indent together."
                 }

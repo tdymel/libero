@@ -19,28 +19,10 @@ impl ListDefaults {
             .selector("& ul", sx().padding_left(SizeCss::LIST_INDENT.value(size)))
     }
 
-    pub fn xs_sx() -> Sx {
-        Self::size_sx(Size::Xs)
-    }
-
-    pub fn sm_sx() -> Sx {
-        Self::size_sx(Size::Sm)
-    }
-
-    pub fn md_sx() -> Sx {
-        Self::size_sx(Size::Md)
-    }
-
-    pub fn lg_sx() -> Sx {
-        Self::size_sx(Size::Lg)
-    }
-
-    pub fn xl_sx() -> Sx {
-        Self::size_sx(Size::Xl)
-    }
-
-    pub fn xxl_sx() -> Sx {
-        Self::size_sx(Size::Xxl)
+    pub fn theme_vars() -> Sx {
+        Size::ALL.into_iter().fold(sx(), |base, size| {
+            base.when(size.state_name(), Self::size_sx(size))
+        })
     }
 }
 
