@@ -68,6 +68,7 @@ macro_rules! html_tags {
             component: HtmlTag,
             class: crate::components::ClassList,
             data_state: Option<String>,
+            style: Option<String>,
             attributes: Vec<Attribute>,
             children: Element,
         ) -> Element {
@@ -77,6 +78,7 @@ macro_rules! html_tags {
                     $tag {
                         class: class,
                         "data-state": data_state,
+                        style: style,
                         ..attributes,
                         {children}
                     }

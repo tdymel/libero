@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        ClassList, HtmlTag, Input, States,
+        ClassList, HtmlTag, Input, States, Variables,
         common::{attr, focus_ring_sx, render_polymorphic},
     },
     hooks::use_css,
@@ -28,6 +28,12 @@ pub struct BoxProps {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    /// CSS custom properties set directly on this element's `style`
+    /// attribute - lets `sx`/`framework_sx` reference a per-instance value
+    /// via `var(--name, fallback)` without generating a new class for every
+    /// distinct value a caller passes.
+    #[props(default, into)]
+    variables: Input<Variables>,
     /// Which element to render as - `div` by default.
     #[props(default, into)]
     component: Input<HtmlTag>,
@@ -45,6 +51,10 @@ pub struct BoxProps {
     href: Option<String>,
     #[props(default)]
     target: Option<String>,
+    /// A raw literal `style` - merged with (not overwritten by) whatever
+    /// `variables` produces, `variables`' declarations first.
+    #[props(default)]
+    style: Option<String>,
     #[props(default)]
     value: Option<String>,
     #[props(default)]
@@ -66,6 +76,11 @@ pub fn Box(props: BoxProps) -> Element {
         .and_then(|sx| use_css(sx, CssLayer::UserStatic));
 
     let data_state = props.states.as_ref().and_then(States::data_state);
+    let variables_style = props
+        .variables
+        .as_ref()
+        .map(Variables::to_string)
+        .filter(|style| !style.is_empty());
 
     let class = props
         .class
@@ -74,6 +89,12 @@ pub fn Box(props: BoxProps) -> Element {
         .with(focus_class)
         .with(static_class);
     let component = props.component.as_ref().copied().unwrap_or_default();
+
+    let style = match (variables_style, props.style) {
+        (Some(variables), Some(raw)) => Some(format!("{variables}{raw}")),
+        (Some(style), None) | (None, Some(style)) => Some(style),
+        (None, None) => None,
+    };
 
     let attributes = props
         .attributes
@@ -93,5 +114,12 @@ pub fn Box(props: BoxProps) -> Element {
         )
         .collect::<Vec<_>>();
 
-    render_polymorphic(component, class, data_state, attributes, props.children)
+    render_polymorphic(
+        component,
+        class,
+        data_state,
+        style,
+        attributes,
+        props.children,
+    )
 }

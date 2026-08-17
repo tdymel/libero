@@ -1,5 +1,5 @@
 use crate::{
-    components::{ClassList, States},
+    components::{ClassList, States, Variables},
     sx::{StaticSx, Sx},
     theme::Size,
 };
@@ -129,6 +129,21 @@ impl From<States> for Input<States> {
 
 impl From<Option<States>> for Input<States> {
     fn from(value: Option<States>) -> Self {
+        match value {
+            Some(value) => Self::Value(value),
+            None => Self::None,
+        }
+    }
+}
+
+impl From<Variables> for Input<Variables> {
+    fn from(value: Variables) -> Self {
+        Self::Value(value)
+    }
+}
+
+impl From<Option<Variables>> for Input<Variables> {
+    fn from(value: Option<Variables>) -> Self {
         match value {
             Some(value) => Self::Value(value),
             None => Self::None,

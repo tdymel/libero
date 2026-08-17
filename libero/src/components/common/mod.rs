@@ -7,6 +7,7 @@ mod orientation;
 mod polymorphic;
 mod states;
 mod util;
+mod variables;
 
 pub(crate) use base_props::base_props;
 pub use class_list::{ClassList, class_list};
@@ -18,3 +19,4 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::render_polymorphic;
 pub use states::{States, states};
 pub(crate) use util::{attr, focus_ring_sx};
+pub use variables::{Variables, variables};

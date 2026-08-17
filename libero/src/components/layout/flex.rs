@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States,
-        common::{base_props, focus_ring_sx},
+        Box, Input, States, Variables,
+        common::{base_props, focus_ring_sx, variables},
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{FlexDefaults, Size, SizeCss},
+    theme::{FLEX_ALIGN_VAR, FLEX_JUSTIFY_VAR, FLEX_WRAP_VAR, FlexDefaults, Size, SizeCss},
 };
 
 /*
@@ -71,14 +71,20 @@ static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-fn flex_dynamic_sx(props: &FlexProps) -> Sx {
-    sx().apply_if(props.align.as_ref(), |sx, align| {
-        sx.align_items(align.clone())
-    })
-    .apply_if(props.justify.as_ref(), |sx, justify| {
-        sx.justify_content(justify.clone())
-    })
-    .apply_if(props.wrap.as_ref(), |sx, wrap| sx.flex_wrap(wrap.clone()))
+fn flex_variables(props: &FlexProps) -> Variables {
+    variables()
+        .with(
+            FLEX_ALIGN_VAR,
+            props.align.as_ref().and_then(ThemeAwareValue::raw),
+        )
+        .with(
+            FLEX_JUSTIFY_VAR,
+            props.justify.as_ref().and_then(ThemeAwareValue::raw),
+        )
+        .with(
+            FLEX_WRAP_VAR,
+            props.wrap.as_ref().and_then(ThemeAwareValue::raw),
+        )
 }
 
 base_props! {
@@ -115,16 +121,16 @@ pub fn Flex(props: FlexProps) -> Element {
         states = states.with(gap.state_name(), true);
     }
 
-    let dynamic_class =
-        crate::hooks::use_css(&flex_dynamic_sx(&props), crate::CssLayer::UserDynamic);
+    let variables = flex_variables(&props);
 
     let last_index = props.children.len().saturating_sub(1);
 
     rsx! {
         Box {
-            class: props.class.unwrap_or_default().with(dynamic_class),
+            class: props.class,
             sx: props.sx,
             states,
+            variables,
             framework_sx: &FLEX_BASE_SX,
             attributes: props.attributes,
             for (index, child) in props.children.into_iter().enumerate() {
