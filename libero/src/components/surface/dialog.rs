@@ -4,7 +4,7 @@ use crate::{
     components::{Box, Input, States, Variables, common::base_props, variables},
     context::ModalContext,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Size, SizeCss},
+    theme::{DIALOG_SIZE, Size, SizeCss},
 };
 
 const DIALOG_RADIUS_VAR: &str = "--lsx-dialog-radius";
@@ -20,7 +20,7 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .max_width(format!(
             "var({DIALOG_SIZE_VAR}, {})",
-            SizeCss::DIALOG_SIZE.value(Size::Md)
+            DIALOG_SIZE.value(Size::Md)
         ))
         .margin("md")
         .padding("lg")
@@ -45,7 +45,7 @@ fn dialog_variables(props: &DialogProps) -> Variables {
             props
                 .size
                 .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::DIALOG_SIZE))),
+                .and_then(|v| v.resolve(Some(DIALOG_SIZE))),
         )
 }
 

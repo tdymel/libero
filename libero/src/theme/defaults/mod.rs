@@ -37,20 +37,20 @@ pub use code::{
     CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, CodeDefaults,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
-pub use data_list::DataListDefaults;
-pub use dialog::DialogDefaults;
+pub use data_list::{DATA_LIST_GAP, DataListDefaults};
+pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use divider::{DIVIDER_SPACING, DividerDefaults};
-pub use drawer::DrawerDefaults;
+pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use flex::{
     FLEX_ALIGN_VAR, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP,
     FLEX_JUSTIFY_VAR, FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP,
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX, FloatDefaults, Placement};
-pub use header::HeaderDefaults;
-pub use icon::IconDefaults;
-pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KbdDefaults};
-pub use list::ListDefaults;
+pub use header::{HEADER_HEIGHT, HeaderDefaults};
+pub use icon::{ICON_SIZE, IconDefaults};
+pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
+pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use mark::MarkDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};

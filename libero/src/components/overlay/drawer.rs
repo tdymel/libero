@@ -8,7 +8,7 @@ use crate::{
     hooks::use_css,
     hooks::use_portal,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Size, SizeCss},
+    theme::{DRAWER_SIZE, Size},
 };
 
 const DRAWER_SIZE_VAR: &str = "--lsx-drawer-size-override";
@@ -50,7 +50,7 @@ static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
 // replacing it). Edge-docking itself is `Float`'s job (see `Drawer`) - this
 // only sizes the panel to fill the slot `Float` anchors it into.
 static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
-    let default_size = SizeCss::DRAWER_SIZE.value(Size::Md);
+    let default_size = DRAWER_SIZE.value(Size::Md);
 
     sx().margin("0")
         .border_radius("0")
@@ -185,7 +185,7 @@ fn drawer_variables(props: &DrawerProps) -> Variables {
             props
                 .size
                 .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::DRAWER_SIZE))),
+                .and_then(|v| v.resolve(Some(DRAWER_SIZE))),
         )
         .with(
             DRAWER_Z_INDEX_VAR,

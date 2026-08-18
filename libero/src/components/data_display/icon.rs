@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, Size, SizeCss},
+    theme::{Color, ColorShade, ColorValue, ICON_SIZE, Size, SizeCss},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -110,11 +110,11 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .flex_shrink("0")
         .width(format!(
             "var({ICON_SIZE_VAR}, {})",
-            SizeCss::ICON_SIZE.value(Size::Md)
+            ICON_SIZE.value(Size::Md)
         ))
         .height(format!(
             "var({ICON_SIZE_VAR}, {})",
-            SizeCss::ICON_SIZE.value(Size::Md)
+            ICON_SIZE.value(Size::Md)
         ))
         .border_radius(format!(
             "var({ICON_RADIUS_VAR}, {})",
@@ -152,10 +152,7 @@ fn icon_variables(props: &IconProps) -> Variables {
         .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(
             ICON_SIZE_VAR,
-            props
-                .size
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::ICON_SIZE))),
+            props.size.as_ref().and_then(|v| v.resolve(Some(ICON_SIZE))),
         )
         .with(
             ICON_RADIUS_VAR,

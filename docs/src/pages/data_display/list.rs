@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Flex, Icon, List, ListItem, Text, Title},
     sx::sx,
-    theme::{Size, SizeCss},
+    theme::{ICON_SIZE, Size},
 };
 
 use crate::icons::{ChevronIcon, FileIcon, FolderIcon};
@@ -40,7 +40,7 @@ fn TreeFile(label: &'static str) -> Element {
             Flex { direction: "row", align: "center", gap: "sm",
                 // Matches the chevron's reserved width so file labels align
                 // under folder labels, not under the chevron.
-                Box { sx: sx().flex_shrink("0").width(SizeCss::ICON_SIZE.value(Size::Xs)) }
+                Box { sx: sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)) }
                 Icon { variant: "transparent", size: "sm", color: "grey.6", FileIcon {} }
                 Text { {label} }
             }

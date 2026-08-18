@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, Size, SizeCss},
+    theme::{ColorShade, ColorValue, HEADER_HEIGHT, Size},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -89,7 +89,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .height(format!(
             "var({HEADER_HEIGHT_VAR}, {})",
-            SizeCss::HEADER_HEIGHT.value(Size::Md)
+            HEADER_HEIGHT.value(Size::Md)
         ))
         .padding_left("md")
         .padding_right("md")
@@ -114,7 +114,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
             props
                 .size
                 .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::HEADER_HEIGHT))),
+                .and_then(|v| v.resolve(Some(HEADER_HEIGHT))),
         )
         .with(
             HEADER_BACKGROUND_VAR,

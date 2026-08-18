@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, List, common::focus_ring_sx},
     sx::{StaticSx, sx},
-    theme::{Size, SizeCss},
+    theme::{LIST_GAP, LIST_INDENT, Size},
 };
 
 use super::{
@@ -142,9 +142,9 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                 List {
                     "role": "group",
                     sx: sx()
-                        .apply_if(props.gap, |sx, gap| sx.gap(SizeCss::LIST_GAP.value(gap)))
+                        .apply_if(props.gap, |sx, gap| sx.gap(LIST_GAP.value(gap)))
                         .apply_if(props.indent, |sx, indent| {
-                            sx.padding_left(SizeCss::LIST_INDENT.value(indent))
+                            sx.padding_left(LIST_INDENT.value(indent))
                         }),
                     size: props.size,
                     for child in &node.children {

@@ -3,7 +3,7 @@ use libero::{
     LiberoProvider,
     components::{ActionIcon, Container, Flex, Header, Image, ScrollArea, Title},
     sx::sx,
-    theme::{Size, SizeCss},
+    theme::{HEADER_HEIGHT, Size},
 };
 
 mod icons;
@@ -171,7 +171,7 @@ fn AppShell() -> Element {
             Flex {
                 direction: "row",
                 align: "stretch",
-                sx: sx().height(format!("calc(100vh - {})", SizeCss::HEADER_HEIGHT.value(Size::Md))),
+                sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT.value(Size::Md))),
                 Sidebar { open }
                 ScrollArea {
                     sx: sx()

@@ -7,7 +7,7 @@ use libero::{
         default_tree_render,
     },
     sx::{Sx, sx},
-    theme::{ColorCss, ColorShade, Size, SizeCss},
+    theme::{ColorCss, ColorShade, DRAWER_SIZE, HEADER_HEIGHT, Size},
 };
 
 use crate::Route;
@@ -21,7 +21,7 @@ use crate::Route;
 // hardcodes `transform`/`visibility` regardless of its value, so nothing
 // odd happens if the viewport crosses `Sm` while it happens to be open.
 fn sidebar_responsive_sx(open: bool) -> Sx {
-    let header_height = SizeCss::HEADER_HEIGHT.value(Size::Md);
+    let header_height = HEADER_HEIGHT.value(Size::Md);
     // `visibility` shouldn't flip to hidden until the slide-out finishes,
     // or the panel would vanish mid-animation instead of sliding away;
     // opening has no such concern, so only closing gets the delay.
@@ -58,7 +58,7 @@ fn sidebar_responsive_sx(open: bool) -> Sx {
             sx().position("sticky")
                 .top("0")
                 .height("100%")
-                .width(SizeCss::DRAWER_SIZE.value(Size::Sm))
+                .width(DRAWER_SIZE.value(Size::Sm))
                 .transform("none")
                 .visibility("visible"),
         )

@@ -2,6 +2,8 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
+pub const KBD_FONT_SIZE: SizeCss = SizeCss::new("--lsx-kbd-font-size-");
+
 pub const KBD_FONT_FAMILY: CssVar = CssVar::new("--lsx-kbd-font-family");
 pub const KBD_BACKGROUND: CssVar = CssVar::new("--lsx-kbd-background");
 pub const KBD_BORDER: CssVar = CssVar::new("--lsx-kbd-border");
@@ -18,7 +20,7 @@ pub struct KbdDefaults {
 
 impl KbdDefaults {
     fn size_sx(size: Size) -> Sx {
-        sx().font_size(SizeCss::KBD_FONT_SIZE.value(size))
+        sx().font_size(KBD_FONT_SIZE.value(size))
     }
 
     pub fn theme_vars() -> Sx {
@@ -45,9 +47,7 @@ impl KbdDefaults {
 
 impl ToCssDeclarations for KbdDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let mut declarations = self
-            .font_size
-            .to_css_declarations(SizeCss::KBD_FONT_SIZE, "px");
+        let mut declarations = self.font_size.to_css_declarations(KBD_FONT_SIZE, "px");
         declarations.push(KBD_FONT_FAMILY.declare(self.font_family));
         declarations.push(KBD_BACKGROUND.declare(self.background));
         declarations.push(KBD_BORDER.declare(self.border));

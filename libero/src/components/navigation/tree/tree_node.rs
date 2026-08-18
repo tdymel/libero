@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, Icon},
     sx::{StaticSx, sx},
-    theme::{Size, SizeCss},
+    theme::{ICON_SIZE, Size},
 };
 
 /// Text `Tree` matches against for typeahead and falls back to rendering
@@ -174,10 +174,8 @@ pub struct TreeNodeRenderArgs<T> {
 // concern - a leading column is only reserved here, by the render that
 // actually draws a chevron; a custom `render_node` that skips the chevron
 // gets no reserved space unless it asks for its own.
-static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx = StaticSx::new(|| {
-    sx().flex_shrink("0")
-        .width(SizeCss::ICON_SIZE.value(Size::Xs))
-});
+static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx =
+    StaticSx::new(|| sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)));
 
 fn chevron_svg() -> Element {
     rsx! {

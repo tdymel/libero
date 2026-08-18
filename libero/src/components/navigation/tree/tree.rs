@@ -12,7 +12,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::Sx,
-    theme::{Size, SizeCss},
+    theme::{LIST_GAP, Size},
 };
 
 use super::{
@@ -348,7 +348,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         .sx
         .into_option()
         .unwrap_or_default()
-        .apply_if(gap, |sx, gap| sx.gap(SizeCss::LIST_GAP.value(gap)));
+        .apply_if(gap, |sx, gap| sx.gap(LIST_GAP.value(gap)));
 
     rsx! {
         List {

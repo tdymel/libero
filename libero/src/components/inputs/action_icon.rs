@@ -9,7 +9,7 @@ use crate::{
         variables,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade, SizeCss},
+    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade, ICON_SIZE, SizeCss},
 };
 
 use super::button::{BUTTON_HOVER_TINT_SHADE, hover_color};
@@ -114,10 +114,7 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
     let result = variables()
         .with(
             ACTION_ICON_SIZE_VAR,
-            props
-                .size
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::ICON_SIZE))),
+            props.size.as_ref().and_then(|v| v.resolve(Some(ICON_SIZE))),
         )
         .with(
             ACTION_ICON_RADIUS_VAR,

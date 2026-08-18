@@ -62,14 +62,6 @@ impl SizeCss {
     pub const SPACING: SizeCss = SizeCss::new("--lsx-spacing-");
     pub const BREAKPOINT: SizeCss = SizeCss::new("--lsx-breakpoint-");
     pub const RADIUS: SizeCss = SizeCss::new("--lsx-radius-");
-    pub const DATA_LIST_GAP: SizeCss = SizeCss::new("--lsx-data-list-gap-");
-    pub const DIALOG_SIZE: SizeCss = SizeCss::new("--lsx-dialog-size-");
-    pub const DRAWER_SIZE: SizeCss = SizeCss::new("--lsx-drawer-size-");
-    pub const HEADER_HEIGHT: SizeCss = SizeCss::new("--lsx-header-height-");
-    pub const ICON_SIZE: SizeCss = SizeCss::new("--lsx-icon-size-");
-    pub const KBD_FONT_SIZE: SizeCss = SizeCss::new("--lsx-kbd-font-size-");
-    pub const LIST_GAP: SizeCss = SizeCss::new("--lsx-list-gap-");
-    pub const LIST_INDENT: SizeCss = SizeCss::new("--lsx-list-indent-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }
