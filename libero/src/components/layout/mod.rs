@@ -14,7 +14,7 @@ pub use r#box::Box;
 pub use center::Center;
 pub use container::Container;
 pub use divider::{Divider, DividerProps, LabelPosition};
-pub use flex::{Flex, FlexDirection};
+pub use flex::{Flex, FlexDirection, FlexWrap};
 pub use float::{Float, Placement};
 pub use header::{Header, HeaderPosition};
 pub use scroll_area::{ScrollArea, ScrollPositionEvent};

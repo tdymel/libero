@@ -55,6 +55,83 @@ impl From<String> for Input<FlexDirection> {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum FlexWrap {
+    Wrap,
+    #[default]
+    NoWrap,
+    WrapReverse,
+}
+
+impl FlexWrap {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Wrap => "wrap",
+            Self::NoWrap => "nowrap",
+            Self::WrapReverse => "wrap-reverse",
+        }
+    }
+}
+
+impl From<bool> for FlexWrap {
+    fn from(value: bool) -> Self {
+        if value { Self::Wrap } else { Self::NoWrap }
+    }
+}
+
+impl From<&str> for FlexWrap {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
+            "wrap" => Self::Wrap,
+            "wrap-reverse" => Self::WrapReverse,
+            _ => Self::NoWrap,
+        }
+    }
+}
+
+impl From<String> for FlexWrap {
+    fn from(value: String) -> Self {
+        Self::from(value.as_str())
+    }
+}
+
+impl From<FlexWrap> for Input<FlexWrap> {
+    fn from(value: FlexWrap) -> Self {
+        Input::Value(value)
+    }
+}
+
+impl From<bool> for Input<FlexWrap> {
+    fn from(value: bool) -> Self {
+        Input::Value(FlexWrap::from(value))
+    }
+}
+
+impl From<&str> for Input<FlexWrap> {
+    fn from(value: &str) -> Self {
+        Input::Value(FlexWrap::from(value))
+    }
+}
+
+impl From<String> for Input<FlexWrap> {
+    fn from(value: String) -> Self {
+        Input::Value(FlexWrap::from(value))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn flex_wrap_parses_bools_and_strings() {
+        assert_eq!(FlexWrap::from(true).as_str(), "wrap");
+        assert_eq!(FlexWrap::from(false).as_str(), "nowrap");
+        assert_eq!(FlexWrap::from("wrap-reverse"), FlexWrap::WrapReverse);
+        assert_eq!(FlexWrap::from("nonsense"), FlexWrap::NoWrap);
+    }
+}
+
 // Column is the unconditional base (also the default when `direction` is
 // unset); `row` overrides it. `gap` sizes are folded in afterwards so an
 // explicit `gap` prop always wins over either axis's own default spacing,
@@ -83,7 +160,7 @@ fn flex_variables(props: &FlexProps) -> Variables {
         )
         .with(
             FLEX_WRAP_VAR,
-            props.wrap.as_ref().and_then(ThemeAwareValue::raw),
+            props.wrap.as_ref().map(|wrap| wrap.as_str().to_string()),
         )
 }
 
@@ -98,7 +175,7 @@ base_props! {
         #[props(default, into)]
         direction: Input<FlexDirection>,
         #[props(default, into)]
-        wrap: Input<ThemeAwareValue>,
+        wrap: Input<FlexWrap>,
         /// Rendered between each child (not before the first or after the
         /// last) - e.g. `divider: rsx! { Divider {} }`.
         #[props(default)]

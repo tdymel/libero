@@ -2,6 +2,8 @@ use dioxus::prelude::*;
 
 use stylesheet_registry::StylesheetRegistry;
 
+pub(crate) use stylesheet_registry::StylesheetKey;
+
 use super::{MODAL_BASE_Z_INDEX, ModalHost, PortalHost, PortalOutlet};
 use crate::{css::Stylesheet, theme::Theme};
 

@@ -79,7 +79,10 @@ impl Size {
 
 impl From<&str> for Size {
     fn from(value: &str) -> Self {
-        Self::parse_dynamic(value).unwrap_or(Self::Md)
+        Self::parse_dynamic(value).unwrap_or_else(|| {
+            debug_assert!(false, "unknown size `{value}`, falling back to md");
+            Self::Md
+        })
     }
 }
 

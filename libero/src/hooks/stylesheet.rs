@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
-    context::LiberoContext,
+    context::{LiberoContext, StylesheetKey},
     css::Stylesheet,
     sx::{StaticSx, Sx},
 };
@@ -71,8 +71,13 @@ impl CssSource for Stylesheet {
 }
 
 struct CssRegistration {
-    hash: u64,
-    registered: bool,
+    /// The source's own hash, to detect an unchanged re-render.
+    identity_hash: u64,
+    /// The registry's key for this registration - `None` when the source
+    /// built empty CSS and was never registered. Never derived from
+    /// `identity_hash`: the registry keys by rendered-CSS hash, which is a
+    /// different value.
+    key: Option<StylesheetKey>,
 }
 
 /// Same as [`use_stylesheet`], but on a caller-chosen layer.
@@ -88,8 +93,8 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
             // Same `Sx` as last render (by content, not identity) - the
             // registry entry (or lack of one) is already correct, so skip
             // rebuilding the CSS text entirely.
-            Some(prev) if prev.hash == identity_hash => {
-                let class_name = if prev.registered {
+            Some(prev) if prev.identity_hash == identity_hash => {
+                let class_name = if prev.key.is_some() {
                     source.css_class_name()
                 } else {
                     None
@@ -103,25 +108,20 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
                 let class_name = stylesheet.class_name().map(str::to_string);
                 let mut changed = false;
 
-                if let Some(prev) = prev {
-                    if prev.registered {
-                        context.stylesheet_registry.release((layer, prev.hash));
-                        changed = true;
-                    }
+                if let Some(prev_key) = prev.and_then(|prev| prev.key) {
+                    context.stylesheet_registry.release(prev_key);
+                    changed = true;
                 }
 
-                let registered = if is_empty {
-                    false
+                let key = if is_empty {
+                    None
                 } else {
-                    context.stylesheet_registry.acquire(stylesheet, layer);
+                    let key = context.stylesheet_registry.acquire(stylesheet, layer);
                     changed = true;
-                    true
+                    Some(key)
                 };
 
-                *state_ref = Some(CssRegistration {
-                    hash: identity_hash,
-                    registered,
-                });
+                *state_ref = Some(CssRegistration { identity_hash, key });
 
                 if changed {
                     *context.stylesheet_registry_version.write() += 1;
@@ -137,11 +137,9 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
         let stylesheet_registry = context.stylesheet_registry.clone();
         let mut stylesheet_registry_version = context.stylesheet_registry_version;
         use_drop(move || {
-            if let Some(prev) = state.borrow_mut().take() {
-                if prev.registered {
-                    stylesheet_registry.release((layer, prev.hash));
-                    *stylesheet_registry_version.write() += 1;
-                }
+            if let Some(key) = state.borrow_mut().take().and_then(|prev| prev.key) {
+                stylesheet_registry.release(key);
+                *stylesheet_registry_version.write() += 1;
             }
         });
     }

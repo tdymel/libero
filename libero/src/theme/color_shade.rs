@@ -25,7 +25,10 @@ impl ColorShade {
             Some("7") => Self::S7,
             Some("8") => Self::S8,
             Some("9") => Self::S9,
-            Some(_) => Self::S5,
+            Some(other) => {
+                debug_assert!(false, "unknown color shade `{other}`, falling back to 5");
+                Self::S5
+            }
         }
     }
 
