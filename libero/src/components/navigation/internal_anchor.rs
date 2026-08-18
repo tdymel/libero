@@ -1,12 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{
         Box, Input, States, Variables,
-        common::{attr, base_props},
+        common::{attr, base_props, use_style_attributes},
     },
-    hooks::use_css,
     sx::{StaticSx, Sx},
 };
 
@@ -38,35 +36,35 @@ base_props! {
 /// handler, and ripple only makes sense for a real button.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
-    let framework_class = use_css(props.framework_sx, CssLayer::Framework);
-    let static_class = use_css(props.sx.as_ref(), CssLayer::UserStatic);
-    let class = props
-        .class
-        .unwrap_or_default()
-        .with(framework_class)
-        .with(static_class);
+    // Both branches need it, and it is a hook - so it stays above the return.
+    let style_attributes = use_style_attributes(
+        &props.class,
+        props.framework_sx,
+        &props.sx,
+        &props.states,
+        &props.variables,
+        None,
+    );
 
     let is_blank = props.target.as_deref() == Some("_blank");
     let router_can_handle_target = props.target.is_none() || is_blank;
-    let data_state = props.states.as_ref().and_then(States::data_state);
-    let style = props
-        .variables
-        .as_ref()
-        .map(Variables::to_string)
-        .filter(|style| !style.is_empty());
 
     if router_can_handle_target && try_router().is_some() {
         let attributes = props
             .attributes
             .into_iter()
-            .chain(data_state.map(|value| attr("data-state", value)))
-            .chain(style.map(|value| attr("style", value)))
+            .chain(
+                style_attributes
+                    .data_state
+                    .map(|value| attr("data-state", value)),
+            )
+            .chain(style_attributes.style.map(|value| attr("style", value)))
             .collect::<Vec<_>>();
 
         return rsx! {
             Link {
                 to: props.to,
-                class: Some(class.to_string()),
+                class: Some(style_attributes.class.to_string()),
                 new_tab: is_blank,
                 onmounted: move |event| props.onmounted.call(event),
                 attributes,
@@ -78,9 +76,11 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     rsx! {
         Box {
             component: "a",
-            class,
+            class: props.class,
+            sx: props.sx,
             states: props.states,
             variables: props.variables,
+            framework_sx: props.framework_sx,
             href: Some(navigation_target_href(props.to)),
             target: props.target,
             onmounted: props.onmounted,

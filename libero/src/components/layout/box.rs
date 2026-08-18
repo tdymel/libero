@@ -1,19 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{
         ClassList, HtmlTag, Input, States, Variables,
-        common::{attr, focus_ring_sx, render_polymorphic},
+        common::{attr, render_polymorphic, use_style_attributes},
     },
-    hooks::use_css,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx},
 };
-
-// Only ever shows up for a Box that received a tabindex (e.g. because it was
-// made clickable via `onclick`), since a plain div isn't keyboard-focusable
-// on its own.
-static BOX_FOCUS_SX: StaticSx = StaticSx::new(|| sx().focus_visible(focus_ring_sx()));
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BoxProps {
@@ -66,30 +59,15 @@ pub struct BoxProps {
 
 #[component]
 pub fn Box(props: BoxProps) -> Element {
-    let focus_class = use_css(Some(&BOX_FOCUS_SX), CssLayer::Framework);
-    let framework_class = use_css(props.framework_sx, CssLayer::Framework);
-    let static_class = use_css(props.sx.as_ref(), CssLayer::UserStatic);
-
-    let data_state = props.states.as_ref().and_then(States::data_state);
-    let variables_style = props
-        .variables
-        .as_ref()
-        .map(Variables::to_string)
-        .filter(|style| !style.is_empty());
-
-    let class = props
-        .class
-        .unwrap_or_default()
-        .with(framework_class)
-        .with(focus_class)
-        .with(static_class);
+    let style_attributes = use_style_attributes(
+        &props.class,
+        props.framework_sx,
+        &props.sx,
+        &props.states,
+        &props.variables,
+        props.style,
+    );
     let component = props.component.as_ref().copied().unwrap_or_default();
-
-    let style = match (variables_style, props.style) {
-        (Some(variables), Some(raw)) => Some(format!("{variables}{raw}")),
-        (Some(style), None) | (None, Some(style)) => Some(style),
-        (None, None) => None,
-    };
 
     let attributes = props
         .attributes
@@ -111,9 +89,9 @@ pub fn Box(props: BoxProps) -> Element {
 
     render_polymorphic(
         component,
-        class,
-        data_state,
-        style,
+        style_attributes.class,
+        style_attributes.data_state,
+        style_attributes.style,
         attributes,
         props.children,
     )

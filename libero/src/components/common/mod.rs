@@ -8,6 +8,7 @@ mod orientation;
 mod polymorphic;
 mod regex_api;
 mod states;
+mod style_attributes;
 mod util;
 mod variables;
 
@@ -22,5 +23,6 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::render_polymorphic;
 pub(crate) use regex_api::{RegexMatch, regex_api};
 pub use states::{States, states};
+pub(crate) use style_attributes::use_style_attributes;
 pub(crate) use util::{attr, focus_ring_sx, warn};
 pub use variables::{Variables, variables};
