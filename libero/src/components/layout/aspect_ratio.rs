@@ -44,3 +44,25 @@ pub fn AspectRatio(props: AspectRatioProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The ratio sets the `-override` twin, not the base variable - the base
+    /// one is the theme's default, which this has to win against.
+    #[test]
+    fn a_ratio_sets_the_override_variable() {
+        let variables = aspect_ratio_variables(Some(&1.5));
+
+        assert_eq!(
+            variables.to_string(),
+            format!("{}:1.5;", ASPECT_RATIO.override_var().name())
+        );
+    }
+
+    #[test]
+    fn no_ratio_emits_no_variable() {
+        assert_eq!(aspect_ratio_variables(None).to_string(), "");
+    }
+}

@@ -62,3 +62,34 @@ pub fn Container(props: ContainerProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::Size;
+
+    #[test]
+    fn size_and_gutters_set_the_override_twins() {
+        let props = ContainerProps {
+            component: Input::None,
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            size: Size::Md.into(),
+            gutters: Size::Lg.into(),
+            children: rsx! {},
+        };
+
+        assert_eq!(
+            container_variables(&props).to_string(),
+            format!(
+                "{}:{};{}:{};",
+                CONTAINER_SIZE.override_var().name(),
+                SizeCss::BREAKPOINT.value(Size::Md),
+                CONTAINER_GUTTERS.override_var().name(),
+                SizeCss::SPACING.value(Size::Lg)
+            )
+        );
+    }
+}

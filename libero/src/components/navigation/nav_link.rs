@@ -177,3 +177,55 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_active_background_is_the_lightest_shade_of_the_color() {
+        let color = ThemeAwareValue::Color(Color::Info);
+        let variables = nav_link_variables(Some(&color), Color::Primary);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
+                ColorValue::Shade(Color::Info, ColorShade::S1).value()
+            )
+        );
+    }
+
+    /// A shade picks the same base color as a bare one - only the family
+    /// matters, the active background always uses `S1`.
+    #[test]
+    fn a_shaded_color_contributes_only_its_family() {
+        let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Info, ColorShade::S9));
+        let variables = nav_link_variables(Some(&color), Color::Primary);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
+                ColorValue::Shade(Color::Info, ColorShade::S1).value()
+            )
+        );
+    }
+
+    #[test]
+    fn an_unrecognisable_color_falls_back_to_the_themed_default() {
+        let raw = ThemeAwareValue::String("gold".to_string());
+        let variables = nav_link_variables(Some(&raw), Color::Primary);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                NAV_LINK_ACTIVE_BACKGROUND_VAR.name(),
+                ColorValue::Shade(Color::Primary, ColorShade::S1).value()
+            )
+        );
+    }
+}

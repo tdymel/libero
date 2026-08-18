@@ -51,3 +51,43 @@ impl From<Vec<(&'static str, bool)>> for States {
 pub fn states() -> States {
     States::new()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn data_state_lists_only_the_active_ones() {
+        let states = states().active("open").inactive("disabled").active("hover");
+
+        assert_eq!(states.data_state().as_deref(), Some("open hover"));
+    }
+
+    #[test]
+    fn no_active_state_renders_no_attribute() {
+        assert_eq!(states().inactive("open").data_state(), None);
+        assert_eq!(states().data_state(), None);
+    }
+
+    #[test]
+    fn setting_a_state_twice_keeps_only_the_last_value() {
+        let states = states().active("open").inactive("open");
+
+        assert_eq!(states.data_state(), None);
+        assert_eq!(states.iter().count(), 1);
+    }
+
+    #[test]
+    fn re_setting_a_state_moves_it_to_the_end() {
+        let states = states().active("a").active("b").active("a");
+
+        assert_eq!(states.data_state().as_deref(), Some("b a"));
+    }
+
+    #[test]
+    fn with_takes_the_flag_from_its_argument() {
+        let states = states().with("open", true).with("disabled", false);
+
+        assert_eq!(states.data_state().as_deref(), Some("open"));
+    }
+}

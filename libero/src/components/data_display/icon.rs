@@ -152,3 +152,62 @@ pub fn Icon(props: IconProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::{Color, ColorShade, ColorValue};
+
+    fn icon_props(color: Input<ThemeAwareValue>) -> IconProps {
+        IconProps {
+            component: Input::None,
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            variant: Input::None,
+            color,
+            size: Input::None,
+            radius: Input::None,
+            children: rsx! {},
+        }
+    }
+
+    #[test]
+    fn a_bare_theme_color_becomes_a_shade_plus_its_contrast() {
+        let variables = icon_variables(&icon_props(Color::Error.into())).to_string();
+
+        assert!(variables.contains(&format!(
+            "{}:{};",
+            ICON_COLOR_VAR.name(),
+            ColorValue::Shade(Color::Error, ColorShade::S6).value()
+        )));
+        assert!(variables.contains(ICON_CONTRAST_VAR.name()));
+    }
+
+    /// A literal has no theme shade behind it, so there's no contrast to
+    /// pair with it and the variable stays unset.
+    #[test]
+    fn a_literal_color_emits_no_contrast() {
+        let variables = icon_variables(&icon_props("#123456".into())).to_string();
+
+        assert!(variables.contains(&format!("{}:#123456;", ICON_COLOR_VAR.name())));
+        assert!(!variables.contains(ICON_CONTRAST_VAR.name()));
+    }
+
+    #[test]
+    fn each_variant_renders_its_own_css() {
+        let class_of =
+            |variant| icon_variant_sx(variant, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR).class_name();
+
+        assert_ne!(
+            class_of(IconVariant::Filled),
+            class_of(IconVariant::Outlined)
+        );
+        assert_ne!(
+            class_of(IconVariant::Outlined),
+            class_of(IconVariant::Transparent)
+        );
+        assert_eq!(class_of(IconVariant::Filled), class_of(IconVariant::Filled));
+    }
+}

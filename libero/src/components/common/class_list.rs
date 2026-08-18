@@ -41,3 +41,44 @@ impl From<String> for ClassList {
 pub fn class_list() -> ClassList {
     ClassList::new()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn joins_classes_in_the_order_they_were_added() {
+        let classes = class_list()
+            .with("lsx-a".to_string())
+            .with("lsx-b".to_string());
+
+        assert_eq!(classes.to_string(), "lsx-a lsx-b");
+    }
+
+    #[test]
+    fn absent_and_empty_classes_are_skipped() {
+        let classes = class_list()
+            .with(None)
+            .with(String::new())
+            .with("lsx-a".to_string());
+
+        assert_eq!(classes.to_string(), "lsx-a");
+    }
+
+    /// Nothing dedupes - a caller passing a class the component also
+    /// computed gets it twice, which is harmless in a `class` attribute.
+    #[test]
+    fn a_repeated_class_is_kept_twice() {
+        let classes = class_list()
+            .with("lsx-a".to_string())
+            .with("lsx-a".to_string());
+
+        assert_eq!(classes.to_string(), "lsx-a lsx-a");
+    }
+
+    #[test]
+    fn from_a_string_starts_a_list_with_it() {
+        assert_eq!(ClassList::from("lsx-a").to_string(), "lsx-a");
+        assert_eq!(ClassList::from(String::new()).to_string(), "");
+    }
+}

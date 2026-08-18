@@ -80,3 +80,51 @@ pub fn Mark(props: MarkProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::ColorValue;
+
+    #[test]
+    fn no_color_falls_back_to_the_themed_default_tinted() {
+        let variables = mark_variables(None, Color::Warning);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                MARK_BACKGROUND_VAR.name(),
+                ColorValue::Shade(Color::Warning, MARK_TINT_SHADE).value()
+            )
+        );
+    }
+
+    #[test]
+    fn a_bare_color_is_tinted_the_same_way() {
+        let color = ThemeAwareValue::Color(Color::Error);
+        let variables = mark_variables(Some(&color), Color::Warning);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                MARK_BACKGROUND_VAR.name(),
+                ColorValue::Shade(Color::Error, MARK_TINT_SHADE).value()
+            )
+        );
+    }
+
+    /// Anything that isn't a bare `Color` is the caller being explicit, so
+    /// it goes through untinted.
+    #[test]
+    fn an_explicit_value_is_not_tinted() {
+        let raw = ThemeAwareValue::String("gold".to_string());
+        let variables = mark_variables(Some(&raw), Color::Warning);
+
+        assert_eq!(
+            variables.to_string(),
+            format!("{}:gold;", MARK_BACKGROUND_VAR.name())
+        );
+    }
+}

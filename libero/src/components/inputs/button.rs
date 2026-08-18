@@ -303,3 +303,73 @@ pub fn Button(props: ButtonProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::{Color, ColorShade, ColorValue};
+
+    /// `Button` always passes `base_color`'s output, which has turned a bare
+    /// theme color into an explicit shade by this point.
+    #[test]
+    fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
+        let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
+        let filled = button_variables(ButtonVariant::Filled, &base).to_string();
+        let outlined = button_variables(ButtonVariant::Outlined, &base).to_string();
+
+        assert!(filled.contains(&format!(
+            "{}:{};",
+            BUTTON_HOVER_VAR.name(),
+            ColorValue::Shade(Color::Primary, ColorShade::S6.darker()).value()
+        )));
+        assert!(outlined.contains(&format!(
+            "{}:{};",
+            BUTTON_HOVER_VAR.name(),
+            ColorValue::Shade(Color::Primary, ColorShade::S1).value()
+        )));
+    }
+
+    #[test]
+    fn the_color_variable_is_the_base_color_itself() {
+        let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
+        let variables = button_variables(ButtonVariant::Filled, &base).to_string();
+
+        assert!(variables.starts_with(&format!(
+            "{}:{};",
+            BUTTON_COLOR_VAR.name(),
+            ColorValue::Shade(Color::Error, ColorShade::S7).value()
+        )));
+    }
+
+    /// A color we can't reason about has no contrast to compute, so the
+    /// variable is left unset and the class's own fallback applies.
+    #[test]
+    fn an_unparseable_color_emits_no_contrast() {
+        let base = ThemeAwareValue::String("gold".to_string());
+        let variables = button_variables(ButtonVariant::Filled, &base).to_string();
+
+        assert!(!variables.contains(BUTTON_CONTRAST_VAR.name()));
+    }
+
+    #[test]
+    fn each_variant_renders_its_own_css() {
+        let class_of = |variant| {
+            button_variant_sx(
+                variant,
+                &BUTTON_COLOR_VAR,
+                &BUTTON_CONTRAST_VAR,
+                &BUTTON_HOVER_VAR,
+            )
+            .class_name()
+        };
+
+        let filled = class_of(ButtonVariant::Filled);
+        let outlined = class_of(ButtonVariant::Outlined);
+        let text = class_of(ButtonVariant::Text);
+
+        assert_ne!(filled, outlined);
+        assert_ne!(outlined, text);
+        assert_ne!(filled, text);
+        assert_eq!(filled, class_of(ButtonVariant::Filled));
+    }
+}

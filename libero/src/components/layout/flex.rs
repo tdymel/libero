@@ -162,3 +162,50 @@ pub fn Flex(props: FlexProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod variables_tests {
+    use super::*;
+
+    fn flex_props(wrap: Input<FlexWrap>, align: Input<ThemeAwareValue>) -> FlexProps {
+        FlexProps {
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            align,
+            justify: Input::None,
+            gap: Input::None,
+            direction: Input::None,
+            wrap,
+            divider: None,
+            children: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn wrap_is_emitted_as_its_css_keyword() {
+        let props = flex_props(FlexWrap::NoWrap.into(), Input::None);
+
+        assert_eq!(
+            flex_variables(&props).to_string(),
+            format!("{}:nowrap;", FLEX_WRAP_VAR.name())
+        );
+    }
+
+    #[test]
+    fn only_the_set_properties_are_emitted() {
+        let props = flex_props(Input::None, "center".into());
+        let variables = flex_variables(&props).to_string();
+
+        assert_eq!(variables, format!("{}:center;", FLEX_ALIGN_VAR.name()));
+    }
+
+    #[test]
+    fn nothing_set_emits_nothing() {
+        assert_eq!(
+            flex_variables(&flex_props(Input::None, Input::None)).to_string(),
+            ""
+        );
+    }
+}

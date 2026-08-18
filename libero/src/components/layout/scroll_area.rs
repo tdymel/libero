@@ -278,3 +278,38 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::{Color, ColorShade, ColorValue, Size};
+
+    #[test]
+    fn a_thumb_color_resolves_with_no_scale() {
+        let color = ThemeAwareValue::Color(Color::Primary);
+        let variables = scroll_area_variables(Some(&color));
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                SCROLL_AREA_THUMB_VAR.name(),
+                ColorValue::Shade(Color::Primary, ColorShade::DEFAULT).value()
+            )
+        );
+    }
+
+    #[test]
+    fn no_thumb_color_emits_no_variable() {
+        assert_eq!(scroll_area_variables(None).to_string(), "");
+    }
+
+    /// A bare `Size` has no scale to resolve against here, so it drops out
+    /// rather than emitting something meaningless.
+    #[test]
+    fn an_unresolvable_value_emits_no_variable() {
+        let size = ThemeAwareValue::Size(Size::Md);
+
+        assert_eq!(scroll_area_variables(Some(&size)).to_string(), "");
+    }
+}

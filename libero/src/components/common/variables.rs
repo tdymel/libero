@@ -50,3 +50,64 @@ impl Display for Variables {
 pub fn variables() -> Variables {
     Variables::new()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const COLOR: CssVar = CssVar::new("--lsx-test-color");
+
+    #[test]
+    fn renders_as_style_attribute_declarations() {
+        let variables = variables()
+            .with(COLOR, "red".to_string())
+            .with(CssVar::new("--lsx-test-size"), "1rem".to_string());
+
+        assert_eq!(
+            variables.to_string(),
+            "--lsx-test-color:red;--lsx-test-size:1rem;"
+        );
+    }
+
+    #[test]
+    fn absent_and_empty_values_are_skipped() {
+        let variables = variables()
+            .with(COLOR, None)
+            .with(CssVar::new("--lsx-test-size"), String::new());
+
+        assert_eq!(variables.to_string(), "");
+    }
+
+    #[test]
+    fn setting_a_variable_to_none_clears_an_earlier_value() {
+        let variables = variables().with(COLOR, "red".to_string()).with(COLOR, None);
+
+        assert_eq!(variables.to_string(), "");
+    }
+
+    /// A borrowed and an owned `CssVar` naming the same property are one
+    /// variable - `CssVar`'s equality is by name, not by representation.
+    #[test]
+    fn a_static_and_an_owned_name_are_the_same_variable() {
+        let owned = CssVar::parse("--lsx-test-color").expect("a valid custom property name");
+        let variables = variables()
+            .with(COLOR, "red".to_string())
+            .with(owned, "blue".to_string());
+
+        assert_eq!(variables.to_string(), "--lsx-test-color:blue;");
+    }
+
+    #[test]
+    fn merge_lets_the_other_side_win_and_keeps_the_rest() {
+        let size = CssVar::new("--lsx-test-size");
+        let base = variables()
+            .with(COLOR, "red".to_string())
+            .with(size, "1rem".to_string());
+        let merged = base.merge(variables().with(COLOR, "blue".to_string()));
+
+        assert_eq!(
+            merged.to_string(),
+            "--lsx-test-size:1rem;--lsx-test-color:blue;"
+        );
+    }
+}

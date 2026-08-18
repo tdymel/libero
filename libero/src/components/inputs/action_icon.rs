@@ -230,3 +230,47 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::{Color, Size};
+
+    fn action_icon_props(color: Input<ThemeAwareValue>) -> ActionIconProps {
+        ActionIconProps {
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            variant: Input::None,
+            color,
+            size: Size::Md.into(),
+            radius: Input::None,
+            aria_label: "test".to_string(),
+            disabled: None,
+            to: Input::None,
+            target: None,
+            children: rsx! {},
+        }
+    }
+
+    /// Sizing is always the ActionIcon's own business; the colour variables
+    /// only appear when it isn't deferring to a wrapped `Icon`'s styling.
+    #[test]
+    fn without_variant_styling_only_the_size_variables_are_set() {
+        let props = action_icon_props(Color::Primary.into());
+        let variables = action_icon_variables(&props, false).to_string();
+
+        assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
+        assert!(!variables.contains(ACTION_ICON_COLOR_VAR.name()));
+    }
+
+    #[test]
+    fn with_variant_styling_the_colour_variables_are_added() {
+        let props = action_icon_props(Color::Primary.into());
+        let variables = action_icon_variables(&props, true).to_string();
+
+        assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
+        assert!(variables.contains(ACTION_ICON_COLOR_VAR.name()));
+    }
+}

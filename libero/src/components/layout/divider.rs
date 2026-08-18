@@ -189,3 +189,61 @@ pub fn Divider(props: DividerProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::{Color, Size};
+
+    #[test]
+    fn a_bare_color_is_tinted_to_the_divider_shade() {
+        let color = ThemeAwareValue::Color(Color::Primary);
+        let variables = divider_variables(Some(&color), None);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                DIVIDER_COLOR_VAR.name(),
+                ColorValue::Shade(Color::Primary, ColorShade::S3).value()
+            )
+        );
+    }
+
+    /// Only a bare `Color` gets tinted - an explicit shade is passed through
+    /// as the caller wrote it.
+    #[test]
+    fn an_explicit_color_value_is_left_alone() {
+        let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S9));
+        let variables = divider_variables(Some(&color), None);
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                DIVIDER_COLOR_VAR.name(),
+                ColorValue::Shade(Color::Error, ColorShade::S9).value()
+            )
+        );
+    }
+
+    #[test]
+    fn spacing_resolves_through_the_spacing_scale() {
+        let spacing = ThemeAwareValue::Size(Size::Lg);
+        let variables = divider_variables(None, Some(&spacing));
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                DIVIDER_SPACING_VAR.name(),
+                SizeCss::SPACING.value(Size::Lg)
+            )
+        );
+    }
+
+    #[test]
+    fn neither_set_emits_nothing() {
+        assert_eq!(divider_variables(None, None).to_string(), "");
+    }
+}

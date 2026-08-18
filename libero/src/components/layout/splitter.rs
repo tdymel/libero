@@ -323,3 +323,37 @@ pub fn Splitter(props: SplitterProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::{Color, ColorShade, ColorValue};
+
+    /// The A-pane fraction is always emitted - it's what positions the
+    /// divider, so there's no sensible "unset" for it.
+    #[test]
+    fn the_pane_fraction_is_always_a_percentage() {
+        let variables = splitter_variables(37.5, None);
+
+        assert_eq!(
+            variables.to_string(),
+            format!("{}:37.5%;", SPLITTER_A_VAR.name())
+        );
+    }
+
+    #[test]
+    fn a_divider_color_is_appended_when_given() {
+        let color = ThemeAwareValue::Color(Color::Grey);
+        let variables = splitter_variables(50.0, Some(&color));
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:50%;{}:{};",
+                SPLITTER_A_VAR.name(),
+                SPLITTER_DIVIDER_COLOR_VAR.name(),
+                ColorValue::Shade(Color::Grey, ColorShade::DEFAULT).value()
+            )
+        );
+    }
+}

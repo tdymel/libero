@@ -139,3 +139,41 @@ pub fn Header(props: HeaderProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::Color;
+
+    fn header_props(color: Input<ThemeAwareValue>) -> HeaderProps {
+        HeaderProps {
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            position: Input::None,
+            size: Input::None,
+            color,
+            z_index: Input::None,
+            children: rsx! {},
+        }
+    }
+
+    #[test]
+    fn a_theme_color_brings_its_own_contrast_along() {
+        let variables = header_variables(&header_props(Color::Primary.into())).to_string();
+
+        assert!(variables.contains(HEADER_BACKGROUND_VAR.name()));
+        assert!(variables.contains(HEADER_COLOR_VAR.name()));
+    }
+
+    /// No color at all means the themed default applies, so both variables
+    /// stay unset rather than being pinned to something here.
+    #[test]
+    fn no_color_emits_neither_variable() {
+        let variables = header_variables(&header_props(Input::None)).to_string();
+
+        assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
+        assert!(!variables.contains(HEADER_COLOR_VAR.name()));
+    }
+}

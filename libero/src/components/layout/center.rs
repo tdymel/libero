@@ -48,3 +48,38 @@ pub fn Center(props: CenterProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn center_props(inline: Option<bool>) -> CenterProps {
+        CenterProps {
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            inline,
+            children: rsx! {},
+        }
+    }
+
+    #[test]
+    fn inline_picks_the_display_mode() {
+        assert_eq!(
+            center_variables(&center_props(Some(true))).to_string(),
+            format!("{}:inline-flex;", CENTER_DISPLAY.override_var().name())
+        );
+        assert_eq!(
+            center_variables(&center_props(Some(false))).to_string(),
+            format!("{}:flex;", CENTER_DISPLAY.override_var().name())
+        );
+    }
+
+    /// Unset means "leave it to the theme", not "flex" - the override
+    /// variable has to stay absent for the themed default to apply.
+    #[test]
+    fn unset_emits_no_override() {
+        assert_eq!(center_variables(&center_props(None)).to_string(), "");
+    }
+}

@@ -253,3 +253,29 @@ pub fn Image(props: ImageProps) -> Element {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::Size;
+
+    #[test]
+    fn a_size_radius_resolves_through_the_radius_scale() {
+        let radius = ThemeAwareValue::Size(Size::Md);
+        let variables = image_variables(Some(&radius));
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                IMAGE_RADIUS_VAR.name(),
+                SizeCss::RADIUS.value(Size::Md)
+            )
+        );
+    }
+
+    #[test]
+    fn no_radius_emits_no_variable() {
+        assert_eq!(image_variables(None).to_string(), "");
+    }
+}
