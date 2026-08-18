@@ -7,10 +7,12 @@ use dioxus::prelude::*;
 
 /// Renders `app` the way a browser would end up seeing it.
 ///
-/// Two passes are required: components register their CSS while they render,
-/// which is *after* `LiberoProvider` rendered its `<style>` blocks, so the
-/// first pass carries the theme CSS but none of the component CSS. The
-/// registry bumps a signal, and the second pass picks it up.
+/// Two passes, because a component whose output depends on an effect or an
+/// async resource has not produced it yet on the creating render - `Select`
+/// only applies its `value` once `use_effect` has flipped `mounted`, and
+/// `QrCode` has nothing to draw until its `use_resource` resolves. The CSS
+/// itself no longer needs the second pass: `StyleOutlet` renders after
+/// `{children}`, so the first pass already carries every registered sheet.
 pub fn render(app: fn() -> Element) -> String {
     let mut dom = VirtualDom::new(app);
     dom.rebuild_in_place();
@@ -20,12 +22,23 @@ pub fn render(app: fn() -> Element) -> String {
 
 /// The rendered markup with the `<style>` blocks stripped - the CSS is
 /// bigger than the markup and full of words like `first-child`, so anything
-/// searching for text has to look past it.
-pub fn body(html: &str) -> &str {
-    match html.rfind("</style>") {
-        Some(end) => &html[end + "</style>".len()..],
-        None => html,
+/// searching for text has to look past it. They are removed wherever they
+/// sit, since `StyleOutlet` renders the registered sheets *after* the
+/// markup while the static ones still come before it.
+pub fn body(html: &str) -> String {
+    let mut body = String::with_capacity(html.len());
+    let mut rest = html;
+
+    while let Some(start) = rest.find("<style") {
+        let Some(end) = rest[start..].find("</style>") else {
+            break;
+        };
+        body.push_str(&rest[..start]);
+        rest = &rest[start + end + "</style>".len()..];
     }
+    body.push_str(rest);
+
+    body
 }
 
 /// Every attribute of the first `<tag>` in `html`.

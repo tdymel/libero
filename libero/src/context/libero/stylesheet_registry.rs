@@ -11,9 +11,14 @@ pub(crate) struct StylesheetKey {
     hash: u64,
 }
 
+/// The `<style>` node for one entry, built once at `acquire` time. Both
+/// fields are `Rc<str>` so [`StylesheetRegistry::stylesheets`] - called on
+/// every re-render of the style outlet - hands them out by refcount bump
+/// instead of re-allocating the whole CSS corpus each time.
 #[derive(Clone)]
 struct RegisteredStylesheet {
-    css: Stylesheet,
+    node_key: Rc<str>,
+    css: Rc<str>,
     ref_count: usize,
 }
 
@@ -36,7 +41,10 @@ impl StylesheetRegistry {
         let mut registry = self.inner.borrow_mut();
 
         let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
-            css: Stylesheet::from(format!(
+            // Deliberately a plain `String`, not another `Stylesheet`: that
+            // would re-hash the whole wrapped text for a key we already have.
+            node_key: Rc::from(format!("{}-{:x}", layer.css_name(), key.hash)),
+            css: Rc::from(format!(
                 "@layer {}{{{}}}",
                 layer.css_name(),
                 stylesheet.as_str()
@@ -59,16 +67,13 @@ impl StylesheetRegistry {
         }
     }
 
-    pub fn stylesheets(&self) -> Vec<(String, String)> {
+    /// Every registered sheet as `(node key, CSS)` - cheap to call, both
+    /// halves are refcounted handles to strings built once at `acquire`.
+    pub fn stylesheets(&self) -> Vec<(Rc<str>, Rc<str>)> {
         self.inner
             .borrow()
-            .iter()
-            .map(|(key, entry)| {
-                (
-                    format!("{}-{:x}", key.layer.css_name(), key.hash),
-                    entry.css.as_str().to_string(),
-                )
-            })
+            .values()
+            .map(|entry| (entry.node_key.clone(), entry.css.clone()))
             .collect()
     }
 }
@@ -110,5 +115,16 @@ mod tests {
 
         registry.release(framework);
         assert_eq!(registry.stylesheets().len(), 1);
+    }
+
+    #[test]
+    fn an_entry_carries_its_layer_in_both_its_node_key_and_its_css() {
+        let registry = StylesheetRegistry::new();
+        registry.acquire(Stylesheet::from(&sx().padding("lg")), CssLayer::Framework);
+
+        let (node_key, css) = registry.stylesheets().remove(0);
+
+        assert!(node_key.starts_with("lsx-framework-"));
+        assert!(css.starts_with("@layer lsx-framework{"));
     }
 }

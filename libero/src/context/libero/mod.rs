@@ -35,6 +35,30 @@ impl LiberoContext {
     }
 }
 
+/// The `<style>` nodes for everything registered so far.
+///
+/// Its own component for two reasons. It subscribes to
+/// `stylesheet_registry_version`, and keeping that read out of
+/// `LiberoProvider` means a component registering CSS re-renders this leaf
+/// instead of the whole app under `{children}`. And `LiberoProvider` renders
+/// it *after* `{children}`: Dioxus renders child scopes eagerly in tree
+/// order, so by the time this runs every descendant has already registered,
+/// and the first pass carries the complete CSS.
+#[component]
+fn StyleOutlet() -> Element {
+    let context = use_context::<LiberoContext>();
+    let _registry_version = context.stylesheet_registry_version.read();
+
+    rsx! {
+        for (node_key, stylesheet) in context.stylesheet_registry.stylesheets() {
+            style {
+                key: "{node_key}",
+                dangerous_inner_html: "{stylesheet}"
+            }
+        }
+    }
+}
+
 #[component]
 pub fn LiberoProvider(
     #[props(default = &Theme::DEFAULT)] theme: &'static Theme,
@@ -42,8 +66,6 @@ pub fn LiberoProvider(
 ) -> Element {
     let stylesheet_registry_version = use_signal(|| 0u64);
     let context = use_context_provider(|| LiberoContext::new(theme, stylesheet_registry_version));
-    let _registry_version = context.stylesheet_registry_version.read();
-    let active_stylesheets = context.stylesheet_registry.stylesheets();
 
     let portal_entries = use_signal(Vec::new);
     use_context_provider(|| PortalHost::new(portal_entries));
@@ -61,13 +83,8 @@ pub fn LiberoProvider(
         style {
             dangerous_inner_html: SCROLL_LOCK_CSS
         }
-        for (key, stylesheet) in active_stylesheets {
-            style {
-                key: "{key}",
-                dangerous_inner_html: "{stylesheet}"
-            }
-        }
         {children}
         PortalOutlet {}
+        StyleOutlet {}
     }
 }

@@ -612,3 +612,47 @@ fn nav_link_renders_a_link_with_its_active_background() {
     assert!(attributes["style"].contains("--lsx-nav-link-active-background"));
     assert!(attributes["data-state"].contains("active"));
 }
+
+/// Registering CSS used to re-render `LiberoProvider` itself - the component
+/// owning `{children}` - which discarded the post-effect state of everything
+/// under it. `Select` lost the `mounted` flag its `value` depends on that
+/// way. The registered sheets now live in a `StyleOutlet` leaf instead, so a
+/// registration dirties only that.
+#[test]
+fn effect_state_survives_a_stylesheet_registration() {
+    #[component]
+    fn Stateful() -> Element {
+        let mut effect_ran = use_signal(|| false);
+        use_effect(move || effect_ran.set(true));
+        rsx! { Text { "effect_ran={effect_ran()}" } }
+    }
+
+    fn app() -> Element {
+        rsx! { LiberoProvider { Stateful {} } }
+    }
+
+    assert!(body(&render(app)).contains("effect_ran=true"));
+}
+
+/// `StyleOutlet` renders after `{children}`, and Dioxus renders child scopes
+/// eagerly in tree order, so the creating render already carries every sheet
+/// its descendants registered - no second pass needed for CSS.
+#[test]
+fn the_first_render_already_carries_the_component_css() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Button { "Press" } } }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+
+    let class = classes_of(&html, "button")
+        .into_iter()
+        .find(|class| class.starts_with("lsx-"))
+        .expect("the button carries a generated class");
+    assert!(
+        html.contains(&format!(".{class}")),
+        "the class's own CSS is missing from the first render"
+    );
+}
