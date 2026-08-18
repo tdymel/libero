@@ -71,39 +71,84 @@ fn body_scope(theme: &Theme) -> CssScope {
 }
 
 fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
+    // Destructured exhaustively (no `..`) on purpose: a new `Theme` field
+    // won't compile until it's either declared here or explicitly ignored
+    // below, so a component's vars can't go silently unemitted.
+    let Theme {
+        spacing,
+        radius,
+        dialog,
+        drawer,
+        flex,
+        center,
+        container,
+        aspect_ratio,
+        float,
+        divider,
+        splitter,
+        button,
+        select,
+        list,
+        data_list,
+        titles,
+        texts,
+        code,
+        header,
+        icon,
+        action_icon,
+        qr_code,
+        kbd,
+        primary,
+        secondary,
+        error,
+        warning,
+        info,
+        success,
+        grey,
+        black,
+        white,
+        // Plain values read from Rust - no CSS vars of their own.
+        scroll_area: _,
+        tree: _,
+        mark: _,
+        nav_link: _,
+        // Emitted by global_reset_scopes, not as a `:root` var.
+        font_smoothing: _,
+    } = *theme;
+
     let mut declarations = Vec::new();
-    declarations.extend(theme.spacing.to_css_declarations(SizeCss::SPACING, "px"));
-    declarations.extend(theme.radius.to_css_declarations(SizeCss::RADIUS, "px"));
+    declarations.extend(spacing.to_css_declarations(SizeCss::SPACING, "px"));
+    declarations.extend(radius.to_css_declarations(SizeCss::RADIUS, "px"));
     push_breakpoint_declarations(&mut declarations);
-    declarations.extend(theme.dialog.to_css_declarations());
-    declarations.extend(theme.drawer.to_css_declarations());
-    declarations.extend(theme.flex.to_css_declarations());
-    declarations.extend(theme.center.to_css_declarations());
-    declarations.extend(theme.container.to_css_declarations());
-    declarations.extend(theme.aspect_ratio.to_css_declarations());
-    declarations.extend(theme.float.to_css_declarations());
-    declarations.extend(theme.divider.to_css_declarations());
-    declarations.extend(theme.splitter.to_css_declarations());
-    declarations.extend(theme.button.to_css_declarations());
-    declarations.extend(theme.select.to_css_declarations());
-    declarations.extend(theme.list.to_css_declarations());
-    declarations.extend(theme.data_list.to_css_declarations());
-    declarations.extend(theme.titles.to_css_declarations());
-    declarations.extend(theme.texts.to_css_declarations());
-    declarations.extend(theme.code.to_css_declarations());
-    declarations.extend(theme.header.to_css_declarations());
-    declarations.extend(theme.icon.to_css_declarations());
-    declarations.extend(theme.action_icon.to_css_declarations());
-    declarations.extend(theme.qr_code.to_css_declarations());
-    declarations.extend(theme.kbd.to_css_declarations());
-    push_named_color_declarations(&mut declarations, theme);
-    push_color_declarations(&mut declarations, Color::Primary, theme.primary);
-    push_color_declarations(&mut declarations, Color::Secondary, theme.secondary);
-    push_color_declarations(&mut declarations, Color::Error, theme.error);
-    push_color_declarations(&mut declarations, Color::Warning, theme.warning);
-    push_color_declarations(&mut declarations, Color::Info, theme.info);
-    push_color_declarations(&mut declarations, Color::Success, theme.success);
-    push_color_declarations(&mut declarations, Color::Grey, theme.grey);
+    declarations.extend(dialog.to_css_declarations());
+    declarations.extend(drawer.to_css_declarations());
+    declarations.extend(flex.to_css_declarations());
+    declarations.extend(center.to_css_declarations());
+    declarations.extend(container.to_css_declarations());
+    declarations.extend(aspect_ratio.to_css_declarations());
+    declarations.extend(float.to_css_declarations());
+    declarations.extend(divider.to_css_declarations());
+    declarations.extend(splitter.to_css_declarations());
+    declarations.extend(button.to_css_declarations());
+    declarations.extend(select.to_css_declarations());
+    declarations.extend(list.to_css_declarations());
+    declarations.extend(data_list.to_css_declarations());
+    declarations.extend(titles.to_css_declarations());
+    declarations.extend(texts.to_css_declarations());
+    declarations.extend(code.to_css_declarations());
+    declarations.extend(header.to_css_declarations());
+    declarations.extend(icon.to_css_declarations());
+    declarations.extend(action_icon.to_css_declarations());
+    declarations.extend(qr_code.to_css_declarations());
+    declarations.extend(kbd.to_css_declarations());
+    push_named_color_declarations(&mut declarations, black, white);
+    push_color_declarations(&mut declarations, Color::Primary, primary);
+    push_color_declarations(&mut declarations, Color::Secondary, secondary);
+    push_color_declarations(&mut declarations, Color::Error, error);
+    push_color_declarations(&mut declarations, Color::Warning, warning);
+    push_color_declarations(&mut declarations, Color::Info, info);
+    push_color_declarations(&mut declarations, Color::Success, success);
+    push_color_declarations(&mut declarations, Color::Grey, grey);
     declarations
 }
 
@@ -116,14 +161,18 @@ fn push_breakpoint_declarations(declarations: &mut Vec<CssDeclaration>) {
     }
 }
 
-fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, theme: &Theme) {
+fn push_named_color_declarations(
+    declarations: &mut Vec<CssDeclaration>,
+    black: HexColor,
+    white: HexColor,
+) {
     declarations.push(CssDeclaration::new(
         NamedColorCss::BLACK.name(),
-        theme.black.to_string(),
+        black.to_string(),
     ));
     declarations.push(CssDeclaration::new(
         NamedColorCss::WHITE.name(),
-        theme.white.to_string(),
+        white.to_string(),
     ));
 }
 
