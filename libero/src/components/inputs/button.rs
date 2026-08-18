@@ -3,12 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States, Variables,
-        common::{base_props, focus_ring_sx, variables},
+        common::{base_color, base_props, contrast_color, focus_ring_sx, hover_color, variables},
         navigation::InternalAnchor,
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, CssVar, Size},
+    theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, CssVar, Size},
 };
 
 // `Input<NavigationTarget>` rather than a bare required field (like
@@ -82,57 +82,14 @@ impl From<String> for Input<ButtonVariant> {
 // The default shade used for a bare color (e.g. "primary") when no explicit
 // shade is given. Kept a step darker than the library-wide default shade (5)
 // since buttons need to stand out more than plain text/borders do.
-const BUTTON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 // Light tint used as the hover background for the outlined/text variants,
 // mirroring Mantine's "subtle" hover treatment. `pub(crate)` since
-// `ActionIcon` reuses this for its own outlined/transparent hover.
-pub(crate) const BUTTON_HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
-
 // A bare theme color name (e.g. "primary") has no shade of its own, so it's
 // resolved to our own default shade here rather than the sx pipeline's
 // generic default (5). Anything else - an explicit shade/contrast, or a
 // literal value like "red"/#123456/rgb(...) - passes through unchanged and
 // is resolved by the normal sx-to-css pipeline. Only a genuinely unset
 // `color` falls back to the library's default color.
-fn button_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
-    match value {
-        None => {
-            ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, BUTTON_DEFAULT_SHADE))
-        }
-        Some(ThemeAwareValue::Color(color)) => {
-            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, BUTTON_DEFAULT_SHADE))
-        }
-        Some(other) => other.clone(),
-    }
-}
-
-// A hover darken/tint and an auto-contrast text color both need a resolved
-// theme shade to compute against; a literal color has neither available.
-fn button_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
-    match base {
-        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
-            ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
-        ),
-        _ => None,
-    }
-}
-
-// `shade_fn` picks the hover shade relative to the base's own shade (e.g.
-// darker for `Filled`, or a fixed light tint for `Outlined`/`Text`). `None`
-// for a literal/raw base - it has no theme shade to derive a hover from.
-// `pub(crate)` - `ActionIcon` reuses this for the same reason.
-pub(crate) fn hover_color(
-    base: &ThemeAwareValue,
-    shade_fn: impl Fn(ColorShade) -> ColorShade,
-) -> Option<String> {
-    match base {
-        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => {
-            Some(ColorValue::Shade(*color, shade_fn(*shade)).value())
-        }
-        _ => None,
-    }
-}
-
 pub(crate) const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
 pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
@@ -230,13 +187,8 @@ pub(crate) fn variant_token(variant: ButtonVariant) -> &'static str {
 }
 
 fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> Variables {
-    let contrast = button_contrast_color(base);
-    let hover = match variant {
-        ButtonVariant::Filled => hover_color(base, ColorShade::darker),
-        ButtonVariant::Outlined | ButtonVariant::Text => {
-            hover_color(base, |_| BUTTON_HOVER_TINT_SHADE)
-        }
-    };
+    let contrast = contrast_color(base);
+    let hover = hover_color(base, variant == ButtonVariant::Filled);
 
     variables()
         .with(BUTTON_COLOR_VAR, base.resolve(None))
@@ -277,7 +229,7 @@ base_props! {
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.as_ref().copied().unwrap_or_default();
-    let color = button_base_color(props.color.as_ref());
+    let color = base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
 

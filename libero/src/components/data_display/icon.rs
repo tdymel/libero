@@ -1,9 +1,13 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
+    components::{
+        Box, HtmlTag, Input, States, Variables,
+        common::{base_color, base_props, contrast_color},
+        variables,
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, CssVar, ICON_SIZE, Size, SizeCss},
+    theme::{CssVar, ICON_SIZE, Size, SizeCss},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -44,7 +48,6 @@ impl From<String> for Input<IconVariant> {
 
 // Matches Button's own default shade - bold enough to read as a filled badge
 // rather than the library-wide default (5).
-const ICON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
 // A bare theme color name (e.g. "primary") has no shade of its own, so it's
 // resolved to our own default shade here rather than the sx pipeline's
@@ -52,27 +55,6 @@ const ICON_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 // literal value like "red"/#123456/rgb(...) - passes through unchanged and
 // is resolved by the normal sx-to-css pipeline. Only a genuinely unset
 // `color` falls back to the library's default color.
-pub(crate) fn icon_base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
-    match value {
-        None => ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ICON_DEFAULT_SHADE)),
-        Some(ThemeAwareValue::Color(color)) => {
-            ThemeAwareValue::ColorValue(ColorValue::Shade(*color, ICON_DEFAULT_SHADE))
-        }
-        Some(other) => other.clone(),
-    }
-}
-
-// Only a resolved theme shade has a precomputed contrast CSS var to pair
-// with; a literal color has no such pairing available.
-pub(crate) fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
-    match base {
-        ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
-            ThemeAwareValue::ColorValue(ColorValue::Contrast(*color, *shade)),
-        ),
-        _ => None,
-    }
-}
-
 /// Structural chrome for `variant`, referencing `color_var`/`contrast_var`
 /// (a `var()` name each, not a resolved value) - shared with `ActionIcon`,
 /// which reuses this exact shape under its own var names since it builds
@@ -135,8 +117,8 @@ pub(crate) fn variant_token(variant: IconVariant) -> &'static str {
 }
 
 fn icon_variables(props: &IconProps) -> Variables {
-    let base = icon_base_color(props.color.as_ref());
-    let contrast = icon_contrast_color(&base);
+    let base = base_color(props.color.as_ref());
+    let contrast = contrast_color(&base);
 
     variables()
         .with(ICON_COLOR_VAR, base.resolve(None))

@@ -4,15 +4,14 @@ use crate::{
     components::{
         Box, IconVariant, Input, States, Variables,
         common::base_props,
-        data_display::{icon_base_color, icon_contrast_color, icon_variant_sx, variant_token},
+        common::{base_color, contrast_color, hover_color},
+        data_display::{icon_variant_sx, variant_token},
         navigation::InternalAnchor,
         variables,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade, CssVar, ICON_SIZE, SizeCss},
+    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, SizeCss},
 };
-
-use super::button::{BUTTON_HOVER_TINT_SHADE, hover_color};
 
 const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
 const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
@@ -118,14 +117,9 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
     }
 
     let variant = props.variant.as_ref().copied().unwrap_or_default();
-    let base = icon_base_color(props.color.as_ref());
-    let contrast = icon_contrast_color(&base);
-    let hover = match variant {
-        IconVariant::Filled => hover_color(&base, ColorShade::darker),
-        IconVariant::Outlined | IconVariant::Transparent => {
-            hover_color(&base, |_| BUTTON_HOVER_TINT_SHADE)
-        }
-    };
+    let base = base_color(props.color.as_ref());
+    let contrast = contrast_color(&base);
+    let hover = hover_color(&base, variant == IconVariant::Filled);
 
     result
         .with(ACTION_ICON_COLOR_VAR, base.resolve(None))

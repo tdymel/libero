@@ -244,10 +244,16 @@ mod tests {
             ("--lsx-aspect-ratio", "--lsx-aspect-ratio-override"),
             ("--lsx-center-display", "--lsx-center-display-override"),
             ("--lsx-container-size", "--lsx-container-size-override"),
-            ("--lsx-container-gutters", "--lsx-container-gutters-override"),
+            (
+                "--lsx-container-gutters",
+                "--lsx-container-gutters-override",
+            ),
             ("--lsx-float-z-index", "--lsx-float-z-index-override"),
             ("--lsx-action-icon-size", "--lsx-action-icon-size-override"),
-            ("--lsx-action-icon-radius", "--lsx-action-icon-radius-override"),
+            (
+                "--lsx-action-icon-radius",
+                "--lsx-action-icon-radius-override",
+            ),
         ] {
             assert_eq!(CssVar::new(base).override_var().name(), expected);
         }
