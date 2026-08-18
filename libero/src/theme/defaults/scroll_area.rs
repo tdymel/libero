@@ -2,6 +2,7 @@ use crate::str_enum::str_enum;
 
 str_enum! {
     /// Which axes show a scrollbar / allow overflow.
+    #[state_prefix = "axis"]
     pub enum ScrollAxis {
         #[default]
         Vertical = "vertical",
@@ -14,6 +15,7 @@ str_enum! {
 str_enum! {
     /// When the scrollbar is actually visible - `Scroll` is treated the same as
     /// `Hover` (no idle-timeout primitive exists in this codebase yet).
+    #[state_prefix = "visible"]
     pub enum ScrollbarVisibility {
         #[default]
         Always = "always",
@@ -25,19 +27,11 @@ str_enum! {
 
 str_enum! {
     /// Maps directly to the CSS `scrollbar-width` keyword.
+    #[state_prefix = "size"]
     pub enum ScrollbarSize {
         #[default]
         Thin = "thin",
         Auto = "auto",
-    }
-}
-
-impl ScrollbarSize {
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Thin => "thin",
-            Self::Auto => "auto",
-        }
     }
 }
 

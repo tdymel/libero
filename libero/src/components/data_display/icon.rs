@@ -58,39 +58,23 @@ pub(crate) const ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-icon-contrast");
 const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
 
 static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline-flex")
+    let base = sx()
+        .display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
         .width(ICON_SIZE.overridable(Size::Md))
         .height(ICON_SIZE.overridable(Size::Md))
         .border_radius(ICON_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Sm)))
-        .selector("& svg", sx().width("100%").height("100%"))
-        .when(
-            "filled",
-            icon_variant_sx(IconVariant::Filled, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR),
-        )
-        .when(
-            "outlined",
-            icon_variant_sx(IconVariant::Outlined, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR),
-        )
-        .when(
-            "transparent",
-            icon_variant_sx(
-                IconVariant::Transparent,
-                &ICON_COLOR_VAR,
-                &ICON_CONTRAST_VAR,
-            ),
-        )
-});
+        .selector("& svg", sx().width("100%").height("100%"));
 
-pub(crate) fn variant_token(variant: IconVariant) -> &'static str {
-    match variant {
-        IconVariant::Filled => "filled",
-        IconVariant::Outlined => "outlined",
-        IconVariant::Transparent => "transparent",
-    }
-}
+    IconVariant::ALL.iter().fold(base, |base, &variant| {
+        base.when(
+            variant.state_name(),
+            icon_variant_sx(variant, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR),
+        )
+    })
+});
 
 fn icon_variables(props: &IconProps) -> Variables {
     let base = base_color(props.color.as_ref());
@@ -137,7 +121,7 @@ pub fn Icon(props: IconProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_default()
-        .with(variant_token(variant), true);
+        .with(variant.state_name(), true);
 
     rsx! {
         Box {

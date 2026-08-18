@@ -5,7 +5,7 @@ use crate::{
         Box, IconVariant, Input, States, Variables,
         common::base_props,
         common::{base_color, contrast_color, hover_color},
-        data_display::{icon_variant_sx, variant_token},
+        data_display::icon_variant_sx,
         navigation::InternalAnchor,
         variables,
     },
@@ -171,7 +171,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .cloned()
         .unwrap_or_default()
         .with("disabled", disabled)
-        .with(variant_token(variant), has_variant_styling);
+        .with(variant.state_name(), has_variant_styling);
 
     if let Some(to) = props.to.as_ref().cloned() {
         // A disabled link keeps looking/behaving like a disabled control (it

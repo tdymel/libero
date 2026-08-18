@@ -91,7 +91,7 @@ pub(crate) fn button_variant_sx(
 }
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
-    ButtonDefaults::theme_vars()
+    let base = ButtonDefaults::theme_vars()
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
@@ -104,34 +104,21 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .text_decoration("none")
-        .outline("none")
-        .when(
-            "filled",
-            button_variant_sx(
-                ButtonVariant::Filled,
-                &BUTTON_COLOR_VAR,
-                &BUTTON_CONTRAST_VAR,
-                &BUTTON_HOVER_VAR,
-            ),
-        )
-        .when(
-            "outlined",
-            button_variant_sx(
-                ButtonVariant::Outlined,
-                &BUTTON_COLOR_VAR,
-                &BUTTON_CONTRAST_VAR,
-                &BUTTON_HOVER_VAR,
-            ),
-        )
-        .when(
-            "text",
-            button_variant_sx(
-                ButtonVariant::Text,
-                &BUTTON_COLOR_VAR,
-                &BUTTON_CONTRAST_VAR,
-                &BUTTON_HOVER_VAR,
-            ),
-        )
+        .outline("none");
+
+    ButtonVariant::ALL
+        .iter()
+        .fold(base, |base, &variant| {
+            base.when(
+                variant.state_name(),
+                button_variant_sx(
+                    variant,
+                    &BUTTON_COLOR_VAR,
+                    &BUTTON_CONTRAST_VAR,
+                    &BUTTON_HOVER_VAR,
+                ),
+            )
+        })
         .when(
             "disabled",
             // pointer-events: none also stops the variant's :hover styles from
@@ -145,14 +132,6 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         // outline is suppressed above and re-added here just for :focus-visible.
         .focus_visible(focus_ring_sx())
 });
-
-pub(crate) fn variant_token(variant: ButtonVariant) -> &'static str {
-    match variant {
-        ButtonVariant::Filled => "filled",
-        ButtonVariant::Outlined => "outlined",
-        ButtonVariant::Text => "text",
-    }
-}
 
 fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> Variables {
     let contrast = contrast_color(base);
@@ -217,7 +196,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .unwrap_or_default()
         .with("disabled", disabled)
         .with("full-width", full_width)
-        .with(variant_token(variant), true)
+        .with(variant.state_name(), true)
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true);
 

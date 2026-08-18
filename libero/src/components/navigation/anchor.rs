@@ -13,6 +13,7 @@ use crate::{
 use super::InternalAnchor;
 
 str_enum! {
+    #[state_prefix = "underline"]
     pub enum AnchorUnderline {
         Always = "always",
         #[default]
@@ -22,14 +23,6 @@ str_enum! {
 }
 
 input_from_str!(AnchorUnderline);
-
-fn underline_token(underline: AnchorUnderline) -> &'static str {
-    match underline {
-        AnchorUnderline::Always => "underline-always",
-        AnchorUnderline::Hover => "underline-hover",
-        AnchorUnderline::Never => "underline-never",
-    }
-}
 
 fn underline_sx(underline: AnchorUnderline) -> Sx {
     match underline {
@@ -47,14 +40,8 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
 static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = TextDefaults::theme_vars().color("primary.6").margin("0");
 
-    [
-        AnchorUnderline::Always,
-        AnchorUnderline::Hover,
-        AnchorUnderline::Never,
-    ]
-    .into_iter()
-    .fold(base, |base, underline| {
-        base.when(underline_token(underline), underline_sx(underline))
+    AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
+        base.when(underline.state_name(), underline_sx(underline))
     })
 });
 
@@ -88,7 +75,7 @@ pub fn Anchor(props: AnchorProps) -> Element {
         .cloned()
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(underline_token(underline), true);
+        .with(underline.state_name(), true);
 
     rsx! {
         InternalAnchor {

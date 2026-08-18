@@ -36,16 +36,6 @@ str_enum! {
     }
 }
 
-impl FlexWrap {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Wrap => "wrap",
-            Self::NoWrap => "nowrap",
-            Self::WrapReverse => "wrap-reverse",
-        }
-    }
-}
-
 impl From<bool> for FlexWrap {
     fn from(value: bool) -> Self {
         if value { Self::Wrap } else { Self::NoWrap }

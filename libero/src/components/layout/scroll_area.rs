@@ -31,16 +31,8 @@ const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color
 /// period of inactivity, see `ScrollbarVisibility` doc.
 fn visibility_token(visibility: ScrollbarVisibility) -> &'static str {
     match visibility {
-        ScrollbarVisibility::Always => "visible-always",
-        ScrollbarVisibility::Hover | ScrollbarVisibility::Scroll => "visible-hover",
-        ScrollbarVisibility::Hidden => "visible-hidden",
-    }
-}
-
-fn size_token(size: ScrollbarSize) -> &'static str {
-    match size {
-        ScrollbarSize::Thin => "size-thin",
-        ScrollbarSize::Auto => "size-auto",
+        ScrollbarVisibility::Scroll => ScrollbarVisibility::Hover.state_name(),
+        visibility => visibility.state_name(),
     }
 }
 
@@ -65,35 +57,24 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         ))
         .when("visible-hidden", sx().scrollbar_width("none"));
 
-    [ScrollbarSize::Thin, ScrollbarSize::Auto]
-        .into_iter()
-        .fold(base, |acc, size| {
-            let token = size_token(size);
-            let width = size.as_str();
-            acc.when(
-                format!("visible-always && {token}"),
-                sx().scrollbar_width(width),
-            )
-            .when(
-                format!("visible-hover && {token}"),
-                sx().scrollbar_width("none")
-                    .hover(sx().scrollbar_width(width))
-                    .selector(":focus-within", sx().scrollbar_width(width)),
-            )
-        })
+    ScrollbarSize::ALL.iter().fold(base, |acc, &size| {
+        let token = size.state_name();
+        let width = size.as_str();
+        acc.when(
+            format!("visible-always && {token}"),
+            sx().scrollbar_width(width),
+        )
+        .when(
+            format!("visible-hover && {token}"),
+            sx().scrollbar_width("none")
+                .hover(sx().scrollbar_width(width))
+                .selector(":focus-within", sx().scrollbar_width(width)),
+        )
+    })
 });
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
     variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
-}
-
-fn axis_token(scrollbars: ScrollAxis) -> &'static str {
-    match scrollbars {
-        ScrollAxis::Vertical => "axis-vertical",
-        ScrollAxis::Horizontal => "axis-horizontal",
-        ScrollAxis::Both => "axis-both",
-        ScrollAxis::None => "axis-none",
-    }
 }
 
 /// Which edges (per axis) the last-seen scroll position was resting
@@ -251,9 +232,9 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .as_ref()
         .cloned()
         .unwrap_or_default()
-        .with(axis_token(scrollbars), true)
+        .with(scrollbars.state_name(), true)
         .with(visibility_token(visibility), true)
-        .with(size_token(size), true);
+        .with(size.state_name(), true);
 
     let variables = scroll_area_variables(props.scrollbar_color.as_ref());
 

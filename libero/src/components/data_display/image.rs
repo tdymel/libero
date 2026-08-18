@@ -12,6 +12,7 @@ use crate::{
 };
 
 str_enum! {
+    #[state_prefix = "fit"]
     pub enum ImageFit {
         Fill = "fill",
         Contain = "contain",
@@ -22,29 +23,7 @@ str_enum! {
     }
 }
 
-impl ImageFit {
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Fill => "fill",
-            Self::Contain => "contain",
-            Self::Cover => "cover",
-            Self::None => "none",
-            Self::ScaleDown => "scale-down",
-        }
-    }
-}
-
 input_from_str!(ImageFit);
-
-fn fit_token(fit: ImageFit) -> &'static str {
-    match fit {
-        ImageFit::Fill => "fit-fill",
-        ImageFit::Contain => "fit-contain",
-        ImageFit::Cover => "fit-cover",
-        ImageFit::None => "fit-none",
-        ImageFit::ScaleDown => "fit-scale-down",
-    }
-}
 
 const IMAGE_RADIUS_VAR: CssVar = CssVar::new("--lsx-image-radius");
 
@@ -154,7 +133,7 @@ pub fn Image(props: ImageProps) -> Element {
             .as_ref()
             .cloned()
             .unwrap_or_default()
-            .with(fit_token(fit), true);
+            .with(fit.state_name(), true);
         use_portal(None);
         return rsx! {
             Box {
@@ -173,7 +152,7 @@ pub fn Image(props: ImageProps) -> Element {
         };
     }
 
-    let img_states = states().with(fit_token(fit), true);
+    let img_states = states().with(fit.state_name(), true);
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
     let mut close_zoom = move || {

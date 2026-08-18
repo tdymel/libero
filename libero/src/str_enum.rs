@@ -1,8 +1,9 @@
 /// Declares a string-parsed prop enum: the enum itself, the standard
-/// derives, and `From<&str>`/`From<String>`.
+/// derives, `ALL`/`as_str`/`state_name`, and `From<&str>`/`From<String>`.
 ///
 /// An unrecognised string parses to the `#[default]` variant. Matching is
-/// case-insensitive; a variant may list several accepted spellings.
+/// case-insensitive; a variant may list several accepted spellings, the
+/// first of which is its canonical one (what `as_str` returns).
 ///
 /// ```ignore
 /// str_enum! {
@@ -16,17 +17,58 @@
 /// }
 /// ```
 ///
+/// `state_name` is the `data-state` token a component writes for the variant,
+/// and what its `sx().when(..)` block keys on. It is `as_str` by default; an
+/// optional `#[state_prefix = ".."]` prefixes it, for an enum whose bare
+/// names would collide with another enum's on the same element:
+///
+/// ```ignore
+/// str_enum! {
+///     #[state_prefix = "fit"]
+///     pub enum ImageFit {
+///         #[default]
+///         Fill = "fill",
+///         ScaleDown = "scale-down" | "scaledown",
+///     }
+/// }
+/// // ImageFit::ScaleDown.state_name() == "fit-scale-down"
+/// ```
+///
 /// Pair it with `input_from_str!` in the component that takes the enum as a
 /// prop - the two are separate because some of these live in `theme`, which
 /// can't reach up to `components::Input`.
 macro_rules! str_enum {
+    // Joins the prefix to each canonical spelling at compile time -
+    // `state_name` has to stay a `&'static str`, since that is what
+    // `States::with` takes.
+    (@state_name $name:ident; $prefix:literal; $($variant:ident => $pattern:literal,)+) => {
+        impl $name {
+            /// This variant's `data-state` token.
+            pub const fn state_name(self) -> &'static str {
+                match self {
+                    $(Self::$variant => concat!($prefix, "-", $pattern),)+
+                }
+            }
+        }
+    };
+
+    (@state_name $name:ident; ; $($variant:ident => $pattern:literal,)+) => {
+        impl $name {
+            /// This variant's `data-state` token.
+            pub const fn state_name(self) -> &'static str {
+                self.as_str()
+            }
+        }
+    };
+
     (
         $(#[doc = $enum_doc:expr])*
+        $(#[state_prefix = $prefix:literal])?
         pub enum $name:ident {
             $(
                 $(#[doc = $variant_doc:expr])*
                 $(#[default $($default:tt)?])?
-                $variant:ident = $($pattern:literal)|+,
+                $variant:ident = $pattern:literal $(| $alias:literal)*,
             )+
         }
     ) => {
@@ -40,10 +82,23 @@ macro_rules! str_enum {
             )+
         }
 
+        impl $name {
+            /// Every variant, in declaration order.
+            pub const ALL: &'static [Self] = &[$(Self::$variant,)+];
+
+            /// This variant's canonical spelling - the first of its accepted
+            /// patterns.
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $pattern,)+
+                }
+            }
+        }
+
         impl From<&str> for $name {
             fn from(value: &str) -> Self {
                 match value.to_lowercase().as_str() {
-                    $($($pattern)|+ => Self::$variant,)+
+                    $($pattern $(| $alias)* => Self::$variant,)+
                     _ => Self::default(),
                 }
             }
@@ -54,6 +109,8 @@ macro_rules! str_enum {
                 Self::from(value.as_str())
             }
         }
+
+        str_enum!(@state_name $name; $($prefix)?; $($variant => $pattern,)+);
     };
 }
 
@@ -61,7 +118,78 @@ pub(crate) use str_enum;
 
 #[cfg(test)]
 mod tests {
-    use crate::components::{ButtonVariant, IconVariant};
+    use crate::components::{
+        AnchorUnderline, ButtonVariant, DrawerAnchor, DrawerVariant, FlexDirection, FlexWrap,
+        HeaderPosition, IconVariant, ImageFit, LabelPosition, Orientation,
+    };
+    use crate::theme::{Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
+
+    /// Every `str_enum!` type, so the round-trip check below actually covers
+    /// them all - add a new one here when you declare it.
+    macro_rules! for_every_str_enum {
+        ($check:ident) => {
+            $check!(AnchorUnderline);
+            $check!(ButtonVariant);
+            $check!(DrawerAnchor);
+            $check!(DrawerVariant);
+            $check!(FlexDirection);
+            $check!(FlexWrap);
+            $check!(HeaderPosition);
+            $check!(IconVariant);
+            $check!(ImageFit);
+            $check!(LabelPosition);
+            $check!(Orientation);
+            $check!(Placement);
+            $check!(QrRobustness);
+            $check!(ScrollAxis);
+            $check!(ScrollbarSize);
+            $check!(ScrollbarVisibility);
+        };
+    }
+
+    /// The guard that hand-written `as_str`/`*_token` copies used to need and
+    /// never had: a canonical spelling that no longer parses back to its own
+    /// variant means the enum and its string form have drifted apart.
+    #[test]
+    fn every_canonical_spelling_parses_back_to_its_own_variant() {
+        macro_rules! check {
+            ($ty:ty) => {
+                for &variant in <$ty>::ALL {
+                    assert_eq!(
+                        <$ty>::from(variant.as_str()),
+                        variant,
+                        concat!(
+                            stringify!($ty),
+                            "::{:?} does not round-trip through as_str()"
+                        ),
+                        variant,
+                    );
+                }
+            };
+        }
+
+        for_every_str_enum!(check);
+    }
+
+    /// `ALL` is what the `sx()` folds iterate, so a missing variant would
+    /// silently drop that variant's whole `when(..)` block.
+    #[test]
+    fn all_lists_every_variant_exactly_once() {
+        macro_rules! check {
+            ($ty:ty) => {
+                let mut seen = <$ty>::ALL.to_vec();
+                let count = seen.len();
+                seen.dedup();
+                assert_eq!(
+                    seen.len(),
+                    count,
+                    concat!(stringify!($ty), "::ALL has a duplicate")
+                );
+            };
+        }
+
+        for_every_str_enum!(check);
+    }
 
     #[test]
     fn parses_case_insensitively_and_accepts_aliases() {
@@ -73,5 +201,17 @@ mod tests {
     fn an_unknown_string_falls_back_to_the_default_variant() {
         assert_eq!(IconVariant::from("nonsense"), IconVariant::default());
         assert_eq!(ButtonVariant::from(""), ButtonVariant::Outlined);
+    }
+
+    #[test]
+    fn as_str_is_the_canonical_spelling_not_an_alias() {
+        assert_eq!(ImageFit::ScaleDown.as_str(), "scale-down");
+        assert_eq!(IconVariant::Outlined.as_str(), "outlined");
+    }
+
+    #[test]
+    fn state_name_is_as_str_unless_a_prefix_is_declared() {
+        assert_eq!(IconVariant::Outlined.state_name(), "outlined");
+        assert_eq!(ImageFit::ScaleDown.state_name(), "fit-scale-down");
     }
 }
