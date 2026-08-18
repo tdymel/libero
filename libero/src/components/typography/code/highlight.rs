@@ -212,12 +212,15 @@ fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &
             replacement.push(Token::Plain(after));
         }
 
+        let has_after = !after.is_empty();
         let inserted = replacement.len();
         tokens.splice(index..=index, replacement);
-        // Skip past what we just inserted (the leading `before` slice, if
-        // any, can't contain an earlier match of this same pattern - `find`
-        // already returned the leftmost one).
-        index += inserted;
+        // Skip past the leading `before` slice and the tagged token we just
+        // inserted (`before` can't contain an earlier match of this same
+        // pattern - `find` already returned the leftmost one) but land back
+        // on `after`, if any, so later matches of this same pattern still
+        // get found there.
+        index += inserted - if has_after { 1 } else { 0 };
     }
 }
 
@@ -474,6 +477,15 @@ mod tests {
             spans
                 .iter()
                 .any(|(text, class)| text == "class" && *class == Some("lsx-tok-attribute"))
+        );
+        // Both the opening and closing tag name must be classified, not just
+        // the first occurrence in the source.
+        assert_eq!(
+            spans
+                .iter()
+                .filter(|(text, class)| *text == "div" && *class == Some("lsx-tok-tag"))
+                .count(),
+            2
         );
     }
 
