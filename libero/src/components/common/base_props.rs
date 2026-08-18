@@ -21,11 +21,12 @@
 /// }
 /// ```
 ///
-/// A component that always renders one specific tag (unlike `Box`, which
-/// is polymorphic across many) can also ask for that tag's own
-/// attributes - e.g. `option`'s `disabled`/`selected`, not part of
-/// `GlobalAttributes` - via a leading `extends(...)` clause, instead of
-/// hand-wiring them the way `Box` has to:
+/// A component can also ask for a specific tag's own attributes - e.g.
+/// `option`'s `disabled`/`selected`, not part of `GlobalAttributes` - via a
+/// leading `extends(...)` clause. Listing several tags works too (`Box`
+/// extends `img`, `a` and `button`), but an attribute name two of them share
+/// is ambiguous at the call site; declare it as an ordinary field to
+/// disambiguate.
 ///
 /// ```ignore
 /// base_props! {
