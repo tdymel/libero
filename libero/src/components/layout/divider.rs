@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, Input, Orientation, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, DividerDefaults, SizeCss},
+    theme::{ColorCss, ColorShade, ColorValue, CssVar, DividerDefaults, SizeCss},
 };
 
 fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
@@ -52,33 +52,39 @@ impl From<String> for Input<LabelPosition> {
     }
 }
 
-const DIVIDER_COLOR_VAR: &str = "--lsx-divider-color";
-const DIVIDER_SPACING_VAR: &str = "--lsx-divider-spacing";
+const DIVIDER_COLOR_VAR: CssVar = CssVar::new("--lsx-divider-color");
+const DIVIDER_SPACING_VAR: CssVar = CssVar::new("--lsx-divider-spacing");
+
+/// The caller's `color` if they set one, else the theme's grey-4.
+fn divider_color() -> String {
+    DIVIDER_COLOR_VAR.value_or(ColorCss::GREY.value(ColorShade::S4))
+}
+
+/// The caller's `spacing` if they set one, else none.
+fn divider_spacing() -> String {
+    DIVIDER_SPACING_VAR.value_or(0)
+}
 
 static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")
         .border_width("0")
         .border_style("solid")
-        .border_color(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"))
+        .border_color(divider_color())
         .when(
             "vertical",
-            sx().border_right(format!(
-                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"
-            ))
-            .align_self("stretch")
-            .margin_left(format!("var({DIVIDER_SPACING_VAR}, 0)"))
-            .margin_right(format!("var({DIVIDER_SPACING_VAR}, 0)"))
-            .and(DividerDefaults::vertical_sx()),
+            sx().border_right(format!("1px solid {}", divider_color()))
+                .align_self("stretch")
+                .margin_left(divider_spacing())
+                .margin_right(divider_spacing())
+                .and(DividerDefaults::vertical_sx()),
         )
         .when(
             "horizontal",
-            sx().border_bottom(format!(
-                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"
-            ))
-            .height("1px")
-            .margin_top(format!("var({DIVIDER_SPACING_VAR}, 0)"))
-            .margin_bottom(format!("var({DIVIDER_SPACING_VAR}, 0)"))
-            .and(DividerDefaults::horizontal_sx()),
+            sx().border_bottom(format!("1px solid {}", divider_color()))
+                .height("1px")
+                .margin_top(divider_spacing())
+                .margin_bottom(divider_spacing())
+                .and(DividerDefaults::horizontal_sx()),
         )
         .when(
             "label",
@@ -88,9 +94,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .color("grey.9")
                 .selector(
                     "&::before, &::after",
-                    sx().content("\"\"")
-                        .flex("1")
-                        .background(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))")),
+                    sx().content("\"\"").flex("1").background(divider_color()),
                 ),
         )
         .when(

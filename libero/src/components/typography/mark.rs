@@ -4,7 +4,7 @@ use crate::{
     components::{Box, Input, States, Variables, common::base_props, variables},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue},
+    theme::{Color, ColorShade, ColorValue, CssVar},
 };
 
 // A light shade keeps the highlight a background tint rather than a solid
@@ -13,7 +13,7 @@ use crate::{
 // shade itself is fixed here.
 const MARK_TINT_SHADE: ColorShade = ColorShade::S1;
 
-const MARK_BACKGROUND_VAR: &str = "--lsx-mark-background";
+const MARK_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-mark-background");
 
 // A bare theme color name (e.g. "primary") has no shade of its own, so it's
 // resolved to our own tint shade here rather than the sx pipeline's generic
@@ -40,7 +40,7 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
 // sets it.
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().color("inherit")
-        .background(format!("var({MARK_BACKGROUND_VAR})"))
+        .background(MARK_BACKGROUND_VAR.value())
 });
 
 fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {

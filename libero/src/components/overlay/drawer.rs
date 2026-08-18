@@ -8,11 +8,10 @@ use crate::{
     hooks::use_css,
     hooks::use_portal,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{DRAWER_SIZE, Size},
+    theme::{ColorCss, ColorShade, CssVar, DRAWER_SIZE, Size},
 };
 
-const DRAWER_SIZE_VAR: &str = "--lsx-drawer-size-override";
-const DRAWER_Z_INDEX_VAR: &str = "--lsx-drawer-z-index";
+const DRAWER_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-drawer-z-index");
 
 // `Static` is documented as usable for a sidebar, which is almost always a
 // flex item that needs to not get squeezed and to scroll its own content
@@ -20,28 +19,27 @@ const DRAWER_Z_INDEX_VAR: &str = "--lsx-drawer-z-index";
 // `ScrollArea`'s job (see the component below), this only sizes the panel
 // itself.
 static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
+    let size = DRAWER_SIZE.override_var().value_or("auto");
+    let border = format!("1px solid {}", ColorCss::GREY.value(ColorShade::S4));
+
     sx().flex_shrink("0")
         .min_height("0")
-        .z_index(format!("var({DRAWER_Z_INDEX_VAR}, auto)"))
+        .z_index(DRAWER_Z_INDEX_VAR.value_or("auto"))
         .when(
             "anchor-left",
-            sx().width(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_right("1px solid var(--lsx-grey-4)"),
+            sx().width(size.clone()).border_right(border.clone()),
         )
         .when(
             "anchor-right",
-            sx().width(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_left("1px solid var(--lsx-grey-4)"),
+            sx().width(size.clone()).border_left(border.clone()),
         )
         .when(
             "anchor-top",
-            sx().height(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_bottom("1px solid var(--lsx-grey-4)"),
+            sx().height(size.clone()).border_bottom(border.clone()),
         )
         .when(
             "anchor-bottom",
-            sx().height(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_top("1px solid var(--lsx-grey-4)"),
+            sx().height(size.clone()).border_top(border.clone()),
         )
 });
 
@@ -50,31 +48,15 @@ static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
 // replacing it). Edge-docking itself is `Float`'s job (see `Drawer`) - this
 // only sizes the panel to fill the slot `Float` anchors it into.
 static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
-    let default_size = DRAWER_SIZE.value(Size::Md);
+    let size = DRAWER_SIZE.overridable(Size::Md);
 
     sx().margin("0")
         .border_radius("0")
         .max_width("none")
-        .when(
-            "anchor-left",
-            sx().height("100%")
-                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
-        )
-        .when(
-            "anchor-right",
-            sx().height("100%")
-                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
-        )
-        .when(
-            "anchor-top",
-            sx().width("100%")
-                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
-        )
-        .when(
-            "anchor-bottom",
-            sx().width("100%")
-                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
-        )
+        .when("anchor-left", sx().height("100%").width(size.clone()))
+        .when("anchor-right", sx().height("100%").width(size.clone()))
+        .when("anchor-top", sx().width("100%").height(size.clone()))
+        .when("anchor-bottom", sx().width("100%").height(size.clone()))
 });
 
 /// Maps a `DrawerAnchor` to a corner `Float` placement plus the one extra
@@ -171,7 +153,7 @@ impl From<String> for Input<DrawerAnchor> {
 fn drawer_variables(props: &DrawerProps) -> Variables {
     variables()
         .with(
-            DRAWER_SIZE_VAR,
+            DRAWER_SIZE.override_var(),
             props
                 .size
                 .as_ref()

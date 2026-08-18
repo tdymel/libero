@@ -8,7 +8,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, Size},
+    theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, Color, ColorShade, ColorValue, CssVar, Size},
 };
 
 // `Input<NavigationTarget>` rather than a bare required field (like
@@ -133,35 +133,35 @@ pub(crate) fn hover_color(
     }
 }
 
-pub(crate) const BUTTON_COLOR_VAR: &str = "--lsx-button-color";
-pub(crate) const BUTTON_CONTRAST_VAR: &str = "--lsx-button-contrast";
-pub(crate) const BUTTON_HOVER_VAR: &str = "--lsx-button-hover";
+pub(crate) const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
+pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
+pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
 
 /// Structural chrome for `variant`, referencing `color_var`/`contrast_var`/
 /// `hover_var` (a `var()` name each, not a resolved value) - shared with
 /// `ActionIcon`, which reuses this exact shape under its own var names.
 pub(crate) fn button_variant_sx(
     variant: ButtonVariant,
-    color_var: &str,
-    contrast_var: &str,
-    hover_var: &str,
+    color_var: &CssVar,
+    contrast_var: &CssVar,
+    hover_var: &CssVar,
 ) -> Sx {
     match variant {
         ButtonVariant::Filled => sx()
-            .background(format!("var({color_var})"))
-            .border_color(format!("var({color_var})"))
-            .color(format!("var({contrast_var}, inherit)"))
-            .hover(sx().background(format!("var({hover_var}, var({color_var}))"))),
+            .background(color_var.value())
+            .border_color(color_var.value())
+            .color(contrast_var.value_or("inherit"))
+            .hover(sx().background(hover_var.value_or(color_var.value()))),
         ButtonVariant::Outlined => sx()
             .background("transparent")
-            .border_color(format!("var({color_var})"))
-            .color(format!("var({color_var})"))
-            .hover(sx().background(format!("var({hover_var}, transparent)"))),
+            .border_color(color_var.value())
+            .color(color_var.value())
+            .hover(sx().background(hover_var.value_or("transparent"))),
         ButtonVariant::Text => sx()
             .background("transparent")
             .border_color("transparent")
-            .color(format!("var({color_var})"))
-            .hover(sx().background(format!("var({hover_var}, transparent)"))),
+            .color(color_var.value())
+            .hover(sx().background(hover_var.value_or("transparent"))),
     }
 }
 
@@ -184,27 +184,27 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
             "filled",
             button_variant_sx(
                 ButtonVariant::Filled,
-                BUTTON_COLOR_VAR,
-                BUTTON_CONTRAST_VAR,
-                BUTTON_HOVER_VAR,
+                &BUTTON_COLOR_VAR,
+                &BUTTON_CONTRAST_VAR,
+                &BUTTON_HOVER_VAR,
             ),
         )
         .when(
             "outlined",
             button_variant_sx(
                 ButtonVariant::Outlined,
-                BUTTON_COLOR_VAR,
-                BUTTON_CONTRAST_VAR,
-                BUTTON_HOVER_VAR,
+                &BUTTON_COLOR_VAR,
+                &BUTTON_CONTRAST_VAR,
+                &BUTTON_HOVER_VAR,
             ),
         )
         .when(
             "text",
             button_variant_sx(
                 ButtonVariant::Text,
-                BUTTON_COLOR_VAR,
-                BUTTON_CONTRAST_VAR,
-                BUTTON_HOVER_VAR,
+                &BUTTON_COLOR_VAR,
+                &BUTTON_CONTRAST_VAR,
+                &BUTTON_HOVER_VAR,
             ),
         )
         .when(

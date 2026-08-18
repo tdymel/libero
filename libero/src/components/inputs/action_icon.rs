@@ -9,16 +9,14 @@ use crate::{
         variables,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade, ICON_SIZE, SizeCss},
+    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade, CssVar, ICON_SIZE, SizeCss},
 };
 
 use super::button::{BUTTON_HOVER_TINT_SHADE, hover_color};
 
-const ACTION_ICON_COLOR_VAR: &str = "--lsx-action-icon-color";
-const ACTION_ICON_CONTRAST_VAR: &str = "--lsx-action-icon-contrast";
-const ACTION_ICON_HOVER_VAR: &str = "--lsx-action-icon-hover";
-const ACTION_ICON_SIZE_VAR: &str = "--lsx-action-icon-size-override";
-const ACTION_ICON_RADIUS_VAR: &str = "--lsx-action-icon-radius-override";
+const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
+const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
+const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
 
 /// `Icon`'s own variant chrome plus a hover, referencing `hover_var` (a
 /// `var()` name, not a resolved value) - mirrors `Button`'s own hover:
@@ -27,17 +25,17 @@ const ACTION_ICON_RADIUS_VAR: &str = "--lsx-action-icon-radius-override";
 /// plain, hover-less `Icon` whose variant styling this builds on.
 fn action_icon_variant_sx(
     variant: IconVariant,
-    color_var: &str,
-    contrast_var: &str,
-    hover_var: &str,
+    color_var: &CssVar,
+    contrast_var: &CssVar,
+    hover_var: &CssVar,
 ) -> Sx {
     let hover_fallback = match variant {
-        IconVariant::Filled => format!("var({color_var})"),
+        IconVariant::Filled => color_var.value(),
         IconVariant::Outlined | IconVariant::Transparent => "transparent".to_string(),
     };
 
     icon_variant_sx(variant, color_var, contrast_var)
-        .hover(sx().background(format!("var({hover_var}, {hover_fallback})")))
+        .hover(sx().background(hover_var.value_or(hover_fallback)))
 }
 
 // `Icon`'s own sizing/svg-fit, plus the resets a native `<button>` needs
@@ -62,44 +60,35 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .cursor("pointer")
         .outline("none")
-        .width(format!(
-            "var({ACTION_ICON_SIZE_VAR}, {})",
-            ACTION_ICON_SIZE.value()
-        ))
-        .height(format!(
-            "var({ACTION_ICON_SIZE_VAR}, {})",
-            ACTION_ICON_SIZE.value()
-        ))
-        .border_radius(format!(
-            "var({ACTION_ICON_RADIUS_VAR}, {})",
-            ACTION_ICON_RADIUS.value()
-        ))
+        .width(ACTION_ICON_SIZE.overridable())
+        .height(ACTION_ICON_SIZE.overridable())
+        .border_radius(ACTION_ICON_RADIUS.overridable())
         .selector("& svg", sx().width("100%").height("100%"))
         .when(
             "filled",
             action_icon_variant_sx(
                 IconVariant::Filled,
-                ACTION_ICON_COLOR_VAR,
-                ACTION_ICON_CONTRAST_VAR,
-                ACTION_ICON_HOVER_VAR,
+                &ACTION_ICON_COLOR_VAR,
+                &ACTION_ICON_CONTRAST_VAR,
+                &ACTION_ICON_HOVER_VAR,
             ),
         )
         .when(
             "outlined",
             action_icon_variant_sx(
                 IconVariant::Outlined,
-                ACTION_ICON_COLOR_VAR,
-                ACTION_ICON_CONTRAST_VAR,
-                ACTION_ICON_HOVER_VAR,
+                &ACTION_ICON_COLOR_VAR,
+                &ACTION_ICON_CONTRAST_VAR,
+                &ACTION_ICON_HOVER_VAR,
             ),
         )
         .when(
             "transparent",
             action_icon_variant_sx(
                 IconVariant::Transparent,
-                ACTION_ICON_COLOR_VAR,
-                ACTION_ICON_CONTRAST_VAR,
-                ACTION_ICON_HOVER_VAR,
+                &ACTION_ICON_COLOR_VAR,
+                &ACTION_ICON_CONTRAST_VAR,
+                &ACTION_ICON_HOVER_VAR,
             ),
         )
         .when(
@@ -113,11 +102,11 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
 fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> Variables {
     let result = variables()
         .with(
-            ACTION_ICON_SIZE_VAR,
+            ACTION_ICON_SIZE.override_var(),
             props.size.as_ref().and_then(|v| v.resolve(Some(ICON_SIZE))),
         )
         .with(
-            ACTION_ICON_RADIUS_VAR,
+            ACTION_ICON_RADIUS.override_var(),
             props
                 .radius
                 .as_ref()

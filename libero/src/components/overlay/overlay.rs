@@ -3,14 +3,15 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, Input, States, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::CssVar,
 };
 
 const OVERLAY_Z_INDEX: &str = "100";
 const OVERLAY_OPACITY: f32 = 0.6;
 
-const OVERLAY_OPACITY_VAR: &str = "--lsx-overlay-opacity";
-const OVERLAY_Z_INDEX_VAR: &str = "--lsx-overlay-z-index";
-const OVERLAY_BLUR_VAR: &str = "--lsx-overlay-blur";
+const OVERLAY_OPACITY_VAR: CssVar = CssVar::new("--lsx-overlay-opacity");
+const OVERLAY_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-overlay-z-index");
+const OVERLAY_BLUR_VAR: CssVar = CssVar::new("--lsx-overlay-blur");
 
 static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
@@ -18,11 +19,12 @@ static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("center")
         .justify_content("center")
-        .z_index(format!("var({OVERLAY_Z_INDEX_VAR}, {OVERLAY_Z_INDEX})"))
+        .z_index(OVERLAY_Z_INDEX_VAR.value_or(OVERLAY_Z_INDEX))
         .background(format!(
-            "rgba(0, 0, 0, var({OVERLAY_OPACITY_VAR}, {OVERLAY_OPACITY}))"
+            "rgba(0, 0, 0, {})",
+            OVERLAY_OPACITY_VAR.value_or(OVERLAY_OPACITY)
         ))
-        .backdrop_filter(format!("var({OVERLAY_BLUR_VAR}, none)"))
+        .backdrop_filter(OVERLAY_BLUR_VAR.value_or("none"))
 });
 
 base_props! {

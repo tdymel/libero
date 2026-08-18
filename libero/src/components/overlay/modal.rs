@@ -5,14 +5,15 @@ use crate::{
     context::ModalContext,
     hooks::use_modal_z_index,
     sx::{StaticSx, Sx, sx},
+    theme::CssVar,
 };
 
-const MODAL_Z_INDEX_VAR: &str = "--lsx-modal-z-index";
+const MODAL_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-modal-z-index");
 
 static MODAL_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
-        .z_index(format!("var({MODAL_Z_INDEX_VAR})"))
+        .z_index(MODAL_Z_INDEX_VAR.value())
 });
 
 // Fixed + inset (not just relative) so it spans the full viewport itself:

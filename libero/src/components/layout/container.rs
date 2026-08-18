@@ -9,40 +9,28 @@ use crate::{
     theme::{CONTAINER_GUTTERS, CONTAINER_SIZE, SizeCss},
 };
 
-const CONTAINER_SIZE_VAR: &str = "--lsx-container-size-override";
-const CONTAINER_GUTTERS_VAR: &str = "--lsx-container-gutters-override";
-
 static CONTAINER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .height("100%")
         .margin_left("auto")
         .margin_right("auto")
-        .max_width(format!(
-            "var({CONTAINER_SIZE_VAR}, {})",
-            CONTAINER_SIZE.value()
-        ))
-        .padding_left(format!(
-            "var({CONTAINER_GUTTERS_VAR}, {})",
-            CONTAINER_GUTTERS.value()
-        ))
-        .padding_right(format!(
-            "var({CONTAINER_GUTTERS_VAR}, {})",
-            CONTAINER_GUTTERS.value()
-        ))
+        .max_width(CONTAINER_SIZE.overridable())
+        .padding_left(CONTAINER_GUTTERS.overridable())
+        .padding_right(CONTAINER_GUTTERS.overridable())
         .focus_visible(focus_ring_sx())
 });
 
 fn container_variables(props: &ContainerProps) -> Variables {
     variables()
         .with(
-            CONTAINER_SIZE_VAR,
+            CONTAINER_SIZE.override_var(),
             props
                 .size
                 .as_ref()
                 .and_then(|v| v.resolve(Some(SizeCss::BREAKPOINT))),
         )
         .with(
-            CONTAINER_GUTTERS_VAR,
+            CONTAINER_GUTTERS.override_var(),
             props
                 .gutters
                 .as_ref()

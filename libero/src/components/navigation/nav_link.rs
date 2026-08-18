@@ -4,7 +4,7 @@ use crate::{
     components::{Box, Input, States, Variables, common::base_props, variables},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, Size, SizeCss},
+    theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
 };
 
 use super::InternalAnchor;
@@ -22,7 +22,7 @@ fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     }
 }
 
-const NAV_LINK_ACTIVE_BACKGROUND_VAR: &str = "--lsx-nav-link-active-background";
+const NAV_LINK_ACTIVE_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-nav-link-active-background");
 
 fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     let base = nav_link_color(color).unwrap_or(default_color);
@@ -53,8 +53,8 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .hover(sx().background("grey.2"))
         .when(
             "active",
-            sx().background(format!("var({NAV_LINK_ACTIVE_BACKGROUND_VAR})"))
-                .hover(sx().background(format!("var({NAV_LINK_ACTIVE_BACKGROUND_VAR})"))),
+            sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())
+                .hover(sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())),
         )
         .when(
             "disabled",

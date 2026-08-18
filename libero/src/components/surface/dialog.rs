@@ -4,11 +4,10 @@ use crate::{
     components::{Box, Input, States, Variables, common::base_props, variables},
     context::ModalContext,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{DIALOG_SIZE, Size, SizeCss},
+    theme::{CssVar, DIALOG_SIZE, Size, SizeCss},
 };
 
-const DIALOG_RADIUS_VAR: &str = "--lsx-dialog-radius";
-const DIALOG_SIZE_VAR: &str = "--lsx-dialog-size-override";
+const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
 
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().background("white")
@@ -18,16 +17,10 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         // A flex item shrinks to its content by default, so without an
         // explicit width, `max-width`/`size` only caps rather than fills.
         .width("100%")
-        .max_width(format!(
-            "var({DIALOG_SIZE_VAR}, {})",
-            DIALOG_SIZE.value(Size::Md)
-        ))
+        .max_width(DIALOG_SIZE.overridable(Size::Md))
         .margin("md")
         .padding("lg")
-        .border_radius(format!(
-            "var({DIALOG_RADIUS_VAR}, {})",
-            SizeCss::RADIUS.value(Size::Md)
-        ))
+        .border_radius(DIALOG_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Md)))
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
 });
 
@@ -41,7 +34,7 @@ fn dialog_variables(props: &DialogProps) -> Variables {
                 .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
         )
         .with(
-            DIALOG_SIZE_VAR,
+            DIALOG_SIZE.override_var(),
             props
                 .size
                 .as_ref()

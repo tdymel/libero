@@ -9,16 +9,14 @@ use crate::{
     theme::ASPECT_RATIO,
 };
 
-const ASPECT_RATIO_VAR: &str = "--lsx-aspect-ratio-override";
-
 static ASPECT_RATIO_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().aspect_ratio(format!("var({ASPECT_RATIO_VAR}, {})", ASPECT_RATIO.value()))
+    sx().aspect_ratio(ASPECT_RATIO.overridable())
         .overflow("hidden")
         .selector("& > *", sx().width("100%").height("100%"))
 });
 
 fn aspect_ratio_variables(ratio: Option<&f32>) -> Variables {
-    variables().with(ASPECT_RATIO_VAR, ratio.map(f32::to_string))
+    variables().with(ASPECT_RATIO.override_var(), ratio.map(f32::to_string))
 }
 
 base_props! {

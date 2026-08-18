@@ -1,6 +1,6 @@
 use super::{Property, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
 use crate::css::canonical_condition;
-use crate::tokens::Size;
+use crate::tokens::{CssVar, Size};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -16,6 +16,13 @@ impl Sx {
 
     pub fn with(self, property: impl Into<String>, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_declaration(SxPropertyKey::parse(property), value.into())
+    }
+
+    /// Declares a CSS custom property inside this rule - the in-stylesheet
+    /// counterpart to [`Variables`](crate::components::Variables), which
+    /// sets one per instance on the `style` attribute.
+    pub fn var(self, name: CssVar, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with(name.name().to_string(), value)
     }
 
     pub(super) fn with_known_property(

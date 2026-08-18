@@ -7,7 +7,7 @@ use crate::{
     },
     hooks::{use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ScrollAxis, ScrollbarSize, ScrollbarVisibility},
+    theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
 };
 
 impl From<&str> for Input<ScrollAxis> {
@@ -54,7 +54,7 @@ pub enum ScrollPositionEvent {
     End(f64, f64),
 }
 
-const SCROLL_AREA_THUMB_VAR: &str = "--lsx-scroll-area-thumb-color";
+const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color");
 
 /// Resolves `Scroll` to the same behavior as `Hover` - no idle-timeout
 /// primitive exists in this codebase yet to fade the scrollbar out after a
@@ -90,7 +90,8 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("axis-both", sx().overflow_x("auto").overflow_y("auto"))
         .when("axis-none", sx().overflow_x("hidden").overflow_y("hidden"))
         .scrollbar_color(format!(
-            "var({SCROLL_AREA_THUMB_VAR}, var(--lsx-grey-5)) transparent"
+            "{} transparent",
+            SCROLL_AREA_THUMB_VAR.value_or(ColorCss::GREY.value(ColorShade::S5))
         ))
         .when("visible-hidden", sx().scrollbar_width("none"));
 

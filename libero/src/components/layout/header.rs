@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, HEADER_HEIGHT, Size},
+    theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, Size},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -73,26 +73,22 @@ fn header_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
     }
 }
 
-const HEADER_HEIGHT_VAR: &str = "--lsx-header-height-override";
-const HEADER_BACKGROUND_VAR: &str = "--lsx-header-background";
-const HEADER_COLOR_VAR: &str = "--lsx-header-color";
-const HEADER_Z_INDEX_VAR: &str = "--lsx-header-z-index";
+const HEADER_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-header-background");
+const HEADER_COLOR_VAR: CssVar = CssVar::new("--lsx-header-color");
+const HEADER_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-header-z-index");
 
 static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
         .width("100%")
-        .height(format!(
-            "var({HEADER_HEIGHT_VAR}, {})",
-            HEADER_HEIGHT.value(Size::Md)
-        ))
+        .height(HEADER_HEIGHT.overridable(Size::Md))
         .padding_left("md")
         .padding_right("md")
-        .background(format!("var({HEADER_BACKGROUND_VAR}, white)"))
-        .color(format!("var({HEADER_COLOR_VAR}, inherit)"))
+        .background(HEADER_BACKGROUND_VAR.value_or("white"))
+        .color(HEADER_COLOR_VAR.value_or("inherit"))
         .border_bottom("1px solid")
         .border_bottom_color("grey.4")
-        .z_index(format!("var({HEADER_Z_INDEX_VAR}, auto)"))
+        .z_index(HEADER_Z_INDEX_VAR.value_or("auto"))
         .position("sticky")
         .top("0")
         .when("static", sx().position("static"))
@@ -105,7 +101,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
 
     variables()
         .with(
-            HEADER_HEIGHT_VAR,
+            HEADER_HEIGHT.override_var(),
             props
                 .size
                 .as_ref()

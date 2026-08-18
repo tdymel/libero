@@ -6,20 +6,15 @@ use crate::{
     theme::CENTER_DISPLAY,
 };
 
-const CENTER_DISPLAY_VAR: &str = "--lsx-center-display-override";
-
 static CENTER_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().display(format!(
-        "var({CENTER_DISPLAY_VAR}, {})",
-        CENTER_DISPLAY.value()
-    ))
-    .align_items("center")
-    .justify_content("center")
+    sx().display(CENTER_DISPLAY.overridable())
+        .align_items("center")
+        .justify_content("center")
 });
 
 fn center_variables(props: &CenterProps) -> Variables {
     variables().with(
-        CENTER_DISPLAY_VAR,
+        CENTER_DISPLAY.override_var(),
         props
             .inline
             .map(|inline| if inline { "inline-flex" } else { "flex" }.to_string()),

@@ -4,7 +4,7 @@ use crate::{
     components::{Box, Input, States, Variables, common::base_props, variables},
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX},
+    theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX},
 };
 
 pub use crate::theme::Placement;
@@ -21,33 +21,31 @@ impl From<String> for Input<Placement> {
     }
 }
 
-const FLOAT_OFFSET_X_VAR: &str = "--lsx-float-offset-x";
-const FLOAT_OFFSET_Y_VAR: &str = "--lsx-float-offset-y";
-const FLOAT_Z_INDEX_VAR: &str = "--lsx-float-z-index-override";
-const FLOAT_TRANSLATE_X_VAR: &str = "--lsx-float-translate-x";
-const FLOAT_TRANSLATE_Y_VAR: &str = "--lsx-float-translate-y";
+const FLOAT_OFFSET_X_VAR: CssVar = CssVar::new("--lsx-float-offset-x");
+const FLOAT_OFFSET_Y_VAR: CssVar = CssVar::new("--lsx-float-offset-y");
+const FLOAT_TRANSLATE_X_VAR: CssVar = CssVar::new("--lsx-float-translate-x");
+const FLOAT_TRANSLATE_Y_VAR: CssVar = CssVar::new("--lsx-float-translate-y");
 
 static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
-        .z_index(format!(
-            "var({FLOAT_Z_INDEX_VAR}, {})",
-            FLOAT_Z_INDEX.value()
-        ))
+        .z_index(FLOAT_Z_INDEX.overridable())
         .transform(format!(
-            "translate(calc(var({FLOAT_TRANSLATE_X_VAR}, 0%) + var({FLOAT_OFFSET_X_VAR}, {})), calc(var({FLOAT_TRANSLATE_Y_VAR}, 0%) + var({FLOAT_OFFSET_Y_VAR}, {})))",
-            FLOAT_OFFSET_X.value(),
-            FLOAT_OFFSET_Y.value(),
+            "translate(calc({} + {}), calc({} + {}))",
+            FLOAT_TRANSLATE_X_VAR.value_or("0%"),
+            FLOAT_OFFSET_X_VAR.value_or(FLOAT_OFFSET_X.value()),
+            FLOAT_TRANSLATE_Y_VAR.value_or("0%"),
+            FLOAT_OFFSET_Y_VAR.value_or(FLOAT_OFFSET_Y.value()),
         ))
         .when("vertical-top", sx().top("0"))
         .when(
             "vertical-center",
-            sx().top("50%").with(FLOAT_TRANSLATE_Y_VAR, "-50%"),
+            sx().top("50%").var(FLOAT_TRANSLATE_Y_VAR, "-50%"),
         )
         .when("vertical-bottom", sx().bottom("0"))
         .when("horizontal-start", sx().left("0"))
         .when(
             "horizontal-center",
-            sx().left("50%").with(FLOAT_TRANSLATE_X_VAR, "-50%"),
+            sx().left("50%").var(FLOAT_TRANSLATE_X_VAR, "-50%"),
         )
         .when("horizontal-end", sx().right("0"))
 });
@@ -63,7 +61,7 @@ fn float_variables(props: &FloatProps) -> Variables {
             props.offset_y.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
-            FLOAT_Z_INDEX_VAR,
+            FLOAT_Z_INDEX.override_var(),
             props.z_index.as_ref().and_then(|v| v.resolve(None)),
         )
 }

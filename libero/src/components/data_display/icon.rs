@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{Color, ColorShade, ColorValue, ICON_SIZE, Size, SizeCss},
+    theme::{Color, ColorShade, ColorValue, CssVar, ICON_SIZE, Size, SizeCss},
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
@@ -77,56 +77,52 @@ pub(crate) fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareVa
 /// (a `var()` name each, not a resolved value) - shared with `ActionIcon`,
 /// which reuses this exact shape under its own var names since it builds
 /// directly on `Icon`'s own variant styling.
-pub(crate) fn icon_variant_sx(variant: IconVariant, color_var: &str, contrast_var: &str) -> Sx {
+pub(crate) fn icon_variant_sx(
+    variant: IconVariant,
+    color_var: &CssVar,
+    contrast_var: &CssVar,
+) -> Sx {
     match variant {
         IconVariant::Filled => sx()
-            .background(format!("var({color_var})"))
-            .color(format!("var({contrast_var}, inherit)")),
+            .background(color_var.value())
+            .color(contrast_var.value_or("inherit")),
         IconVariant::Outlined => sx()
             .background("transparent")
             .border("1px solid")
-            .border_color(format!("var({color_var})"))
-            .color(format!("var({color_var})")),
-        IconVariant::Transparent => sx()
-            .background("transparent")
-            .color(format!("var({color_var})")),
+            .border_color(color_var.value())
+            .color(color_var.value()),
+        IconVariant::Transparent => sx().background("transparent").color(color_var.value()),
     }
 }
 
-pub(crate) const ICON_COLOR_VAR: &str = "--lsx-icon-color";
-pub(crate) const ICON_CONTRAST_VAR: &str = "--lsx-icon-contrast";
-const ICON_SIZE_VAR: &str = "--lsx-icon-size-override";
-const ICON_RADIUS_VAR: &str = "--lsx-icon-radius";
+pub(crate) const ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-icon-color");
+pub(crate) const ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-icon-contrast");
+const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
 
 static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
-        .width(format!(
-            "var({ICON_SIZE_VAR}, {})",
-            ICON_SIZE.value(Size::Md)
-        ))
-        .height(format!(
-            "var({ICON_SIZE_VAR}, {})",
-            ICON_SIZE.value(Size::Md)
-        ))
-        .border_radius(format!(
-            "var({ICON_RADIUS_VAR}, {})",
-            SizeCss::RADIUS.value(Size::Sm)
-        ))
+        .width(ICON_SIZE.overridable(Size::Md))
+        .height(ICON_SIZE.overridable(Size::Md))
+        .border_radius(ICON_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Sm)))
         .selector("& svg", sx().width("100%").height("100%"))
         .when(
             "filled",
-            icon_variant_sx(IconVariant::Filled, ICON_COLOR_VAR, ICON_CONTRAST_VAR),
+            icon_variant_sx(IconVariant::Filled, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR),
         )
         .when(
             "outlined",
-            icon_variant_sx(IconVariant::Outlined, ICON_COLOR_VAR, ICON_CONTRAST_VAR),
+            icon_variant_sx(IconVariant::Outlined, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR),
         )
         .when(
             "transparent",
-            icon_variant_sx(IconVariant::Transparent, ICON_COLOR_VAR, ICON_CONTRAST_VAR),
+            icon_variant_sx(
+                IconVariant::Transparent,
+                &ICON_COLOR_VAR,
+                &ICON_CONTRAST_VAR,
+            ),
         )
 });
 
@@ -146,7 +142,7 @@ fn icon_variables(props: &IconProps) -> Variables {
         .with(ICON_COLOR_VAR, base.resolve(None))
         .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(
-            ICON_SIZE_VAR,
+            ICON_SIZE.override_var(),
             props.size.as_ref().and_then(|v| v.resolve(Some(ICON_SIZE))),
         )
         .with(

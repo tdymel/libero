@@ -1,10 +1,3 @@
-#[macro_export]
-macro_rules! sx_var {
-    ($name:literal) => {
-        concat!("var(--lsx-", $name, ")")
-    };
-}
-
 /// Builds a non-global attribute (e.g. `src`/`href`) to push into a
 /// `Vec<Attribute>` by hand, bypassing `extends = GlobalAttributes`.
 pub(crate) fn attr<T>(
@@ -30,7 +23,12 @@ pub(crate) fn warn(_message: &str) {}
 /// the theme's primary color where that isn't known (e.g. a raw/unparseable
 /// background, or no themed background above it at all).
 pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
+    use crate::tokens::{ColorCss, ColorShade, NamedColorCss};
+
     crate::sx::sx()
-        .outline("2px solid var(--lsx-focus-contrast, var(--lsx-primary-6))")
+        .outline(format!(
+            "2px solid {}",
+            NamedColorCss::FOCUS_CONTRAST.value_or(ColorCss::PRIMARY.value(ColorShade::S6))
+        ))
         .outline_offset("2px")
 }

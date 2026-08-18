@@ -16,9 +16,9 @@ pub const FLEX_ROW_WRAP: CssVar = CssVar::new("--lsx-flex-row-wrap");
 // (see `Variables`) rather than baked into a generated class - `default_sx`
 // references these with a fallback to the axis's own theme default, so an
 // override never needs a new class/stylesheet entry of its own.
-pub const FLEX_ALIGN_VAR: &str = "--lsx-flex-align";
-pub const FLEX_JUSTIFY_VAR: &str = "--lsx-flex-justify";
-pub const FLEX_WRAP_VAR: &str = "--lsx-flex-wrap";
+pub const FLEX_ALIGN_VAR: CssVar = CssVar::new("--lsx-flex-align");
+pub const FLEX_JUSTIFY_VAR: CssVar = CssVar::new("--lsx-flex-justify");
+pub const FLEX_WRAP_VAR: CssVar = CssVar::new("--lsx-flex-wrap");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FlexAxisDefaults {
@@ -59,10 +59,10 @@ impl FlexDefaults {
         };
 
         sx().flex_direction(direction)
-            .align_items(format!("var({FLEX_ALIGN_VAR}, {align})"))
-            .justify_content(format!("var({FLEX_JUSTIFY_VAR}, {justify})"))
+            .align_items(FLEX_ALIGN_VAR.value_or(align))
+            .justify_content(FLEX_JUSTIFY_VAR.value_or(justify))
             .gap(spacing)
-            .flex_wrap(format!("var({FLEX_WRAP_VAR}, {wrap})"))
+            .flex_wrap(FLEX_WRAP_VAR.value_or(wrap))
     }
 }
 

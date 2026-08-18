@@ -7,7 +7,7 @@ use crate::{
     },
     hooks::{use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
+    theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
 };
 
 /// Fired as the divider is dragged/keyed - both panes' resulting sizes, in
@@ -19,8 +19,8 @@ pub enum SplitterResizeEvent {
     End(f64, f64),
 }
 
-const SPLITTER_A_VAR: &str = "--lsx-splitter-a";
-const SPLITTER_DIVIDER_COLOR_VAR: &str = "--lsx-splitter-divider-color";
+const SPLITTER_A_VAR: CssVar = CssVar::new("--lsx-splitter-a");
+const SPLITTER_DIVIDER_COLOR_VAR: CssVar = CssVar::new("--lsx-splitter-divider-color");
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct DragState {
@@ -43,7 +43,7 @@ static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 static SPLITTER_PANEL_A_SX: StaticSx = StaticSx::new(|| {
-    sx().flex(format!("0 0 var({SPLITTER_A_VAR}, 50%)"))
+    sx().flex(format!("0 0 {}", SPLITTER_A_VAR.value_or("50%")))
         .min_width("0")
         .min_height("0")
 });
@@ -60,9 +60,7 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         .flex_shrink("0")
         .align_self("stretch")
-        .background(format!(
-            "var({SPLITTER_DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"
-        ));
+        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::GREY.value(ColorShade::S4)));
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         acc.when(
