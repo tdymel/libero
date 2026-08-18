@@ -1,4 +1,6 @@
-use crate::tokens::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss};
+use crate::tokens::{
+    Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss,
+};
 
 use super::BreakpointValue;
 

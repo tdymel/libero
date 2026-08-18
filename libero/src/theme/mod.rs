@@ -28,5 +28,5 @@ pub use theme::Theme;
 // The token vocabulary lives one layer below `sx` (see `crate::tokens`);
 // it is re-exported here so `libero::theme::Size` stays the public path.
 pub use crate::tokens::{
-    Color, ColorCss, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, Sizes, SizeCss,
+    Color, ColorCss, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss, Sizes,
 };
