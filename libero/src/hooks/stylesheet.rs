@@ -18,24 +18,21 @@ pub fn use_stylesheet(stylesheet: impl Into<Stylesheet>) -> Option<String> {
 }
 
 /// A value [`use_css`] can register. Separates a cheap identity check
-/// (`identity_hash`/`class_name`) from the expensive CSS text build
-/// (`build`), so a render whose `Sx` is unchanged from the last one never
-/// has to walk its entry tree or format any CSS - `Sx::hash` is a cheap
-/// structural hash over the already-in-memory entries, unlike
-/// `Stylesheet::hash`, which needs the rendered text to exist first.
+/// (`identity_hash`) from the expensive CSS text build (`build`), so a
+/// render whose `Sx` is unchanged from the last one never has to walk its
+/// entry tree or format any CSS - `Sx::hash` is a cheap structural hash over
+/// the already-in-memory entries, unlike `Stylesheet::hash`, which needs the
+/// rendered text to exist first. That is also why the previous render's
+/// class name is cached in `CssRegistration` rather than recomputed: getting
+/// it from an `Sx` means rendering the CSS.
 pub(crate) trait CssSource {
     fn identity_hash(&self) -> u64;
-    fn css_class_name(&self) -> Option<String>;
     fn build(self) -> Stylesheet;
 }
 
 impl CssSource for &Sx {
     fn identity_hash(&self) -> u64 {
         self.hash()
-    }
-
-    fn css_class_name(&self) -> Option<String> {
-        Some(self.class_name())
     }
 
     fn build(self) -> Stylesheet {
@@ -48,10 +45,6 @@ impl CssSource for &StaticSx {
         self.hash()
     }
 
-    fn css_class_name(&self) -> Option<String> {
-        Some(self.class_name())
-    }
-
     fn build(self) -> Stylesheet {
         Stylesheet::from(self)
     }
@@ -60,10 +53,6 @@ impl CssSource for &StaticSx {
 impl CssSource for Stylesheet {
     fn identity_hash(&self) -> u64 {
         self.hash()
-    }
-
-    fn css_class_name(&self) -> Option<String> {
-        self.class_name().map(str::to_string)
     }
 
     fn build(self) -> Stylesheet {
@@ -77,10 +66,13 @@ struct CssRegistration {
     /// source that is present.
     identity_hash: Option<u64>,
     /// The registry's key for this registration - `None` when the source
-    /// built empty CSS and was never registered. Never derived from
-    /// `identity_hash`: the registry keys by rendered-CSS hash, which is a
-    /// different value.
+    /// built empty CSS and was never registered. Not derived from
+    /// `identity_hash`: that one is structural, the registry keys by
+    /// rendered-CSS hash.
     key: Option<StylesheetKey>,
+    /// The class name handed out last render, cached so an unchanged
+    /// re-render doesn't have to rebuild the CSS to recompute it.
+    class_name: Option<String>,
 }
 
 /// Same as [`use_stylesheet`], but on a caller-chosen layer.
@@ -102,11 +94,7 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
             // registry entry (or lack of one) is already correct, so skip
             // rebuilding the CSS text entirely.
             Some(prev) if prev.identity_hash == identity_hash => {
-                let class_name = if prev.key.is_some() {
-                    source.and_then(|source| source.css_class_name())
-                } else {
-                    None
-                };
+                let class_name = prev.class_name.clone();
                 *state_ref = Some(prev);
                 class_name
             }
@@ -131,13 +119,18 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
                     _ => None,
                 };
 
-                *state_ref = Some(CssRegistration { identity_hash, key });
+                let class_name = key.and(class_name);
+                *state_ref = Some(CssRegistration {
+                    identity_hash,
+                    key,
+                    class_name: class_name.clone(),
+                });
 
                 if changed {
                     *context.stylesheet_registry_version.write() += 1;
                 }
 
-                key.and(class_name)
+                class_name
             }
         }
     };

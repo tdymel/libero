@@ -1,7 +1,10 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
 use crate::tokens::{NamedColorCss, Size};
 
-use super::{Property, StaticSx, Sx, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
+use super::{
+    Property, StaticSx, Sx, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue,
+    class_name_from_hash,
+};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
@@ -9,16 +12,22 @@ struct CssContext {
     media_query: Option<String>,
 }
 
+/// Stands in for the class name while the CSS is built, so the sheet can be
+/// hashed before its own name exists - see [`Sx::class_name`].
+pub(crate) const ROOT_CLASS_PLACEHOLDER: &str = "\u{1}";
+
 impl From<&Sx> for Stylesheet {
     fn from(sx: &Sx) -> Self {
         let mut scopes = Vec::new();
         let context = CssContext {
-            selectors: vec![format!(".{}", sx.class_name())],
+            selectors: vec![format!(".{ROOT_CLASS_PLACEHOLDER}")],
             media_query: None,
         };
 
         collect_scopes(&mut scopes, sx, &context);
-        Stylesheet::new(scopes).with_class_name(sx.class_name())
+        let stylesheet = Stylesheet::new(scopes);
+        let class_name = class_name_from_hash(stylesheet.hash());
+        stylesheet.with_root_class(ROOT_CLASS_PLACEHOLDER, class_name)
     }
 }
 
@@ -172,6 +181,26 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn class_name_and_registry_hash_are_one_value() {
+        let stylesheet = Stylesheet::from(&sx().padding("lg"));
+        let class_name = class_name_from_hash(stylesheet.hash());
+
+        assert_eq!(stylesheet.class_name(), Some(class_name.as_str()));
+        assert!(stylesheet.as_str().contains(&format!(".{class_name}")));
+        assert!(!stylesheet.as_str().contains(ROOT_CLASS_PLACEHOLDER));
+    }
+
+    #[test]
+    fn identical_css_gets_one_class_name_however_it_was_built() {
+        let direct = Stylesheet::from(&sx().padding("lg").color("red"));
+        let composed = Stylesheet::from(&sx().padding("lg").and(sx().color("red")));
+
+        assert_eq!(direct.as_str(), composed.as_str());
+        assert_eq!(direct.hash(), composed.hash());
+        assert_eq!(direct.class_name(), composed.class_name());
+    }
 
     #[test]
     fn sx_breakpoint_value_emits_media_scopes() {

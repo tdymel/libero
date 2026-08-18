@@ -8,6 +8,7 @@ mod theme_aware_value;
 
 pub use breakpoint_value::{BreakpointValue, bp};
 pub use static_sx::StaticSx;
+pub(crate) use sx::class_name_from_hash;
 pub use sx::{Sx, sx};
 pub use sx_entry::SxEntry;
 

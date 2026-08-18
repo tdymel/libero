@@ -134,9 +134,19 @@ impl Sx {
         self.entries.hash(hasher);
     }
 
+    /// This `Sx`'s class name - base62 of the hash of the CSS it renders to,
+    /// which is also its key in the stylesheet registry. Building the CSS is
+    /// the only way to get it, so at runtime it comes from `use_css`, which
+    /// has the rendered sheet in hand; this spelling is for tests.
+    #[cfg(test)]
     pub(crate) fn class_name(&self) -> String {
-        format!("lsx-{}", encode_base62(self.hash()))
+        class_name_from_hash(crate::css::Stylesheet::from(self).hash())
     }
+}
+
+/// The one place a `.lsx-*` class name is minted.
+pub(crate) fn class_name_from_hash(hash: u64) -> String {
+    format!("lsx-{}", encode_base62(hash))
 }
 
 const BASE62_ALPHABET: &[u8; 62] =
