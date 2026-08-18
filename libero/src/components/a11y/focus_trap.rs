@@ -1,17 +1,14 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use dioxus::prelude::*;
 
 use crate::{
     components::{Box, Input, States, common::base_props, common::dom_api},
+    hooks::use_id,
     sx::{StaticSx, Sx, sx},
 };
 
 use super::visually_hidden::VISUALLY_HIDDEN_SX;
 
 const FOCUSABLE_SELECTOR: &str = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"])";
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
@@ -67,7 +64,7 @@ base_props! {
 
 #[component]
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
-    let id = use_signal(|| format!("lsx-focus-trap-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
+    let id = use_id();
 
     rsx! {
         Box {

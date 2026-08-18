@@ -6,17 +6,12 @@ use crate::{
     theme::{ColorShade, ColorValue, HEADER_HEIGHT, Size},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum HeaderPosition {
     Static,
+    #[default]
     Sticky,
     Fixed,
-}
-
-impl Default for HeaderPosition {
-    fn default() -> Self {
-        Self::Sticky
-    }
 }
 
 impl From<&str> for HeaderPosition {

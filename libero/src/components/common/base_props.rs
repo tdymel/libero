@@ -1,8 +1,8 @@
 /// Declares a component `Props` struct, prepending the fields nearly every
 /// visual component needs - `attributes` (`extends = GlobalAttributes`, so
-/// it also captures any DOM event a caller writes), `class`, `sx`, `states`
-/// - so the body only needs to list what's actually specific to this
-/// component, instead of repeating these four every time.
+/// it also captures any DOM event a caller writes), `class`, `sx`,
+/// `states` - so the body only needs to list what's actually specific to
+/// this component, instead of repeating these four every time.
 ///
 /// Expands at the call site (ordinary `macro_rules!` path resolution, not
 /// definition-site hygiene) - relies on `Props`/`Attribute` (from `dioxus::
@@ -22,10 +22,10 @@
 /// ```
 ///
 /// A component that always renders one specific tag (unlike `Box`, which
-/// is polymorphic across many) can also ask for that tag's own attributes
-/// - e.g. `option`'s `disabled`/`selected`, not part of `GlobalAttributes`
-/// - via a leading `extends(...)` clause, instead of hand-wiring them the
-/// way `Box` has to:
+/// is polymorphic across many) can also ask for that tag's own
+/// attributes - e.g. `option`'s `disabled`/`selected`, not part of
+/// `GlobalAttributes` - via a leading `extends(...)` clause, instead of
+/// hand-wiring them the way `Box` has to:
 ///
 /// ```ignore
 /// base_props! {

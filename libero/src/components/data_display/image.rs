@@ -10,19 +10,14 @@ use crate::{
     theme::SizeCss,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ImageFit {
     Fill,
     Contain,
+    #[default]
     Cover,
     None,
     ScaleDown,
-}
-
-impl Default for ImageFit {
-    fn default() -> Self {
-        Self::Cover
-    }
 }
 
 impl ImageFit {

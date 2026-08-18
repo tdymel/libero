@@ -1,16 +1,11 @@
 /// Which axes show a scrollbar / allow overflow.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ScrollAxis {
+    #[default]
     Vertical,
     Horizontal,
     Both,
     None,
-}
-
-impl Default for ScrollAxis {
-    fn default() -> Self {
-        Self::Vertical
-    }
 }
 
 impl From<&str> for ScrollAxis {
@@ -32,18 +27,13 @@ impl From<String> for ScrollAxis {
 
 /// When the scrollbar is actually visible - `Scroll` is treated the same as
 /// `Hover` (no idle-timeout primitive exists in this codebase yet).
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ScrollbarVisibility {
+    #[default]
     Always,
     Hover,
     Hidden,
     Scroll,
-}
-
-impl Default for ScrollbarVisibility {
-    fn default() -> Self {
-        Self::Always
-    }
 }
 
 impl From<&str> for ScrollbarVisibility {
@@ -64,16 +54,11 @@ impl From<String> for ScrollbarVisibility {
 }
 
 /// Maps directly to the CSS `scrollbar-width` keyword.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ScrollbarSize {
+    #[default]
     Thin,
     Auto,
-}
-
-impl Default for ScrollbarSize {
-    fn default() -> Self {
-        Self::Thin
-    }
 }
 
 impl ScrollbarSize {

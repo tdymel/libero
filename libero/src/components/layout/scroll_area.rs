@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use dioxus::prelude::*;
 
 use crate::{
@@ -7,7 +5,7 @@ use crate::{
         Box, Input, States, Variables,
         common::{base_props, dom_api, variables},
     },
-    hooks::use_theme,
+    hooks::{use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ScrollAxis, ScrollbarSize, ScrollbarVisibility},
 };
@@ -55,8 +53,6 @@ pub enum ScrollPositionEvent {
     Change(f64, f64),
     End(f64, f64),
 }
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 const SCROLL_AREA_THUMB_VAR: &str = "--lsx-scroll-area-thumb-color";
 
@@ -129,9 +125,9 @@ fn axis_token(scrollbars: ScrollAxis) -> &'static str {
     }
 }
 
-/// Which edges (per axis) the last-seen scroll position was resting against
-/// - only used to fire `on_*_reached` on the rising edge, not on every
-/// scroll event while still resting there.
+/// Which edges (per axis) the last-seen scroll position was resting
+/// against - only used to fire `on_*_reached` on the rising edge, not on
+/// every scroll event while still resting there.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct EdgeState {
     top: bool,
@@ -186,12 +182,7 @@ base_props! {
 #[component]
 pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
-    let root_id = use_hook(|| {
-        format!(
-            "lsx-scroll-area-{}",
-            NEXT_ID.fetch_add(1, Ordering::Relaxed)
-        )
-    });
+    let root_id = use_id();
 
     let scrollbars = props
         .scrollbars
@@ -268,14 +259,13 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         }
     };
 
-    let root_id_for_position = root_id.clone();
     let scroll_position_x = props.scroll_position_x;
     let scroll_position_y = props.scroll_position_y;
     use_effect(use_reactive!(|scroll_position_x, scroll_position_y| {
         if scroll_position_x.is_none() && scroll_position_y.is_none() {
             return;
         }
-        let Ok(container) = dom_api().query_selector(&format!("#{root_id_for_position}")) else {
+        let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
             return;
         };
         let Ok(scroll_size) = container.scroll_size() else {

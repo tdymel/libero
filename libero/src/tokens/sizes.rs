@@ -41,7 +41,7 @@ impl<T: Copy> Sizes<T> {
 
 impl<T: Display + Copy> Sizes<T> {
     /// One CSS var declaration per size, e.g. `--lsx-spacing-xs:4px;`.
-    pub(crate) fn to_css_declarations(&self, css: SizeCss, unit: &str) -> Vec<CssDeclaration> {
+    pub(crate) fn to_css_declarations(self, css: SizeCss, unit: &str) -> Vec<CssDeclaration> {
         Size::ALL
             .into_iter()
             .map(|size| css.declare(size, format!("{}{unit}", self.get(size))))

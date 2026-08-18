@@ -6,18 +6,13 @@ pub const QR_CODE_FOREGROUND: CssVar = CssVar::new("--lsx-qrcode-foreground");
 
 /// QR error-correction level - higher levels tolerate more damage/occlusion
 /// at the cost of a denser code for the same data.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum QrRobustness {
     Low,
+    #[default]
     Medium,
     Quartile,
     High,
-}
-
-impl Default for QrRobustness {
-    fn default() -> Self {
-        Self::Medium
-    }
 }
 
 impl From<&str> for QrRobustness {

@@ -8,17 +8,12 @@ use crate::{
 
 use super::InternalAnchor;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum AnchorUnderline {
     Always,
+    #[default]
     Hover,
     Never,
-}
-
-impl Default for AnchorUnderline {
-    fn default() -> Self {
-        Self::Hover
-    }
 }
 
 impl From<&str> for AnchorUnderline {

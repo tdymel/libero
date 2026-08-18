@@ -28,7 +28,9 @@ impl States {
         self.0.iter().copied()
     }
 
-    pub fn active_data_state(&self) -> Option<String> {
+    /// The space-joined names of the active states - the value for the
+    /// element's `data-state` attribute, or `None` when none are active.
+    pub fn data_state(&self) -> Option<String> {
         let value = self
             .0
             .iter()
@@ -37,10 +39,6 @@ impl States {
             .join(" ");
 
         (!value.is_empty()).then_some(value)
-    }
-
-    pub fn data_state(&self) -> Option<String> {
-        self.active_data_state()
     }
 }
 

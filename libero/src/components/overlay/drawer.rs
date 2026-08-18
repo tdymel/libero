@@ -89,19 +89,14 @@ fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum DrawerVariant {
     /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop - built on
     /// `Modal`.
+    #[default]
     Temporary,
     /// In-place plain panel, no portal/backdrop/focus-trap, e.g. a sidebar.
     Static,
-}
-
-impl Default for DrawerVariant {
-    fn default() -> Self {
-        Self::Temporary
-    }
 }
 
 impl From<&str> for DrawerVariant {
@@ -131,18 +126,13 @@ impl From<String> for Input<DrawerVariant> {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum DrawerAnchor {
+    #[default]
     Left,
     Right,
     Top,
     Bottom,
-}
-
-impl Default for DrawerAnchor {
-    fn default() -> Self {
-        Self::Left
-    }
 }
 
 impl From<&str> for DrawerAnchor {

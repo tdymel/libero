@@ -15,17 +15,12 @@ fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum LabelPosition {
     Start,
+    #[default]
     Center,
     End,
-}
-
-impl Default for LabelPosition {
-    fn default() -> Self {
-        Self::Center
-    }
 }
 
 impl From<&str> for LabelPosition {

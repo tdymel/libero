@@ -132,13 +132,13 @@ fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> V
         to_css_value(property, value),
     )];
 
-    if matches!(property, SxPropertyKey::Known(Property::Background)) {
-        if let Some(contrast) = value.focus_contrast() {
-            declarations.push(CssDeclaration::new(
-                NamedColorCss::FOCUS_CONTRAST.name(),
-                contrast,
-            ));
-        }
+    if matches!(property, SxPropertyKey::Known(Property::Background))
+        && let Some(contrast) = value.focus_contrast()
+    {
+        declarations.push(CssDeclaration::new(
+            NamedColorCss::FOCUS_CONTRAST.name(),
+            contrast,
+        ));
     }
 
     declarations

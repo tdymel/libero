@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    sync::atomic::{AtomicU64, Ordering},
-};
+use std::collections::HashSet;
 
 use dioxus::prelude::*;
 
@@ -10,7 +7,7 @@ use crate::{
         Input, List, States,
         common::{base_props, dom_api},
     },
-    hooks::use_theme,
+    hooks::{use_id, use_theme},
     sx::Sx,
     theme::{LIST_GAP, Size},
 };
@@ -21,8 +18,6 @@ use super::{
     },
     tree_row::TreeRow,
 };
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 struct VisibleNode {
     id: String,
@@ -242,7 +237,7 @@ base_props! {
 #[component]
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
-    let root_id = use_hook(|| format!("lsx-tree-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
+    let root_id = use_id();
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
 
@@ -258,7 +253,6 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     let onexpandedchange = props.onexpandedchange;
     let data_for_keydown = props.data.clone();
-    let root_id_for_keydown = root_id.clone();
     let mut active_id_for_keydown = active_id;
     let resolved_active_for_keydown = resolved_active.clone();
 
@@ -275,7 +269,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let mut go_to = |target: Option<String>| {
             if let Some(target) = target {
                 active_id_for_keydown.set(Some(target.clone()));
-                focus_tree_item(&root_id_for_keydown, &target);
+                focus_tree_item(&root_id(), &target);
             }
         };
 
@@ -318,7 +312,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         toggle_expanded(&current, expanded, onexpandedchange);
                     } else {
-                        click_tree_item(&root_id_for_keydown, &current);
+                        click_tree_item(&root_id(), &current);
                     }
                 }
             }
@@ -328,7 +322,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         toggle_expanded(&current, expanded, onexpandedchange);
                     } else {
-                        click_tree_item(&root_id_for_keydown, &current);
+                        click_tree_item(&root_id(), &current);
                     }
                 }
             }

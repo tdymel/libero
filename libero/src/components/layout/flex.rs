@@ -16,16 +16,11 @@ use crate::{
  *   Not sure if we should provide a similar API.
  */
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum FlexDirection {
     Row,
+    #[default]
     Column,
-}
-
-impl Default for FlexDirection {
-    fn default() -> Self {
-        Self::Column
-    }
 }
 
 impl From<&str> for FlexDirection {

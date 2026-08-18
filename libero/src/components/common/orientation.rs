@@ -1,15 +1,10 @@
 use super::Input;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Orientation {
+    #[default]
     Vertical,
     Horizontal,
-}
-
-impl Default for Orientation {
-    fn default() -> Self {
-        Self::Vertical
-    }
 }
 
 impl From<&str> for Orientation {

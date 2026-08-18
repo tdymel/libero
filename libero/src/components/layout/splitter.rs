@@ -1,5 +1,3 @@
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use dioxus::prelude::*;
 
 use crate::{
@@ -7,7 +5,7 @@ use crate::{
         Box, Input, Orientation, States, Variables,
         common::{base_props, dom_api, variables, warn},
     },
-    hooks::use_theme,
+    hooks::{use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
 };
@@ -20,8 +18,6 @@ pub enum SplitterResizeEvent {
     Change(f64, f64),
     End(f64, f64),
 }
-
-static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
 const SPLITTER_A_VAR: &str = "--lsx-splitter-a";
 const SPLITTER_DIVIDER_COLOR_VAR: &str = "--lsx-splitter-divider-color";
@@ -177,7 +173,7 @@ base_props! {
 #[component]
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
-    let root_id = use_hook(|| format!("lsx-splitter-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
+    let root_id = use_id();
     let (panel_a, panel_b) = resolve_panels(props.children);
 
     let orientation = props
@@ -207,10 +203,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
     // exits the container just pauses updates (`onmousemove` only fires
     // while over it) rather than aborting the drag; it resumes if the
     // cursor comes back, and only `onmouseup` actually ends it.
-    let root_id_for_down = root_id.clone();
     let onmousedown = move |event: Event<MouseData>| {
         event.prevent_default();
-        let Ok(container) = dom_api().query_selector(&format!("#{root_id_for_down}")) else {
+        let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
             return;
         };
         let Ok(dimensions) = container.dimensions() else {

@@ -6,17 +6,12 @@ use crate::{
     theme::{Color, ColorShade, ColorValue, ICON_SIZE, Size, SizeCss},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum IconVariant {
+    #[default]
     Filled,
     Outlined,
     Transparent,
-}
-
-impl Default for IconVariant {
-    fn default() -> Self {
-        Self::Filled
-    }
 }
 
 impl From<&str> for IconVariant {

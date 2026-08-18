@@ -7,23 +7,18 @@ pub const FLOAT_OFFSET_X: CssVar = CssVar::new("--lsx-float-offset-x");
 pub const FLOAT_OFFSET_Y: CssVar = CssVar::new("--lsx-float-offset-y");
 
 /// Anchor corner/edge within the floated element's `position: relative` parent.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum Placement {
     TopStart,
     TopCenter,
     TopEnd,
     CenterStart,
+    #[default]
     CenterCenter,
     CenterEnd,
     BottomStart,
     BottomCenter,
     BottomEnd,
-}
-
-impl Default for Placement {
-    fn default() -> Self {
-        Self::CenterCenter
-    }
 }
 
 impl From<&str> for Placement {

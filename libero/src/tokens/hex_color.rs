@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use super::{ColorShade, ShadeRamp};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -132,10 +134,6 @@ impl HexColor {
         }
     }
 
-    pub(crate) fn to_string(self) -> String {
-        format!("#{:02X}{:02X}{:02X}", self.r(), self.g(), self.b())
-    }
-
     const fn mix(self, other: Self, weight: u8) -> Self {
         let r = mix_channel(self.r(), other.r(), weight);
         let g = mix_channel(self.g(), other.g(), weight);
@@ -145,6 +143,12 @@ impl HexColor {
 
     const fn luminance(self) -> u16 {
         (self.r() as u16 * 30 + self.g() as u16 * 59 + self.b() as u16 * 11) / 100
+    }
+}
+
+impl Display for HexColor {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "#{:02X}{:02X}{:02X}", self.r(), self.g(), self.b())
     }
 }
 

@@ -42,17 +42,12 @@ struct Ripple {
     y: f64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
 pub enum ButtonVariant {
     Filled,
+    #[default]
     Outlined,
     Text,
-}
-
-impl Default for ButtonVariant {
-    fn default() -> Self {
-        Self::Outlined
-    }
 }
 
 impl From<&str> for ButtonVariant {
