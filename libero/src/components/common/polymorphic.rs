@@ -3,11 +3,21 @@ use dioxus::prelude::*;
 use crate::components::Input;
 
 macro_rules! html_tags {
-    ($($variant:ident => $tag:ident),* $(,)?) => {
-        /// Root elements a polymorphic component can render as.
+    (
+        default { $($dvariant:ident => $dtag:ident),* $(,)? }
+        full { $($fvariant:ident => $ftag:ident),* $(,)? }
+    ) => {
+        /// Root elements a polymorphic component can render as. Always the
+        /// full HTML5 element set regardless of the `full-polymorphism`
+        /// feature - that feature only controls how many of
+        /// `render_polymorphic`'s match arms actually compile, not this
+        /// type's shape (so downstream code naming a `full`-tier variant
+        /// still compiles either way, it just renders as `<div>` without
+        /// the feature - see `render_polymorphic`'s fallback arm).
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         pub enum HtmlTag {
-            $($variant),*
+            $($dvariant,)*
+            $($fvariant,)*
         }
 
         impl Default for HtmlTag {
@@ -19,7 +29,8 @@ macro_rules! html_tags {
         impl HtmlTag {
             pub const fn as_str(&self) -> &'static str {
                 match self {
-                    $(Self::$variant => stringify!($tag)),*
+                    $(Self::$dvariant => stringify!($dtag),)*
+                    $(Self::$fvariant => stringify!($ftag),)*
                 }
             }
         }
@@ -27,7 +38,8 @@ macro_rules! html_tags {
         impl From<&str> for HtmlTag {
             fn from(value: &str) -> Self {
                 match value.to_lowercase().as_str() {
-                    $(stringify!($tag) => Self::$variant,)*
+                    $(stringify!($dtag) => Self::$dvariant,)*
+                    $(stringify!($ftag) => Self::$fvariant,)*
                     _ => Self::Div,
                 }
             }
@@ -64,6 +76,15 @@ macro_rules! html_tags {
         /// attributes - `Box`'s own `extends = GlobalAttributes` captures
         /// whatever event a caller writes generically, so every arm just
         /// needs to spread it, not name each event it might contain.
+        ///
+        /// Only the `default` tier's arms (the tags `libero`'s own
+        /// components actually render - see `polymorphic.rs`'s
+        /// `html_tags!` invocation) compile unconditionally; the rest need
+        /// the `full-polymorphism` feature, and fall back to `<div>`
+        /// without it (same fallback `HtmlTag::from(&str)` already uses for
+        /// an unrecognized tag name) - this is what keeps `Box`'s
+        /// `render_polymorphic` from paying for all 111 HTML tags when a
+        /// consumer only ever asks for a handful.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
             class: crate::components::ClassList,
@@ -74,132 +95,168 @@ macro_rules! html_tags {
         ) -> Element {
             let class = class.to_string();
             match component {
-                $(HtmlTag::$variant => rsx! {
-                    $tag {
+                $(HtmlTag::$dvariant => rsx! {
+                    $dtag {
                         class: class,
                         "data-state": data_state,
                         style: style,
                         ..attributes,
                         {children}
                     }
-                }),*
+                },)*
+                $(
+                    #[cfg(feature = "full-polymorphism")]
+                    HtmlTag::$fvariant => rsx! {
+                        $ftag {
+                            class: class,
+                            "data-state": data_state,
+                            style: style,
+                            ..attributes,
+                            {children}
+                        }
+                    },
+                )*
+                #[cfg(not(feature = "full-polymorphism"))]
+                _ => rsx! {
+                    div {
+                        class: class,
+                        "data-state": data_state,
+                        style: style,
+                        ..attributes,
+                        {children}
+                    }
+                },
             }
         }
     };
 }
 
-// The full HTML5 element set dioxus_elements supports, so this list never
-// needs to grow again for a new tag.
+// `default` is every tag `libero`'s own components render internally, plus
+// every tag `docs` itself needs (grep for `component: "..."` / `HtmlTag::...`
+// across `libero/src` and `docs/src` - see
+// [[project_wasm_bundle_size_findings]]) - so both work fully with default
+// features, `docs` included (no reason to make the site demonstrating the
+// library pay the same "opt into more tags" cost an external consumer
+// would). `full` is the rest of the HTML5 element set dioxus_elements
+// supports - opt into the `full-polymorphism` feature for those; without it
+// `Box`/`Title`/`Text`/etc still accept any `HtmlTag`, they just render as
+// `<div>` for a `full`-tier tag (see `render_polymorphic`'s fallback arm).
+// This split never needs to grow for a new tag - only which group a tag
+// moves to, if `libero` or `docs` starts using one.
 html_tags! {
-    A => a,
-    Abbr => abbr,
-    Address => address,
-    Area => area,
-    Article => article,
-    Aside => aside,
-    Audio => audio,
-    B => b,
-    Base => base,
-    Bdi => bdi,
-    Bdo => bdo,
-    Blockquote => blockquote,
-    Body => body,
-    Br => br,
-    Button => button,
-    Canvas => canvas,
-    Caption => caption,
-    Cite => cite,
-    Code => code,
-    Col => col,
-    Colgroup => colgroup,
-    Data => data,
-    Datalist => datalist,
-    Dd => dd,
-    Del => del,
-    Details => details,
-    Dfn => dfn,
-    Dialog => dialog,
-    Div => div,
-    Dl => dl,
-    Dt => dt,
-    Em => em,
-    Embed => embed,
-    Fieldset => fieldset,
-    Figcaption => figcaption,
-    Figure => figure,
-    Footer => footer,
-    Form => form,
-    H1 => h1,
-    H2 => h2,
-    H3 => h3,
-    H4 => h4,
-    H5 => h5,
-    H6 => h6,
-    Head => head,
-    Header => header,
-    Hgroup => hgroup,
-    Hr => hr,
-    I => i,
-    Iframe => iframe,
-    Img => img,
-    Input => input,
-    Ins => ins,
-    Kbd => kbd,
-    Label => label,
-    Legend => legend,
-    Li => li,
-    Link => link,
-    Main => main,
-    Map => map,
-    Mark => mark,
-    Menu => menu,
-    Meta => meta,
-    Meter => meter,
-    Nav => nav,
-    Noscript => noscript,
-    Object => object,
-    Ol => ol,
-    Optgroup => optgroup,
-    Option => option,
-    Output => output,
-    P => p,
-    Param => param,
-    Picture => picture,
-    Pre => pre,
-    Progress => progress,
-    Q => q,
-    Rp => rp,
-    Rt => rt,
-    Ruby => ruby,
-    S => s,
-    Samp => samp,
-    Script => script,
-    Section => section,
-    Select => select,
-    Slot => slot,
-    Small => small,
-    Source => source,
-    Span => span,
-    Strong => strong,
-    Style => style,
-    Sub => sub,
-    Summary => summary,
-    Sup => sup,
-    Table => table,
-    Tbody => tbody,
-    Td => td,
-    Template => template,
-    Textarea => textarea,
-    Tfoot => tfoot,
-    Th => th,
-    Thead => thead,
-    Time => time,
-    Title => title,
-    Tr => tr,
-    Track => track,
-    U => u,
-    Ul => ul,
-    Var => var,
-    Video => video,
-    Wbr => wbr,
+    default {
+        A => a,
+        Button => button,
+        Code => code,
+        Dd => dd,
+        Div => div,
+        Dl => dl,
+        Dt => dt,
+        H1 => h1,
+        H2 => h2,
+        H3 => h3,
+        H4 => h4,
+        H5 => h5,
+        H6 => h6,
+        Header => header,
+        Img => img,
+        Kbd => kbd,
+        Label => label,
+        Li => li,
+        Main => main,
+        Mark => mark,
+        Option => option,
+        P => p,
+        Pre => pre,
+        Section => section,
+        Select => select,
+        Span => span,
+        Ul => ul,
+    }
+    full {
+        Abbr => abbr,
+        Address => address,
+        Area => area,
+        Article => article,
+        Aside => aside,
+        Audio => audio,
+        B => b,
+        Base => base,
+        Bdi => bdi,
+        Bdo => bdo,
+        Blockquote => blockquote,
+        Body => body,
+        Br => br,
+        Canvas => canvas,
+        Caption => caption,
+        Cite => cite,
+        Col => col,
+        Colgroup => colgroup,
+        Data => data,
+        Datalist => datalist,
+        Del => del,
+        Details => details,
+        Dfn => dfn,
+        Dialog => dialog,
+        Em => em,
+        Embed => embed,
+        Fieldset => fieldset,
+        Figcaption => figcaption,
+        Figure => figure,
+        Footer => footer,
+        Form => form,
+        Head => head,
+        Hgroup => hgroup,
+        Hr => hr,
+        I => i,
+        Iframe => iframe,
+        Input => input,
+        Ins => ins,
+        Legend => legend,
+        Link => link,
+        Map => map,
+        Menu => menu,
+        Meta => meta,
+        Meter => meter,
+        Nav => nav,
+        Noscript => noscript,
+        Object => object,
+        Ol => ol,
+        Optgroup => optgroup,
+        Output => output,
+        Param => param,
+        Picture => picture,
+        Progress => progress,
+        Q => q,
+        Rp => rp,
+        Rt => rt,
+        Ruby => ruby,
+        S => s,
+        Samp => samp,
+        Script => script,
+        Slot => slot,
+        Small => small,
+        Source => source,
+        Strong => strong,
+        Style => style,
+        Sub => sub,
+        Summary => summary,
+        Sup => sup,
+        Table => table,
+        Tbody => tbody,
+        Td => td,
+        Template => template,
+        Textarea => textarea,
+        Tfoot => tfoot,
+        Th => th,
+        Thead => thead,
+        Time => time,
+        Title => title,
+        Tr => tr,
+        Track => track,
+        U => u,
+        Var => var,
+        Video => video,
+        Wbr => wbr,
+    }
 }

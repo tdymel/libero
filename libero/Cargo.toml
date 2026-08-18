@@ -55,6 +55,16 @@ default = [
 # both components render identically either way, just from the main bundle
 # instead of a lazy-loaded one.
 wasm-split = ["dioxus/wasm-split"]
+# `Box` (and anything built on it - `Title`, `Text`, `Icon`, ...) can render
+# as any of the full HTML5 element set via `component: HtmlTag::...`/a tag
+# name string, but `render_polymorphic` only compiles a match arm per tag
+# that's actually reachable - without this, only the tags `libero`'s own
+# components (and `docs`) use internally get a real arm (see
+# `polymorphic.rs`'s `html_tags!` invocation); everything else silently
+# renders as `<div>` instead of failing to compile. Turn this on if your own
+# app passes a `full`-tier tag (e.g. `"table"`, `"nav"`, `"textarea"`) to
+# `component`.
+full-polymorphism = []
 # Each turns on one hand-ported grammar in `components/typography/code/languages/`
 # (see `language_catalog.rs`) - only the languages you enable are compiled in.
 code-lang-bash = []
