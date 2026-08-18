@@ -56,15 +56,15 @@ fn float_variables(props: &FloatProps) -> Variables {
     variables()
         .with(
             FLOAT_OFFSET_X_VAR,
-            props.offset_x.as_ref().and_then(ThemeAwareValue::raw),
+            props.offset_x.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             FLOAT_OFFSET_Y_VAR,
-            props.offset_y.as_ref().and_then(ThemeAwareValue::raw),
+            props.offset_y.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             FLOAT_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+            props.z_index.as_ref().and_then(|v| v.resolve(None)),
         )
 }
 

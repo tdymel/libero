@@ -28,7 +28,7 @@ fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> 
     let base = nav_link_color(color).unwrap_or(default_color);
     let background = ThemeAwareValue::ColorValue(ColorValue::Shade(base, ColorShade::S1));
 
-    variables().with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolved())
+    variables().with(NAV_LINK_ACTIVE_BACKGROUND_VAR, background.resolve(None))
 }
 
 static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {

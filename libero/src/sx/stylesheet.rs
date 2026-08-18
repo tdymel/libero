@@ -1,5 +1,5 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
-use crate::tokens::{ColorShade, ColorValue, NamedColorCss, Size};
+use crate::tokens::{NamedColorCss, Size};
 
 use super::{Property, StaticSx, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
 
@@ -149,29 +149,22 @@ fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> V
 }
 
 fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
-    match value {
-        ThemeAwareValue::Size(size) => to_size_css_value(property, *size),
-        ThemeAwareValue::Number(value) => value.clone(),
-        ThemeAwareValue::Color(color) => ColorValue::Shade(*color, ColorShade::DEFAULT).value(),
-        ThemeAwareValue::ColorValue(value) => value.value(),
-        ThemeAwareValue::CssVar(css_var) => css_var.value(),
-        ThemeAwareValue::String(value) => value.clone(),
-        ThemeAwareValue::RawColor(raw, _) => raw.clone(),
-        ThemeAwareValue::BreakpointValue(_) => {
-            unreachable!("breakpoint values are expanded before css value conversion")
-        }
-    }
-}
-
-fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
     let scale = match property {
         SxPropertyKey::Known(property) => property.size_scale(),
         SxPropertyKey::Raw(_) => None,
     };
 
-    match scale {
-        Some(scale) => scale.value(size),
-        None => size.as_str().to_string(),
+    match value.resolve(scale) {
+        Some(value) => value,
+        // A `Size` on a property with no scale of its own: emit the bare
+        // keyword.
+        None => match value {
+            ThemeAwareValue::Size(size) => size.as_str().to_string(),
+            ThemeAwareValue::BreakpointValue(_) => {
+                unreachable!("breakpoint values are expanded before css value conversion")
+            }
+            _ => unreachable!("every other variant resolves"),
+        },
     }
 }
 

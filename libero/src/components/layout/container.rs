@@ -32,22 +32,6 @@ static CONTAINER_BASE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-// `xs`-`xxl` resolve through the same breakpoint/spacing scales the theme
-// default itself uses, just a different step; anything else passes through.
-fn container_size(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::BREAKPOINT.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
-fn container_gutters(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::SPACING.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
 fn container_variables(props: &ContainerProps) -> Variables {
     variables()
         .with(
@@ -55,16 +39,14 @@ fn container_variables(props: &ContainerProps) -> Variables {
             props
                 .size
                 .as_ref()
-                .map(container_size)
-                .and_then(|v| v.raw()),
+                .and_then(|v| v.resolve(Some(SizeCss::BREAKPOINT))),
         )
         .with(
             CONTAINER_GUTTERS_VAR,
             props
                 .gutters
                 .as_ref()
-                .map(container_gutters)
-                .and_then(|v| v.raw()),
+                .and_then(|v| v.resolve(Some(SizeCss::SPACING))),
         )
 }
 

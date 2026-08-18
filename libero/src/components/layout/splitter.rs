@@ -117,7 +117,7 @@ fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variab
         .with(SPLITTER_A_VAR, Some(format!("{a}%")))
         .with(
             SPLITTER_DIVIDER_COLOR_VAR,
-            divider_color.and_then(ThemeAwareValue::resolved),
+            divider_color.and_then(|v| v.resolve(None)),
         )
 }
 

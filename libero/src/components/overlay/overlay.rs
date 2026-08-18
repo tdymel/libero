@@ -42,7 +42,7 @@ base_props! {
 fn px_value(value: &ThemeAwareValue) -> Option<String> {
     match value {
         ThemeAwareValue::Number(number) => Some(format!("{number}px")),
-        _ => value.raw(),
+        _ => value.resolve(None),
     }
 }
 
@@ -53,11 +53,11 @@ pub fn Overlay(props: OverlayProps) -> Element {
     let variables = variables()
         .with(
             OVERLAY_OPACITY_VAR,
-            props.opacity.as_ref().and_then(ThemeAwareValue::raw),
+            props.opacity.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             OVERLAY_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+            props.z_index.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             OVERLAY_BLUR_VAR,

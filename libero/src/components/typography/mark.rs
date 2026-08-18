@@ -46,7 +46,7 @@ static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
 fn mark_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
     variables().with(
         MARK_BACKGROUND_VAR,
-        mark_background_color(color, default_color).resolved(),
+        mark_background_color(color, default_color).resolve(None),
     )
 }
 

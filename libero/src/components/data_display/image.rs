@@ -7,6 +7,7 @@ use crate::{
     },
     hooks::{use_focus_return, use_portal},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::SizeCss,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -79,7 +80,10 @@ fn fit_token(fit: ImageFit) -> &'static str {
 const IMAGE_RADIUS_VAR: &str = "--lsx-image-radius";
 
 fn image_variables(radius: Option<&ThemeAwareValue>) -> Variables {
-    variables().with(IMAGE_RADIUS_VAR, radius.and_then(ThemeAwareValue::radius))
+    variables().with(
+        IMAGE_RADIUS_VAR,
+        radius.and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
+    )
 }
 
 static IMAGE_BASE_SX: StaticSx = StaticSx::new(|| {

@@ -89,15 +89,6 @@ fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
     }
 }
 
-/// `xs`-`xl` resolve through the drawer size scale, distinct from
-/// `Dialog`'s; anything else passes through unchanged.
-fn drawer_size(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::DRAWER_SIZE.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum DrawerVariant {
     /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop - built on
@@ -191,11 +182,14 @@ fn drawer_variables(props: &DrawerProps) -> Variables {
     variables()
         .with(
             DRAWER_SIZE_VAR,
-            props.size.as_ref().map(drawer_size).and_then(|v| v.raw()),
+            props
+                .size
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::DRAWER_SIZE))),
         )
         .with(
             DRAWER_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+            props.z_index.as_ref().and_then(|v| v.resolve(None)),
         )
 }
 

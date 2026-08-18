@@ -4,14 +4,12 @@ use crate::{
     components::{
         Box, IconVariant, Input, States, Variables,
         common::base_props,
-        data_display::{
-            icon_base_color, icon_contrast_color, icon_size, icon_variant_sx, variant_token,
-        },
+        data_display::{icon_base_color, icon_contrast_color, icon_variant_sx, variant_token},
         navigation::InternalAnchor,
         variables,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade},
+    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ColorShade, SizeCss},
 };
 
 use super::button::{BUTTON_HOVER_TINT_SHADE, hover_color};
@@ -116,11 +114,17 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
     let result = variables()
         .with(
             ACTION_ICON_SIZE_VAR,
-            props.size.as_ref().map(icon_size).and_then(|v| v.raw()),
+            props
+                .size
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::ICON_SIZE))),
         )
         .with(
             ACTION_ICON_RADIUS_VAR,
-            props.radius.as_ref().and_then(ThemeAwareValue::radius),
+            props
+                .radius
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
         );
 
     if !has_variant_styling {
@@ -138,10 +142,10 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
     };
 
     result
-        .with(ACTION_ICON_COLOR_VAR, base.resolved())
+        .with(ACTION_ICON_COLOR_VAR, base.resolve(None))
         .with(
             ACTION_ICON_CONTRAST_VAR,
-            contrast.and_then(|c| c.resolved()),
+            contrast.and_then(|c| c.resolve(None)),
         )
         .with(ACTION_ICON_HOVER_VAR, hover)
 }

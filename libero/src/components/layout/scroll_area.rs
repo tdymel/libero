@@ -117,10 +117,7 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
-    variables().with(
-        SCROLL_AREA_THUMB_VAR,
-        color.and_then(ThemeAwareValue::resolved),
-    )
+    variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
 }
 
 fn axis_token(scrollbars: ScrollAxis) -> &'static str {

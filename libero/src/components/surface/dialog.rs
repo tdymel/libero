@@ -31,24 +31,21 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
 });
 
-/// `xs`-`xl` resolve through the dialog size scale, not the (much larger)
-/// breakpoint scale `max-width` normally uses; anything else passes through.
-pub(crate) fn dialog_size(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::DIALOG_SIZE.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
 fn dialog_variables(props: &DialogProps) -> Variables {
     variables()
         .with(
             DIALOG_RADIUS_VAR,
-            props.radius.as_ref().and_then(ThemeAwareValue::radius),
+            props
+                .radius
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
         )
         .with(
             DIALOG_SIZE_VAR,
-            props.size.as_ref().map(dialog_size).and_then(|v| v.raw()),
+            props
+                .size
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::DIALOG_SIZE))),
         )
 }
 

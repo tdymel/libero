@@ -78,13 +78,6 @@ fn header_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
     }
 }
 
-fn header_size(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::HEADER_HEIGHT.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
 const HEADER_HEIGHT_VAR: &str = "--lsx-header-height-override";
 const HEADER_BACKGROUND_VAR: &str = "--lsx-header-background";
 const HEADER_COLOR_VAR: &str = "--lsx-header-color";
@@ -118,19 +111,22 @@ fn header_variables(props: &HeaderProps) -> Variables {
     variables()
         .with(
             HEADER_HEIGHT_VAR,
-            props.size.as_ref().map(header_size).and_then(|v| v.raw()),
+            props
+                .size
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::HEADER_HEIGHT))),
         )
         .with(
             HEADER_BACKGROUND_VAR,
-            base.as_ref().and_then(ThemeAwareValue::resolved),
+            base.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             HEADER_COLOR_VAR,
-            contrast.as_ref().and_then(ThemeAwareValue::resolved),
+            contrast.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             HEADER_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
+            props.z_index.as_ref().and_then(|v| v.resolve(None)),
         )
 }
 

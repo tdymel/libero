@@ -15,13 +15,6 @@ fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-fn divider_spacing(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::SPACING.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LabelPosition {
     Start,
@@ -141,11 +134,11 @@ fn divider_variables(
     variables()
         .with(
             DIVIDER_COLOR_VAR,
-            color.map(divider_color_value).and_then(|v| v.resolved()),
+            color.map(divider_color_value).and_then(|v| v.resolve(None)),
         )
         .with(
             DIVIDER_SPACING_VAR,
-            spacing.map(divider_spacing).and_then(|v| v.raw()),
+            spacing.and_then(|v| v.resolve(Some(SizeCss::SPACING))),
         )
 }
 

@@ -244,8 +244,8 @@ fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> Variables
     };
 
     variables()
-        .with(BUTTON_COLOR_VAR, base.resolved())
-        .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolved()))
+        .with(BUTTON_COLOR_VAR, base.resolve(None))
+        .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, hover)
 }
 

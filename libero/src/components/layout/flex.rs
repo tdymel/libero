@@ -152,11 +152,11 @@ fn flex_variables(props: &FlexProps) -> Variables {
     variables()
         .with(
             FLEX_ALIGN_VAR,
-            props.align.as_ref().and_then(ThemeAwareValue::raw),
+            props.align.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             FLEX_JUSTIFY_VAR,
-            props.justify.as_ref().and_then(ThemeAwareValue::raw),
+            props.justify.as_ref().and_then(|v| v.resolve(None)),
         )
         .with(
             FLEX_WRAP_VAR,

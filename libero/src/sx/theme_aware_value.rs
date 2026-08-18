@@ -21,43 +21,17 @@ pub enum ThemeAwareValue {
 }
 
 impl ThemeAwareValue {
-    /// CSS text for values needing no theme resolution; `None` otherwise.
-    pub fn raw(&self) -> Option<String> {
+    /// CSS text for this value. A bare `Size` resolves through `scale`, or
+    /// is `None` when the caller has no scale to offer it.
+    pub(crate) fn resolve(&self, scale: Option<SizeCss>) -> Option<String> {
         match self {
             Self::String(value) | Self::Number(value) => Some(value.clone()),
             Self::CssVar(css_var) => Some(css_var.value()),
             Self::RawColor(raw, _) => Some(raw.clone()),
-            Self::Size(_) | Self::Color(_) | Self::ColorValue(_) | Self::BreakpointValue(_) => None,
-        }
-    }
-
-    /// Like [`raw`](Self::raw), but also resolves a themed `Color`/
-    /// `ColorValue` (via their own `.value()`) instead of punting on them -
-    /// for building a [`crate::components::Variables`] entry outside the Sx
-    /// pipeline, where that resolution would otherwise happen. Still `None`
-    /// for `Size`/`BreakpointValue`, which need a property-aware scale a
-    /// caller must resolve itself first (see e.g. `icon_size`/
-    /// `header_size`/`dialog_size`/`drawer_size`). A bare `Color` falls back
-    /// to the library-wide default shade (6), same as the Sx pipeline's own
-    /// generic default - in practice every caller normalizes a bare `Color`
-    /// to its own default shade before this point, so this is a safety net,
-    /// not the common path.
-    pub(crate) fn resolved(&self) -> Option<String> {
-        match self {
             Self::ColorValue(color_value) => Some(color_value.value()),
             Self::Color(color) => Some(ColorValue::Shade(*color, ColorShade::DEFAULT).value()),
-            _ => self.raw(),
-        }
-    }
-
-    /// Like [`resolved`](Self::resolved), but for a `radius` override
-    /// specifically - a `Size` resolves through the shared global radius
-    /// scale (the same one every migrated component's own theme default
-    /// already reads from), instead of `resolved`'s `None`.
-    pub(crate) fn radius(&self) -> Option<String> {
-        match self {
-            Self::Size(size) => Some(SizeCss::RADIUS.value(*size)),
-            _ => self.resolved(),
+            Self::Size(size) => scale.map(|scale| scale.value(*size)),
+            Self::BreakpointValue(_) => None,
         }
     }
 

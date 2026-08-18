@@ -78,13 +78,6 @@ pub(crate) fn icon_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareVa
     }
 }
 
-pub(crate) fn icon_size(value: &ThemeAwareValue) -> ThemeAwareValue {
-    match value {
-        ThemeAwareValue::Size(size) => SizeCss::ICON_SIZE.value(*size).into(),
-        other => other.clone(),
-    }
-}
-
 /// Structural chrome for `variant`, referencing `color_var`/`contrast_var`
 /// (a `var()` name each, not a resolved value) - shared with `ActionIcon`,
 /// which reuses this exact shape under its own var names since it builds
@@ -155,15 +148,21 @@ fn icon_variables(props: &IconProps) -> Variables {
     let contrast = icon_contrast_color(&base);
 
     variables()
-        .with(ICON_COLOR_VAR, base.resolved())
-        .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolved()))
+        .with(ICON_COLOR_VAR, base.resolve(None))
+        .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(
             ICON_SIZE_VAR,
-            props.size.as_ref().map(icon_size).and_then(|v| v.raw()),
+            props
+                .size
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::ICON_SIZE))),
         )
         .with(
             ICON_RADIUS_VAR,
-            props.radius.as_ref().and_then(ThemeAwareValue::radius),
+            props
+                .radius
+                .as_ref()
+                .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
         )
 }
 
