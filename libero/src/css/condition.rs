@@ -14,6 +14,15 @@ pub(crate) fn condition_groups(condition: &str) -> Vec<Vec<String>> {
         .collect()
 }
 
+/// Normalizes a `when()` condition so equivalent spellings hash alike.
+pub(crate) fn canonical_condition(condition: &str) -> String {
+    condition_groups(condition)
+        .into_iter()
+        .map(|group| group.join(" && "))
+        .collect::<Vec<_>>()
+        .join(" || ")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -37,6 +46,12 @@ mod tests {
             condition_groups("hover || focus"),
             vec![vec!["hover"], vec!["focus"]]
         );
+    }
+
+    #[test]
+    fn canonical_condition_normalizes_spacing() {
+        assert_eq!(canonical_condition("a&&b"), "a && b");
+        assert_eq!(canonical_condition("  hover  ||focus "), "hover || focus");
     }
 
     #[test]

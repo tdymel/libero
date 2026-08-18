@@ -4,7 +4,7 @@ mod css_scope;
 mod selector;
 mod stylesheet;
 
-pub(crate) use condition::condition_groups;
+pub(crate) use condition::{canonical_condition, condition_groups};
 pub(crate) use css_declaration::{CssDeclaration, ToCssDeclarations};
 pub(crate) use css_scope::CssScope;
 pub(crate) use selector::expand_selector;

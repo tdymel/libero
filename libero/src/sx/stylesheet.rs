@@ -280,6 +280,14 @@ mod tests {
     }
 
     #[test]
+    fn sx_when_equivalent_spellings_share_one_class() {
+        assert_eq!(
+            sx().when("a&&b", sx().color("red")).class_name(),
+            sx().when("  a &&  b ", sx().color("red")).class_name()
+        );
+    }
+
+    #[test]
     fn sx_when_or_condition_emits_comma_separated_selectors() {
         let stylesheet = Stylesheet::from(&sx().when("hover || focus", sx().color("red")));
         let css = stylesheet.as_str();

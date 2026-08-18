@@ -1,4 +1,5 @@
 use super::{Property, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
+use crate::css::canonical_condition;
 use crate::tokens::Size;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -46,7 +47,10 @@ impl Sx {
     }
 
     pub fn when(self, condition: impl Into<String>, nested: Sx) -> Self {
-        self.modifier(SxModifierKey::Condition(condition.into()), nested)
+        self.modifier(
+            SxModifierKey::Condition(canonical_condition(&condition.into())),
+            nested,
+        )
     }
 
     pub fn selector(self, selector: impl Into<String>, nested: Sx) -> Self {
