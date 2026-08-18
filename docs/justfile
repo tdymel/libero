@@ -8,13 +8,13 @@ start:
     {{dx}} serve --platform web --debug-symbols=false --hotpatch
 
 start_release:
-    {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false --wasm-split
+    {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false --wasm-split --features libero/wasm-split
 
 build:
     {{dx}} build --platform web --debug-symbols=false
 
 build_release:
-    just build --release
+    {{dx}} build --platform web --debug-symbols=false --release --wasm-split --features libero/wasm-split
 
 # Rebuild the local dx binary from .dioxus-fork (branch fix/combined)
 build-dx:
