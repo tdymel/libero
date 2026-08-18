@@ -2,7 +2,6 @@ mod breakpoint_value;
 mod static_sx;
 mod stylesheet;
 mod sx;
-mod sx_builder_props;
 mod sx_entry;
 mod sx_key;
 pub mod sx_modifier;

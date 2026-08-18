@@ -1,255 +1,125 @@
 use crate::theme::Size;
 
-#[repr(u16)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Property {
-    Background,
-    Width,
-    Height,
-    Padding,
-    PaddingTop,
-    PaddingLeft,
-    PaddingRight,
-    PaddingBottom,
-    MarginLeft,
-    MarginRight,
-    MarginTop,
-    MarginBottom,
-    Margin,
-    Display,
-    FlexDirection,
-    FlexWrap,
-    AlignItems,
-    JustifyContent,
-    Gap,
-    GridTemplateColumns,
-    GridColumn,
-    MaxWidth,
-    MaxHeight,
-    FontFamily,
-    FontSize,
-    FontWeight,
-    LetterSpacing,
-    LineHeight,
-    TextDecoration,
-    Border,
-    BorderTop,
-    BorderRight,
-    BorderBottom,
-    BorderLeft,
-    Color,
-    Flex,
-    FlexGrow,
-    Content,
-    BorderWidth,
-    BorderStyle,
-    BorderColor,
-    BorderRightColor,
-    BorderBottomColor,
-    FlexShrink,
-    AlignSelf,
-    WhiteSpace,
-    UserSelect,
-    Position,
-    Top,
-    Right,
-    Bottom,
-    Left,
-    Overflow,
-    OverflowX,
-    OverflowY,
-    ScrollbarWidth,
-    ScrollbarColor,
-    Clip,
-    ObjectFit,
-    BorderRadius,
-    Cursor,
-    Opacity,
-    PointerEvents,
-    ListStyle,
-    MinWidth,
-    MinHeight,
-    AspectRatio,
-    Outline,
-    OutlineOffset,
-    Inset,
-    ZIndex,
-    Transition,
-    BackdropFilter,
-    BoxShadow,
-    TextAlign,
-    ScrollMargin,
-    Transform,
-    Visibility,
+use super::{Sx, ThemeAwareValue};
+
+/// The single source of truth for every CSS property `Sx` knows: enum
+/// variant, its CSS name, and its `Sx` builder method. Adding a property is
+/// one line here.
+macro_rules! properties {
+    ($($variant:ident => $css_name:literal, $method:ident;)*) => {
+        #[repr(u16)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+        pub enum Property {
+            $($variant,)*
+        }
+
+        impl Property {
+            pub fn parse(property: &str) -> Option<Self> {
+                match property {
+                    $($css_name => Some(Self::$variant),)*
+                    _ => None,
+                }
+            }
+
+            pub const fn as_str(self) -> &'static str {
+                match self {
+                    $(Self::$variant => $css_name,)*
+                }
+            }
+
+            #[cfg(test)]
+            const ALL: &'static [Self] = &[$(Self::$variant,)*];
+        }
+
+        impl Sx {
+            $(
+                pub fn $method(self, value: impl Into<ThemeAwareValue>) -> Self {
+                    self.with_known_property(Property::$variant, value)
+                }
+            )*
+        }
+    };
 }
 
-impl Property {
-    pub fn parse(property: &str) -> Option<Self> {
-        match property {
-            "background" => Some(Self::Background),
-            "width" => Some(Self::Width),
-            "height" => Some(Self::Height),
-            "padding" => Some(Self::Padding),
-            "padding-top" => Some(Self::PaddingTop),
-            "padding-left" => Some(Self::PaddingLeft),
-            "padding-right" => Some(Self::PaddingRight),
-            "padding-bottom" => Some(Self::PaddingBottom),
-            "margin-left" => Some(Self::MarginLeft),
-            "margin-right" => Some(Self::MarginRight),
-            "margin-top" => Some(Self::MarginTop),
-            "margin-bottom" => Some(Self::MarginBottom),
-            "margin" => Some(Self::Margin),
-            "display" => Some(Self::Display),
-            "flex-direction" => Some(Self::FlexDirection),
-            "flex-wrap" => Some(Self::FlexWrap),
-            "align-items" => Some(Self::AlignItems),
-            "justify-content" => Some(Self::JustifyContent),
-            "gap" => Some(Self::Gap),
-            "grid-template-columns" => Some(Self::GridTemplateColumns),
-            "grid-column" => Some(Self::GridColumn),
-            "max-width" => Some(Self::MaxWidth),
-            "max-height" => Some(Self::MaxHeight),
-            "font-family" => Some(Self::FontFamily),
-            "font-size" => Some(Self::FontSize),
-            "font-weight" => Some(Self::FontWeight),
-            "letter-spacing" => Some(Self::LetterSpacing),
-            "line-height" => Some(Self::LineHeight),
-            "text-decoration" => Some(Self::TextDecoration),
-            "border" => Some(Self::Border),
-            "border-top" => Some(Self::BorderTop),
-            "border-right" => Some(Self::BorderRight),
-            "border-bottom" => Some(Self::BorderBottom),
-            "border-left" => Some(Self::BorderLeft),
-            "color" => Some(Self::Color),
-            "flex" => Some(Self::Flex),
-            "flex-grow" => Some(Self::FlexGrow),
-            "content" => Some(Self::Content),
-            "border-width" => Some(Self::BorderWidth),
-            "border-style" => Some(Self::BorderStyle),
-            "border-color" => Some(Self::BorderColor),
-            "border-right-color" => Some(Self::BorderRightColor),
-            "border-bottom-color" => Some(Self::BorderBottomColor),
-            "flex-shrink" => Some(Self::FlexShrink),
-            "align-self" => Some(Self::AlignSelf),
-            "white-space" => Some(Self::WhiteSpace),
-            "user-select" => Some(Self::UserSelect),
-            "position" => Some(Self::Position),
-            "top" => Some(Self::Top),
-            "right" => Some(Self::Right),
-            "bottom" => Some(Self::Bottom),
-            "left" => Some(Self::Left),
-            "overflow" => Some(Self::Overflow),
-            "overflow-x" => Some(Self::OverflowX),
-            "overflow-y" => Some(Self::OverflowY),
-            "scrollbar-width" => Some(Self::ScrollbarWidth),
-            "scrollbar-color" => Some(Self::ScrollbarColor),
-            "clip" => Some(Self::Clip),
-            "object-fit" => Some(Self::ObjectFit),
-            "border-radius" => Some(Self::BorderRadius),
-            "cursor" => Some(Self::Cursor),
-            "opacity" => Some(Self::Opacity),
-            "pointer-events" => Some(Self::PointerEvents),
-            "list-style" => Some(Self::ListStyle),
-            "min-width" => Some(Self::MinWidth),
-            "min-height" => Some(Self::MinHeight),
-            "aspect-ratio" => Some(Self::AspectRatio),
-            "outline" => Some(Self::Outline),
-            "outline-offset" => Some(Self::OutlineOffset),
-            "inset" => Some(Self::Inset),
-            "z-index" => Some(Self::ZIndex),
-            "transition" => Some(Self::Transition),
-            "backdrop-filter" => Some(Self::BackdropFilter),
-            "box-shadow" => Some(Self::BoxShadow),
-            "text-align" => Some(Self::TextAlign),
-            "scroll-margin" => Some(Self::ScrollMargin),
-            "transform" => Some(Self::Transform),
-            "visibility" => Some(Self::Visibility),
-            _ => None,
-        }
-    }
-
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Self::Background => "background",
-            Self::Width => "width",
-            Self::Height => "height",
-            Self::Padding => "padding",
-            Self::PaddingTop => "padding-top",
-            Self::PaddingLeft => "padding-left",
-            Self::PaddingRight => "padding-right",
-            Self::PaddingBottom => "padding-bottom",
-            Self::MarginLeft => "margin-left",
-            Self::MarginRight => "margin-right",
-            Self::MarginTop => "margin-top",
-            Self::MarginBottom => "margin-bottom",
-            Self::Margin => "margin",
-            Self::Display => "display",
-            Self::FlexDirection => "flex-direction",
-            Self::FlexWrap => "flex-wrap",
-            Self::AlignItems => "align-items",
-            Self::JustifyContent => "justify-content",
-            Self::Gap => "gap",
-            Self::GridTemplateColumns => "grid-template-columns",
-            Self::GridColumn => "grid-column",
-            Self::MaxWidth => "max-width",
-            Self::MaxHeight => "max-height",
-            Self::FontFamily => "font-family",
-            Self::FontSize => "font-size",
-            Self::FontWeight => "font-weight",
-            Self::LetterSpacing => "letter-spacing",
-            Self::LineHeight => "line-height",
-            Self::TextDecoration => "text-decoration",
-            Self::Border => "border",
-            Self::BorderTop => "border-top",
-            Self::BorderRight => "border-right",
-            Self::BorderBottom => "border-bottom",
-            Self::BorderLeft => "border-left",
-            Self::Color => "color",
-            Self::Flex => "flex",
-            Self::FlexGrow => "flex-grow",
-            Self::Content => "content",
-            Self::BorderWidth => "border-width",
-            Self::BorderStyle => "border-style",
-            Self::BorderColor => "border-color",
-            Self::BorderRightColor => "border-right-color",
-            Self::BorderBottomColor => "border-bottom-color",
-            Self::FlexShrink => "flex-shrink",
-            Self::AlignSelf => "align-self",
-            Self::WhiteSpace => "white-space",
-            Self::UserSelect => "user-select",
-            Self::Position => "position",
-            Self::Top => "top",
-            Self::Right => "right",
-            Self::Bottom => "bottom",
-            Self::Left => "left",
-            Self::Overflow => "overflow",
-            Self::OverflowX => "overflow-x",
-            Self::OverflowY => "overflow-y",
-            Self::ScrollbarWidth => "scrollbar-width",
-            Self::ScrollbarColor => "scrollbar-color",
-            Self::Clip => "clip",
-            Self::ObjectFit => "object-fit",
-            Self::BorderRadius => "border-radius",
-            Self::Cursor => "cursor",
-            Self::Opacity => "opacity",
-            Self::PointerEvents => "pointer-events",
-            Self::ListStyle => "list-style",
-            Self::MinWidth => "min-width",
-            Self::MinHeight => "min-height",
-            Self::AspectRatio => "aspect-ratio",
-            Self::Outline => "outline",
-            Self::OutlineOffset => "outline-offset",
-            Self::Inset => "inset",
-            Self::ZIndex => "z-index",
-            Self::Transition => "transition",
-            Self::BackdropFilter => "backdrop-filter",
-            Self::BoxShadow => "box-shadow",
-            Self::TextAlign => "text-align",
-            Self::ScrollMargin => "scroll-margin",
-            Self::Transform => "transform",
-            Self::Visibility => "visibility",
-        }
-    }
+properties! {
+    Background => "background", background;
+    Width => "width", width;
+    Height => "height", height;
+    Padding => "padding", padding;
+    PaddingTop => "padding-top", padding_top;
+    PaddingLeft => "padding-left", padding_left;
+    PaddingRight => "padding-right", padding_right;
+    PaddingBottom => "padding-bottom", padding_bottom;
+    MarginLeft => "margin-left", margin_left;
+    MarginRight => "margin-right", margin_right;
+    MarginTop => "margin-top", margin_top;
+    MarginBottom => "margin-bottom", margin_bottom;
+    Margin => "margin", margin;
+    Display => "display", display;
+    FlexDirection => "flex-direction", flex_direction;
+    FlexWrap => "flex-wrap", flex_wrap;
+    AlignItems => "align-items", align_items;
+    JustifyContent => "justify-content", justify_content;
+    Gap => "gap", gap;
+    GridTemplateColumns => "grid-template-columns", grid_template_columns;
+    GridColumn => "grid-column", grid_column;
+    MaxWidth => "max-width", max_width;
+    MaxHeight => "max-height", max_height;
+    FontFamily => "font-family", font_family;
+    FontSize => "font-size", font_size;
+    FontWeight => "font-weight", font_weight;
+    LetterSpacing => "letter-spacing", letter_spacing;
+    LineHeight => "line-height", line_height;
+    TextDecoration => "text-decoration", text_decoration;
+    Border => "border", border;
+    BorderTop => "border-top", border_top;
+    BorderRight => "border-right", border_right;
+    BorderBottom => "border-bottom", border_bottom;
+    BorderLeft => "border-left", border_left;
+    Color => "color", color;
+    Flex => "flex", flex;
+    FlexGrow => "flex-grow", flex_grow;
+    Content => "content", content;
+    BorderWidth => "border-width", border_width;
+    BorderStyle => "border-style", border_style;
+    BorderColor => "border-color", border_color;
+    BorderRightColor => "border-right-color", border_right_color;
+    BorderBottomColor => "border-bottom-color", border_bottom_color;
+    FlexShrink => "flex-shrink", flex_shrink;
+    AlignSelf => "align-self", align_self;
+    WhiteSpace => "white-space", white_space;
+    UserSelect => "user-select", user_select;
+    Position => "position", position;
+    Top => "top", top;
+    Right => "right", right;
+    Bottom => "bottom", bottom;
+    Left => "left", left;
+    Overflow => "overflow", overflow;
+    OverflowX => "overflow-x", overflow_x;
+    OverflowY => "overflow-y", overflow_y;
+    ScrollbarWidth => "scrollbar-width", scrollbar_width;
+    ScrollbarColor => "scrollbar-color", scrollbar_color;
+    Clip => "clip", clip;
+    ObjectFit => "object-fit", object_fit;
+    BorderRadius => "border-radius", border_radius;
+    Cursor => "cursor", cursor;
+    Opacity => "opacity", opacity;
+    PointerEvents => "pointer-events", pointer_events;
+    ListStyle => "list-style", list_style;
+    MinWidth => "min-width", min_width;
+    MinHeight => "min-height", min_height;
+    AspectRatio => "aspect-ratio", aspect_ratio;
+    Outline => "outline", outline;
+    OutlineOffset => "outline-offset", outline_offset;
+    Inset => "inset", inset;
+    ZIndex => "z-index", z_index;
+    Transition => "transition", transition;
+    BackdropFilter => "backdrop-filter", backdrop_filter;
+    BoxShadow => "box-shadow", box_shadow;
+    TextAlign => "text-align", text_align;
+    ScrollMargin => "scroll-margin", scroll_margin;
+    Transform => "transform", transform;
+    Visibility => "visibility", visibility;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -280,4 +150,24 @@ pub enum SxModifierKey {
     Selector(String),
     Condition(String),
     Breakpoint(Size),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_property_parses_back_from_its_css_name() {
+        for property in Property::ALL {
+            assert_eq!(Property::parse(property.as_str()), Some(*property));
+        }
+    }
+
+    #[test]
+    fn a_builder_method_sets_its_own_property() {
+        assert_eq!(
+            SxPropertyKey::parse("z-index"),
+            SxPropertyKey::Known(Property::ZIndex)
+        );
+    }
 }

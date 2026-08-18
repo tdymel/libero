@@ -1,4 +1,5 @@
 use super::{Property, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
+use crate::theme::Size;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
@@ -30,6 +31,30 @@ impl Sx {
             sx: nested,
         });
         self
+    }
+
+    pub fn hover(self, nested: Sx) -> Self {
+        self.selector(":hover", nested)
+    }
+
+    pub fn focus(self, nested: Sx) -> Self {
+        self.selector(":focus", nested)
+    }
+
+    pub fn focus_visible(self, nested: Sx) -> Self {
+        self.selector(":focus-visible", nested)
+    }
+
+    pub fn when(self, condition: impl Into<String>, nested: Sx) -> Self {
+        self.modifier(SxModifierKey::Condition(condition.into()), nested)
+    }
+
+    pub fn selector(self, selector: impl Into<String>, nested: Sx) -> Self {
+        self.modifier(SxModifierKey::Selector(selector.into()), nested)
+    }
+
+    pub fn breakpoint(self, breakpoint: Size, nested: Sx) -> Self {
+        self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }
 
     pub fn apply_if<T>(self, value: Option<T>, f: impl FnOnce(Self, T) -> Self) -> Self {
