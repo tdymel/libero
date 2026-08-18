@@ -69,6 +69,26 @@ impl Input<ThemeAwareValue> {
     }
 }
 
+/// The `&str`/`String` -> `Input<T>` forwarders for a `str_enum!` type,
+/// which `#[props(into)]` can't chain on its own.
+macro_rules! input_from_str {
+    ($ty:ty) => {
+        impl From<&str> for $crate::components::Input<$ty> {
+            fn from(value: &str) -> Self {
+                Self::Value(<$ty>::from(value))
+            }
+        }
+
+        impl From<String> for $crate::components::Input<$ty> {
+            fn from(value: String) -> Self {
+                Self::Value(<$ty>::from(value.as_str()))
+            }
+        }
+    };
+}
+
+pub(crate) use input_from_str;
+
 impl From<Sx> for Input<Sx> {
     fn from(value: Sx) -> Self {
         Self::Value(value)
@@ -114,17 +134,7 @@ impl From<Option<String>> for Input<ClassList> {
     }
 }
 
-impl From<&str> for Input<ClassList> {
-    fn from(value: &str) -> Self {
-        Self::Value(ClassList::from(value))
-    }
-}
-
-impl From<String> for Input<ClassList> {
-    fn from(value: String) -> Self {
-        Self::Value(ClassList::from(value))
-    }
-}
+input_from_str!(ClassList);
 
 impl From<Size> for Input<Size> {
     fn from(value: Size) -> Self {
@@ -132,17 +142,7 @@ impl From<Size> for Input<Size> {
     }
 }
 
-impl From<&str> for Input<Size> {
-    fn from(value: &str) -> Self {
-        Self::Value(Size::from(value))
-    }
-}
-
-impl From<String> for Input<Size> {
-    fn from(value: String) -> Self {
-        Self::Value(Size::from(value))
-    }
-}
+input_from_str!(Size);
 
 impl From<f32> for Input<f32> {
     fn from(value: f32) -> Self {

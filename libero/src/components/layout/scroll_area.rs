@@ -3,48 +3,18 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States, Variables,
-        common::{base_props, dom_api, variables},
+        common::{base_props, dom_api, input_from_str, variables},
     },
     hooks::{use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
 };
 
-impl From<&str> for Input<ScrollAxis> {
-    fn from(value: &str) -> Self {
-        Input::Value(ScrollAxis::from(value))
-    }
-}
+input_from_str!(ScrollAxis);
 
-impl From<String> for Input<ScrollAxis> {
-    fn from(value: String) -> Self {
-        Input::Value(ScrollAxis::from(value))
-    }
-}
+input_from_str!(ScrollbarVisibility);
 
-impl From<&str> for Input<ScrollbarVisibility> {
-    fn from(value: &str) -> Self {
-        Input::Value(ScrollbarVisibility::from(value))
-    }
-}
-
-impl From<String> for Input<ScrollbarVisibility> {
-    fn from(value: String) -> Self {
-        Input::Value(ScrollbarVisibility::from(value))
-    }
-}
-
-impl From<&str> for Input<ScrollbarSize> {
-    fn from(value: &str) -> Self {
-        Input::Value(ScrollbarSize::from(value))
-    }
-}
-
-impl From<String> for Input<ScrollbarSize> {
-    fn from(value: String) -> Self {
-        Input::Value(ScrollbarSize::from(value))
-    }
-}
+input_from_str!(ScrollbarSize);
 
 /// Scroll position as a percent (0-100) of each axis's scrollable range.
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -3,10 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States, Variables,
-        common::{base_color, base_props, contrast_color, focus_ring_sx, hover_color, variables},
+        common::{
+            base_color, base_props, contrast_color, focus_ring_sx, hover_color, input_from_str,
+            variables,
+        },
         navigation::InternalAnchor,
     },
     hooks::use_theme,
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, CssVar, Size},
 };
@@ -17,17 +21,7 @@ use crate::{
 // `NavigationTarget::from(Route::Foo {})` instead), since Dioxus's
 // `#[props(into)]` can't chain a foreign conversion through an `Option`/our
 // own wrapper at once.
-impl From<&str> for Input<NavigationTarget> {
-    fn from(value: &str) -> Self {
-        Input::Value(NavigationTarget::from(value))
-    }
-}
-
-impl From<String> for Input<NavigationTarget> {
-    fn from(value: String) -> Self {
-        Input::Value(NavigationTarget::from(value))
-    }
-}
+input_from_str!(NavigationTarget);
 
 impl From<NavigationTarget> for Input<NavigationTarget> {
     fn from(value: NavigationTarget) -> Self {
@@ -42,42 +36,16 @@ struct Ripple {
     y: f64,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum ButtonVariant {
-    Filled,
-    #[default]
-    Outlined,
-    Text,
-}
-
-impl From<&str> for ButtonVariant {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "filled" => Self::Filled,
-            "text" => Self::Text,
-            "outlined" | "outline" => Self::Outlined,
-            _ => Self::Outlined,
-        }
+str_enum! {
+    pub enum ButtonVariant {
+        Filled = "filled",
+        #[default]
+        Outlined = "outlined" | "outline",
+        Text = "text",
     }
 }
 
-impl From<String> for ButtonVariant {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<ButtonVariant> {
-    fn from(value: &str) -> Self {
-        Input::Value(ButtonVariant::from(value))
-    }
-}
-
-impl From<String> for Input<ButtonVariant> {
-    fn from(value: String) -> Self {
-        Input::Value(ButtonVariant::from(value))
-    }
-}
+input_from_str!(ButtonVariant);
 
 // The default shade used for a bare color (e.g. "primary") when no explicit
 // shade is given. Kept a step darker than the library-wide default shade (5)

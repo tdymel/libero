@@ -1,45 +1,25 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 
+use crate::str_enum::str_enum;
 use crate::theme::CssVar;
 
 pub const FLOAT_Z_INDEX: CssVar = CssVar::new("--lsx-float-z-index");
 pub const FLOAT_OFFSET_X: CssVar = CssVar::new("--lsx-float-offset-x");
 pub const FLOAT_OFFSET_Y: CssVar = CssVar::new("--lsx-float-offset-y");
 
-/// Anchor corner/edge within the floated element's `position: relative` parent.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum Placement {
-    TopStart,
-    TopCenter,
-    TopEnd,
-    CenterStart,
-    #[default]
-    CenterCenter,
-    CenterEnd,
-    BottomStart,
-    BottomCenter,
-    BottomEnd,
-}
-
-impl From<&str> for Placement {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "top-start" => Self::TopStart,
-            "top-center" => Self::TopCenter,
-            "top-end" => Self::TopEnd,
-            "center-start" => Self::CenterStart,
-            "center-end" => Self::CenterEnd,
-            "bottom-start" => Self::BottomStart,
-            "bottom-center" => Self::BottomCenter,
-            "bottom-end" => Self::BottomEnd,
-            _ => Self::CenterCenter,
-        }
-    }
-}
-
-impl From<String> for Placement {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
+str_enum! {
+    /// Anchor corner/edge within the floated element's `position: relative` parent.
+    pub enum Placement {
+        TopStart = "top-start",
+        TopCenter = "top-center",
+        TopEnd = "top-end",
+        CenterStart = "center-start",
+        #[default]
+        CenterCenter = "center-center",
+        CenterEnd = "center-end",
+        BottomStart = "bottom-start",
+        BottomCenter = "bottom-center",
+        BottomEnd = "bottom-end",
     }
 }
 

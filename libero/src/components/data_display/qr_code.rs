@@ -5,7 +5,10 @@ use fast_qr::convert::{Builder, svg::SvgBuilder};
 use fast_qr::{ECL, QRBuilder};
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{
+        Box, Input, States,
+        common::{base_props, input_from_str},
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrRobustness},
@@ -22,17 +25,7 @@ impl From<QrRobustness> for ECL {
     }
 }
 
-impl From<&str> for Input<QrRobustness> {
-    fn from(value: &str) -> Self {
-        Input::Value(QrRobustness::from(value))
-    }
-}
-
-impl From<String> for Input<QrRobustness> {
-    fn from(value: String) -> Self {
-        Input::Value(QrRobustness::from(value))
-    }
-}
+input_from_str!(QrRobustness);
 
 // Standard 4-module quiet zone (ISO/IEC 18004) - not a style choice, most
 // scanners won't reliably read a code without it.

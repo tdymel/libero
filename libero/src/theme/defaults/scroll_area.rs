@@ -1,64 +1,35 @@
-/// Which axes show a scrollbar / allow overflow.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum ScrollAxis {
-    #[default]
-    Vertical,
-    Horizontal,
-    Both,
-    None,
-}
+use crate::str_enum::str_enum;
 
-impl From<&str> for ScrollAxis {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "horizontal" => Self::Horizontal,
-            "both" => Self::Both,
-            "none" => Self::None,
-            _ => Self::Vertical,
-        }
+str_enum! {
+    /// Which axes show a scrollbar / allow overflow.
+    pub enum ScrollAxis {
+        #[default]
+        Vertical = "vertical",
+        Horizontal = "horizontal",
+        Both = "both",
+        None = "none",
     }
 }
 
-impl From<String> for ScrollAxis {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
+str_enum! {
+    /// When the scrollbar is actually visible - `Scroll` is treated the same as
+    /// `Hover` (no idle-timeout primitive exists in this codebase yet).
+    pub enum ScrollbarVisibility {
+        #[default]
+        Always = "always",
+        Hover = "hover",
+        Hidden = "hidden",
+        Scroll = "scroll",
     }
 }
 
-/// When the scrollbar is actually visible - `Scroll` is treated the same as
-/// `Hover` (no idle-timeout primitive exists in this codebase yet).
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum ScrollbarVisibility {
-    #[default]
-    Always,
-    Hover,
-    Hidden,
-    Scroll,
-}
-
-impl From<&str> for ScrollbarVisibility {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "hover" => Self::Hover,
-            "hidden" => Self::Hidden,
-            "scroll" => Self::Scroll,
-            _ => Self::Always,
-        }
+str_enum! {
+    /// Maps directly to the CSS `scrollbar-width` keyword.
+    pub enum ScrollbarSize {
+        #[default]
+        Thin = "thin",
+        Auto = "auto",
     }
-}
-
-impl From<String> for ScrollbarVisibility {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-/// Maps directly to the CSS `scrollbar-width` keyword.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum ScrollbarSize {
-    #[default]
-    Thin,
-    Auto,
 }
 
 impl ScrollbarSize {
@@ -67,21 +38,6 @@ impl ScrollbarSize {
             Self::Thin => "thin",
             Self::Auto => "auto",
         }
-    }
-}
-
-impl From<&str> for ScrollbarSize {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "auto" => Self::Auto,
-            _ => Self::Thin,
-        }
-    }
-}
-
-impl From<String> for ScrollbarSize {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
     }
 }
 

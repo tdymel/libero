@@ -18,6 +18,7 @@ pub(crate) use color_variant::{base_color, contrast_color, hover_color};
 pub use dom_api::{DomApi, DomApiError, dom_api};
 pub use element_api::{Dimensions, ElementApi};
 pub use input::Input;
+pub(crate) use input::input_from_str;
 pub use orientation::Orientation;
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::render_polymorphic;

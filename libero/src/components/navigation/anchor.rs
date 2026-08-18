@@ -1,48 +1,27 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, States, common::base_props},
+    components::{
+        Input, States,
+        common::{base_props, input_from_str},
+    },
+    str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
     theme::{Size, TextDefaults},
 };
 
 use super::InternalAnchor;
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum AnchorUnderline {
-    Always,
-    #[default]
-    Hover,
-    Never,
-}
-
-impl From<&str> for AnchorUnderline {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "always" => Self::Always,
-            "never" => Self::Never,
-            _ => Self::Hover,
-        }
+str_enum! {
+    pub enum AnchorUnderline {
+        Always = "always",
+        #[default]
+        Hover = "hover",
+        Never = "never",
     }
 }
 
-impl From<String> for AnchorUnderline {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<AnchorUnderline> {
-    fn from(value: &str) -> Self {
-        Input::Value(AnchorUnderline::from(value))
-    }
-}
-
-impl From<String> for Input<AnchorUnderline> {
-    fn from(value: String) -> Self {
-        Input::Value(AnchorUnderline::from(value))
-    }
-}
+input_from_str!(AnchorUnderline);
 
 fn underline_token(underline: AnchorUnderline) -> &'static str {
     match underline {

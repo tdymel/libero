@@ -3,8 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States, Variables,
-        common::{base_props, focus_ring_sx, variables},
+        common::{base_props, focus_ring_sx, input_from_str, variables},
     },
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{FLEX_ALIGN_VAR, FLEX_JUSTIFY_VAR, FLEX_WRAP_VAR, FlexDefaults, Size, SizeCss},
 };
@@ -16,46 +17,23 @@ use crate::{
  *   Not sure if we should provide a similar API.
  */
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum FlexDirection {
-    Row,
-    #[default]
-    Column,
-}
-
-impl From<&str> for FlexDirection {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "row" => Self::Row,
-            _ => Self::Column,
-        }
+str_enum! {
+    pub enum FlexDirection {
+        Row = "row",
+        #[default]
+        Column = "column",
     }
 }
 
-impl From<String> for FlexDirection {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
+input_from_str!(FlexDirection);
 
-impl From<&str> for Input<FlexDirection> {
-    fn from(value: &str) -> Self {
-        Input::Value(FlexDirection::from(value))
+str_enum! {
+    pub enum FlexWrap {
+        Wrap = "wrap",
+        #[default]
+        NoWrap = "nowrap",
+        WrapReverse = "wrap-reverse",
     }
-}
-
-impl From<String> for Input<FlexDirection> {
-    fn from(value: String) -> Self {
-        Input::Value(FlexDirection::from(value))
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum FlexWrap {
-    Wrap,
-    #[default]
-    NoWrap,
-    WrapReverse,
 }
 
 impl FlexWrap {
@@ -74,22 +52,6 @@ impl From<bool> for FlexWrap {
     }
 }
 
-impl From<&str> for FlexWrap {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "wrap" => Self::Wrap,
-            "wrap-reverse" => Self::WrapReverse,
-            _ => Self::NoWrap,
-        }
-    }
-}
-
-impl From<String> for FlexWrap {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
 impl From<FlexWrap> for Input<FlexWrap> {
     fn from(value: FlexWrap) -> Self {
         Input::Value(value)
@@ -102,17 +64,7 @@ impl From<bool> for Input<FlexWrap> {
     }
 }
 
-impl From<&str> for Input<FlexWrap> {
-    fn from(value: &str) -> Self {
-        Input::Value(FlexWrap::from(value))
-    }
-}
-
-impl From<String> for Input<FlexWrap> {
-    fn from(value: String) -> Self {
-        Input::Value(FlexWrap::from(value))
-    }
-}
+input_from_str!(FlexWrap);
 
 #[cfg(test)]
 mod tests {

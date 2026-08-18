@@ -1,7 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, Orientation, States, Variables, common::base_props, variables},
+    components::{
+        Box, Input, Orientation, States, Variables,
+        common::{base_props, input_from_str},
+        variables,
+    },
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, ColorValue, CssVar, DividerDefaults, SizeCss},
 };
@@ -15,42 +20,16 @@ fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum LabelPosition {
-    Start,
-    #[default]
-    Center,
-    End,
-}
-
-impl From<&str> for LabelPosition {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "start" => Self::Start,
-            "end" => Self::End,
-            "center" => Self::Center,
-            _ => Self::Center,
-        }
+str_enum! {
+    pub enum LabelPosition {
+        Start = "start",
+        #[default]
+        Center = "center",
+        End = "end",
     }
 }
 
-impl From<String> for LabelPosition {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<LabelPosition> {
-    fn from(value: &str) -> Self {
-        Input::Value(LabelPosition::from(value))
-    }
-}
-
-impl From<String> for Input<LabelPosition> {
-    fn from(value: String) -> Self {
-        Input::Value(LabelPosition::from(value))
-    }
-}
+input_from_str!(LabelPosition);
 
 const DIVIDER_COLOR_VAR: CssVar = CssVar::new("--lsx-divider-color");
 const DIVIDER_SPACING_VAR: CssVar = CssVar::new("--lsx-divider-spacing");

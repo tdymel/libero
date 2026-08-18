@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, Variables, common::base_props, variables},
+    components::{
+        Box, Input, States, Variables,
+        common::{base_props, input_from_str},
+        variables,
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX},
@@ -9,17 +13,7 @@ use crate::{
 
 pub use crate::theme::Placement;
 
-impl From<&str> for Input<Placement> {
-    fn from(value: &str) -> Self {
-        Input::Value(Placement::from(value))
-    }
-}
-
-impl From<String> for Input<Placement> {
-    fn from(value: String) -> Self {
-        Input::Value(Placement::from(value))
-    }
-}
+input_from_str!(Placement);
 
 const FLOAT_OFFSET_X_VAR: CssVar = CssVar::new("--lsx-float-offset-x");
 const FLOAT_OFFSET_Y_VAR: CssVar = CssVar::new("--lsx-float-offset-y");

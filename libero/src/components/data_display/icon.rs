@@ -3,48 +3,24 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color},
+        common::{base_color, base_props, contrast_color, input_from_str},
         variables,
     },
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, ICON_SIZE, Size, SizeCss},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum IconVariant {
-    #[default]
-    Filled,
-    Outlined,
-    Transparent,
-}
-
-impl From<&str> for IconVariant {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "outlined" | "outline" => Self::Outlined,
-            "transparent" => Self::Transparent,
-            _ => Self::Filled,
-        }
+str_enum! {
+    pub enum IconVariant {
+        #[default]
+        Filled = "filled",
+        Outlined = "outlined" | "outline",
+        Transparent = "transparent",
     }
 }
 
-impl From<String> for IconVariant {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<IconVariant> {
-    fn from(value: &str) -> Self {
-        Input::Value(IconVariant::from(value))
-    }
-}
-
-impl From<String> for Input<IconVariant> {
-    fn from(value: String) -> Self {
-        Input::Value(IconVariant::from(value))
-    }
-}
+input_from_str!(IconVariant);
 
 // Matches Button's own default shade - bold enough to read as a filled badge
 // rather than the library-wide default (5).

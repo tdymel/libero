@@ -3,10 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Dialog, Float, Input, Modal, Placement, ScrollArea, States, Variables,
-        common::base_props, variables,
+        common::{base_props, input_from_str},
+        variables,
     },
     hooks::use_css,
     hooks::use_portal,
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, DRAWER_SIZE, Size},
 };
@@ -71,80 +73,30 @@ fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum DrawerVariant {
-    /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop - built on
-    /// `Modal`.
-    #[default]
-    Temporary,
-    /// In-place plain panel, no portal/backdrop/focus-trap, e.g. a sidebar.
-    Static,
-}
-
-impl From<&str> for DrawerVariant {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "static" => Self::Static,
-            _ => Self::Temporary,
-        }
+str_enum! {
+    pub enum DrawerVariant {
+        /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop - built on
+        /// `Modal`.
+        #[default]
+        Temporary = "temporary",
+        /// In-place plain panel, no portal/backdrop/focus-trap, e.g. a sidebar.
+        Static = "static",
     }
 }
 
-impl From<String> for DrawerVariant {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
+input_from_str!(DrawerVariant);
+
+str_enum! {
+    pub enum DrawerAnchor {
+        #[default]
+        Left = "left",
+        Right = "right",
+        Top = "top",
+        Bottom = "bottom",
     }
 }
 
-impl From<&str> for Input<DrawerVariant> {
-    fn from(value: &str) -> Self {
-        Input::Value(DrawerVariant::from(value))
-    }
-}
-
-impl From<String> for Input<DrawerVariant> {
-    fn from(value: String) -> Self {
-        Input::Value(DrawerVariant::from(value))
-    }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum DrawerAnchor {
-    #[default]
-    Left,
-    Right,
-    Top,
-    Bottom,
-}
-
-impl From<&str> for DrawerAnchor {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "right" => Self::Right,
-            "top" => Self::Top,
-            "bottom" => Self::Bottom,
-            _ => Self::Left,
-        }
-    }
-}
-
-impl From<String> for DrawerAnchor {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<DrawerAnchor> {
-    fn from(value: &str) -> Self {
-        Input::Value(DrawerAnchor::from(value))
-    }
-}
-
-impl From<String> for Input<DrawerAnchor> {
-    fn from(value: String) -> Self {
-        Input::Value(DrawerAnchor::from(value))
-    }
-}
+input_from_str!(DrawerAnchor);
 
 // TODO: `anchor` here only picks the border/axis, not real placement - callers
 // must still order `Drawer` correctly themselves. Consider an API that also

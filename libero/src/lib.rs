@@ -9,6 +9,7 @@ pub mod context;
 pub mod hooks;
 
 mod css;
+mod str_enum;
 pub mod sx;
 pub mod theme;
 mod tokens;

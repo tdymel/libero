@@ -3,21 +3,23 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Dialog, Input, Modal, States, Variables,
-        common::{base_props, focus_ring_sx, states, variables},
+        common::{base_props, focus_ring_sx, input_from_str, states, variables},
     },
     hooks::{use_focus_return, use_portal},
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, SizeCss},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum ImageFit {
-    Fill,
-    Contain,
-    #[default]
-    Cover,
-    None,
-    ScaleDown,
+str_enum! {
+    pub enum ImageFit {
+        Fill = "fill",
+        Contain = "contain",
+        #[default]
+        Cover = "cover",
+        None = "none",
+        ScaleDown = "scale-down" | "scaledown",
+    }
 }
 
 impl ImageFit {
@@ -32,35 +34,7 @@ impl ImageFit {
     }
 }
 
-impl From<&str> for ImageFit {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "fill" => Self::Fill,
-            "contain" => Self::Contain,
-            "none" => Self::None,
-            "scale-down" | "scaledown" => Self::ScaleDown,
-            _ => Self::Cover,
-        }
-    }
-}
-
-impl From<String> for ImageFit {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<ImageFit> {
-    fn from(value: &str) -> Self {
-        Input::Value(ImageFit::from(value))
-    }
-}
-
-impl From<String> for Input<ImageFit> {
-    fn from(value: String) -> Self {
-        Input::Value(ImageFit::from(value))
-    }
-}
+input_from_str!(ImageFit);
 
 fn fit_token(fit: ImageFit) -> &'static str {
     match fit {

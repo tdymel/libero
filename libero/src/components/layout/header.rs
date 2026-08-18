@@ -1,46 +1,26 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, HtmlTag, Input, States, Variables, common::base_props, variables},
+    components::{
+        Box, HtmlTag, Input, States, Variables,
+        common::{base_props, input_from_str},
+        variables,
+    },
+    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, Size},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum HeaderPosition {
-    Static,
-    #[default]
-    Sticky,
-    Fixed,
-}
-
-impl From<&str> for HeaderPosition {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "static" => Self::Static,
-            "fixed" => Self::Fixed,
-            _ => Self::Sticky,
-        }
+str_enum! {
+    pub enum HeaderPosition {
+        Static = "static",
+        #[default]
+        Sticky = "sticky",
+        Fixed = "fixed",
     }
 }
 
-impl From<String> for HeaderPosition {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<HeaderPosition> {
-    fn from(value: &str) -> Self {
-        Input::Value(HeaderPosition::from(value))
-    }
-}
-
-impl From<String> for Input<HeaderPosition> {
-    fn from(value: String) -> Self {
-        Input::Value(HeaderPosition::from(value))
-    }
-}
+input_from_str!(HeaderPosition);
 
 // Matches Button's own default shade - bold enough for a solid brand-color
 // banner rather than the library-wide default (5).
