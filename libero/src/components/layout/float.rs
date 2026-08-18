@@ -52,18 +52,9 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn float_variables(props: &FloatProps) -> Variables {
     variables()
-        .with(
-            FLOAT_OFFSET_X_VAR,
-            props.offset_x.as_ref().and_then(|v| v.resolve(None)),
-        )
-        .with(
-            FLOAT_OFFSET_Y_VAR,
-            props.offset_y.as_ref().and_then(|v| v.resolve(None)),
-        )
-        .with(
-            FLOAT_Z_INDEX.override_var(),
-            props.z_index.as_ref().and_then(|v| v.resolve(None)),
-        )
+        .with(FLOAT_OFFSET_X_VAR, props.offset_x.resolve(None))
+        .with(FLOAT_OFFSET_Y_VAR, props.offset_y.resolve(None))
+        .with(FLOAT_Z_INDEX.override_var(), props.z_index.resolve(None))
 }
 
 base_props! {
@@ -92,11 +83,7 @@ base_props! {
 #[component]
 pub fn Float(props: FloatProps) -> Element {
     let theme = use_theme();
-    let placement = props
-        .placement
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.float.placement);
+    let placement = props.placement.copied_or(theme.float.placement);
     let variables = float_variables(&props);
 
     let states = props

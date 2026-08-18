@@ -167,7 +167,7 @@ pub fn Image(props: ImageProps) -> Element {
         props.src.clone()
     };
 
-    let fit = props.fit.as_ref().copied().unwrap_or_default();
+    let fit = props.fit.copied_or_default();
     let variables = image_variables(props.radius.as_ref());
 
     let on_error_src = props.src.clone();

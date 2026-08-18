@@ -28,7 +28,7 @@ base_props! {
 #[component]
 pub fn List(props: ListProps) -> Element {
     let theme = use_theme();
-    let size = props.size.as_ref().copied().unwrap_or(theme.list.size);
+    let size = props.size.copied_or(theme.list.size);
 
     let states = props
         .states

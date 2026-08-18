@@ -53,14 +53,8 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
     let variables = variables()
-        .with(
-            OVERLAY_OPACITY_VAR,
-            props.opacity.as_ref().and_then(|v| v.resolve(None)),
-        )
-        .with(
-            OVERLAY_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(|v| v.resolve(None)),
-        )
+        .with(OVERLAY_OPACITY_VAR, props.opacity.resolve(None))
+        .with(OVERLAY_Z_INDEX_VAR, props.z_index.resolve(None))
         .with(
             OVERLAY_BLUR_VAR,
             props

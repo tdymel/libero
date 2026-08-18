@@ -102,10 +102,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
     variables()
         .with(
             HEADER_HEIGHT.override_var(),
-            props
-                .size
-                .as_ref()
-                .and_then(|v| v.resolve(Some(HEADER_HEIGHT))),
+            props.size.resolve(Some(HEADER_HEIGHT)),
         )
         .with(
             HEADER_BACKGROUND_VAR,
@@ -115,10 +112,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
             HEADER_COLOR_VAR,
             contrast.as_ref().and_then(|v| v.resolve(None)),
         )
-        .with(
-            HEADER_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(|v| v.resolve(None)),
-        )
+        .with(HEADER_Z_INDEX_VAR, props.z_index.resolve(None))
 }
 
 base_props! {
@@ -142,7 +136,7 @@ base_props! {
 /// actions as children rather than being scoped to either itself.
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
-    let position = props.position.as_ref().copied().unwrap_or_default();
+    let position = props.position.copied_or_default();
     let variables = header_variables(&props);
 
     let states = props

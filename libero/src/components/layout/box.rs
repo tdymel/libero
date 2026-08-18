@@ -67,7 +67,7 @@ pub fn Box(props: BoxProps) -> Element {
         &props.variables,
         props.style,
     );
-    let component = props.component.as_ref().copied().unwrap_or_default();
+    let component = props.component.copied_or_default();
 
     let attributes = props
         .attributes

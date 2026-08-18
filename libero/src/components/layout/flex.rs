@@ -145,14 +145,8 @@ static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn flex_variables(props: &FlexProps) -> Variables {
     variables()
-        .with(
-            FLEX_ALIGN_VAR,
-            props.align.as_ref().and_then(|v| v.resolve(None)),
-        )
-        .with(
-            FLEX_JUSTIFY_VAR,
-            props.justify.as_ref().and_then(|v| v.resolve(None)),
-        )
+        .with(FLEX_ALIGN_VAR, props.align.resolve(None))
+        .with(FLEX_JUSTIFY_VAR, props.justify.resolve(None))
         .with(
             FLEX_WRAP_VAR,
             props.wrap.as_ref().map(|wrap| wrap.as_str().to_string()),
@@ -181,7 +175,7 @@ base_props! {
 
 #[component]
 pub fn Flex(props: FlexProps) -> Element {
-    let direction = props.direction.as_ref().copied().unwrap_or_default();
+    let direction = props.direction.copied_or_default();
 
     let mut states = props
         .states

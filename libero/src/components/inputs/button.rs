@@ -228,7 +228,7 @@ base_props! {
 #[component]
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.as_ref().copied().unwrap_or_default();
+    let variant = props.variant.copied_or_default();
     let color = base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
@@ -237,12 +237,8 @@ pub fn Button(props: ButtonProps) -> Element {
     let mut ripple_signal = use_signal(|| None::<Ripple>);
     let mut next_ripple_id = use_signal(|| 0u64);
 
-    let size = props.size.as_ref().copied().unwrap_or(theme.button.size);
-    let radius = props
-        .radius
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.button.radius);
+    let size = props.size.copied_or(theme.button.size);
+    let radius = props.radius.copied_or(theme.button.radius);
 
     let variables = button_variables(variant, &color);
 

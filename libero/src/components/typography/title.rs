@@ -39,7 +39,7 @@ base_props! {
 
 #[component]
 pub fn Title(props: TitleProps) -> Element {
-    let chosen_size = props.size.as_ref().copied().unwrap_or(Size::Xxl);
+    let chosen_size = props.size.copied_or(Size::Xxl);
 
     let states = props
         .states

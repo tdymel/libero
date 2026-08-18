@@ -170,14 +170,10 @@ base_props! {
 
 #[component]
 pub fn Divider(props: DividerProps) -> Element {
-    let orientation = props
-        .orientation
-        .as_ref()
-        .copied()
-        .unwrap_or(Orientation::Horizontal);
+    let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let vertical = orientation == Orientation::Vertical;
     let has_label = props.children.is_some();
-    let label_position = props.label_position.as_ref().copied().unwrap_or_default();
+    let label_position = props.label_position.copied_or_default();
 
     let divider_states = props
         .states

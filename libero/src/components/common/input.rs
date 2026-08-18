@@ -1,7 +1,7 @@
 use crate::{
     components::{ClassList, States, Variables},
     sx::{StaticSx, Sx},
-    theme::Size,
+    theme::{Size, SizeCss},
 };
 
 use crate::sx::ThemeAwareValue;
@@ -34,6 +34,22 @@ impl<T: 'static> Input<T> {
         }
     }
 
+    /// The value if set, else `default` - the `Copy` read, which is most of
+    /// them (`Size`, `HtmlTag`, and every component's own variant enum).
+    pub fn copied_or(&self, default: T) -> T
+    where
+        T: Copy,
+    {
+        self.as_ref().copied().unwrap_or(default)
+    }
+
+    pub fn copied_or_default(&self) -> T
+    where
+        T: Copy + Default,
+    {
+        self.copied_or(T::default())
+    }
+
     pub fn unwrap_or_default(self) -> T
     where
         T: Default + Clone,
@@ -43,6 +59,13 @@ impl<T: 'static> Input<T> {
             Self::Value(value) => value,
             Self::Static(value) => value.clone(),
         }
+    }
+}
+
+impl Input<ThemeAwareValue> {
+    /// Resolves to a CSS value, reading a bare `Size` against `scale`.
+    pub(crate) fn resolve(&self, scale: Option<SizeCss>) -> Option<String> {
+        self.as_ref().and_then(|value| value.resolve(scale))
     }
 }
 

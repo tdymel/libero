@@ -185,21 +185,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
     let root_id = use_id();
 
-    let scrollbars = props
-        .scrollbars
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.scroll_area.scrollbars);
+    let scrollbars = props.scrollbars.copied_or(theme.scroll_area.scrollbars);
     let visibility = props
         .scrollbar_visibility
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.scroll_area.visibility);
-    let size = props
-        .scrollbar_size
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.scroll_area.size);
+        .copied_or(theme.scroll_area.visibility);
+    let size = props.scrollbar_size.copied_or(theme.scroll_area.size);
 
     let mut is_scrolling = use_signal(|| false);
     let mut edges = use_signal(EdgeState::default);

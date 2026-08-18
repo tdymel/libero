@@ -241,7 +241,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
 
-    let size = props.size.as_ref().copied().unwrap_or(theme.tree.size);
+    let size = props.size.copied_or(theme.tree.size);
 
     let expanded_snapshot = expanded.read().clone();
     let order = visible_order(&props.data, &expanded_snapshot);

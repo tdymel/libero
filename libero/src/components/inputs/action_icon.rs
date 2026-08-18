@@ -102,21 +102,18 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
     let result = variables()
         .with(
             ACTION_ICON_SIZE.override_var(),
-            props.size.as_ref().and_then(|v| v.resolve(Some(ICON_SIZE))),
+            props.size.resolve(Some(ICON_SIZE)),
         )
         .with(
             ACTION_ICON_RADIUS.override_var(),
-            props
-                .radius
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
+            props.radius.resolve(Some(SizeCss::RADIUS)),
         );
 
     if !has_variant_styling {
         return result;
     }
 
-    let variant = props.variant.as_ref().copied().unwrap_or_default();
+    let variant = props.variant.copied_or_default();
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
     let hover = hover_color(&base, variant == IconVariant::Filled);
@@ -165,7 +162,7 @@ base_props! {
 pub fn ActionIcon(props: ActionIconProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
-    let variant = props.variant.as_ref().copied().unwrap_or_default();
+    let variant = props.variant.copied_or_default();
     let variables = action_icon_variables(&props, has_variant_styling);
 
     let states = props

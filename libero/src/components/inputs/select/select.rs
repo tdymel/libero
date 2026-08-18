@@ -51,12 +51,8 @@ base_props! {
 pub fn Select(props: SelectProps) -> Element {
     let theme = use_theme();
 
-    let size = props.size.as_ref().copied().unwrap_or(theme.select.size);
-    let radius = props
-        .radius
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.select.radius);
+    let size = props.size.copied_or(theme.select.size);
+    let radius = props.radius.copied_or(theme.select.radius);
 
     let states = props
         .states

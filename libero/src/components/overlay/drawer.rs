@@ -154,15 +154,9 @@ fn drawer_variables(props: &DrawerProps) -> Variables {
     variables()
         .with(
             DRAWER_SIZE.override_var(),
-            props
-                .size
-                .as_ref()
-                .and_then(|v| v.resolve(Some(DRAWER_SIZE))),
+            props.size.resolve(Some(DRAWER_SIZE)),
         )
-        .with(
-            DRAWER_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(|v| v.resolve(None)),
-        )
+        .with(DRAWER_Z_INDEX_VAR, props.z_index.resolve(None))
 }
 
 base_props! {
@@ -190,8 +184,8 @@ base_props! {
 /// via CSS on opposite breakpoints, for a responsive sidebar-becomes-drawer.
 #[component]
 pub fn Drawer(props: DrawerProps) -> Element {
-    let variant = props.variant.as_ref().copied().unwrap_or_default();
-    let anchor = props.anchor.as_ref().copied().unwrap_or_default();
+    let variant = props.variant.copied_or_default();
+    let anchor = props.anchor.copied_or_default();
     let variables = drawer_variables(&props);
 
     let states = props

@@ -24,17 +24,11 @@ fn container_variables(props: &ContainerProps) -> Variables {
     variables()
         .with(
             CONTAINER_SIZE.override_var(),
-            props
-                .size
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::BREAKPOINT))),
+            props.size.resolve(Some(SizeCss::BREAKPOINT)),
         )
         .with(
             CONTAINER_GUTTERS.override_var(),
-            props
-                .gutters
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::SPACING))),
+            props.gutters.resolve(Some(SizeCss::SPACING)),
         )
 }
 

@@ -100,8 +100,8 @@ base_props! {
 
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
-    let size = props.size.as_ref().copied().unwrap_or(Size::Md);
-    let underline = props.underline.as_ref().copied().unwrap_or_default();
+    let size = props.size.copied_or(Size::Md);
+    let underline = props.underline.copied_or_default();
 
     let states = props
         .states

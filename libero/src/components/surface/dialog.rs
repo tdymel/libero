@@ -28,17 +28,11 @@ fn dialog_variables(props: &DialogProps) -> Variables {
     variables()
         .with(
             DIALOG_RADIUS_VAR,
-            props
-                .radius
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
+            props.radius.resolve(Some(SizeCss::RADIUS)),
         )
         .with(
             DIALOG_SIZE.override_var(),
-            props
-                .size
-                .as_ref()
-                .and_then(|v| v.resolve(Some(DIALOG_SIZE))),
+            props.size.resolve(Some(DIALOG_SIZE)),
         )
 }
 

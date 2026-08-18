@@ -174,23 +174,11 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let root_id = use_id();
     let (panel_a, panel_b) = resolve_panels(props.children);
 
-    let orientation = props
-        .orientation
-        .as_ref()
-        .copied()
-        .unwrap_or(Orientation::Vertical);
+    let orientation = props.orientation.copied_or(Orientation::Vertical);
     let vertical = orientation == Orientation::Vertical;
 
-    let min_size = props
-        .min_size
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.splitter.min_size);
-    let size = props
-        .divider_size
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.splitter.size);
+    let min_size = props.min_size.copied_or(theme.splitter.min_size);
+    let size = props.divider_size.copied_or(theme.splitter.size);
 
     let mut a = use_signal(|| props.initial_size.clamp(min_size, 100.0 - min_size));
     let mut drag = use_signal(|| Option::<DragState>::None);

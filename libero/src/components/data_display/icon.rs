@@ -125,15 +125,9 @@ fn icon_variables(props: &IconProps) -> Variables {
         .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(
             ICON_SIZE.override_var(),
-            props.size.as_ref().and_then(|v| v.resolve(Some(ICON_SIZE))),
+            props.size.resolve(Some(ICON_SIZE)),
         )
-        .with(
-            ICON_RADIUS_VAR,
-            props
-                .radius
-                .as_ref()
-                .and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
-        )
+        .with(ICON_RADIUS_VAR, props.radius.resolve(Some(SizeCss::RADIUS)))
 }
 
 base_props! {
@@ -158,8 +152,8 @@ base_props! {
 /// fill/stroke - the convention most icon sets follow - then inherits.
 #[component]
 pub fn Icon(props: IconProps) -> Element {
-    let component = props.component.as_ref().copied().unwrap_or(HtmlTag::Span);
-    let variant = props.variant.as_ref().copied().unwrap_or_default();
+    let component = props.component.copied_or(HtmlTag::Span);
+    let variant = props.variant.copied_or_default();
     let variables = icon_variables(&props);
 
     let states = props

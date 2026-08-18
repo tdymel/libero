@@ -64,10 +64,9 @@ base_props! {
 pub fn DataList(props: DataListProps) -> Element {
     let theme = use_theme();
 
-    let is_horizontal =
-        props.orientation.as_ref().copied().unwrap_or_default() == Orientation::Horizontal;
+    let is_horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
 
-    let gap = props.gap.as_ref().copied().unwrap_or(theme.data_list.size);
+    let gap = props.gap.copied_or(theme.data_list.size);
 
     let states = props
         .states

@@ -26,7 +26,7 @@ base_props! {
 
 #[component]
 pub fn Text(props: TextProps) -> Element {
-    let chosen_size = props.size.as_ref().copied().unwrap_or(Size::Md);
+    let chosen_size = props.size.copied_or(Size::Md);
 
     let states = props
         .states
@@ -35,7 +35,7 @@ pub fn Text(props: TextProps) -> Element {
         .unwrap_or_default()
         .with(chosen_size.state_name(), true);
 
-    let component = props.component.as_ref().copied().unwrap_or(HtmlTag::P);
+    let component = props.component.copied_or(HtmlTag::P);
 
     rsx! {
         Box {

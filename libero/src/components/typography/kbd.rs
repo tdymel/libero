@@ -29,7 +29,7 @@ base_props! {
 #[component]
 pub fn Kbd(props: KbdProps) -> Element {
     // Matches Mantine's own default.
-    let size = props.size.as_ref().copied().unwrap_or(Size::Sm);
+    let size = props.size.copied_or(Size::Sm);
 
     let states = props
         .states

@@ -103,11 +103,7 @@ async fn generate_svg_lazy(data: String, robustness: QrRobustness) -> Option<Str
 #[component]
 pub fn QrCode(props: QrCodeProps) -> Element {
     let theme = use_theme();
-    let robustness = props
-        .robustness
-        .as_ref()
-        .copied()
-        .unwrap_or(theme.qr_code.robustness);
+    let robustness = props.robustness.copied_or(theme.qr_code.robustness);
     let data = props.data.clone();
 
     let svg = use_resource(use_reactive!(|data, robustness| async move {
