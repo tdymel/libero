@@ -38,13 +38,8 @@ base_props! {
 /// handler, and ripple only makes sense for a real button.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
-    let framework_class = props
-        .framework_sx
-        .and_then(|sx| use_css(sx, CssLayer::Framework));
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_css(sx, CssLayer::UserStatic));
+    let framework_class = use_css(props.framework_sx, CssLayer::Framework);
+    let static_class = use_css(props.sx.as_ref(), CssLayer::UserStatic);
     let class = props
         .class
         .unwrap_or_default()

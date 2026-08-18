@@ -157,6 +157,10 @@ base_props! {
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
     let mut zoomed = use_signal(|| false);
+    // Hoisted above the non-zoomable early return, and paired with the
+    // `use_portal(None)` below it: hook slots are positional, so both paths
+    // have to reach the same hooks in the same order.
+    let mut focus_return = use_focus_return();
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
@@ -182,6 +186,7 @@ pub fn Image(props: ImageProps) -> Element {
             .cloned()
             .unwrap_or_default()
             .with(fit_token(fit), true);
+        use_portal(None);
         return rsx! {
             Box {
                 component: "img",
@@ -202,7 +207,6 @@ pub fn Image(props: ImageProps) -> Element {
     let img_states = states().with(fit_token(fit), true);
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
-    let mut focus_return = use_focus_return();
     let mut close_zoom = move || {
         zoomed.set(false);
         focus_return.restore();

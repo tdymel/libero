@@ -44,7 +44,7 @@ static TOKEN_STYLESHEET: LazyLock<String> = LazyLock::new(|| {
 
 pub(crate) fn use_token_theme() {
     use_css(
-        Stylesheet::from(TOKEN_STYLESHEET.as_str()),
+        Some(Stylesheet::from(TOKEN_STYLESHEET.as_str())),
         CssLayer::Framework,
     );
 }

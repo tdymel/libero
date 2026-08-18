@@ -232,7 +232,14 @@ pub fn Drawer(props: DrawerProps) -> Element {
         .with("anchor-top", anchor == DrawerAnchor::Top)
         .with("anchor-bottom", anchor == DrawerAnchor::Bottom);
 
+    // Registered for both variants, and paired with the `use_portal(None)`
+    // below: hook slots are positional, and `variant` is a caller prop that
+    // can flip (the docs compose a Static and a Temporary drawer on
+    // opposite breakpoints), so neither hook may sit behind this return.
+    let drawer_class = use_css(Some(&DRAWER_TEMPORARY_SX), crate::CssLayer::Framework);
+
     if variant == DrawerVariant::Static {
+        use_portal(None);
         return rsx! {
             Box {
                 class: props.class,
@@ -249,7 +256,6 @@ pub fn Drawer(props: DrawerProps) -> Element {
         };
     }
 
-    let drawer_class = use_css(&DRAWER_TEMPORARY_SX, crate::CssLayer::Framework);
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
     let (placement, float_sx) = drawer_float_placement(anchor);
 

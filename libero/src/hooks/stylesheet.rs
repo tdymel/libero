@@ -13,7 +13,8 @@ use crate::{
 /// class name, on the `UserCustom` layer so it always wins the cascade. Raw
 /// `&str`/`String` CSS has no single selector, so it returns no class name.
 pub fn use_stylesheet(stylesheet: impl Into<Stylesheet>) -> Option<String> {
-    use_css(stylesheet.into(), CssLayer::UserCustom)
+    let stylesheet: Stylesheet = stylesheet.into();
+    use_css(Some(stylesheet), CssLayer::UserCustom)
 }
 
 /// A value [`use_css`] can register. Separates a cheap identity check
@@ -71,8 +72,10 @@ impl CssSource for Stylesheet {
 }
 
 struct CssRegistration {
-    /// The source's own hash, to detect an unchanged re-render.
-    identity_hash: u64,
+    /// The source's own hash, to detect an unchanged re-render - `None`
+    /// when there was no source at all, which never compares equal to a
+    /// source that is present.
+    identity_hash: Option<u64>,
     /// The registry's key for this registration - `None` when the source
     /// built empty CSS and was never registered. Never derived from
     /// `identity_hash`: the registry keys by rendered-CSS hash, which is a
@@ -81,8 +84,13 @@ struct CssRegistration {
 }
 
 /// Same as [`use_stylesheet`], but on a caller-chosen layer.
-pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String> {
-    let identity_hash = source.identity_hash();
+///
+/// Takes an `Option` so a caller with nothing to register still calls it
+/// unconditionally: this is three hooks, and Dioxus hook slots are
+/// positional, so branching around the call would hand a later hook the
+/// slot an earlier one used as soon as the condition flips.
+pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
+    let identity_hash = source.as_ref().map(CssSource::identity_hash);
     let mut context = use_context::<LiberoContext>();
     let state = use_hook(|| Rc::new(RefCell::new(None::<CssRegistration>)));
 
@@ -95,7 +103,7 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
             // rebuilding the CSS text entirely.
             Some(prev) if prev.identity_hash == identity_hash => {
                 let class_name = if prev.key.is_some() {
-                    source.css_class_name()
+                    source.and_then(|source| source.css_class_name())
                 } else {
                     None
                 };
@@ -103,9 +111,11 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
                 class_name
             }
             prev => {
-                let stylesheet = source.build();
-                let is_empty = stylesheet.as_str().is_empty();
-                let class_name = stylesheet.class_name().map(str::to_string);
+                let stylesheet = source.map(CssSource::build);
+                let class_name = stylesheet
+                    .as_ref()
+                    .and_then(|stylesheet| stylesheet.class_name())
+                    .map(str::to_string);
                 let mut changed = false;
 
                 if let Some(prev_key) = prev.and_then(|prev| prev.key) {
@@ -113,12 +123,12 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
                     changed = true;
                 }
 
-                let key = if is_empty {
-                    None
-                } else {
-                    let key = context.stylesheet_registry.acquire(stylesheet, layer);
-                    changed = true;
-                    Some(key)
+                let key = match stylesheet {
+                    Some(stylesheet) if !stylesheet.as_str().is_empty() => {
+                        changed = true;
+                        Some(context.stylesheet_registry.acquire(stylesheet, layer))
+                    }
+                    _ => None,
                 };
 
                 *state_ref = Some(CssRegistration { identity_hash, key });
@@ -127,7 +137,7 @@ pub(crate) fn use_css(source: impl CssSource, layer: CssLayer) -> Option<String>
                     *context.stylesheet_registry_version.write() += 1;
                 }
 
-                if is_empty { None } else { class_name }
+                key.and(class_name)
             }
         }
     };

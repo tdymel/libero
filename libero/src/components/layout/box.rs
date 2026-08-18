@@ -66,14 +66,9 @@ pub struct BoxProps {
 
 #[component]
 pub fn Box(props: BoxProps) -> Element {
-    let focus_class = use_css(&BOX_FOCUS_SX, CssLayer::Framework);
-    let framework_class = props
-        .framework_sx
-        .and_then(|sx| use_css(sx, CssLayer::Framework));
-    let static_class = props
-        .sx
-        .as_ref()
-        .and_then(|sx| use_css(sx, CssLayer::UserStatic));
+    let focus_class = use_css(Some(&BOX_FOCUS_SX), CssLayer::Framework);
+    let framework_class = use_css(props.framework_sx, CssLayer::Framework);
+    let static_class = use_css(props.sx.as_ref(), CssLayer::UserStatic);
 
     let data_state = props.states.as_ref().and_then(States::data_state);
     let variables_style = props

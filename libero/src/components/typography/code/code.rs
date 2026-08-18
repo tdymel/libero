@@ -386,13 +386,32 @@ fn CopyButton(source: String, floating: bool) -> Element {
 pub fn Code(props: CodeProps) -> Element {
     use_token_theme();
 
+    let language = props.language.as_ref().copied();
+    // Everything actually shown or copied - the highlighter, the plain
+    // fallback, the copy button - uses the marker-stripped version, so what
+    // you read and what you copy always match. Only `block` has diff
+    // markers to strip; inline code renders its source verbatim.
+    let display_source = props.source.as_ref().map(|source| {
+        if props.diff && props.block {
+            strip_diff_markers(source)
+        } else {
+            source.clone()
+        }
+    });
+    // Hoisted above both branches on purpose: hook slots are positional, so
+    // a `use_resource` inside `if props.block` would hand its slot to the
+    // inline branch's own the moment `block` flips.
+    let source = display_source.clone();
+    let highlighted = use_resource(use_reactive!(|source, language| async move {
+        match (source, language) {
+            (Some(source), Some(language)) => Some(highlight_lazy(source, language).await),
+            _ => None,
+        }
+    }));
+
     if props.block {
-        let language = props.language.as_ref().copied();
-        // Diff statuses come from the raw source (markers must still be
-        // there to detect); everything actually shown or copied - the
-        // highlighter, the plain fallback, the copy button - uses the
-        // marker-stripped version instead, so what you read and what you
-        // copy always match.
+        // Diff statuses come from the raw source - the markers must still
+        // be there to detect.
         let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
             props
                 .source
@@ -402,20 +421,6 @@ pub fn Code(props: CodeProps) -> Element {
         } else {
             Vec::new()
         };
-        let display_source = props.source.as_ref().map(|source| {
-            if props.diff {
-                strip_diff_markers(source)
-            } else {
-                source.clone()
-            }
-        });
-        let source = display_source.clone();
-        let highlighted = use_resource(use_reactive!(|source, language| async move {
-            match (source, language) {
-                (Some(source), Some(language)) => Some(highlight_lazy(source, language).await),
-                _ => None,
-            }
-        }));
         let lines = display_source.as_deref().map(|source| {
             highlighted
                 .read()
@@ -479,14 +484,6 @@ pub fn Code(props: CodeProps) -> Element {
     }
 
     if let Some(source) = props.source.clone() {
-        let language = props.language.as_ref().copied();
-        let highlighted = use_resource(use_reactive!(|source, language| async move {
-            match language {
-                Some(language) => Some(highlight_lazy(source, language).await),
-                None => None,
-            }
-        }));
-
         return rsx! {
             Box {
                 component: "code",
