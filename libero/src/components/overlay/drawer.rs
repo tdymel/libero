@@ -26,22 +26,22 @@ static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
         .when(
             "anchor-left",
             sx().width(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_right("1px solid var(--lsx-grey-3)"),
+                .border_right("1px solid var(--lsx-grey-4)"),
         )
         .when(
             "anchor-right",
             sx().width(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_left("1px solid var(--lsx-grey-3)"),
+                .border_left("1px solid var(--lsx-grey-4)"),
         )
         .when(
             "anchor-top",
             sx().height(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_bottom("1px solid var(--lsx-grey-3)"),
+                .border_bottom("1px solid var(--lsx-grey-4)"),
         )
         .when(
             "anchor-bottom",
             sx().height(format!("var({DRAWER_SIZE_VAR}, auto)"))
-                .border_top("1px solid var(--lsx-grey-3)"),
+                .border_top("1px solid var(--lsx-grey-4)"),
         )
 });
 

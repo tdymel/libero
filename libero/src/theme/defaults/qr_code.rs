@@ -37,25 +37,11 @@ impl From<String> for QrRobustness {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct QrCodeDefaults {
     pub background: &'static str,
     pub foreground: &'static str,
     pub robustness: QrRobustness,
-}
-
-impl QrCodeDefaults {
-    pub const fn new(
-        background: &'static str,
-        foreground: &'static str,
-        robustness: QrRobustness,
-    ) -> Self {
-        Self {
-            background,
-            foreground,
-            robustness,
-        }
-    }
 }
 
 impl ToCssDeclarations for QrCodeDefaults {

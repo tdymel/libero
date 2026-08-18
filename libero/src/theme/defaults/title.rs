@@ -18,33 +18,13 @@ pub struct TitleSize {
     pub line_height: &'static str,
 }
 
-impl TitleSize {
-    pub const fn new(
-        font_weight: &'static str,
-        font_size: &'static str,
-        letter_spacing: &'static str,
-        line_height: &'static str,
-    ) -> Self {
-        Self {
-            font_weight,
-            font_size,
-            letter_spacing,
-            line_height,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleDefaults {
     pub font_family: &'static str,
     pub sizes: Sizes<TitleSize>,
 }
 
 impl TitleDefaults {
-    pub const fn new(font_family: &'static str, sizes: Sizes<TitleSize>) -> Self {
-        Self { font_family, sizes }
-    }
-
     /// Font-size/weight/letter-spacing/line-height for `size` - everything
     /// about a `Title` that actually varies by size. Font-family doesn't,
     /// so it's not part of this - see `TITLE_FONT_FAMILY`.

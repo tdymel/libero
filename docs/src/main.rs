@@ -15,10 +15,9 @@ use icons::BurgerIcon;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, CodePage,
     ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FloatPage,
-    FocusTrapPage, GettingStarted, HeaderPage,
-    IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage,
-    QrCodePage, ScrollAreaPage, SelectPage, SplitterPage, TextPage, TitlePage, TreePage,
-    VisuallyHiddenPage,
+    FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage,
+    ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage, SplitterPage,
+    TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 

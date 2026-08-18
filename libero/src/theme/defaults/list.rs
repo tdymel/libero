@@ -2,7 +2,7 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{Size, SizeCss, Sizes};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ListDefaults {
     pub size: Size,
     pub gap: Sizes<u8>,
@@ -10,10 +10,6 @@ pub struct ListDefaults {
 }
 
 impl ListDefaults {
-    pub const fn new(size: Size, gap: Sizes<u8>, indent: Sizes<u8>) -> Self {
-        Self { size, gap, indent }
-    }
-
     fn size_sx(size: Size) -> Sx {
         sx().gap(SizeCss::LIST_GAP.value(size))
             .selector("& ul", sx().padding_left(SizeCss::LIST_INDENT.value(size)))

@@ -1,15 +1,9 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::theme::{SizeCss, Sizes};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct HeaderDefaults {
     pub height: Sizes<u16>,
-}
-
-impl HeaderDefaults {
-    pub const fn new(height: Sizes<u16>) -> Self {
-        Self { height }
-    }
 }
 
 impl ToCssDeclarations for HeaderDefaults {

@@ -48,28 +48,12 @@ impl From<String> for Placement {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FloatDefaults {
     pub z_index: u16,
     pub offset_x: &'static str,
     pub offset_y: &'static str,
     pub placement: Placement,
-}
-
-impl FloatDefaults {
-    pub const fn new(
-        z_index: u16,
-        offset_x: &'static str,
-        offset_y: &'static str,
-        placement: Placement,
-    ) -> Self {
-        Self {
-            z_index,
-            offset_x,
-            offset_y,
-            placement,
-        }
-    }
 }
 
 impl ToCssDeclarations for FloatDefaults {

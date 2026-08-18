@@ -38,14 +38,14 @@ impl ThemeAwareValue {
     /// for `Size`/`BreakpointValue`, which need a property-aware scale a
     /// caller must resolve itself first (see e.g. `icon_size`/
     /// `header_size`/`dialog_size`/`drawer_size`). A bare `Color` falls back
-    /// to the library-wide default shade (5), same as the Sx pipeline's own
+    /// to the library-wide default shade (6), same as the Sx pipeline's own
     /// generic default - in practice every caller normalizes a bare `Color`
     /// to its own default shade before this point, so this is a safety net,
     /// not the common path.
     pub(crate) fn resolved(&self) -> Option<String> {
         match self {
             Self::ColorValue(color_value) => Some(color_value.value()),
-            Self::Color(color) => Some(ColorValue::Shade(*color, ColorShade::S5).value()),
+            Self::Color(color) => Some(ColorValue::Shade(*color, ColorShade::DEFAULT).value()),
             _ => self.raw(),
         }
     }
@@ -68,7 +68,7 @@ impl ThemeAwareValue {
     /// existing/inherited value alone in that case rather than clearing it.
     pub(crate) fn focus_contrast(&self) -> Option<String> {
         match self {
-            Self::Color(color) => Some(ColorValue::Contrast(*color, ColorShade::S5).value()),
+            Self::Color(color) => Some(ColorValue::Contrast(*color, ColorShade::DEFAULT).value()),
             Self::ColorValue(ColorValue::Shade(color, shade)) => {
                 Some(ColorValue::Contrast(*color, *shade).value())
             }

@@ -4,15 +4,9 @@ use crate::theme::CssVar;
 
 pub const CENTER_DISPLAY: CssVar = CssVar::new("--lsx-center-display");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CenterDefaults {
     pub inline: bool,
-}
-
-impl CenterDefaults {
-    pub const fn new(inline: bool) -> Self {
-        Self { inline }
-    }
 }
 
 impl ToCssDeclarations for CenterDefaults {

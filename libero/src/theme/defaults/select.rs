@@ -13,21 +13,7 @@ pub struct SelectSizeLevel {
     pub padding_x: &'static str,
 }
 
-impl SelectSizeLevel {
-    pub const fn new(
-        font_size: &'static str,
-        height: &'static str,
-        padding_x: &'static str,
-    ) -> Self {
-        Self {
-            font_size,
-            height,
-            padding_x,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SelectDefaults {
     pub size: Size,
     pub radius: Size,
@@ -35,14 +21,6 @@ pub struct SelectDefaults {
 }
 
 impl SelectDefaults {
-    pub const fn new(size: Size, radius: Size, sizes: Sizes<SelectSizeLevel>) -> Self {
-        Self {
-            size,
-            radius,
-            sizes,
-        }
-    }
-
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(SELECT_FONT_SIZE.value(size))
             .height(SELECT_HEIGHT.value(size))

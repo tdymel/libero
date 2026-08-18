@@ -106,17 +106,3 @@ pub struct ScrollAreaDefaults {
     pub visibility: ScrollbarVisibility,
     pub size: ScrollbarSize,
 }
-
-impl ScrollAreaDefaults {
-    pub const fn new(
-        scrollbars: ScrollAxis,
-        visibility: ScrollbarVisibility,
-        size: ScrollbarSize,
-    ) -> Self {
-        Self {
-            scrollbars,
-            visibility,
-            size,
-        }
-    }
-}

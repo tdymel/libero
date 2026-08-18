@@ -57,7 +57,7 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
         .padding_right("8px")
         .border_radius("4px")
         .cursor("pointer")
-        .hover(sx().background("grey.1"))
+        .hover(sx().background("grey.2"))
 });
 
 #[derive(Props, Clone, PartialEq)]

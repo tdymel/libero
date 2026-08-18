@@ -7,9 +7,3 @@ use crate::theme::Size;
 pub struct TreeDefaults {
     pub size: Size,
 }
-
-impl TreeDefaults {
-    pub const fn new(size: Size) -> Self {
-        Self { size }
-    }
-}

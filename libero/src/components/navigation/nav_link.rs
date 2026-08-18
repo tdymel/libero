@@ -50,7 +50,7 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         // look before it's actually selected. Active gets a light tint of
         // the resolved color instead, same convention as `Mark`/
         // `ActionIcon`'s outlined hover.
-        .hover(sx().background("grey.1"))
+        .hover(sx().background("grey.2"))
         .when(
             "active",
             sx().background(format!("var({NAV_LINK_ACTIVE_BACKGROUND_VAR})"))

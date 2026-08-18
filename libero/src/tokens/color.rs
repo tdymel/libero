@@ -1,4 +1,4 @@
-use super::{ColorCss, NamedColorCss};
+use super::{ColorCss, NamedColorCss, ShadeRamp};
 
 /// How a [`Color`] names its CSS custom properties, as `(own, contrast)`: a
 /// palette color has a 9-shade var per role, black/white have exactly one
@@ -24,6 +24,14 @@ pub enum Color {
 }
 
 impl Color {
+    /// Greys and black/white walk the neutral mix curve, hues the chromatic one.
+    pub(crate) const fn shade_ramp(self) -> ShadeRamp {
+        match self {
+            Self::Grey | Self::Black | Self::White => ShadeRamp::Neutral,
+            _ => ShadeRamp::Chromatic,
+        }
+    }
+
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "primary" => Some(Self::Primary),

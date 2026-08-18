@@ -21,7 +21,7 @@ static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .border_style("solid")
         .border_width("1px")
-        .border_color("grey.4")
+        .border_color("grey.5")
         .background("white")
         .color("black")
         .cursor("pointer")

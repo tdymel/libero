@@ -3,7 +3,7 @@ use std::fmt::Display;
 use super::{Size, SizeCss};
 use crate::css::CssDeclaration;
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Sizes<T> {
     pub xs: T,
     pub sm: T,

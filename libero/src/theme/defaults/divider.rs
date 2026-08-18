@@ -5,16 +5,12 @@ use crate::theme::{CssVar, Size, SizeCss};
 
 pub const DIVIDER_SPACING: CssVar = CssVar::new("--lsx-divider-spacing");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DividerDefaults {
     pub spacing: Option<Size>,
 }
 
 impl DividerDefaults {
-    pub const fn new(spacing: Option<Size>) -> Self {
-        Self { spacing }
-    }
-
     pub fn horizontal_sx() -> Sx {
         sx().margin_top(DIVIDER_SPACING.value())
             .margin_bottom(DIVIDER_SPACING.value())

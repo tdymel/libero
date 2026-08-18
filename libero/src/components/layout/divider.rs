@@ -71,11 +71,11 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")
         .border_width("0")
         .border_style("solid")
-        .border_color(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"))
+        .border_color(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"))
         .when(
             "vertical",
             sx().border_right(format!(
-                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"
+                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"
             ))
             .align_self("stretch")
             .margin_left(format!("var({DIVIDER_SPACING_VAR}, 0)"))
@@ -85,7 +85,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         .when(
             "horizontal",
             sx().border_bottom(format!(
-                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"
+                "1px solid var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"
             ))
             .height("1px")
             .margin_top(format!("var({DIVIDER_SPACING_VAR}, 0)"))
@@ -102,7 +102,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                     "&::before, &::after",
                     sx().content("\"\"")
                         .flex("1")
-                        .background(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-3))")),
+                        .background(format!("var({DIVIDER_COLOR_VAR}, var(--lsx-grey-4))")),
                 ),
         )
         .when(

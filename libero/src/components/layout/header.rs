@@ -103,7 +103,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .background(format!("var({HEADER_BACKGROUND_VAR}, white)"))
         .color(format!("var({HEADER_COLOR_VAR}, inherit)"))
         .border_bottom("1px solid")
-        .border_bottom_color("grey.3")
+        .border_bottom_color("grey.4")
         .z_index(format!("var({HEADER_Z_INDEX_VAR}, auto)"))
         .position("sticky")
         .top("0")

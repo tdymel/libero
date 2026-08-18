@@ -65,7 +65,7 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
         .flex_shrink("0")
         .align_self("stretch")
         .background(format!(
-            "var({SPLITTER_DIVIDER_COLOR_VAR}, var(--lsx-grey-3))"
+            "var({SPLITTER_DIVIDER_COLOR_VAR}, var(--lsx-grey-4))"
         ));
 
     Size::ALL.into_iter().fold(base, |acc, size| {

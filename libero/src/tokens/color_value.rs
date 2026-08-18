@@ -38,18 +38,21 @@ impl ColorValue {
         }
 
         let (name, shade) = match value.split_once('.') {
-            Some((name, shade)) => (name, ColorShade::parse(Some(shade))),
-            None => (value, ColorShade::parse(None)),
+            Some((name, shade)) => (name, Some(shade)),
+            None => (value, None),
         };
         let (name, contrast) = match name.strip_suffix("-contrast") {
             Some(name) => (name, true),
             None => (name, false),
         };
 
+        // Name first: raw CSS like `rgba(0, 0, 0, 0.15)` splits into a
+        // nonsense shade, and must bail before `ColorShade::parse` asserts.
         let color = Color::parse(name)?;
         if !matches!(color.vars(), ColorVars::Palette(..)) {
             return None;
         }
+        let shade = ColorShade::parse(shade);
 
         Some(if contrast {
             Self::Contrast(color, shade)
@@ -102,7 +105,7 @@ mod tests {
     fn parse_covers_bare_shaded_and_contrast_forms() {
         assert_eq!(
             ColorValue::parse("primary"),
-            Some(ColorValue::Shade(Color::Primary, ColorShade::S5))
+            Some(ColorValue::Shade(Color::Primary, ColorShade::S6))
         );
         assert_eq!(
             ColorValue::parse("grey.7"),
@@ -110,7 +113,7 @@ mod tests {
         );
         assert_eq!(
             ColorValue::parse("warning-contrast"),
-            Some(ColorValue::Contrast(Color::Warning, ColorShade::S5))
+            Some(ColorValue::Contrast(Color::Warning, ColorShade::S6))
         );
         assert_eq!(
             ColorValue::parse("info-contrast.3"),
@@ -120,6 +123,14 @@ mod tests {
             ColorValue::parse("black"),
             Some(ColorValue::Shade(Color::Black, ColorShade::S1))
         );
+    }
+
+    /// Raw CSS splits on `.` into a nonsense shade - parse must reject it on
+    /// the color name, not trip `ColorShade::parse`'s debug assert.
+    #[test]
+    fn parse_rejects_raw_css_without_asserting_on_the_shade() {
+        assert_eq!(ColorValue::parse("rgba(255, 255, 255, 0.15)"), None);
+        assert_eq!(ColorValue::parse("1.5rem"), None);
     }
 
     #[test]

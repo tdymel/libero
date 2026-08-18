@@ -22,7 +22,7 @@ pub const CODE_TOK_HEADING: CssVar = CssVar::new("--lsx-code-tok-heading");
 // `code.rs`'s `CODE_LINE_ROW_SX`) rather than being independent fields that
 // could drift out of sync with it.
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CodeDefaults {
     pub font_family: &'static str,
     pub background: &'static str,
@@ -39,45 +39,6 @@ pub struct CodeDefaults {
     pub tok_tag: &'static str,
     pub tok_attribute: &'static str,
     pub tok_heading: &'static str,
-}
-
-impl CodeDefaults {
-    #[allow(clippy::too_many_arguments)]
-    pub const fn new(
-        font_family: &'static str,
-        background: &'static str,
-        border: &'static str,
-        muted_text: &'static str,
-        line_number: &'static str,
-        tok_keyword: &'static str,
-        tok_string: &'static str,
-        tok_comment: &'static str,
-        tok_number: &'static str,
-        tok_constant: &'static str,
-        tok_function: &'static str,
-        tok_type: &'static str,
-        tok_tag: &'static str,
-        tok_attribute: &'static str,
-        tok_heading: &'static str,
-    ) -> Self {
-        Self {
-            font_family,
-            background,
-            border,
-            muted_text,
-            line_number,
-            tok_keyword,
-            tok_string,
-            tok_comment,
-            tok_number,
-            tok_constant,
-            tok_function,
-            tok_type,
-            tok_tag,
-            tok_attribute,
-            tok_heading,
-        }
-    }
 }
 
 impl ToCssDeclarations for CodeDefaults {

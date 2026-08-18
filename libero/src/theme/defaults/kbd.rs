@@ -7,7 +7,7 @@ pub const KBD_BACKGROUND: CssVar = CssVar::new("--lsx-kbd-background");
 pub const KBD_BORDER: CssVar = CssVar::new("--lsx-kbd-border");
 pub const KBD_COLOR: CssVar = CssVar::new("--lsx-kbd-color");
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KbdDefaults {
     pub font_size: Sizes<u16>,
     pub font_family: &'static str,
@@ -17,22 +17,6 @@ pub struct KbdDefaults {
 }
 
 impl KbdDefaults {
-    pub const fn new(
-        font_size: Sizes<u16>,
-        font_family: &'static str,
-        background: &'static str,
-        border: &'static str,
-        color: &'static str,
-    ) -> Self {
-        Self {
-            font_size,
-            font_family,
-            background,
-            border,
-            color,
-        }
-    }
-
     fn size_sx(size: Size) -> Sx {
         sx().font_size(SizeCss::KBD_FONT_SIZE.value(size))
     }

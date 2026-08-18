@@ -13,6 +13,7 @@ mod sizes;
 
 pub use color::Color;
 pub use color_shade::ColorShade;
+pub(crate) use color_shade::ShadeRamp;
 pub use color_value::ColorValue;
 pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use hex_color::HexColor;

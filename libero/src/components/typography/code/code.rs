@@ -24,7 +24,7 @@ const CODE_LINES_VERTICAL_PADDING_PX: u32 = 24;
 
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline")
-        .background("grey.1")
+        .background("grey.2")
         .border_radius("4px")
         .padding("2px 6px")
         .font_family(CODE_FONT_FAMILY.value())

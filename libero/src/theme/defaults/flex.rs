@@ -20,7 +20,7 @@ pub const FLEX_ALIGN_VAR: &str = "--lsx-flex-align";
 pub const FLEX_JUSTIFY_VAR: &str = "--lsx-flex-justify";
 pub const FLEX_WRAP_VAR: &str = "--lsx-flex-wrap";
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FlexAxisDefaults {
     pub align: &'static str,
     pub justify: &'static str,
@@ -28,33 +28,13 @@ pub struct FlexAxisDefaults {
     pub wrap: bool,
 }
 
-impl FlexAxisDefaults {
-    pub const fn new(
-        align: &'static str,
-        justify: &'static str,
-        spacing: Size,
-        wrap: bool,
-    ) -> Self {
-        Self {
-            align,
-            justify,
-            spacing,
-            wrap,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct FlexDefaults {
     pub column: FlexAxisDefaults,
     pub row: FlexAxisDefaults,
 }
 
 impl FlexDefaults {
-    pub const fn new(column: FlexAxisDefaults, row: FlexAxisDefaults) -> Self {
-        Self { column, row }
-    }
-
     pub fn default_sx(is_row: bool) -> Sx {
         let direction = if is_row { "row" } else { "column" };
         let align = if is_row {

@@ -18,21 +18,7 @@ pub struct ButtonSizeLevel {
     pub padding_x: &'static str,
 }
 
-impl ButtonSizeLevel {
-    pub const fn new(
-        font_size: &'static str,
-        height: &'static str,
-        padding_x: &'static str,
-    ) -> Self {
-        Self {
-            font_size,
-            height,
-            padding_x,
-        }
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ButtonDefaults {
     pub size: Size,
     pub radius: Size,
@@ -40,14 +26,6 @@ pub struct ButtonDefaults {
 }
 
 impl ButtonDefaults {
-    pub const fn new(size: Size, radius: Size, sizes: Sizes<ButtonSizeLevel>) -> Self {
-        Self {
-            size,
-            radius,
-            sizes,
-        }
-    }
-
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(BUTTON_FONT_SIZE.value(size))
             .height(BUTTON_HEIGHT.value(size))

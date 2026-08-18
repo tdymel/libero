@@ -1,13 +1,17 @@
 use super::{
-    ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, CenterDefaults, CodeDefaults,
-    ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
-    FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor, IconDefaults,
-    KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness,
-    ScrollAreaDefaults, SelectDefaults, Sizes, SplitterDefaults, TextDefaults, TextSize,
-    TitleDefaults, TitleSize, TreeDefaults,
+    ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, ButtonSizeLevel, CenterDefaults,
+    CodeDefaults, Color, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
+    DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor,
+    IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, Placement,
+    QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
+    ScrollbarVisibility, SelectDefaults, SelectSizeLevel, Size, Sizes, SplitterDefaults,
+    TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
 };
 
-#[derive(Clone, Debug, PartialEq)]
+const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
+const MONO_FONT_FAMILY: &str = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
     pub radius: Sizes<u8>,
@@ -49,205 +53,273 @@ pub struct Theme {
 }
 
 impl Theme {
-    pub const DEFAULT: Theme = Theme::new(
-        Sizes::new(4, 8, 12, 16, 20, 24),
-        Sizes::new(2, 4, 8, 16, 32, 64),
-        FlexDefaults::new(
-            FlexAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
-            FlexAxisDefaults::new("center", "flex-start", super::Size::Md, false),
-        ),
-        CenterDefaults::new(false),
-        ContainerDefaults::new(super::Size::Lg, super::Size::Md),
-        AspectRatioDefaults::new(1.0),
-        FloatDefaults::new(100, "0px", "0px", super::Placement::CenterCenter),
-        DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750, 900)),
-        DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400, 480)),
-        DividerDefaults::new(None),
-        SplitterDefaults::new(
-            super::Size::Sm,
-            Sizes::new(1, 1, 2, 3, 4, 6),
-            Sizes::new(10, 10, 12, 14, 16, 20),
-            10.0,
-            1.0,
-            10.0,
-        ),
-        ScrollAreaDefaults::new(
-            super::ScrollAxis::Vertical,
-            super::ScrollbarVisibility::Always,
-            super::ScrollbarSize::Thin,
-        ),
-        ButtonDefaults::new(
-            super::Size::Md,
-            super::Size::Md,
-            Sizes::new(
-                super::ButtonSizeLevel::new("0.75rem", "30px", "10px"),
-                super::ButtonSizeLevel::new("0.875rem", "36px", "14px"),
-                super::ButtonSizeLevel::new("1rem", "42px", "18px"),
-                super::ButtonSizeLevel::new("1.125rem", "50px", "22px"),
-                super::ButtonSizeLevel::new("1.25rem", "60px", "28px"),
-                super::ButtonSizeLevel::new("1.375rem", "72px", "34px"),
+    pub const DEFAULT: Theme = Theme {
+        spacing: Sizes::new(4, 8, 12, 16, 20, 24),
+        radius: Sizes::new(2, 4, 8, 16, 32, 64),
+        flex: FlexDefaults {
+            column: FlexAxisDefaults {
+                align: "stretch",
+                justify: "flex-start",
+                spacing: Size::Md,
+                wrap: false,
+            },
+            row: FlexAxisDefaults {
+                align: "center",
+                justify: "flex-start",
+                spacing: Size::Md,
+                wrap: false,
+            },
+        },
+        center: CenterDefaults { inline: false },
+        container: ContainerDefaults {
+            size: Size::Lg,
+            gutters: Size::Md,
+        },
+        aspect_ratio: AspectRatioDefaults { ratio: 1.0 },
+        float: FloatDefaults {
+            z_index: 100,
+            offset_x: "0px",
+            offset_y: "0px",
+            placement: Placement::CenterCenter,
+        },
+        dialog: DialogDefaults {
+            size: Sizes::new(240, 300, 510, 600, 750, 900),
+        },
+        drawer: DrawerDefaults {
+            size: Sizes::new(200, 240, 280, 320, 400, 480),
+        },
+        divider: DividerDefaults { spacing: None },
+        splitter: SplitterDefaults {
+            size: Size::Sm,
+            divider_size: Sizes::new(1, 1, 2, 3, 4, 6),
+            hit_size: Sizes::new(10, 10, 12, 14, 16, 20),
+            min_size: 10.0,
+            step: 1.0,
+            big_step: 10.0,
+        },
+        scroll_area: ScrollAreaDefaults {
+            scrollbars: ScrollAxis::Vertical,
+            visibility: ScrollbarVisibility::Always,
+            size: ScrollbarSize::Thin,
+        },
+        button: ButtonDefaults {
+            size: Size::Md,
+            radius: Size::Md,
+            sizes: Sizes::new(
+                ButtonSizeLevel {
+                    font_size: "0.75rem",
+                    height: "30px",
+                    padding_x: "10px",
+                },
+                ButtonSizeLevel {
+                    font_size: "0.875rem",
+                    height: "36px",
+                    padding_x: "14px",
+                },
+                ButtonSizeLevel {
+                    font_size: "1rem",
+                    height: "42px",
+                    padding_x: "18px",
+                },
+                ButtonSizeLevel {
+                    font_size: "1.125rem",
+                    height: "50px",
+                    padding_x: "22px",
+                },
+                ButtonSizeLevel {
+                    font_size: "1.25rem",
+                    height: "60px",
+                    padding_x: "28px",
+                },
+                ButtonSizeLevel {
+                    font_size: "1.375rem",
+                    height: "72px",
+                    padding_x: "34px",
+                },
             ),
-        ),
-        SelectDefaults::new(
-            super::Size::Md,
-            super::Size::Sm,
-            Sizes::new(
-                super::SelectSizeLevel::new("0.75rem", "28px", "8px"),
-                super::SelectSizeLevel::new("0.8125rem", "32px", "10px"),
-                super::SelectSizeLevel::new("0.875rem", "36px", "12px"),
-                super::SelectSizeLevel::new("0.9375rem", "40px", "14px"),
-                super::SelectSizeLevel::new("1rem", "44px", "16px"),
-                super::SelectSizeLevel::new("1.0625rem", "48px", "18px"),
+        },
+        select: SelectDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            sizes: Sizes::new(
+                SelectSizeLevel {
+                    font_size: "0.75rem",
+                    height: "28px",
+                    padding_x: "8px",
+                },
+                SelectSizeLevel {
+                    font_size: "0.8125rem",
+                    height: "32px",
+                    padding_x: "10px",
+                },
+                SelectSizeLevel {
+                    font_size: "0.875rem",
+                    height: "36px",
+                    padding_x: "12px",
+                },
+                SelectSizeLevel {
+                    font_size: "0.9375rem",
+                    height: "40px",
+                    padding_x: "14px",
+                },
+                SelectSizeLevel {
+                    font_size: "1rem",
+                    height: "44px",
+                    padding_x: "16px",
+                },
+                SelectSizeLevel {
+                    font_size: "1.0625rem",
+                    height: "48px",
+                    padding_x: "18px",
+                },
             ),
-        ),
-        ListDefaults::new(
-            super::Size::Md,
-            Sizes::new(4, 8, 12, 16, 20, 24),
-            Sizes::new(8, 12, 16, 20, 24, 28),
-        ),
-        DataListDefaults::new(super::Size::Md, Sizes::new(6, 8, 12, 16, 20, 24)),
-        TreeDefaults::new(super::Size::Md),
-        TitleDefaults::new(
-            "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-            Sizes::new(
-                TitleSize::new("400", "0.75rem", "0em", "1.5"), // xs (h6)
-                TitleSize::new("400", "0.875rem", "0em", "1.5"), // sm (h5)
-                TitleSize::new("400", "1rem", "0em", "1.45"),   // md (h4)
-                TitleSize::new("400", "1.375rem", "0em", "1.4"), // lg (h3)
-                TitleSize::new("400", "1.625rem", "-0.005em", "1.35"), // xl (h2)
-                TitleSize::new("400", "2.125rem", "-0.01em", "1.3"), // xxl (h1, default)
+        },
+        list: ListDefaults {
+            size: Size::Md,
+            gap: Sizes::new(4, 8, 12, 16, 20, 24),
+            indent: Sizes::new(8, 12, 16, 20, 24, 28),
+        },
+        data_list: DataListDefaults {
+            size: Size::Md,
+            gap: Sizes::new(6, 8, 12, 16, 20, 24),
+        },
+        tree: TreeDefaults { size: Size::Md },
+        titles: TitleDefaults {
+            font_family: SANS_FONT_FAMILY,
+            sizes: Sizes::new(
+                TitleSize {
+                    font_weight: "400",
+                    font_size: "0.75rem",
+                    letter_spacing: "0em",
+                    line_height: "1.5",
+                }, // xs (h6)
+                TitleSize {
+                    font_weight: "400",
+                    font_size: "0.875rem",
+                    letter_spacing: "0em",
+                    line_height: "1.5",
+                }, // sm (h5)
+                TitleSize {
+                    font_weight: "400",
+                    font_size: "1rem",
+                    letter_spacing: "0em",
+                    line_height: "1.45",
+                }, // md (h4)
+                TitleSize {
+                    font_weight: "400",
+                    font_size: "1.375rem",
+                    letter_spacing: "0em",
+                    line_height: "1.4",
+                }, // lg (h3)
+                TitleSize {
+                    font_weight: "400",
+                    font_size: "1.625rem",
+                    letter_spacing: "-0.005em",
+                    line_height: "1.35",
+                }, // xl (h2)
+                TitleSize {
+                    font_weight: "400",
+                    font_size: "2.125rem",
+                    letter_spacing: "-0.01em",
+                    line_height: "1.3",
+                }, // xxl (h1, default)
             ),
-        ),
-        TextDefaults::new(
-            "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'",
-            Sizes::new(
-                TextSize::new("400", "0.75rem", "0em", "1.4"),   // xs
-                TextSize::new("400", "0.875rem", "0em", "1.45"), // sm
-                TextSize::new("400", "1rem", "0em", "1.5"),      // md (default)
-                TextSize::new("400", "1.125rem", "0em", "1.55"), // lg
-                TextSize::new("400", "1.25rem", "0em", "1.6"),   // xl
-                TextSize::new("400", "1.375rem", "0em", "1.65"), // xxl
+        },
+        texts: TextDefaults {
+            font_family: SANS_FONT_FAMILY,
+            sizes: Sizes::new(
+                TextSize {
+                    font_weight: "400",
+                    font_size: "0.75rem",
+                    letter_spacing: "0em",
+                    line_height: "1.4",
+                }, // xs
+                TextSize {
+                    font_weight: "400",
+                    font_size: "0.875rem",
+                    letter_spacing: "0em",
+                    line_height: "1.45",
+                }, // sm
+                TextSize {
+                    font_weight: "400",
+                    font_size: "1rem",
+                    letter_spacing: "0em",
+                    line_height: "1.5",
+                }, // md (default)
+                TextSize {
+                    font_weight: "400",
+                    font_size: "1.125rem",
+                    letter_spacing: "0em",
+                    line_height: "1.55",
+                }, // lg
+                TextSize {
+                    font_weight: "400",
+                    font_size: "1.25rem",
+                    letter_spacing: "0em",
+                    line_height: "1.6",
+                }, // xl
+                TextSize {
+                    font_weight: "400",
+                    font_size: "1.375rem",
+                    letter_spacing: "0em",
+                    line_height: "1.65",
+                }, // xxl
             ),
-        ),
-        CodeDefaults::new(
-            "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-            "#f6f8fa",
-            "#d0d7de",
-            "#57606a",
-            "#8c959f",
-            "#cf222e",
-            "#0a3069",
-            "#6e7781",
-            "#0550ae",
-            "#0550ae",
-            "#8250df",
-            "#953800",
-            "#116329",
-            "#0969da",
-            "#cf222e",
-        ),
-        HeaderDefaults::new(Sizes::new(48, 56, 64, 72, 80, 88)),
-        IconDefaults::new(Sizes::new(16, 20, 24, 32, 40, 48)),
-        ActionIconDefaults::new(super::Size::Md, super::Size::Sm),
-        QrCodeDefaults::new("#FFFFFF", "#000000", QrRobustness::Medium),
-        MarkDefaults::new(super::Color::Warning),
-        KbdDefaults::new(
-            Sizes::new(10, 12, 14, 16, 20, 24),
-            "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace",
-            "#f6f8fa",
-            "#d0d7de",
-            "#57606a",
-        ),
-        NavLinkDefaults::new(super::Color::Primary),
-        HexColor::new(0x228BE6),
-        HexColor::new(0xE03131),
-        HexColor::new(0xE03131),
-        HexColor::new(0xF08C00),
-        HexColor::new(0x228BE6),
-        HexColor::new(0x2F9E44),
-        HexColor::new(0x868E96),
-        HexColor::new(0x000000),
-        HexColor::new(0xFFFFFF),
-        true,
-    );
-
-    pub const fn new(
-        spacing: Sizes<u8>,
-        radius: Sizes<u8>,
-        flex: FlexDefaults,
-        center: CenterDefaults,
-        container: ContainerDefaults,
-        aspect_ratio: AspectRatioDefaults,
-        float: FloatDefaults,
-        dialog: DialogDefaults,
-        drawer: DrawerDefaults,
-        divider: DividerDefaults,
-        splitter: SplitterDefaults,
-        scroll_area: ScrollAreaDefaults,
-        button: ButtonDefaults,
-        select: SelectDefaults,
-        list: ListDefaults,
-        data_list: DataListDefaults,
-        tree: TreeDefaults,
-        titles: TitleDefaults,
-        texts: TextDefaults,
-        code: CodeDefaults,
-        header: HeaderDefaults,
-        icon: IconDefaults,
-        action_icon: ActionIconDefaults,
-        qr_code: QrCodeDefaults,
-        mark: MarkDefaults,
-        kbd: KbdDefaults,
-        nav_link: NavLinkDefaults,
-        primary: HexColor,
-        secondary: HexColor,
-        error: HexColor,
-        warning: HexColor,
-        info: HexColor,
-        success: HexColor,
-        grey: HexColor,
-        black: HexColor,
-        white: HexColor,
-        font_smoothing: bool,
-    ) -> Self {
-        Self {
-            spacing,
-            radius,
-            flex,
-            center,
-            container,
-            aspect_ratio,
-            float,
-            dialog,
-            drawer,
-            divider,
-            splitter,
-            scroll_area,
-            button,
-            select,
-            list,
-            data_list,
-            tree,
-            titles,
-            texts,
-            code,
-            header,
-            icon,
-            action_icon,
-            qr_code,
-            mark,
-            kbd,
-            nav_link,
-            primary,
-            secondary,
-            error,
-            warning,
-            info,
-            success,
-            grey,
-            black,
-            white,
-            font_smoothing,
-        }
-    }
+        },
+        code: CodeDefaults {
+            font_family: MONO_FONT_FAMILY,
+            background: "#f6f8fa",
+            border: "#d0d7de",
+            muted_text: "#57606a",
+            line_number: "#8c959f",
+            tok_keyword: "#cf222e",
+            tok_string: "#0a3069",
+            tok_comment: "#6e7781",
+            tok_number: "#0550ae",
+            tok_constant: "#0550ae",
+            tok_function: "#8250df",
+            tok_type: "#953800",
+            tok_tag: "#116329",
+            tok_attribute: "#0969da",
+            tok_heading: "#cf222e",
+        },
+        header: HeaderDefaults {
+            height: Sizes::new(48, 56, 64, 72, 80, 88),
+        },
+        icon: IconDefaults {
+            size: Sizes::new(16, 20, 24, 32, 40, 48),
+        },
+        action_icon: ActionIconDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+        },
+        qr_code: QrCodeDefaults {
+            background: "#FFFFFF",
+            foreground: "#000000",
+            robustness: QrRobustness::Medium,
+        },
+        mark: MarkDefaults {
+            color: Color::Warning,
+        },
+        kbd: KbdDefaults {
+            font_size: Sizes::new(10, 12, 14, 16, 20, 24),
+            font_family: MONO_FONT_FAMILY,
+            background: "#f6f8fa",
+            border: "#d0d7de",
+            color: "#57606a",
+        },
+        nav_link: NavLinkDefaults {
+            color: Color::Primary,
+        },
+        primary: HexColor::new(0x228BE6),
+        secondary: HexColor::new(0x7950F2),
+        error: HexColor::new(0xFA5252),
+        warning: HexColor::new(0xFAB005),
+        info: HexColor::new(0x15AABF),
+        success: HexColor::new(0x40C057),
+        grey: HexColor::new(0x868E96),
+        black: HexColor::new(0x000000),
+        white: HexColor::new(0xFFFFFF),
+        font_smoothing: true,
+    };
 }

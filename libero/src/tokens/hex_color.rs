@@ -1,4 +1,4 @@
-use super::ColorShade;
+use super::{ColorShade, ShadeRamp};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexColor {
@@ -89,17 +89,32 @@ impl HexColor {
         self.rgb
     }
 
-    pub(crate) const fn shade(self, shade: ColorShade) -> Self {
-        let percent = match shade {
-            ColorShade::S1 => 80,
-            ColorShade::S2 => 65,
-            ColorShade::S3 => 50,
-            ColorShade::S4 => 35,
-            ColorShade::S5 => 20,
-            ColorShade::S6 => 10,
-            ColorShade::S7 => 0,
-            ColorShade::S8 => -10,
-            ColorShade::S9 => -20,
+    /// Percentages are fitted against Mantine's published palettes, so a
+    /// base picked as a Mantine shade-6 value reproduces its ramp.
+    pub(crate) const fn shade(self, shade: ColorShade, ramp: ShadeRamp) -> Self {
+        let percent = match ramp {
+            ShadeRamp::Chromatic => match shade {
+                ColorShade::S1 => 80,
+                ColorShade::S2 => 62,
+                ColorShade::S3 => 41,
+                ColorShade::S4 => 22,
+                ColorShade::S5 => 9,
+                ColorShade::S6 => 0,
+                ColorShade::S7 => -7,
+                ColorShade::S8 => -16,
+                ColorShade::S9 => -25,
+            },
+            ShadeRamp::Neutral => match shade {
+                ColorShade::S1 => 90,
+                ColorShade::S2 => 84,
+                ColorShade::S3 => 75,
+                ColorShade::S4 => 62,
+                ColorShade::S5 => 35,
+                ColorShade::S6 => 0,
+                ColorShade::S7 => -43,
+                ColorShade::S8 => -59,
+                ColorShade::S9 => -75,
+            },
         };
 
         if percent >= 0 {
@@ -154,7 +169,7 @@ mod tests {
     #[test]
     fn hex_color_shade_and_contrast() {
         const COLOR: HexColor = HexColor::new(0x228BE6);
-        const SHADE: HexColor = COLOR.shade(ColorShade::S1);
+        const SHADE: HexColor = COLOR.shade(ColorShade::S1, ShadeRamp::Chromatic);
         const CONTRAST: HexColor = COLOR.contrast();
 
         assert_eq!(SHADE.rgb(), 0xD2_E7_FA);

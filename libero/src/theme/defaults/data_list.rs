@@ -2,17 +2,13 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{Size, SizeCss, Sizes};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DataListDefaults {
     pub size: Size,
     pub gap: Sizes<u8>,
 }
 
 impl DataListDefaults {
-    pub const fn new(size: Size, gap: Sizes<u8>) -> Self {
-        Self { size, gap }
-    }
-
     fn size_sx(size: Size) -> Sx {
         sx().gap(SizeCss::DATA_LIST_GAP.value(size))
     }

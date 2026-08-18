@@ -131,14 +131,14 @@ fn push_color_declarations(declarations: &mut Vec<CssDeclaration>, color: Color,
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Shade(color, shade).var_name(),
-            base.shade(shade).to_string(),
+            base.shade(shade, color.shade_ramp()).to_string(),
         ));
     }
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Contrast(color, shade).var_name(),
-            if base.shade(shade).contrast().rgb() == 0x00_00_00 {
+            if base.shade(shade, color.shade_ramp()).contrast().rgb() == 0x00_00_00 {
                 ColorValue::Shade(Color::Black, shade).value()
             } else {
                 ColorValue::Shade(Color::White, shade).value()
@@ -217,20 +217,46 @@ mod tests {
         );
         assert!(
             css.as_str()
-                .contains("--lsx-primary-contrast-7:var(--lsx-white);")
+                .contains("--lsx-primary-contrast-6:var(--lsx-white);")
         );
-        assert!(css.as_str().contains("--lsx-secondary-7:#E03131;"));
-        assert!(css.as_str().contains("--lsx-error-7:#E03131;"));
-        assert!(css.as_str().contains("--lsx-warning-7:#F08C00;"));
-        assert!(css.as_str().contains("--lsx-info-7:#228BE6;"));
-        assert!(css.as_str().contains("--lsx-success-7:#2F9E44;"));
-        assert!(css.as_str().contains("--lsx-grey-7:#868E96;"));
+        assert!(css.as_str().contains("--lsx-secondary-6:#7950F2;"));
+        assert!(css.as_str().contains("--lsx-error-6:#FA5252;"));
+        assert!(css.as_str().contains("--lsx-warning-6:#FAB005;"));
+        assert!(css.as_str().contains("--lsx-info-6:#15AABF;"));
+        assert!(css.as_str().contains("--lsx-success-6:#40C057;"));
+        assert!(css.as_str().contains("--lsx-grey-6:#868E96;"));
         assert!(
             css.as_str()
-                .contains("--lsx-grey-contrast-7:var(--lsx-black);")
+                .contains("--lsx-grey-contrast-6:var(--lsx-black);")
         );
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));
+    }
+
+    /// The shade curves are fitted to Mantine's published palettes; these
+    /// lock both ramps so a tweak to one can't silently reshape the other.
+    #[test]
+    fn theme_css_palette_ramps_track_mantine() {
+        let css = Stylesheet::from(&Theme::DEFAULT);
+        let css = css.as_str();
+
+        for (var, hex) in [
+            ("--lsx-primary-1", "#D2E7FA"),
+            ("--lsx-primary-3", "#7CBAF0"),
+            ("--lsx-primary-6", "#228BE6"),
+            ("--lsx-primary-9", "#1968AC"),
+        ] {
+            assert!(css.contains(&format!("{var}:{hex};")), "{var} != {hex}");
+        }
+
+        for (var, hex) in [
+            ("--lsx-grey-1", "#F2F3F4"),
+            ("--lsx-grey-3", "#E0E2E4"),
+            ("--lsx-grey-6", "#868E96"),
+            ("--lsx-grey-9", "#212325"),
+        ] {
+            assert!(css.contains(&format!("{var}:{hex};")), "{var} != {hex}");
+        }
     }
 
     #[test]

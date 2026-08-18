@@ -152,7 +152,7 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
     match value {
         ThemeAwareValue::Size(size) => to_size_css_value(property, *size),
         ThemeAwareValue::Number(value) => value.clone(),
-        ThemeAwareValue::Color(color) => ColorValue::Shade(*color, ColorShade::S5).value(),
+        ThemeAwareValue::Color(color) => ColorValue::Shade(*color, ColorShade::DEFAULT).value(),
         ThemeAwareValue::ColorValue(value) => value.value(),
         ThemeAwareValue::CssVar(css_var) => css_var.value(),
         ThemeAwareValue::String(value) => value.clone(),
@@ -264,11 +264,11 @@ mod tests {
     }
 
     #[test]
-    fn sx_bare_color_defaults_to_shade_5_in_css() {
+    fn sx_bare_color_defaults_to_shade_6_in_css() {
         let stylesheet = Stylesheet::from(&sx().color("primary"));
         let css = stylesheet.as_str();
 
-        assert!(css.contains("color:var(--lsx-primary-5);"));
+        assert!(css.contains("color:var(--lsx-primary-6);"));
     }
 
     #[test]
