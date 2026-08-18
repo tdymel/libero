@@ -11,7 +11,8 @@ use crate::{
         common::{base_props, dom_api},
     },
     hooks::use_theme,
-    sx::{Sx, ThemeAwareValue},
+    sx::Sx,
+    theme::{Size, SizeCss},
 };
 
 use super::{
@@ -129,18 +130,19 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     #[props(default, into)]
     states: Input<States>,
     #[props(default, into)]
-    size: Input<ThemeAwareValue>,
-    /// Overrides the gap between rows at every nesting level (indent is
-    /// untouched) - e.g. `"0"` so a border on each row reads as one
-    /// continuous line down a section instead of separate dashes.
+    size: Input<Size>,
+    /// Overrides the gap between rows at every nesting level, independently
+    /// of `size` (indent is untouched). Off-scale values (like a flat `0`)
+    /// go through `sx` instead - see the `& ul` note on `indent`.
     #[props(default, into)]
-    gap: Input<ThemeAwareValue>,
-    /// Overrides the per-level indent at every nesting level - e.g. `"0"`
-    /// to disable it entirely and compute your own from `render_node`'s
-    /// `depth` instead, when the indent needs to interact with the content
-    /// itself (like a border lining up with an ancestor's chevron column).
+    gap: Input<Size>,
+    /// Overrides the per-level indent at every nesting level, independently
+    /// of `size`. To disable it entirely and compute your own offset from
+    /// `render_node`'s `depth`, zero it through `sx` on both the root and
+    /// its nested groups: `sx().padding_left("0").selector("& ul",
+    /// sx().padding_left("0"))`.
     #[props(default, into)]
-    indent: Input<ThemeAwareValue>,
+    indent: Input<Size>,
     /// Required - WAI-ARIA's tree pattern needs an accessible name on the root.
     #[props(into)]
     aria_label: String,
@@ -219,11 +221,11 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
 base_props! {
     struct TreeCoreProps {
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Size>,
         #[props(default, into)]
-        gap: Input<ThemeAwareValue>,
+        gap: Input<Size>,
         #[props(default, into)]
-        indent: Input<ThemeAwareValue>,
+        indent: Input<Size>,
         #[props(into)]
         aria_label: String,
         data: Vec<TreeNodeErased>,
@@ -244,10 +246,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
 
-    let size = match props.size.as_ref() {
-        Some(ThemeAwareValue::Size(size)) => *size,
-        _ => theme.tree.size,
-    };
+    let size = props.size.as_ref().copied().unwrap_or(theme.tree.size);
 
     let expanded_snapshot = expanded.read().clone();
     let order = visible_order(&props.data, &expanded_snapshot);
@@ -343,13 +342,13 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         }
     };
 
-    let gap = props.gap.into_option();
-    let indent = props.indent.into_option();
+    let gap = props.gap.as_ref().copied();
+    let indent = props.indent.as_ref().copied();
     let root_sx = props
         .sx
         .into_option()
         .unwrap_or_default()
-        .apply_if(gap.clone(), |sx, gap| sx.gap(gap));
+        .apply_if(gap, |sx, gap| sx.gap(SizeCss::LIST_GAP.value(gap)));
 
     rsx! {
         List {
@@ -367,8 +366,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     key: "{node.id}",
                     node: node.clone(),
                     size,
-                    gap: gap.clone(),
-                    indent: indent.clone(),
+                    gap,
+                    indent,
                     depth: 0,
                     expanded,
                     resolved_active: resolved_active.clone(),

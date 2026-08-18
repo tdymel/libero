@@ -4,8 +4,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, List, common::focus_ring_sx},
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::Size,
+    sx::{StaticSx, sx},
+    theme::{Size, SizeCss},
 };
 
 use super::{
@@ -64,8 +64,8 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
 pub(super) struct TreeRowProps {
     pub node: TreeNodeErased,
     pub size: Size,
-    pub gap: Option<ThemeAwareValue>,
-    pub indent: Option<ThemeAwareValue>,
+    pub gap: Option<Size>,
+    pub indent: Option<Size>,
     pub depth: usize,
     pub expanded: Signal<HashSet<String>>,
     pub resolved_active: Option<String>,
@@ -142,16 +142,18 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                 List {
                     "role": "group",
                     sx: sx()
-                        .apply_if(props.gap.clone(), |sx, gap| sx.gap(gap))
-                        .apply_if(props.indent.clone(), |sx, indent| sx.padding_left(indent)),
+                        .apply_if(props.gap, |sx, gap| sx.gap(SizeCss::LIST_GAP.value(gap)))
+                        .apply_if(props.indent, |sx, indent| {
+                            sx.padding_left(SizeCss::LIST_INDENT.value(indent))
+                        }),
                     size: props.size,
                     for child in &node.children {
                         TreeRow {
                             key: "{child.id}",
                             node: child.clone(),
                             size: props.size,
-                            gap: props.gap.clone(),
-                            indent: props.indent.clone(),
+                            gap: props.gap,
+                            indent: props.indent,
                             depth: props.depth + 1,
                             expanded: props.expanded,
                             resolved_active: props.resolved_active.clone(),

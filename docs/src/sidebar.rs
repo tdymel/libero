@@ -214,18 +214,25 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                 Tree {
                     aria_label: "Documentation pages",
                     size: "xs",
+                    // Both zeroed off-scale, so they go through `sx` rather
+                    // than `Tree`'s `Size`-typed `gap`/`indent` props, and
+                    // the `& ul` half is what carries them into every
+                    // nested group as well as the root.
+                    //
                     // Zero gap between sibling rows - each `NavLink`'s own
                     // left border then reads as one continuous line down
                     // the section instead of a dashed one.
-                    gap: "0",
+                    //
                     // `Tree` no longer reserves any leading chevron column of
                     // its own (that's purely `default_tree_render`'s thing
-                    // now) - with indent also disabled, every row, branch or
+                    // now) - with indent also zeroed, every row, branch or
                     // leaf, at any depth, starts at the exact same x. That's
                     // what puts a leaf's border in line with its parent
                     // group's own chevron with no offsetting math needed;
                     // `args.depth` below only pads a leaf's *label* inward.
-                    indent: "0",
+                    sx: sx()
+                        .gap("0")
+                        .selector("& ul", sx().gap("0").padding_left("0")),
                     data,
                     default_expanded,
                     render_node: move |args: TreeNodeRenderArgs<SidebarEntry>| {

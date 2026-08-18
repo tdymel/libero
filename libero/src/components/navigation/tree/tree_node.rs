@@ -164,8 +164,8 @@ pub struct TreeNodeRenderArgs<T> {
     /// 0 for a top-level node, incrementing by one per nesting level.
     /// `Tree`'s own indent (see `TreeProps::indent`) already uses this to
     /// shift each level - it's exposed here so `render_node` can take over
-    /// indentation entirely instead (e.g. set `indent: "0"` on `Tree` and
-    /// compute your own left offset from this).
+    /// indentation entirely instead (zero `Tree`'s own indent through its
+    /// `sx` and compute your own left offset from this).
     pub depth: usize,
 }
 
