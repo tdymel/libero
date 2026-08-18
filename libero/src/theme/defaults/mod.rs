@@ -1,4 +1,5 @@
 mod action_icon;
+mod aspect_ratio;
 mod button;
 mod code;
 mod container;
@@ -20,6 +21,7 @@ mod title;
 mod tree;
 
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
+pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION,
     BUTTON_RIPPLE_KEYFRAMES, ButtonDefaults, ButtonSizeLevel,

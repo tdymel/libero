@@ -14,7 +14,8 @@ pub use color_shade::ColorShade;
 pub use color_value::ColorValue;
 pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use defaults::{
-    ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults, BUTTON_FONT_SIZE, BUTTON_HEIGHT,
+    ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ASPECT_RATIO, ActionIconDefaults, AspectRatioDefaults,
+    BUTTON_FONT_SIZE, BUTTON_HEIGHT,
     BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION, BUTTON_RIPPLE_KEYFRAMES, ButtonDefaults,
     ButtonSizeLevel, CODE_BACKGROUND, CODE_BORDER, CODE_FONT_FAMILY, CODE_LINE_NUMBER,
     CODE_MUTED_TEXT, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION,

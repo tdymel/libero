@@ -1,17 +1,18 @@
 use super::{
-    ActionIconDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults, DataListDefaults,
-    DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults,
-    HeaderDefaults, HexColor, IconDefaults, KbdDefaults, ListDefaults, MarkDefaults,
+    ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults,
+    DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults,
+    FlexDefaults, HeaderDefaults, HexColor, IconDefaults, KbdDefaults, ListDefaults, MarkDefaults,
     NavLinkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize,
     TitleDefaults, TitleSize, TreeDefaults,
 };
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
     pub radius: Sizes<u8>,
     pub flex: FlexDefaults,
     pub container: ContainerDefaults,
+    pub aspect_ratio: AspectRatioDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
     pub divider: DividerDefaults,
@@ -51,6 +52,7 @@ impl Theme {
             FlexAxisDefaults::new("center", "flex-start", super::Size::Md, false),
         ),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
+        AspectRatioDefaults::new(1.0),
         DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750, 900)),
         DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400, 480)),
         DividerDefaults::new(None),
@@ -154,6 +156,7 @@ impl Theme {
         radius: Sizes<u8>,
         flex: FlexDefaults,
         container: ContainerDefaults,
+        aspect_ratio: AspectRatioDefaults,
         dialog: DialogDefaults,
         drawer: DrawerDefaults,
         divider: DividerDefaults,
@@ -188,6 +191,7 @@ impl Theme {
             radius,
             flex,
             container,
+            aspect_ratio,
             dialog,
             drawer,
             divider,

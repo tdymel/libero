@@ -121,6 +121,12 @@ impl From<String> for Input<Size> {
     }
 }
 
+impl From<f32> for Input<f32> {
+    fn from(value: f32) -> Self {
+        Self::Value(value)
+    }
+}
+
 impl From<States> for Input<States> {
     fn from(value: States) -> Self {
         Self::Value(value)

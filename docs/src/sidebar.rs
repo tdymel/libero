@@ -124,6 +124,7 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
             "layout",
             "Layout",
             vec![
+                page(Route::AspectRatioPage {}, "AspectRatio"),
                 page(Route::BoxPage {}, "Box"),
                 page(Route::ContainerPage {}, "Container"),
                 page(Route::DividerPage {}, "Divider"),

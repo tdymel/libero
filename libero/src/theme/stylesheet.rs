@@ -79,6 +79,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(theme.drawer.to_css_declarations());
     declarations.extend(theme.flex.to_css_declarations());
     declarations.extend(theme.container.to_css_declarations());
+    declarations.extend(theme.aspect_ratio.to_css_declarations());
     declarations.extend(theme.divider.to_css_declarations());
     declarations.extend(theme.button.to_css_declarations());
     declarations.extend(theme.select.to_css_declarations());
