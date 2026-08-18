@@ -69,15 +69,14 @@ impl Sx {
     }
 
     fn with_declaration(mut self, property: SxPropertyKey, value: ThemeAwareValue) -> Self {
-        self.entries.retain(|entry| {
-            !matches!(
-                entry,
-                SxEntry::Declaration {
-                    property: existing,
-                    ..
-                } if existing == &property
-            )
+        // At most one declaration per property, so stop at the first hit.
+        let existing = self.entries.iter().position(|entry| {
+            matches!(entry, SxEntry::Declaration { property: existing, .. } if existing == &property)
         });
+
+        if let Some(index) = existing {
+            self.entries.remove(index);
+        }
 
         self.entries.push(SxEntry::Declaration { property, value });
         self

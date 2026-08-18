@@ -201,85 +201,101 @@ mod tests {
 
     use super::*;
 
+    fn assert_declares(pairs: &[(&str, &str)]) {
+        let css = Stylesheet::from(&Theme::DEFAULT);
+        let css = css.as_str();
+
+        for (var, value) in pairs {
+            assert!(
+                css.contains(&format!("{var}:{value};")),
+                "missing {var}:{value}"
+            );
+        }
+    }
+
     #[test]
-    fn theme_css_happy_path() {
-        let theme = &Theme::DEFAULT;
-        let css = Stylesheet::from(theme);
+    fn theme_css_is_one_root_block() {
+        let css = Stylesheet::from(&Theme::DEFAULT);
 
-        assert!(css.as_str().contains(BUTTON_RIPPLE_KEYFRAMES));
-        assert!(css.as_str().contains("--lsx-button-font-size-md:1rem;"));
-        assert!(css.as_str().contains("--lsx-button-height-md:42px;"));
-        assert!(css.as_str().contains("--lsx-button-padding-x-md:18px;"));
-        assert!(css.as_str().contains("--lsx-spacing-xs:4px;"));
-        assert!(css.as_str().contains("--lsx-spacing-xl:20px;"));
-        assert!(css.as_str().contains("--lsx-breakpoint-xs:36rem;"));
-        assert!(css.as_str().contains("--lsx-breakpoint-xl:88rem;"));
-        assert!(css.as_str().contains("--lsx-dialog-size-md:510px;"));
-        assert!(css.as_str().contains("--lsx-drawer-size-md:280px;"));
-        assert!(
-            css.as_str()
-                .contains("--lsx-container-size:var(--lsx-breakpoint-lg);")
-        );
-        assert!(
-            css.as_str()
-                .contains("--lsx-container-gutters:var(--lsx-spacing-md);")
-        );
-        assert!(css.as_str().contains("--lsx-divider-spacing:0;"));
-        assert!(css.as_str().contains("--lsx-flex-column-align:stretch;"));
-        assert!(
-            css.as_str()
-                .contains("--lsx-flex-column-justify:flex-start;")
-        );
-        assert!(
-            css.as_str()
-                .contains("--lsx-flex-column-spacing:var(--lsx-spacing-md);")
-        );
-        assert!(css.as_str().contains("--lsx-flex-column-wrap:nowrap;"));
-        assert!(css.as_str().contains("--lsx-flex-row-align:center;"));
-        assert!(css.as_str().contains("--lsx-flex-row-justify:flex-start;"));
-        assert!(
-            css.as_str()
-                .contains("--lsx-flex-row-spacing:var(--lsx-spacing-md);")
-        );
-        assert!(css.as_str().contains("--lsx-flex-row-wrap:nowrap;"));
-        assert!(css.as_str().contains("--lsx-title-font-size-xxl:2.125rem;"));
-        assert!(css.as_str().contains("--lsx-title-font-weight-xxl:400;"));
-        assert!(css.as_str().contains("--lsx-title-font-size-xl:1.625rem;"));
-        assert!(css.as_str().contains("--lsx-title-font-size-lg:1.375rem;"));
-        assert!(css.as_str().contains("--lsx-title-font-size-md:1rem;"));
-        assert!(css.as_str().contains("--lsx-title-font-size-sm:0.875rem;"));
-        assert!(css.as_str().contains("--lsx-title-font-size-xs:0.75rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-size-xs:0.75rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-size-sm:0.875rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-size-md:1rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-size-lg:1.125rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-size-xl:1.25rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-size-xxl:1.375rem;"));
-        assert!(css.as_str().contains("--lsx-text-font-weight-xs:400;"));
-        assert!(css.as_str().contains("--lsx-text-line-height-md:1.5;"));
-
-        assert!(css.as_str().contains("--lsx-black:#000000;"));
-        assert!(css.as_str().contains("--lsx-white:#FFFFFF;"));
-        assert!(
-            css.as_str()
-                .contains("--lsx-primary-contrast-1:var(--lsx-black);")
-        );
-        assert!(
-            css.as_str()
-                .contains("--lsx-primary-contrast-6:var(--lsx-white);")
-        );
-        assert!(css.as_str().contains("--lsx-secondary-6:#7950F2;"));
-        assert!(css.as_str().contains("--lsx-error-6:#FA5252;"));
-        assert!(css.as_str().contains("--lsx-warning-6:#FAB005;"));
-        assert!(css.as_str().contains("--lsx-info-6:#15AABF;"));
-        assert!(css.as_str().contains("--lsx-success-6:#40C057;"));
-        assert!(css.as_str().contains("--lsx-grey-6:#868E96;"));
-        assert!(
-            css.as_str()
-                .contains("--lsx-grey-contrast-6:var(--lsx-black);")
-        );
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));
+        assert!(css.as_str().contains(BUTTON_RIPPLE_KEYFRAMES));
+    }
+
+    #[test]
+    fn theme_css_declares_the_global_scales() {
+        assert_declares(&[
+            ("--lsx-spacing-xs", "4px"),
+            ("--lsx-spacing-xl", "20px"),
+            ("--lsx-breakpoint-xs", "36rem"),
+            ("--lsx-breakpoint-xl", "88rem"),
+        ]);
+    }
+
+    #[test]
+    fn theme_css_declares_component_defaults() {
+        assert_declares(&[
+            ("--lsx-button-font-size-md", "1rem"),
+            ("--lsx-button-height-md", "42px"),
+            ("--lsx-button-padding-x-md", "18px"),
+            ("--lsx-dialog-size-md", "510px"),
+            ("--lsx-drawer-size-md", "280px"),
+            ("--lsx-container-size", "var(--lsx-breakpoint-lg)"),
+            ("--lsx-container-gutters", "var(--lsx-spacing-md)"),
+            ("--lsx-divider-spacing", "0"),
+        ]);
+    }
+
+    #[test]
+    fn theme_css_declares_both_flex_axes() {
+        assert_declares(&[
+            ("--lsx-flex-column-align", "stretch"),
+            ("--lsx-flex-column-justify", "flex-start"),
+            ("--lsx-flex-column-spacing", "var(--lsx-spacing-md)"),
+            ("--lsx-flex-column-wrap", "nowrap"),
+            ("--lsx-flex-row-align", "center"),
+            ("--lsx-flex-row-justify", "flex-start"),
+            ("--lsx-flex-row-spacing", "var(--lsx-spacing-md)"),
+            ("--lsx-flex-row-wrap", "nowrap"),
+        ]);
+    }
+
+    #[test]
+    fn theme_css_declares_the_typography_scales() {
+        assert_declares(&[
+            ("--lsx-title-font-size-xxl", "2.125rem"),
+            ("--lsx-title-font-size-xl", "1.625rem"),
+            ("--lsx-title-font-size-lg", "1.375rem"),
+            ("--lsx-title-font-size-md", "1rem"),
+            ("--lsx-title-font-size-sm", "0.875rem"),
+            ("--lsx-title-font-size-xs", "0.75rem"),
+            ("--lsx-title-font-weight-xxl", "400"),
+            ("--lsx-text-font-size-xs", "0.75rem"),
+            ("--lsx-text-font-size-sm", "0.875rem"),
+            ("--lsx-text-font-size-md", "1rem"),
+            ("--lsx-text-font-size-lg", "1.125rem"),
+            ("--lsx-text-font-size-xl", "1.25rem"),
+            ("--lsx-text-font-size-xxl", "1.375rem"),
+            ("--lsx-text-font-weight-xs", "400"),
+            ("--lsx-text-line-height-md", "1.5"),
+        ]);
+    }
+
+    #[test]
+    fn theme_css_declares_the_palette_and_its_contrasts() {
+        assert_declares(&[
+            ("--lsx-black", "#000000"),
+            ("--lsx-white", "#FFFFFF"),
+            ("--lsx-secondary-6", "#7950F2"),
+            ("--lsx-error-6", "#FA5252"),
+            ("--lsx-warning-6", "#FAB005"),
+            ("--lsx-info-6", "#15AABF"),
+            ("--lsx-success-6", "#40C057"),
+            ("--lsx-grey-6", "#868E96"),
+            ("--lsx-primary-contrast-1", "var(--lsx-black)"),
+            ("--lsx-primary-contrast-6", "var(--lsx-white)"),
+            ("--lsx-grey-contrast-6", "var(--lsx-black)"),
+        ]);
     }
 
     /// The shade curves are fitted to Mantine's published palettes; these

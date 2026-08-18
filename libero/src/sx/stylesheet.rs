@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
 use crate::tokens::{NamedColorCss, Size};
 
-use super::{Property, StaticSx, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
+use super::{Property, StaticSx, Sx, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
@@ -56,13 +56,13 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     }
 }
 
-fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
+fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext {
     match modifier {
-        SxModifier::Selector(pattern) => CssContext {
+        SxModifierKey::Selector(pattern) => CssContext {
             selectors: expand_selector(pattern, &context.selectors),
             media_query: context.media_query.clone(),
         },
-        SxModifier::Condition(condition) => CssContext {
+        SxModifierKey::Condition(condition) => CssContext {
             selectors: condition_groups(condition)
                 .into_iter()
                 .flat_map(|group| {
@@ -77,7 +77,7 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifier) -> CssContext {
                 .collect(),
             media_query: context.media_query.clone(),
         },
-        SxModifier::Breakpoint(size) => CssContext {
+        SxModifierKey::Breakpoint(size) => CssContext {
             selectors: context.selectors.clone(),
             media_query: Some(format!("(min-width: {})", size.breakpoint_value())),
         },
@@ -94,7 +94,7 @@ fn collect_declaration_scopes(
     match value {
         ThemeAwareValue::BreakpointValue(breakpoint_value) => {
             for (size, value) in breakpoint_value.values() {
-                push_breakpoint_declaration_scope(scopes, context, property, *size, Some(value));
+                push_breakpoint_declaration_scope(scopes, context, property, *size, value);
             }
         }
         _ => declarations.extend(property_declarations(property, value)),
@@ -106,12 +106,8 @@ fn push_breakpoint_declaration_scope(
     context: &CssContext,
     property: &SxPropertyKey,
     size: Size,
-    value: Option<&ThemeAwareValue>,
+    value: &ThemeAwareValue,
 ) {
-    let Some(value) = value else {
-        return;
-    };
-
     let mut scope = CssScope::new(
         context.selectors.join(", "),
         property_declarations(property, value),
