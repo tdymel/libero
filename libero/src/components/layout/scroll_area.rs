@@ -83,8 +83,14 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("block")
         .width("100%")
         .height("100%")
-        .when("axis-vertical", sx().overflow_y("auto").overflow_x("hidden"))
-        .when("axis-horizontal", sx().overflow_x("auto").overflow_y("hidden"))
+        .when(
+            "axis-vertical",
+            sx().overflow_y("auto").overflow_x("hidden"),
+        )
+        .when(
+            "axis-horizontal",
+            sx().overflow_x("auto").overflow_y("hidden"),
+        )
         .when("axis-both", sx().overflow_x("auto").overflow_y("auto"))
         .when("axis-none", sx().overflow_x("hidden").overflow_y("hidden"))
         .scrollbar_color(format!(
@@ -111,7 +117,10 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
-    variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(ThemeAwareValue::resolved))
+    variables().with(
+        SCROLL_AREA_THUMB_VAR,
+        color.and_then(ThemeAwareValue::resolved),
+    )
 }
 
 fn axis_token(scrollbars: ScrollAxis) -> &'static str {
@@ -180,7 +189,12 @@ base_props! {
 #[component]
 pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
-    let root_id = use_hook(|| format!("lsx-scroll-area-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
+    let root_id = use_hook(|| {
+        format!(
+            "lsx-scroll-area-{}",
+            NEXT_ID.fetch_add(1, Ordering::Relaxed)
+        )
+    });
 
     let scrollbars = props
         .scrollbars
@@ -211,8 +225,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         let data = event.data();
         let max_x = (data.scroll_width() - data.client_width()).max(0) as f64;
         let max_y = (data.scroll_height() - data.client_height()).max(0) as f64;
-        let x_pct = if max_x > 0.0 { data.scroll_left() / max_x * 100.0 } else { 0.0 };
-        let y_pct = if max_y > 0.0 { data.scroll_top() / max_y * 100.0 } else { 0.0 };
+        let x_pct = if max_x > 0.0 {
+            data.scroll_left() / max_x * 100.0
+        } else {
+            0.0
+        };
+        let y_pct = if max_y > 0.0 {
+            data.scroll_top() / max_y * 100.0
+        } else {
+            0.0
+        };
 
         if is_scrolling() {
             on_scroll.call(ScrollPositionEvent::Change(x_pct, y_pct));

@@ -6,13 +6,18 @@ use std::{
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Input, List, States, common::dom_api},
+    components::{
+        Input, List, States,
+        common::{base_props, dom_api},
+    },
     hooks::use_theme,
     sx::{Sx, ThemeAwareValue},
 };
 
 use super::{
-    tree_node::{TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render},
+    tree_node::{
+        ErasedRenderNode, TreeLabel, TreeNode, TreeNodeErased, TreeNodeRenderArgs, erase_nodes,
+    },
     tree_row::TreeRow,
 };
 
@@ -26,8 +31,8 @@ struct VisibleNode {
     label: String,
 }
 
-fn push_visible_nodes<T: TreeLabel + Clone>(
-    nodes: &[TreeNode<T>],
+fn push_visible_nodes(
+    nodes: &[TreeNodeErased],
     expanded: &HashSet<String>,
     parent_id: Option<&str>,
     out: &mut Vec<VisibleNode>,
@@ -38,7 +43,7 @@ fn push_visible_nodes<T: TreeLabel + Clone>(
             parent_id: parent_id.map(str::to_string),
             has_children: node.has_children(),
             disabled: node.disabled,
-            label: node.data.tree_label(),
+            label: node.label.clone(),
         });
         if node.has_children() && expanded.contains(&node.id) {
             push_visible_nodes(&node.children, expanded, Some(node.id.as_str()), out);
@@ -46,10 +51,7 @@ fn push_visible_nodes<T: TreeLabel + Clone>(
     }
 }
 
-fn visible_order<T: TreeLabel + Clone>(
-    nodes: &[TreeNode<T>],
-    expanded: &HashSet<String>,
-) -> Vec<VisibleNode> {
+fn visible_order(nodes: &[TreeNodeErased], expanded: &HashSet<String>) -> Vec<VisibleNode> {
     let mut out = Vec::new();
     push_visible_nodes(nodes, expanded, None, &mut out);
     out
@@ -148,7 +150,7 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     /// call that yourself from a custom `render_node` to fall back to it
     /// selectively, e.g. default rendering for branches, something custom
     /// (like a `NavLink`) for leaves.
-    #[props(default = Callback::new(default_tree_render))]
+    #[props(default = Callback::new(super::tree_node::default_tree_render))]
     render_node: Callback<TreeNodeRenderArgs<T>, Element>,
     /// Which nodes start expanded - seeds `Tree`'s own internal state once.
     /// After that, expanded/collapsed is `Tree`'s own business, not the
@@ -162,8 +164,81 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     onexpandedchange: EventHandler<HashSet<String>>,
 }
 
+/// Thin generic shim: converts `props.data`/`render_node` to their
+/// type-erased form once, then hands off to the non-generic `TreeCore`. Only
+/// this small conversion monomorphizes per `T` - the actual tree machinery
+/// (`TreeCore`, `TreeRow`, keyboard nav) is compiled once regardless of how
+/// many different `T`s callers use (see [[project_wasm_bundle_size_findings]]).
 #[component]
 pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> Element {
+    // Cached rather than re-erased every render: keeps the `Rc<dyn Any>`
+    // pointers inside `TreeNodeErased` stable across renders that don't
+    // change `props.data` (e.g. an expand/collapse), which is what lets
+    // `TreeNodeErased`'s `PartialEq` (pointer-based) actually skip
+    // re-rendering an untouched `TreeRow` subtree.
+    let mut erased_cache = use_signal(|| (props.data.clone(), erase_nodes::<T>(&props.data)));
+    if erased_cache.read().0 != props.data {
+        erased_cache.set((props.data.clone(), erase_nodes::<T>(&props.data)));
+    }
+    let erased_data = erased_cache.read().1.clone();
+
+    let render_node = props.render_node;
+    let erased_render_node = ErasedRenderNode::new(move |args| {
+        let data = args
+            .data
+            .downcast::<T>()
+            .expect("Tree: erased node data type mismatch");
+        render_node.call(TreeNodeRenderArgs {
+            id: args.id,
+            data: (*data).clone(),
+            expanded: args.expanded,
+            disabled: args.disabled,
+            tabindex: args.tabindex,
+            depth: args.depth,
+        })
+    });
+
+    rsx! {
+        TreeCore {
+            attributes: props.attributes,
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            size: props.size,
+            gap: props.gap,
+            indent: props.indent,
+            aria_label: props.aria_label,
+            data: erased_data,
+            render_node: erased_render_node,
+            default_expanded: props.default_expanded,
+            onexpandedchange: props.onexpandedchange,
+        }
+    }
+}
+
+base_props! {
+    struct TreeCoreProps {
+        #[props(default, into)]
+        size: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        gap: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        indent: Input<ThemeAwareValue>,
+        #[props(into)]
+        aria_label: String,
+        data: Vec<TreeNodeErased>,
+        render_node: ErasedRenderNode,
+        #[props(default)]
+        default_expanded: HashSet<String>,
+        #[props(default)]
+        onexpandedchange: EventHandler<HashSet<String>>,
+    }
+}
+
+/// The real `Tree` - non-generic, compiled once. See [`Tree`] for why the
+/// public generic component is split out from this.
+#[component]
+fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
     let root_id = use_hook(|| format!("lsx-tree-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)));
     let active_id = use_signal(|| None::<String>);
@@ -298,7 +373,7 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
                     expanded,
                     resolved_active: resolved_active.clone(),
                     active_id,
-                    render_node: props.render_node,
+                    render_node: props.render_node.clone(),
                     onexpandedchange: props.onexpandedchange,
                 }
             }

@@ -68,7 +68,10 @@ impl ElementApi for WebElementHandle {
     }
 
     fn scroll_offset(&self) -> Result<(f64, f64), DomApiError> {
-        Ok((self.element.scroll_left() as f64, self.element.scroll_top() as f64))
+        Ok((
+            self.element.scroll_left() as f64,
+            self.element.scroll_top() as f64,
+        ))
     }
 
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), DomApiError> {

@@ -1,3 +1,5 @@
+use std::{any::Any, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -52,9 +54,90 @@ impl<T> TreeNode<T> {
         self.disabled = disabled;
         self
     }
+}
 
-    pub(crate) fn has_children(&self) -> bool {
+/// Type-erased mirror of `TreeNode<T>` - what the actual tree machinery
+/// (`TreeRow`, keyboard nav, `push_visible_nodes`) is built against, so that
+/// code compiles once instead of once per `T` (see [[project_wasm_bundle_size_findings]]).
+/// `label` is precomputed via `TreeLabel` at erasure time; nothing downstream
+/// of it needs `T: TreeLabel` anymore.
+#[derive(Clone)]
+pub(super) struct TreeNodeErased {
+    pub id: String,
+    pub label: String,
+    pub children: Vec<TreeNodeErased>,
+    pub disabled: bool,
+    pub data: Rc<dyn Any>,
+}
+
+impl TreeNodeErased {
+    pub(super) fn has_children(&self) -> bool {
         !self.children.is_empty()
+    }
+}
+
+// `data` compares by pointer identity, not value - erasure is re-run (via
+// `Tree`'s own cache) only when the source `Vec<TreeNode<T>>` actually
+// changed by value, so a stable `Rc` here is exactly the signal `TreeRow`
+// needs to skip re-rendering an untouched subtree.
+impl PartialEq for TreeNodeErased {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.label == other.label
+            && self.disabled == other.disabled
+            && self.children == other.children
+            && Rc::ptr_eq(&self.data, &other.data)
+    }
+}
+
+pub(super) fn erase_nodes<T: TreeLabel + Clone + 'static>(
+    nodes: &[TreeNode<T>],
+) -> Vec<TreeNodeErased> {
+    nodes
+        .iter()
+        .map(|node| TreeNodeErased {
+            id: node.id.clone(),
+            label: node.data.tree_label(),
+            disabled: node.disabled,
+            children: erase_nodes(&node.children),
+            data: Rc::new(node.data.clone()) as Rc<dyn Any>,
+        })
+        .collect()
+}
+
+/// Type-erased mirror of [`TreeNodeRenderArgs<T>`] - what `TreeRow` actually
+/// calls `render_node` with. `Tree<T>` wraps the user's typed callback in one
+/// that downcasts `data` back to `T`, so the downcast is the only per-`T`
+/// cost instead of the whole row's rendering machinery.
+pub(super) struct TreeNodeRenderArgsErased {
+    pub id: String,
+    pub data: Rc<dyn Any>,
+    pub expanded: Option<bool>,
+    pub disabled: bool,
+    pub tabindex: &'static str,
+    pub depth: usize,
+}
+
+/// `Rc<dyn Fn>` wrapper so `TreeRowProps` can derive `Clone`/`PartialEq`
+/// without being generic over `T`. Equality is always `true`: which literal
+/// closure instance is held doesn't affect a row's rendered output for given
+/// `(id, data, expanded, disabled, depth)`, so it shouldn't gate memoization.
+#[derive(Clone)]
+pub(super) struct ErasedRenderNode(Rc<dyn Fn(TreeNodeRenderArgsErased) -> Element>);
+
+impl ErasedRenderNode {
+    pub(super) fn new(f: impl Fn(TreeNodeRenderArgsErased) -> Element + 'static) -> Self {
+        Self(Rc::new(f))
+    }
+
+    pub(super) fn call(&self, args: TreeNodeRenderArgsErased) -> Element {
+        (self.0)(args)
+    }
+}
+
+impl PartialEq for ErasedRenderNode {
+    fn eq(&self, _other: &Self) -> bool {
+        true
     }
 }
 

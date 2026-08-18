@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     tree::toggle_expanded,
-    tree_node::{TreeLabel, TreeNode, TreeNodeRenderArgs},
+    tree_node::{ErasedRenderNode, TreeNodeErased, TreeNodeRenderArgsErased},
 };
 
 // The `<li role="treeitem">` itself - block-level, not flex, so a nested
@@ -61,8 +61,8 @@ static TREE_ROW_CONTENT_SX: StaticSx = StaticSx::new(|| {
 });
 
 #[derive(Props, Clone, PartialEq)]
-pub(super) struct TreeRowProps<T: TreeLabel + Clone + PartialEq + 'static> {
-    pub node: TreeNode<T>,
+pub(super) struct TreeRowProps {
+    pub node: TreeNodeErased,
     pub size: Size,
     pub gap: Option<ThemeAwareValue>,
     pub indent: Option<ThemeAwareValue>,
@@ -70,14 +70,12 @@ pub(super) struct TreeRowProps<T: TreeLabel + Clone + PartialEq + 'static> {
     pub expanded: Signal<HashSet<String>>,
     pub resolved_active: Option<String>,
     pub active_id: Signal<Option<String>>,
-    pub render_node: Callback<TreeNodeRenderArgs<T>, Element>,
+    pub render_node: ErasedRenderNode,
     pub onexpandedchange: EventHandler<HashSet<String>>,
 }
 
 #[component]
-pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
-    props: TreeRowProps<T>,
-) -> Element {
+pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let node = &props.node;
     let has_children = node.has_children();
     let is_expanded = has_children.then(|| props.expanded.read().contains(&node.id));
@@ -93,7 +91,7 @@ pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
     // itself doesn't reserve a leading chevron column. That's
     // `default_tree_render`'s own concern (see its doc comment); a custom
     // `render_node` that skips the chevron gets no leftover gap to explain.
-    let content = props.render_node.call(TreeNodeRenderArgs {
+    let content = props.render_node.call(TreeNodeRenderArgsErased {
         id: node.id.clone(),
         data: node.data.clone(),
         expanded: is_expanded,
@@ -158,7 +156,7 @@ pub(super) fn TreeRow<T: TreeLabel + Clone + PartialEq + 'static>(
                             expanded: props.expanded,
                             resolved_active: props.resolved_active.clone(),
                             active_id: props.active_id,
-                            render_node: props.render_node,
+                            render_node: props.render_node.clone(),
                             onexpandedchange: props.onexpandedchange,
                         }
                     }

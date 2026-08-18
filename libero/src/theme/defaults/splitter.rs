@@ -42,7 +42,9 @@ impl SplitterDefaults {
 
 impl ToCssDeclarations for SplitterDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let mut declarations = self.divider_size.to_css_declarations(SPLITTER_DIVIDER_SIZE, "px");
+        let mut declarations = self
+            .divider_size
+            .to_css_declarations(SPLITTER_DIVIDER_SIZE, "px");
         declarations.extend(self.hit_size.to_css_declarations(SPLITTER_HIT_SIZE, "px"));
         declarations
     }
