@@ -1,18 +1,7 @@
-mod color;
-mod color_shade;
-mod color_value;
-mod css_var;
 mod defaults;
-mod hex_color;
-mod size;
-mod sizes;
 mod stylesheet;
 mod theme;
 
-pub use color::Color;
-pub use color_shade::ColorShade;
-pub use color_value::ColorValue;
-pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use defaults::{
     ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ASPECT_RATIO, ActionIconDefaults, AspectRatioDefaults,
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION,
@@ -34,7 +23,10 @@ pub use defaults::{
     TEXT_LINE_HEIGHT, TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING,
     TITLE_LINE_HEIGHT, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
 };
-pub use hex_color::HexColor;
-pub use size::Size;
-pub use sizes::Sizes;
 pub use theme::Theme;
+
+// The token vocabulary lives one layer below `sx` (see `crate::tokens`);
+// it is re-exported here so `libero::theme::Size` stays the public path.
+pub use crate::tokens::{
+    Color, ColorCss, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, Sizes, SizeCss,
+};

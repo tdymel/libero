@@ -1,4 +1,4 @@
-use crate::theme::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss};
+use crate::tokens::{Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss};
 
 use super::BreakpointValue;
 
@@ -172,7 +172,7 @@ impl From<f64> for ThemeAwareValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::theme::CssVar;
+    use crate::tokens::CssVar;
 
     use super::*;
 
@@ -192,11 +192,11 @@ mod tests {
     fn theme_aware_value_parses_a_bare_color_name_as_color_not_color_value() {
         assert_eq!(
             ThemeAwareValue::from("primary"),
-            ThemeAwareValue::Color(crate::theme::Color::Primary)
+            ThemeAwareValue::Color(crate::tokens::Color::Primary)
         );
         assert_eq!(
-            ThemeAwareValue::from(crate::theme::Color::Secondary),
-            ThemeAwareValue::Color(crate::theme::Color::Secondary)
+            ThemeAwareValue::from(crate::tokens::Color::Secondary),
+            ThemeAwareValue::Color(crate::tokens::Color::Secondary)
         );
     }
 
@@ -204,9 +204,9 @@ mod tests {
     fn theme_aware_value_parses_an_explicit_shade_as_color_value() {
         assert_eq!(
             ThemeAwareValue::from("primary.7"),
-            ThemeAwareValue::ColorValue(crate::theme::ColorValue::Shade(
-                crate::theme::Color::Primary,
-                crate::theme::ColorShade::S7
+            ThemeAwareValue::ColorValue(crate::tokens::ColorValue::Shade(
+                crate::tokens::Color::Primary,
+                crate::tokens::ColorShade::S7
             ))
         );
     }

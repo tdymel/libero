@@ -1,4 +1,4 @@
-use crate::theme::Size;
+use crate::tokens::Size;
 
 use super::ThemeAwareValue;
 
@@ -49,7 +49,7 @@ pub fn bp() -> BreakpointValue {
 
 #[cfg(test)]
 mod tests {
-    use crate::theme::Size;
+    use crate::tokens::Size;
 
     use super::*;
 

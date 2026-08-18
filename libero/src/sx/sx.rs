@@ -1,5 +1,5 @@
 use super::{Property, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue};
-use crate::theme::Size;
+use crate::tokens::Size;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 

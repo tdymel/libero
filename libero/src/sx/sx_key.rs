@@ -1,4 +1,4 @@
-use crate::theme::{Size, SizeCss};
+use crate::tokens::{Size, SizeCss};
 
 use super::{Sx, ThemeAwareValue};
 

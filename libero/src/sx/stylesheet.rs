@@ -1,5 +1,5 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
-use crate::theme::{ColorShade, ColorValue, NamedColorCss, Size};
+use crate::tokens::{ColorShade, ColorValue, NamedColorCss, Size};
 
 use super::{Property, StaticSx, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
 
@@ -179,7 +179,7 @@ fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
 mod tests {
     use crate::{
         sx::{bp, sx},
-        theme::Size,
+        tokens::Size,
     };
 
     use super::*;
