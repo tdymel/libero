@@ -1,8 +1,8 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, Flex, Icon, Text, Title, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
-        default_tree_render,
+        Box, Code, Icon, Text, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render,
     },
     sx::sx,
 };
@@ -114,13 +114,9 @@ pub fn TreePage() -> Element {
     let mut files_selected = use_signal(|| None::<String>);
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Tree" }
+        DocPage {
+            title: "Tree",
+            lead: rsx! {
                 Text {
                     "Data-driven, not composed via children - pass "
                     Code { "Vec<TreeNode<T>>" }
@@ -161,12 +157,9 @@ pub fn TreePage() -> Element {
                     Code { "End" }
                     " jump to the first/last row, and typing a letter jumps to the next match."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Basic" }
+            },
+            DocSection {
+                title: "Basic",
                 Text {
                     "Plain "
                     Code { "String" }
@@ -209,10 +202,8 @@ pub fn TreePage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Custom rendering" }
+            DocSection {
+                title: "Custom rendering",
                 Text {
                     "A "
                     Code { "render_node" }

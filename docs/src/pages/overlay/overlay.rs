@@ -1,29 +1,24 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, Overlay, Text, Title},
+    components::{Box, Overlay, Text},
     sx::sx,
 };
 
 #[component]
 pub fn OverlayPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Overlay" }
+        DocPage {
+            title: "Overlay",
+            lead: rsx! {
                 Text {
                     "Dims/blurs whatever is behind it - Modal renders one behind its content. "
                     "Defaults to position: fixed, spanning the whole viewport; overridden to "
                     "position: absolute below to stay contained in this demo."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 Box {
                     // `z-index` (any value, not just a high one) is what
                     // actually contains the overlay here - `position` alone

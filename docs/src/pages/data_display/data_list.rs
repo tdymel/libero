@@ -1,6 +1,7 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, DataList, DataListItem, Flex, Text, Title},
+    components::{Code, DataList, DataListItem, Text},
     sx::sx,
 };
 
@@ -9,13 +10,9 @@ pub fn DataListPage() -> Element {
     let phones = vec!["555-1234", "555-5678"];
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "DataList" }
+        DocPage {
+            title: "DataList",
+            lead: rsx! {
                 Text {
                     "Renders a "
                     Code { "dl" }
@@ -35,11 +32,9 @@ pub fn DataListPage() -> Element {
                     Code { "for" }
                     " loop, which flattens the same way."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Vertical (default)" }
+            },
+            DocSection {
+                title: "Vertical (default)",
                 DataList {
                     DataListItem { label: rsx! { "Status" }, "Active" }
                     DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
@@ -51,10 +46,8 @@ pub fn DataListPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Horizontal" }
+            DocSection {
+                title: "Horizontal",
                 Text {
                     "Terms and descriptions sit in two aligned columns. A term with several "
                     "descriptions still lines up correctly - each extra description just adds "

@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Flex, Text, Title, VisuallyHidden};
+use libero::components::{Anchor, Text, VisuallyHidden};
 
 #[component]
 pub fn VisuallyHiddenPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Visually Hidden" }
+        DocPage {
+            title: "Visually Hidden",
+            lead: rsx! {
                 Text {
                     "Content available to screen readers but removed from sighted layout - "
                     "e.g. extra context for a link that's ambiguous out of context."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 Text {
                     Anchor {
                         to: "https://example.com",

@@ -1,24 +1,19 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Flex, Option as SelectOption, Select, Text, Title};
+use libero::components::{Flex, Option as SelectOption, Select, Text};
 
 #[component]
 pub fn SelectPage() -> Element {
     let mut value = use_signal(|| "sm".to_string());
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Select" }
+        DocPage {
+            title: "Select",
+            lead: rsx! {
                 Text { "A styled native select, wrapped in its own label when label is set." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 Select {
                     label: "Size",
                     value: value(),
@@ -31,10 +26,8 @@ pub fn SelectPage() -> Element {
                 }
                 Text { "Selected: {value()}" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "row",
                     gap: "md",

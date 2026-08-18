@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, Text, Title},
+    components::{Flex, Text},
     sx::sx,
 };
 
 #[component]
 pub fn TextPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Text" }
+        DocPage {
+            title: "Text",
+            lead: rsx! {
                 Text { "Body copy - renders a p by default, sized via the theme's text scale." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            },
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "column",
                     gap: "sm",
@@ -30,10 +25,8 @@ pub fn TextPage() -> Element {
                     Text { size: "xl", "Extra large" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "As a span" }
+            DocSection {
+                title: "As a span",
                 Text {
                     "Inline text with "
                     Text { component: "span", sx: sx().font_weight("700"), "bold inline text" }

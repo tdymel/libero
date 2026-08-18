@@ -1,19 +1,16 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Flex, Text, Title},
+    components::{Box, Code, Text},
     sx::sx,
 };
 
 #[component]
 pub fn BoxPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Box" }
+        DocPage {
+            title: "Box",
+            lead: rsx! {
                 Text {
                     "The polymorphic primitive every other component is built on - renders "
                     "as any tag via "
@@ -28,21 +25,17 @@ pub fn BoxPage() -> Element {
                     Code { "src" }
                     "."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 Box {
                     component: "section",
                     sx: sx().padding("16px").background("grey.1").border_radius("md"),
                     Text { "Rendered as a section, styled entirely via sx." }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "As a link" }
+            DocSection {
+                title: "As a link",
                 Box {
                     component: "a",
                     href: "https://dioxuslabs.com",

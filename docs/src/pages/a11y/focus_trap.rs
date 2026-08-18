@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Button, Flex, FocusTrap, Text, Title};
+use libero::components::{Button, Flex, FocusTrap, Text};
 
 #[component]
 pub fn FocusTrapPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Focus Trap" }
+        DocPage {
+            title: "Focus Trap",
+            lead: rsx! {
                 Text {
                     "Confines Tab/Shift+Tab cycling to its children - the same mechanism "
                     "Modal uses internally to keep keyboard focus inside an open dialog."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 Text { "Tab through these buttons - focus stays inside the trap and wraps around." }
                 FocusTrap {
                     Flex {

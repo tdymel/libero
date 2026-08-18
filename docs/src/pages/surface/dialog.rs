@@ -1,29 +1,24 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Dialog, Flex, Text, Title},
+    components::{Dialog, Text, Title},
     sx::sx,
 };
 
 #[component]
 pub fn DialogPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Dialog" }
+        DocPage {
+            title: "Dialog",
+            lead: rsx! {
                 Text {
                     "The dialog surface itself - padding, radius, shadow, and the role/"
                     "aria-modal wiring. Pair it with Modal for the portaled, backdrop-"
                     "dimmed, focus-trapped overlay behavior."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 Dialog {
                     size: "sm",
                     sx: sx().margin("0"),

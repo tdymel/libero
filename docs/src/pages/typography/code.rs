@@ -1,5 +1,6 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Text, Title};
+use libero::components::{Code, Text};
 
 const RUST_EXAMPLE: &str = r#"fn shout(word: &str) -> String {
     // Rust
@@ -49,13 +50,9 @@ const DIFF_EXAMPLE: &str = r#"fn greet(name: &str) -> String {
 #[component]
 pub fn CodePage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Code" }
+        DocPage {
+            title: "Code",
+            lead: rsx! {
                 Text {
                     "Inline "
                     Code { "code" }
@@ -72,11 +69,9 @@ pub fn CodePage() -> Element {
                     Code { "Theme.code" }
                     " and can be overridden per-app."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "No language" }
+            },
+            DocSection {
+                title: "No language",
                 Text {
                     "No "
                     Code { "language" }
@@ -86,10 +81,8 @@ pub fn CodePage() -> Element {
                 }
                 Code { block: true, source: "cargo add libero" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Recognized, but not enabled" }
+            DocSection {
+                title: "Recognized, but not enabled",
                 Text {
                     "Libero recognizes far more languages than any one build compiles in - "
                     Code { "language: \"python\"" }
@@ -108,50 +101,36 @@ pub fn CodePage() -> Element {
                 }
                 Code { block: true, source: "print(\"hello\")", language: "python" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Highlighted - Rust" }
+            DocSection {
+                title: "Highlighted - Rust",
                 Code { block: true, source: RUST_EXAMPLE, language: "rust" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Highlighted - Shell" }
+            DocSection {
+                title: "Highlighted - Shell",
                 Code { block: true, source: SHELL_EXAMPLE, language: "shell" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Highlighted - Markdown" }
+            DocSection {
+                title: "Highlighted - Markdown",
                 Code { block: true, source: MARKDOWN_EXAMPLE, language: "markdown" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Highlighted - HTML" }
+            DocSection {
+                title: "Highlighted - HTML",
                 Code { block: true, source: HTML_EXAMPLE, language: "html" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Highlighted - CSS" }
+            DocSection {
+                title: "Highlighted - CSS",
                 Code { block: true, source: CSS_EXAMPLE, language: "css" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Inline highlighting" }
+            DocSection {
+                title: "Inline highlighting",
                 Text {
                     "Works inline too - "
                     Code { source: "let x: u32 = 5;", language: "rust" }
                     " stays a single line, colored the same way."
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Without a header" }
+            DocSection {
+                title: "Without a header",
                 Text {
                     Code { "header: false" }
                     " drops the bar - the copy button (if "
@@ -162,10 +141,8 @@ pub fn CodePage() -> Element {
                 Code { block: true, source: "cargo build --release", language: "shell", header: false }
                 Code { block: true, source: RUST_EXAMPLE, language: "rust", header: false }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Without a copy button" }
+            DocSection {
+                title: "Without a copy button",
                 Text { Code { "copyable: false" } " keeps the header, drops the button." }
                 Code {
                     block: true,
@@ -174,10 +151,8 @@ pub fn CodePage() -> Element {
                     copyable: false,
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Max lines" }
+            DocSection {
+                title: "Max lines",
                 Text {
                     Code { "max_lines" }
                     " caps the visible height to roughly that many lines, scrolling "
@@ -190,17 +165,13 @@ pub fn CodePage() -> Element {
                     max_lines: 6,
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Long lines" }
+            DocSection {
+                title: "Long lines",
                 Text { "A single line wider than the block scrolls horizontally on its own." }
                 Code { block: true, source: LONG_LINE_EXAMPLE, language: "rust" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Line numbers" }
+            DocSection {
+                title: "Line numbers",
                 Text { Code { "line_numbers: false" } " drops the gutter entirely." }
                 Code {
                     block: true,
@@ -209,10 +180,8 @@ pub fn CodePage() -> Element {
                     line_numbers: false,
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Highlighted lines" }
+            DocSection {
+                title: "Highlighted lines",
                 Text {
                     Code { "highlight_lines" }
                     " emphasizes specific rows - a comma-separated list of line numbers "
@@ -227,10 +196,8 @@ pub fn CodePage() -> Element {
                     highlight_lines: "2,4-5",
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Diff" }
+            DocSection {
+                title: "Diff",
                 Text {
                     Code { "diff: true" }
                     " reads a leading "
@@ -244,10 +211,8 @@ pub fn CodePage() -> Element {
                 }
                 Code { block: true, source: DIFF_EXAMPLE, diff: true }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Opaque children" }
+            DocSection {
+                title: "Opaque children",
                 Text {
                     "Without "
                     Code { "source" }

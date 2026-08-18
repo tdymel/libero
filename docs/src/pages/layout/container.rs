@@ -1,28 +1,23 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Container, Flex, Text, Title},
+    components::{Container, Text},
     sx::sx,
 };
 
 #[component]
 pub fn ContainerPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Container" }
+        DocPage {
+            title: "Container",
+            lead: rsx! {
                 Text {
                     "Centers content and caps its width at a breakpoint - wraps your main "
                     "content, not the whole page shell."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            },
+            DocSection {
+                title: "Sizes",
                 Container {
                     size: "sm",
                     sx: sx().background("grey.1").padding("16px"),

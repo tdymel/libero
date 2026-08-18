@@ -1,39 +1,30 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Divider, Flex, Text, Title},
+    components::{Divider, Flex, Text},
     sx::sx,
 };
 
 #[component]
 pub fn DividerPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Divider" }
+        DocPage {
+            title: "Divider",
+            lead: rsx! {
                 Text { "A horizontal or vertical rule, with an optional centered/positioned label." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Horizontal" }
+            },
+            DocSection {
+                title: "Horizontal",
                 Divider {}
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "With a label" }
+            DocSection {
+                title: "With a label",
                 Divider { "OR" }
                 Divider { label_position: "start", "Start" }
                 Divider { label_position: "end", "End" }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Vertical" }
+            DocSection {
+                title: "Vertical",
                 Flex {
                     direction: "row",
                     gap: "md",

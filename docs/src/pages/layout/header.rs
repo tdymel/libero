@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, Header, Text, Title},
+    components::{Flex, Header, Text},
     sx::sx,
 };
 
 #[component]
 pub fn HeaderPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Header" }
+        DocPage {
+            title: "Header",
+            lead: rsx! {
                 Text { "The page's banner landmark - always renders header. This page's own header uses one." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Colors" }
+            },
+            DocSection {
+                title: "Colors",
                 Flex {
                     direction: "column",
                     gap: "sm",

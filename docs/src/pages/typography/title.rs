@@ -1,26 +1,21 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::components::{Code, Flex, Text, Title};
 
 #[component]
 pub fn TitlePage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Title" }
+        DocPage {
+            title: "Title",
+            lead: rsx! {
                 Text {
                     "A heading, h1 through h6 - "
                     Code { "component" }
                     " decouples the semantic tag from the visual size, for a11y heading order."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Variants" }
+            },
+            DocSection {
+                title: "Variants",
                 Flex {
                     direction: "column",
                     gap: "sm",
@@ -32,10 +27,8 @@ pub fn TitlePage() -> Element {
                     Title { size: "xs", "Heading six" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Decoupled tag" }
+            DocSection {
+                title: "Decoupled tag",
                 Text { "Sized like h1, but rendered as a p - doesn't affect the page's heading order." }
                 Title { size: "xxl", component: "p", "Looks like h1, isn't one" }
             }

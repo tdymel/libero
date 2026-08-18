@@ -1,18 +1,15 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Icon, Text, Title};
+use libero::components::{Code, Flex, Icon, Text};
 
 use crate::icons::CheckmarkIcon;
 
 #[component]
 pub fn IconPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Icon" }
+        DocPage {
+            title: "Icon",
+            lead: rsx! {
                 Text {
                     "Wraps an svg child in a sized, colored badge. "
                     Code { "color" }
@@ -20,12 +17,9 @@ pub fn IconPage() -> Element {
                     Code { "currentColor" }
                     " for its fill/stroke then inherits."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Variants" }
+            },
+            DocSection {
+                title: "Variants",
                 Flex {
                     direction: "row",
                     gap: "xxl",
@@ -53,10 +47,8 @@ pub fn IconPage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "row",
                     gap: "lg",
@@ -69,10 +61,8 @@ pub fn IconPage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Colors" }
+            DocSection {
+                title: "Colors",
                 Flex {
                     direction: "row",
                     gap: "lg",

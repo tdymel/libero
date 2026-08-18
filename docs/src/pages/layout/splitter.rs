@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, Splitter, Text, Title},
+    components::{Box, Splitter, Text},
     sx::sx,
 };
 
 #[component]
 pub fn SplitterPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Splitter" }
+        DocPage {
+            title: "Splitter",
+            lead: rsx! {
                 Text { "Splits two panes with a draggable/keyboard-resizable divider. Only two panes - nest another `Splitter` inside a pane for more." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Vertical (default)" }
+            },
+            DocSection {
+                title: "Vertical (default)",
                 Text { "Side-by-side panes, dragged left/right." }
                 Box {
                     sx: sx().height("160px").border("1px solid var(--lsx-grey-3)"),
@@ -30,10 +25,8 @@ pub fn SplitterPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Horizontal" }
+            DocSection {
+                title: "Horizontal",
                 Text { "Stacked panes, dragged up/down." }
                 Box {
                     sx: sx().height("220px").border("1px solid var(--lsx-grey-3)"),
@@ -46,10 +39,8 @@ pub fn SplitterPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Composed" }
+            DocSection {
+                title: "Composed",
                 Text { "Nesting `Splitter`s composes more than 2 panes - here a horizontal split on the right of a vertical one." }
                 Box {
                     sx: sx().height("260px").border("1px solid var(--lsx-grey-3)"),

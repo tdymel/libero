@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{AspectRatio, Flex, Text, Title},
+    components::{AspectRatio, Flex, Text},
     sx::sx,
 };
 
 #[component]
 pub fn AspectRatioPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "AspectRatio" }
+        DocPage {
+            title: "AspectRatio",
+            lead: rsx! {
                 Text { "Enforces a width-to-height ratio on its child, cropping it to fill the box." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Ratios" }
+            },
+            DocSection {
+                title: "Ratios",
                 Flex {
                     gap: "md",
                     AspectRatio {

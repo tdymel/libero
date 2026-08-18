@@ -1,6 +1,7 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Flex, Icon, List, ListItem, Text, Title},
+    components::{Box, Code, Flex, Icon, List, ListItem, Text},
     sx::sx,
     theme::{ICON_SIZE, Size},
 };
@@ -51,13 +52,9 @@ fn TreeFile(label: &'static str) -> Element {
 #[component]
 pub fn ListPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "List" }
+        DocPage {
+            title: "List",
+            lead: rsx! {
                 Text {
                     "Renders a "
                     Code { "ul" }
@@ -70,11 +67,9 @@ pub fn ListPage() -> Element {
                     Code { "md" }
                     ") controls item gap and nested-list indent together."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Example" }
+            },
+            DocSection {
+                title: "Example",
                 List {
                     ListItem { "First item" }
                     ListItem { "Second item" }
@@ -87,10 +82,8 @@ pub fn ListPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "File tree" }
+            DocSection {
+                title: "File tree",
                 Text {
                     "Purely visual - no interactivity or state, just "
                     Code { "List" }

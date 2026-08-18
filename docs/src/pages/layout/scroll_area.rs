@@ -1,6 +1,7 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, ScrollArea, ScrollPositionEvent, Text, Title},
+    components::{Box, Flex, ScrollArea, ScrollPositionEvent, Text},
     sx::sx,
 };
 
@@ -10,19 +11,13 @@ pub fn ScrollAreaPage() -> Element {
     let mut jump_target = use_signal(|| None::<f64>);
 
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "ScrollArea" }
+        DocPage {
+            title: "ScrollArea",
+            lead: rsx! {
                 Text { "Scrolls its content, filling the parent by default. Reports live scroll position/edges via events, and can be scrolled to a percent imperatively." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Default (vertical)" }
+            },
+            DocSection {
+                title: "Default (vertical)",
                 Box {
                     sx: sx().height("160px").border("1px solid var(--lsx-grey-3)"),
                     ScrollArea {
@@ -37,10 +32,8 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Both axes, hover-visible scrollbars" }
+            DocSection {
+                title: "Both axes, hover-visible scrollbars",
                 Box {
                     sx: sx().height("160px").width("240px").border("1px solid var(--lsx-grey-3)"),
                     ScrollArea {
@@ -55,10 +48,8 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Live position + reached events" }
+            DocSection {
+                title: "Live position + reached events",
                 Text { "x: {position().0:.0}%, y: {position().1:.0}%" }
                 Box {
                     sx: sx().height("160px").width("320px").border("1px solid var(--lsx-grey-3)"),

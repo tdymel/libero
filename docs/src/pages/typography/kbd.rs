@@ -1,16 +1,13 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Kbd, Text, Title};
+use libero::components::{Code, Flex, Kbd, Text};
 
 #[component]
 pub fn KbdPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Kbd" }
+        DocPage {
+            title: "Kbd",
+            lead: rsx! {
                 Text {
                     "Save with "
                     Kbd { "Ctrl" }
@@ -22,12 +19,9 @@ pub fn KbdPage() -> Element {
                     Code { "Theme::kbd" }
                     ") - size is the only prop."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            },
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "row",
                     gap: "lg",

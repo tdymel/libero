@@ -1,6 +1,7 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{ActionIcon, Code, Flex, Text, Title},
+    components::{ActionIcon, Code, Flex, Text},
     sx::sx,
 };
 
@@ -9,13 +10,9 @@ use crate::icons::CheckmarkIcon;
 #[component]
 pub fn ActionIconPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "ActionIcon" }
+        DocPage {
+            title: "ActionIcon",
+            lead: rsx! {
                 Text {
                     Code { "Icon" }
                     "'s sizing, color, and variant system, rendered as a real "
@@ -23,11 +20,9 @@ pub fn ActionIconPage() -> Element {
                     " with click handling and required a11y - for icon-only actions like a "
                     "copy, close, or delete button."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Variants" }
+            },
+            DocSection {
+                title: "Variants",
                 Flex {
                     direction: "row",
                     gap: "xxl",
@@ -54,10 +49,8 @@ pub fn ActionIconPage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "No variant or color" }
+            DocSection {
+                title: "No variant or color",
                 Text {
                     "With neither set, "
                     Code { "ActionIcon" }
@@ -72,10 +65,8 @@ pub fn ActionIconPage() -> Element {
                 }
                 ActionIcon { aria_label: "Confirm", CheckmarkIcon {} }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "row",
                     gap: "lg",
@@ -87,10 +78,8 @@ pub fn ActionIconPage() -> Element {
                     ActionIcon { color: "primary", size: "xl", aria_label: "Confirm", CheckmarkIcon {} }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Colors" }
+            DocSection {
+                title: "Colors",
                 Flex {
                     direction: "row",
                     gap: "lg",
@@ -100,10 +89,8 @@ pub fn ActionIconPage() -> Element {
                     ActionIcon { color: "warning", aria_label: "Confirm", CheckmarkIcon {} }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Disabled" }
+            DocSection {
+                title: "Disabled",
                 ActionIcon {
                     variant: "filled",
                     color: "primary",
@@ -112,10 +99,8 @@ pub fn ActionIconPage() -> Element {
                     CheckmarkIcon {}
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "As a link" }
+            DocSection {
+                title: "As a link",
                 Text {
                     sx: sx().color("grey.6"),
                     "Renders as a real anchor, or a router Link when to matches an internal route.",
@@ -129,10 +114,8 @@ pub fn ActionIconPage() -> Element {
                     CheckmarkIcon {}
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Accessible name" }
+            DocSection {
+                title: "Accessible name",
                 Text {
                     sx: sx().color("grey.6"),
                     "aria_label is required, not optional - an icon-only button has no visible "

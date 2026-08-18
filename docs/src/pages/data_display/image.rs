@@ -1,28 +1,23 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Flex, Image, Text, Title},
+    components::{Flex, Image, Text},
     sx::sx,
 };
 
 #[component]
 pub fn ImagePage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Image" }
+        DocPage {
+            title: "Image",
+            lead: rsx! {
                 Text {
                     "An img with a fallback source on load error, optional rounded corners, "
                     "and an optional click-to-zoom overlay."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Fit & radius" }
+            },
+            DocSection {
+                title: "Fit & radius",
                 Flex {
                     direction: "row",
                     gap: "lg",
@@ -41,10 +36,8 @@ pub fn ImagePage() -> Element {
                     }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Zoomable" }
+            DocSection {
+                title: "Zoomable",
                 Text { sx: sx().color("grey.6"), "Click to open a zoomed overlay." }
                 Image {
                     src: crate::LOGO,

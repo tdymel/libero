@@ -1,25 +1,20 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Divider, Flex, Text, Title},
+    components::{Box, Divider, Flex, Text},
     sx::sx,
 };
 
 #[component]
 pub fn FlexPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Flex" }
+        DocPage {
+            title: "Flex",
+            lead: rsx! {
                 Text { "A flexbox container - direction, gap, align, justify and wrap, all theme-aware." }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Row with gap" }
+            },
+            DocSection {
+                title: "Row with gap",
                 Flex {
                     direction: "row",
                     gap: "md",
@@ -28,10 +23,8 @@ pub fn FlexPage() -> Element {
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Column" }
+            DocSection {
+                title: "Column",
                 Flex {
                     direction: "column",
                     gap: "sm",
@@ -39,10 +32,8 @@ pub fn FlexPage() -> Element {
                     Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Divider" }
+            DocSection {
+                title: "Divider",
                 Text { "Rendered between each child - not before the first or after the last." }
                 Flex {
                     direction: "column",

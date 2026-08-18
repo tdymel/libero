@@ -1,6 +1,7 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Divider, Flex, Text, Title},
+    components::{Code, Divider, Flex, Text},
     sx::sx,
 };
 
@@ -15,30 +16,21 @@ const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
 #[component]
 pub fn GettingStarted() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Getting Started" }
+        DocPage {
+            title: "Getting Started",
+            lead: rsx! {
                 Text {
                     "Libero is a Dioxus component library focused on developer experience, UX, accessibility, and configurability."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Installation" }
+            },
+            DocSection {
+                title: "Installation",
                 Text { "Add Libero to your project with cargo:" }
                 Code { block: true, source: "cargo add libero", language: "shell" }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Quick Start" }
+            DocSection {
+                title: "Quick Start",
                 Text {
                     "Wrap your app in "
                     Code { "LiberoProvider" }
@@ -47,10 +39,8 @@ pub fn GettingStarted() -> Element {
                 Code { block: true, source: QUICK_START_EXAMPLE, language: "rust" }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Building for the Web" }
+            DocSection {
+                title: "Building for the Web",
                 Text {
                     "Libero's "
                     Code { "wasm-split" }

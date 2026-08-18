@@ -1,19 +1,16 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, NavLink, Text, Title},
+    components::{Code, Flex, NavLink, Text},
     sx::sx,
 };
 
 #[component]
 pub fn NavLinkPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "NavLink" }
+        DocPage {
+            title: "NavLink",
+            lead: rsx! {
                 Text {
                     "A navigation list item - "
                     Code { "Anchor" }
@@ -23,12 +20,9 @@ pub fn NavLinkPage() -> Element {
                     Code { "Theme::nav_link" }
                     ") by default."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Active state" }
+            },
+            DocSection {
+                title: "Active state",
                 Text {
                     sx: sx().color("grey.6"),
                     "Auto-detected by comparing "
@@ -53,10 +47,8 @@ pub fn NavLinkPage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Colors" }
+            DocSection {
+                title: "Colors",
                 Text {
                     sx: sx().color("grey.6"),
                     "Forced active here to show the tint - color only shows once a link is "
@@ -73,10 +65,8 @@ pub fn NavLinkPage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Disabled" }
+            DocSection {
+                title: "Disabled",
                 Flex {
                     direction: "column",
                     gap: "xs",

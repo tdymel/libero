@@ -1,19 +1,16 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, QrCode, Text, Title},
+    components::{Code, Flex, QrCode, Text},
     sx::sx,
 };
 
 #[component]
 pub fn QrCodePage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "QrCode" }
+        DocPage {
+            title: "QrCode",
+            lead: rsx! {
                 Text {
                     "Encodes "
                     Code { "data" }
@@ -24,12 +21,9 @@ pub fn QrCodePage() -> Element {
                     Code { "robustness" }
                     " is the only thing you tune per code."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Basic usage" }
+            },
+            DocSection {
+                title: "Basic usage",
                 QrCode {
                     data: "https://github.com/tdymel/libero",
                     aria_label: "QR code linking to the libero GitHub repository",
@@ -37,10 +31,8 @@ pub fn QrCodePage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Robustness" }
+            DocSection {
+                title: "Robustness",
                 Text {
                     sx: sx().color("grey.6"),
                     "Error-correction level - higher levels tolerate more damage/"
@@ -103,10 +95,8 @@ pub fn QrCodePage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Scalable" }
+            DocSection {
+                title: "Scalable",
                 Text {
                     sx: sx().color("grey.6"),
                     "The generated SVG has no fixed width/height, just a square "
@@ -123,10 +113,8 @@ pub fn QrCodePage() -> Element {
                 }
             }
 
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Accessible name" }
+            DocSection {
+                title: "Accessible name",
                 Text {
                     sx: sx().color("grey.6"),
                     "aria_label is required, not optional - a QR code conveys real "

@@ -1,29 +1,24 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Text, Title},
+    components::{Button, Code, Flex, Text},
     sx::sx,
 };
 
 #[component]
 pub fn ButtonPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Button" }
+        DocPage {
+            title: "Button",
+            lead: rsx! {
                 Text {
                     "A clickable control, or a router-aware link when "
                     Code { "to" }
                     " is set."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Variants" }
+            },
+            DocSection {
+                title: "Variants",
                 Flex {
                     direction: "row",
                     gap: "md",
@@ -32,10 +27,8 @@ pub fn ButtonPage() -> Element {
                     Button { variant: "text", "Text" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "row",
                     gap: "md",
@@ -47,10 +40,8 @@ pub fn ButtonPage() -> Element {
                     Button { variant: "filled", size: "xl", "Extra large" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Colors" }
+            DocSection {
+                title: "Colors",
                 Flex {
                     direction: "row",
                     gap: "md",
@@ -60,10 +51,8 @@ pub fn ButtonPage() -> Element {
                     Button { variant: "filled", color: "warning", "Warning" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Disabled" }
+            DocSection {
+                title: "Disabled",
                 Flex {
                     direction: "row",
                     gap: "md",
@@ -71,10 +60,8 @@ pub fn ButtonPage() -> Element {
                     Button { variant: "outlined", disabled: true, "Outlined" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "As a link" }
+            DocSection {
+                title: "As a link",
                 Text {
                     sx: sx().color("grey.6"),
                     "Renders as a real anchor, or a router Link when to matches an internal route.",

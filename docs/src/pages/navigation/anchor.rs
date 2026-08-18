@@ -1,28 +1,23 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Flex, Text, Title},
+    components::{Anchor, Flex, Text},
     sx::sx,
 };
 
 #[component]
 pub fn AnchorPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Anchor" }
+        DocPage {
+            title: "Anchor",
+            lead: rsx! {
                 Text {
                     "Text styled and sized like Text, rendered as a real link - router-aware "
                     "via to, falling back to a plain href when no router is mounted."
                 }
-            }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Underline" }
+            },
+            DocSection {
+                title: "Underline",
                 Flex {
                     direction: "row",
                     gap: "lg",
@@ -31,10 +26,8 @@ pub fn AnchorPage() -> Element {
                     Anchor { to: "https://dioxuslabs.com", underline: "never", "Never" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Sizes" }
+            DocSection {
+                title: "Sizes",
                 Flex {
                     direction: "row",
                     gap: "lg",
@@ -44,10 +37,8 @@ pub fn AnchorPage() -> Element {
                     Anchor { to: "https://dioxuslabs.com", size: "xl", "Extra large" }
                 }
             }
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Internal navigation" }
+            DocSection {
+                title: "Internal navigation",
                 Text {
                     sx: sx().color("grey.6"),
                     "Uses the app's router directly - clicking this is a client-side navigation, not a full page reload.",

@@ -1,16 +1,13 @@
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Mark, Text, Title};
+use libero::components::{Code, Mark, Text};
 
 #[component]
 pub fn MarkPage() -> Element {
     rsx! {
-        Flex {
-            direction: "column",
-            gap: "xxl",
-            Flex {
-                direction: "column",
-                gap: "lg",
-                Title { size: "xxl", "Mark" }
+        DocPage {
+            title: "Mark",
+            lead: rsx! {
                 Text {
                     "Highlight "
                     Mark { "this chunk" }
@@ -20,12 +17,9 @@ pub fn MarkPage() -> Element {
                     Code { "warning" }
                     " color by default."
                 }
-            }
-
-            Flex {
-                direction: "column",
-                gap: "sm",
-                Title { size: "xl", "Colors" }
+            },
+            DocSection {
+                title: "Colors",
                 Text {
                     "Default: "
                     Mark { "warning" }

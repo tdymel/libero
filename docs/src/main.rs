@@ -6,6 +6,7 @@ use libero::{
     theme::{HEADER_HEIGHT, Size},
 };
 
+mod components;
 mod icons;
 mod pages;
 mod sidebar;
