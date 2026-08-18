@@ -3,6 +3,7 @@ target
 .dioxus-fork
 writeups
 feature_creep
+memory
 
 # added by gcma: paths removed from history
 .agents/*
