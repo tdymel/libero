@@ -1,5 +1,5 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
-use crate::theme::{ColorShade, ColorValue, NamedColorCss, Size, SizeCss};
+use crate::theme::{ColorShade, ColorValue, NamedColorCss, Size};
 
 use super::{Property, StaticSx, Sx, SxEntry, SxModifier, SxPropertyKey, ThemeAwareValue};
 
@@ -164,23 +164,14 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
 }
 
 fn to_size_css_value(property: &SxPropertyKey, size: Size) -> String {
-    match property {
-        SxPropertyKey::Known(Property::Padding)
-        | SxPropertyKey::Known(Property::PaddingTop)
-        | SxPropertyKey::Known(Property::PaddingLeft)
-        | SxPropertyKey::Known(Property::PaddingRight)
-        | SxPropertyKey::Known(Property::PaddingBottom)
-        | SxPropertyKey::Known(Property::Gap)
-        | SxPropertyKey::Known(Property::Margin)
-        | SxPropertyKey::Known(Property::MarginTop)
-        | SxPropertyKey::Known(Property::MarginBottom)
-        | SxPropertyKey::Known(Property::MarginLeft)
-        | SxPropertyKey::Known(Property::MarginRight) => SizeCss::SPACING.value(size),
-        SxPropertyKey::Known(Property::MaxWidth) | SxPropertyKey::Known(Property::MinWidth) => {
-            SizeCss::BREAKPOINT.value(size)
-        }
-        SxPropertyKey::Known(Property::BorderRadius) => SizeCss::RADIUS.value(size),
-        _ => size.as_str().to_string(),
+    let scale = match property {
+        SxPropertyKey::Known(property) => property.size_scale(),
+        SxPropertyKey::Raw(_) => None,
+    };
+
+    match scale {
+        Some(scale) => scale.value(size),
+        None => size.as_str().to_string(),
     }
 }
 
@@ -254,6 +245,22 @@ mod tests {
         let css = stylesheet.as_str();
 
         assert!(css.contains("padding:var(--lsx-spacing-lg);"));
+    }
+
+    #[test]
+    fn sx_min_width_size_resolves_to_breakpoint_css_var() {
+        let stylesheet = Stylesheet::from(&sx().min_width(Size::Sm));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("min-width:var(--lsx-breakpoint-sm);"));
+    }
+
+    #[test]
+    fn sx_size_on_an_unscaled_property_keeps_its_own_name() {
+        let stylesheet = Stylesheet::from(&sx().content(Size::Md));
+        let css = stylesheet.as_str();
+
+        assert!(css.contains("content:md;"));
     }
 
     #[test]

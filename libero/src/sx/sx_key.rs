@@ -1,12 +1,15 @@
-use crate::theme::Size;
+use crate::theme::{Size, SizeCss};
 
 use super::{Sx, ThemeAwareValue};
 
 /// The single source of truth for every CSS property `Sx` knows: enum
-/// variant, its CSS name, and its `Sx` builder method. Adding a property is
-/// one line here.
+/// variant, its CSS name, its `Sx` builder method, and optionally the
+/// [`SizeCss`] scale a bare `Size` value resolves through for it. Adding a
+/// property is one line here.
 macro_rules! properties {
-    ($($variant:ident => $css_name:literal, $method:ident;)*) => {
+    (@scale) => { None };
+    (@scale $scale:expr) => { Some($scale) };
+    ($($variant:ident => $css_name:literal, $method:ident $(, $scale:expr)?;)*) => {
         #[repr(u16)]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
         pub enum Property {
@@ -24,6 +27,14 @@ macro_rules! properties {
             pub const fn as_str(self) -> &'static str {
                 match self {
                     $(Self::$variant => $css_name,)*
+                }
+            }
+
+            /// The `Size` scale a bare `Size` resolves through for this
+            /// property - `None` keeps the size's own name (`"md"`).
+            pub(crate) const fn size_scale(self) -> Option<SizeCss> {
+                match self {
+                    $(Self::$variant => properties!(@scale $($scale)?),)*
                 }
             }
 
@@ -45,25 +56,25 @@ properties! {
     Background => "background", background;
     Width => "width", width;
     Height => "height", height;
-    Padding => "padding", padding;
-    PaddingTop => "padding-top", padding_top;
-    PaddingLeft => "padding-left", padding_left;
-    PaddingRight => "padding-right", padding_right;
-    PaddingBottom => "padding-bottom", padding_bottom;
-    MarginLeft => "margin-left", margin_left;
-    MarginRight => "margin-right", margin_right;
-    MarginTop => "margin-top", margin_top;
-    MarginBottom => "margin-bottom", margin_bottom;
-    Margin => "margin", margin;
+    Padding => "padding", padding, SizeCss::SPACING;
+    PaddingTop => "padding-top", padding_top, SizeCss::SPACING;
+    PaddingLeft => "padding-left", padding_left, SizeCss::SPACING;
+    PaddingRight => "padding-right", padding_right, SizeCss::SPACING;
+    PaddingBottom => "padding-bottom", padding_bottom, SizeCss::SPACING;
+    MarginLeft => "margin-left", margin_left, SizeCss::SPACING;
+    MarginRight => "margin-right", margin_right, SizeCss::SPACING;
+    MarginTop => "margin-top", margin_top, SizeCss::SPACING;
+    MarginBottom => "margin-bottom", margin_bottom, SizeCss::SPACING;
+    Margin => "margin", margin, SizeCss::SPACING;
     Display => "display", display;
     FlexDirection => "flex-direction", flex_direction;
     FlexWrap => "flex-wrap", flex_wrap;
     AlignItems => "align-items", align_items;
     JustifyContent => "justify-content", justify_content;
-    Gap => "gap", gap;
+    Gap => "gap", gap, SizeCss::SPACING;
     GridTemplateColumns => "grid-template-columns", grid_template_columns;
     GridColumn => "grid-column", grid_column;
-    MaxWidth => "max-width", max_width;
+    MaxWidth => "max-width", max_width, SizeCss::BREAKPOINT;
     MaxHeight => "max-height", max_height;
     FontFamily => "font-family", font_family;
     FontSize => "font-size", font_size;
@@ -101,12 +112,12 @@ properties! {
     ScrollbarColor => "scrollbar-color", scrollbar_color;
     Clip => "clip", clip;
     ObjectFit => "object-fit", object_fit;
-    BorderRadius => "border-radius", border_radius;
+    BorderRadius => "border-radius", border_radius, SizeCss::RADIUS;
     Cursor => "cursor", cursor;
     Opacity => "opacity", opacity;
     PointerEvents => "pointer-events", pointer_events;
     ListStyle => "list-style", list_style;
-    MinWidth => "min-width", min_width;
+    MinWidth => "min-width", min_width, SizeCss::BREAKPOINT;
     MinHeight => "min-height", min_height;
     AspectRatio => "aspect-ratio", aspect_ratio;
     Outline => "outline", outline;
