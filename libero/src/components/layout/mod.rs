@@ -4,6 +4,7 @@ mod center;
 mod container;
 mod divider;
 mod flex;
+mod float;
 mod header;
 
 pub use aspect_ratio::AspectRatio;
@@ -12,4 +13,5 @@ pub use center::Center;
 pub use container::Container;
 pub use divider::{Divider, DividerProps, LabelPosition};
 pub use flex::{Flex, FlexDirection};
+pub use float::{Float, Placement};
 pub use header::{Header, HeaderPosition};

@@ -1,9 +1,9 @@
 use super::{
     ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, CenterDefaults, CodeDefaults,
     ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
-    FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor, IconDefaults, KbdDefaults,
-    ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults,
-    Sizes, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
+    FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor, IconDefaults,
+    KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness,
+    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -14,6 +14,7 @@ pub struct Theme {
     pub center: CenterDefaults,
     pub container: ContainerDefaults,
     pub aspect_ratio: AspectRatioDefaults,
+    pub float: FloatDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
     pub divider: DividerDefaults,
@@ -55,6 +56,7 @@ impl Theme {
         CenterDefaults::new(false),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
         AspectRatioDefaults::new(1.0),
+        FloatDefaults::new(100, "0px", "0px", super::Placement::CenterCenter),
         DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750, 900)),
         DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400, 480)),
         DividerDefaults::new(None),
@@ -160,6 +162,7 @@ impl Theme {
         center: CenterDefaults,
         container: ContainerDefaults,
         aspect_ratio: AspectRatioDefaults,
+        float: FloatDefaults,
         dialog: DialogDefaults,
         drawer: DrawerDefaults,
         divider: DividerDefaults,
@@ -196,6 +199,7 @@ impl Theme {
             center,
             container,
             aspect_ratio,
+            float,
             dialog,
             drawer,
             divider,

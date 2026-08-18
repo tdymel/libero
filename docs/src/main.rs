@@ -14,8 +14,8 @@ use icons::BurgerIcon;
 
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, CodePage,
-    ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FocusTrapPage,
-    GettingStarted, HeaderPage,
+    ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FloatPage,
+    FocusTrapPage, GettingStarted, HeaderPage,
     IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage,
     QrCodePage, SelectPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
@@ -68,6 +68,8 @@ pub(crate) enum Route {
     DividerPage {},
     #[route("/layout/flex")]
     FlexPage {},
+    #[route("/layout/float")]
+    FloatPage {},
     #[route("/layout/header")]
     HeaderPage {},
 
@@ -78,14 +80,15 @@ pub(crate) enum Route {
     #[route("/navigation/tree")]
     TreePage {},
 
-    #[route("/overlay/dialog")]
-    DialogPage {},
     #[route("/overlay/drawer")]
     DrawerPage {},
     #[route("/overlay/modal")]
     ModalPage {},
     #[route("/overlay/overlay")]
     OverlayPage {},
+
+    #[route("/surface/dialog")]
+    DialogPage {},
 
     #[route("/typography/code")]
     CodePage {},

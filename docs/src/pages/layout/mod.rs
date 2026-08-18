@@ -4,6 +4,7 @@ mod center;
 mod container;
 mod divider;
 mod flex;
+mod float;
 mod header;
 
 pub use aspect_ratio::AspectRatioPage;
@@ -12,4 +13,5 @@ pub use center::CenterPage;
 pub use container::ContainerPage;
 pub use divider::DividerPage;
 pub use flex::FlexPage;
+pub use float::FloatPage;
 pub use header::HeaderPage;

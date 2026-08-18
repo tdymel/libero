@@ -203,6 +203,14 @@ impl Sx {
         self.with_known_property(Property::Right, value)
     }
 
+    pub fn bottom(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Bottom, value)
+    }
+
+    pub fn left(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::Left, value)
+    }
+
     pub fn overflow(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Overflow, value)
     }

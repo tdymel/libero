@@ -21,4 +21,5 @@ pub use navigation::{
     default_tree_render,
 };
 pub use overlay::*;
+pub use surface::*;
 pub use typography::*;

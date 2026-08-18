@@ -5,6 +5,7 @@ mod inputs;
 mod layout;
 mod navigation;
 mod overlay;
+mod surface;
 mod typography;
 
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
@@ -12,8 +13,10 @@ pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage};
 pub use getting_started::GettingStarted;
 pub use inputs::{ActionIconPage, ButtonPage, SelectPage};
 pub use layout::{
-    AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, HeaderPage,
+    AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,
+    HeaderPage,
 };
 pub use navigation::{AnchorPage, NavLinkPage, TreePage};
-pub use overlay::{DialogPage, DrawerPage, ModalPage, OverlayPage};
+pub use overlay::{DrawerPage, ModalPage, OverlayPage};
+pub use surface::DialogPage;
 pub use typography::{CodePage, KbdPage, MarkPage, TextPage, TitlePage};

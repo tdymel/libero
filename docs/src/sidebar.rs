@@ -130,6 +130,7 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
                 page(Route::ContainerPage {}, "Container"),
                 page(Route::DividerPage {}, "Divider"),
                 page(Route::FlexPage {}, "Flex"),
+                page(Route::FloatPage {}, "Float"),
                 page(Route::HeaderPage {}, "Header"),
             ],
         ),
@@ -146,11 +147,15 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
             "overlay",
             "Overlay",
             vec![
-                page(Route::DialogPage {}, "Dialog"),
                 page(Route::DrawerPage {}, "Drawer"),
                 page(Route::ModalPage {}, "Modal"),
                 page(Route::OverlayPage {}, "Overlay"),
             ],
+        ),
+        group(
+            "surface",
+            "Surface",
+            vec![page(Route::DialogPage {}, "Dialog")],
         ),
         group(
             "typography",

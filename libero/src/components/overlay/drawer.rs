@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Dialog, Input, Modal, States, Variables, common::base_props, variables},
+    components::{
+        Box, Dialog, Float, Input, Modal, Placement, States, Variables, common::base_props,
+        variables,
+    },
     hooks::use_css,
     hooks::use_portal,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -44,39 +47,47 @@ static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
 
 // `Temporary`'s surface, layered onto `Dialog`'s own class/vars (Dialog owns
 // its own `framework_sx`, so this rides along as an extra class rather than
-// replacing it).
+// replacing it). Edge-docking itself is `Float`'s job (see `Drawer`) - this
+// only sizes the panel to fill the slot `Float` anchors it into.
 static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
     let default_size = SizeCss::DRAWER_SIZE.value(Size::Md);
 
     sx().margin("0")
         .border_radius("0")
         .max_width("none")
-        .z_index(format!("var({DRAWER_Z_INDEX_VAR}, auto)"))
         .when(
             "anchor-left",
             sx().height("100%")
-                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
-                .margin_right("auto"),
+                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
         )
         .when(
             "anchor-right",
             sx().height("100%")
-                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
-                .margin_left("auto"),
+                .width(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
         )
         .when(
             "anchor-top",
             sx().width("100%")
-                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
-                .margin_bottom("auto"),
+                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
         )
         .when(
             "anchor-bottom",
             sx().width("100%")
-                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})"))
-                .margin_top("auto"),
+                .height(format!("var({DRAWER_SIZE_VAR}, {default_size})")),
         )
 });
+
+/// Maps a `DrawerAnchor` to a corner `Float` placement plus the one extra
+/// offset that stretches it to a full edge - a corner placement anchors two
+/// adjacent sides with no `transform` involved, so this only adds the third.
+fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
+    match anchor {
+        DrawerAnchor::Left => (Placement::TopStart, sx().bottom("0")),
+        DrawerAnchor::Right => (Placement::TopEnd, sx().bottom("0")),
+        DrawerAnchor::Top => (Placement::TopStart, sx().right("0")),
+        DrawerAnchor::Bottom => (Placement::BottomStart, sx().right("0")),
+    }
+}
 
 /// `xs`-`xl` resolve through the drawer size scale, distinct from
 /// `Dialog`'s; anything else passes through unchanged.
@@ -250,8 +261,10 @@ pub fn Drawer(props: DrawerProps) -> Element {
 
     let drawer_class = use_css(&DRAWER_TEMPORARY_SX, crate::CssLayer::Framework);
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
+    let (placement, float_sx) = drawer_float_placement(anchor);
 
     let onclose = props.onclose;
+    let z_index = props.z_index.clone();
     let sx = props.sx.clone();
     let attributes = props.attributes.clone();
     let children = props.children.clone();
@@ -259,13 +272,18 @@ pub fn Drawer(props: DrawerProps) -> Element {
     use_portal(Some(rsx! {
         Modal {
             onclose: move |_| onclose.call(()),
-            Dialog {
-                class: class.clone(),
-                sx: sx.clone(),
-                states: states.clone(),
-                variables: variables.clone(),
-                attributes: attributes.clone(),
-                {children.clone()}
+            Float {
+                placement: Input::Value(placement),
+                z_index: z_index.clone(),
+                sx: float_sx.clone(),
+                Dialog {
+                    class: class.clone(),
+                    sx: sx.clone(),
+                    states: states.clone(),
+                    variables: variables.clone(),
+                    attributes: attributes.clone(),
+                    {children.clone()}
+                }
             }
         }
     }));

@@ -7,60 +7,8 @@ use crate::{
     theme::{Size, SizeCss},
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum DialogAlign {
-    Start,
-    Center,
-    End,
-}
-
-impl Default for DialogAlign {
-    fn default() -> Self {
-        Self::Center
-    }
-}
-
-impl DialogAlign {
-    pub const fn as_str(&self) -> &'static str {
-        match self {
-            Self::Start => "start",
-            Self::Center => "center",
-            Self::End => "end",
-        }
-    }
-}
-
-impl From<&str> for DialogAlign {
-    fn from(value: &str) -> Self {
-        match value.to_lowercase().as_str() {
-            "start" => Self::Start,
-            "end" => Self::End,
-            _ => Self::Center,
-        }
-    }
-}
-
-impl From<String> for DialogAlign {
-    fn from(value: String) -> Self {
-        Self::from(value.as_str())
-    }
-}
-
-impl From<&str> for Input<DialogAlign> {
-    fn from(value: &str) -> Self {
-        Input::Value(DialogAlign::from(value))
-    }
-}
-
-impl From<String> for Input<DialogAlign> {
-    fn from(value: String) -> Self {
-        Input::Value(DialogAlign::from(value))
-    }
-}
-
 const DIALOG_RADIUS_VAR: &str = "--lsx-dialog-radius";
 const DIALOG_SIZE_VAR: &str = "--lsx-dialog-size-override";
-const DIALOG_Z_INDEX_VAR: &str = "--lsx-dialog-z-index";
 
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().background("white")
@@ -81,11 +29,6 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
             SizeCss::RADIUS.value(Size::Md)
         ))
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
-        .z_index(format!("var({DIALOG_Z_INDEX_VAR}, auto)"))
-        .when("vertical-start", sx().margin_bottom("auto"))
-        .when("vertical-end", sx().margin_top("auto"))
-        .when("horizontal-start", sx().margin_right("auto"))
-        .when("horizontal-end", sx().margin_left("auto"))
 });
 
 /// `xs`-`xl` resolve through the dialog size scale, not the (much larger)
@@ -107,10 +50,6 @@ fn dialog_variables(props: &DialogProps) -> Variables {
             DIALOG_SIZE_VAR,
             props.size.as_ref().map(dialog_size).and_then(|v| v.raw()),
         )
-        .with(
-            DIALOG_Z_INDEX_VAR,
-            props.z_index.as_ref().and_then(ThemeAwareValue::raw),
-        )
 }
 
 base_props! {
@@ -121,42 +60,22 @@ base_props! {
         radius: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
-        #[props(default, into)]
-        z_index: Input<ThemeAwareValue>,
         /// Forwarded alongside Dialog's own - e.g. `Drawer` layers its
         /// own anchor/size variables onto Dialog's rendered surface.
         #[props(default, into)]
         variables: Input<Variables>,
-        /// Cross-axis position - `Start`/`End` pin to top/bottom instead of
-        /// Modal's default vertical center.
-        #[props(default, into)]
-        vertical: Input<DialogAlign>,
-        /// Main-axis position - `Start`/`End` pin to left/right instead of
-        /// the default horizontal center.
-        #[props(default, into)]
-        horizontal: Input<DialogAlign>,
         children: Element,
     }
 }
 
 /// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in
 /// a [`crate::components::Modal`] (auto-detected, not passed explicitly).
+/// Carries no positioning of its own - anchor it with [`crate::components::Float`]
+/// or your own layout.
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();
-    let vertical = props.vertical.as_ref().copied().unwrap_or_default();
-    let horizontal = props.horizontal.as_ref().copied().unwrap_or_default();
     let variables = dialog_variables(&props).merge(props.variables.unwrap_or_default());
-
-    let states = props
-        .states
-        .as_ref()
-        .cloned()
-        .unwrap_or_default()
-        .with("vertical-start", vertical == DialogAlign::Start)
-        .with("vertical-end", vertical == DialogAlign::End)
-        .with("horizontal-start", horizontal == DialogAlign::Start)
-        .with("horizontal-end", horizontal == DialogAlign::End);
 
     rsx! {
         Box {
@@ -165,7 +84,7 @@ pub fn Dialog(props: DialogProps) -> Element {
             "aria-label": props.aria_label.clone(),
             class: props.class,
             sx: props.sx,
-            states,
+            states: props.states,
             variables,
             framework_sx: &DIALOG_BASE_SX,
             attributes: props.attributes,

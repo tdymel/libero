@@ -9,6 +9,7 @@ mod dialog;
 mod divider;
 mod drawer;
 mod flex;
+mod float;
 mod header;
 mod icon;
 mod kbd;
@@ -43,6 +44,7 @@ pub use flex::{
     FLEX_JUSTIFY_VAR, FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP,
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
+pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX, FloatDefaults, Placement};
 pub use header::HeaderDefaults;
 pub use icon::IconDefaults;
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KbdDefaults};
