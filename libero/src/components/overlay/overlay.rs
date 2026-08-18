@@ -3,15 +3,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{Box, Input, States, common::base_props, variables},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::CssVar,
+    theme::{OVERLAY_BLUR, OVERLAY_OPACITY, Z_INDEX_OVERLAY},
 };
-
-const OVERLAY_Z_INDEX: &str = "100";
-const OVERLAY_OPACITY: f32 = 0.6;
-
-const OVERLAY_OPACITY_VAR: CssVar = CssVar::new("--lsx-overlay-opacity");
-const OVERLAY_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-overlay-z-index");
-const OVERLAY_BLUR_VAR: CssVar = CssVar::new("--lsx-overlay-blur");
 
 static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
@@ -19,12 +12,9 @@ static OVERLAY_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("center")
         .justify_content("center")
-        .z_index(OVERLAY_Z_INDEX_VAR.value_or(OVERLAY_Z_INDEX))
-        .background(format!(
-            "rgba(0, 0, 0, {})",
-            OVERLAY_OPACITY_VAR.value_or(OVERLAY_OPACITY)
-        ))
-        .backdrop_filter(OVERLAY_BLUR_VAR.value_or("none"))
+        .z_index(Z_INDEX_OVERLAY.overridable())
+        .background(format!("rgba(0, 0, 0, {})", OVERLAY_OPACITY.overridable()))
+        .backdrop_filter(OVERLAY_BLUR.overridable())
 });
 
 base_props! {
@@ -53,10 +43,10 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
     let variables = variables()
-        .with(OVERLAY_OPACITY_VAR, props.opacity.resolve(None))
-        .with(OVERLAY_Z_INDEX_VAR, props.z_index.resolve(None))
+        .with(OVERLAY_OPACITY.override_var(), props.opacity.resolve(None))
+        .with(Z_INDEX_OVERLAY.override_var(), props.z_index.resolve(None))
         .with(
-            OVERLAY_BLUR_VAR,
+            OVERLAY_BLUR.override_var(),
             props
                 .blur
                 .as_ref()

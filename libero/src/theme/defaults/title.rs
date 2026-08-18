@@ -43,11 +43,8 @@ impl TitleDefaults {
     /// applies, so choosing a size never costs a new dynamically-generated
     /// CSS class.
     pub fn theme_vars() -> Sx {
-        Size::ALL
-            .into_iter()
-            .fold(sx().font_family(TITLE_FONT_FAMILY.value()), |base, size| {
-                base.when(size.state_name(), Self::size_sx(size))
-            })
+        sx().font_family(TITLE_FONT_FAMILY.value())
+            .per_size(Self::size_sx)
     }
 }
 

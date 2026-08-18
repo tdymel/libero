@@ -19,9 +19,7 @@ impl ListDefaults {
     }
 
     pub fn theme_vars() -> Sx {
-        Size::ALL.into_iter().fold(sx(), |base, size| {
-            base.when(size.state_name(), Self::size_sx(size))
-        })
+        sx().per_size(Self::size_sx)
     }
 }
 

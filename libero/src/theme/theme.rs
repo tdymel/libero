@@ -2,10 +2,10 @@ use super::{
     ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, ButtonSizeLevel, CenterDefaults,
     CodeDefaults, Color, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
     DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor,
-    IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, Placement,
-    QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
+    IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, OverlayDefaults,
+    Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
     ScrollbarVisibility, SelectDefaults, SelectSizeLevel, Size, Sizes, SplitterDefaults,
-    TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
+    TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -20,6 +20,8 @@ pub struct Theme {
     pub container: ContainerDefaults,
     pub aspect_ratio: AspectRatioDefaults,
     pub float: FloatDefaults,
+    pub overlay: OverlayDefaults,
+    pub z_index: ZIndexDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
     pub divider: DividerDefaults,
@@ -77,10 +79,20 @@ impl Theme {
         },
         aspect_ratio: AspectRatioDefaults { ratio: 1.0 },
         float: FloatDefaults {
-            z_index: 100,
             offset_x: "0px",
             offset_y: "0px",
             placement: Placement::CenterCenter,
+        },
+        overlay: OverlayDefaults {
+            opacity: 0.6,
+            blur: "none",
+        },
+        z_index: ZIndexDefaults {
+            header: 100,
+            float: 200,
+            overlay: 300,
+            modal: 1000,
+            modal_step: 10,
         },
         dialog: DialogDefaults {
             size: Sizes::new(240, 300, 510, 600, 750, 900),

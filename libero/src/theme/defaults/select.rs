@@ -36,12 +36,7 @@ impl SelectDefaults {
     }
 
     pub fn theme_vars() -> Sx {
-        let base = Size::ALL.into_iter().fold(sx(), |base, size| {
-            base.when(size.state_name(), Self::size_sx(size))
-        });
-        Size::ALL.into_iter().fold(base, |base, radius| {
-            base.when(radius.radius_state_name(), Self::radius_sx(radius))
-        })
+        sx().per_size(Self::size_sx).per_radius(Self::radius_sx)
     }
 }
 

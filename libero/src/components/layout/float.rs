@@ -8,7 +8,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX},
+    theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, Z_INDEX_FLOAT},
 };
 
 pub use crate::theme::Placement;
@@ -22,7 +22,7 @@ const FLOAT_TRANSLATE_Y_VAR: CssVar = CssVar::new("--lsx-float-translate-y");
 
 static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
-        .z_index(FLOAT_Z_INDEX.overridable())
+        .z_index(Z_INDEX_FLOAT.overridable())
         .transform(format!(
             "translate(calc({} + {}), calc({} + {}))",
             FLOAT_TRANSLATE_X_VAR.value_or("0%"),
@@ -48,7 +48,7 @@ fn float_variables(props: &FloatProps) -> Variables {
     variables()
         .with(FLOAT_OFFSET_X_VAR, props.offset_x.resolve(None))
         .with(FLOAT_OFFSET_Y_VAR, props.offset_y.resolve(None))
-        .with(FLOAT_Z_INDEX.override_var(), props.z_index.resolve(None))
+        .with(Z_INDEX_FLOAT.override_var(), props.z_index.resolve(None))
 }
 
 base_props! {
@@ -65,7 +65,7 @@ base_props! {
         /// `float.offset_y` setting.
         #[props(default, into)]
         offset_y: Input<ThemeAwareValue>,
-        /// Defaults to the theme's `float.z_index` setting.
+        /// Defaults to the theme's `z_index.float` setting.
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         children: Element,

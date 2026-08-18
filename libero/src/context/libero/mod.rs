@@ -4,7 +4,7 @@ use stylesheet_registry::StylesheetRegistry;
 
 pub(crate) use stylesheet_registry::StylesheetKey;
 
-use super::{MODAL_BASE_Z_INDEX, ModalHost, PortalHost, PortalOutlet};
+use super::{ModalHost, PortalHost, PortalOutlet};
 use crate::{css::Stylesheet, theme::Theme};
 
 mod css_layer;
@@ -48,8 +48,8 @@ pub fn LiberoProvider(
     let portal_entries = use_signal(Vec::new);
     use_context_provider(|| PortalHost::new(portal_entries));
 
-    let modal_z_index = use_signal(|| MODAL_BASE_Z_INDEX);
-    use_context_provider(|| ModalHost::new(modal_z_index));
+    let modal_z_index = use_signal(|| theme.z_index.modal);
+    use_context_provider(|| ModalHost::new(modal_z_index, theme.z_index.modal_step));
 
     rsx! {
         style {

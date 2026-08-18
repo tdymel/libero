@@ -60,6 +60,22 @@ impl Sx {
         )
     }
 
+    /// One `when(size.state_name(), ..)` block per `Size` - the shape every
+    /// size-aware `*Defaults::theme_vars()` needs.
+    pub fn per_size(self, size_sx: impl Fn(Size) -> Sx) -> Self {
+        Size::ALL.into_iter().fold(self, |base, size| {
+            base.when(size.state_name(), size_sx(size))
+        })
+    }
+
+    /// Same, keyed by `radius-{size}` so a component's radius can be set
+    /// independently of its `size`.
+    pub fn per_radius(self, radius_sx: impl Fn(Size) -> Sx) -> Self {
+        Size::ALL.into_iter().fold(self, |base, radius| {
+            base.when(radius.radius_state_name(), radius_sx(radius))
+        })
+    }
+
     pub fn selector(self, selector: impl Into<String>, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Selector(selector.into()), nested)
     }
@@ -157,6 +173,26 @@ mod tests {
         assert_eq!(encode_base62(61), "z");
         assert_eq!(encode_base62(62), "10");
         assert_eq!(encode_base62(u64::MAX), "LygHa16AHYF");
+    }
+
+    #[test]
+    fn per_size_and_per_radius_match_the_folds_they_replaced() {
+        use crate::theme::Size;
+
+        let helpers = super::sx()
+            .per_size(|size| super::sx().padding(size.state_name()))
+            .per_radius(|radius| super::sx().border_radius(radius.state_name()));
+        let base = Size::ALL.into_iter().fold(super::sx(), |base, size| {
+            base.when(size.state_name(), super::sx().padding(size.state_name()))
+        });
+        let folded = Size::ALL.into_iter().fold(base, |base, radius| {
+            base.when(
+                radius.radius_state_name(),
+                super::sx().border_radius(radius.state_name()),
+            )
+        });
+
+        assert_eq!(helpers.class_name(), folded.class_name());
     }
 
     #[test]

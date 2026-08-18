@@ -8,7 +8,7 @@ use crate::{
     },
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, Size},
+    theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, Size, Z_INDEX_HEADER},
 };
 
 str_enum! {
@@ -55,7 +55,6 @@ fn header_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
 
 const HEADER_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-header-background");
 const HEADER_COLOR_VAR: CssVar = CssVar::new("--lsx-header-color");
-const HEADER_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-header-z-index");
 
 static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -68,7 +67,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .color(HEADER_COLOR_VAR.value_or("inherit"))
         .border_bottom("1px solid")
         .border_bottom_color("grey.4")
-        .z_index(HEADER_Z_INDEX_VAR.value_or("auto"))
+        .z_index(Z_INDEX_HEADER.overridable())
         .position("sticky")
         .top("0")
         .when("static", sx().position("static"))
@@ -92,7 +91,7 @@ fn header_variables(props: &HeaderProps) -> Variables {
             HEADER_COLOR_VAR,
             contrast.as_ref().and_then(|v| v.resolve(None)),
         )
-        .with(HEADER_Z_INDEX_VAR, props.z_index.resolve(None))
+        .with(Z_INDEX_HEADER.override_var(), props.z_index.resolve(None))
 }
 
 base_props! {

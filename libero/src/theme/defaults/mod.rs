@@ -16,6 +16,7 @@ mod kbd;
 mod list;
 mod mark;
 mod nav_link;
+mod overlay;
 mod qr_code;
 mod scroll_area;
 mod select;
@@ -23,6 +24,7 @@ mod splitter;
 mod text;
 mod title;
 mod tree;
+mod z_index;
 
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
@@ -46,13 +48,14 @@ pub use flex::{
     FLEX_JUSTIFY_VAR, FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP,
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
-pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FLOAT_Z_INDEX, FloatDefaults, Placement};
+pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
 pub use header::{HEADER_HEIGHT, HeaderDefaults};
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use mark::MarkDefaults;
 pub use nav_link::NavLinkDefaults;
+pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use select::{
@@ -68,3 +71,4 @@ pub use title::{
     TitleDefaults, TitleSize,
 };
 pub use tree::TreeDefaults;
+pub use z_index::{Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, ZIndexDefaults};

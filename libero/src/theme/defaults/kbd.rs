@@ -39,9 +39,7 @@ impl KbdDefaults {
             .border_bottom(border_bottom)
             .border_radius(SizeCss::RADIUS.value(Size::Sm));
 
-        Size::ALL.into_iter().fold(base, |base, size| {
-            base.when(size.state_name(), Self::size_sx(size))
-        })
+        base.per_size(Self::size_sx)
     }
 }
 

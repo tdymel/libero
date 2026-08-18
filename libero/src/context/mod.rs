@@ -4,7 +4,6 @@ mod portal;
 
 pub(crate) use libero::{CssLayer, StylesheetKey};
 pub use libero::{LiberoContext, LiberoProvider};
-pub(crate) use modal::MODAL_BASE_Z_INDEX;
 pub use modal::{ModalContext, ModalHost};
 pub(crate) use portal::PortalEntry;
 pub use portal::{PortalHost, PortalOutlet};
