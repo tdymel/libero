@@ -39,6 +39,11 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlE
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 regex = "1"
 
+# Render-to-string, for the component tests in `tests/` - the fork's own copy,
+# so the tests build against exactly the dioxus this crate does.
+[dev-dependencies]
+dioxus-ssr = { path = "../.dioxus-fork/packages/ssr" }
+
 [features]
 default = [
     "wasm-split",
