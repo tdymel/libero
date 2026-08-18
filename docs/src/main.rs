@@ -13,9 +13,9 @@ mod sidebar;
 use icons::BurgerIcon;
 
 use pages::{
-    ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CodePage, ContainerPage,
-    DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FocusTrapPage, GettingStarted,
-    HeaderPage,
+    ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, CodePage,
+    ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FocusTrapPage,
+    GettingStarted, HeaderPage,
     IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage,
     QrCodePage, SelectPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
@@ -60,6 +60,8 @@ pub(crate) enum Route {
     AspectRatioPage {},
     #[route("/layout/box")]
     BoxPage {},
+    #[route("/layout/center")]
+    CenterPage {},
     #[route("/layout/container")]
     ContainerPage {},
     #[route("/layout/divider")]

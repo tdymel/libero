@@ -1,6 +1,7 @@
 mod action_icon;
 mod aspect_ratio;
 mod button;
+mod center;
 mod code;
 mod container;
 mod data_list;
@@ -26,6 +27,7 @@ pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION,
     BUTTON_RIPPLE_KEYFRAMES, ButtonDefaults, ButtonSizeLevel,
 };
+pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use code::{
     CODE_BACKGROUND, CODE_BORDER, CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT,
     CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION, CODE_TOK_HEADING,

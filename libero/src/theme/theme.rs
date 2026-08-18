@@ -1,9 +1,9 @@
 use super::{
-    ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, CodeDefaults, ContainerDefaults,
-    DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults,
-    FlexDefaults, HeaderDefaults, HexColor, IconDefaults, KbdDefaults, ListDefaults, MarkDefaults,
-    NavLinkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults, Sizes, TextDefaults, TextSize,
-    TitleDefaults, TitleSize, TreeDefaults,
+    ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, CenterDefaults, CodeDefaults,
+    ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
+    FlexAxisDefaults, FlexDefaults, HeaderDefaults, HexColor, IconDefaults, KbdDefaults,
+    ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness, SelectDefaults,
+    Sizes, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -11,6 +11,7 @@ pub struct Theme {
     pub spacing: Sizes<u8>,
     pub radius: Sizes<u8>,
     pub flex: FlexDefaults,
+    pub center: CenterDefaults,
     pub container: ContainerDefaults,
     pub aspect_ratio: AspectRatioDefaults,
     pub dialog: DialogDefaults,
@@ -51,6 +52,7 @@ impl Theme {
             FlexAxisDefaults::new("stretch", "flex-start", super::Size::Md, false),
             FlexAxisDefaults::new("center", "flex-start", super::Size::Md, false),
         ),
+        CenterDefaults::new(false),
         ContainerDefaults::new(super::Size::Lg, super::Size::Md),
         AspectRatioDefaults::new(1.0),
         DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750, 900)),
@@ -155,6 +157,7 @@ impl Theme {
         spacing: Sizes<u8>,
         radius: Sizes<u8>,
         flex: FlexDefaults,
+        center: CenterDefaults,
         container: ContainerDefaults,
         aspect_ratio: AspectRatioDefaults,
         dialog: DialogDefaults,
@@ -190,6 +193,7 @@ impl Theme {
             spacing,
             radius,
             flex,
+            center,
             container,
             aspect_ratio,
             dialog,
