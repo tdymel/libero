@@ -29,20 +29,20 @@ pub(crate) trait RegexApi {
     fn find(&self, pattern: &str, case_insensitive: bool, text: &str) -> Option<RegexMatch>;
 }
 
-struct BrowserRegexApi;
+struct PlatformRegexApi;
 
-impl RegexApi for BrowserRegexApi {
+impl RegexApi for PlatformRegexApi {
     fn find(&self, pattern: &str, case_insensitive: bool, text: &str) -> Option<RegexMatch> {
         find_impl(pattern, case_insensitive, text)
     }
 }
 
-static BROWSER_REGEX_API: BrowserRegexApi = BrowserRegexApi;
+static PLATFORM_REGEX_API: PlatformRegexApi = PlatformRegexApi;
 
 /// The current platform's [`RegexApi`] - a plain accessor, not a hook, so
 /// it's callable from anywhere.
 pub(crate) fn regex_api() -> &'static dyn RegexApi {
-    &BROWSER_REGEX_API
+    &PLATFORM_REGEX_API
 }
 
 #[cfg(target_arch = "wasm32")]

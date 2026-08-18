@@ -23,16 +23,18 @@ categories = ["gui", "wasm", "web-programming"]
 # in, so nobody else can build this as-is.
 dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "router", "logger"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
+
+# Everything web-specific is wasm32-only, so a native build (`cargo test`, or
+# any future non-web renderer) compiles without it and the platform-backed
+# APIs return `PlatformError::Unsupported` instead of panicking inside
+# wasm-bindgen. `Code`'s highlighter uses the browser's own `RegExp` engine
+# via `js_sys` there; the `regex` crate below is its non-web counterpart,
+# never compiled for wasm32 at all.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "0.3"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlElement", "NodeList", "Navigator", "Clipboard", "DomRect", "console"] }
-
-# `Code`'s highlighter uses the browser's own `RegExp` engine via `js_sys` on
-# wasm32 (see `components/common/regex_api.rs`) - the `regex` crate below is
-# its non-web counterpart (native `cargo test`, and any future non-web
-# renderer target), never compiled for wasm32 at all.
-[target.'cfg(target_arch = "wasm32")'.dependencies]
-js-sys = "0.3"
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 regex = "1"
