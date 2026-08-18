@@ -24,6 +24,18 @@ pub trait ElementApi {
     /// This element's rendered pixel size.
     fn dimensions(&self) -> Result<Dimensions, DomApiError>;
 
+    /// This element's total scrollable content size (`scrollWidth`/
+    /// `scrollHeight`) - e.g. for converting a scroll percent into a pixel
+    /// offset.
+    fn scroll_size(&self) -> Result<Dimensions, DomApiError>;
+
+    /// This element's current scroll offset, in pixels (`scrollLeft`,
+    /// `scrollTop`).
+    fn scroll_offset(&self) -> Result<(f64, f64), DomApiError>;
+
+    /// Sets this element's scroll offset, in pixels.
+    fn scroll_to(&self, x: f64, y: f64) -> Result<(), DomApiError>;
+
     /// Finds the first descendant matching `selector`, scoped to this
     /// element's own subtree.
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError>;

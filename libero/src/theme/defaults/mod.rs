@@ -17,6 +17,7 @@ mod list;
 mod mark;
 mod nav_link;
 mod qr_code;
+mod scroll_area;
 mod select;
 mod splitter;
 mod text;
@@ -53,6 +54,7 @@ pub use list::ListDefaults;
 pub use mark::MarkDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
+pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use select::{
     SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SelectDefaults, SelectSizeLevel,
 };

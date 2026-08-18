@@ -3,8 +3,8 @@ use super::{
     ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
     FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor, IconDefaults,
     KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness,
-    SelectDefaults, Sizes, SplitterDefaults, TextDefaults, TextSize, TitleDefaults, TitleSize,
-    TreeDefaults,
+    ScrollAreaDefaults, SelectDefaults, Sizes, SplitterDefaults, TextDefaults, TextSize,
+    TitleDefaults, TitleSize, TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -20,6 +20,7 @@ pub struct Theme {
     pub drawer: DrawerDefaults,
     pub divider: DividerDefaults,
     pub splitter: SplitterDefaults,
+    pub scroll_area: ScrollAreaDefaults,
     pub button: ButtonDefaults,
     pub select: SelectDefaults,
     pub list: ListDefaults,
@@ -69,6 +70,11 @@ impl Theme {
             10.0,
             1.0,
             10.0,
+        ),
+        ScrollAreaDefaults::new(
+            super::ScrollAxis::Vertical,
+            super::ScrollbarVisibility::Always,
+            super::ScrollbarSize::Thin,
         ),
         ButtonDefaults::new(
             super::Size::Md,
@@ -177,6 +183,7 @@ impl Theme {
         drawer: DrawerDefaults,
         divider: DividerDefaults,
         splitter: SplitterDefaults,
+        scroll_area: ScrollAreaDefaults,
         button: ButtonDefaults,
         select: SelectDefaults,
         list: ListDefaults,
@@ -215,6 +222,7 @@ impl Theme {
             drawer,
             divider,
             splitter,
+            scroll_area,
             button,
             select,
             list,

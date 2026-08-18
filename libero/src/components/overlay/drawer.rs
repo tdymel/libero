@@ -2,8 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, Float, Input, Modal, Placement, States, Variables, common::base_props,
-        variables,
+        Box, Dialog, Float, Input, Modal, Placement, ScrollArea, States, Variables,
+        common::base_props, variables,
     },
     hooks::use_css,
     hooks::use_portal,
@@ -16,12 +16,12 @@ const DRAWER_Z_INDEX_VAR: &str = "--lsx-drawer-z-index";
 
 // `Static` is documented as usable for a sidebar, which is almost always a
 // flex item that needs to not get squeezed and to scroll its own content
-// rather than growing past its allotted space.
+// rather than growing past its allotted space - the actual scrolling is
+// `ScrollArea`'s job (see the component below), this only sizes the panel
+// itself.
 static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().flex_shrink("0")
         .min_height("0")
-        .padding("lg")
-        .overflow("auto")
         .z_index(format!("var({DRAWER_Z_INDEX_VAR}, auto)"))
         .when(
             "anchor-left",
@@ -246,15 +246,11 @@ pub fn Drawer(props: DrawerProps) -> Element {
                 states,
                 variables,
                 framework_sx: &DRAWER_STATIC_BASE_SX,
-                // Chromium makes a scrollable `overflow: auto` region with
-                // actual overflowing content an implicit tab stop of its own
-                // (for arrow-key/Page-Down scrolling) unless opted out -
-                // right here since this is otherwise exactly that region,
-                // and its own content (e.g. nav links) is already
-                // separately focusable, making the extra stop redundant.
-                tabindex: "-1",
                 attributes: props.attributes,
-                {props.children}
+                ScrollArea {
+                    sx: sx().padding("lg"),
+                    {props.children}
+                }
             }
         };
     }

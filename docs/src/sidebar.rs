@@ -132,6 +132,7 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
                 page(Route::FlexPage {}, "Flex"),
                 page(Route::FloatPage {}, "Float"),
                 page(Route::HeaderPage {}, "Header"),
+                page(Route::ScrollAreaPage {}, "ScrollArea"),
                 page(Route::SplitterPage {}, "Splitter"),
             ],
         ),

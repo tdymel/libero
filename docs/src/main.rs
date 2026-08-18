@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Container, Flex, Header, Image, Title},
+    components::{ActionIcon, Container, Flex, Header, Image, ScrollArea, Title},
     sx::sx,
     theme::{Size, SizeCss},
 };
@@ -17,7 +17,8 @@ use pages::{
     ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FloatPage,
     FocusTrapPage, GettingStarted, HeaderPage,
     IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage,
-    QrCodePage, SelectPage, SplitterPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
+    QrCodePage, ScrollAreaPage, SelectPage, SplitterPage, TextPage, TitlePage, TreePage,
+    VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 
@@ -72,6 +73,8 @@ pub(crate) enum Route {
     FloatPage {},
     #[route("/layout/header")]
     HeaderPage {},
+    #[route("/layout/scroll-area")]
+    ScrollAreaPage {},
     #[route("/layout/splitter")]
     SplitterPage {},
 
@@ -159,72 +162,57 @@ fn AppShell() -> Element {
                     Title { size: "lg", component: "span", "Libero" }
                 }
             }
-            // This row - not the document - is the scrolling element, so its
-            // scrollbar only ever covers the area under the header instead
-            // of running the full window height. Full-width (unlike
-            // `Container`, which is capped/centered), so the scrollbar still
-            // lands on the actual window edge and scrolling works anywhere
-            // in the row, not just directly over the narrow content column.
+            // This row itself never scrolls - `Sidebar` scrolls its own
+            // content internally (`Drawer`'s `Static` variant), and only the
+            // rest of the row (everything the sidebar doesn't take up)
+            // should scroll. So `ScrollArea` - not `Container` - is the flex
+            // item filling that remaining space; `Container` just sizes/
+            // centers the actual page content inside it, and is free to grow
+            // past the row's height since `ScrollArea` is what scrolls.
             Flex {
                 direction: "row",
                 align: "stretch",
-                // No `flex: 1` here on purpose - its implied `flex-basis: 0%`
-                // would compete with the explicit `height` below for sizing
-                // this row (and does nothing useful anyway now that the
-                // outer column has no definite height of its own to grow
-                // into).
-                sx: sx()
-                    .height(format!("calc(100vh - {})", SizeCss::HEADER_HEIGHT.value(Size::Md)))
-                    .overflow("auto"),
-                // Same reasoning as `Drawer`'s own `Static` variant: a
-                // scrollable region with actual overflow otherwise becomes
-                // an implicit tab stop of its own in Chromium, redundant
-                // (and confusing) given its content - the sidebar and
-                // `Container` - is already separately focusable.
-                tabindex: "-1",
+                sx: sx().height(format!("calc(100vh - {})", SizeCss::HEADER_HEIGHT.value(Size::Md))),
                 Sidebar { open }
-                Container {
-                    component: "main",
-                    size: "sm",
-                    // Unreachable behind the open mobile drawer otherwise -
-                    // still in the DOM, just visually covered. No-op at
-                    // desktop widths, since `open` never becomes true there.
-                    // `inert` is a boolean HTML attribute - presence (any
-                    // value, including "false") is what enables it, so it
-                    // must be omitted entirely when not open, not set to the
-                    // string "false".
-                    inert: open().then_some(true),
-                    // Two defaults were fighting content-driven sizing here:
-                    // the row's `align: stretch` (only kicks in for an `auto`
-                    // cross-size, so `height: auto` alone actually invites
-                    // it) and Container's own framework `height: 100%` (a
-                    // definite size, which applies regardless of stretch).
-                    // Both capped Container to the row's short, viewport-
-                    // sized height while its real content just overflowed
-                    // past that box - burying this padding-bottom inside the
-                    // undersized box instead of after the real content end.
-                    // `align-self` opts out of the stretch, `height: auto`
-                    // overrides the definite 100%; together they let
-                    // Container grow to its content, like the row's own
-                    // `overflow: auto` already assumes it can.
+                ScrollArea {
                     sx: sx()
                         .flex("1")
-                        .align_self("flex-start")
-                        .height("auto")
+                        .min_height("0")
                         // A flex item's default `min-width: auto` means "at
                         // least my content's min-content width" - here
                         // that's whichever single code line on the page is
                         // longest, which can easily exceed the row's actual
-                        // available space. Without this, Container refuses
-                        // to shrink past that width, so the *row* scrolls
-                        // horizontally instead of just that one code block
+                        // available space. Without this, this item refuses
+                        // to shrink past that width, so it would push the
+                        // *row* wider instead of just that one code block
                         // scrolling internally like it's meant to.
-                        .min_width("0")
-                        // Mobile has no room to spare for the desktop
-                        // padding - shrink it there, restore it from `Sm` up.
-                        .padding("24px 16px")
-                        .breakpoint(Size::Sm, sx().padding("48px 64px")),
-                    Outlet::<Route> {}
+                        .min_width("0"),
+                    Container {
+                        component: "main",
+                        size: "sm",
+                        // Unreachable behind the open mobile drawer
+                        // otherwise - still in the DOM, just visually
+                        // covered. No-op at desktop widths, since `open`
+                        // never becomes true there. `inert` is a boolean
+                        // HTML attribute - presence (any value, including
+                        // "false") is what enables it, so it must be omitted
+                        // entirely when not open, not set to the string
+                        // "false".
+                        inert: open().then_some(true),
+                        // `Container`'s own framework `height: 100%` would
+                        // otherwise cap it to `ScrollArea`'s viewport height
+                        // instead of letting it grow to its real content
+                        // height - which is exactly what `ScrollArea` needs
+                        // to actually have something to scroll.
+                        sx: sx()
+                            .height("auto")
+                            // Mobile has no room to spare for the desktop
+                            // padding - shrink it there, restore it from `Sm`
+                            // up.
+                            .padding("24px 16px")
+                            .breakpoint(Size::Sm, sx().padding("48px 64px")),
+                        Outlet::<Route> {}
+                    }
                 }
             }
         }

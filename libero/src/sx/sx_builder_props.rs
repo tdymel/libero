@@ -215,6 +215,22 @@ impl Sx {
         self.with_known_property(Property::Overflow, value)
     }
 
+    pub fn overflow_x(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::OverflowX, value)
+    }
+
+    pub fn overflow_y(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::OverflowY, value)
+    }
+
+    pub fn scrollbar_width(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::ScrollbarWidth, value)
+    }
+
+    pub fn scrollbar_color(self, value: impl Into<ThemeAwareValue>) -> Self {
+        self.with_known_property(Property::ScrollbarColor, value)
+    }
+
     pub fn clip(self, value: impl Into<ThemeAwareValue>) -> Self {
         self.with_known_property(Property::Clip, value)
     }

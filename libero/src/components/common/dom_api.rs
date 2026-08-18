@@ -60,6 +60,23 @@ impl ElementApi for WebElementHandle {
         })
     }
 
+    fn scroll_size(&self) -> Result<Dimensions, DomApiError> {
+        Ok(Dimensions {
+            width: self.element.scroll_width() as f64,
+            height: self.element.scroll_height() as f64,
+        })
+    }
+
+    fn scroll_offset(&self) -> Result<(f64, f64), DomApiError> {
+        Ok((self.element.scroll_left() as f64, self.element.scroll_top() as f64))
+    }
+
+    fn scroll_to(&self, x: f64, y: f64) -> Result<(), DomApiError> {
+        self.element.set_scroll_left(x as i32);
+        self.element.set_scroll_top(y as i32);
+        Ok(())
+    }
+
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError> {
         let element = self
             .element

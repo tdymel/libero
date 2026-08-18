@@ -31,6 +31,7 @@ pub use defaults::{
     KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KbdDefaults, ListDefaults, MarkDefaults,
     NavLinkDefaults, Placement, QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults,
     QrRobustness,
+    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
     SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE,
     SelectDefaults, SelectSizeLevel, SplitterDefaults,
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
