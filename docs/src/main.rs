@@ -17,7 +17,7 @@ use pages::{
     ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FloatPage,
     FocusTrapPage, GettingStarted, HeaderPage,
     IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage,
-    QrCodePage, SelectPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
+    QrCodePage, SelectPage, SplitterPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
 use sidebar::Sidebar;
 
@@ -72,6 +72,8 @@ pub(crate) enum Route {
     FloatPage {},
     #[route("/layout/header")]
     HeaderPage {},
+    #[route("/layout/splitter")]
+    SplitterPage {},
 
     #[route("/navigation/anchor")]
     AnchorPage {},

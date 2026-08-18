@@ -1,6 +1,6 @@
 use wasm_bindgen::{JsCast, JsValue};
 
-use crate::components::common::ElementApi;
+use crate::components::common::{Dimensions, ElementApi};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DomApiError {
@@ -50,6 +50,14 @@ impl ElementApi for WebElementHandle {
             .and_then(|window| window.document())
             .and_then(|document| document.active_element())
             .is_some_and(|active| JsValue::from(active) == JsValue::from(self.element.clone()))
+    }
+
+    fn dimensions(&self) -> Result<Dimensions, DomApiError> {
+        let rect = self.element.get_bounding_client_rect();
+        Ok(Dimensions {
+            width: rect.width(),
+            height: rect.height(),
+        })
     }
 
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, DomApiError> {

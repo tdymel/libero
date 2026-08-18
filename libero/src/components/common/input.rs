@@ -127,6 +127,12 @@ impl From<f32> for Input<f32> {
     }
 }
 
+impl From<f64> for Input<f64> {
+    fn from(value: f64) -> Self {
+        Self::Value(value)
+    }
+}
+
 impl From<States> for Input<States> {
     fn from(value: States) -> Self {
         Self::Value(value)

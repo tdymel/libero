@@ -3,7 +3,8 @@ use super::{
     ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
     FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor, IconDefaults,
     KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, QrCodeDefaults, QrRobustness,
-    SelectDefaults, Sizes, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
+    SelectDefaults, Sizes, SplitterDefaults, TextDefaults, TextSize, TitleDefaults, TitleSize,
+    TreeDefaults,
 };
 
 #[derive(Clone, Debug, PartialEq)]
@@ -18,6 +19,7 @@ pub struct Theme {
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
     pub divider: DividerDefaults,
+    pub splitter: SplitterDefaults,
     pub button: ButtonDefaults,
     pub select: SelectDefaults,
     pub list: ListDefaults,
@@ -60,6 +62,14 @@ impl Theme {
         DialogDefaults::new(Sizes::new(240, 300, 510, 600, 750, 900)),
         DrawerDefaults::new(Sizes::new(200, 240, 280, 320, 400, 480)),
         DividerDefaults::new(None),
+        SplitterDefaults::new(
+            super::Size::Sm,
+            Sizes::new(1, 1, 2, 3, 4, 6),
+            Sizes::new(10, 10, 12, 14, 16, 20),
+            10.0,
+            1.0,
+            10.0,
+        ),
         ButtonDefaults::new(
             super::Size::Md,
             super::Size::Md,
@@ -166,6 +176,7 @@ impl Theme {
         dialog: DialogDefaults,
         drawer: DrawerDefaults,
         divider: DividerDefaults,
+        splitter: SplitterDefaults,
         button: ButtonDefaults,
         select: SelectDefaults,
         list: ListDefaults,
@@ -203,6 +214,7 @@ impl Theme {
             dialog,
             drawer,
             divider,
+            splitter,
             button,
             select,
             list,

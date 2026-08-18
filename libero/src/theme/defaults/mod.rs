@@ -18,6 +18,7 @@ mod mark;
 mod nav_link;
 mod qr_code;
 mod select;
+mod splitter;
 mod text;
 mod title;
 mod tree;
@@ -55,6 +56,7 @@ pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobu
 pub use select::{
     SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SelectDefaults, SelectSizeLevel,
 };
+pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
     TextDefaults, TextSize,

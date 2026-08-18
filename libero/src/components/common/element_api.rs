@@ -1,5 +1,14 @@
 use crate::components::common::DomApiError;
 
+/// An element's rendered pixel size (`getBoundingClientRect`'s
+/// `width`/`height`) - e.g. for converting a drag delta into a fraction of
+/// the element it's dragging across.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct Dimensions {
+    pub width: f64,
+    pub height: f64,
+}
+
 /// A single resolved, currently-valid element - obtained only via
 /// [`DomApi::query_selector`](crate::components::common::DomApi::query_selector)
 /// or another `ElementApi`'s own scoped queries, never held past the call
@@ -11,6 +20,9 @@ pub trait ElementApi {
 
     /// Whether this is the currently focused element.
     fn is_focused(&self) -> bool;
+
+    /// This element's rendered pixel size.
+    fn dimensions(&self) -> Result<Dimensions, DomApiError>;
 
     /// Finds the first descendant matching `selector`, scoped to this
     /// element's own subtree.

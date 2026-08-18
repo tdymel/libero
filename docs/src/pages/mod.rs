@@ -14,7 +14,7 @@ pub use getting_started::GettingStarted;
 pub use inputs::{ActionIconPage, ButtonPage, SelectPage};
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,
-    HeaderPage,
+    HeaderPage, SplitterPage,
 };
 pub use navigation::{AnchorPage, NavLinkPage, TreePage};
 pub use overlay::{DrawerPage, ModalPage, OverlayPage};

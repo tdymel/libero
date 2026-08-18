@@ -6,6 +6,7 @@ mod divider;
 mod flex;
 mod float;
 mod header;
+mod splitter;
 
 pub use aspect_ratio::AspectRatio;
 pub use r#box::Box;
@@ -15,3 +16,4 @@ pub use divider::{Divider, DividerProps, LabelPosition};
 pub use flex::{Flex, FlexDirection};
 pub use float::{Float, Placement};
 pub use header::{Header, HeaderPosition};
+pub use splitter::{Splitter, SplitterResizeEvent};

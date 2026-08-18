@@ -14,6 +14,16 @@ pub(crate) fn attr<T>(
     dioxus::prelude::Attribute::new(name, value, None, false)
 }
 
+/// Debug-only warning, a no-op in release builds - unlike `dioxus::warn!`,
+/// just a plain string, no format-string semantics.
+#[cfg(debug_assertions)]
+pub(crate) fn warn(message: &str) {
+    dioxus::prelude::warn!("{message}");
+}
+
+#[cfg(not(debug_assertions))]
+pub(crate) fn warn(_message: &str) {}
+
 /// Standard `:focus-visible` ring - contrasts against whichever ancestor
 /// most recently set a background (via `--lsx-focus-contrast`, published by
 /// `background()`; see `ThemeAwareValue::focus_contrast`), falling back to
