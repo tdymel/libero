@@ -101,23 +101,35 @@ fn find_impl(pattern: &'static str, case_insensitive: bool, text: &str) -> Optio
 
     let indices = js_sys::Reflect::get(&result, &"indices".into()).ok()?;
     let indices: js_sys::Array = indices.dyn_into().ok()?;
-    let (start_u16, end_u16) = group_span(&indices, 0)?;
-    let start = utf16_to_byte_offset(text, start_u16);
-    let end = utf16_to_byte_offset(text, end_u16);
-
-    let group_count = indices.length();
-    let groups = (1..group_count)
-        .map(|group| {
-            group_span(&indices, group).map(|(g_start, g_end)| {
-                (
-                    utf16_to_byte_offset(text, g_start),
-                    utf16_to_byte_offset(text, g_end),
-                )
-            })
-        })
+    let spans: Vec<Option<(usize, usize)>> = (0..indices.length())
+        .map(|group| group_span(&indices, group))
         .collect();
 
-    Some(RegexMatch { start, end, groups })
+    resolve_spans(text, &spans)
+}
+
+/// `spans` are the engine's UTF-16 spans, group 0 first. One walk of `text`
+/// converts them all - doing it per offset re-walked the string 2 + 2*groups
+/// times per match, which made highlighting quadratic in source length.
+#[cfg(any(target_arch = "wasm32", test))]
+fn resolve_spans(text: &str, spans: &[Option<(usize, usize)>]) -> Option<RegexMatch> {
+    let offsets: Vec<usize> = spans
+        .iter()
+        .flatten()
+        .flat_map(|&(start, end)| [start, end])
+        .collect();
+    let mut bytes = utf16_to_byte_offsets(text, &offsets).into_iter();
+
+    let mut resolved = spans
+        .iter()
+        .map(|span| span.and_then(|_| Some((bytes.next()?, bytes.next()?))));
+    let (start, end) = resolved.next().flatten()?;
+
+    Some(RegexMatch {
+        start,
+        end,
+        groups: resolved.collect(),
+    })
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -134,17 +146,32 @@ fn group_span(indices: &js_sys::Array, group: u32) -> Option<(usize, usize)> {
     Some((start, end))
 }
 
-/// JS offsets are UTF-16 code units; walk both encodings in lockstep.
-#[cfg(target_arch = "wasm32")]
-fn utf16_to_byte_offset(text: &str, offset: usize) -> usize {
-    let mut utf16_count = 0usize;
-    for (byte_offset, ch) in text.char_indices() {
-        if utf16_count >= offset {
-            return byte_offset;
+/// JS offsets are UTF-16 code units; walk both encodings in lockstep,
+/// resolving every offset in `offsets` in one pass. Returns them in the
+/// order given.
+#[cfg(any(target_arch = "wasm32", test))]
+fn utf16_to_byte_offsets(text: &str, offsets: &[usize]) -> Vec<usize> {
+    let mut order: Vec<usize> = (0..offsets.len()).collect();
+    order.sort_unstable_by_key(|&index| offsets[index]);
+
+    let mut resolved = vec![text.len(); offsets.len()];
+    let mut chars = text.chars();
+    let mut utf16 = 0usize;
+    let mut byte = 0usize;
+
+    for index in order {
+        while utf16 < offsets[index] {
+            let Some(ch) = chars.next() else {
+                byte = text.len();
+                break;
+            };
+            utf16 += ch.len_utf16();
+            byte += ch.len_utf8();
         }
-        utf16_count += ch.len_utf16();
+        resolved[index] = byte;
     }
-    text.len()
+
+    resolved
 }
 
 #[cfg(not(target_arch = "wasm32"))]
@@ -186,4 +213,49 @@ fn find_impl(pattern: &'static str, case_insensitive: bool, text: &str) -> Optio
             groups,
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{resolve_spans, utf16_to_byte_offsets};
+
+    /// 'é' is 2 bytes / 1 code unit, '😀' 4 bytes / 2 code units.
+    const MIXED: &str = "aé😀b";
+
+    #[test]
+    fn offsets_resolve_across_encodings() {
+        assert_eq!(
+            utf16_to_byte_offsets(MIXED, &[0, 1, 2, 4, 5]),
+            vec![0, 1, 3, 7, 8]
+        );
+    }
+
+    /// Group spans arrive in group order, which nesting makes non-monotonic.
+    #[test]
+    fn offsets_resolve_out_of_order() {
+        assert_eq!(utf16_to_byte_offsets(MIXED, &[4, 1, 2]), vec![7, 1, 3]);
+    }
+
+    /// Landing inside a surrogate pair rounds past it, as walking one offset
+    /// at a time did.
+    #[test]
+    fn an_offset_inside_a_surrogate_pair_lands_after_it() {
+        assert_eq!(utf16_to_byte_offsets(MIXED, &[3]), vec![7]);
+    }
+
+    #[test]
+    fn an_offset_past_the_end_is_the_length() {
+        assert_eq!(utf16_to_byte_offsets(MIXED, &[99]), vec![MIXED.len()]);
+    }
+
+    #[test]
+    fn spans_resolve_to_a_match_with_its_groups() {
+        let spans = [Some((1, 4)), None, Some((2, 4))];
+
+        let matched = resolve_spans(MIXED, &spans).expect("group 0 matched");
+
+        assert_eq!((matched.start, matched.end), (1, 7));
+        assert_eq!(matched.group(1), None);
+        assert_eq!(matched.group(2), Some((3, 7)));
+    }
 }
