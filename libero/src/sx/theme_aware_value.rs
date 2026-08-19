@@ -51,35 +51,59 @@ impl ThemeAwareValue {
     }
 }
 
+impl ThemeAwareValue {
+    /// The variants that borrow nothing, so a `&str` can be classified before
+    /// it is allocated. `None` leaves the two owning variants to the caller.
+    fn parse_borrowed(value: &str) -> Option<Self> {
+        if let Some(size) = Size::parse_dynamic(value) {
+            return Some(Self::Size(size));
+        }
+
+        if let Some(color) = Color::parse(value) {
+            return Some(Self::Color(color));
+        }
+
+        // Without a shade or the contrast suffix, `ColorValue::parse` reduces
+        // to the `Color::parse` above - which it also re-runs internally.
+        if (value.contains('.') || value.ends_with("-contrast"))
+            && let Some(color) = ColorValue::parse(value)
+        {
+            return Some(Self::ColorValue(color));
+        }
+
+        if let Some(css_var) = CssVar::parse(value) {
+            return Some(Self::CssVar(css_var));
+        }
+
+        None
+    }
+}
+
 impl From<String> for ThemeAwareValue {
     fn from(value: String) -> Self {
-        if let Some(size) = Size::parse_dynamic(value.as_str()) {
-            return Self::Size(size);
+        if let Some(parsed) = Self::parse_borrowed(value.as_str()) {
+            return parsed;
         }
 
-        if let Some(color) = Color::parse(value.as_str()) {
-            return Self::Color(color);
+        match HexColor::parse(value.as_str()) {
+            Some(hex) => Self::RawColor(value, hex),
+            None => Self::String(value),
         }
-
-        if let Some(color) = ColorValue::parse(value.as_str()) {
-            return Self::ColorValue(color);
-        }
-
-        if let Some(css_var) = CssVar::parse(value.as_str()) {
-            return Self::CssVar(css_var);
-        }
-
-        if let Some(hex) = HexColor::parse(value.as_str()) {
-            return Self::RawColor(value, hex);
-        }
-
-        Self::String(value)
     }
 }
 
 impl From<&str> for ThemeAwareValue {
+    /// Allocates only for the two owning variants - a token, color or var
+    /// value never reaches a `to_string`.
     fn from(value: &str) -> Self {
-        Self::from(value.to_string())
+        if let Some(parsed) = Self::parse_borrowed(value) {
+            return parsed;
+        }
+
+        match HexColor::parse(value) {
+            Some(hex) => Self::RawColor(value.to_string(), hex),
+            None => Self::String(value.to_string()),
+        }
     }
 }
 
