@@ -100,6 +100,22 @@ fn click_tree_item(root_id: &str, target_id: &str) {
     let _ = root.query_selector(&selector).and_then(|el| el.click());
 }
 
+// Shift is part of ordinary typing; the rest mark a browser or OS shortcut
+// that must not be mistaken for typeahead.
+fn has_shortcut_modifier(event: &Event<KeyboardData>) -> bool {
+    let modifiers = event.modifiers();
+    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
+}
+
+// Keyboard nav only applies while the active row itself holds focus. Anything
+// else (an input or editable inside a row) owns its own keystrokes.
+fn tree_item_focused(root_id: &str, target_id: &str) -> bool {
+    let selector = format!("#{root_id} [data-tree-id={target_id:?}]");
+    dom_api()
+        .query_selector(&selector)
+        .is_ok_and(|el| el.is_focused())
+}
+
 // Scoped to `root_id`, so two `Tree`s can reuse node ids without colliding.
 fn focus_tree_item(root_id: &str, target_id: &str) {
     let selector = format!("#{root_id} [data-tree-id={target_id:?}]");
@@ -252,6 +268,9 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let Some(current) = resolved_active_for_keydown.clone() else {
             return;
         };
+        if !tree_item_focused(&root_id(), &current) {
+            return;
+        }
         let expanded_snapshot = expanded.read().clone();
         let order = visible_order(&data_for_keydown, &expanded_snapshot);
         let Some(node) = order.iter().find(|node| node.id == current) else {
@@ -308,6 +327,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     }
                 }
             }
+            Key::Character(ref c) if c == " " && has_shortcut_modifier(&event) => {}
             Key::Character(ref c) if c == " " => {
                 if !node.disabled {
                     event.prevent_default();
@@ -318,10 +338,14 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     }
                 }
             }
-            Key::Character(ref c) => {
-                if let Some(ch) = c.chars().next() {
+            Key::Character(ref c) if !has_shortcut_modifier(&event) => {
+                if let Some(target) = c
+                    .chars()
+                    .next()
+                    .and_then(|ch| typeahead_match(&order, &current, ch))
+                {
                     event.prevent_default();
-                    go_to(typeahead_match(&order, &current, ch));
+                    go_to(Some(target));
                 }
             }
             _ => {}
