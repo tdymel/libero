@@ -45,9 +45,14 @@ base_props! {
 /// No opinion on content - pass `role`/`aria-modal`/`aria-label` yourself.
 #[component]
 pub fn Modal(props: ModalProps) -> Element {
-    use_context_provider(|| ModalContext {
-        onclose: props.onclose,
-    });
+    // Forwarded through `use_callback`, not stored directly: a context
+    // provider runs once, but rsx builds a fresh `EventHandler` every render,
+    // so storing the prop would freeze descendants on the closure - and the
+    // values it captured - from mount. `use_callback` swaps its inner closure
+    // each render behind a handle stable enough to provide once.
+    let onclose = props.onclose;
+    let onclose = use_callback(move |()| onclose.call(()));
+    use_context_provider(|| ModalContext { onclose });
 
     let z_index = use_modal_z_index();
     let variables = variables().with(MODAL_Z_INDEX_VAR, z_index.to_string());
@@ -55,7 +60,6 @@ pub fn Modal(props: ModalProps) -> Element {
     // Deferred a microtask: closing synchronously from an event still
     // bubbling through the torn-down modal re-enters the same `EventHandler`
     // and panics with `AlreadyBorrowedMut`.
-    let onclose = props.onclose;
     let close = move || {
         spawn(async move {
             onclose.call(());
