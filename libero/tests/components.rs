@@ -713,3 +713,25 @@ fn a_root_id_component_falls_back_to_a_generated_id() {
     assert_eq!(ids.len(), 1);
     assert!(ids[0].starts_with("lsx-"), "unexpected generated id: {}", ids[0]);
 }
+
+/// `min_size` floors *both* panes, so anything past 50 leaves `f64::clamp`
+/// with `min > max` and panicked the whole subtree.
+#[test]
+fn splitter_survives_a_min_size_past_the_midpoint() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Splitter { initial_size: 50.0, min_size: 70.0,
+                    div { "left" }
+                    div { "right" }
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("left") && body.contains("right"));
+    assert!(body.contains("aria-valuemin=\"50\""));
+    assert!(body.contains("--lsx-splitter-a:50%;"));
+}

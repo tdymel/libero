@@ -132,7 +132,7 @@ base_props! {
         /// Initial % of pane A, clamped to `min_size` at mount. Uncontrolled
         /// afterward - `on_resize` only notifies.
         initial_size: f64,
-        /// % floor applied to both panes.
+        /// % floor applied to both panes, capped at 50.
         #[props(default, into)]
         min_size: Input<f64>,
         #[props(default, into)]
@@ -157,7 +157,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Vertical);
     let vertical = orientation == Orientation::Vertical;
 
-    let min_size = props.min_size.copied_or(theme.splitter.min_size);
+    // Both panes get the same floor, so anything above 50 leaves no range -
+    // and `f64::clamp` asserts `min <= max`.
+    let min_size = props.min_size.copied_or(theme.splitter.min_size).clamp(0.0, 50.0);
     let size = props.divider_size.copied_or(theme.splitter.size);
 
     let mut a = use_signal(|| props.initial_size.clamp(min_size, 100.0 - min_size));
