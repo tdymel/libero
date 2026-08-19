@@ -18,6 +18,14 @@ impl ModalHost {
         self.next_z_index.set(z_index + self.step);
         z_index
     }
+
+    /// Only the top of the stack can be given back - anything below it is
+    /// still spanned by a modal above, so its index stays spent.
+    pub(crate) fn release_z_index(&mut self, z_index: i32) {
+        if (self.next_z_index)() == z_index + self.step {
+            self.next_z_index.set(z_index);
+        }
+    }
 }
 
 /// Lets a dialog rendered by [`crate::hooks::use_modal`] close itself.

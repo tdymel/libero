@@ -11,7 +11,9 @@ use crate::{
 
 pub(crate) fn use_modal_z_index() -> i32 {
     let mut host = use_context::<ModalHost>();
-    use_hook(|| host.acquire_z_index())
+    let z_index = use_hook(|| host.acquire_z_index());
+    use_drop(move || host.release_z_index(z_index));
+    z_index
 }
 
 pub fn use_modal_context() -> ModalContext {
