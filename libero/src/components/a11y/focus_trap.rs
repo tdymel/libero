@@ -24,15 +24,17 @@ fn focus_first(id: &str) {
     }
 }
 
-fn cycle_focus(id: &str, backwards: bool) {
+/// `false` when there was nothing to focus, so the caller can leave Tab to
+/// the browser rather than swallowing it and stranding focus.
+fn cycle_focus(id: &str, backwards: bool) -> bool {
     let Ok(root) = dom_api().query_selector(&format!("#{id}")) else {
-        return;
+        return false;
     };
     let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
-        return;
+        return false;
     };
     if items.is_empty() {
-        return;
+        return false;
     }
 
     let index = items.iter().position(|item| item.is_focused());
@@ -53,7 +55,7 @@ fn cycle_focus(id: &str, backwards: bool) {
             }
         }
     };
-    let _ = items[next].focus();
+    items[next].focus().is_ok()
 }
 
 base_props! {
@@ -74,9 +76,8 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
             states: props.states,
             framework_sx: &FOCUS_TRAP_SX,
             onkeydown: move |event: Event<KeyboardData>| {
-                if event.key() == Key::Tab {
+                if event.key() == Key::Tab && cycle_focus(&id(), event.modifiers().shift()) {
                     event.prevent_default();
-                    cycle_focus(&id(), event.modifiers().shift());
                 }
             },
             attributes: props.attributes,
