@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use crate::{
     components::dom_api,
@@ -45,6 +45,13 @@ pub struct DragOptions {
     pub on_end: Callback<()>,
 }
 
+/// The one pointer a drag follows, and where it went down.
+#[derive(Clone, Copy)]
+struct ActiveDrag {
+    pointer_id: i32,
+    start: DragPoint,
+}
+
 /// Handlers to spread onto the two elements a drag involves.
 #[derive(Clone, Copy)]
 pub struct Drag {
@@ -70,10 +77,17 @@ pub fn use_drag(options: DragOptions) -> Drag {
         on_end,
     } = options;
 
-    let mut start = use_signal(|| Option::<DragPoint>::None);
+    let mut active = use_signal(|| Option::<ActiveDrag>::None);
     let mut dragging = use_signal(|| false);
 
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
+        // A right- or middle-click must not drag; an unreported button (some
+        // webviews, and touch) still counts as primary.
+        if matches!(event.trigger_button(), Some(button) if button != MouseButton::Primary)
+            || active.read().is_some()
+        {
+            return;
+        }
         event.prevent_default();
         let coordinates = event.client_coordinates();
         let client = DragPoint {
@@ -90,18 +104,25 @@ pub fn use_drag(options: DragOptions) -> Drag {
             let _ = element.set_pointer_capture(event.pointer_id());
         }
 
-        start.set(Some(client));
+        active.set(Some(ActiveDrag {
+            pointer_id: event.pointer_id(),
+            start: client,
+        }));
         dragging.set(true);
     });
 
     let onpointermove = use_callback(move |event: Event<PointerData>| {
-        let Some(start) = start() else {
+        let Some(drag) = active() else {
             return;
         };
+        // A second finger on the same element is not this drag.
+        if event.pointer_id() != drag.pointer_id {
+            return;
+        }
         let coordinates = event.client_coordinates();
 
         on_move.call(DragMove {
-            start,
+            start: drag.start,
             client: DragPoint {
                 x: coordinates.x,
                 y: coordinates.y,
@@ -109,11 +130,16 @@ pub fn use_drag(options: DragOptions) -> Drag {
         });
     });
 
-    let end = use_callback(move |_: Event<PointerData>| {
-        if start.take().is_some() {
-            dragging.set(false);
-            on_end.call(());
+    let end = use_callback(move |event: Event<PointerData>| {
+        let Some(drag) = active() else {
+            return;
+        };
+        if event.pointer_id() != drag.pointer_id {
+            return;
         }
+        active.set(None);
+        dragging.set(false);
+        on_end.call(());
     });
 
     Drag {
