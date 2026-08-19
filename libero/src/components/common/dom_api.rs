@@ -121,7 +121,7 @@ struct UnsupportedDomApi;
 #[cfg(not(target_arch = "wasm32"))]
 impl DomApi for UnsupportedDomApi {
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError> {
-        super::warn(&format!(
+        crate::utils::warn(&format!(
             "dom_api().query_selector({selector:?}) on a target without a DOM"
         ));
         Err(PlatformError::Unsupported)

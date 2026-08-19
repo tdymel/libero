@@ -99,7 +99,27 @@ macro_rules! str_enum {
             fn from(value: &str) -> Self {
                 match value.to_lowercase().as_str() {
                     $($pattern $(| $alias)* => Self::$variant,)+
-                    _ => Self::default(),
+                    // An unrecognized spelling is an authoring mistake, and
+                    // falling back to the default renders something
+                    // plausible-looking instead of failing - so say so.
+                    // `""` warns like anything else: `Input`'s `None`, not
+                    // an empty string, is how a prop is left unset.
+                    _ => {
+                        $crate::utils::warn(&format!(
+                            concat!(
+                                stringify!($name),
+                                ": unrecognized value {:?}, using {:?}. Accepted: {}."
+                            ),
+                            value,
+                            Self::default().as_str(),
+                            Self::ALL
+                                .iter()
+                                .map(|variant| format!("{:?}", variant.as_str()))
+                                .collect::<Vec<_>>()
+                                .join(", "),
+                        ));
+                        Self::default()
+                    }
                 }
             }
         }
@@ -118,6 +138,7 @@ pub(crate) use str_enum;
 
 #[cfg(test)]
 mod tests {
+
     use crate::components::{
         AnchorUnderline, ButtonVariant, DrawerAnchor, DrawerVariant, FlexDirection, FlexWrap,
         HeaderPosition, IconVariant, ImageFit, LabelPosition, Orientation,

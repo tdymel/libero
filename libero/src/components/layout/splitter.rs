@@ -3,11 +3,12 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, Orientation, States, Variables,
-        common::{base_props, dom_api, variables, warn},
+        common::{base_props, dom_api, variables},
     },
     hooks::{use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
+    utils::warn,
 };
 
 /// Fired as the divider is dragged/keyed - both panes' resulting sizes, in

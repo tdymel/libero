@@ -27,5 +27,5 @@ pub(crate) use polymorphic::render_polymorphic;
 pub(crate) use regex_api::{RegexMatch, regex_api};
 pub use states::{States, states};
 pub(crate) use style_attributes::use_style_attributes;
-pub(crate) use util::{attr, focus_ring_sx, warn};
+pub(crate) use util::{attr, focus_ring_sx};
 pub use variables::{Variables, variables};

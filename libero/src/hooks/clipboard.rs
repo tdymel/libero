@@ -37,7 +37,7 @@ struct UnsupportedClipboardApi;
 #[cfg(not(target_arch = "wasm32"))]
 impl ClipboardApi for UnsupportedClipboardApi {
     fn write_text(&self, _text: &str) -> Result<(), PlatformError> {
-        crate::components::warn("clipboard write on a target without one");
+        crate::utils::warn("clipboard write on a target without one");
         Err(PlatformError::Unsupported)
     }
 }

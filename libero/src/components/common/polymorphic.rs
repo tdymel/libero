@@ -40,7 +40,14 @@ macro_rules! html_tags {
                 match value.to_lowercase().as_str() {
                     $(stringify!($dtag) => Self::$dvariant,)*
                     $(stringify!($ftag) => Self::$fvariant,)*
-                    _ => Self::Div,
+                    // No accepted-value list here, unlike `str_enum!`'s -
+                    // the whole HTML5 element set is not useful output.
+                    _ => {
+                        crate::utils::warn(&format!(
+                            "HtmlTag: unrecognized tag {value:?}, rendering as <div>."
+                        ));
+                        Self::Div
+                    }
                 }
             }
         }
@@ -116,14 +123,24 @@ macro_rules! html_tags {
                         }
                     },
                 )*
+                // A `full`-tier tag without the feature: the value is
+                // fine, the build configuration is not - which is a
+                // different fix from a typo, so it gets its own message.
                 #[cfg(not(feature = "full-polymorphism"))]
-                _ => rsx! {
-                    div {
-                        class: class,
-                        "data-state": data_state,
-                        style: style,
-                        ..attributes,
-                        {children}
+                _ => {
+                    crate::utils::warn(&format!(
+                        "HtmlTag::{component:?} (<{}>) needs the \"full-polymorphism\" \
+                         feature, rendering as <div>.",
+                        component.as_str()
+                    ));
+                    rsx! {
+                        div {
+                            class: class,
+                            "data-state": data_state,
+                            style: style,
+                            ..attributes,
+                            {children}
+                        }
                     }
                 },
             }
