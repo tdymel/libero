@@ -5,7 +5,7 @@ use crate::{
         Box, Input, Orientation, States, Variables,
         common::{base_props, dom_api, variables},
     },
-    hooks::{use_id, use_theme},
+    hooks::{DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
     utils::warn,
@@ -21,17 +21,6 @@ pub enum SplitterResizeEvent {
 
 const SPLITTER_A_VAR: CssVar = CssVar::new("--lsx-splitter-a");
 const SPLITTER_DIVIDER_COLOR_VAR: CssVar = CssVar::new("--lsx-splitter-divider-color");
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct DragState {
-    /// `client_x` (vertical orientation) or `client_y` (horizontal) at
-    /// `mousedown`.
-    start_client: f64,
-    start_a: f64,
-    /// Container width (vertical) or height (horizontal), measured once at
-    /// `mousedown` to turn the drag's pixel delta into a percentage.
-    container_size: f64,
-}
 
 static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -74,10 +63,7 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
 // Invisible, and negatively inset past the bar into both panes, so the drag
 // target is larger than the visible line without the panes leaving a gap.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
-    // `touch-action: none` is what makes a touch drag possible at all:
-    // otherwise the browser claims the gesture as a scroll and no
-    // `pointermove` ever arrives.
-    let base = sx().position("absolute").touch_action("none");
+    let base = sx().position("absolute").and(drag_handle_sx());
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let inset = format!(
@@ -175,71 +161,48 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let size = props.divider_size.copied_or(theme.splitter.size);
 
     let mut a = use_signal(|| props.initial_size.clamp(min_size, 100.0 - min_size));
-    let mut drag = use_signal(|| Option::<DragState>::None);
+    // Container width (vertical) or height (horizontal), measured once at
+    // pointerdown to turn the drag's pixel delta into a percentage.
+    let mut container_size = use_signal(|| 0.0_f64);
+    let mut start_a = use_signal(|| 0.0_f64);
 
     let on_resize = props.on_resize;
 
-    // Pointer events so touch and pen drag too. The container captures the
-    // pointer, so moves and the release are delivered here wherever the
-    // pointer travels. Capture ends itself at `pointerup`/`pointercancel`.
-    let onpointerdown = move |event: Event<PointerData>| {
-        event.prevent_default();
-        let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
-            return;
-        };
-        let Ok(dimensions) = container.dimensions() else {
-            return;
-        };
-        let container_size = if vertical {
-            dimensions.width
-        } else {
-            dimensions.height
-        };
-        if container_size <= 0.0 {
-            return;
-        }
-        let coordinates = event.client_coordinates();
-        let start_client = if vertical {
-            coordinates.x
-        } else {
-            coordinates.y
-        };
-        // Best-effort: failing costs out-of-container tracking, not the drag.
-        let _ = container.set_pointer_capture(event.pointer_id());
-        drag.set(Some(DragState {
-            start_client,
-            start_a: a(),
-            container_size,
-        }));
-        on_resize.call(SplitterResizeEvent::Start(a(), 100.0 - a()));
-    };
+    let drag = use_drag(DragOptions {
+        capture: root_id,
+        on_start: Callback::new(move |_: DragStart| {
+            let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
+                return false;
+            };
+            let Ok(dimensions) = container.dimensions() else {
+                return false;
+            };
+            let size = if vertical {
+                dimensions.width
+            } else {
+                dimensions.height
+            };
+            if size <= 0.0 {
+                return false;
+            }
 
-    let onpointermove = move |event: Event<PointerData>| {
-        let Some(state) = drag() else {
-            return;
-        };
-        let coordinates = event.client_coordinates();
-        let client = if vertical {
-            coordinates.x
-        } else {
-            coordinates.y
-        };
-        let delta_pct = (client - state.start_client) / state.container_size * 100.0;
-        let new_a = (state.start_a + delta_pct).clamp(min_size, 100.0 - min_size);
-        a.set(new_a);
-        on_resize.call(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
-    };
-
-    let mut end_drag = move || {
-        if drag().is_some() {
-            drag.set(None);
+            container_size.set(size);
+            start_a.set(a());
+            on_resize.call(SplitterResizeEvent::Start(a(), 100.0 - a()));
+            true
+        }),
+        on_move: Callback::new(move |event: DragMove| {
+            let delta = event.delta();
+            let pixels = if vertical { delta.x } else { delta.y };
+            let delta_pct = pixels / container_size() * 100.0;
+            let new_a = (start_a() + delta_pct).clamp(min_size, 100.0 - min_size);
+            a.set(new_a);
+            on_resize.call(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
+        }),
+        on_end: Callback::new(move |_| {
             on_resize.call(SplitterResizeEvent::End(a(), 100.0 - a()));
-        }
-    };
-
-    let onpointerup = move |_| end_drag();
-    // The OS can revoke a pointer mid-drag; without this the drag sticks.
-    let onpointercancel = move |_| end_drag();
+        }),
+    });
 
     let onkeydown = move |event: Event<KeyboardData>| {
         let step = if event.modifiers().shift() {
@@ -274,7 +237,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .unwrap_or_default()
         .with("vertical", vertical)
         .with("horizontal", !vertical)
-        .with("dragging", drag().is_some());
+        .with("dragging", (drag.dragging)());
 
     let divider_states = States::default()
         .with("vertical", vertical)
@@ -293,9 +256,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
             variables,
             framework_sx: &SPLITTER_BASE_SX,
             attributes: props.attributes,
-            onpointermove,
-            onpointerup,
-            onpointercancel,
+            onpointermove: drag.onpointermove,
+            onpointerup: drag.onpointerup,
+            onpointercancel: drag.onpointercancel,
             Box {
                 framework_sx: &SPLITTER_PANEL_A_SX,
                 {panel_a}
@@ -312,7 +275,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     "aria-valuenow": "{a() as i64}",
                     "aria-valuemin": "{min_size as i64}",
                     "aria-valuemax": "{(100.0 - min_size) as i64}",
-                    onpointerdown,
+                    onpointerdown: drag.onpointerdown,
                     onkeydown,
                 }
             }
