@@ -55,8 +55,6 @@ pub fn Select(props: SelectProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true);

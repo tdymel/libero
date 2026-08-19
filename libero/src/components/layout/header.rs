@@ -114,8 +114,6 @@ pub fn Header(props: HeaderProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("static", position == HeaderPosition::Static)
         .with("fixed", position == HeaderPosition::Fixed);

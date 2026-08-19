@@ -60,8 +60,6 @@ pub fn DataList(props: DataListProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(gap.state_name(), true)
         .with("horizontal", is_horizontal);

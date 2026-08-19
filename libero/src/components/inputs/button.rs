@@ -174,8 +174,6 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("disabled", disabled)
         .with("full-width", full_width)

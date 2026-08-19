@@ -237,8 +237,6 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("vertical", vertical)
         .with("horizontal", !vertical)

@@ -100,8 +100,6 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let variables = nav_link_variables(props.color.as_ref(), theme.nav_link.color);
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("disabled", disabled)
         .with("active", is_active);

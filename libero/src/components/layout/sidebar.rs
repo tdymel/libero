@@ -64,8 +64,6 @@ pub fn Sidebar(props: SidebarProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .active(side.state_name())
         .active(size.state_name());

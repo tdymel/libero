@@ -92,8 +92,6 @@ pub fn Drawer(props: DrawerProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .active(size.state_name())
         .with("anchor-left", anchor == DrawerAnchor::Left)

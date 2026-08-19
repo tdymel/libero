@@ -115,18 +115,15 @@ base_props! {
 #[component]
 pub fn Flex(props: FlexProps) -> Element {
     let direction = props.direction.copied_or_default();
+    let variables = flex_variables(&props);
 
     let mut states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("row", direction == FlexDirection::Row);
     if let Some(gap) = props.gap.as_ref().copied() {
         states = states.with(gap.state_name(), true);
     }
-
-    let variables = flex_variables(&props);
 
     let last_index = props.children.len().saturating_sub(1);
 

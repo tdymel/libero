@@ -61,8 +61,6 @@ pub fn Anchor(props: AnchorProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(underline.state_name(), true);

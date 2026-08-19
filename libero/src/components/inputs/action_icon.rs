@@ -156,8 +156,6 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("disabled", disabled)
         .with(variant.state_name(), has_variant_styling);

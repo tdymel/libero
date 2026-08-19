@@ -156,8 +156,6 @@ pub fn Divider(props: DividerProps) -> Element {
 
     let divider_states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with("vertical", vertical)
         .with("horizontal", !vertical)

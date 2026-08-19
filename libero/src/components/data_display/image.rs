@@ -114,8 +114,6 @@ pub fn Image(props: ImageProps) -> Element {
     if !props.zoomable {
         let states = props
             .states
-            .as_ref()
-            .cloned()
             .unwrap_or_default()
             .with(fit.state_name(), true);
         use_portal(None);
@@ -144,12 +142,7 @@ pub fn Image(props: ImageProps) -> Element {
         focus_return.restore();
     };
 
-    let button_states = props
-        .states
-        .as_ref()
-        .cloned()
-        .unwrap_or_default()
-        .with("zoomed", zoomed());
+    let button_states = props.states.unwrap_or_default().with("zoomed", zoomed());
 
     let label = match (props.alt.is_empty(), zoomed()) {
         (true, false) => "Zoom in".to_string(),

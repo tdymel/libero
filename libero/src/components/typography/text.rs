@@ -30,8 +30,6 @@ pub fn Text(props: TextProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(chosen_size.state_name(), true);
 

@@ -31,8 +31,6 @@ pub fn Kbd(props: KbdProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(size.state_name(), true);
 

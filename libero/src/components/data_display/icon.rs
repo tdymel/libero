@@ -110,8 +110,6 @@ pub fn Icon(props: IconProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(variant.state_name(), true);
 

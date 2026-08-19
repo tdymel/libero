@@ -240,8 +240,6 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let states = props
         .states
-        .as_ref()
-        .cloned()
         .unwrap_or_default()
         .with(scrollbars.state_name(), true)
         .with(visibility_token(visibility), true)
