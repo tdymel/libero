@@ -21,6 +21,20 @@ struct RegisteredStylesheet {
     ref_count: usize,
 }
 
+impl RegisteredStylesheet {
+    /// Whether this entry really holds `stylesheet`'s CSS. Debug-only: it
+    /// re-renders the layered text, which is the allocation `css` exists to
+    /// avoid - see [`StylesheetRegistry::acquire`].
+    #[cfg(debug_assertions)]
+    fn holds(&self, layer: CssLayer, stylesheet: &Stylesheet) -> bool {
+        *self.css == *layered_css(layer, stylesheet)
+    }
+}
+
+fn layered_css(layer: CssLayer, stylesheet: &Stylesheet) -> String {
+    format!("@layer {}{{{}}}", layer.css_name(), stylesheet.as_str())
+}
+
 #[derive(Clone, Default)]
 pub struct StylesheetRegistry {
     inner: Rc<RefCell<BTreeMap<StylesheetKey, RegisteredStylesheet>>>,
@@ -42,13 +56,25 @@ impl StylesheetRegistry {
         let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
             // Not a `Stylesheet`: that re-hashes text for a key we have.
             node_key: Rc::from(format!("{}-{:x}", layer.css_name(), key.hash)),
-            css: Rc::from(format!(
-                "@layer {}{{{}}}",
-                layer.css_name(),
-                stylesheet.as_str()
-            )),
+            css: Rc::from(layered_css(layer, &stylesheet)),
             ref_count: 0,
         });
+
+        // The key is a 64-bit hash of the CSS text, and the same number mints
+        // the class name, so a collision would render one sheet with
+        // another's CSS *and* share its refcount - silently, and identically
+        // on every reload. Too unlikely to design around, far too quiet to
+        // leave undetected.
+        #[cfg(debug_assertions)]
+        if !entry.holds(layer, &stylesheet) {
+            crate::utils::warn(&format!(
+                "StylesheetRegistry: CSS hash collision on {}-{:x} - two different \
+                 stylesheets share one class name, and one will render with the \
+                 other's CSS.",
+                layer.css_name(),
+                key.hash,
+            ));
+        }
 
         entry.ref_count += 1;
         key
@@ -113,6 +139,22 @@ mod tests {
 
         registry.release(framework);
         assert_eq!(registry.stylesheets().len(), 1);
+    }
+
+    /// Stands in for a real hash collision, which can't be constructed to
+    /// order: the check is what turns one into a visible warning instead of
+    /// silently wrong styles.
+    #[cfg(debug_assertions)]
+    #[test]
+    fn an_entry_does_not_hold_a_different_sheets_css() {
+        let registry = StylesheetRegistry::new();
+        let key = registry.acquire(Stylesheet::from(&sx().padding("lg")), CssLayer::Framework);
+        let registry = registry.inner.borrow();
+        let entry = registry.get(&key).expect("just acquired");
+
+        assert!(entry.holds(CssLayer::Framework, &Stylesheet::from(&sx().padding("lg"))));
+        assert!(!entry.holds(CssLayer::Framework, &Stylesheet::from(&sx().color("red"))));
+        assert!(!entry.holds(CssLayer::UserCustom, &Stylesheet::from(&sx().padding("lg"))));
     }
 
     #[test]
