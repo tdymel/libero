@@ -167,56 +167,45 @@ fn tokenize(text: &str, grammar: Grammar) -> Vec<Token<'_>> {
 /// Replaces every match of `pattern` within still-untokenized (`Plain`)
 /// spans with a `Tagged` token, recursing into `inside` grammars first.
 fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &PatternDef) {
-    let mut index = 0;
-    while index < tokens.len() {
-        let Token::Plain(text) = tokens[index] else {
-            index += 1;
+    // Rebuilt rather than spliced in place: splicing shifts every following
+    // token per match, which is quadratic over a long block.
+    let mut out = Vec::with_capacity(tokens.len());
+    for token in tokens.drain(..) {
+        let Token::Plain(mut rest) = token else {
+            out.push(token);
             continue;
         };
 
-        let Some(matched) = regex_api().find(pattern.pattern, pattern.case_insensitive, text)
-        else {
-            index += 1;
-            continue;
-        };
+        while let Some(matched) = regex_api().find(pattern.pattern, pattern.case_insensitive, rest)
+        {
+            let (start, end) = resolve_span(pattern, &matched);
+            if start >= end {
+                break;
+            }
 
-        let (start, end) = resolve_span(pattern, &matched);
-        if start >= end {
-            index += 1;
-            continue;
+            // `find` returns the leftmost match, so the text before it can
+            // hold none and is never re-searched.
+            if start > 0 {
+                out.push(Token::Plain(&rest[..start]));
+            }
+            let matched_text = &rest[start..end];
+            let children = match pattern.inside {
+                Some(inside) => tokenize(matched_text, inside()),
+                None => vec![Token::Plain(matched_text)],
+            };
+            out.push(Token::Tagged {
+                name,
+                alias: pattern.alias,
+                children,
+            });
+            rest = &rest[end..];
         }
 
-        let before = &text[..start];
-        let matched_text = &text[start..end];
-        let after = &text[end..];
-
-        let children = match pattern.inside {
-            Some(inside) => tokenize(matched_text, inside()),
-            None => vec![Token::Plain(matched_text)],
-        };
-        let tagged = Token::Tagged {
-            name,
-            alias: pattern.alias,
-            children,
-        };
-
-        let mut replacement = Vec::with_capacity(3);
-        if !before.is_empty() {
-            replacement.push(Token::Plain(before));
+        if !rest.is_empty() {
+            out.push(Token::Plain(rest));
         }
-        replacement.push(tagged);
-        if !after.is_empty() {
-            replacement.push(Token::Plain(after));
-        }
-
-        let has_after = !after.is_empty();
-        let inserted = replacement.len();
-        tokens.splice(index..=index, replacement);
-        // Skip `before` (it can hold no earlier match - `find` returns the
-        // leftmost) and the new token, but land on `after` so later matches
-        // of the same pattern are still found.
-        index += inserted - if has_after { 1 } else { 0 };
     }
+    *tokens = out;
 }
 
 /// Strips a lookbehind group's prefix and/or a lookahead group's suffix out
@@ -275,16 +264,16 @@ pub(crate) type HighlightedLine = Vec<(String, Option<&'static str>)>;
 /// Flattens a token tree into `(text, class)` spans. A token's own class beats
 /// its parent's when it maps to a known one (`alias` first, being more
 /// specific); otherwise it inherits its ancestor's.
-fn flatten(
-    tokens: &[Token<'_>],
-    out: &mut Vec<(String, Option<&'static str>)>,
+fn flatten<'a>(
+    tokens: &[Token<'a>],
+    out: &mut Vec<(&'a str, Option<&'static str>)>,
     inherited: Option<&'static str>,
 ) {
     for token in tokens {
         match token {
             Token::Plain(text) => {
                 if !text.is_empty() {
-                    out.push((text.to_string(), inherited));
+                    out.push((text, inherited));
                 }
             }
             Token::Tagged {
@@ -321,14 +310,16 @@ pub(crate) fn highlight(source: &str, language: Language) -> Vec<HighlightedLine
     split_into_lines(spans, source.ends_with('\n'))
 }
 
+/// The only place a span's text is copied: `flatten`'s spans borrow the
+/// source, and these are the pieces that outlive it.
 fn split_into_lines(
-    spans: Vec<(String, Option<&'static str>)>,
+    spans: Vec<(&str, Option<&'static str>)>,
     source_ends_with_newline: bool,
 ) -> Vec<HighlightedLine> {
     let mut lines: Vec<HighlightedLine> = vec![Vec::new()];
 
     for (text, class) in spans {
-        let mut rest = text.as_str();
+        let mut rest = text;
         while let Some(newline_pos) = rest.find('\n') {
             let line_part = rest[..newline_pos]
                 .strip_suffix('\r')
