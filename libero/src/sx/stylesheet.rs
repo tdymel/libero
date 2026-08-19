@@ -203,6 +203,28 @@ mod tests {
     }
 
     #[test]
+    fn a_nested_block_is_merged_however_it_was_composed() {
+        let direct = Stylesheet::from(&sx().hover(sx().color("red").background("blue")));
+        let composed = Stylesheet::from(
+            &sx()
+                .hover(sx().color("red"))
+                .and(sx().hover(sx().background("blue"))),
+        );
+
+        assert_eq!(direct.as_str(), composed.as_str());
+        assert_eq!(direct.hash(), composed.hash());
+    }
+
+    #[test]
+    fn merging_a_nested_block_lets_the_later_value_win() {
+        let stylesheet = Stylesheet::from(&sx().hover(sx().color("red")).hover(sx().color("blue")));
+
+        assert_eq!(stylesheet.as_str().matches(":hover").count(), 1);
+        assert!(stylesheet.as_str().contains("blue"));
+        assert!(!stylesheet.as_str().contains("red"));
+    }
+
+    #[test]
     fn sx_breakpoint_value_emits_media_scopes() {
         let stylesheet = Stylesheet::from(
             &sx()

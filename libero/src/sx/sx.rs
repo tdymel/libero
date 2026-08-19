@@ -33,12 +33,8 @@ impl Sx {
         self.with_declaration(SxPropertyKey::Known(property), value.into())
     }
 
-    pub(super) fn modifier(mut self, modifier: SxModifierKey, nested: Sx) -> Self {
-        self.entries.push(SxEntry::Nested {
-            modifier,
-            sx: nested,
-        });
-        self
+    pub(super) fn modifier(self, modifier: SxModifierKey, nested: Sx) -> Self {
+        self.with_modifier(modifier, nested)
     }
 
     pub fn hover(self, nested: Sx) -> Self {
@@ -105,6 +101,30 @@ impl Sx {
         self
     }
 
+    /// At most one block per modifier: a second `:hover`/`when(..)`/breakpoint
+    /// merges into the first (in place, so the block keeps the position it was
+    /// first declared at) instead of emitting a duplicate scope.
+    fn with_modifier(mut self, modifier: SxModifierKey, nested: Sx) -> Self {
+        let existing = self.entries.iter().position(|entry| {
+            matches!(entry, SxEntry::Nested { modifier: existing, .. } if existing == &modifier)
+        });
+
+        match existing {
+            Some(index) => {
+                let SxEntry::Nested { sx, .. } = &mut self.entries[index] else {
+                    unreachable!("position() matched a nested entry")
+                };
+                *sx = std::mem::take(sx).and(nested);
+            }
+            None => self.entries.push(SxEntry::Nested {
+                modifier,
+                sx: nested,
+            }),
+        }
+
+        self
+    }
+
     pub fn and(mut self, other: Sx) -> Self {
         for entry in other.entries {
             match entry {
@@ -112,7 +132,7 @@ impl Sx {
                     self = self.with_declaration(property, value);
                 }
                 SxEntry::Nested { modifier, sx } => {
-                    self.entries.push(SxEntry::Nested { modifier, sx });
+                    self = self.with_modifier(modifier, sx);
                 }
             }
         }
