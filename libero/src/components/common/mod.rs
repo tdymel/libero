@@ -24,7 +24,7 @@ pub use orientation::Orientation;
 pub use platform_error::PlatformError;
 pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::render_polymorphic;
-pub(crate) use regex_api::{RegexMatch, regex_api};
+pub(crate) use regex_api::{PreparedText, RegexMatch, regex_api};
 pub use states::{States, states};
 pub(crate) use style_attributes::use_style_attributes;
 pub(crate) use util::{attr, css_string, focus_ring_sx};

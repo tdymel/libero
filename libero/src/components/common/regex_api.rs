@@ -14,17 +14,88 @@ impl RegexMatch {
         debug_assert!(index >= 1, "group 0 (the whole match) has no index here");
         self.groups.get(index - 1).copied().flatten()
     }
+
+    /// Both engines match a suffix and so report offsets into it; callers
+    /// want them in the whole span.
+    fn shift(&mut self, offset: usize) {
+        self.start += offset;
+        self.end += offset;
+        for group in self.groups.iter_mut().flatten() {
+            group.0 += offset;
+            group.1 += offset;
+        }
+    }
 }
 
-/// Finds the leftmost match of `pattern` in `text`. Patterns must use syntax
-/// both engines understand - no lookaround or backreferences; `PatternDef`'s
+/// A span prepared for repeated matching.
+///
+/// On wasm the text is marshalled into a JS string once here instead of on
+/// every [`RegexApi::find`]: `highlight.rs` re-searches the same span once
+/// per match, and a `&str` argument costs a full UTF-8 -> UTF-16 copy per
+/// call, which made tokenizing quadratic in span length. The per-call
+/// haystack is then a JS-side `substring`, which is a view, not a copy.
+pub(crate) struct PreparedText<'a> {
+    text: &'a str,
+    #[cfg(target_arch = "wasm32")]
+    js: js_sys::JsString,
+    /// Last resolved (byte, UTF-16) offset pair. `find`'s `start` only ever
+    /// moves forward within one span, so resuming the walk here keeps
+    /// offset conversion linear over the span instead of quadratic.
+    #[cfg(target_arch = "wasm32")]
+    cursor: std::cell::Cell<(usize, usize)>,
+}
+
+impl<'a> PreparedText<'a> {
+    pub(crate) fn new(text: &'a str) -> Self {
+        Self {
+            text,
+            #[cfg(target_arch = "wasm32")]
+            js: js_sys::JsString::from(text),
+            #[cfg(target_arch = "wasm32")]
+            cursor: std::cell::Cell::new((0, 0)),
+        }
+    }
+
+    /// The still-unsearched tail. Matching this rather than the whole span
+    /// keeps `^`/`\b` seeing a fresh string start, as slicing always did.
+    fn suffix(&self, start: usize) -> &'a str {
+        &self.text[start..]
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    fn utf16_offset(&self, byte: usize) -> u32 {
+        let (checkpoint, utf16) = self.cursor.get();
+        let (from, mut utf16) = if byte < checkpoint {
+            (0, 0)
+        } else {
+            (checkpoint, utf16)
+        };
+
+        utf16 += self.text[from..byte]
+            .chars()
+            .map(char::len_utf16)
+            .sum::<usize>();
+        self.cursor.set((byte, utf16));
+
+        utf16 as u32
+    }
+}
+
+/// Finds the leftmost match of `pattern` in `text` at or after `start`,
+/// reporting offsets into the whole span. Patterns must use syntax both
+/// engines understand - no lookaround or backreferences; `PatternDef`'s
 /// group-index flags stand in, the same convention Prism uses.
 ///
 /// `pattern` is `&'static str` so it can key the compile cache by identity -
 /// see [`CompiledKey`].
 pub(crate) trait RegexApi {
-    fn find(&self, pattern: &'static str, case_insensitive: bool, text: &str)
-    -> Option<RegexMatch>;
+    fn find(
+        &self,
+        pattern: &'static str,
+        case_insensitive: bool,
+        text: &PreparedText<'_>,
+        start: usize,
+    ) -> Option<RegexMatch>;
 }
 
 struct PlatformRegexApi;
@@ -34,9 +105,10 @@ impl RegexApi for PlatformRegexApi {
         &self,
         pattern: &'static str,
         case_insensitive: bool,
-        text: &str,
+        text: &PreparedText<'_>,
+        start: usize,
     ) -> Option<RegexMatch> {
-        find_impl(pattern, case_insensitive, text)
+        find_impl(pattern, case_insensitive, text, start)
     }
 }
 
@@ -92,12 +164,31 @@ fn cached_regexp(pattern: &'static str, case_insensitive: bool) -> js_sys::RegEx
     })
 }
 
+/// `exec` is reached through `Reflect` rather than `js_sys::RegExp::exec`,
+/// which takes a `&str` and so would re-copy the haystack on every call -
+/// the copy [`PreparedText`] exists to avoid.
 #[cfg(target_arch = "wasm32")]
-fn find_impl(pattern: &'static str, case_insensitive: bool, text: &str) -> Option<RegexMatch> {
+fn find_impl(
+    pattern: &'static str,
+    case_insensitive: bool,
+    text: &PreparedText<'_>,
+    start: usize,
+) -> Option<RegexMatch> {
     use wasm_bindgen::JsCast;
 
     let regexp = cached_regexp(pattern, case_insensitive);
-    let result = regexp.exec(text)?;
+    let haystack = text
+        .js
+        .substring(text.utf16_offset(start), text.js.length());
+
+    let exec: js_sys::Function = js_sys::Reflect::get(&regexp, &"exec".into())
+        .ok()?
+        .dyn_into()
+        .ok()?;
+    let result = exec.call1(&regexp, &haystack).ok()?;
+    if result.is_null() || result.is_undefined() {
+        return None;
+    }
 
     let indices = js_sys::Reflect::get(&result, &"indices".into()).ok()?;
     let indices: js_sys::Array = indices.dyn_into().ok()?;
@@ -105,7 +196,10 @@ fn find_impl(pattern: &'static str, case_insensitive: bool, text: &str) -> Optio
         .map(|group| group_span(&indices, group))
         .collect();
 
-    resolve_spans(text, &spans)
+    let mut matched = resolve_spans(text.suffix(start), &spans)?;
+    matched.shift(start);
+
+    Some(matched)
 }
 
 /// `spans` are the engine's UTF-16 spans, group 0 first. One walk of `text`
@@ -188,7 +282,12 @@ thread_local! {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn find_impl(pattern: &'static str, case_insensitive: bool, text: &str) -> Option<RegexMatch> {
+fn find_impl(
+    pattern: &'static str,
+    case_insensitive: bool,
+    text: &PreparedText<'_>,
+    start: usize,
+) -> Option<RegexMatch> {
     REGEX_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         let regex = cache
@@ -200,18 +299,21 @@ fn find_impl(pattern: &'static str, case_insensitive: bool, text: &str) -> Optio
                     .unwrap_or_else(|err| panic!("invalid regex pattern {pattern:?}: {err}"))
             });
 
-        let captures = regex.captures(text)?;
+        let captures = regex.captures(text.suffix(start))?;
         let whole = captures.get(0).expect("group 0 always matches");
 
         let groups = (1..captures.len())
             .map(|group| captures.get(group).map(|m| (m.start(), m.end())))
             .collect();
 
-        Some(RegexMatch {
+        let mut matched = RegexMatch {
             start: whole.start(),
             end: whole.end(),
             groups,
-        })
+        };
+        matched.shift(start);
+
+        Some(matched)
     })
 }
 

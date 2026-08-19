@@ -8,7 +8,7 @@
 use dioxus::wasm_split;
 
 use crate::components::Input;
-use crate::components::common::{RegexMatch, regex_api};
+use crate::components::common::{PreparedText, RegexMatch, regex_api};
 
 use super::language_catalog::LANGUAGE_CATALOG;
 
@@ -171,12 +171,18 @@ fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &
     // token per match, which is quadratic over a long block.
     let mut out = Vec::with_capacity(tokens.len());
     for token in tokens.drain(..) {
-        let Token::Plain(mut rest) = token else {
+        let Token::Plain(span) = token else {
             out.push(token);
             continue;
         };
 
-        while let Some(matched) = regex_api().find(pattern.pattern, pattern.case_insensitive, rest)
+        // Prepared once per span, then searched from a moving cursor - each
+        // `find` on a fresh `&str` would re-marshal the tail on wasm.
+        let prepared = PreparedText::new(span);
+        let mut cursor = 0;
+
+        while let Some(matched) =
+            regex_api().find(pattern.pattern, pattern.case_insensitive, &prepared, cursor)
         {
             let (start, end) = resolve_span(pattern, &matched);
             if start >= end {
@@ -185,10 +191,10 @@ fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &
 
             // `find` returns the leftmost match, so the text before it can
             // hold none and is never re-searched.
-            if start > 0 {
-                out.push(Token::Plain(&rest[..start]));
+            if start > cursor {
+                out.push(Token::Plain(&span[cursor..start]));
             }
-            let matched_text = &rest[start..end];
+            let matched_text = &span[start..end];
             let children = match pattern.inside {
                 Some(inside) => tokenize(matched_text, inside()),
                 None => vec![Token::Plain(matched_text)],
@@ -198,11 +204,11 @@ fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &
                 alias: pattern.alias,
                 children,
             });
-            rest = &rest[end..];
+            cursor = end;
         }
 
-        if !rest.is_empty() {
-            out.push(Token::Plain(rest));
+        if cursor < span.len() {
+            out.push(Token::Plain(&span[cursor..]));
         }
     }
     *tokens = out;
