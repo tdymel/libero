@@ -10,11 +10,21 @@ start:
 start_release:
     {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false --wasm-split --features libero/wasm-split
 
+public := justfile_directory() / ".." / "target" / "dx" / "docs"
+
 build:
     {{dx}} build --platform web --debug-symbols=false
+    ./preload_wasm.sh {{public}}/debug/web/public
 
 build_release:
     {{dx}} build --platform web --debug-symbols=false --release --wasm-split --features libero/wasm-split
+    ./preload_wasm.sh {{public}}/release/web/public
+
+# Serve a built bundle with brotli/gzip content negotiation, the way a real
+# static host would. `dx serve` skips the preload step and `python3 -m
+# http.server` ignores the precompressed siblings, so neither is measurable.
+serve_dist port="8080":
+    ./serve_dist.py {{public}}/release/web/public {{port}}
 
 # Rebuild the local dx binary from .dioxus-fork (branch fix/combined)
 build-dx:

@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title></title>
+        <!-- dx preloads the entry JS but not the wasm it fetches, so the wasm
+             request only starts once that module has downloaded and parsed.
+             `preload_wasm.sh` (run by `just build`/`just build_release`) rewrites
+             this marker with the real hashed filename, collapsing the round
+             trip. `dx serve` does not run it - build and serve the output to
+             measure the difference. -->
+        <!-- LIBERO_WASM_PRELOAD -->
+    </head>
+    <body>
+        <div id="main"></div>
+    </body>
+</html>

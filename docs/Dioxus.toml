@@ -1,0 +1,10 @@
+[web]
+# Emits brotli siblings (`.br`, no gzip) for the wasm and assets in release
+# builds: the main wasm is 1.12MB raw against 300KB brotli. The host must be
+# configured to serve them - `serve_dist.py` is the local equivalent.
+pre_compress = true
+
+[web.app]
+# dx concatenates its title into an existing <title>, so setting it here is
+# what stops index.html rendering as "liberodioxus | ⛺".
+title = "libero"
