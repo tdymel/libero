@@ -126,6 +126,10 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
                     class_name: class_name.clone(),
                 });
 
+                // A signal write during render, which is only sound because
+                // `StyleOutlet` renders after `{children}` and so reads this
+                // after every child has registered - that ordering is
+                // load-bearing, not incidental.
                 if changed {
                     *context.stylesheet_registry_version.write() += 1;
                 }

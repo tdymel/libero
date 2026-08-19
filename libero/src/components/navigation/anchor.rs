@@ -5,22 +5,14 @@ use crate::{
         Input, States,
         common::{base_props, input_from_str},
     },
-    str_enum::str_enum,
+    hooks::use_theme,
     sx::{StaticSx, Sx, sx},
-    theme::{Size, TextDefaults},
+    theme::{AnchorDefaults, Size},
 };
 
 use super::InternalAnchor;
 
-str_enum! {
-    #[state_prefix = "underline"]
-    pub enum AnchorUnderline {
-        Always = "always",
-        #[default]
-        Hover = "hover",
-        Never = "never",
-    }
-}
+pub use crate::theme::AnchorUnderline;
 
 input_from_str!(AnchorUnderline);
 
@@ -34,11 +26,11 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
     }
 }
 
-// Reuses Text's own theme-level sizing (TextDefaults::theme_vars), not Text
+// Reuses Text's theme-level sizing (via AnchorDefaults::theme_vars), not Text
 // the component, since Text has no href/target/rel escape hatch to render a
 // real anchor with.
 static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = TextDefaults::theme_vars().color("primary.6").margin("0");
+    let base = AnchorDefaults::theme_vars().margin("0");
 
     AnchorUnderline::ALL.iter().fold(base, |base, &underline| {
         base.when(underline.state_name(), underline_sx(underline))
@@ -66,8 +58,9 @@ base_props! {
 
 #[component]
 pub fn Anchor(props: AnchorProps) -> Element {
-    let size = props.size.copied_or(Size::Md);
-    let underline = props.underline.copied_or_default();
+    let theme = use_theme();
+    let size = props.size.copied_or(theme.anchor.size);
+    let underline = props.underline.copied_or(theme.anchor.underline);
 
     let states = props
         .states

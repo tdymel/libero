@@ -99,7 +99,9 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         icon,
         action_icon,
         qr_code,
+        image,
         kbd,
+        anchor,
         primary,
         secondary,
         error,
@@ -116,7 +118,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         nav_link: _,
         // Emitted by global_reset_scopes, not as a `:root` var.
         font_smoothing: _,
-    } = *theme;
+    } = theme;
 
     let mut declarations = Vec::new();
     declarations.extend(spacing.to_css_declarations(SizeCss::SPACING, "px"));
@@ -145,14 +147,16 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(action_icon.to_css_declarations());
     declarations.extend(qr_code.to_css_declarations());
     declarations.extend(kbd.to_css_declarations());
-    push_named_color_declarations(&mut declarations, black, white);
-    push_color_declarations(&mut declarations, Color::Primary, primary);
-    push_color_declarations(&mut declarations, Color::Secondary, secondary);
-    push_color_declarations(&mut declarations, Color::Error, error);
-    push_color_declarations(&mut declarations, Color::Warning, warning);
-    push_color_declarations(&mut declarations, Color::Info, info);
-    push_color_declarations(&mut declarations, Color::Success, success);
-    push_color_declarations(&mut declarations, Color::Grey, grey);
+    declarations.extend(image.to_css_declarations());
+    declarations.extend(anchor.to_css_declarations());
+    push_named_color_declarations(&mut declarations, *black, *white);
+    push_color_declarations(&mut declarations, Color::Primary, *primary);
+    push_color_declarations(&mut declarations, Color::Secondary, *secondary);
+    push_color_declarations(&mut declarations, Color::Error, *error);
+    push_color_declarations(&mut declarations, Color::Warning, *warning);
+    push_color_declarations(&mut declarations, Color::Info, *info);
+    push_color_declarations(&mut declarations, Color::Success, *success);
+    push_color_declarations(&mut declarations, Color::Grey, *grey);
     declarations
 }
 
@@ -358,3 +362,4 @@ mod tests {
         assert!(!css.contains("font-smoothing"));
     }
 }
+

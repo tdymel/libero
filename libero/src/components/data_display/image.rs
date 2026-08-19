@@ -5,40 +5,27 @@ use crate::{
         Box, Dialog, Input, Modal, States, Variables,
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
     },
-    hooks::{use_focus_return, use_portal},
-    str_enum::str_enum,
+    hooks::{use_focus_return, use_portal, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, SizeCss},
+    theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
 };
 
-str_enum! {
-    #[state_prefix = "fit"]
-    pub enum ImageFit {
-        Fill = "fill",
-        Contain = "contain",
-        #[default]
-        Cover = "cover",
-        None = "none",
-        ScaleDown = "scale-down" | "scaledown",
-    }
-}
+pub use crate::theme::ImageFit;
 
 input_from_str!(ImageFit);
 
-const IMAGE_RADIUS_VAR: CssVar = CssVar::new("--lsx-image-radius");
-
 fn image_variables(radius: Option<&ThemeAwareValue>) -> Variables {
     variables().with(
-        IMAGE_RADIUS_VAR,
+        IMAGE_RADIUS.override_var(),
         radius.and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
     )
 }
 
 static IMAGE_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("block")
+    ImageDefaults::theme_vars()
+        .display("block")
         .width("100%")
         .height("100%")
-        .border_radius(IMAGE_RADIUS_VAR.value_or(0))
         .when("fit-fill", sx().object_fit("fill"))
         .when("fit-contain", sx().object_fit("contain"))
         .when("fit-cover", sx().object_fit("cover"))
@@ -120,7 +107,7 @@ pub fn Image(props: ImageProps) -> Element {
         props.src.clone()
     };
 
-    let fit = props.fit.copied_or_default();
+    let fit = props.fit.copied_or(use_theme().image.fit);
     let variables = image_variables(props.radius.as_ref());
 
     let on_error_src = props.src.clone();
@@ -247,7 +234,7 @@ mod tests {
             variables.to_string(),
             format!(
                 "{}:{};",
-                IMAGE_RADIUS_VAR.name(),
+                IMAGE_RADIUS.override_var().name(),
                 SizeCss::RADIUS.value(Size::Md)
             )
         );

@@ -1,8 +1,10 @@
 use super::{
-    ActionIconDefaults, AspectRatioDefaults, ButtonDefaults, ButtonSizeLevel, CenterDefaults,
+    ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
+    ButtonSizeLevel, CenterDefaults,
     CodeDefaults, Color, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
     DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor,
-    IconDefaults, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults, OverlayDefaults,
+    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
+    NavLinkDefaults, OverlayDefaults,
     Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
     ScrollbarVisibility, SelectDefaults, SelectSizeLevel, Size, Sizes, SplitterDefaults,
     TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults, ZIndexDefaults,
@@ -11,7 +13,11 @@ use super::{
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
 const MONO_FONT_FAMILY: &str = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+// Deliberately not `Copy`, despite being built from `Copy` fields: at ~2KB a
+// stray by-value use is a silent memcpy. Nothing needs it - `Theme::DEFAULT`
+// is a `const` (so `Theme { ..Theme::DEFAULT }` still works) and `use_theme()`
+// hands out `&'static Theme`.
+#[derive(Clone, Debug, PartialEq)]
 pub struct Theme {
     pub spacing: Sizes<u8>,
     pub radius: Sizes<u8>,
@@ -39,9 +45,11 @@ pub struct Theme {
     pub icon: IconDefaults,
     pub action_icon: ActionIconDefaults,
     pub qr_code: QrCodeDefaults,
+    pub image: ImageDefaults,
     pub mark: MarkDefaults,
     pub kbd: KbdDefaults,
     pub nav_link: NavLinkDefaults,
+    pub anchor: AnchorDefaults,
     pub primary: HexColor,
     pub secondary: HexColor,
     pub error: HexColor,
@@ -310,6 +318,10 @@ impl Theme {
             foreground: "#000000",
             robustness: QrRobustness::Medium,
         },
+        image: ImageDefaults {
+            fit: ImageFit::Cover,
+            radius: "0",
+        },
         mark: MarkDefaults {
             color: Color::Warning,
         },
@@ -321,6 +333,11 @@ impl Theme {
             color: "#57606a",
         },
         nav_link: NavLinkDefaults {
+            color: Color::Primary,
+        },
+        anchor: AnchorDefaults {
+            size: Size::Md,
+            underline: AnchorUnderline::Hover,
             color: Color::Primary,
         },
         primary: HexColor::new(0x228BE6),

@@ -1,4 +1,5 @@
 mod action_icon;
+mod anchor;
 mod aspect_ratio;
 mod button;
 mod center;
@@ -12,6 +13,7 @@ mod flex;
 mod float;
 mod header;
 mod icon;
+mod image;
 mod kbd;
 mod list;
 mod mark;
@@ -27,6 +29,7 @@ mod tree;
 mod z_index;
 
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
+pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION,
@@ -51,6 +54,7 @@ pub use flex::{
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
 pub use header::{HEADER_HEIGHT, HeaderDefaults};
 pub use icon::{ICON_SIZE, IconDefaults};
+pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use mark::MarkDefaults;
