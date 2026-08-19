@@ -17,5 +17,5 @@ pub use modal::{ModalHandle, use_modal, use_modal_context};
 pub use portal::use_portal;
 pub use presence::{Presence, use_presence};
 pub use stylesheet::use_stylesheet;
-pub(crate) use stylesheet::{SxSource, use_css};
+pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::use_theme;

@@ -1,7 +1,6 @@
 use crate::{
-    CssLayer,
     components::{ClassList, Input, States, Variables},
-    hooks::{SxSource, use_css},
+    hooks::{SxSource, use_box_css},
     sx::{StaticSx, Sx},
 };
 
@@ -14,7 +13,7 @@ pub(crate) struct StyleAttributes {
 
 /// Resolves the styling props every `Box`-shaped component shares.
 ///
-/// Three `use_css` calls, so it is a hook: call it before any early return.
+/// Calls [`use_box_css`], so it is a hook: call it before any early return.
 pub(crate) fn use_style_attributes(
     class: &Input<ClassList>,
     framework_sx: Option<&'static StaticSx>,
@@ -23,8 +22,6 @@ pub(crate) fn use_style_attributes(
     variables: &Input<Variables>,
     style: Option<String>,
 ) -> StyleAttributes {
-    let focus_class = use_css(Some(&BOX_FOCUS_SX), CssLayer::Framework);
-    let framework_class = use_css(framework_sx, CssLayer::Framework);
     // Not `sx.as_ref()`: that collapses the lifetime, so a caller's `static`
     // is rehashed and rebuilt as if it were freshly built this render.
     let sx_source = match sx {
@@ -32,7 +29,8 @@ pub(crate) fn use_style_attributes(
         Input::Value(sx) => Some(SxSource::Owned(sx)),
         Input::Static(sx) => Some(SxSource::Static(sx)),
     };
-    let static_class = use_css(sx_source, CssLayer::UserStatic);
+    let (focus_class, framework_class, static_class) =
+        use_box_css(&BOX_FOCUS_SX, framework_sx, sx_source);
 
     let variables_style = variables
         .as_ref()

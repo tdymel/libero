@@ -127,78 +127,150 @@ struct CssRegistration {
     class_name: Option<String>,
 }
 
+/// Registers one source into the registry, reusing the previous registration
+/// when the source is unchanged. Returns whether the registry was touched.
+fn register(
+    slot: &mut Option<CssRegistration>,
+    source: Option<impl CssSource>,
+    layer: CssLayer,
+    context: &mut LiberoContext,
+) -> (Option<String>, bool) {
+    let identity_hash = source.as_ref().map(CssSource::identity_hash);
+
+    match slot.take() {
+        // Same content as last render - the registry is already correct.
+        Some(prev) if prev.identity_hash == identity_hash => {
+            let class_name = prev.class_name.clone();
+            *slot = Some(prev);
+            (class_name, false)
+        }
+        prev => {
+            let stylesheet = source.map(CssSource::build);
+            let class_name = stylesheet
+                .as_ref()
+                .and_then(|stylesheet| stylesheet.class_name())
+                .map(str::to_string);
+            let mut changed = false;
+
+            if let Some(prev_key) = prev.and_then(|prev| prev.key) {
+                context.stylesheet_registry.release(prev_key);
+                changed = true;
+            }
+
+            let key = match stylesheet {
+                Some(stylesheet) if !stylesheet.as_str().is_empty() => {
+                    changed = true;
+                    Some(context.stylesheet_registry.acquire(stylesheet, layer))
+                }
+                _ => None,
+            };
+
+            let class_name = key.and(class_name);
+            *slot = Some(CssRegistration {
+                identity_hash,
+                key,
+                class_name: class_name.clone(),
+            });
+
+            (class_name, changed)
+        }
+    }
+}
+
+/// Releases every key a hook still holds, bumping the version once if any went.
+fn release_all(state: &RefCell<Vec<Option<CssRegistration>>>, context: &mut LiberoContext) {
+    let released = state
+        .borrow_mut()
+        .drain(..)
+        .filter_map(|slot| slot.and_then(|prev| prev.key))
+        .fold(false, |_, key| {
+            context.stylesheet_registry.release(key);
+            true
+        });
+
+    if released {
+        *context.stylesheet_registry_version.write() += 1;
+    }
+}
+
+/// A signal write during render, sound only because `StyleOutlet` renders
+/// after `{children}` and so reads it once every child has registered.
+/// Load-bearing ordering.
+fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
+    if changed {
+        *context.stylesheet_registry_version.write() += 1;
+    }
+}
+
 /// Same as [`use_stylesheet`], but on a caller-chosen layer.
 ///
 /// Takes an `Option` so a caller with nothing to register still calls it:
-/// hook slots are positional, and this is three of them.
+/// hook slots are positional.
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
-    let identity_hash = source.as_ref().map(CssSource::identity_hash);
     let mut context = use_context::<LiberoContext>();
-    let state = use_hook(|| Rc::new(RefCell::new(None::<CssRegistration>)));
+    let state = use_hook(|| Rc::new(RefCell::new(vec![None::<CssRegistration>])));
 
-    let class_name = {
-        let mut state_ref = state.borrow_mut();
+    let (class_name, changed) = register(&mut state.borrow_mut()[0], source, layer, &mut context);
+    bump_if_changed(changed, &mut context);
 
-        match state_ref.take() {
-            // Same content as last render - the registry is already correct.
-            Some(prev) if prev.identity_hash == identity_hash => {
-                let class_name = prev.class_name.clone();
-                *state_ref = Some(prev);
-                class_name
-            }
-            prev => {
-                let stylesheet = source.map(CssSource::build);
-                let class_name = stylesheet
-                    .as_ref()
-                    .and_then(|stylesheet| stylesheet.class_name())
-                    .map(str::to_string);
-                let mut changed = false;
-
-                if let Some(prev_key) = prev.and_then(|prev| prev.key) {
-                    context.stylesheet_registry.release(prev_key);
-                    changed = true;
-                }
-
-                let key = match stylesheet {
-                    Some(stylesheet) if !stylesheet.as_str().is_empty() => {
-                        changed = true;
-                        Some(context.stylesheet_registry.acquire(stylesheet, layer))
-                    }
-                    _ => None,
-                };
-
-                let class_name = key.and(class_name);
-                *state_ref = Some(CssRegistration {
-                    identity_hash,
-                    key,
-                    class_name: class_name.clone(),
-                });
-
-                // A signal write during render, sound only because
-                // `StyleOutlet` renders after `{children}` and so reads it
-                // once every child has registered. Load-bearing ordering.
-                if changed {
-                    *context.stylesheet_registry_version.write() += 1;
-                }
-
-                class_name
-            }
-        }
-    };
-
-    {
+    use_drop({
         let state = state.clone();
-        let stylesheet_registry = context.stylesheet_registry.clone();
-        let mut stylesheet_registry_version = context.stylesheet_registry_version;
-        use_drop(move || {
-            if let Some(key) = state.borrow_mut().take().and_then(|prev| prev.key) {
-                stylesheet_registry.release(key);
-                *stylesheet_registry_version.write() += 1;
-            }
-        });
-    }
+        let mut context = context;
+        move || release_all(&state, &mut context)
+    });
 
     class_name
+}
+
+/// The three registrations every `Box`-shaped component makes, behind **one**
+/// hook slot, one context read and one `use_drop`.
+///
+/// Three `use_css` calls cost ~180 ns each of which only ~28 ns is real work -
+/// the rest is per-hook plumbing. Sharing it is worth ~360 ns per component.
+pub(crate) fn use_box_css(
+    focus: &'static StaticSx,
+    framework: Option<&'static StaticSx>,
+    sx: Option<SxSource<'_>>,
+) -> (Option<String>, Option<String>, Option<String>) {
+    let mut context = use_context::<LiberoContext>();
+    let state = use_hook(|| Rc::new(RefCell::new(vec![None, None, None])));
+
+    let (focus_class, framework_class, static_class, changed) = {
+        let mut slots = state.borrow_mut();
+        let (slots, sx_slot) = slots.split_at_mut(2);
+        let (focus_slot, framework_slot) = slots.split_at_mut(1);
+
+        let (focus_class, focus_changed) = register(
+            &mut focus_slot[0],
+            Some(focus),
+            CssLayer::Framework,
+            &mut context,
+        );
+        let (framework_class, framework_changed) = register(
+            &mut framework_slot[0],
+            framework,
+            CssLayer::Framework,
+            &mut context,
+        );
+        let (static_class, sx_changed) =
+            register(&mut sx_slot[0], sx, CssLayer::UserStatic, &mut context);
+
+        (
+            focus_class,
+            framework_class,
+            static_class,
+            focus_changed || framework_changed || sx_changed,
+        )
+    };
+    bump_if_changed(changed, &mut context);
+
+    use_drop({
+        let state = state.clone();
+        let mut context = context;
+        move || release_all(&state, &mut context)
+    });
+
+    (focus_class, framework_class, static_class)
 }
 
 #[cfg(test)]
