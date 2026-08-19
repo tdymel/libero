@@ -231,3 +231,34 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn nodes() -> Vec<TreeNode<&'static str>> {
+        vec![
+            TreeNode::new("a", "Alpha").children(vec![TreeNode::new("a1", "Alpha One")]),
+            TreeNode::new("b", "Beta"),
+        ]
+    }
+
+    #[test]
+    fn cloning_one_erasure_stays_equal() {
+        let erased = erase_nodes(&nodes());
+        assert!(erased == erased.clone());
+    }
+
+    #[test]
+    fn re_erasing_equal_data_is_not_equal() {
+        assert!(erase_nodes(&nodes()) != erase_nodes(&nodes()));
+    }
+
+    #[test]
+    fn a_changed_child_breaks_equality() {
+        let erased = erase_nodes(&nodes());
+        let mut changed = erased.clone();
+        changed[0].children[0].label = "Alpha Two".to_string();
+        assert!(erased != changed);
+    }
+}

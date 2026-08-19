@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -166,18 +166,31 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
 /// this small conversion monomorphizes per `T` - the actual tree machinery
 /// (`TreeCore`, `TreeRow`, keyboard nav) is compiled once regardless of how
 /// many different `T`s callers use (see [[project_wasm_bundle_size_findings]]).
+///
+/// Panics if a `TreeRow` hands back node data that isn't a `T` - the type
+/// erasure trades that former compile-time guarantee for a runtime check.
 #[component]
 pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> Element {
     // Cached rather than re-erased every render: keeps the `Rc<dyn Any>`
     // pointers inside `TreeNodeErased` stable across renders that don't
     // change `props.data` (e.g. an expand/collapse), which is what lets
     // `TreeNodeErased`'s `PartialEq` (pointer-based) actually skip
-    // re-rendering an untouched `TreeRow` subtree.
-    let mut erased_cache = use_signal(|| (props.data.clone(), erase_nodes::<T>(&props.data)));
-    if erased_cache.read().0 != props.data {
-        erased_cache.set((props.data.clone(), erase_nodes::<T>(&props.data)));
-    }
-    let erased_data = erased_cache.read().1.clone();
+    // re-rendering an untouched `TreeRow` subtree. Deliberately not a
+    // signal - it's derived purely from `props.data`, and writing a signal
+    // here would dirty the scope and force a second render pass.
+    let cache = use_hook(|| {
+        Rc::new(RefCell::new((
+            props.data.clone(),
+            erase_nodes::<T>(&props.data),
+        )))
+    });
+    let erased_data = {
+        let mut cache = cache.borrow_mut();
+        if cache.0 != props.data {
+            *cache = (props.data.clone(), erase_nodes::<T>(&props.data));
+        }
+        cache.1.clone()
+    };
 
     let render_node = props.render_node;
     let erased_render_node = ErasedRenderNode::new(move |args| {
