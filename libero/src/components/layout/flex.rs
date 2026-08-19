@@ -69,10 +69,8 @@ mod tests {
     }
 }
 
-// Column is the unconditional base (also the default when `direction` is
-// unset); `row` overrides it. `gap` sizes are folded in afterwards so an
-// explicit `gap` prop always wins over either axis's own default spacing,
-// regardless of direction.
+// Column is the unconditional base and `row` overrides it. `gap` folds in
+// afterwards, so an explicit `gap` beats either axis's default spacing.
 static FLEX_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .display("flex")
@@ -107,8 +105,7 @@ base_props! {
         direction: Input<FlexDirection>,
         #[props(default, into)]
         wrap: Input<FlexWrap>,
-        /// Rendered between each child (not before the first or after the
-        /// last) - e.g. `divider: rsx! { Divider {} }`.
+        /// Between each child, not before the first or after the last.
         #[props(default)]
         divider: Option<Element>,
         children: Vec<Element>,

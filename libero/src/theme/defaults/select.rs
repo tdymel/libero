@@ -28,9 +28,8 @@ impl SelectDefaults {
             .padding_right(SELECT_PADDING_X.value(size))
     }
 
-    // Radius reads off the shared global radius scale rather than its own
-    // - it's keyed by its own `radius-{size}` token (not `size-{size}`) so
-    // it can be set independently of the select's own `size`.
+    // The shared global radius scale, keyed by `radius-{size}` rather than
+    // `size-{size}`, so it can be set independently of `size`.
     pub fn radius_sx(radius: Size) -> Sx {
         sx().border_radius(SizeCss::RADIUS.value(radius))
     }

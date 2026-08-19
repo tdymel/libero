@@ -18,9 +18,8 @@ impl Sx {
         self.with_declaration(SxPropertyKey::parse(property), value.into())
     }
 
-    /// Declares a CSS custom property inside this rule - the in-stylesheet
-    /// counterpart to [`Variables`](crate::components::Variables), which
-    /// sets one per instance on the `style` attribute.
+    /// Declares a CSS custom property in this rule - the in-stylesheet twin
+    /// of [`Variables`](crate::components::Variables).
     pub fn var(self, name: CssVar, value: impl Into<ThemeAwareValue>) -> Self {
         self.with(name.name().to_string(), value)
     }
@@ -56,16 +55,14 @@ impl Sx {
         )
     }
 
-    /// One `when(size.state_name(), ..)` block per `Size` - the shape every
-    /// size-aware `*Defaults::theme_vars()` needs.
+    /// One `when(size.state_name(), ..)` block per `Size`.
     pub fn per_size(self, size_sx: impl Fn(Size) -> Sx) -> Self {
         Size::ALL.into_iter().fold(self, |base, size| {
             base.when(size.state_name(), size_sx(size))
         })
     }
 
-    /// Same, keyed by `radius-{size}` so a component's radius can be set
-    /// independently of its `size`.
+    /// Same, keyed by `radius-{size}`, so radius is independent of `size`.
     pub fn per_radius(self, radius_sx: impl Fn(Size) -> Sx) -> Self {
         Size::ALL.into_iter().fold(self, |base, radius| {
             base.when(radius.radius_state_name(), radius_sx(radius))
@@ -87,17 +84,14 @@ impl Sx {
         }
     }
 
-    /// At most one declaration per property, and re-declaring one *moves it
-    /// to the end* rather than overwriting in place - deliberately unlike
-    /// [`Sx::with_modifier`]. Source order is what decides a shorthand
-    /// against a longhand (`padding` vs `padding-top`) within a single rule,
-    /// so the most recently declared property has to end up last for
-    /// "re-declaring wins" to hold; overwriting in place would leave an
-    /// earlier shorthand clobbering the override. `with_modifier` can keep
-    /// its position because nested blocks carry a `[data-state~=..]`
-    /// selector, so specificity rather than order settles them.
+    /// At most one declaration per property, and re-declaring *moves it to the
+    /// end* rather than overwriting in place - unlike [`Sx::with_modifier`].
+    /// Within one rule, source order is what settles a shorthand against a
+    /// longhand (`padding` vs `padding-top`), so the latest declaration must
+    /// land last for "re-declaring wins" to hold. Modifiers can keep their
+    /// position because their `[data-state~=..]` selector settles them by
+    /// specificity instead.
     fn with_declaration(mut self, property: SxPropertyKey, value: ThemeAwareValue) -> Self {
-        // At most one declaration per property, so stop at the first hit.
         let existing = self.entries.iter().position(|entry| {
             matches!(entry, SxEntry::Declaration { property: existing, .. } if existing == &property)
         });
@@ -110,9 +104,8 @@ impl Sx {
         self
     }
 
-    /// At most one block per modifier: a second `:hover`/`when(..)`/breakpoint
-    /// merges into the first (in place, so the block keeps the position it was
-    /// first declared at) instead of emitting a duplicate scope.
+    /// At most one block per modifier: a second `:hover`/`when(..)` merges
+    /// into the first, in place, rather than emitting a duplicate scope.
     fn with_modifier(mut self, modifier: SxModifierKey, nested: Sx) -> Self {
         let existing = self.entries.iter().position(|entry| {
             matches!(entry, SxEntry::Nested { modifier: existing, .. } if existing == &modifier)
@@ -134,16 +127,14 @@ impl Sx {
         self
     }
 
-    /// Merges `other` on top of `self` - `other` wins every property and
-    /// modifier they both declare. A property `other` re-declares moves to
-    /// the end (see [`Sx::with_declaration`]), which is what lets it beat a
-    /// shorthand `self` declared earlier. A consequence worth knowing: the
-    /// emitted declaration order depends on how an `Sx` was built, so two
-    /// `Sx` with identical effective styling can render different CSS text
-    /// and therefore land under different class names. Cheap in practice -
-    /// every `and` call site composes a `StaticSx` once per process, and the
-    /// user-`sx`/`framework_sx` override path never merges at all (those are
-    /// separate classes on separate CSS layers, see `use_style_attributes`).
+    /// Merges `other` on top of `self`. A property `other` re-declares moves
+    /// to the end (see [`Sx::with_declaration`]), which is what lets it beat a
+    /// shorthand `self` declared earlier.
+    ///
+    /// So declaration order depends on build order, and two equivalent `Sx`
+    /// can render different CSS text under different class names. Cheap in
+    /// practice: every call site composes a `StaticSx` once per process, and
+    /// the `sx`/`framework_sx` override path never merges at all.
     pub fn and(mut self, other: Sx) -> Self {
         for entry in other.entries {
             match entry {
@@ -163,8 +154,7 @@ impl Sx {
         &self.entries
     }
 
-    /// Content hash of this `Sx`'s entries - not `Hash::hash`, which `Sx`
-    /// also derives.
+    /// Hash of the entries, not the derived `Hash::hash`.
     pub(crate) fn content_hash(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash_into(&mut hasher);
@@ -175,10 +165,9 @@ impl Sx {
         self.entries.hash(hasher);
     }
 
-    /// This `Sx`'s class name - base62 of the hash of the CSS it renders to,
-    /// which is also its key in the stylesheet registry. Building the CSS is
-    /// the only way to get it, so at runtime it comes from `use_css`, which
-    /// has the rendered sheet in hand; this spelling is for tests.
+    /// Base62 hash of the rendered CSS, and its stylesheet-registry key.
+    /// Getting it means building the CSS, so at runtime it comes from
+    /// `use_css`, which already has the sheet - this spelling is for tests.
     #[cfg(test)]
     pub(crate) fn class_name(&self) -> String {
         class_name_from_hash(crate::css::Stylesheet::from(self).hash())
@@ -193,8 +182,7 @@ pub(crate) fn class_name_from_hash(hash: u64) -> String {
 const BASE62_ALPHABET: &[u8; 62] =
     b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
-/// Shorter than hex (base 16) for the same hash - up to 11 chars instead of
-/// 16 for a `u64`.
+/// 11 chars for a `u64`, against hex's 16.
 fn encode_base62(mut value: u64) -> String {
     if value == 0 {
         return "0".to_string();
@@ -246,12 +234,9 @@ mod tests {
         assert_eq!(helpers.class_name(), folded.class_name());
     }
 
-    /// The ordering `with_declaration` deliberately produces: a re-declared
-    /// property moves to the end, so it still beats a shorthand declared
-    /// before it. Overwriting in place instead would emit
-    /// `padding-top:4px;padding:8px`, letting the shorthand win and silently
-    /// swallowing the override - which is what the framework's own `and`
-    /// compositions (`Flex`, `Divider`, `DataList`) rely on not happening.
+    /// Overwriting in place instead would emit `padding-top:4px;padding:8px`,
+    /// letting the shorthand swallow the override - which `Flex`, `Divider`
+    /// and `DataList`'s `and` compositions rely on not happening.
     #[test]
     fn a_re_declared_property_moves_last_so_it_beats_an_earlier_shorthand() {
         use crate::css::Stylesheet;

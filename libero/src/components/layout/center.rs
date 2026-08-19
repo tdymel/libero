@@ -23,9 +23,8 @@ fn center_variables(props: &CenterProps) -> Variables {
 
 base_props! {
     pub struct CenterProps {
-        /// Uses `inline-flex` instead of `flex` - for centering inline
-        /// content without stretching to fill the parent's width. Defaults
-        /// to the theme's `center.inline` setting.
+        /// `inline-flex` instead of `flex`, so it doesn't stretch to the
+        /// parent's width.
         #[props(default)]
         inline: Option<bool>,
         children: Element,
@@ -76,8 +75,8 @@ mod tests {
         );
     }
 
-    /// Unset means "leave it to the theme", not "flex" - the override
-    /// variable has to stay absent for the themed default to apply.
+    /// Unset means "leave it to the theme", so the override var must stay
+    /// absent rather than being pinned to `flex`.
     #[test]
     fn unset_emits_no_override() {
         assert_eq!(center_variables(&center_props(None)).to_string(), "");

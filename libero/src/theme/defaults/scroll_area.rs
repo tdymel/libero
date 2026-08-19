@@ -13,8 +13,7 @@ str_enum! {
 }
 
 str_enum! {
-    /// When the scrollbar is actually visible - `Scroll` is treated the same as
-    /// `Hover` (no idle-timeout primitive exists in this codebase yet).
+    /// `Scroll` behaves as `Hover` - nothing here fades on an idle timeout.
     #[state_prefix = "visible"]
     pub enum ScrollbarVisibility {
         #[default]

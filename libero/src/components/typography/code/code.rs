@@ -16,9 +16,8 @@ use crate::{
 
 const UNRECOGNIZED_LANGUAGE_LABEL: &str = "Unrecognized language";
 
-// Shared with `max_lines`' height math below, so both stay in sync with
-// `CODE_LINES_SX`/`CODE_PLAIN_PRE_SX`'s actual line-height and padding
-// instead of a second set of hand-copied numbers.
+// Shared with `max_lines`' height math, so neither drifts from
+// `CODE_LINES_SX`'s actual line-height and padding.
 const CODE_LINE_HEIGHT_PX: u32 = 20;
 const CODE_LINES_VERTICAL_PADDING_PX: u32 = 24;
 
@@ -54,9 +53,7 @@ static CODE_BLOCK_HEADER_SX: StaticSx = StaticSx::new(|| {
         .color(CODE_MUTED_TEXT.value())
 });
 
-// display/align-items/justify-content/border/background(transparent)/cursor
-// all match `ActionIcon`'s own base styling already - only what actually
-// differs from it needs restating here.
+// Only what differs from `ActionIcon`'s own base styling.
 static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
         .padding("5px")
@@ -64,11 +61,9 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
 });
 
-// Centered on the first code line specifically (not the container as a
-// whole - would drift off-center against a single-line block otherwise):
-// `CODE_LINES_SX`'s 12px top padding, plus half of its 20px line-height,
-// minus half the button's own ~26px height (5px padding + 14px icon + 1px
-// border, both edges).
+// Centered on the first code line, not the container, which would drift on a
+// single-line block: 12px top padding + half of the 20px line-height, minus
+// half the button's ~26px height.
 static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("9px")
@@ -92,18 +87,14 @@ static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
         .padding(format!("{}px 0", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875rem")
-        // Explicit rather than left to the font's own metrics - the
-        // floating copy button's vertical centering, and `max_lines`' scroll
-        // height, are both computed against this exact value.
+        // Explicit, not the font's metrics: the copy button's centering and
+        // `max_lines`' scroll height are computed against this exact value.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
-// Light tint + a solid accent bar down the left edge (`box-shadow` rather
-// than `border-left`, so the bar doesn't shift content relative to
-// unmarked rows). Colors are the theme's actual primary/success/error, not
-// independent theme fields - stay in sync with them automatically. The
-// three states are mutually exclusive (see `code_lines`'s `row_state`), so
-// a plain row simply carries none of them.
+// `box-shadow` rather than `border-left`, so the accent bar doesn't shift
+// content relative to unmarked rows. The three states are mutually exclusive
+// (see `code_lines`'s `row_state`).
 static CODE_LINE_ROW_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("row")
@@ -147,8 +138,8 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .padding(format!("{}px 16px", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875rem")
-        // Matches `CODE_LINES_SX` - keeps `max_lines`' scroll height correct
-        // for the opaque-`children` path too, not just highlighted source.
+        // Matches `CODE_LINES_SX`, so `max_lines` is right for the opaque
+        // `children` path too.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
@@ -190,43 +181,38 @@ base_props! {
         /// Renders as a `pre`-wrapped, multi-line block instead of inline `code`.
         #[props(default)]
         block: bool,
-        /// Runtime text to syntax-highlight - mutually exclusive with `children`.
-        /// Also what enables line numbers and the copy button, since those need
-        /// an actual string, not opaque `children`.
+        /// Text to syntax-highlight, mutually exclusive with `children`. Line
+        /// numbers and the copy button need a real string, so they need this.
         #[props(default, into)]
         source: Option<String>,
         /// Unrecognized values fall back to no highlighting rather than a guess.
         #[props(default, into)]
         language: Input<Language>,
-        /// `block` only. Shows the language (or "Unrecognized language" if the
-        /// name isn't in libero's catalog, or isn't enabled via a `code-lang-*`
-        /// feature) in a bar above the code.
+        /// `block` only. A bar above the code naming the language, or
+        /// "Unrecognized language" if it isn't in the catalog or its
+        /// `code-lang-*` feature is off.
         #[props(default = true)]
         header: bool,
         /// `block` only, and only takes effect with `source` (nothing to copy
         /// from `children`). Without `header`, floats in the top-right corner.
         #[props(default = true)]
         copyable: bool,
-        /// `block` only. Caps the visible height to roughly this many lines,
-        /// scrolling vertically past it - unset (the default) grows to fit all
-        /// content. Very long individual lines always scroll horizontally,
-        /// regardless of this.
+        /// `block` only. Caps the visible height to roughly this many lines
+        /// and scrolls past it; unset grows to fit. Long lines always scroll
+        /// horizontally regardless.
         #[props(default)]
         max_lines: Option<u32>,
         /// `block` only, and only takes effect with `source`. Toggles the
         /// line-number gutter.
         #[props(default = true)]
         line_numbers: bool,
-        /// `block` only, and only takes effect with `source`. 1-indexed lines to
-        /// visually emphasize, e.g. `"3"`, `"5-7"`, or `"1,5-7,10"`. Malformed
-        /// segments are skipped rather than rejecting the whole value.
+        /// `block` + `source` only. 1-indexed lines to emphasize, e.g.
+        /// `"1,5-7,10"`. Malformed segments are skipped, not rejected.
         #[props(default, into)]
         highlight_lines: Option<String>,
-        /// `block` only, and only takes effect with `source`. Treats each line
-        /// of `source` as a unified diff - a leading `+`/`-` colors that line's
-        /// row (added/removed) and is itself stripped from what's displayed,
-        /// highlighted, and copied. Other lines are left exactly as they are.
-        /// Takes priority over `highlight_lines` on lines both would match.
+        /// `block` + `source` only. Reads `source` as a unified diff: a
+        /// leading `+`/`-` colors the row and is stripped from what's shown,
+        /// highlighted and copied. Wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
         children: Element,
@@ -239,9 +225,8 @@ enum DiffStatus {
     Removed,
 }
 
-/// Based on the raw line's leading byte, not its tokenized spans - keeps
-/// diff-status detection independent of (and unaffected by) how the
-/// grammar happened to split `+`/`-` into scopes.
+/// From the raw leading byte, not the tokenized spans, so the grammar's
+/// scoping of `+`/`-` can't affect it.
 fn diff_status(line: &str) -> Option<DiffStatus> {
     match line.as_bytes().first() {
         Some(b'+') => Some(DiffStatus::Added),
@@ -250,11 +235,9 @@ fn diff_status(line: &str) -> Option<DiffStatus> {
     }
 }
 
-/// Drops a line's leading `+`/`-` (not a leading space - only lines
-/// actually marked added/removed are touched, so `source` doesn't need to
-/// follow strict unified-diff conventions for its unchanged lines). Used
-/// for highlighting, plain rendering, and the copy button alike, so what's
-/// shown and what's copied always match.
+/// Drops a leading `+`/`-`, but not a leading space, so unchanged lines need
+/// no strict unified-diff form. Used by highlighting, plain rendering and the
+/// copy button alike, so shown and copied always match.
 fn strip_diff_markers(source: &str) -> String {
     source
         .lines()
@@ -266,9 +249,8 @@ fn strip_diff_markers(source: &str) -> String {
         .join("\n")
 }
 
-/// Parses a `"3,5-7,10"`-style spec into the 1-indexed line numbers it
-/// names. Malformed segments (empty, non-numeric, backwards ranges) are
-/// skipped rather than rejecting the whole spec.
+/// `"3,5-7,10"` into the 1-indexed lines it names. Malformed segments are
+/// skipped, not rejected.
 fn parse_highlighted_lines(spec: &str) -> HashSet<usize> {
     let mut lines = HashSet::new();
     for segment in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
@@ -316,9 +298,8 @@ fn code_line_row(
             Box {
                 component: "span",
                 framework_sx: &CODE_LINE_CONTENT_SX,
-                // Without the gutter there's nothing reserving left inset -
-                // match `CODE_LINE_NUMBER_SX`'s own 12px so the block still
-                // has breathing room instead of text flush on the edge.
+                // No gutter means nothing reserves a left inset; match
+                // `CODE_LINE_NUMBER_SX`'s 12px so text isn't flush.
                 sx: if line_numbers { sx() } else { sx().padding_left("12px") },
                 for (text, class) in line.iter() {
                     span { class: *class, {text.as_str()} }
@@ -358,9 +339,8 @@ fn code_lines(
 #[component]
 fn CopyButton(source: String, floating: bool) -> Element {
     let mut clipboard: Clipboard = use_clipboard();
-    // Neither `variant` nor `color` is set, so `ActionIcon` contributes no
-    // background/color of its own - this `sx` (hover swap included) is the
-    // only thing controlling the button's look.
+    // No `variant`/`color`, so `ActionIcon` adds no background of its own and
+    // this `sx` fully controls the look.
     let button_sx = if floating {
         CODE_COPY_BUTTON_FLOATING_SX.clone()
     } else {
@@ -387,10 +367,8 @@ pub fn Code(props: CodeProps) -> Element {
     use_token_theme();
 
     let language = props.language.as_ref().copied();
-    // Everything actually shown or copied - the highlighter, the plain
-    // fallback, the copy button - uses the marker-stripped version, so what
-    // you read and what you copy always match. Only `block` has diff
-    // markers to strip; inline code renders its source verbatim.
+    // Everything shown or copied uses the stripped version, so the two match.
+    // Only `block` has markers; inline code is verbatim.
     let display_source = props.source.as_ref().map(|source| {
         if props.diff && props.block {
             strip_diff_markers(source)
@@ -398,9 +376,8 @@ pub fn Code(props: CodeProps) -> Element {
             source.clone()
         }
     });
-    // Hoisted above both branches on purpose: hook slots are positional, so
-    // a `use_resource` inside `if props.block` would hand its slot to the
-    // inline branch's own the moment `block` flips.
+    // Hoisted above both branches: hook slots are positional, so a
+    // `use_resource` inside `if props.block` would swap slots when it flips.
     let source = display_source.clone();
     let highlighted = use_resource(use_reactive!(|source, language| async move {
         match (source, language) {
@@ -410,8 +387,7 @@ pub fn Code(props: CodeProps) -> Element {
     }));
 
     if props.block {
-        // Diff statuses come from the raw source - the markers must still
-        // be there to detect.
+        // Diff statuses need the markers still present.
         let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
             props
                 .source

@@ -27,13 +27,11 @@ impl From<QrRobustness> for ECL {
 
 input_from_str!(QrRobustness);
 
-// Standard 4-module quiet zone (ISO/IEC 18004) - not a style choice, most
-// scanners won't reliably read a code without it.
+// ISO/IEC 18004 quiet zone. Not a style choice - scanners need it.
 const QR_CODE_MARGIN: usize = 4;
 
-// `fast_qr`'s svg has no width/height attribute (just a square viewBox), so
-// it already scales to fill this - `& svg` just makes that fill explicit and
-// keeps it block-level instead of leaving inline-svg's baseline gap under it.
+// `fast_qr`'s svg is viewBox-only, so it already scales to fill. `& svg` is
+// there to drop inline-svg's baseline gap underneath.
 static QR_CODE_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width("100%")
@@ -46,8 +44,7 @@ base_props! {
         data: String,
         #[props(default, into)]
         robustness: Input<QrRobustness>,
-        /// Required - a QR code conveys real information to a sighted/scanning
-        /// user, but nothing to a screen reader without one.
+        /// Required: a QR code says nothing to a screen reader without one.
         aria_label: String,
     }
 }
@@ -66,21 +63,17 @@ fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {
         })
 }
 
-// `#[wasm_split]` drops the item's visibility on wasm32 (it rebuilds the fn
-// from just `item_fn.sig`, which doesn't carry `vis`), so this stays private
-// and `generate_svg_lazy` below re-exposes it at the visibility callers need.
+// `#[wasm_split]` rebuilds the fn from its signature alone and so drops
+// visibility on wasm32; `generate_svg_lazy` re-exposes it.
 #[cfg(feature = "wasm-split")]
 #[wasm_split::wasm_split(qr_code)]
 async fn generate_svg_split(data: String, robustness: QrRobustness) -> Option<String> {
     generate_svg(data, robustness)
 }
 
-/// Same as [`generate_svg`], but with the `wasm-split` feature on, `fast_qr`
-/// itself lives in a separate wasm chunk fetched on first call instead of
-/// the main bundle - see `dioxus::wasm_split`. Without that feature (or on
-/// non-wasm32 targets) this is just a plain async call with nothing split
-/// out, so it works with a plain `dx serve`/`dx build`, no `--wasm-split`
-/// cooperation required.
+/// [`generate_svg`], but under the `wasm-split` feature `fast_qr` lives in a
+/// separate chunk fetched on first call. Without it this is a plain async
+/// call, so no `--wasm-split` build is required.
 async fn generate_svg_lazy(data: String, robustness: QrRobustness) -> Option<String> {
     #[cfg(feature = "wasm-split")]
     return generate_svg_split(data, robustness).await;
@@ -89,10 +82,8 @@ async fn generate_svg_lazy(data: String, robustness: QrRobustness) -> Option<Str
     return generate_svg(data, robustness);
 }
 
-/// Renders `data` as a scalable QR code SVG. Colors come from the theme
-/// (`Theme::qr_code`); `robustness` picks the error-correction level,
-/// falling back to the theme's default when unset. Renders nothing if
-/// `data` is too long for the chosen `robustness` level to encode.
+/// `data` as a scalable QR code SVG, colored from `Theme::qr_code`. Renders
+/// nothing if `data` is too long for the chosen `robustness` to encode.
 #[component]
 pub fn QrCode(props: QrCodeProps) -> Element {
     let theme = use_theme();

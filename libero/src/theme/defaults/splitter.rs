@@ -9,8 +9,7 @@ pub struct SplitterDefaults {
     /// Which size level `divider_size` uses when unset.
     pub size: Size,
     pub divider_size: Sizes<u8>,
-    /// Invisible drag/keyboard hit-target thickness - stays fixed regardless
-    /// of `divider_size`, doesn't grow on hover/drag.
+    /// Invisible hit-target thickness, fixed regardless of `divider_size`.
     pub hit_size: Sizes<u8>,
     /// Percent floor applied to both panes.
     pub min_size: f64,

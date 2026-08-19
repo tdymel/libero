@@ -26,9 +26,8 @@ fn underline_sx(underline: AnchorUnderline) -> Sx {
     }
 }
 
-// Reuses Text's theme-level sizing (via AnchorDefaults::theme_vars), not Text
-// the component, since Text has no href/target/rel escape hatch to render a
-// real anchor with.
+// Text's theme-level sizing, not `Text` itself - it has no href/target/rel
+// escape hatch to render a real anchor with.
 static ANCHOR_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = AnchorDefaults::theme_vars().margin("0");
 
@@ -41,11 +40,9 @@ base_props! {
     pub struct AnchorProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// A plain path/URL or a typed route (anything `Into<NavigationTarget>`,
-        /// e.g. `Route::Foo {}`). Resolves through the app's Dioxus router when
-        /// one is mounted and `target` allows it (unset or `"_blank"`) -
-        /// internal targets then get SPA navigation instead of a full page
-        /// reload. Falls back to a plain `href` otherwise.
+        /// A path/URL or a typed route (`Route::Foo {}`). With a router
+        /// mounted and `target` unset or `"_blank"`, an internal target gets
+        /// SPA navigation; otherwise a plain `href`.
         #[props(into)]
         to: NavigationTarget,
         #[props(default)]

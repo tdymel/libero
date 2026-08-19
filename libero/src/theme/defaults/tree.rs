@@ -1,8 +1,7 @@
 use crate::theme::Size;
 
-/// Which of `List`'s size levels a `Tree` uses by default for row
-/// gap/indent - `Tree` renders through `List`/`role="group"` underneath, so
-/// there's no separate size scale to declare here.
+/// `Tree` renders through `List`, so it has no size scale of its own - this
+/// only picks which of `List`'s levels it defaults to.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TreeDefaults {
     pub size: Size,

@@ -1,7 +1,6 @@
 use std::fmt::{self, Display};
 
-/// A CSS class list, built up incrementally - `Display`/`to_string()` is its
-/// string representation (space-joined, empty entries skipped).
+/// A CSS class list. `Display` space-joins it, skipping empty entries.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct ClassList(Vec<String>);
 
@@ -10,8 +9,7 @@ impl ClassList {
         Self::default()
     }
 
-    /// Appends `class`, skipping `None`/empty ones - safe to chain directly
-    /// off whatever `use_css` or a caller's own `class` prop returns.
+    /// Skips `None`/empty, so `use_css`'s output chains directly.
     pub fn with(mut self, class: impl Into<Option<String>>) -> Self {
         if let Some(class) = class.into().filter(|class| !class.is_empty()) {
             self.0.push(class);
@@ -65,8 +63,7 @@ mod tests {
         assert_eq!(classes.to_string(), "lsx-a");
     }
 
-    /// Nothing dedupes - a caller passing a class the component also
-    /// computed gets it twice, which is harmless in a `class` attribute.
+    /// No deduping - a repeated class is harmless in a `class` attribute.
     #[test]
     fn a_repeated_class_is_kept_twice() {
         let classes = class_list()

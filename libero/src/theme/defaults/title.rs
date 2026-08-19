@@ -25,9 +25,8 @@ pub struct TitleDefaults {
 }
 
 impl TitleDefaults {
-    /// Font-size/weight/letter-spacing/line-height for `size` - everything
-    /// about a `Title` that actually varies by size. Font-family doesn't,
-    /// so it's not part of this - see `TITLE_FONT_FAMILY`.
+    /// Everything about a `Title` that varies by size. Font-family doesn't,
+    /// hence `TITLE_FONT_FAMILY`.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(TITLE_FONT_SIZE.value(size))
             .font_weight(TITLE_FONT_WEIGHT.value(size))
@@ -35,13 +34,9 @@ impl TitleDefaults {
             .line_height(TITLE_LINE_HEIGHT.value(size))
     }
 
-    /// Font-family plus every size's declarations at once, each size gated
-    /// behind its own `[data-state~="size-md"]`-style selector (see
-    /// `Size::state_name`) - one static/framework `Sx` that every `Title`
-    /// instance shares regardless of which size it's actually using; only
-    /// the `data-state` attribute (set per-instance) picks which size block
-    /// applies, so choosing a size never costs a new dynamically-generated
-    /// CSS class.
+    /// Every size at once, each gated behind its own `data-state` selector,
+    /// so all `Title`s share one static class and picking a size never mints
+    /// a new one.
     pub fn theme_vars() -> Sx {
         sx().font_family(TITLE_FONT_FAMILY.value())
             .per_size(Self::size_sx)

@@ -10,9 +10,9 @@ use super::css_scope::CssScope;
 pub struct Stylesheet {
     css: String,
     class_name: Option<String>,
-    /// Hash of the CSS as first built - kept across
-    /// [`with_root_class`](Self::with_root_class) so a class-scoped sheet's
-    /// hash is the one its own class name was derived from.
+    /// Of the CSS as first built, kept across
+    /// [`with_root_class`](Self::with_root_class), so it stays the hash the
+    /// class name was derived from.
     hash: u64,
 }
 
@@ -25,9 +25,9 @@ impl Stylesheet {
         self.class_name.as_deref()
     }
 
-    /// Substitutes the placeholder root selector for the real class name,
-    /// leaving [`hash`](Self::hash) at the pre-substitution value - that is
-    /// what makes the class name and the registry key the same number.
+    /// Substitutes the placeholder root selector for the real class name.
+    /// [`hash`](Self::hash) stays pre-substitution, which is what makes the
+    /// class name and the registry key the same number.
     pub(crate) fn with_root_class(mut self, placeholder: &str, class_name: String) -> Self {
         self.css = self.css.replace(placeholder, &class_name);
         self.class_name = Some(class_name);
@@ -42,9 +42,8 @@ impl Stylesheet {
         Self::from(css)
     }
 
-    /// Identifies this sheet's content - the registry's key, and (for an
-    /// `Sx` conversion) the source of its class name. `DefaultHasher` isn't
-    /// stable across std releases, so never persist a value derived from it.
+    /// The registry's key, and an `Sx` sheet's class name. Never persist it:
+    /// `DefaultHasher` isn't stable across std releases.
     pub(crate) fn hash(&self) -> u64 {
         self.hash
     }

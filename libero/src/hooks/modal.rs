@@ -48,15 +48,15 @@ impl<P: Clone + PartialEq + 'static> ModalHandle<P> {
 }
 
 impl<P: Default + Clone + PartialEq + 'static> ModalHandle<P> {
-    /// Opens with default props - for dialogs with no meaningful props.
+    /// Opens with default props.
     pub fn open_default(&self) {
         self.open(P::default());
     }
 }
 
-/// Registers `component` as a modal, opened from anywhere via
-/// `handle.open(props)`. Inside `component`, use [`use_modal_context`] to
-/// close it and [`crate::components::Dialog`] for its a11y roles.
+/// Registers `component` as a modal, opened anywhere via `handle.open(props)`.
+/// Inside it, [`use_modal_context`] closes and
+/// [`crate::components::Dialog`] carries the a11y roles.
 pub fn use_modal<P>(component: fn(P) -> Element) -> ModalHandle<P>
 where
     P: Properties + Clone + PartialEq + 'static,

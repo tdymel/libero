@@ -5,10 +5,8 @@ use crate::{
     sx::{StaticSx, Sx, sx},
 };
 
-// Block-level, no flex - a nested `List` placed among this item's own
-// content must stack below it, not sit beside it in a row. Row-alignment
-// (e.g. an icon next to a label) is the job of whatever's placed inside,
-// same as `NavLink` already does for itself.
+// Block, not flex, so a nested `List` stacks below this item's content rather
+// than beside it. Row alignment is the content's own job.
 static LIST_ITEM_BASE_SX: StaticSx = StaticSx::new(|| sx().padding("0"));
 
 base_props! {

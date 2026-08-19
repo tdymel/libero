@@ -22,16 +22,12 @@ str_enum! {
 
 input_from_str!(HeaderPosition);
 
-// Matches Button's own default shade - bold enough for a solid brand-color
-// banner rather than the library-wide default (5).
+// Matches Button's shade: bold enough for a solid brand-color banner.
 const HEADER_DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
-// Unlike `Icon`/`Button`, an unset `color` means "leave the neutral default
-// alone" rather than falling back to a theme color - a bare theme color name
-// has no shade of its own, so it's resolved to our own default shade here;
-// anything else (an explicit shade/contrast, or a literal value like
-// "red"/#123456/rgb(...)) passes through unchanged for the sx-to-css
-// pipeline to resolve normally.
+// Unlike `Icon`/`Button`, an unset `color` keeps the neutral default rather
+// than falling back to a theme color. A bare color name takes the shade
+// above; everything else passes through.
 fn header_base_color(value: Option<&ThemeAwareValue>) -> Option<ThemeAwareValue> {
     match value {
         None => None,
@@ -42,8 +38,7 @@ fn header_base_color(value: Option<&ThemeAwareValue>) -> Option<ThemeAwareValue>
     }
 }
 
-// Only a resolved theme shade has a precomputed contrast CSS var to pair
-// with; a literal color has no such pairing available.
+// Only a resolved theme shade has a precomputed contrast var.
 fn header_contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
     match base {
         ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
@@ -96,9 +91,8 @@ fn header_variables(props: &HeaderProps) -> Variables {
 
 base_props! {
     pub struct HeaderProps {
-        /// `Sticky` (default) stays visible while scrolling with no offset
-        /// needed; `Fixed` is viewport-relative but requires you to offset your
-        /// own content, same caveat as `Drawer`'s `anchor`.
+        /// `Sticky` (default) needs no offset; `Fixed` is viewport-relative
+        /// and you offset your own content, as with `Drawer`'s `anchor`.
         #[props(default, into)]
         position: Input<HeaderPosition>,
         #[props(default, into)]
@@ -111,8 +105,8 @@ base_props! {
     }
 }
 
-/// The page's `banner` landmark - always renders `<header>`. Hosts a nav and
-/// actions as children rather than being scoped to either itself.
+/// The page's `banner` landmark, always a `<header>`. Hosts nav and actions
+/// as children rather than being scoped to either.
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
     let position = props.position.copied_or_default();
@@ -167,8 +161,7 @@ mod tests {
         assert!(variables.contains(HEADER_COLOR_VAR.name()));
     }
 
-    /// No color at all means the themed default applies, so both variables
-    /// stay unset rather than being pinned to something here.
+    /// Unset means the themed default applies, so neither var is pinned.
     #[test]
     fn no_color_emits_neither_variable() {
         let variables = header_variables(&header_props(Input::None)).to_string();

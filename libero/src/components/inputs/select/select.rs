@@ -33,8 +33,7 @@ base_props! {
     pub struct SelectProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// Corner radius - `theme.select.radius` by default, independent
-        /// of `size`.
+        /// Corner radius, independent of `size`.
         #[props(default, into)]
         radius: Input<Size>,
         #[props(into)]
@@ -62,18 +61,10 @@ pub fn Select(props: SelectProps) -> Element {
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true);
 
-    // `<option>`s come from `props.children` - a dynamic node mounted in the
-    // same pass as `<select>` itself, so on the *creating* render there's no
-    // matching option yet for the browser to select against `value` (it
-    // silently falls back to the first option instead). Rendering no
-    // `value` attribute at all on that first render, then flipping
-    // `mounted` true in `use_effect` (which only runs once the whole
-    // subtree - options included - is actually committed), defers the real
-    // value application to a subsequent *update*, where the plain `value:`
-    // attribute path already works correctly (dioxus-web's own
-    // `set_attribute.js` sets `.value` as a DOM property, not just an
-    // attribute - it just needs the options to already exist, which they do
-    // by then).
+    // The `<option>`s mount in the same pass as the `<select>`, so on the
+    // creating render there is nothing for `value` to select and the browser
+    // silently takes the first option. Emitting no `value` until `use_effect`
+    // fires defers it to an update, by which point the options exist.
     let mut mounted = use_signal(|| false);
     use_effect(move || mounted.set(true));
     let value = mounted().then(|| props.value.clone());

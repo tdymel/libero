@@ -17,11 +17,9 @@ const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
 const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
 const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
 
-/// `Icon`'s own variant chrome plus a hover, referencing `hover_var` (a
-/// `var()` name, not a resolved value) - mirrors `Button`'s own hover:
-/// darker on `Filled`, a light tint behind the border/text on
-/// `Outlined`/`Transparent` - this is an interactive button, unlike the
-/// plain, hover-less `Icon` whose variant styling this builds on.
+/// `Icon`'s variant chrome plus `Button`'s hover - darker on `Filled`, a
+/// light tint on `Outlined`/`Transparent`. `hover_var` is a `var()` name, not
+/// a resolved value.
 fn action_icon_variant_sx(
     variant: IconVariant,
     color_var: &CssVar,
@@ -37,18 +35,14 @@ fn action_icon_variant_sx(
         .hover(sx().background(hover_var.value_or(hover_fallback)))
 }
 
-// `Icon`'s own sizing/svg-fit, plus the resets a native `<button>` needs
-// that a `<span>` (Icon's default element) never had to worry about - no
-// border/background/padding from the browser's own button styling, and no
-// default focus ring (the visible one comes from `Box`'s own
-// `:focus-visible` handling, same as `Button`). Unlike `Icon`, the
-// filled/outlined/transparent variant chrome is only reachable through the
-// matching data-state token, which `ActionIcon` only sets when the caller
-// actually asks for the badge look via `variant`/`color` - a caller
-// supplying its own full `sx` (e.g. `Code`'s copy button, with its own
-// hover treatment) needs background/color left alone entirely, and CSS
-// layering means a plain (non-hover) declaration here would otherwise
-// always beat a `:hover` override from the caller's lower-priority `sx`.
+// `Icon`'s sizing plus the resets a native `<button>` needs that its `<span>`
+// never did.
+//
+// The variant chrome sits behind a data-state token that `ActionIcon` sets
+// only when the caller asks for it via `variant`/`color`. A caller with its
+// own `sx` (`Code`'s copy button) needs background/color untouched: layering
+// means a plain declaration here would beat a `:hover` rule from their
+// lower-priority `sx`.
 static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline-flex")
         .align_items("center")
@@ -137,16 +131,12 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Required, not optional - an icon-only button has no visible text for
-        /// a screen reader to announce, so it needs an accessible name from
-        /// somewhere.
+        /// Required: an icon-only button has no text to announce.
         aria_label: String,
         #[props(default)]
         disabled: Option<bool>,
-        /// Renders as a link (router-aware, like `Anchor`/`Button`) instead of a
-        /// `<button>` when set. No `onclick`/`onmouseleave` in that case, same
-        /// tradeoff `Button` makes for its own link mode - real navigation
-        /// happens instead.
+        /// Renders a router-aware link instead of a `<button>`. No
+        /// `onclick`/`onmouseleave` then - real navigation happens instead.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
@@ -155,9 +145,8 @@ base_props! {
     }
 }
 
-/// `Icon`'s sized/colored/variant-shaped badge, rendered as a real `<button>`
-/// instead of a `span` - `Icon` plus `Button`'s click handling and a11y,
-/// for icon-only actions like a copy or close button.
+/// `Icon`'s badge as a real `<button>`, with `Button`'s click handling and
+/// a11y - for icon-only actions like copy or close.
 #[component]
 pub fn ActionIcon(props: ActionIconProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
@@ -174,12 +163,9 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .with(variant.state_name(), has_variant_styling);
 
     if let Some(to) = props.to.as_ref().cloned() {
-        // A disabled link keeps looking/behaving like a disabled control (it
-        // just doesn't natively support the `disabled` attribute like
-        // <button> does): no `to` at all stops navigation entirely,
-        // `aria-disabled`/`tabindex` keep it out of the a11y tree and tab
-        // order. Can't go through `InternalAnchor` for this - it always
-        // resolves to a real, working link.
+        // `<a>` has no native `disabled`: dropping `to` stops navigation,
+        // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
+        // `InternalAnchor` can't do this - it always resolves a real link.
         if disabled {
             return rsx! {
                 Box {
@@ -254,8 +240,8 @@ mod tests {
         }
     }
 
-    /// Sizing is always the ActionIcon's own business; the colour variables
-    /// only appear when it isn't deferring to a wrapped `Icon`'s styling.
+    /// Sizing is always ActionIcon's; the color vars appear only when it
+    /// isn't deferring to a wrapped `Icon`.
     #[test]
     fn without_variant_styling_only_the_size_variables_are_set() {
         let props = action_icon_props(Color::Primary.into());

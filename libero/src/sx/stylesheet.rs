@@ -12,8 +12,8 @@ struct CssContext {
     media_query: Option<String>,
 }
 
-/// Stands in for the class name while the CSS is built, so the sheet can be
-/// hashed before its own name exists - see [`Sx::class_name`].
+/// Stands in while the CSS is built, so the sheet can be hashed before its
+/// own name exists - see [`Sx::class_name`].
 pub(crate) const ROOT_CLASS_PLACEHOLDER: &str = "\u{1}";
 
 impl From<&Sx> for Stylesheet {
@@ -130,11 +130,9 @@ fn push_breakpoint_declaration_scope(
     scopes.push(scope);
 }
 
-/// `background`'s declaration doubles as the source for
-/// `--lsx-focus-contrast`, an inheriting custom property any focusable
-/// descendant's `:focus-visible` ring can read (with a fallback) to
-/// contrast against whichever ancestor most recently set a background -
-/// see `ThemeAwareValue::focus_contrast`.
+/// `background` also publishes `--lsx-focus-contrast`, which inherits, so a
+/// descendant's focus ring can contrast against the nearest ancestor
+/// background - see `ThemeAwareValue::focus_contrast`.
 fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
     let mut declarations = vec![CssDeclaration::new(
         property.as_str(),
@@ -161,8 +159,7 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
 
     match value.resolve(scale) {
         Some(value) => value,
-        // A `Size` on a property with no scale of its own: emit the bare
-        // keyword.
+        // No scale for this property, so emit the bare keyword.
         None => match value {
             ThemeAwareValue::Size(size) => size.as_str().to_string(),
             ThemeAwareValue::BreakpointValue(_) => {
@@ -387,10 +384,9 @@ mod tests {
 
     #[test]
     fn sx_selector_ampersand_with_space_expands_to_descendant_combinator() {
-        // A plain (non-&) pattern is trimmed and then appended directly, so a
-        // leading space meant as a descendant combinator (e.g. " ul") is lost
-        // and silently produces an invalid selector. The `&`-form is not
-        // trimmed away and is the correct way to express this.
+        // A plain pattern is trimmed before being appended, so a leading
+        // space meant as a descendant combinator is silently lost. `&` is the
+        // correct form.
         let descendant_sx = sx().selector("& ul", sx().height("1px"));
         let css = Stylesheet::from(&descendant_sx).as_str().to_string();
 

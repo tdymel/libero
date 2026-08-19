@@ -1,7 +1,6 @@
-//! One file per ported language, each exposing a `grammar() -> Grammar`.
-//! Small hand-ports covering common syntax (not aiming for a reference
-//! implementation's full fidelity), restricted to regex features both
-//! `RegexApi` implementations support (no lookaround, no backreferences).
+//! One file per language, each exposing `grammar() -> Grammar`. Hand-ports
+//! covering common syntax, restricted to what both `RegexApi` engines support
+//! (no lookaround, no backreferences).
 
 #[cfg(feature = "code-lang-bash")]
 pub(crate) mod bash;

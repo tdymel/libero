@@ -46,9 +46,8 @@ fn global_reset_scopes(theme: &Theme) -> Vec<CssScope> {
 }
 
 fn body_scope(theme: &Theme) -> CssScope {
-    // Black/white have no per-shade contrast var of their own (unlike the
-    // palette colors), so the contrast is computed here the same way
-    // push_color_declarations does it for palette shades.
+    // Black/white have no per-shade contrast var, so it's computed here the
+    // way `push_color_declarations` does for palette shades.
     let text_color_var = if theme.white.contrast().rgb() == 0x00_00_00 {
         NamedColorCss::BLACK.value()
     } else {
@@ -71,9 +70,8 @@ fn body_scope(theme: &Theme) -> CssScope {
 }
 
 fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
-    // Destructured exhaustively (no `..`) on purpose: a new `Theme` field
-    // won't compile until it's either declared here or explicitly ignored
-    // below, so a component's vars can't go silently unemitted.
+    // Exhaustive (no `..`) on purpose: a new `Theme` field won't compile
+    // until it's declared or explicitly ignored, so vars can't go unemitted.
     let Theme {
         spacing,
         radius,
@@ -160,9 +158,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations
 }
 
-// Breakpoints are interpolated directly into `@media` query strings
-// (sx_to_css.rs), which can't reference CSS custom properties, so they stay
-// hardcoded literals rather than a theme-configurable `Sizes<T>` scale.
+// `@media` can't reference custom properties, and breakpoints go straight
+// into query strings, so they stay literals rather than a themed scale.
 fn push_breakpoint_declarations(declarations: &mut Vec<CssDeclaration>) {
     for size in super::Size::ALL {
         declarations.push(SizeCss::BREAKPOINT.declare(size, size.breakpoint_value()));
@@ -306,8 +303,8 @@ mod tests {
         ]);
     }
 
-    /// The shade curves are fitted to Mantine's published palettes; these
-    /// lock both ramps so a tweak to one can't silently reshape the other.
+    /// Both ramps are fitted to Mantine's palettes; this locks them so a
+    /// tweak to one can't silently reshape the other.
     #[test]
     fn theme_css_palette_ramps_track_mantine() {
         let css = Stylesheet::from(&Theme::DEFAULT);

@@ -11,8 +11,7 @@ use crate::{
     utils::warn,
 };
 
-/// Fired as the divider is dragged/keyed - both panes' resulting sizes, in
-/// percent of the container, with `A` (left/top) first.
+/// Both panes' resulting sizes as percentages, `A` (left/top) first.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SplitterResizeEvent {
     Start(f64, f64),
@@ -29,9 +28,8 @@ struct DragState {
     /// `mousedown`.
     start_client: f64,
     start_a: f64,
-    /// Container's width (vertical) or height (horizontal) in px, measured
-    /// once at `mousedown` - needed to convert the drag's pixel delta into a
-    /// percent of the container.
+    /// Container width (vertical) or height (horizontal), measured once at
+    /// `mousedown` to turn the drag's pixel delta into a percentage.
     container_size: f64,
 }
 
@@ -52,10 +50,8 @@ static SPLITTER_PANEL_A_SX: StaticSx = StaticSx::new(|| {
 static SPLITTER_PANEL_B_SX: StaticSx =
     StaticSx::new(|| sx().flex("1 1 0%").min_width("0").min_height("0"));
 
-// The layout-participating element - only as wide/tall as `divider_size`, so
-// the panes sit flush against it with no visible gap. The larger pointer/
-// keyboard hit target is a child overlay that doesn't take up flex space of
-// its own (see `SPLITTER_HIT_SX` below).
+// Only as thick as `divider_size`, so the panes sit flush. The larger hit
+// target is a child overlay taking no flex space of its own.
 static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .position("relative")
@@ -75,14 +71,12 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-// Invisible - extends symmetrically past the bar into both neighboring
-// panes (via a negative inset, `divider_size` minus `hit_size`) so the
-// actual clickable/draggable target is comfortably larger than the thin
-// visible line, without the panes themselves leaving a gap for it.
+// Invisible, and negatively inset past the bar into both panes, so the drag
+// target is larger than the visible line without the panes leaving a gap.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
-    // `touch-action: none` is what makes a touch drag possible at all -
-    // without it the browser treats the gesture as a scroll and never
-    // delivers the `pointermove`s.
+    // `touch-action: none` is what makes a touch drag possible at all:
+    // otherwise the browser claims the gesture as a scroll and no
+    // `pointermove` ever arrives.
     let base = sx().position("absolute").touch_action("none");
 
     Size::ALL.into_iter().fold(base, |acc, size| {
@@ -119,8 +113,7 @@ fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variab
         )
 }
 
-/// Exactly 2 children expected (`A`/left-top, then `B`/right-bottom) - a
-/// missing one renders as an empty pane, extras are dropped. Both cases
+/// Exactly 2 children. A missing one renders empty, extras are dropped; both
 /// warn.
 fn resolve_panels(children: Vec<Element>) -> (Element, Element) {
     let count = children.len();
@@ -150,12 +143,10 @@ base_props! {
         /// `"horizontal"` (stacked panes).
         #[props(default, into)]
         orientation: Input<Orientation>,
-        /// Initial % of the left/top pane (A) - clamped to `min_size` at
-        /// mount if lower. Uncontrolled afterward: drag/keyboard own the
-        /// live value, `on_resize` only notifies.
+        /// Initial % of pane A, clamped to `min_size` at mount. Uncontrolled
+        /// afterward - `on_resize` only notifies.
         initial_size: f64,
-        /// % floor applied to both panes - defaults to the theme's
-        /// `splitter.min_size` setting.
+        /// % floor applied to both panes.
         #[props(default, into)]
         min_size: Input<f64>,
         #[props(default, into)]
@@ -164,8 +155,7 @@ base_props! {
         divider_color: Input<ThemeAwareValue>,
         #[props(default)]
         on_resize: EventHandler<SplitterResizeEvent>,
-        /// Exactly 2 - `A` (left/top) then `B` (right/bottom). Nest another
-        /// `Splitter` inside a pane for more than 2.
+        /// Exactly 2: `A` (left/top) then `B`. Nest for more.
         children: Vec<Element>,
     }
 }
@@ -189,12 +179,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     let on_resize = props.on_resize;
 
-    // Pointer events rather than mouse ones, so touch and pen drag too, and
-    // the container captures the pointer at `pointerdown`: every further
-    // move/up is delivered here no matter where the pointer travels, so a
-    // drag continues (rather than pausing) outside the container and can't
-    // be left stuck by a release outside it. Capture ends on its own at
-    // `pointerup`/`pointercancel`, so there is nothing to release by hand.
+    // Pointer events so touch and pen drag too. The container captures the
+    // pointer, so moves and the release are delivered here wherever the
+    // pointer travels. Capture ends itself at `pointerup`/`pointercancel`.
     let onpointerdown = move |event: Event<PointerData>| {
         event.prevent_default();
         let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
@@ -217,8 +204,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
         } else {
             coordinates.y
         };
-        // Only once a drag is actually starting - and best-effort, since a
-        // failure costs just the out-of-container tracking, not the drag.
+        // Best-effort: failing costs out-of-container tracking, not the drag.
         let _ = container.set_pointer_capture(event.pointer_id());
         drag.set(Some(DragState {
             start_client,
@@ -252,8 +238,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
     };
 
     let onpointerup = move |_| end_drag();
-    // The OS can revoke a pointer mid-drag (a system gesture, an incoming
-    // call) - without this the drag would stay stuck open.
+    // The OS can revoke a pointer mid-drag; without this the drag sticks.
     let onpointercancel = move |_| end_drag();
 
     let onkeydown = move |event: Event<KeyboardData>| {
@@ -344,8 +329,7 @@ mod tests {
     use super::*;
     use crate::tokens::{Color, ColorShade, ColorValue};
 
-    /// The A-pane fraction is always emitted - it's what positions the
-    /// divider, so there's no sensible "unset" for it.
+    /// It positions the divider, so there is no "unset" for it.
     #[test]
     fn the_pane_fraction_is_always_a_percentage() {
         let variables = splitter_variables(37.5, None);

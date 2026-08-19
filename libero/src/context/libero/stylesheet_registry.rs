@@ -3,18 +3,17 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use super::CssLayer;
 use crate::css::Stylesheet;
 
-/// Identifies a registry entry. Only [`StylesheetRegistry::acquire`] mints
-/// one, so a caller can't release under a key the registry never used.
+/// Only [`StylesheetRegistry::acquire`] mints one, so nothing can be released
+/// under a key the registry never issued.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct StylesheetKey {
     layer: CssLayer,
     hash: u64,
 }
 
-/// The `<style>` node for one entry, built once at `acquire` time. Both
-/// fields are `Rc<str>` so [`StylesheetRegistry::stylesheets`] - called on
-/// every re-render of the style outlet - hands them out by refcount bump
-/// instead of re-allocating the whole CSS corpus each time.
+/// Built once at `acquire`. `Rc<str>` so
+/// [`StylesheetRegistry::stylesheets`], called on every style-outlet render,
+/// bumps a refcount instead of re-allocating the whole CSS corpus.
 #[derive(Clone)]
 struct RegisteredStylesheet {
     node_key: Rc<str>,
@@ -41,8 +40,7 @@ impl StylesheetRegistry {
         let mut registry = self.inner.borrow_mut();
 
         let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
-            // Deliberately a plain `String`, not another `Stylesheet`: that
-            // would re-hash the whole wrapped text for a key we already have.
+            // Not a `Stylesheet`: that re-hashes text for a key we have.
             node_key: Rc::from(format!("{}-{:x}", layer.css_name(), key.hash)),
             css: Rc::from(format!(
                 "@layer {}{{{}}}",
@@ -67,8 +65,8 @@ impl StylesheetRegistry {
         }
     }
 
-    /// Every registered sheet as `(node key, CSS)` - cheap to call, both
-    /// halves are refcounted handles to strings built once at `acquire`.
+    /// Every registered sheet as `(node key, CSS)`. Cheap - both halves are
+    /// refcounted handles.
     pub fn stylesheets(&self) -> Vec<(Rc<str>, Rc<str>)> {
         self.inner
             .borrow()

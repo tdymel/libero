@@ -2,10 +2,9 @@ use crate::tokens::{Size, SizeCss};
 
 use super::{Sx, ThemeAwareValue};
 
-/// The single source of truth for every CSS property `Sx` knows: enum
-/// variant, its CSS name, its `Sx` builder method, and optionally the
-/// [`SizeCss`] scale a bare `Size` value resolves through for it. Adding a
-/// property is one line here.
+/// Every CSS property `Sx` knows: variant, CSS name, builder method, and the
+/// [`SizeCss`] scale a bare `Size` resolves through. Adding a property is one
+/// line here.
 macro_rules! properties {
     (@scale) => { None };
     (@scale $scale:expr) => { Some($scale) };
@@ -30,8 +29,7 @@ macro_rules! properties {
                 }
             }
 
-            /// The `Size` scale a bare `Size` resolves through for this
-            /// property - `None` keeps the size's own name (`"md"`).
+            /// `None` keeps the size's own name (`"md"`).
             pub(crate) const fn size_scale(self) -> Option<SizeCss> {
                 match self {
                     $(Self::$variant => properties!(@scale $($scale)?),)*

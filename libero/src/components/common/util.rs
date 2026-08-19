@@ -1,5 +1,4 @@
-/// Builds a non-global attribute (e.g. `src`/`href`) to push into a
-/// `Vec<Attribute>` by hand, bypassing `extends = GlobalAttributes`.
+/// A non-global attribute to push into a `Vec<Attribute>` by hand.
 pub(crate) fn attr<T>(
     name: &'static str,
     value: impl dioxus::core::IntoAttributeValue<T>,
@@ -7,11 +6,9 @@ pub(crate) fn attr<T>(
     dioxus::prelude::Attribute::new(name, value, None, false)
 }
 
-/// Standard `:focus-visible` ring - contrasts against whichever ancestor
-/// most recently set a background (via `--lsx-focus-contrast`, published by
-/// `background()`; see `ThemeAwareValue::focus_contrast`), falling back to
-/// the theme's primary color where that isn't known (e.g. a raw/unparseable
-/// background, or no themed background above it at all).
+/// Standard `:focus-visible` ring, contrasting against the nearest ancestor
+/// background via `--lsx-focus-contrast` (published by `background()`).
+/// Falls back to primary when no ancestor published one.
 pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
     use crate::tokens::{ColorCss, ColorShade, NamedColorCss};
 

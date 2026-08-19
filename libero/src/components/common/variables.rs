@@ -2,12 +2,9 @@ use std::fmt::{self, Display};
 
 use crate::tokens::CssVar;
 
-/// CSS custom properties (`--name:value;`), built up incrementally and
-/// rendered directly into an element's `style` attribute - `Display`/
-/// `to_string()` is its string representation. Lets a component's shared,
-/// cached static class reference a per-instance value via `var(--name,
-/// fallback)`, instead of generating a whole new class/stylesheet entry for
-/// every distinct value combination a caller might pass.
+/// CSS custom properties rendered into an element's `style` attribute, so a
+/// component's shared static class can reference a per-instance value through
+/// `var(--name, fallback)` rather than minting a class per value.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Variables(Vec<(CssVar, String)>);
 
@@ -16,8 +13,7 @@ impl Variables {
         Self::default()
     }
 
-    /// Sets `name` to `value`, skipping `None`/empty ones - safe to chain
-    /// directly off an optional per-instance override.
+    /// Skips `None`/empty, so an optional override chains directly.
     pub fn with(mut self, name: CssVar, value: impl Into<Option<String>>) -> Self {
         self.0.retain(|(existing, _)| existing != &name);
         if let Some(value) = value.into().filter(|value| !value.is_empty()) {
@@ -26,10 +22,8 @@ impl Variables {
         self
     }
 
-    /// Adds every entry from `other` on top of `self` (each still replaces
-    /// any existing entry of the same name) - for a component that forwards
-    /// a caller-supplied `Variables` alongside its own internally-computed
-    /// ones (e.g. `Dialog` forwarding `Drawer`'s).
+    /// `other`'s entries win by name. For a component forwarding a
+    /// caller-supplied `Variables` alongside its own.
     pub fn merge(mut self, other: Self) -> Self {
         for (name, value) in other.0 {
             self = self.with(name, value);
@@ -85,8 +79,7 @@ mod tests {
         assert_eq!(variables.to_string(), "");
     }
 
-    /// A borrowed and an owned `CssVar` naming the same property are one
-    /// variable - `CssVar`'s equality is by name, not by representation.
+    /// `CssVar` equality is by name, not representation.
     #[test]
     fn a_static_and_an_owned_name_are_the_same_variable() {
         let owned = CssVar::parse("--lsx-test-color").expect("a valid custom property name");

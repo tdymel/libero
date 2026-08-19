@@ -11,11 +11,10 @@ const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
 
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().background("white")
-        // Modal's content wrapper is pointer-events:none so backdrop clicks
-        // fall through it - restore interactivity for the dialog itself.
+        // `Modal`'s wrapper is pointer-events:none so backdrop clicks fall
+        // through; the dialog itself needs them back.
         .pointer_events("auto")
-        // A flex item shrinks to its content by default, so without an
-        // explicit width, `max-width`/`size` only caps rather than fills.
+        // A flex item shrinks to content, so `size` would only cap, not fill.
         .width("100%")
         .max_width(DIALOG_SIZE.overridable(Size::Md))
         .margin("md")
@@ -44,18 +43,16 @@ base_props! {
         radius: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
-        /// Forwarded alongside Dialog's own - e.g. `Drawer` layers its
-        /// own anchor/size variables onto Dialog's rendered surface.
+        /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.
         #[props(default, into)]
         variables: Input<Variables>,
         children: Element,
     }
 }
 
-/// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in
-/// a [`crate::components::Modal`] (auto-detected, not passed explicitly).
-/// Carries no positioning of its own - anchor it with [`crate::components::Float`]
-/// or your own layout.
+/// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in a
+/// [`crate::components::Modal`] (auto-detected). No positioning of its own -
+/// anchor it with [`crate::components::Float`] or your own layout.
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();

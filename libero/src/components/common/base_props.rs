@@ -1,15 +1,9 @@
-/// Declares a component `Props` struct, prepending the fields nearly every
-/// visual component needs - `attributes` (`extends = GlobalAttributes`, so
-/// it also captures any DOM event a caller writes), `class`, `sx`,
-/// `states` - so the body only needs to list what's actually specific to
-/// this component, instead of repeating these four every time.
+/// Declares a component `Props` struct, prepending `attributes` (extends
+/// `GlobalAttributes`, so it also captures DOM events), `class`, `sx` and
+/// `states`. The body lists only what's specific to the component.
 ///
-/// Expands at the call site (ordinary `macro_rules!` path resolution, not
-/// definition-site hygiene) - relies on `Props`/`Attribute` (from `dioxus::
-/// prelude::*`) and `Input`/`States`/`Sx` already being in scope there,
-/// which every component file needs anyway for its own fields (`ClassList`
-/// is fully qualified here instead, since not every file has a reason to
-/// import it on its own).
+/// Expands at the call site, so `Props`/`Attribute`/`Input`/`States`/`Sx`
+/// must be in scope there - every component file imports them anyway.
 ///
 /// ```ignore
 /// base_props! {
@@ -21,12 +15,9 @@
 /// }
 /// ```
 ///
-/// A component can also ask for a specific tag's own attributes - e.g.
-/// `option`'s `disabled`/`selected`, not part of `GlobalAttributes` - via a
-/// leading `extends(...)` clause. Listing several tags works too (`Box`
-/// extends `img`, `a` and `button`), but an attribute name two of them share
-/// is ambiguous at the call site; declare it as an ordinary field to
-/// disambiguate.
+/// A leading `extends(...)` adds a specific tag's own attributes (e.g.
+/// `option`'s `selected`). Several tags work, but an attribute two of them
+/// share is ambiguous at the call site - declare it as a field instead.
 ///
 /// ```ignore
 /// base_props! {

@@ -2,13 +2,9 @@ use dioxus::prelude::*;
 
 pub(crate) struct PortalEntry {
     pub(crate) id: u64,
-    /// The already-rendered content, computed by the registering component
-    /// in its own scope (via `use_portal`) - not a closure `PortalOutlet`
-    /// would call from its own, unrelated scope. Reading a signal owned by
-    /// another, non-ancestor scope at call time is exactly what
-    /// `dioxus_signals`' "used in a scope that is not a descendant of the
-    /// owning scope" warning flags, so the value has to already be resolved
-    /// by the time it lands here.
+    /// Already rendered in the registering component's own scope, not a
+    /// closure `PortalOutlet` would call from its unrelated one - that would
+    /// read signals from a non-ancestor scope.
     pub(crate) render: Option<Element>,
 }
 

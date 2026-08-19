@@ -8,9 +8,8 @@ use crate::{
     theme::{ICON_SIZE, Size},
 };
 
-/// Text `Tree` matches against for typeahead and falls back to rendering
-/// when no `render_node` is given - the one thing `Tree` needs to know about
-/// an otherwise fully user-defined `data: T`.
+/// The one thing `Tree` needs from a user-defined `data: T`: text to match
+/// typeahead against, and to render when there's no `render_node`.
 pub trait TreeLabel {
     fn tree_label(&self) -> String;
 }
@@ -56,11 +55,9 @@ impl<T> TreeNode<T> {
     }
 }
 
-/// Type-erased mirror of `TreeNode<T>` - what the actual tree machinery
-/// (`TreeRow`, keyboard nav, `push_visible_nodes`) is built against, so that
-/// code compiles once instead of once per `T` (see [[project_wasm_bundle_size_findings]]).
-/// `label` is precomputed via `TreeLabel` at erasure time; nothing downstream
-/// of it needs `T: TreeLabel` anymore.
+/// Type-erased mirror of `TreeNode<T>`. The tree machinery is built against
+/// this so it compiles once instead of once per `T`; `label` is precomputed
+/// at erasure time, so nothing downstream needs `T: TreeLabel`.
 #[derive(Clone)]
 pub(super) struct TreeNodeErased {
     pub id: String,
@@ -76,10 +73,8 @@ impl TreeNodeErased {
     }
 }
 
-// `data` compares by pointer identity, not value - erasure is re-run (via
-// `Tree`'s own cache) only when the source `Vec<TreeNode<T>>` actually
-// changed by value, so a stable `Rc` here is exactly the signal `TreeRow`
-// needs to skip re-rendering an untouched subtree.
+// `data` compares by pointer identity: `Tree`'s cache re-erases only on a
+// real change, so a stable `Rc` is exactly the "subtree untouched" signal.
 impl PartialEq for TreeNodeErased {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id
@@ -105,10 +100,9 @@ pub(super) fn erase_nodes<T: TreeLabel + Clone + 'static>(
         .collect()
 }
 
-/// Type-erased mirror of [`TreeNodeRenderArgs<T>`] - what `TreeRow` actually
-/// calls `render_node` with. `Tree<T>` wraps the user's typed callback in one
-/// that downcasts `data` back to `T`, so the downcast is the only per-`T`
-/// cost instead of the whole row's rendering machinery.
+/// Type-erased mirror of [`TreeNodeRenderArgs<T>`]. `Tree<T>` wraps the typed
+/// callback in one that downcasts `data` back to `T`, so a downcast is the
+/// only per-`T` cost.
 pub(super) struct TreeNodeRenderArgsErased {
     pub id: String,
     pub data: Rc<dyn Any>,
@@ -118,10 +112,9 @@ pub(super) struct TreeNodeRenderArgsErased {
     pub depth: usize,
 }
 
-/// `Rc<dyn Fn>` wrapper so `TreeRowProps` can derive `Clone`/`PartialEq`
-/// without being generic over `T`. Equality is always `true`: which literal
-/// closure instance is held doesn't affect a row's rendered output for given
-/// `(id, data, expanded, disabled, depth)`, so it shouldn't gate memoization.
+/// `Rc<dyn Fn>` wrapper so `TreeRowProps` derives `Clone`/`PartialEq` without
+/// being generic over `T`. Always equal: the closure instance doesn't change a
+/// row's output for given args, so it shouldn't gate memoization.
 #[derive(Clone)]
 pub(super) struct ErasedRenderNode(Rc<dyn Fn(TreeNodeRenderArgsErased) -> Element>);
 
@@ -141,12 +134,9 @@ impl PartialEq for ErasedRenderNode {
     }
 }
 
-/// Passed to `render_node` for each visible row - the node's own data plus
-/// the live state that a static `TreeNode<T>` value can't know on its own
-/// (whether it's currently expanded). `Tree` doesn't have a notion of
-/// "selected" - if `render_node` renders a real link, the link itself
-/// already knows whether it's active (e.g. `NavLink` compares against the
-/// current route); for anything else, track selection as your own state.
+/// Passed to `render_node` per visible row: the node's data plus live state a
+/// static `TreeNode<T>` can't know. There is no "selected" - a rendered link
+/// knows its own active state; anything else tracks selection itself.
 #[derive(Clone, PartialEq)]
 pub struct TreeNodeRenderArgs<T> {
     pub id: String,
@@ -154,26 +144,17 @@ pub struct TreeNodeRenderArgs<T> {
     /// `None` for a leaf (no children, no chevron, no `aria-expanded`).
     pub expanded: Option<bool>,
     pub disabled: bool,
-    /// Apply this to whatever real interactive element (a link, a button)
-    /// your own content renders - it suppresses that element's *native*
-    /// tab stop, since `Tree` already made the row itself the one roving
-    /// tab stop. Without it you'd get two independent tab stops per row:
-    /// the tree's own roving one, and the link/button's native implicit
-    /// one - and arrow-key navigation only ever moves the tree's.
+    /// Apply to any interactive element your content renders. The row is
+    /// already the roving tab stop; without this the link/button adds a
+    /// second one that arrow-key navigation never moves.
     pub tabindex: &'static str,
-    /// 0 for a top-level node, incrementing by one per nesting level.
-    /// `Tree`'s own indent (see `TreeProps::indent`) already uses this to
-    /// shift each level - it's exposed here so `render_node` can take over
-    /// indentation entirely instead (zero `Tree`'s own indent through its
-    /// `sx` and compute your own left offset from this).
+    /// 0 at top level. Exposed so `render_node` can take indentation over
+    /// entirely - zero `TreeProps::indent` via `sx` and offset from this.
     pub depth: usize,
 }
 
-// Matches the chevron's own width, so `default_tree_render`'s leaves line up
-// with its branch siblings instead of starting further left. Not `Tree`'s
-// concern - a leading column is only reserved here, by the render that
-// actually draws a chevron; a custom `render_node` that skips the chevron
-// gets no reserved space unless it asks for its own.
+// Chevron-width, so leaves line up with their branch siblings. Reserved only
+// here, by the render that draws the chevron - not by `Tree`.
 static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx =
     StaticSx::new(|| sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)));
 
@@ -191,20 +172,12 @@ fn chevron_svg() -> Element {
     }
 }
 
-/// `Tree`'s own fallback row content - a chevron for a branch (rotating with
-/// `expanded`), a matching spacer for a leaf, then `tree_label()`. This is
-/// what `render_node` defaults to when not given, and it's `pub` so a custom
-/// `render_node` can selectively fall back to it too (e.g. use this for
-/// branches, something custom for leaves) instead of reimplementing it.
+/// `render_node`'s default: a chevron for a branch, a matching spacer for a
+/// leaf, then `tree_label()`. `pub` so a custom `render_node` can fall back to
+/// it for some rows rather than reimplementing it.
 ///
-/// The chevron is entirely this function's own concern, not `Tree`'s - a
-/// custom `render_node` that wants one (or its leading space) draws it
-/// itself from `args.expanded`/`args.depth`.
-///
-/// Provides its own vertical padding - `TreeRow`'s content wrapper
-/// deliberately has none (so a bordered, full-height `render_node` like a
-/// `NavLink` can read as continuous between rows), so plain content needs
-/// to bring its own breathing room.
+/// The chevron is this function's concern, not `Tree`'s. It also brings its
+/// own vertical padding, since `TreeRow`'s wrapper deliberately has none.
 pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element {
     let leading = match args.expanded {
         Some(expanded) => rsx! {

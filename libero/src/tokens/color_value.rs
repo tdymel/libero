@@ -19,15 +19,13 @@ impl ColorValue {
 
         match color.vars() {
             ColorVars::Palette(own, other) => if contrast { other } else { own }.name(shade),
-            // Black/white have a single var each, with no per-shade
-            // variants, so the shade is irrelevant here.
+            // One var each, no per-shade variants.
             ColorVars::Named(own, other) => if contrast { other } else { own }.name().to_string(),
         }
     }
 
-    /// Parses a palette reference: `"primary"`, `"primary.7"`, or the
-    /// contrast of either (`"primary-contrast.7"`). Black and white have no
-    /// shades of their own, so only their bare names parse.
+    /// `"primary"`, `"primary.7"`, or a contrast of either
+    /// (`"primary-contrast.7"`). Black/white parse only as bare names.
     pub(crate) fn parse(value: &str) -> Option<Self> {
         if value == "black" {
             return Some(Self::Shade(Color::Black, ColorShade::S1));
@@ -46,8 +44,8 @@ impl ColorValue {
             None => (name, false),
         };
 
-        // Name first: raw CSS like `rgba(0, 0, 0, 0.15)` splits into a
-        // nonsense shade, and must bail before `ColorShade::parse` asserts.
+        // Name first: `rgba(0, 0, 0, 0.15)` splits into a nonsense shade and
+        // must bail before `ColorShade::parse` asserts.
         let color = Color::parse(name)?;
         if !matches!(color.vars(), ColorVars::Palette(..)) {
             return None;
@@ -125,8 +123,8 @@ mod tests {
         );
     }
 
-    /// Raw CSS splits on `.` into a nonsense shade - parse must reject it on
-    /// the color name, not trip `ColorShade::parse`'s debug assert.
+    /// Raw CSS must be rejected on the color name, not by tripping
+    /// `ColorShade::parse`'s debug assert.
     #[test]
     fn parse_rejects_raw_css_without_asserting_on_the_shade() {
         assert_eq!(ColorValue::parse("rgba(255, 255, 255, 0.15)"), None);

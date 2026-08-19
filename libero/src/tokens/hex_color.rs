@@ -15,12 +15,9 @@ impl HexColor {
         Self { rgb }
     }
 
-    /// Recognizes `#rgb`/`#rrggbb`, `rgb(r, g, b)`, and fully-opaque
-    /// `rgba(r, g, b, 1)`. A translucent `rgba()` (e.g. a hover tint) is
-    /// deliberately `None` - its true visual color depends on whatever
-    /// shows through underneath it, which isn't something we can compute
-    /// here. Anything else (named colors, `hsl()`, css vars, ...) is `None`
-    /// too.
+    /// `#rgb`/`#rrggbb`, `rgb()`, and fully-opaque `rgba()`. A translucent
+    /// `rgba()` is `None` on purpose - its visual color depends on whatever
+    /// shows through. Named colors, `hsl()` and vars are `None` too.
     pub(crate) fn parse(value: &str) -> Option<Self> {
         let value = value.trim();
 
@@ -91,8 +88,8 @@ impl HexColor {
         self.rgb
     }
 
-    /// Percentages are fitted against Mantine's published palettes, so a
-    /// base picked as a Mantine shade-6 value reproduces its ramp.
+    /// Fitted to Mantine's palettes, so a Mantine shade-6 base reproduces
+    /// its ramp.
     pub(crate) const fn shade(self, shade: ColorShade, ramp: ShadeRamp) -> Self {
         let percent = match ramp {
             ShadeRamp::Chromatic => match shade {

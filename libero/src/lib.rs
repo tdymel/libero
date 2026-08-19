@@ -1,7 +1,6 @@
 #![allow(non_snake_case)]
-// A component's `mod.rs` only re-exports; the component itself lives in a
-// file of the same name (see CLAUDE.md's component file pattern), so
-// `code/code.rs`, `tree/tree.rs` etc. are deliberate.
+// A component's `mod.rs` only re-exports, so `code/code.rs`, `tree/tree.rs`
+// etc. are deliberate.
 #![allow(clippy::module_inception)]
 
 pub mod components;

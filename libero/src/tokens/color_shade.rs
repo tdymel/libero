@@ -1,6 +1,5 @@
-/// Which mix curve `HexColor::shade` walks. Chromatic hues read as a tint
-/// ramp off their base; a neutral grey needs a much wider spread to cover
-/// the same perceptual range.
+/// Which mix curve `HexColor::shade` walks. A neutral grey needs a much wider
+/// spread than a hue to cover the same perceptual range.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum ShadeRamp {
     Chromatic,
@@ -22,7 +21,7 @@ pub enum ColorShade {
 }
 
 impl ColorShade {
-    /// Shade a bare `"primary"` resolves to - the base hex itself.
+    /// What a bare `"primary"` resolves to: the base hex itself.
     pub(crate) const DEFAULT: Self = Self::S6;
 
     pub(crate) fn parse(suffix: Option<&str>) -> Self {

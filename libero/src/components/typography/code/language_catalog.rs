@@ -1,8 +1,6 @@
-//! The hand-ported set of languages `highlight.rs`'s engine can color. Each
-//! entry's grammar is only compiled in when its `code-lang-*` Cargo feature
-//! is on (see `languages/mod.rs`) - unlike the old syntect-backed catalog,
-//! there's no "recognized but not compiled" middle ground: an entry only
-//! exists here at all when its language module is present.
+//! The languages `highlight.rs` can color. An entry exists only when its
+//! `code-lang-*` feature compiled the grammar in - there is no "recognized
+//! but not compiled" state.
 
 use std::sync::LazyLock;
 
@@ -15,8 +13,7 @@ pub(crate) struct LanguageEntry {
     pub(crate) grammar: fn() -> Grammar,
 }
 
-// Each push below is behind its own `code-lang-*` feature gate, so they
-// can't be collapsed into a single `vec![...]` literal.
+// Each push is feature-gated, so this can't be one `vec![...]`.
 #[allow(clippy::vec_init_then_push)]
 pub(crate) static LANGUAGE_CATALOG: LazyLock<Vec<LanguageEntry>> = LazyLock::new(|| {
     let mut catalog = Vec::new();

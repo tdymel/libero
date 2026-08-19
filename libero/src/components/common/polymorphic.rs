@@ -7,13 +7,10 @@ macro_rules! html_tags {
         default { $($dvariant:ident => $dtag:ident),* $(,)? }
         full { $($fvariant:ident => $ftag:ident),* $(,)? }
     ) => {
-        /// Root elements a polymorphic component can render as. Always the
-        /// full HTML5 element set regardless of the `full-polymorphism`
-        /// feature - that feature only controls how many of
-        /// `render_polymorphic`'s match arms actually compile, not this
-        /// type's shape (so downstream code naming a `full`-tier variant
-        /// still compiles either way, it just renders as `<div>` without
-        /// the feature - see `render_polymorphic`'s fallback arm).
+        /// Always the full HTML5 element set - `full-polymorphism` controls
+        /// how many of `render_polymorphic`'s arms compile, not this type. So
+        /// a `full`-tier variant always compiles; without the feature it just
+        /// renders as `<div>`.
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
         pub enum HtmlTag {
             $($dvariant,)*
@@ -40,8 +37,7 @@ macro_rules! html_tags {
                 match value.to_lowercase().as_str() {
                     $(stringify!($dtag) => Self::$dvariant,)*
                     $(stringify!($ftag) => Self::$fvariant,)*
-                    // No accepted-value list here, unlike `str_enum!`'s -
-                    // the whole HTML5 element set is not useful output.
+                    // No accepted-value list: 111 tags is not useful output.
                     _ => {
                         crate::utils::warn(&format!(
                             "HtmlTag: unrecognized tag {value:?}, rendering as <div>."
@@ -76,22 +72,14 @@ macro_rules! html_tags {
             }
         }
 
-        /// Renders `children`/`class`/`data-state`/`attributes` on whichever
-        /// element `component` selects (a runtime value, so this dispatches
-        /// at runtime - each arm is trivial, so that cost is negligible).
-        /// `attributes` carries event handlers too, not just plain
-        /// attributes - `Box`'s own `extends = GlobalAttributes` captures
-        /// whatever event a caller writes generically, so every arm just
-        /// needs to spread it, not name each event it might contain.
+        /// Renders on whichever element `component` selects. `attributes`
+        /// carries event handlers too - `extends = GlobalAttributes` captures
+        /// them generically, so each arm only has to spread it.
         ///
-        /// Only the `default` tier's arms (the tags `libero`'s own
-        /// components actually render - see `polymorphic.rs`'s
-        /// `html_tags!` invocation) compile unconditionally; the rest need
-        /// the `full-polymorphism` feature, and fall back to `<div>`
-        /// without it (same fallback `HtmlTag::from(&str)` already uses for
-        /// an unrecognized tag name) - this is what keeps `Box`'s
-        /// `render_polymorphic` from paying for all 111 HTML tags when a
-        /// consumer only ever asks for a handful.
+        /// Only the `default` tier's arms compile unconditionally; the rest
+        /// need `full-polymorphism` and fall back to `<div>` without it. That
+        /// is what keeps a consumer using a handful of tags from paying for
+        /// all 111.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
             class: crate::components::ClassList,
@@ -123,9 +111,8 @@ macro_rules! html_tags {
                         }
                     },
                 )*
-                // A `full`-tier tag without the feature: the value is
-                // fine, the build configuration is not - which is a
-                // different fix from a typo, so it gets its own message.
+                // The value is fine, the build configuration is not - a
+                // different fix from a typo, so a different message.
                 #[cfg(not(feature = "full-polymorphism"))]
                 _ => {
                     crate::utils::warn(&format!(
@@ -148,18 +135,10 @@ macro_rules! html_tags {
     };
 }
 
-// `default` is every tag `libero`'s own components render internally, plus
-// every tag `docs` itself needs (grep for `component: "..."` / `HtmlTag::...`
-// across `libero/src` and `docs/src` - see
-// [[project_wasm_bundle_size_findings]]) - so both work fully with default
-// features, `docs` included (no reason to make the site demonstrating the
-// library pay the same "opt into more tags" cost an external consumer
-// would). `full` is the rest of the HTML5 element set dioxus_elements
-// supports - opt into the `full-polymorphism` feature for those; without it
-// `Box`/`Title`/`Text`/etc still accept any `HtmlTag`, they just render as
-// `<div>` for a `full`-tier tag (see `render_polymorphic`'s fallback arm).
-// This split never needs to grow for a new tag - only which group a tag
-// moves to, if `libero` or `docs` starts using one.
+// `default` is every tag `libero` and `docs` actually render, so both work on
+// default features. `full` is the rest of the HTML5 set, behind
+// `full-polymorphism`; without it a `full`-tier tag still type-checks and
+// renders as `<div>`. A new tag never grows this split, it only picks a side.
 html_tags! {
     default {
         A => a,

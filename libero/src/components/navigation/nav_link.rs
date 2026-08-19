@@ -9,9 +9,8 @@ use crate::{
 
 use super::InternalAnchor;
 
-// Only meaningful for values grounded in the named palette - an arbitrary
-// literal (hex/css) has no well-defined "lighter shade" to derive, so it
-// falls through to the theme's default color instead.
+// A literal hex/css color has no derivable "lighter shade", so it falls
+// through to the theme's default.
 fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     match value {
         Some(ThemeAwareValue::Color(color)) => Some(*color),
@@ -40,16 +39,11 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .color("inherit")
         .text_decoration("none")
         .cursor("pointer")
-        // Gives `scroll_into_view`'s `Nearest` some breathing room instead of
-        // stopping flush against the scroll container's edge - respected by
-        // the native `scrollIntoView` call under the hood, so it only ever
-        // affects *where* a scroll lands, never whether one happens at all.
+        // Keeps `scroll_into_view`'s `Nearest` off the container's edge.
+        // Affects where a scroll lands, never whether one happens.
         .scroll_margin("8rem")
-        // A non-active link only tints on hover, and with a neutral grey
-        // rather than `color` - hovering shouldn't preview the "selected"
-        // look before it's actually selected. Active gets a light tint of
-        // the resolved color instead, same convention as `Mark`/
-        // `ActionIcon`'s outlined hover.
+        // Hover is neutral grey, not `color`: it shouldn't preview the
+        // selected look. Active gets the light color tint instead.
         .hover(sx().background("grey.2"))
         .when(
             "active",
@@ -73,23 +67,17 @@ base_props! {
         target: Option<String>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Highlights this link with a light background tint. Unset auto-detects
-        /// by comparing `to` against the current route - only ever true for an
-        /// `Internal` target with a router mounted. Set explicitly to override
-        /// (e.g. a parent nav item that should read as active for a whole
-        /// section, or for an `External` target/routerless usage, where
-        /// auto-detection has nothing to compare against and always reads
-        /// `false`).
+        /// Tints the link. Unset, it compares `to` against the current route,
+        /// so it is only ever true for an `Internal` target with a router
+        /// mounted. Set it explicitly for a section-level parent item, or
+        /// anywhere auto-detection has nothing to compare against.
         #[props(default)]
         active: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
-        /// Scrolls this link into view (only if it isn't already visible)
-        /// whenever it becomes active - on mount, or later if a different link
-        /// was active first. Off by default: it's a side effect on whatever
-        /// scrollable container happens to be an ancestor, which only makes
-        /// sense for a handful of call sites (e.g. a sidebar), not every place a
-        /// `NavLink` might get used.
+        /// Scrolls this link into view when it becomes active, if it isn't
+        /// already visible. Off by default - it acts on whatever scrollable
+        /// ancestor happens to exist, which only suits a sidebar.
         #[props(default)]
         scroll_into_view: Option<bool>,
         children: Element,
@@ -122,11 +110,9 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let scroll_into_view = props.scroll_into_view.unwrap_or(false);
     let mut mounted = use_signal(|| None::<MountedEvent>);
 
-    // Re-runs whenever `is_active` changes (`use_reactive!` - it's a plain
-    // bool, not a signal) and whenever `mounted` first becomes available
-    // (a real signal read, auto-tracked) - between the two, this covers
-    // both "already active on mount" and "became active later" without
-    // needing two separate code paths.
+    // `is_active` is a plain bool, hence `use_reactive!`; `mounted` is a
+    // signal and tracks itself. Together they cover both "active on mount"
+    // and "became active later" in one path.
     use_effect(use_reactive!(|is_active| {
         if scroll_into_view
             && is_active
@@ -197,8 +183,7 @@ mod tests {
         );
     }
 
-    /// A shade picks the same base color as a bare one - only the family
-    /// matters, the active background always uses `S1`.
+    /// Only the color family matters; the active background is always `S1`.
     #[test]
     fn a_shaded_color_contributes_only_its_family() {
         let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Info, ColorShade::S9));

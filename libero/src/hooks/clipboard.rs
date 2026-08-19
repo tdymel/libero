@@ -2,10 +2,8 @@ use dioxus::prelude::*;
 
 use crate::components::PlatformError;
 
-/// Writes text to the system clipboard - the only DOM-adjacent operation in
-/// this crate that isn't element-scoped (no selector/`ElementApi` applies),
-/// so it gets its own tiny trait here instead of living on `DomApi`. Only
-/// this hook uses it, so it stays private to this module.
+/// The only DOM-adjacent operation here that isn't element-scoped, hence its
+/// own trait rather than a place on `DomApi`.
 trait ClipboardApi {
     fn write_text(&self, text: &str) -> Result<(), PlatformError>;
 }
@@ -52,8 +50,7 @@ fn clipboard_api() -> &'static dyn ClipboardApi {
     &CLIPBOARD_HANDLE
 }
 
-/// Writes to the system clipboard and tracks a transient "just copied" flag
-/// - callers decide when to clear it (e.g. `onmouseleave`).
+/// Writes to the clipboard and tracks a "just copied" flag the caller clears.
 #[derive(Clone, Copy)]
 pub struct Clipboard {
     copied: Signal<bool>,

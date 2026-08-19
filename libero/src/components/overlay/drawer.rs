@@ -15,11 +15,8 @@ use crate::{
 
 const DRAWER_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-drawer-z-index");
 
-// `Static` is documented as usable for a sidebar, which is almost always a
-// flex item that needs to not get squeezed and to scroll its own content
-// rather than growing past its allotted space - the actual scrolling is
-// `ScrollArea`'s job (see the component below), this only sizes the panel
-// itself.
+// A `Static` sidebar is usually a flex item that must not be squeezed. This
+// only sizes the panel; the scrolling is `ScrollArea`'s job.
 static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
     let size = DRAWER_SIZE.override_var().value_or("auto");
     let border = format!("1px solid {}", ColorCss::GREY.value(ColorShade::S4));
@@ -45,10 +42,8 @@ static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-// `Temporary`'s surface, layered onto `Dialog`'s own class/vars (Dialog owns
-// its own `framework_sx`, so this rides along as an extra class rather than
-// replacing it). Edge-docking itself is `Float`'s job (see `Drawer`) - this
-// only sizes the panel to fill the slot `Float` anchors it into.
+// `Temporary`'s surface, riding along as an extra class on `Dialog`'s own.
+// Edge-docking is `Float`'s job; this only fills the slot it anchors.
 static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
     let size = DRAWER_SIZE.overridable(Size::Md);
 
@@ -61,9 +56,8 @@ static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
         .when("anchor-bottom", sx().width("100%").height(size.clone()))
 });
 
-/// Maps a `DrawerAnchor` to a corner `Float` placement plus the one extra
-/// offset that stretches it to a full edge - a corner placement anchors two
-/// adjacent sides with no `transform` involved, so this only adds the third.
+/// A corner `Float` placement already pins two adjacent sides with no
+/// `transform`, so an anchor only needs the third offset to reach a full edge.
 fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
     match anchor {
         DrawerAnchor::Left => (Placement::TopStart, sx().bottom("0")),
@@ -75,8 +69,7 @@ fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
 
 str_enum! {
     pub enum DrawerVariant {
-        /// Portaled, dimmed, focus-trapped, closes on Escape/backdrop - built on
-        /// `Modal`.
+        /// Portaled, dimmed, focus-trapped; closes on Escape/backdrop.
         #[default]
         Temporary = "temporary",
         /// In-place plain panel, no portal/backdrop/focus-trap, e.g. a sidebar.
@@ -111,16 +104,16 @@ base_props! {
     pub struct DrawerProps {
         #[props(default, into)]
         variant: Input<DrawerVariant>,
-        /// On `Static`, only picks the border side/size axis, not placement -
-        /// position it yourself in your own layout. Full effect on `Temporary`.
+        /// On `Static`, picks only the border side and size axis - placement
+        /// is your layout's job. Full effect on `Temporary`.
         #[props(default, into)]
         anchor: Input<DrawerAnchor>,
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Requested by Escape/backdrop on `Temporary`; on `Static` it's only
-        /// for your own close button - `Drawer` tracks no open/closed state.
+        /// Requested by Escape/backdrop on `Temporary`, and by your own close
+        /// button on `Static`. `Drawer` tracks no open/closed state.
         #[props(default)]
         onclose: EventHandler<()>,
         children: Element,
@@ -146,10 +139,9 @@ pub fn Drawer(props: DrawerProps) -> Element {
         .with("anchor-top", anchor == DrawerAnchor::Top)
         .with("anchor-bottom", anchor == DrawerAnchor::Bottom);
 
-    // Registered for both variants, and paired with the `use_portal(None)`
-    // below: hook slots are positional, and `variant` is a caller prop that
-    // can flip (the docs compose a Static and a Temporary drawer on
-    // opposite breakpoints), so neither hook may sit behind this return.
+    // `variant` is a caller prop that can flip, and hook slots are
+    // positional, so neither this nor the `use_portal(None)` below may sit
+    // behind the early return.
     let drawer_class = use_css(Some(&DRAWER_TEMPORARY_SX), crate::CssLayer::Framework);
 
     if variant == DrawerVariant::Static {

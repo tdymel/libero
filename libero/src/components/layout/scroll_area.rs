@@ -26,9 +26,8 @@ pub enum ScrollPositionEvent {
 
 const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color");
 
-/// Resolves `Scroll` to the same behavior as `Hover` - no idle-timeout
-/// primitive exists in this codebase yet to fade the scrollbar out after a
-/// period of inactivity, see `ScrollbarVisibility` doc.
+/// `Scroll` behaves as `Hover`: nothing here can yet fade the scrollbar out
+/// after an idle timeout. See `ScrollbarVisibility`.
 fn visibility_token(visibility: ScrollbarVisibility) -> &'static str {
     match visibility {
         ScrollbarVisibility::Scroll => ScrollbarVisibility::Hover.state_name(),
@@ -77,9 +76,8 @@ fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
     variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
 }
 
-/// Which edges (per axis) the last-seen scroll position was resting
-/// against - only used to fire `on_*_reached` on the rising edge, not on
-/// every scroll event while still resting there.
+/// Which edges the last scroll position rested against, so `on_*_reached`
+/// fires on the rising edge rather than every event.
 #[derive(Clone, Copy, Debug, Default, PartialEq)]
 struct EdgeState {
     top: bool,
@@ -90,26 +88,21 @@ struct EdgeState {
 
 base_props! {
     pub struct ScrollAreaProps {
-        /// Which axes scroll - `"vertical"` (default), `"horizontal"`,
-        /// `"both"`, or `"none"`.
+        /// `"vertical"` (default), `"horizontal"`, `"both"` or `"none"`.
         #[props(default, into)]
         scrollbars: Input<ScrollAxis>,
-        /// When the scrollbar itself is visible - `"always"` (default),
-        /// `"hover"`, `"hidden"`, or `"scroll"` (currently identical to
-        /// `"hover"`).
+        /// `"always"` (default), `"hover"`, `"hidden"`, or `"scroll"`
+        /// (currently identical to `"hover"`).
         #[props(default, into)]
         scrollbar_visibility: Input<ScrollbarVisibility>,
-        /// Maps to the CSS `scrollbar-width` keyword - `"thin"` (default)
-        /// or `"auto"`.
+        /// CSS `scrollbar-width`: `"thin"` (default) or `"auto"`.
         #[props(default, into)]
         scrollbar_size: Input<ScrollbarSize>,
         /// Scrollbar thumb color - track stays transparent.
         #[props(default, into)]
         scrollbar_color: Input<ThemeAwareValue>,
-        /// Percent (0-100) along the horizontal axis to scroll to.
-        /// `None` (default) leaves the scroll position at 0. A value bound
-        /// to the caller's own state re-applies every time it changes;
-        /// a literal only applies once, at mount.
+        /// Percent (0-100) to scroll to. Bound to a signal it re-applies on
+        /// every change; a literal applies once, at mount.
         scroll_position_x: Option<f64>,
         /// Percent (0-100) along the vertical axis - see `scroll_position_x`.
         scroll_position_y: Option<f64>,
@@ -246,11 +239,9 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             states,
             variables,
             framework_sx: &SCROLL_AREA_BASE_SX,
-            // Chromium makes a scrollable `overflow: auto` region with actual
-            // overflowing content an implicit tab stop of its own (arrow-key/
-            // Page-Down scrolling) unless opted out - always true here since
-            // scrolling is this component's entire purpose, and its content
-            // is expected to carry its own focusable elements already.
+            // Chromium makes an overflowing `overflow: auto` region an
+            // implicit tab stop unless opted out. Always the case here, and
+            // the content carries its own focusable elements.
             tabindex: "-1",
             attributes: props.attributes,
             onscroll,
@@ -285,8 +276,7 @@ mod tests {
         assert_eq!(scroll_area_variables(None).to_string(), "");
     }
 
-    /// A bare `Size` has no scale to resolve against here, so it drops out
-    /// rather than emitting something meaningless.
+    /// A bare `Size` has no scale here, so it drops out.
     #[test]
     fn an_unresolvable_value_emits_no_variable() {
         let size = ThemeAwareValue::Size(Size::Md);

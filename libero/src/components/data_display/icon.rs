@@ -22,19 +22,12 @@ str_enum! {
 
 input_from_str!(IconVariant);
 
-// Matches Button's own default shade - bold enough to read as a filled badge
-// rather than the library-wide default (5).
+// Matches Button's shade: bold enough to read as a filled badge.
 
-// A bare theme color name (e.g. "primary") has no shade of its own, so it's
-// resolved to our own default shade here rather than the sx pipeline's
-// generic default (5). Anything else - an explicit shade/contrast, or a
-// literal value like "red"/#123456/rgb(...) - passes through unchanged and
-// is resolved by the normal sx-to-css pipeline. Only a genuinely unset
-// `color` falls back to the library's default color.
-/// Structural chrome for `variant`, referencing `color_var`/`contrast_var`
-/// (a `var()` name each, not a resolved value) - shared with `ActionIcon`,
-/// which reuses this exact shape under its own var names since it builds
-/// directly on `Icon`'s own variant styling.
+// A bare color name carries no shade, so it takes the default above rather
+// than the sx pipeline's generic one. Everything else passes through.
+/// Structural chrome for `variant`. The arguments are `var()` names, not
+/// resolved values, so `ActionIcon` reuses this under its own.
 pub(crate) fn icon_variant_sx(
     variant: IconVariant,
     color_var: &CssVar,
@@ -92,7 +85,7 @@ fn icon_variables(props: &IconProps) -> Variables {
 
 base_props! {
     pub struct IconProps {
-        /// Which element to render as - `span` by default.
+        /// Element to render as; `span` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
         #[props(default, into)]
@@ -107,9 +100,8 @@ base_props! {
     }
 }
 
-/// Wraps an svg child in a sized, colored badge. `color` sets the
-/// container's CSS `color`, which any child svg using `currentColor` for its
-/// fill/stroke - the convention most icon sets follow - then inherits.
+/// Wraps an svg child in a sized, colored badge. `color` sets the container's
+/// CSS `color`, which a `currentColor` svg then inherits.
 #[component]
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
@@ -169,8 +161,7 @@ mod tests {
         assert!(variables.contains(ICON_CONTRAST_VAR.name()));
     }
 
-    /// A literal has no theme shade behind it, so there's no contrast to
-    /// pair with it and the variable stays unset.
+    /// A literal has no theme shade, so no contrast to pair with it.
     #[test]
     fn a_literal_color_emits_no_contrast() {
         let variables = icon_variables(&icon_props("#123456".into())).to_string();

@@ -12,10 +12,8 @@ pub const FLEX_ROW_JUSTIFY: CssVar = CssVar::new("--lsx-flex-row-justify");
 pub const FLEX_ROW_SPACING: CssVar = CssVar::new("--lsx-flex-row-spacing");
 pub const FLEX_ROW_WRAP: CssVar = CssVar::new("--lsx-flex-row-wrap");
 
-// Per-instance overrides, set directly in the element's `style` attribute
-// (see `Variables`) rather than baked into a generated class - `default_sx`
-// references these with a fallback to the axis's own theme default, so an
-// override never needs a new class/stylesheet entry of its own.
+// Set in the element's `style`, not baked into a class. `default_sx` falls
+// back to the axis's theme default, so an override mints no new class.
 pub const FLEX_ALIGN_VAR: CssVar = CssVar::new("--lsx-flex-align");
 pub const FLEX_JUSTIFY_VAR: CssVar = CssVar::new("--lsx-flex-justify");
 pub const FLEX_WRAP_VAR: CssVar = CssVar::new("--lsx-flex-wrap");

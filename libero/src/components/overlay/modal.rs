@@ -16,12 +16,9 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
         .z_index(MODAL_Z_INDEX_VAR.value())
 });
 
-// Fixed + inset (not just relative) so it spans the full viewport itself:
-// Dialog's start/end margin:auto trick needs real free space on this flex
-// container to push against, not just Modal's root. pointer-events:none so
-// clicks in its empty area (outside the actual content) fall through to
-// Overlay beneath instead of being swallowed by this full-viewport div;
-// the content itself restores pointer-events:auto.
+// Fixed + inset so it spans the viewport: `Dialog`'s `margin:auto` needs real
+// free space on this flex container to push against. `pointer-events:none` so
+// clicks in the empty area reach the `Overlay` below; the content restores it.
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
@@ -41,9 +38,9 @@ base_props! {
 }
 
 /// A focus-trapped, dimmed layer that locks scroll and stacks above earlier
-/// modals. You control its existence by conditionally rendering it; closing
-/// (Escape/backdrop) is requested via `onclose`, not self-removal. Descendants
-/// close it via [`crate::hooks::use_modal_context`].
+/// modals. Render it conditionally - Escape/backdrop only *request* a close
+/// via `onclose`. Descendants close it via
+/// [`crate::hooks::use_modal_context`].
 ///
 /// No opinion on content - pass `role`/`aria-modal`/`aria-label` yourself.
 #[component]
@@ -55,9 +52,9 @@ pub fn Modal(props: ModalProps) -> Element {
     let z_index = use_modal_z_index();
     let variables = variables().with(MODAL_Z_INDEX_VAR, z_index.to_string());
 
-    // Deferred to the next microtask: closing synchronously (from an event
-    // still bubbling through the modal being torn down) can re-enter the
-    // same `EventHandler` and panic with `AlreadyBorrowedMut`.
+    // Deferred a microtask: closing synchronously from an event still
+    // bubbling through the torn-down modal re-enters the same `EventHandler`
+    // and panics with `AlreadyBorrowedMut`.
     let onclose = props.onclose;
     let close = move || {
         spawn(async move {

@@ -1,8 +1,8 @@
 use super::{ColorCss, NamedColorCss, ShadeRamp};
 
-/// How a [`Color`] names its CSS custom properties, as `(own, contrast)`: a
-/// palette color has a 9-shade var per role, black/white have exactly one
-/// var each and are each other's contrast.
+/// How a [`Color`] names its custom properties, as `(own, contrast)`. Palette
+/// colors get a 9-shade var per role; black/white get one each and are each
+/// other's contrast.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) enum ColorVars {
     Palette(ColorCss, ColorCss),
@@ -47,8 +47,7 @@ impl Color {
         }
     }
 
-    /// The single table mapping a color to its CSS var names - every
-    /// shade/contrast, name/value lookup goes through this.
+    /// Every shade/contrast and name/value lookup goes through here.
     pub(crate) const fn vars(self) -> ColorVars {
         match self {
             Self::Primary => ColorVars::Palette(ColorCss::PRIMARY, ColorCss::PRIMARY_CONTRAST),

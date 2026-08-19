@@ -8,10 +8,7 @@ use crate::{
 
 static TITLE_BASE_SX: StaticSx = StaticSx::new(|| TitleDefaults::theme_vars().margin("0"));
 
-/// The heading tag `size` implies by default - `Xxl` is h1 (the largest,
-/// most prominent), down to `Xs` as h6. Override via `component` to keep a
-/// size's visual weight while using a different semantic tag, e.g. to
-/// preserve a page's h1->h2->h3 a11y heading order.
+/// `Xxl` is h1, down to `Xs` as h6.
 fn default_component(size: Size) -> HtmlTag {
     match size {
         Size::Xxl => HtmlTag::H1,
@@ -27,10 +24,8 @@ base_props! {
     pub struct TitleProps {
         #[props(default, into)]
         size: Input<Size>,
-        /// Which element to render as - defaults to `size`'s own heading tag
-        /// (see `default_component`). Override to keep `size`'s visual
-        /// weight while using a different semantic tag, e.g. to preserve a
-        /// page's h1->h2->h3 a11y heading order.
+        /// Defaults to `size`'s heading tag. Override to keep a size's visual
+        /// weight under a different tag, preserving h1->h2->h3 order.
         #[props(default, into)]
         component: Input<HtmlTag>,
         children: Element,

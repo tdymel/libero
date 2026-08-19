@@ -6,19 +6,17 @@ pub const Z_INDEX_FLOAT: CssVar = CssVar::new("--lsx-z-index-float");
 pub const Z_INDEX_OVERLAY: CssVar = CssVar::new("--lsx-z-index-overlay");
 pub const Z_INDEX_MODAL: CssVar = CssVar::new("--lsx-z-index-modal");
 
-/// The library's stacking order, in one place so two components can't tie.
+/// The library's stacking order in one place, so two components can't tie.
 /// Gaps of 100 leave room to slot a layer in without renumbering.
 ///
-/// Plain integers rather than CSS-var-only values because `ModalHost` does
-/// the `modal + n * modal_step` arithmetic in Rust; the vars are published
-/// too, so a caller's own `sx` can sit on the same scale.
+/// Plain integers because `ModalHost` computes `modal + n * modal_step` in
+/// Rust; the vars are published too, for a caller's own `sx`.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ZIndexDefaults {
     pub header: i32,
     pub float: i32,
     pub overlay: i32,
-    /// The first modal's z-index; each further modal opened on top of it
-    /// gets `modal_step` more.
+    /// The first modal's z-index; each one above adds `modal_step`.
     pub modal: i32,
     pub modal_step: i32,
 }

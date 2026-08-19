@@ -1,15 +1,11 @@
-/// A single match, as byte offsets into the UTF-8 text that was searched -
-/// callers never need to think about the underlying engine's own string
-/// representation (native `regex` uses UTF-8 byte offsets already; the
-/// browser engine's UTF-16 code-unit offsets are converted before this type
-/// is ever built).
+/// A single match, always as UTF-8 byte offsets - the browser engine's UTF-16
+/// code-unit offsets are converted before this type is built.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct RegexMatch {
     pub(crate) start: usize,
     pub(crate) end: usize,
-    /// 1-indexed capture group spans - `groups[0]` is group 1, etc. Used to
-    /// emulate lookbehind/lookahead (see `PatternDef` in `highlight.rs`):
-    /// neither regex engine needs real lookaround support because of it.
+    /// 1-indexed group spans (`groups[0]` is group 1). Used to emulate
+    /// lookaround, which neither engine supports - see `highlight.rs`.
     groups: Vec<Option<(usize, usize)>>,
 }
 
@@ -20,14 +16,12 @@ impl RegexMatch {
     }
 }
 
-/// Finds the leftmost match of `pattern` in `text`. Patterns are restricted
-/// to syntax both implementations understand - no lookaround assertions or
-/// backreferences (native `regex` supports neither); lookbehind/lookahead-
-/// style behavior goes through `PatternDef`'s group-index flags instead,
-/// same convention Prism itself uses for lookbehind.
+/// Finds the leftmost match of `pattern` in `text`. Patterns must use syntax
+/// both engines understand - no lookaround or backreferences; `PatternDef`'s
+/// group-index flags stand in, the same convention Prism uses.
 ///
-/// `pattern` is `&'static str` because every compiled pattern is cached
-/// under its identity for the process' lifetime - see [`CompiledKey`].
+/// `pattern` is `&'static str` so it can key the compile cache by identity -
+/// see [`CompiledKey`].
 pub(crate) trait RegexApi {
     fn find(&self, pattern: &'static str, case_insensitive: bool, text: &str)
     -> Option<RegexMatch>;
@@ -46,11 +40,9 @@ impl RegexApi for PlatformRegexApi {
     }
 }
 
-/// Identifies a compiled regex without hashing the pattern body: every
-/// pattern reaching here is a `&'static str` from a `const` grammar in
-/// `languages/`, so its address and length already identify it uniquely.
-/// The flag is part of the key because case-insensitivity is baked into the
-/// compiled form on both engines.
+/// Identifies a compiled regex without hashing its body: every pattern comes
+/// from a `const` grammar, so address and length identify it. The flag is part
+/// of the key because both engines bake it into the compiled form.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct CompiledKey {
     pattern: *const u8,
@@ -70,18 +62,15 @@ impl CompiledKey {
 
 static PLATFORM_REGEX_API: PlatformRegexApi = PlatformRegexApi;
 
-/// The current platform's [`RegexApi`] - a plain accessor, not a hook, so
-/// it's callable from anywhere.
+/// Not a hook, so it's callable from anywhere.
 pub(crate) fn regex_api() -> &'static dyn RegexApi {
     &PLATFORM_REGEX_API
 }
 
 #[cfg(target_arch = "wasm32")]
 thread_local! {
-    /// Compiled `RegExp` objects, keyed by pattern identity. Safe to reuse
-    /// across calls: no `g`/`y` flag, so `exec` carries no `lastIndex` state
-    /// from one call to the next. Single-threaded target, hence `thread_local`
-    /// rather than a lock.
+    /// Reuse is safe: no `g`/`y` flag, so `exec` carries no `lastIndex`
+    /// between calls. `thread_local` because the target is single-threaded.
     static REGEXP_CACHE: std::cell::RefCell<
         std::collections::HashMap<CompiledKey, js_sys::RegExp>,
     > = std::cell::RefCell::new(std::collections::HashMap::new());
@@ -94,9 +83,8 @@ fn cached_regexp(pattern: &'static str, case_insensitive: bool) -> js_sys::RegEx
             .borrow_mut()
             .entry(CompiledKey::new(pattern, case_insensitive))
             .or_insert_with(|| {
-                // "d" (hasIndices) surfaces per-group code-unit spans via
-                // `.indices`, needed to locate lookbehind/lookahead
-                // reference groups.
+                // "d" surfaces per-group spans via `.indices`, which is how
+                // lookaround reference groups get located.
                 let flags = if case_insensitive { "di" } else { "d" };
                 js_sys::RegExp::new(pattern, flags)
             })
@@ -146,9 +134,7 @@ fn group_span(indices: &js_sys::Array, group: u32) -> Option<(usize, usize)> {
     Some((start, end))
 }
 
-/// JS string indices are UTF-16 code-unit offsets - walk `text`'s chars,
-/// accumulating both encodings in lockstep, until the UTF-16 count reaches
-/// `offset`.
+/// JS offsets are UTF-16 code units; walk both encodings in lockstep.
 #[cfg(target_arch = "wasm32")]
 fn utf16_to_byte_offset(text: &str, offset: usize) -> usize {
     let mut utf16_count = 0usize;
@@ -163,14 +149,12 @@ fn utf16_to_byte_offset(text: &str, offset: usize) -> usize {
 
 #[cfg(not(target_arch = "wasm32"))]
 thread_local! {
-    /// Compiled regexes, keyed by pattern identity. Compilation dominates
-    /// matching by orders of magnitude, and `highlight.rs` re-runs the same
-    /// handful of patterns across every untokenized span of a code block, so
-    /// this is what keeps highlighting off an O(patterns x spans) compile path.
+    /// Compilation dominates matching by orders of magnitude, and
+    /// `highlight.rs` re-runs the same patterns over every untokenized span -
+    /// without this, highlighting is O(patterns x spans) compiles.
     ///
-    /// Unbounded on purpose: the pattern set is closed (the `const` grammars of
-    /// whichever `code-lang-*` features are compiled in), so the map reaches a
-    /// fixed size and stops growing.
+    /// Unbounded on purpose: the pattern set is closed (`const` grammars), so
+    /// the map reaches a fixed size.
     static REGEX_CACHE: std::cell::RefCell<
         std::collections::HashMap<CompiledKey, regex::Regex>,
     > = std::cell::RefCell::new(std::collections::HashMap::new());

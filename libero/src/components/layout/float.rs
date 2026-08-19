@@ -53,19 +53,15 @@ fn float_variables(props: &FloatProps) -> Variables {
 
 base_props! {
     pub struct FloatProps {
-        /// Anchor corner/edge, e.g. `"top-start"` - defaults to the theme's
-        /// `float.placement` setting.
+        /// Anchor corner/edge, e.g. `"top-start"`.
         #[props(default, into)]
         placement: Input<Placement>,
-        /// Shift along the horizontal axis - defaults to the theme's
-        /// `float.offset_x` setting.
+        /// Shift along the horizontal axis.
         #[props(default, into)]
         offset_x: Input<ThemeAwareValue>,
-        /// Shift along the vertical axis - defaults to the theme's
-        /// `float.offset_y` setting.
+        /// Shift along the vertical axis.
         #[props(default, into)]
         offset_y: Input<ThemeAwareValue>,
-        /// Defaults to the theme's `z_index.float` setting.
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
         children: Element,

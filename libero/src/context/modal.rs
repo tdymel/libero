@@ -27,9 +27,9 @@ pub struct ModalContext {
 }
 
 impl ModalContext {
-    /// Deferred to the next microtask: closing synchronously (from a click
-    /// still bubbling through the modal being torn down) can re-enter the
-    /// same `EventHandler` and panic with `AlreadyBorrowedMut`.
+    /// Deferred a microtask: closing synchronously from a click still
+    /// bubbling through the torn-down modal re-enters the same
+    /// `EventHandler` and panics with `AlreadyBorrowedMut`.
     pub fn close(&self) {
         let onclose = self.onclose;
         spawn(async move {

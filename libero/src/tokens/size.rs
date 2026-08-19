@@ -46,9 +46,8 @@ impl Size {
         }
     }
 
-    /// The `data-state` token representing this size - `"size-md"` etc.
-    /// For components that gate size-specific CSS behind
-    /// `[data-state~="..."]` instead of generating a new class per size.
+    /// This size's `data-state` token, e.g. `"size-md"` - for gating
+    /// size-specific CSS instead of minting a class per size.
     pub const fn state_name(&self) -> &'static str {
         match self {
             Self::Xs => "size-xs",
@@ -60,11 +59,9 @@ impl Size {
         }
     }
 
-    /// Same as [`state_name`](Self::state_name), but for a `radius` prop
-    /// that scales independently of a component's own `size` (e.g.
-    /// `Select`'s `radius` defaults to matching `size` but can be
-    /// overridden separately) - a distinct token namespace so both can be
-    /// present on the same element without colliding.
+    /// [`state_name`](Self::state_name) in a separate namespace, so a
+    /// `radius` that scales independently of `size` can sit on the same
+    /// element without colliding.
     pub const fn radius_state_name(&self) -> &'static str {
         match self {
             Self::Xs => "radius-xs",

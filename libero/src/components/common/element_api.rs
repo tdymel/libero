@@ -1,18 +1,15 @@
 use crate::components::common::PlatformError;
 
-/// An element's rendered pixel size (`getBoundingClientRect`'s
-/// `width`/`height`) - e.g. for converting a drag delta into a fraction of
-/// the element it's dragging across.
+/// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Dimensions {
     pub width: f64,
     pub height: f64,
 }
 
-/// A single resolved, currently-valid element - obtained only via
+/// A resolved element, valid only for the call that produced it. Obtained via
 /// [`DomApi::query_selector`](crate::components::common::DomApi::query_selector)
-/// or another `ElementApi`'s own scoped queries, never held past the call
-/// that produced it.
+/// or another `ElementApi`'s scoped queries - never stored.
 pub trait ElementApi {
     fn focus(&self) -> Result<(), PlatformError>;
     fn blur(&self) -> Result<(), PlatformError>;
@@ -24,30 +21,24 @@ pub trait ElementApi {
     /// This element's rendered pixel size.
     fn dimensions(&self) -> Result<Dimensions, PlatformError>;
 
-    /// This element's total scrollable content size (`scrollWidth`/
-    /// `scrollHeight`) - e.g. for converting a scroll percent into a pixel
-    /// offset.
+    /// Total scrollable content size (`scrollWidth`/`scrollHeight`).
     fn scroll_size(&self) -> Result<Dimensions, PlatformError>;
 
-    /// This element's current scroll offset, in pixels (`scrollLeft`,
-    /// `scrollTop`).
+    /// Current scroll offset in pixels (`scrollLeft`, `scrollTop`).
     fn scroll_offset(&self) -> Result<(f64, f64), PlatformError>;
 
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 
-    /// Routes every further event from `pointer_id` to this element until
-    /// the pointer is released - so a drag keeps tracking once the pointer
-    /// leaves the element, and still delivers its `pointerup`. Released
-    /// automatically on `pointerup`/`pointercancel`, hence no counterpart.
+    /// Routes further events from `pointer_id` here, so a drag keeps tracking
+    /// once the pointer leaves and still gets its `pointerup`. Released
+    /// automatically, hence no counterpart.
     fn set_pointer_capture(&self, pointer_id: i32) -> Result<(), PlatformError>;
 
-    /// Finds the first descendant matching `selector`, scoped to this
-    /// element's own subtree.
+    /// First descendant matching `selector`.
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError>;
 
-    /// Finds every descendant matching `selector`, in DOM order, scoped to
-    /// this element's own subtree.
+    /// Every descendant matching `selector`, in DOM order.
     fn query_selector_all(&self, selector: &str)
     -> Result<Vec<Box<dyn ElementApi>>, PlatformError>;
 }

@@ -1,10 +1,8 @@
 //! Small port of https://github.com/PrismJS/prism/blob/v2/src/languages/prism-css.js
 //!
-//! Known simplification: `property` matches any identifier immediately
-//! followed by `:` anywhere in the source, not just inside a declaration
-//! block - real Prism scopes this via a nested `{...}`-block grammar. Rare
-//! to matter in practice (would only misfire on an unquoted `word:` inside
-//! e.g. a `url(...)` value).
+//! Simplification: `property` matches an identifier followed by `:` anywhere,
+//! not just inside a declaration block, where Prism uses a nested `{...}`
+//! grammar. Only misfires on an unquoted `word:` inside e.g. `url(...)`.
 
 use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenRule};
 

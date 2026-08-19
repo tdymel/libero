@@ -78,8 +78,8 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "horizontal && label",
-            // "horizontal" is unconditional (see below), so it also matches here;
-            // these two properties out-specificity and override its border/height.
+            // "horizontal" is unconditional and also matches here; these two
+            // out-specificity its border/height.
             sx().border_bottom("0")
                 .height("auto")
                 .width("100%")
@@ -91,8 +91,8 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
                 .align_self("stretch")
                 .selector("&::before, &::after", sx().width("1px")),
         )
-        // Only meaningful together with "label" - out-specificities the
-        // "label" block's own even-flex ::before/::after above.
+        // Only with "label" - out-specificities its even-flex
+        // ::before/::after above.
         .when(
             "label && label-start",
             sx().selector("&::before", sx().flex("0 0 10%"))
@@ -210,8 +210,7 @@ mod tests {
         );
     }
 
-    /// Only a bare `Color` gets tinted - an explicit shade is passed through
-    /// as the caller wrote it.
+    /// Only a bare `Color` is tinted; an explicit shade passes through.
     #[test]
     fn an_explicit_color_value_is_left_alone() {
         let color = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S9));

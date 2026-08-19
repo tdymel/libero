@@ -1,9 +1,8 @@
 //! A small port of Prism (https://prismjs.com)'s tokenizing engine.
-//! Simplified relative to upstream Prism: matching only ever happens within
-//! text a higher-priority rule hasn't already claimed (no "greedy" carry
-//! across already-tokenized siblings) - the common case for the hand-ported
-//! grammars in `languages/`, at the cost of Prism's rarer cross-token
-//! greedy-rematch behavior.
+//!
+//! Simplified: matching only happens within text no higher-priority rule has
+//! claimed, dropping Prism's rarer greedy rematch across already-tokenized
+//! siblings. The hand-ported grammars in `languages/` don't need it.
 
 #[cfg(feature = "wasm-split")]
 use dioxus::wasm_split;
@@ -13,9 +12,8 @@ use crate::components::common::{RegexMatch, regex_api};
 
 use super::language_catalog::LANGUAGE_CATALOG;
 
-/// A language recognized by [`LANGUAGE_CATALOG`] - always has a grammar,
-/// since the catalog only lists languages actually ported and compiled in
-/// (gated by their own `code-lang-*` Cargo feature).
+/// Always has a grammar: the catalog only lists languages compiled in by
+/// their `code-lang-*` feature.
 #[derive(Clone, Copy)]
 pub struct Language(&'static super::language_catalog::LanguageEntry);
 
@@ -51,8 +49,7 @@ impl Language {
     }
 }
 
-/// Unrecognized input means "don't highlight", not "guess" - resolves to
-/// `Input::None` rather than defaulting to some language.
+/// Unrecognized input means "don't highlight", not "guess a language".
 impl From<&str> for Input<Language> {
     fn from(value: &str) -> Self {
         Language::parse(value)
@@ -67,26 +64,20 @@ impl From<String> for Input<Language> {
     }
 }
 
-/// A single alternative pattern for a [`TokenRule`]. Built via the `new` +
-/// chained setters below, e.g. `PatternDef::new(r"//.*").greedy()`.
+/// One alternative pattern for a [`TokenRule`], e.g.
+/// `PatternDef::new(r"//.*").greedy()`.
 pub(crate) struct PatternDef {
     pattern: &'static str,
     case_insensitive: bool,
-    /// This group is a lookbehind stand-in - matched but not part of the
-    /// token, stripped off the start. Same convention Prism itself uses, so
-    /// neither regex engine needs real lookbehind support.
+    /// Lookbehind stand-in: matched, then stripped off the token's start.
+    /// Prism's own convention, so neither engine needs real lookbehind.
     lookbehind_group: Option<usize>,
-    /// This group is a lookahead stand-in - matched (so the pattern can
-    /// assert on what follows, e.g. a CSS property name asserting a
-    /// trailing `:`, or markdown's closing `**`) but not part of the token;
-    /// the token ends where this group starts instead of at the full
-    /// match's end. Neither regex engine needs real lookahead support
-    /// because of this.
+    /// Lookahead stand-in: matched so the pattern can assert on what follows
+    /// (a CSS property's trailing `:`), but the token ends where this group
+    /// starts rather than at the match's end.
     lookahead_group: Option<usize>,
-    /// Reserved for parity with Prism's grammar shape (kept on ported
-    /// patterns for anyone cross-referencing upstream) - the engine here
-    /// only ever matches within not-yet-tokenized text, so it has no
-    /// separate effect on the result today.
+    /// No effect here - this engine only matches untokenized text. Kept for
+    /// parity when cross-referencing upstream Prism grammars.
     #[allow(dead_code)]
     greedy: bool,
     inside: Option<fn() -> Grammar>,
@@ -137,15 +128,15 @@ impl PatternDef {
     }
 }
 
-/// A named token type and its alternative patterns, tried in the array
-/// order given - matches Prism's own "first pattern to match wins" rule.
+/// A token type and its patterns, tried in array order - Prism's "first
+/// pattern to match wins".
 pub(crate) struct TokenRule {
     pub(crate) name: &'static str,
     pub(crate) patterns: &'static [PatternDef],
 }
 
-/// Rule priority is array order, same as Prism's reliance on object-key
-/// insertion order - earlier rules claim text before later ones see it.
+/// Priority is array order: earlier rules claim text before later ones see
+/// it, as Prism does with object-key insertion order.
 pub(crate) type Grammar = &'static [TokenRule];
 
 enum Token<'a> {
@@ -215,11 +206,9 @@ fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &
         let has_after = !after.is_empty();
         let inserted = replacement.len();
         tokens.splice(index..=index, replacement);
-        // Skip past the leading `before` slice and the tagged token we just
-        // inserted (`before` can't contain an earlier match of this same
-        // pattern - `find` already returned the leftmost one) but land back
-        // on `after`, if any, so later matches of this same pattern still
-        // get found there.
+        // Skip `before` (it can hold no earlier match - `find` returns the
+        // leftmost) and the new token, but land on `after` so later matches
+        // of the same pattern are still found.
         index += inserted - if has_after { 1 } else { 0 };
     }
 }
@@ -240,10 +229,8 @@ fn resolve_span(pattern: &PatternDef, matched: &RegexMatch) -> (usize, usize) {
     (start, end)
 }
 
-/// Prism token name/alias -> the `lsx-tok-*` classes `token_theme.rs`
-/// styles. Not exhaustive - anything unmatched (plain punctuation,
-/// whitespace, operators) stays unstyled, same "good enough, consistent"
-/// tradeoff the old TextMate-scope mapping made.
+/// Prism token name/alias -> the `lsx-tok-*` classes `token_theme.rs` styles.
+/// Deliberately not exhaustive; anything unmatched stays unstyled.
 const TOKEN_CLASSES: &[(&str, &str)] = &[
     ("comment", "lsx-tok-comment"),
     ("string", "lsx-tok-string"),
@@ -279,10 +266,9 @@ fn classify_name(name: &str) -> Option<&'static str> {
 
 pub(crate) type HighlightedLine = Vec<(String, Option<&'static str>)>;
 
-/// Flattens a token tree into `(text, class)` spans - a token's own class
-/// wins over its parent's whenever it maps to a known class (checking
-/// `alias` first, since that's the more specific label when present),
-/// otherwise the span inherits whatever class its ancestor carried.
+/// Flattens a token tree into `(text, class)` spans. A token's own class beats
+/// its parent's when it maps to a known one (`alias` first, being more
+/// specific); otherwise it inherits its ancestor's.
 fn flatten(
     tokens: &[Token<'_>],
     out: &mut Vec<(String, Option<&'static str>)>,
@@ -310,8 +296,7 @@ fn flatten(
     }
 }
 
-/// Same shape as [`highlight`], for when there's no language to color by -
-/// keeps `Code`'s rendering (line numbers included) on one code path.
+/// [`highlight`]'s shape with no language, so `Code` keeps one render path.
 pub(crate) fn plain_lines(source: &str) -> Vec<HighlightedLine> {
     source
         .lines()
@@ -359,9 +344,8 @@ fn split_into_lines(
         }
     }
 
-    // A trailing newline in the source shouldn't produce a trailing empty
-    // line - matches `str::lines()`'s own behavior, which `plain_lines`
-    // (and callers comparing the two paths) rely on.
+    // No trailing empty line from a trailing newline, matching `str::lines()`
+    // and therefore `plain_lines`.
     if source_ends_with_newline && lines.last().is_some_and(Vec::is_empty) {
         lines.pop();
     }
@@ -369,20 +353,16 @@ fn split_into_lines(
     lines
 }
 
-// `#[wasm_split]` drops the item's visibility on wasm32 (it rebuilds the fn
-// from just `item_fn.sig`, which doesn't carry `vis`), so this stays private
-// and `highlight_lazy` below re-exposes it at the visibility callers need.
+// `#[wasm_split]` rebuilds the fn from its signature alone and so drops
+// visibility on wasm32; `highlight_lazy` re-exposes it.
 #[cfg(feature = "wasm-split")]
 #[wasm_split::wasm_split(code_highlighting)]
 async fn highlight_split(source: String, language: Language) -> Vec<HighlightedLine> {
     highlight(&source, language)
 }
 
-/// Same as [`highlight`], but with the `wasm-split` feature on, the
-/// highlighting engine lives in a separate wasm chunk fetched on first call
-/// instead of the main bundle - see `dioxus::wasm_split`. Without that
-/// feature (or on non-wasm32 targets) this is just a plain async call with
-/// nothing split out.
+/// [`highlight`], but under the `wasm-split` feature the engine lives in a
+/// separate chunk fetched on first call. Without it, a plain async call.
 pub(crate) async fn highlight_lazy(source: String, language: Language) -> Vec<HighlightedLine> {
     #[cfg(feature = "wasm-split")]
     return highlight_split(source, language).await;
@@ -399,10 +379,9 @@ mod tests {
         Language::parse(name).unwrap_or_else(|| panic!("{name} should be in LANGUAGE_CATALOG"))
     }
 
-    /// Regression/crash guard across the whole catalog - every grammar must
-    /// tokenize arbitrary text without panicking or hanging (the "start >=
-    /// end" guard in `apply_pattern` is what keeps a pathological pattern
-    /// from looping forever).
+    /// Every grammar must tokenize arbitrary text without panicking or
+    /// hanging - `apply_pattern`'s "start >= end" guard is what stops a
+    /// pathological pattern looping forever.
     #[test]
     fn every_catalog_language_highlights_without_panicking() {
         let sample = "hello_world(123) // a comment \"a string\" 4.5 { } [ ] < > = : ; \n";

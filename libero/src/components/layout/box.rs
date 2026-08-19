@@ -9,29 +9,22 @@ use crate::{
 };
 
 base_props! {
-    // `img`/`a`/`button` cover the non-global attributes callers actually
-    // set on a `Box` (`src`, `alt`, `href`, `target`, `value`, `disabled`).
-    // An attribute name two of them share (or one `GlobalAttributes`
-    // already carries) is ambiguous at the call site, hence the explicit
-    // `alt`/`r#type` fields below - an inherent builder method wins over
-    // both. `referrerpolicy` (`img` and `a`) is unused so far.
+    // Covers the non-global attributes callers set on a `Box`. Names shared
+    // by two of these tags are ambiguous at the call site, hence the explicit
+    // `alt`/`r#type` fields - an inherent builder method wins over both.
     extends(img, a, button);
     pub struct BoxProps {
-        /// CSS custom properties set directly on this element's `style`
-        /// attribute - lets `sx`/`framework_sx` reference a per-instance value
-        /// via `var(--name, fallback)` without generating a new class for every
-        /// distinct value a caller passes.
+        /// Per-instance CSS custom properties on the `style` attribute, so
+        /// `sx` can reference a varying value without a class per value.
         #[props(default, into)]
         variables: Input<Variables>,
         /// Which element to render as - `div` by default.
         #[props(default, into)]
         component: Input<HtmlTag>,
-        /// Framework-layer `Sx` for a component built on top of `Box` (e.g.
-        /// `Divider`'s own base styles), registered alongside `Box`'s own.
+        /// Base styles of a component built on `Box`, on its own CSS layer.
         #[props(default)]
         framework_sx: Option<&'static StaticSx>,
-        /// A raw literal `style` - merged with (not overwritten by) whatever
-        /// `variables` produces, `variables`' declarations first.
+        /// Merged after `variables`, not overwritten by it.
         #[props(default)]
         style: Option<String>,
         #[props(default)]

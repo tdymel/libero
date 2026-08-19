@@ -38,12 +38,11 @@ impl LiberoContext {
 /// The `<style>` nodes for everything registered so far.
 ///
 /// Its own component for two reasons. It subscribes to
-/// `stylesheet_registry_version`, and keeping that read out of
-/// `LiberoProvider` means a component registering CSS re-renders this leaf
-/// instead of the whole app under `{children}`. And `LiberoProvider` renders
-/// it *after* `{children}`: Dioxus renders child scopes eagerly in tree
-/// order, so by the time this runs every descendant has already registered,
-/// and the first pass carries the complete CSS.
+/// `stylesheet_registry_version`, so registering CSS re-renders this leaf
+/// rather than everything under `{children}`. And `LiberoProvider` renders it
+/// *after* `{children}`: child scopes render eagerly in tree order, so by the
+/// time this runs every descendant has registered and the first pass carries
+/// the complete CSS.
 #[component]
 fn StyleOutlet() -> Element {
     let context = use_context::<LiberoContext>();

@@ -119,8 +119,8 @@ mod web {
     }
 }
 
-/// The platform that has no DOM at all - every lookup fails before an
-/// [`ElementApi`] can exist, so no element impl is needed off the web.
+/// No DOM at all: every lookup fails before an [`ElementApi`] can exist, so
+/// no element impl is needed off the web.
 #[cfg(not(target_arch = "wasm32"))]
 struct UnsupportedDomApi;
 
@@ -140,8 +140,7 @@ static DOM_HANDLE: web::WebDomHandle = web::WebDomHandle;
 #[cfg(not(target_arch = "wasm32"))]
 static DOM_HANDLE: UnsupportedDomApi = UnsupportedDomApi;
 
-/// The current platform's [`DomApi`] - a plain accessor, not a hook, so it's
-/// callable from anywhere including event handlers.
+/// Not a hook, so it's callable from anywhere, event handlers included.
 pub fn dom_api() -> &'static dyn DomApi {
     &DOM_HANDLE
 }

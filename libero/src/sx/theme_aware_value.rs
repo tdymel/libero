@@ -13,16 +13,13 @@ pub enum ThemeAwareValue {
     ColorValue(ColorValue),
     CssVar(CssVar),
     BreakpointValue(BreakpointValue),
-    /// A literal `#hex`/`rgb()`/opaque-`rgba()` color - original text (for
-    /// faithful CSS output) paired with its parsed RGB (for contrast
-    /// lookups). A translucent `rgba()` never becomes this variant (see
-    /// `HexColor::parse`) - it falls back to `String` instead.
+    /// A literal color: original text for CSS output, parsed RGB for contrast
+    /// lookups. A translucent `rgba()` stays a `String` instead.
     RawColor(String, HexColor),
 }
 
 impl ThemeAwareValue {
-    /// CSS text for this value. A bare `Size` resolves through `scale`, or
-    /// is `None` when the caller has no scale to offer it.
+    /// CSS text. A bare `Size` needs `scale`, and is `None` without one.
     pub(crate) fn resolve(&self, scale: Option<SizeCss>) -> Option<String> {
         match self {
             Self::String(value) | Self::Number(value) => Some(value.clone()),
@@ -35,11 +32,9 @@ impl ThemeAwareValue {
         }
     }
 
-    /// The contrasting color to draw a focus ring in, when this value is
-    /// used as a `background` whose contrast can actually be determined.
-    /// `None` for anything else (raw CSS we can't parse: named colors,
-    /// `hsl()`, css vars, gradients, ...) - callers should leave the
-    /// existing/inherited value alone in that case rather than clearing it.
+    /// Focus-ring color for this value used as a `background`. `None` when
+    /// the contrast can't be determined (named colors, `hsl()`, vars,
+    /// gradients) - leave the inherited value alone rather than clearing it.
     pub(crate) fn focus_contrast(&self) -> Option<String> {
         match self {
             Self::Color(color) => Some(ColorValue::Contrast(*color, ColorShade::DEFAULT).value()),

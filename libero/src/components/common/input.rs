@@ -34,8 +34,7 @@ impl<T: 'static> Input<T> {
         }
     }
 
-    /// The value if set, else `default` - the `Copy` read, which is most of
-    /// them (`Size`, `HtmlTag`, and every component's own variant enum).
+    /// The value if set, else `default`. The `Copy` read, which is most.
     pub fn copied_or(&self, default: T) -> T
     where
         T: Copy,
@@ -69,8 +68,8 @@ impl Input<ThemeAwareValue> {
     }
 }
 
-/// The `&str`/`String` -> `Input<T>` forwarders for a `str_enum!` type,
-/// which `#[props(into)]` can't chain on its own.
+/// `&str`/`String` -> `Input<T>` for a `str_enum!` type - `#[props(into)]`
+/// can't chain that on its own.
 macro_rules! input_from_str {
     ($ty:ty) => {
         impl From<&str> for $crate::components::Input<$ty> {
@@ -89,8 +88,7 @@ macro_rules! input_from_str {
 
 pub(crate) use input_from_str;
 
-/// The plain `T`/`Option<T>` -> `Input<T>` forwarders, which `#[props(into)]`
-/// can't chain on its own.
+/// `T`/`Option<T>` -> `Input<T>`, which `#[props(into)]` can't chain.
 macro_rules! input_from {
     ($($ty:ty),+ $(,)?) => {
         $(

@@ -1,9 +1,8 @@
 //! Small hand-port of YAML's common syntax.
 //!
-//! Known simplification: `key` matches any identifier immediately followed
-//! by `:` anywhere in the source, not just at the start of a line (the
-//! engine tokenizes the whole document at once, with no per-line anchor
-//! support) - see the same tradeoff noted in `css.rs`.
+//! Simplification: `key` matches an identifier followed by `:` anywhere, not
+//! just at line start - the engine tokenizes the whole document with no
+//! per-line anchors. Same tradeoff as `css.rs`.
 
 use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenRule};
 

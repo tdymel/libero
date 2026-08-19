@@ -7,20 +7,15 @@ use crate::{
     theme::{Color, ColorShade, ColorValue, CssVar},
 };
 
-// A light shade keeps the highlight a background tint rather than a solid
-// fill, so the surrounding text still reads clearly over it. Which color is
-// tinted by default lives in `Theme::mark` (see `MarkDefaults`); only the
-// shade itself is fixed here.
+// Light enough to stay a tint rather than a fill, so text reads over it.
+// Which color gets tinted is `Theme::mark`; only the shade is fixed here.
 const MARK_TINT_SHADE: ColorShade = ColorShade::S1;
 
 const MARK_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-mark-background");
 
-// A bare theme color name (e.g. "primary") has no shade of its own, so it's
-// resolved to our own tint shade here rather than the sx pipeline's generic
-// default (5). Anything else - an explicit shade/contrast, or a literal
-// value like "yellow"/#123456/rgb(...) - passes through unchanged and is
-// resolved by the normal sx-to-css pipeline. Only a genuinely unset `color`
-// falls back to the theme's default.
+// A bare color name carries no shade, so it takes the tint shade rather than
+// the sx pipeline's generic default. Explicit shades and literal values pass
+// through untouched.
 fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) -> ThemeAwareValue {
     match value {
         None => ThemeAwareValue::ColorValue(ColorValue::Shade(default_color, MARK_TINT_SHADE)),
@@ -31,13 +26,9 @@ fn mark_background_color(value: Option<&ThemeAwareValue>, default_color: Color) 
     }
 }
 
-// The browser's own UA stylesheet forces `<mark>` to black text, which would
-// stay illegible against a dark caller-supplied background - `color:inherit`
-// hands text color back to the surrounding context, same as Mantine's Mark
-// leaves it untouched and only ever sets the background. The background
-// itself always resolves to *some* value (default or override), so no
-// fallback is needed on the `var()` reference here - `mark_variables` always
-// sets it.
+// The UA stylesheet forces `<mark>` to black text, illegible on a dark
+// caller-supplied background; `color:inherit` hands it back to the context.
+// No `var()` fallback needed - `mark_variables` always sets the background.
 static MARK_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().color("inherit")
         .background(MARK_BACKGROUND_VAR.value())
@@ -58,10 +49,8 @@ base_props! {
     }
 }
 
-/// Highlights `children` with a themed background tint, rendered as a real
-/// `<mark>`. `color` picks the tint (any theme color or literal value);
-/// unset falls back to a light shade of the theme's default (`Theme::mark`,
-/// `warning` out of the box).
+/// A real `<mark>` with a themed background tint. `color` takes any theme
+/// color or literal value; unset uses a light shade of `Theme::mark`.
 #[component]
 pub fn Mark(props: MarkProps) -> Element {
     let theme = use_theme();

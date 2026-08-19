@@ -1,7 +1,6 @@
-//! The vocabulary CSS values are written in - sizes, colors and the CSS
-//! custom properties naming them. Sits *below* [`crate::sx`] (which needs
-//! these types to type its values) and knows nothing about `Theme`, which
-//! sits above `sx` and configures what these tokens resolve to.
+//! The vocabulary CSS values are written in: sizes, colors, and the custom
+//! properties naming them. Below [`crate::sx`], which types its values with
+//! these, and knows nothing of `Theme`, which sits above `sx`.
 
 mod color;
 mod color_shade;

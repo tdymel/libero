@@ -15,12 +15,10 @@ use crate::{
     theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, CssVar, Size},
 };
 
-// `Input<NavigationTarget>` rather than a bare required field (like
-// `Anchor`'s `to`), since a Button is only a link when this is actually set -
-// costs the ergonomic direct `to: Route::Foo {}` Anchor gets (needs
-// `NavigationTarget::from(Route::Foo {})` instead), since Dioxus's
-// `#[props(into)]` can't chain a foreign conversion through an `Option`/our
-// own wrapper at once.
+// Optional, since a Button is only a link when set. Costs the direct
+// `to: Route::Foo {}` that `Anchor` gets: `#[props(into)]` can't chain a
+// foreign conversion through a wrapper, so callers need
+// `NavigationTarget::from(..)`.
 input_from_str!(NavigationTarget);
 
 impl From<NavigationTarget> for Input<NavigationTarget> {
@@ -47,15 +45,13 @@ str_enum! {
 
 input_from_str!(ButtonVariant);
 
-// Per-instance values `button_variant_sx` references by name: the resolved
-// `color`, the text color that contrasts against it, and the hover tint.
+// What `button_variant_sx` references by name.
 const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
 const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
 
-/// Structural chrome for `variant`, referencing `color_var`/`contrast_var`/
-/// `hover_var` (a `var()` name each, not a resolved value) - shared with
-/// `ActionIcon`, which reuses this exact shape under its own var names.
+/// Structural chrome for `variant`. The three arguments are `var()` names,
+/// not resolved values, so `ActionIcon` reuses this under its own.
 pub(crate) fn button_variant_sx(
     variant: ButtonVariant,
     color_var: &CssVar,
@@ -112,15 +108,13 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         })
         .when(
             "disabled",
-            // pointer-events: none also stops the variant's :hover styles from
-            // triggering, since a disabled button no longer receives pointer events.
+            // Also stops the variant's `:hover` from ever triggering.
             sx().opacity("0.5")
                 .cursor("not-allowed")
                 .pointer_events("none"),
         )
         .when("full-width", sx().width("100%"))
-        // Only shown for keyboard focus (not on mouse click), since the base
-        // outline is suppressed above and re-added here just for :focus-visible.
+        // The base outline is suppressed above and re-added only here.
         .focus_visible(focus_ring_sx())
 });
 
@@ -140,8 +134,7 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         variant: Input<ButtonVariant>,
-        /// Corner radius - `theme.button.radius` by default, independent
-        /// of `size`.
+        /// Corner radius, independent of `size`.
         #[props(default, into)]
         radius: Input<Size>,
         #[props(default, into)]
@@ -152,9 +145,8 @@ base_props! {
         disabled: Option<bool>,
         #[props(default)]
         onclick: EventHandler<MouseEvent>,
-        /// Renders as a link (router-aware, like `Anchor`) instead of a
-        /// `<button>` when set. No ripple/`onclick` in that case - see the note
-        /// above `is_link` below.
+        /// Renders a router-aware link instead of a `<button>`. No
+        /// ripple/`onclick` then - see `is_link` below.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
@@ -171,7 +163,7 @@ pub fn Button(props: ButtonProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
 
-    // Only one ripple is shown at a time; a new click simply overrides the last one.
+    // One at a time; a new click overrides the last.
     let mut ripple_signal = use_signal(|| None::<Ripple>);
     let mut next_ripple_id = use_signal(|| 0u64);
 
@@ -214,16 +206,12 @@ pub fn Button(props: ButtonProps) -> Element {
         }
     };
 
-    // `InternalAnchor` has no `onclick`, since ripple only makes sense for a
-    // real <button> - a link-mode Button loses the ripple, and `onclick`
-    // itself is never called, only real navigation happens.
+    // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
+    // real and loses the ripple, which only makes sense on a `<button>`.
     if let Some(to) = props.to.as_ref().cloned() {
-        // A disabled link keeps looking/behaving like a disabled control (it
-        // just doesn't natively support the `disabled` attribute like
-        // <button> does): no `to` at all stops navigation entirely,
-        // `aria-disabled`/`tabindex` keep it out of the a11y tree and tab
-        // order. Can't go through `InternalAnchor` for this - it always
-        // resolves to a real, working link.
+        // `<a>` has no native `disabled`: dropping `to` stops navigation,
+        // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
+        // `InternalAnchor` can't do this - it always resolves a real link.
         if disabled {
             return rsx! {
                 Box {
@@ -279,8 +267,7 @@ mod tests {
     use super::*;
     use crate::tokens::{Color, ColorShade, ColorValue};
 
-    /// `Button` always passes `base_color`'s output, which has turned a bare
-    /// theme color into an explicit shade by this point.
+    /// `Button` passes `base_color`'s output, already an explicit shade.
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
@@ -311,8 +298,8 @@ mod tests {
         )));
     }
 
-    /// A color we can't reason about has no contrast to compute, so the
-    /// variable is left unset and the class's own fallback applies.
+    /// No computable contrast, so the var stays unset and the class's own
+    /// fallback applies.
     #[test]
     fn an_unparseable_color_emits_no_contrast() {
         let base = ThemeAwareValue::String("gold".to_string());

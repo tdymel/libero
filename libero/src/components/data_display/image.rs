@@ -46,9 +46,7 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-// Only ever rendered while `zoomed` is true (it's the button inside the
-// zoomed overlay itself), so its cursor is a fixed "zoom-out" - not a
-// per-instance dynamic value.
+// Only rendered while zoomed, so its cursor is a fixed "zoom-out".
 static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .position("relative")
@@ -92,9 +90,8 @@ base_props! {
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
     let mut zoomed = use_signal(|| false);
-    // Hoisted above the non-zoomable early return, and paired with the
-    // `use_portal(None)` below it: hook slots are positional, so both paths
-    // have to reach the same hooks in the same order.
+    // Hoisted above the early return and paired with the `use_portal(None)`
+    // below: hook slots are positional, so both paths must match.
     let mut focus_return = use_focus_return();
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());

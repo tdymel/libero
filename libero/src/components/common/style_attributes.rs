@@ -5,19 +5,16 @@ use crate::{
     sx::{StaticSx, Sx},
 };
 
-/// The class / `data-state` / `style` triple every element built from our
-/// styling props ends up rendering.
+/// The class / `data-state` / `style` triple the styling props resolve to.
 pub(crate) struct StyleAttributes {
     pub class: ClassList,
     pub data_state: Option<String>,
     pub style: Option<String>,
 }
 
-/// Resolves the styling props shared by every `Box`-shaped component into
-/// what the DOM actually needs.
+/// Resolves the styling props every `Box`-shaped component shares.
 ///
-/// Three `use_css` calls, so it is a hook: call it unconditionally, before
-/// any early return.
+/// Three `use_css` calls, so it is a hook: call it before any early return.
 pub(crate) fn use_style_attributes(
     class: &Input<ClassList>,
     framework_sx: Option<&'static StaticSx>,
@@ -52,9 +49,7 @@ pub(crate) fn use_style_attributes(
     }
 }
 
-// Only ever shows up for an element that received a tabindex (e.g. because it
-// was made clickable via `onclick`), since a plain div isn't keyboard-
-// focusable on its own - but an `<a href>` is, which is why it is shared
-// here rather than living in `Box` alone.
+// Shared rather than living in `Box`: a plain div only reaches this once it
+// has a tabindex, but an `<a href>` is focusable on its own.
 static BOX_FOCUS_SX: StaticSx =
     StaticSx::new(|| crate::sx::sx().focus_visible(super::focus_ring_sx()));

@@ -7,22 +7,16 @@ use crate::{
 
 base_props! {
     pub struct DataListItemProps {
-        /// The term (`<dt>`) - `sx`/`class`/`attributes`/`states` decorate
-        /// this element specifically, not the whole item (there's no single
-        /// element wrapping a term plus its descriptions).
+        /// The term (`<dt>`). `sx`/`class`/`states` decorate this element
+        /// only - nothing wraps a term together with its descriptions.
         label: Element,
-        /// One or more descriptions (`<dd>`) for `label` - a `<dt>` can have
-        /// any number of `<dd>`s, so this is a `Vec<Element>` rather than a
-        /// single `Element`: writing more than one child here (literally, or
-        /// from a `for` loop) gives each one its own `<dd>`, the same way
-        /// writing them as ordinary rsx! children always has, with no extra
-        /// ceremony over a single description.
+        /// Descriptions for `label`. A `Vec` because a `<dt>` may have any
+        /// number of `<dd>`s - each child gets its own.
         children: Vec<Element>,
     }
 }
 
-/// One entry of a [`DataList`](super::DataList) - a term and its
-/// description(s).
+/// A term and its descriptions, in a [`DataList`](super::DataList).
 ///
 /// ```ignore
 /// DataListItem {

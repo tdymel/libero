@@ -17,14 +17,10 @@ pub fn use_stylesheet(stylesheet: impl Into<Stylesheet>) -> Option<String> {
     use_css(Some(stylesheet), CssLayer::UserCustom)
 }
 
-/// A value [`use_css`] can register. Separates a cheap identity check
-/// (`identity_hash`) from the expensive CSS text build (`build`), so a
-/// render whose `Sx` is unchanged from the last one never has to walk its
-/// entry tree or format any CSS - `Sx::hash` is a cheap structural hash over
-/// the already-in-memory entries, unlike `Stylesheet::hash`, which needs the
-/// rendered text to exist first. That is also why the previous render's
-/// class name is cached in `CssRegistration` rather than recomputed: getting
-/// it from an `Sx` means rendering the CSS.
+/// A value [`use_css`] can register. Splits the cheap identity check from the
+/// expensive CSS build, so an unchanged re-render formats nothing:
+/// `identity_hash` is structural over in-memory entries, where a
+/// `Stylesheet` hash would need the rendered text first.
 pub(crate) trait CssSource {
     fn identity_hash(&self) -> u64;
     fn build(self) -> Stylesheet;
@@ -61,26 +57,19 @@ impl CssSource for Stylesheet {
 }
 
 struct CssRegistration {
-    /// The source's own hash, to detect an unchanged re-render - `None`
-    /// when there was no source at all, which never compares equal to a
-    /// source that is present.
+    /// `None` means no source, which never equals a source that is present.
     identity_hash: Option<u64>,
-    /// The registry's key for this registration - `None` when the source
-    /// built empty CSS and was never registered. Not derived from
-    /// `identity_hash`: that one is structural, the registry keys by
-    /// rendered-CSS hash.
+    /// `None` when the source built empty CSS. Unrelated to `identity_hash` -
+    /// the registry keys by rendered-CSS hash, not structure.
     key: Option<StylesheetKey>,
-    /// The class name handed out last render, cached so an unchanged
-    /// re-render doesn't have to rebuild the CSS to recompute it.
+    /// Cached, because recomputing it from an `Sx` means rendering the CSS.
     class_name: Option<String>,
 }
 
 /// Same as [`use_stylesheet`], but on a caller-chosen layer.
 ///
-/// Takes an `Option` so a caller with nothing to register still calls it
-/// unconditionally: this is three hooks, and Dioxus hook slots are
-/// positional, so branching around the call would hand a later hook the
-/// slot an earlier one used as soon as the condition flips.
+/// Takes an `Option` so a caller with nothing to register still calls it:
+/// hook slots are positional, and this is three of them.
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
     let identity_hash = source.as_ref().map(CssSource::identity_hash);
     let mut context = use_context::<LiberoContext>();
@@ -90,9 +79,7 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
         let mut state_ref = state.borrow_mut();
 
         match state_ref.take() {
-            // Same `Sx` as last render (by content, not identity) - the
-            // registry entry (or lack of one) is already correct, so skip
-            // rebuilding the CSS text entirely.
+            // Same content as last render - the registry is already correct.
             Some(prev) if prev.identity_hash == identity_hash => {
                 let class_name = prev.class_name.clone();
                 *state_ref = Some(prev);
@@ -126,10 +113,9 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
                     class_name: class_name.clone(),
                 });
 
-                // A signal write during render, which is only sound because
-                // `StyleOutlet` renders after `{children}` and so reads this
-                // after every child has registered - that ordering is
-                // load-bearing, not incidental.
+                // A signal write during render, sound only because
+                // `StyleOutlet` renders after `{children}` and so reads it
+                // once every child has registered. Load-bearing ordering.
                 if changed {
                     *context.stylesheet_registry_version.write() += 1;
                 }

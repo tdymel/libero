@@ -29,8 +29,7 @@ base_props! {
     }
 }
 
-/// A CSS pixel length for values with no unit of their own (numbers), passed
-/// through unchanged otherwise (strings, CSS vars).
+/// Bare numbers become `px`; strings and vars pass through.
 fn px_value(value: &ThemeAwareValue) -> Option<String> {
     match value {
         ThemeAwareValue::Number(number) => Some(format!("{number}px")),
@@ -38,8 +37,7 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
     }
 }
 
-/// Dims/blurs whatever is behind it. Callers control whether it exists by
-/// conditionally rendering it, not by passing an `open` flag.
+/// Dims/blurs what's behind it. Render it conditionally - there is no `open`.
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
     let variables = variables()

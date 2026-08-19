@@ -16,9 +16,7 @@ static KBD_BASE_SX: StaticSx = StaticSx::new(|| {
 
 base_props! {
     pub struct KbdProps {
-        /// Font size - `sm` by default. The rest of the look (background,
-        /// border, text color, font family) is theme-only (`Theme::kbd`);
-        /// there's no per-instance color prop.
+        /// Font size. Everything else about the look is `Theme::kbd` only.
         #[props(default, into)]
         size: Input<Size>,
         children: Element,

@@ -3,10 +3,9 @@ use std::fmt::Display;
 use super::{ColorShade, Size};
 use crate::css::CssDeclaration;
 
-/// Suffix marking the per-instance override twin of a themed default var:
-/// `--lsx-icon-size` is what `Theme` declares, `--lsx-icon-size-override`
-/// is what a caller's own prop sets on the element's `style`. Derived, never
-/// spelled out, so the two can't drift apart.
+/// Marks the per-instance twin of a themed var: `Theme` declares
+/// `--lsx-icon-size`, a caller's prop sets `--lsx-icon-size-override`.
+/// Always derived, so the two can't drift apart.
 const OVERRIDE_SUFFIX: &str = "-override";
 
 #[derive(Clone, Debug)]
@@ -15,10 +14,8 @@ pub enum CssVar {
     Owned(String),
 }
 
-// Compared and hashed by name only: the two variants are a storage detail
-// (`override_var` always yields `Owned`, a const always `Static`), so the
-// same custom property must compare equal either way - `Variables` dedupes
-// on it, and `Sx`'s class-name hash has to match for identical CSS.
+// By name only - the variants are a storage detail, but `Variables` dedupes
+// on equality and identical CSS must hash to the same class name.
 impl PartialEq for CssVar {
     fn eq(&self, other: &Self) -> bool {
         self.name() == other.name()
@@ -49,8 +46,8 @@ impl CssVar {
         format!("var({})", self.name())
     }
 
-    /// `var(--name, <fallback>)` - the fallback is CSS text, so pass another
-    /// var's `value()` rather than writing `var(--lsx-...)` by hand.
+    /// `var(--name, <fallback>)`. The fallback is CSS text - pass another
+    /// var's `value()`, don't hand-write `var(--lsx-...)`.
     pub fn value_or(&self, fallback: impl Display) -> String {
         format!("var({}, {fallback})", self.name())
     }
@@ -60,8 +57,7 @@ impl CssVar {
         Self::Owned(format!("{}{OVERRIDE_SUFFIX}", self.name()))
     }
 
-    /// `var(--name-override, var(--name))` - a caller's per-instance value
-    /// if they set one, else the theme's.
+    /// `var(--name-override, var(--name))`: the caller's value, else theme's.
     pub fn overridable(&self) -> String {
         self.override_var().value_or(self.value())
     }
@@ -119,8 +115,7 @@ impl SizeCss {
         format!("var({}{}, {fallback})", self.prefix, size.as_str())
     }
 
-    /// The single per-instance override twin of this whole scale - one var
-    /// for the scale, not one per size (`--lsx-drawer-size-override`).
+    /// One override var for the whole scale, not one per size.
     pub fn override_var(self) -> CssVar {
         CssVar::Owned(format!(
             "{}{}",
@@ -190,11 +185,9 @@ pub struct NamedColorCss {
 impl NamedColorCss {
     pub const BLACK: NamedColorCss = NamedColorCss::new("--lsx-black");
     pub const WHITE: NamedColorCss = NamedColorCss::new("--lsx-white");
-    /// Published by `background()` wherever a color's contrast is known (see
-    /// `ThemeAwareValue::focus_contrast`) - focus rings read it (with a
-    /// fallback) so they contrast against whichever ancestor most recently
-    /// set a background, without either side needing to know about the
-    /// other.
+    /// Published by `background()` when a color's contrast is known, and read
+    /// by focus rings, so a ring contrasts against the nearest ancestor
+    /// background without either side knowing about the other.
     pub const FOCUS_CONTRAST: NamedColorCss = NamedColorCss::new("--lsx-focus-contrast");
 
     pub const fn new(name: &'static str) -> Self {
@@ -235,8 +228,7 @@ mod tests {
         assert_eq!(var.value_or(0), "var(--lsx-icon-color, 0)");
     }
 
-    // The names these derive used to be hand-written literals in each
-    // component; they have to stay byte-identical or the theme's `:root`
+    // These names must stay byte-identical, or the theme's `:root`
     // declaration and the element's override stop meeting.
     #[test]
     fn override_names_match_the_literals_they_replaced() {

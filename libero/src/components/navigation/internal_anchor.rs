@@ -30,13 +30,12 @@ base_props! {
     }
 }
 
-/// Renders `to` as a working link - the router's own `Link` when one is
-/// mounted and `target` allows it (unset or `"_blank"`), else a plain `<a>`.
-/// No `onclick`: only `Button`'s non-link `<button>` case needs a click
-/// handler, and ripple only makes sense for a real button.
+/// `to` as a working link: the router's `Link` when one is mounted and
+/// `target` allows it, else a plain `<a>`. No `onclick` - only `Button`'s
+/// `<button>` case needs one.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
-    // Both branches need it, and it is a hook - so it stays above the return.
+    // A hook both branches need, so it stays above the return.
     let style_attributes = use_style_attributes(
         &props.class,
         props.framework_sx,

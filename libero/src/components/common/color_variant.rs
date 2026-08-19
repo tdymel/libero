@@ -1,18 +1,15 @@
 use crate::sx::ThemeAwareValue;
 use crate::tokens::{Color, ColorShade, ColorValue};
 
-// A bare theme color name (e.g. "primary") has no shade of its own, so it's
-// resolved to this rather than the sx pipeline's generic default (5).
+// A bare color name carries no shade, so it takes this over the sx
+// pipeline's generic default.
 const DEFAULT_SHADE: ColorShade = ColorShade::S6;
 
-// Outlined/text-like variants tint their hover with a fixed light shade
-// instead of darkening, since their resting background is transparent.
+// Transparent at rest, so these tint on hover instead of darkening.
 const HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
 
-/// Resolves a `color` prop into the base color a filled/outlined/plain
-/// variant is built from. Anything but a bare theme color name - an explicit
-/// shade/contrast, or a literal like `"red"`/`#123456`/`rgb(...)` - passes
-/// through unchanged for the normal sx-to-css pipeline to resolve.
+/// The base color a filled/outlined/plain variant is built from. Anything but
+/// a bare theme color name passes through untouched.
 pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     match value {
         None => ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, DEFAULT_SHADE)),
@@ -23,8 +20,8 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     }
 }
 
-/// The auto-contrast text color to pair with `base` - only a resolved theme
-/// shade has a precomputed contrast var; a literal color has none.
+/// Auto-contrast text for `base`. `None` for a literal color, which has no
+/// precomputed contrast var.
 pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
     match base {
         ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) => Some(
@@ -34,9 +31,8 @@ pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> 
     }
 }
 
-/// The hover color for `base` - a darker shade when the variant already
-/// paints `base` as its background, a fixed light tint otherwise. `None` for
-/// a literal/raw base, which has no theme shade to derive either from.
+/// Hover color for `base`: darker when `base` is already the background, a
+/// light tint otherwise. `None` for a literal base, which has no shade scale.
 pub(crate) fn hover_color(base: &ThemeAwareValue, filled: bool) -> Option<String> {
     let ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) = base else {
         return None;

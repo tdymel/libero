@@ -34,13 +34,11 @@
 /// // ImageFit::ScaleDown.state_name() == "fit-scale-down"
 /// ```
 ///
-/// Pair it with `input_from_str!` in the component that takes the enum as a
-/// prop - the two are separate because some of these live in `theme`, which
-/// can't reach up to `components::Input`.
+/// Pair with `input_from_str!` in the component taking the prop. Separate
+/// macros because some of these live in `theme`, which can't reach up to
+/// `components::Input`.
 macro_rules! str_enum {
-    // Joins the prefix to each canonical spelling at compile time -
-    // `state_name` has to stay a `&'static str`, since that is what
-    // `States::with` takes.
+    // Joined at compile time: `States::with` needs a `&'static str`.
     (@state_name $name:ident; $prefix:literal; $($variant:ident => $pattern:literal,)+) => {
         impl $name {
             /// This variant's `data-state` token.
@@ -99,11 +97,9 @@ macro_rules! str_enum {
             fn from(value: &str) -> Self {
                 match value.to_lowercase().as_str() {
                     $($pattern $(| $alias)* => Self::$variant,)+
-                    // An unrecognized spelling is an authoring mistake, and
-                    // falling back to the default renders something
-                    // plausible-looking instead of failing - so say so.
-                    // `""` warns like anything else: `Input`'s `None`, not
-                    // an empty string, is how a prop is left unset.
+                    // The default renders something plausible, so a typo is
+                    // otherwise invisible. `""` warns too - a prop is unset
+                    // via `Input`'s `None`, not an empty string.
                     _ => {
                         $crate::utils::warn(&format!(
                             concat!(
@@ -145,8 +141,7 @@ mod tests {
     };
     use crate::theme::{Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 
-    /// Every `str_enum!` type, so the round-trip check below actually covers
-    /// them all - add a new one here when you declare it.
+    /// Add every new `str_enum!` here - the checks below iterate this list.
     macro_rules! for_every_str_enum {
         ($check:ident) => {
             $check!(AnchorUnderline);
@@ -168,9 +163,8 @@ mod tests {
         };
     }
 
-    /// The guard that hand-written `as_str`/`*_token` copies used to need and
-    /// never had: a canonical spelling that no longer parses back to its own
-    /// variant means the enum and its string form have drifted apart.
+    /// A canonical spelling that no longer parses back means the enum and its
+    /// string form have drifted apart.
     #[test]
     fn every_canonical_spelling_parses_back_to_its_own_variant() {
         macro_rules! check {
@@ -192,8 +186,8 @@ mod tests {
         for_every_str_enum!(check);
     }
 
-    /// `ALL` is what the `sx()` folds iterate, so a missing variant would
-    /// silently drop that variant's whole `when(..)` block.
+    /// The `sx()` folds iterate `ALL`, so a duplicate or missing variant
+    /// silently corrupts that variant's `when(..)` block.
     #[test]
     fn all_lists_every_variant_exactly_once() {
         macro_rules! check {

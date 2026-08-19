@@ -73,11 +73,9 @@ fn typeahead_match(order: &[VisibleNode], current: &str, ch: char) -> Option<Str
     })
 }
 
-// Toggles `id` in/out of `expanded` - the one state mutation `Tree` performs
-// on its own behalf (a disclosure toggle is structural, not content). Shared
-// between a branch row's click (in `tree_row`) and the keyboard
-// Enter/Space/Left/Right handling below. Never touches selection - that's
-// entirely `render_node`'s (e.g. a `NavLink`'s) own business now.
+// The one state mutation `Tree` makes on its own behalf, shared between a
+// branch row's click and the keyboard handling. Never touches selection -
+// that belongs to `render_node`.
 pub(super) fn toggle_expanded(
     id: &str,
     mut expanded: Signal<HashSet<String>>,
@@ -91,12 +89,9 @@ pub(super) fn toggle_expanded(
     onexpandedchange.call(next);
 }
 
-// A leaf's own real interactive element (an `<a href>`, a `<button>`) is
-// deliberately kept out of the tab order (see `TreeNodeRenderArgs::tabindex`)
-// so the roving `<li>` stays the only tab stop - which means activating it
-// via keyboard (Enter/Space) can't rely on the browser's native "focused
-// link/button responds to Enter" behavior, since it's never actually
-// focused. This triggers it the same way a real click would instead.
+// A leaf's real link/button is kept out of the tab order (see
+// `TreeNodeRenderArgs::tabindex`), so it is never focused and Enter never
+// reaches it natively. This triggers it the way a click would.
 fn click_tree_item(root_id: &str, target_id: &str) {
     let Ok(root) = dom_api().query_selector(&format!("#{root_id}")) else {
         return;
@@ -105,8 +100,7 @@ fn click_tree_item(root_id: &str, target_id: &str) {
     let _ = root.query_selector(&selector).and_then(|el| el.click());
 }
 
-// Scoped to `root_id` the same way `click_tree_item` is, so multiple `Tree`
-// instances on one page can reuse the same node ids without colliding.
+// Scoped to `root_id`, so two `Tree`s can reuse node ids without colliding.
 fn focus_tree_item(root_id: &str, target_id: &str) {
     let selector = format!("#{root_id} [data-tree-id={target_id:?}]");
     let _ = dom_api()
@@ -126,58 +120,44 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     states: Input<States>,
     #[props(default, into)]
     size: Input<Size>,
-    /// Overrides the gap between rows at every nesting level, independently
-    /// of `size` (indent is untouched). Off-scale values (like a flat `0`)
-    /// go through `sx` instead - see the `& ul` note on `indent`.
+    /// Row gap at every level, independent of `size`. Off-scale values go
+    /// through `sx` - see the `& ul` note on `indent`.
     #[props(default, into)]
     gap: Input<Size>,
-    /// Overrides the per-level indent at every nesting level, independently
-    /// of `size`. To disable it entirely and compute your own offset from
-    /// `render_node`'s `depth`, zero it through `sx` on both the root and
-    /// its nested groups: `sx().padding_left("0").selector("& ul",
-    /// sx().padding_left("0"))`.
+    /// Per-level indent, independent of `size`. To offset from `render_node`'s
+    /// `depth` yourself, zero it on both the root and its nested groups:
+    /// `sx().padding_left("0").selector("& ul", sx().padding_left("0"))`.
     #[props(default, into)]
     indent: Input<Size>,
-    /// Required - WAI-ARIA's tree pattern needs an accessible name on the root.
+    /// Required by WAI-ARIA's tree pattern.
     #[props(into)]
     aria_label: String,
     data: Vec<TreeNode<T>>,
-    /// Renders each visible row's content given its data and live state.
-    /// Defaults to [`default_tree_render`] (plain `tree_label()` text) -
-    /// call that yourself from a custom `render_node` to fall back to it
-    /// selectively, e.g. default rendering for branches, something custom
-    /// (like a `NavLink`) for leaves.
+    /// Each visible row's content. Defaults to [`default_tree_render`], which
+    /// a custom `render_node` can also call to fall back selectively - say,
+    /// default branches and `NavLink` leaves.
     #[props(default = Callback::new(super::tree_node::default_tree_render))]
     render_node: Callback<TreeNodeRenderArgs<T>, Element>,
-    /// Which nodes start expanded - seeds `Tree`'s own internal state once.
-    /// After that, expanded/collapsed is `Tree`'s own business, not the
-    /// caller's - not a controlled prop.
+    /// Seeds `Tree`'s internal state once. Not a controlled prop.
     #[props(default)]
     default_expanded: HashSet<String>,
-    /// Fires whenever the internal expanded set changes, for callers that
-    /// want to observe it (e.g. to force a section open from outside) -
-    /// purely a notification, not what drives rendering.
+    /// Notification only - it doesn't drive rendering.
     #[props(default)]
     onexpandedchange: EventHandler<HashSet<String>>,
 }
 
-/// Thin generic shim: converts `props.data`/`render_node` to their
-/// type-erased form once, then hands off to the non-generic `TreeCore`. Only
-/// this small conversion monomorphizes per `T` - the actual tree machinery
-/// (`TreeCore`, `TreeRow`, keyboard nav) is compiled once regardless of how
-/// many different `T`s callers use (see [[project_wasm_bundle_size_findings]]).
+/// Generic shim: erases `props.data`/`render_node` once, then hands off to the
+/// non-generic `TreeCore`. Only this conversion monomorphizes per `T`; the
+/// tree machinery compiles once.
 ///
-/// Panics if a `TreeRow` hands back node data that isn't a `T` - the type
-/// erasure trades that former compile-time guarantee for a runtime check.
+/// Panics if a `TreeRow` hands back data that isn't a `T` - the erasure trades
+/// that compile-time guarantee for a runtime check.
 #[component]
 pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> Element {
-    // Cached rather than re-erased every render: keeps the `Rc<dyn Any>`
-    // pointers inside `TreeNodeErased` stable across renders that don't
-    // change `props.data` (e.g. an expand/collapse), which is what lets
-    // `TreeNodeErased`'s `PartialEq` (pointer-based) actually skip
-    // re-rendering an untouched `TreeRow` subtree. Deliberately not a
-    // signal - it's derived purely from `props.data`, and writing a signal
-    // here would dirty the scope and force a second render pass.
+    // Cached so the `Rc<dyn Any>` pointers stay stable across renders that
+    // don't change `props.data`, which is what lets `TreeNodeErased`'s
+    // pointer equality skip an untouched subtree. Not a signal: it derives
+    // from `props.data`, and writing one here forces a second render pass.
     let cache = use_hook(|| {
         Rc::new(RefCell::new((
             props.data.clone(),
@@ -245,8 +225,7 @@ base_props! {
     }
 }
 
-/// The real `Tree` - non-generic, compiled once. See [`Tree`] for why the
-/// public generic component is split out from this.
+/// The real `Tree`, non-generic and compiled once. See [`Tree`] for why.
 #[component]
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
