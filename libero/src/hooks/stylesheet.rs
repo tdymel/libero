@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use dioxus::prelude::*;
 
@@ -36,13 +36,33 @@ impl CssSource for &Sx {
     }
 }
 
-impl CssSource for &StaticSx {
+thread_local! {
+    /// A `StaticSx` renders to byte-identical CSS however many components
+    /// mount it, so the conversion is done once per static instead of once
+    /// per mount. Keyed by address, the way `regex_api`'s `CompiledKey` keys
+    /// a pattern - sound because the impl below is on `&'static StaticSx`, so
+    /// an entry's address can never be reused by something else. Unbounded on
+    /// purpose: every `StaticSx` is a `static` item, so the map reaches a
+    /// fixed size.
+    static STATIC_SX_CSS: RefCell<HashMap<usize, Stylesheet>> = RefCell::new(HashMap::new());
+}
+
+/// `'static` so the address is a stable identity - see [`STATIC_SX_CSS`].
+impl CssSource for &'static StaticSx {
+    /// The address, not a hash of the entries: a `static` is its own identity,
+    /// and hashing the entry tree on every render is the cost being removed.
     fn identity_hash(&self) -> u64 {
-        self.content_hash()
+        std::ptr::from_ref(*self) as u64
     }
 
     fn build(self) -> Stylesheet {
-        Stylesheet::from(self)
+        STATIC_SX_CSS.with(|cache| {
+            cache
+                .borrow_mut()
+                .entry(std::ptr::from_ref(self) as usize)
+                .or_insert_with(|| Stylesheet::from(self))
+                .clone()
+        })
     }
 }
 
@@ -138,4 +158,49 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
     }
 
     class_name
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sx::sx;
+
+    static PADDING: StaticSx = StaticSx::new(|| sx().padding("lg"));
+    static SAME_PADDING: StaticSx = StaticSx::new(|| sx().padding("lg"));
+    static COLOR: StaticSx = StaticSx::new(|| sx().color("red"));
+
+    #[test]
+    fn a_memoized_build_matches_an_unmemoized_one() {
+        let memoized: &'static StaticSx = &PADDING;
+
+        assert_eq!(memoized.build(), Stylesheet::from(&PADDING));
+    }
+
+    #[test]
+    fn a_second_build_of_the_same_static_is_the_same_sheet() {
+        let first: &'static StaticSx = &COLOR;
+        let second: &'static StaticSx = &COLOR;
+
+        assert_eq!(first.build(), second.build());
+    }
+
+    /// The cache is keyed by address, so these are two entries - but the CSS
+    /// is keyed by content, so they still collapse to one class and one
+    /// registry entry downstream.
+    #[test]
+    fn two_statics_with_equal_content_keep_separate_identities_and_one_class() {
+        let padding: &'static StaticSx = &PADDING;
+        let same: &'static StaticSx = &SAME_PADDING;
+
+        assert_ne!(padding.identity_hash(), same.identity_hash());
+        assert_eq!(padding.build().class_name(), same.build().class_name());
+    }
+
+    #[test]
+    fn different_statics_do_not_share_a_cache_entry() {
+        let padding: &'static StaticSx = &PADDING;
+        let color: &'static StaticSx = &COLOR;
+
+        assert_ne!(padding.build().as_str(), color.build().as_str());
+    }
 }
