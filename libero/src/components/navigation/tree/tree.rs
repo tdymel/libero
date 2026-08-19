@@ -19,27 +19,30 @@ use super::{
     tree_row::TreeRow,
 };
 
-struct VisibleNode {
-    id: String,
-    parent_id: Option<String>,
+/// Borrows from the `data` it walks: it is rebuilt on every render and every
+/// keystroke, so owning the ids and labels meant two `String`s per node each
+/// time.
+struct VisibleNode<'a> {
+    id: &'a str,
+    parent_id: Option<&'a str>,
     has_children: bool,
     disabled: bool,
-    label: String,
+    label: &'a str,
 }
 
-fn push_visible_nodes(
-    nodes: &[TreeNodeErased],
+fn push_visible_nodes<'a>(
+    nodes: &'a [TreeNodeErased],
     expanded: &HashSet<String>,
-    parent_id: Option<&str>,
-    out: &mut Vec<VisibleNode>,
+    parent_id: Option<&'a str>,
+    out: &mut Vec<VisibleNode<'a>>,
 ) {
     for node in nodes {
         out.push(VisibleNode {
-            id: node.id.clone(),
-            parent_id: parent_id.map(str::to_string),
+            id: &node.id,
+            parent_id,
             has_children: node.has_children(),
             disabled: node.disabled,
-            label: node.label.clone(),
+            label: &node.label,
         });
         if node.has_children() && expanded.contains(&node.id) {
             push_visible_nodes(&node.children, expanded, Some(node.id.as_str()), out);
@@ -47,7 +50,10 @@ fn push_visible_nodes(
     }
 }
 
-fn visible_order(nodes: &[TreeNodeErased], expanded: &HashSet<String>) -> Vec<VisibleNode> {
+fn visible_order<'a>(
+    nodes: &'a [TreeNodeErased],
+    expanded: &HashSet<String>,
+) -> Vec<VisibleNode<'a>> {
     let mut out = Vec::new();
     push_visible_nodes(nodes, expanded, None, &mut out);
     out
@@ -59,7 +65,7 @@ fn sibling_id(order: &[VisibleNode], current: &str, offset: isize) -> Option<Str
     if target < 0 {
         return None;
     }
-    order.get(target as usize).map(|node| node.id.clone())
+    order.get(target as usize).map(|node| node.id.to_string())
 }
 
 fn typeahead_match(order: &[VisibleNode], current: &str, ch: char) -> Option<String> {
@@ -69,7 +75,9 @@ fn typeahead_match(order: &[VisibleNode], current: &str, ch: char) -> Option<Str
     (1..=len).find_map(|offset| {
         let index = (current_index + offset) % len;
         let node = &order[index];
-        (!node.disabled && node.label.to_ascii_lowercase().starts_with(ch)).then(|| node.id.clone())
+        // First char only, so no lowercased copy of every label per keystroke.
+        let first = node.label.chars().next().map(|c| c.to_ascii_lowercase());
+        (!node.disabled && first == Some(ch)).then(|| node.id.to_string())
     })
 }
 
@@ -252,13 +260,12 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     let size = props.size.copied_or(theme.tree.size);
 
-    let expanded_snapshot = expanded.read().clone();
-    let order = visible_order(&props.data, &expanded_snapshot);
+    let order = visible_order(&props.data, &expanded.read());
     let resolved_active = active_id
         .read()
         .clone()
-        .filter(|id| order.iter().any(|node| &node.id == id))
-        .or_else(|| order.first().map(|node| node.id.clone()));
+        .filter(|id| order.iter().any(|node| node.id == id))
+        .or_else(|| order.first().map(|node| node.id.to_string()));
 
     let onexpandedchange = props.onexpandedchange;
     let data_for_keydown = props.data.clone();
@@ -272,11 +279,12 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         if !tree_item_focused(&root_id(), &current) {
             return;
         }
-        let expanded_snapshot = expanded.read().clone();
-        let order = visible_order(&data_for_keydown, &expanded_snapshot);
+        let order = visible_order(&data_for_keydown, &expanded.read());
         let Some(node) = order.iter().find(|node| node.id == current) else {
             return;
         };
+        // A bool, not the set: `toggle_expanded` writes to `expanded` below.
+        let is_expanded = expanded.read().contains(&current);
 
         let mut go_to = |target: Option<String>| {
             if let Some(target) = target {
@@ -296,15 +304,15 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             }
             Key::Home => {
                 event.prevent_default();
-                go_to(order.first().map(|node| node.id.clone()));
+                go_to(order.first().map(|node| node.id.to_string()));
             }
             Key::End => {
                 event.prevent_default();
-                go_to(order.last().map(|node| node.id.clone()));
+                go_to(order.last().map(|node| node.id.to_string()));
             }
             Key::ArrowRight if node.has_children => {
                 event.prevent_default();
-                if expanded_snapshot.contains(&current) {
+                if is_expanded {
                     go_to(sibling_id(&order, &current, 1));
                 } else {
                     toggle_expanded(&current, expanded, onexpandedchange);
@@ -312,10 +320,10 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             }
             Key::ArrowLeft => {
                 event.prevent_default();
-                if node.has_children && expanded_snapshot.contains(&current) {
+                if node.has_children && is_expanded {
                     toggle_expanded(&current, expanded, onexpandedchange);
                 } else {
-                    go_to(node.parent_id.clone());
+                    go_to(node.parent_id.map(str::to_string));
                 }
             }
             Key::Enter => {
