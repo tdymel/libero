@@ -120,6 +120,21 @@ base_props! {
     }
 }
 
+/// Position as a percent of each axis's scrollable range, plus that range
+/// in px - `(x%, y%, max_x, max_y)`.
+fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
+    let max_x = (data.scroll_width() - data.client_width()).max(0) as f64;
+    let max_y = (data.scroll_height() - data.client_height()).max(0) as f64;
+    let percent = |offset: f64, max: f64| if max > 0.0 { offset / max * 100.0 } else { 0.0 };
+
+    (
+        percent(data.scroll_left(), max_x),
+        percent(data.scroll_top(), max_y),
+        max_x,
+        max_y,
+    )
+}
+
 /// Scrolls its content, filling the parent by default. Read the scroll
 /// position via `on_scroll`/`on_*_reached`; set it imperatively via
 /// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
@@ -146,18 +161,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let onscroll = move |event: Event<ScrollData>| {
         let data = event.data();
-        let max_x = (data.scroll_width() - data.client_width()).max(0) as f64;
-        let max_y = (data.scroll_height() - data.client_height()).max(0) as f64;
-        let x_pct = if max_x > 0.0 {
-            data.scroll_left() / max_x * 100.0
-        } else {
-            0.0
-        };
-        let y_pct = if max_y > 0.0 {
-            data.scroll_top() / max_y * 100.0
-        } else {
-            0.0
-        };
+        let (x_pct, y_pct, max_x, max_y) = scroll_metrics(&data);
 
         if is_scrolling() {
             on_scroll.call(ScrollPositionEvent::Change(x_pct, y_pct));
@@ -188,9 +192,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         edges.set(new_edges);
     };
 
-    let onscrollend = move |_| {
+    let onscrollend = move |event: Event<ScrollData>| {
         if is_scrolling() {
             is_scrolling.set(false);
+            let (x_pct, y_pct, ..) = scroll_metrics(&event.data());
+            on_scroll.call(ScrollPositionEvent::End(x_pct, y_pct));
         }
     };
 
@@ -282,5 +288,61 @@ mod tests {
         let size = ThemeAwareValue::Size(Size::Md);
 
         assert_eq!(scroll_area_variables(Some(&size)).to_string(), "");
+    }
+
+    struct FakeScroll {
+        top: f64,
+        left: f64,
+        scroll: (i32, i32),
+        client: (i32, i32),
+    }
+
+    impl dioxus::html::HasScrollData for FakeScroll {
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
+        }
+        fn scroll_top(&self) -> f64 {
+            self.top
+        }
+        fn scroll_left(&self) -> f64 {
+            self.left
+        }
+        fn scroll_width(&self) -> i32 {
+            self.scroll.0
+        }
+        fn scroll_height(&self) -> i32 {
+            self.scroll.1
+        }
+        fn client_width(&self) -> i32 {
+            self.client.0
+        }
+        fn client_height(&self) -> i32 {
+            self.client.1
+        }
+    }
+
+    #[test]
+    fn metrics_are_a_percent_of_the_scrollable_range() {
+        let data = ScrollData::new(FakeScroll {
+            top: 100.0,
+            left: 50.0,
+            scroll: (300, 500),
+            client: (100, 300),
+        });
+
+        assert_eq!(scroll_metrics(&data), (25.0, 50.0, 200.0, 200.0));
+    }
+
+    /// Content that fits scrolls nowhere - the percent would divide by zero.
+    #[test]
+    fn an_unscrollable_axis_reports_zero() {
+        let data = ScrollData::new(FakeScroll {
+            top: 0.0,
+            left: 0.0,
+            scroll: (100, 100),
+            client: (100, 100),
+        });
+
+        assert_eq!(scroll_metrics(&data), (0.0, 0.0, 0.0, 0.0));
     }
 }

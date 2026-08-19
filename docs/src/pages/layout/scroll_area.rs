@@ -57,9 +57,10 @@ pub fn ScrollAreaPage() -> Element {
                         scrollbars: "both",
                         scroll_position_y: jump_target(),
                         on_scroll: move |event| {
-                            if let ScrollPositionEvent::Change(x, y) | ScrollPositionEvent::Start(x, y) = event {
-                                position.set((x, y));
-                            }
+                            let (ScrollPositionEvent::Start(x, y)
+                            | ScrollPositionEvent::Change(x, y)
+                            | ScrollPositionEvent::End(x, y)) = event;
+                            position.set((x, y));
                         },
                         on_top_reached: move |_| jump_target.set(None),
                         Flex {

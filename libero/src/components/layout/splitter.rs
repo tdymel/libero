@@ -159,7 +159,10 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     // Both panes get the same floor, so anything above 50 leaves no range -
     // and `f64::clamp` asserts `min <= max`.
-    let min_size = props.min_size.copied_or(theme.splitter.min_size).clamp(0.0, 50.0);
+    let min_size = props
+        .min_size
+        .copied_or(theme.splitter.min_size)
+        .clamp(0.0, 50.0);
     let size = props.divider_size.copied_or(theme.splitter.size);
 
     let mut a = use_signal(|| props.initial_size.clamp(min_size, 100.0 - min_size));

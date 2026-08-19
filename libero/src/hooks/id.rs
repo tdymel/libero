@@ -32,10 +32,11 @@ pub fn use_root_id(attributes: &[Attribute]) -> Signal<String> {
 }
 
 fn caller_id(attributes: &[Attribute]) -> Option<String> {
-    attributes.iter().rev().find_map(|attribute| {
-        match (attribute.name, &attribute.value) {
+    attributes
+        .iter()
+        .rev()
+        .find_map(|attribute| match (attribute.name, &attribute.value) {
             ("id", AttributeValue::Text(value)) => Some(value.clone()),
             _ => None,
-        }
-    })
+        })
 }

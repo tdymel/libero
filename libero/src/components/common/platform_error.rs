@@ -5,4 +5,7 @@ pub enum PlatformError {
     Unsupported,
     /// Supported, but the thing asked for wasn't there.
     NotFound,
+    /// Supported and attempted, but the platform refused - e.g. a clipboard
+    /// write without permission or off a secure context.
+    Denied,
 }

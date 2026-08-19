@@ -695,7 +695,10 @@ fn a_root_id_component_renders_the_callers_id_once() {
     let body = body(&render(app));
 
     assert_eq!(body.matches("id=\"mine\"").count(), 4);
-    assert!(!body.contains("id=\"lsx-"), "a generated id shadowed the caller's:\n{body}");
+    assert!(
+        !body.contains("id=\"lsx-"),
+        "a generated id shadowed the caller's:\n{body}"
+    );
 }
 
 #[test]
@@ -711,7 +714,11 @@ fn a_root_id_component_falls_back_to_a_generated_id() {
     let ids = ids_of(&body(&render(app)), "div");
 
     assert_eq!(ids.len(), 1);
-    assert!(ids[0].starts_with("lsx-"), "unexpected generated id: {}", ids[0]);
+    assert!(
+        ids[0].starts_with("lsx-"),
+        "unexpected generated id: {}",
+        ids[0]
+    );
 }
 
 /// `min_size` floors *both* panes, so anything past 50 leaves `f64::clamp`
