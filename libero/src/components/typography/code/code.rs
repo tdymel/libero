@@ -431,7 +431,7 @@ pub fn Code(props: CodeProps) -> Element {
         let label = language
             .map(Language::label)
             .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
-        let show_copy = props.copyable && props.source.is_some();
+        let copy_source = display_source.clone().filter(|_| props.copyable);
         let highlighted_lines = props
             .highlight_lines
             .as_deref()
@@ -458,12 +458,12 @@ pub fn Code(props: CodeProps) -> Element {
                         component: "div",
                         framework_sx: &CODE_BLOCK_HEADER_SX,
                         span { {label} }
-                        if show_copy {
-                            CopyButton { source: display_source.clone().unwrap(), floating: false }
+                        if let Some(copy_source) = copy_source.clone() {
+                            CopyButton { source: copy_source, floating: false }
                         }
                     }
-                } else if show_copy {
-                    CopyButton { source: display_source.clone().unwrap(), floating: true }
+                } else if let Some(copy_source) = copy_source.clone() {
+                    CopyButton { source: copy_source, floating: true }
                 }
                 Box {
                     component: "div",

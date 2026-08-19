@@ -47,20 +47,11 @@ str_enum! {
 
 input_from_str!(ButtonVariant);
 
-// The default shade used for a bare color (e.g. "primary") when no explicit
-// shade is given. Kept a step darker than the library-wide default shade (5)
-// since buttons need to stand out more than plain text/borders do.
-// Light tint used as the hover background for the outlined/text variants,
-// mirroring Mantine's "subtle" hover treatment. `pub(crate)` since
-// A bare theme color name (e.g. "primary") has no shade of its own, so it's
-// resolved to our own default shade here rather than the sx pipeline's
-// generic default (5). Anything else - an explicit shade/contrast, or a
-// literal value like "red"/#123456/rgb(...) - passes through unchanged and
-// is resolved by the normal sx-to-css pipeline. Only a genuinely unset
-// `color` falls back to the library's default color.
-pub(crate) const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
-pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
-pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
+// Per-instance values `button_variant_sx` references by name: the resolved
+// `color`, the text color that contrasts against it, and the hover tint.
+const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
+const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
+const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
 
 /// Structural chrome for `variant`, referencing `color_var`/`contrast_var`/
 /// `hover_var` (a `var()` name each, not a resolved value) - shared with

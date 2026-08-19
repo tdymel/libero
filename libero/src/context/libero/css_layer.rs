@@ -18,3 +18,20 @@ impl CssLayer {
         "@layer lsx-framework, lsx-user-static, lsx-user-custom;"
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn the_layer_order_lists_every_layer_by_its_own_name() {
+        let expected = format!(
+            "@layer {}, {}, {};",
+            CssLayer::Framework.css_name(),
+            CssLayer::UserStatic.css_name(),
+            CssLayer::UserCustom.css_name(),
+        );
+
+        assert_eq!(CssLayer::order_css(), expected);
+    }
+}

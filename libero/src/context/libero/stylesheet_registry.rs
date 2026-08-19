@@ -60,7 +60,7 @@ impl StylesheetRegistry {
         let mut registry = self.inner.borrow_mut();
 
         if let Some(entry) = registry.get_mut(&key) {
-            entry.ref_count -= 1;
+            entry.ref_count = entry.ref_count.saturating_sub(1);
             if entry.ref_count == 0 {
                 registry.remove(&key);
             }

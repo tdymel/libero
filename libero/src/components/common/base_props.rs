@@ -39,8 +39,7 @@
 /// }
 /// ```
 macro_rules! base_props {
-    (
-        extends($($extra_extends:ident),+ $(,)?);
+    (@build [$($extra_extends:tt)*]
         $(#[$struct_meta:meta])*
         $vis:vis struct $name:ident {
             $($fields:tt)*
@@ -49,7 +48,7 @@ macro_rules! base_props {
         $(#[$struct_meta])*
         #[derive(Props, Clone, PartialEq)]
         $vis struct $name {
-            #[props(extends = GlobalAttributes, $(extends = $extra_extends),+)]
+            #[props(extends = GlobalAttributes $($extra_extends)*)]
             attributes: Vec<Attribute>,
             #[props(default, into)]
             class: Input<crate::components::ClassList>,
@@ -61,25 +60,12 @@ macro_rules! base_props {
         }
     };
 
-    (
-        $(#[$struct_meta:meta])*
-        $vis:vis struct $name:ident {
-            $($fields:tt)*
-        }
-    ) => {
-        $(#[$struct_meta])*
-        #[derive(Props, Clone, PartialEq)]
-        $vis struct $name {
-            #[props(extends = GlobalAttributes)]
-            attributes: Vec<Attribute>,
-            #[props(default, into)]
-            class: Input<crate::components::ClassList>,
-            #[props(default, into)]
-            sx: Input<Sx>,
-            #[props(default, into)]
-            states: Input<States>,
-            $($fields)*
-        }
+    (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
+        base_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
+    };
+
+    ($($rest:tt)*) => {
+        base_props!(@build [] $($rest)*);
     };
 }
 

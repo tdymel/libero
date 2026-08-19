@@ -12,16 +12,12 @@ impl States {
         self
     }
 
-    pub fn active(mut self, state: &'static str) -> Self {
-        self.0.retain(|(existing, _)| existing != &state);
-        self.0.push((state, true));
-        self
+    pub fn active(self, state: &'static str) -> Self {
+        self.with(state, true)
     }
 
-    pub fn inactive(mut self, state: &'static str) -> Self {
-        self.0.retain(|(existing, _)| existing != &state);
-        self.0.push((state, false));
-        self
+    pub fn inactive(self, state: &'static str) -> Self {
+        self.with(state, false)
     }
 
     pub fn iter(&self) -> impl Iterator<Item = (&'static str, bool)> + '_ {

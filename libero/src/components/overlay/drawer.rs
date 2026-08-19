@@ -98,10 +98,6 @@ str_enum! {
 
 input_from_str!(DrawerAnchor);
 
-// TODO: `anchor` here only picks the border/axis, not real placement - callers
-// must still order `Drawer` correctly themselves. Consider an API that also
-// positions it (e.g. order/margin-auto) so `anchor` is authoritative here too.
-
 fn drawer_variables(props: &DrawerProps) -> Variables {
     variables()
         .with(

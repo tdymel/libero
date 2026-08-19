@@ -89,39 +89,34 @@ macro_rules! input_from_str {
 
 pub(crate) use input_from_str;
 
-impl From<Sx> for Input<Sx> {
-    fn from(value: Sx) -> Self {
-        Self::Value(value)
-    }
+/// The plain `T`/`Option<T>` -> `Input<T>` forwarders, which `#[props(into)]`
+/// can't chain on its own.
+macro_rules! input_from {
+    ($($ty:ty),+ $(,)?) => {
+        $(
+            impl From<$ty> for Input<$ty> {
+                fn from(value: $ty) -> Self {
+                    Self::Value(value)
+                }
+            }
+
+            impl From<Option<$ty>> for Input<$ty> {
+                fn from(value: Option<$ty>) -> Self {
+                    match value {
+                        Some(value) => Self::Value(value),
+                        None => Self::None,
+                    }
+                }
+            }
+        )+
+    };
 }
 
-impl From<Option<Sx>> for Input<Sx> {
-    fn from(value: Option<Sx>) -> Self {
-        match value {
-            Some(value) => Self::Value(value),
-            None => Self::None,
-        }
-    }
-}
+input_from!(Sx, ClassList, Size, f32, f64, States, Variables);
 
 impl From<&'static StaticSx> for Input<Sx> {
     fn from(value: &'static StaticSx) -> Self {
         Self::Static(value)
-    }
-}
-
-impl From<ClassList> for Input<ClassList> {
-    fn from(value: ClassList) -> Self {
-        Self::Value(value)
-    }
-}
-
-impl From<Option<ClassList>> for Input<ClassList> {
-    fn from(value: Option<ClassList>) -> Self {
-        match value {
-            Some(value) => Self::Value(value),
-            None => Self::None,
-        }
     }
 }
 
@@ -136,55 +131,7 @@ impl From<Option<String>> for Input<ClassList> {
 
 input_from_str!(ClassList);
 
-impl From<Size> for Input<Size> {
-    fn from(value: Size) -> Self {
-        Self::Value(value)
-    }
-}
-
 input_from_str!(Size);
-
-impl From<f32> for Input<f32> {
-    fn from(value: f32) -> Self {
-        Self::Value(value)
-    }
-}
-
-impl From<f64> for Input<f64> {
-    fn from(value: f64) -> Self {
-        Self::Value(value)
-    }
-}
-
-impl From<States> for Input<States> {
-    fn from(value: States) -> Self {
-        Self::Value(value)
-    }
-}
-
-impl From<Option<States>> for Input<States> {
-    fn from(value: Option<States>) -> Self {
-        match value {
-            Some(value) => Self::Value(value),
-            None => Self::None,
-        }
-    }
-}
-
-impl From<Variables> for Input<Variables> {
-    fn from(value: Variables) -> Self {
-        Self::Value(value)
-    }
-}
-
-impl From<Option<Variables>> for Input<Variables> {
-    fn from(value: Option<Variables>) -> Self {
-        match value {
-            Some(value) => Self::Value(value),
-            None => Self::None,
-        }
-    }
-}
 
 impl<T> From<T> for Input<ThemeAwareValue>
 where
