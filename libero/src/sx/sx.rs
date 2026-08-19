@@ -124,7 +124,9 @@ impl Sx {
         &self.entries
     }
 
-    pub(crate) fn hash(&self) -> u64 {
+    /// Content hash of this `Sx`'s entries - not `Hash::hash`, which `Sx`
+    /// also derives.
+    pub(crate) fn content_hash(&self) -> u64 {
         let mut hasher = DefaultHasher::new();
         self.hash_into(&mut hasher);
         hasher.finish()

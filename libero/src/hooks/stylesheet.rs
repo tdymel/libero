@@ -32,7 +32,7 @@ pub(crate) trait CssSource {
 
 impl CssSource for &Sx {
     fn identity_hash(&self) -> u64 {
-        self.hash()
+        self.content_hash()
     }
 
     fn build(self) -> Stylesheet {
@@ -42,7 +42,7 @@ impl CssSource for &Sx {
 
 impl CssSource for &StaticSx {
     fn identity_hash(&self) -> u64 {
-        self.hash()
+        self.content_hash()
     }
 
     fn build(self) -> Stylesheet {
