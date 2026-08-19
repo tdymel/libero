@@ -3,7 +3,7 @@ use std::{any::Any, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Icon},
+    components::{Box, Icon, States},
     sx::{StaticSx, sx},
     theme::{ICON_SIZE, Size},
 };
@@ -158,6 +158,26 @@ pub struct TreeNodeRenderArgs<T> {
 static DEFAULT_RENDER_LEADING_SPACER_SX: StaticSx =
     StaticSx::new(|| sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)));
 
+// Both the row and the chevron it contains, so a visible row builds no `Sx`
+// of its own: a `sx` prop is rehashed on every render and rendered to CSS
+// once per instance, where a static is built once per process.
+static DEFAULT_RENDER_ROW_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .align_items("center")
+        .gap("6px")
+        .padding("6px 0")
+        .selector(
+            "& [data-tree-chevron]",
+            sx().flex_shrink("0")
+                .transition("transform 120ms ease")
+                .transform("rotate(0deg)"),
+        )
+        .selector(
+            "& [data-tree-chevron][data-state~=\"expanded\"]",
+            sx().transform("rotate(90deg)"),
+        )
+});
+
 fn chevron_svg() -> Element {
     rsx! {
         svg {
@@ -185,9 +205,8 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
                 variant: "transparent",
                 size: "xs",
                 color: "grey.6",
-                sx: sx().flex_shrink("0")
-                    .transition("transform 120ms ease")
-                    .transform(if expanded { "rotate(90deg)" } else { "rotate(0deg)" }),
+                "data-tree-chevron": true,
+                states: States::new().with("expanded", expanded),
                 {chevron_svg()}
             }
         },
@@ -198,7 +217,7 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
 
     rsx! {
         Box {
-            sx: sx().display("flex").align_items("center").gap("6px").padding("6px 0"),
+            framework_sx: &DEFAULT_RENDER_ROW_SX,
             {leading}
             "{args.data.tree_label()}"
         }

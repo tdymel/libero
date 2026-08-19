@@ -5,12 +5,16 @@ use dioxus::prelude::*;
 use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
 use super::token_theme::use_token_theme;
 use crate::{
-    components::{ActionIcon, Box, Input, States, common::base_props},
-    hooks::{Clipboard, use_clipboard},
+    CssLayer,
+    components::{
+        ActionIcon, Box, Input, States, Variables,
+        common::{base_props, class_list, variables},
+    },
+    hooks::{Clipboard, use_clipboard, use_css},
     sx::{StaticSx, Sx, sx},
     theme::{
         CODE_BACKGROUND, CODE_BORDER, CODE_COPY_HOVER_BACKGROUND, CODE_COPY_HOVER_TEXT,
-        CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT, ColorCss, ColorShade,
+        CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT, ColorCss, ColorShade, CssVar,
     },
 };
 
@@ -19,6 +23,9 @@ const UNRECOGNIZED_LANGUAGE_LABEL: &str = "Unrecognized language";
 // Shared with `max_lines`' height math, so neither drifts from
 // `CODE_LINES_SX`'s actual line-height and padding.
 const CODE_LINE_HEIGHT_PX: u32 = 20;
+// Set once on the lines container and inherited, so the gutter's width varies
+// per block without every row carrying an `sx` of its own.
+const CODE_GUTTER_WIDTH_VAR: CssVar = CssVar::new("--lsx-code-gutter-width");
 const CODE_LINES_VERTICAL_PADDING_PX: u32 = 24;
 
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
@@ -132,11 +139,18 @@ static CODE_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .text_align("right")
         .padding("0 12px")
+        .min_width(CODE_GUTTER_WIDTH_VAR.value_or("1ch"))
         .color(CODE_LINE_NUMBER.value())
 });
 
-static CODE_LINE_CONTENT_SX: StaticSx =
-    StaticSx::new(|| sx().flex("1").white_space("pre").padding_right("16px"));
+// No gutter means nothing reserves a left inset; `no-gutter` matches
+// `CODE_LINE_NUMBER_SX`'s 12px so text isn't flush.
+static CODE_LINE_CONTENT_SX: StaticSx = StaticSx::new(|| {
+    sx().flex("1")
+        .white_space("pre")
+        .padding_right("16px")
+        .when("no-gutter", sx().padding_left("12px"))
+});
 
 static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
@@ -282,7 +296,6 @@ fn code_line_row(
     index: usize,
     line: &HighlightedLine,
     line_numbers: bool,
-    gutter_width: &str,
     row_state: Option<&'static str>,
 ) -> Element {
     let states = row_state
@@ -297,22 +310,23 @@ fn code_line_row(
                 Box {
                     component: "span",
                     framework_sx: &CODE_LINE_NUMBER_SX,
-                    sx: sx().min_width(gutter_width.to_string()),
                     {(index + 1).to_string()}
                 }
             }
             Box {
                 component: "span",
                 framework_sx: &CODE_LINE_CONTENT_SX,
-                // No gutter means nothing reserves a left inset; match
-                // `CODE_LINE_NUMBER_SX`'s 12px so text isn't flush.
-                sx: if line_numbers { sx() } else { sx().padding_left("12px") },
+                states: States::new().with("no-gutter", !line_numbers),
                 for (text, class) in line.iter() {
                     span { class: *class, {text.as_str()} }
                 }
             }
         }
     }
+}
+
+fn gutter_variables(gutter_width: String) -> Variables {
+    variables().with(CODE_GUTTER_WIDTH_VAR, gutter_width)
 }
 
 fn code_lines(
@@ -327,6 +341,7 @@ fn code_lines(
         Box {
             component: "div",
             framework_sx: &CODE_LINES_SX,
+            variables: gutter_variables(gutter_width),
             for (index, line) in lines.iter().enumerate() {
                 {
                     let row_state = match diff_statuses.get(index).copied().flatten() {
@@ -335,7 +350,7 @@ fn code_lines(
                         None if highlighted_lines.contains(&(index + 1)) => Some("highlighted"),
                         None => None,
                     };
-                    code_line_row(index, line, line_numbers, &gutter_width, row_state)
+                    code_line_row(index, line, line_numbers, row_state)
                 }
             }
         }
@@ -346,17 +361,24 @@ fn code_lines(
 fn CopyButton(source: String, floating: bool) -> Element {
     let mut clipboard: Clipboard = use_clipboard();
     // No `variant`/`color`, so `ActionIcon` adds no background of its own and
-    // this `sx` fully controls the look.
-    let button_sx = if floating {
-        CODE_COPY_BUTTON_FLOATING_SX.clone()
+    // these fully control the look.
+    //
+    // Registered here and passed as a class rather than through `ActionIcon`'s
+    // `sx`, which would clone the static into an owned `Sx` and so re-render
+    // it to CSS per instance - `use_css` memoizes only a `&'static StaticSx`.
+    // Still `UserStatic`, because that is what puts it above
+    // `ACTION_ICON_BASE_SX`'s own `padding`/`border-radius` in the cascade.
+    let button_sx: &'static StaticSx = if floating {
+        &CODE_COPY_BUTTON_FLOATING_SX
     } else {
-        CODE_COPY_BUTTON_SX.clone()
+        &CODE_COPY_BUTTON_SX
     };
+    let button_class = use_css(Some(button_sx), CssLayer::UserStatic);
 
     rsx! {
         ActionIcon {
             aria_label: "Copy code",
-            sx: button_sx,
+            class: class_list().with(button_class),
             onclick: move |_| clipboard.copy(source.clone()),
             onmouseleave: move |_| clipboard.reset(),
             if clipboard.copied() {
