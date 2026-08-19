@@ -78,12 +78,24 @@ fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
 
 /// Which edges the last scroll position rested against, so `on_*_reached`
 /// fires on the rising edge rather than every event.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct EdgeState {
     top: bool,
     bottom: bool,
     left: bool,
     right: bool,
+}
+
+impl EdgeState {
+    /// Where a scroll container starts. All-`false` would make the first
+    /// scroll event report leaving-and-reaching the top and left edges it was
+    /// already resting against.
+    const AT_ORIGIN: Self = Self {
+        top: true,
+        bottom: false,
+        left: true,
+        right: false,
+    };
 }
 
 base_props! {
@@ -151,7 +163,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let size = props.scrollbar_size.copied_or(theme.scroll_area.size);
 
     let mut is_scrolling = use_signal(|| false);
-    let mut edges = use_signal(EdgeState::default);
+    let mut edges = use_signal(|| EdgeState::AT_ORIGIN);
 
     let on_scroll = props.on_scroll;
     let on_top_reached = props.on_top_reached;
