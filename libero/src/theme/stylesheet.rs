@@ -77,6 +77,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         radius,
         dialog,
         drawer,
+        sidebar,
         flex,
         center,
         container,
@@ -124,6 +125,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_breakpoint_declarations(&mut declarations);
     declarations.extend(dialog.to_css_declarations());
     declarations.extend(drawer.to_css_declarations());
+    declarations.extend(sidebar.to_css_declarations());
     declarations.extend(flex.to_css_declarations());
     declarations.extend(center.to_css_declarations());
     declarations.extend(container.to_css_declarations());
@@ -245,6 +247,7 @@ mod tests {
             ("--lsx-button-padding-x-md", "18px"),
             ("--lsx-dialog-size-md", "510px"),
             ("--lsx-drawer-size-md", "280px"),
+            ("--lsx-sidebar-size-md", "280px"),
             ("--lsx-container-size", "var(--lsx-breakpoint-lg)"),
             ("--lsx-container-gutters", "var(--lsx-spacing-md)"),
             ("--lsx-divider-spacing", "0"),
@@ -359,4 +362,3 @@ mod tests {
         assert!(!css.contains("font-smoothing"));
     }
 }
-

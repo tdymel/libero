@@ -7,6 +7,7 @@ mod flex;
 mod float;
 mod header;
 mod scroll_area;
+mod sidebar;
 mod splitter;
 
 pub use aspect_ratio::AspectRatio;
@@ -18,4 +19,5 @@ pub use flex::{Flex, FlexDirection, FlexWrap};
 pub use float::{Float, Placement};
 pub use header::{Header, HeaderPosition};
 pub use scroll_area::{ScrollArea, ScrollPositionEvent};
+pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
 pub use splitter::{Splitter, SplitterResizeEvent};

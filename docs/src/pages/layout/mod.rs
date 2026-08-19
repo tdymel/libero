@@ -7,6 +7,7 @@ mod flex;
 mod float;
 mod header;
 mod scroll_area;
+mod sidebar;
 mod splitter;
 
 pub use aspect_ratio::AspectRatioPage;
@@ -18,4 +19,5 @@ pub use flex::FlexPage;
 pub use float::FloatPage;
 pub use header::HeaderPage;
 pub use scroll_area::ScrollAreaPage;
+pub use sidebar::SidebarPage;
 pub use splitter::SplitterPage;

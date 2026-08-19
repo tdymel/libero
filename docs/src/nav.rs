@@ -3,16 +3,16 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Drawer, Flex, NavLink, States, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
+        Flex, NavLink, Sidebar, States, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
         default_tree_render,
     },
     sx::{Sx, sx},
-    theme::{ColorCss, ColorShade, DRAWER_SIZE, HEADER_HEIGHT, Size},
+    theme::{ColorCss, ColorShade, HEADER_HEIGHT, SIDEBAR_SIZE, Size},
 };
 
 use crate::Route;
 
-// One `Drawer`, one responsive `sx` - no second drawer, no viewport
+// One `Sidebar`, one responsive `sx` - no second drawer, no viewport
 // detection. Below the `Sm` breakpoint it's a fixed, off-canvas panel
 // toggled by `open` (slides via `transform`, `visibility` hidden when
 // closed so its links drop out of tab order/the a11y tree instead of just
@@ -20,7 +20,7 @@ use crate::Route;
 // sidebar from before, with `open` irrelevant - the breakpoint override
 // hardcodes `transform`/`visibility` regardless of its value, so nothing
 // odd happens if the viewport crosses `Sm` while it happens to be open.
-fn sidebar_responsive_sx(open: bool) -> Sx {
+fn nav_responsive_sx(open: bool) -> Sx {
     let header_height = HEADER_HEIGHT.value(Size::Md);
     // `visibility` shouldn't flip to hidden until the slide-out finishes,
     // or the panel would vanish mid-animation instead of sliding away;
@@ -35,7 +35,7 @@ fn sidebar_responsive_sx(open: bool) -> Sx {
         .top(header_height.clone())
         .height(format!("calc(100vh - {header_height})"))
         .width("100%")
-        // `Drawer`'s own base has no background - fine sitting adjacent to
+        // `Sidebar`'s own base has no background - fine sitting adjacent to
         // content in normal flow (desktop), but this mode overlaps the main
         // content, which would otherwise show through underneath it.
         .background("white")
@@ -58,25 +58,25 @@ fn sidebar_responsive_sx(open: bool) -> Sx {
             sx().position("sticky")
                 .top("0")
                 .height("100%")
-                .width(DRAWER_SIZE.value(Size::Sm))
+                .width(SIDEBAR_SIZE.value(Size::Sm))
                 .transform("none")
                 .visibility("visible"),
         )
 }
 
 #[derive(Clone, PartialEq)]
-struct SidebarEntry {
+struct NavEntry {
     label: &'static str,
 }
 
-impl TreeLabel for SidebarEntry {
+impl TreeLabel for NavEntry {
     fn tree_label(&self) -> String {
         self.label.to_string()
     }
 }
 
-fn page(route: Route, label: &'static str) -> TreeNode<SidebarEntry> {
-    TreeNode::new(route.to_string(), SidebarEntry { label })
+fn page(route: Route, label: &'static str) -> TreeNode<NavEntry> {
+    TreeNode::new(route.to_string(), NavEntry { label })
 }
 
 // A synthetic id (never a real route path, which always starts with `/`) -
@@ -84,12 +84,12 @@ fn page(route: Route, label: &'static str) -> TreeNode<SidebarEntry> {
 fn group(
     id: &'static str,
     label: &'static str,
-    children: Vec<TreeNode<SidebarEntry>>,
-) -> TreeNode<SidebarEntry> {
-    TreeNode::new(format!("group:{id}"), SidebarEntry { label }).children(children)
+    children: Vec<TreeNode<NavEntry>>,
+) -> TreeNode<NavEntry> {
+    TreeNode::new(format!("group:{id}"), NavEntry { label }).children(children)
 }
 
-fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
+fn nav_tree() -> Vec<TreeNode<NavEntry>> {
     vec![
         page(Route::GettingStarted {}, "Getting Started"),
         group(
@@ -133,6 +133,7 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
                 page(Route::FloatPage {}, "Float"),
                 page(Route::HeaderPage {}, "Header"),
                 page(Route::ScrollAreaPage {}, "ScrollArea"),
+                page(Route::SidebarPage {}, "Sidebar"),
                 page(Route::SplitterPage {}, "Splitter"),
             ],
         ),
@@ -173,15 +174,15 @@ fn sidebar_tree() -> Vec<TreeNode<SidebarEntry>> {
     ]
 }
 
-fn ancestor_group(data: &[TreeNode<SidebarEntry>], target: &str) -> Option<String> {
+fn ancestor_group(data: &[TreeNode<NavEntry>], target: &str) -> Option<String> {
     data.iter()
         .find(|node| node.children.iter().any(|child| child.id == target))
         .map(|node| node.id.clone())
 }
 
 #[component]
-pub fn Sidebar(open: Signal<bool>) -> Element {
-    let data = sidebar_tree();
+pub fn DocsNav(open: Signal<bool>) -> Element {
+    let data = nav_tree();
 
     let current_path = try_router()
         .map(|router| router.full_route_string())
@@ -196,11 +197,10 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
     }
 
     rsx! {
-        Drawer {
-            variant: "static",
-            anchor: "left",
+        Sidebar {
+            side: "left",
             role: "navigation",
-            sx: sidebar_responsive_sx(open()),
+            sx: nav_responsive_sx(open()),
             Flex {
                 direction: "column",
                 gap: "sm",
@@ -235,7 +235,7 @@ pub fn Sidebar(open: Signal<bool>) -> Element {
                         .selector("& ul", sx().gap("0").padding_left("0")),
                     data,
                     default_expanded,
-                    render_node: move |args: TreeNodeRenderArgs<SidebarEntry>| {
+                    render_node: move |args: TreeNodeRenderArgs<NavEntry>| {
                         if args.expanded.is_some() {
                             return default_tree_render(args);
                         }

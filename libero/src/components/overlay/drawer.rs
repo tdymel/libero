@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, Float, Input, Modal, Placement, ScrollArea, States, Variables,
+        Dialog, Float, Input, Modal, Placement, States,
         common::{base_props, input_from_str},
         variables,
     },
@@ -10,50 +10,36 @@ use crate::{
     hooks::use_portal,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, CssVar, DRAWER_SIZE, Size},
+    theme::{CssVar, DRAWER_SIZE, Size},
 };
 
 const DRAWER_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-drawer-z-index");
 
-// A `Static` sidebar is usually a flex item that must not be squeezed. This
-// only sizes the panel; the scrolling is `ScrollArea`'s job.
-static DRAWER_STATIC_BASE_SX: StaticSx = StaticSx::new(|| {
-    let size = DRAWER_SIZE.override_var().value_or("auto");
-    let border = format!("1px solid {}", ColorCss::GREY.value(ColorShade::S4));
-
-    sx().flex_shrink("0")
-        .min_height("0")
-        .z_index(DRAWER_Z_INDEX_VAR.value_or("auto"))
-        .when(
-            "anchor-left",
-            sx().width(size.clone()).border_right(border.clone()),
-        )
-        .when(
-            "anchor-right",
-            sx().width(size.clone()).border_left(border.clone()),
-        )
-        .when(
-            "anchor-top",
-            sx().height(size.clone()).border_bottom(border.clone()),
-        )
-        .when(
-            "anchor-bottom",
-            sx().height(size.clone()).border_top(border.clone()),
-        )
-});
-
-// `Temporary`'s surface, riding along as an extra class on `Dialog`'s own.
-// Edge-docking is `Float`'s job; this only fills the slot it anchors.
-static DRAWER_TEMPORARY_SX: StaticSx = StaticSx::new(|| {
-    let size = DRAWER_SIZE.overridable(Size::Md);
-
-    sx().margin("0")
+// Rides along as an extra class on `Dialog`'s own. Edge-docking is `Float`'s
+// job; this only fills the slot it anchors.
+static DRAWER_SX: StaticSx = StaticSx::new(|| {
+    let base = sx()
+        .margin("0")
         .border_radius("0")
         .max_width("none")
-        .when("anchor-left", sx().height("100%").width(size.clone()))
-        .when("anchor-right", sx().height("100%").width(size.clone()))
-        .when("anchor-top", sx().width("100%").height(size.clone()))
-        .when("anchor-bottom", sx().width("100%").height(size.clone()))
+        .when("anchor-left", sx().height("100%"))
+        .when("anchor-right", sx().height("100%"))
+        .when("anchor-top", sx().width("100%"))
+        .when("anchor-bottom", sx().width("100%"));
+
+    Size::ALL.into_iter().fold(base, |acc, size| {
+        let state = size.state_name();
+        let value = DRAWER_SIZE.value(size);
+
+        acc.when(
+            format!("anchor-left && {state} || anchor-right && {state}"),
+            sx().width(value.clone()),
+        )
+        .when(
+            format!("anchor-top && {state} || anchor-bottom && {state}"),
+            sx().height(value),
+        )
+    })
 });
 
 /// A corner `Float` placement already pins two adjacent sides with no
@@ -68,18 +54,6 @@ fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
 }
 
 str_enum! {
-    pub enum DrawerVariant {
-        /// Portaled, dimmed, focus-trapped; closes on Escape/backdrop.
-        #[default]
-        Temporary = "temporary",
-        /// In-place plain panel, no portal/backdrop/focus-trap, e.g. a sidebar.
-        Static = "static",
-    }
-}
-
-input_from_str!(DrawerVariant);
-
-str_enum! {
     pub enum DrawerAnchor {
         #[default]
         Left = "left",
@@ -91,77 +65,43 @@ str_enum! {
 
 input_from_str!(DrawerAnchor);
 
-fn drawer_variables(props: &DrawerProps) -> Variables {
-    variables()
-        .with(
-            DRAWER_SIZE.override_var(),
-            props.size.resolve(Some(DRAWER_SIZE)),
-        )
-        .with(DRAWER_Z_INDEX_VAR, props.z_index.resolve(None))
-}
-
 base_props! {
     pub struct DrawerProps {
-        #[props(default, into)]
-        variant: Input<DrawerVariant>,
-        /// On `Static`, picks only the border side and size axis - placement
-        /// is your layout's job. Full effect on `Temporary`.
+        /// The edge the drawer docks to.
         #[props(default, into)]
         anchor: Input<DrawerAnchor>,
         #[props(default, into)]
-        size: Input<ThemeAwareValue>,
+        size: Input<Size>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Requested by Escape/backdrop on `Temporary`, and by your own close
-        /// button on `Static`. `Drawer` tracks no open/closed state.
+        /// Requested by Escape or a backdrop click. `Drawer` tracks no
+        /// open/closed state.
         #[props(default)]
         onclose: EventHandler<()>,
         children: Element,
     }
 }
 
-/// A panel anchored to one edge - `Temporary` (default) is a modal drawer;
-/// `Static` is a plain in-flow panel (e.g. a sidebar). Compose both, hidden
-/// via CSS on opposite breakpoints, for a responsive sidebar-becomes-drawer.
+/// A portaled, dimmed, focus-trapped panel docked to one edge, closing on
+/// Escape or backdrop click. For an in-flow panel, see `Sidebar`.
 #[component]
 pub fn Drawer(props: DrawerProps) -> Element {
-    let variant = props.variant.copied_or_default();
     let anchor = props.anchor.copied_or_default();
-    let variables = drawer_variables(&props);
+    let size = props.size.copied_or(Size::Md);
+    let variables = variables().with(DRAWER_Z_INDEX_VAR, props.z_index.resolve(None));
 
     let states = props
         .states
         .as_ref()
         .cloned()
         .unwrap_or_default()
+        .active(size.state_name())
         .with("anchor-left", anchor == DrawerAnchor::Left)
         .with("anchor-right", anchor == DrawerAnchor::Right)
         .with("anchor-top", anchor == DrawerAnchor::Top)
         .with("anchor-bottom", anchor == DrawerAnchor::Bottom);
 
-    // `variant` is a caller prop that can flip, and hook slots are
-    // positional, so neither this nor the `use_portal(None)` below may sit
-    // behind the early return.
-    let drawer_class = use_css(Some(&DRAWER_TEMPORARY_SX), crate::CssLayer::Framework);
-
-    if variant == DrawerVariant::Static {
-        use_portal(None);
-        return rsx! {
-            Box {
-                class: props.class,
-                sx: props.sx,
-                states,
-                variables,
-                framework_sx: &DRAWER_STATIC_BASE_SX,
-                attributes: props.attributes,
-                ScrollArea {
-                    sx: sx().padding("lg"),
-                    {props.children}
-                }
-            }
-        };
-    }
-
+    let drawer_class = use_css(Some(&DRAWER_SX), crate::CssLayer::Framework);
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
     let (placement, float_sx) = drawer_float_placement(anchor);
 

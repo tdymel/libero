@@ -136,8 +136,8 @@ pub(crate) use str_enum;
 mod tests {
 
     use crate::components::{
-        AnchorUnderline, ButtonVariant, DrawerAnchor, DrawerVariant, FlexDirection, FlexWrap,
-        HeaderPosition, IconVariant, ImageFit, LabelPosition, Orientation,
+        AnchorUnderline, ButtonVariant, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition,
+        IconVariant, ImageFit, LabelPosition, Orientation, SidebarSide,
     };
     use crate::theme::{Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 
@@ -147,7 +147,6 @@ mod tests {
             $check!(AnchorUnderline);
             $check!(ButtonVariant);
             $check!(DrawerAnchor);
-            $check!(DrawerVariant);
             $check!(FlexDirection);
             $check!(FlexWrap);
             $check!(HeaderPosition);
@@ -160,6 +159,7 @@ mod tests {
             $check!(ScrollAxis);
             $check!(ScrollbarSize);
             $check!(ScrollbarVisibility);
+            $check!(SidebarSide);
         };
     }
 

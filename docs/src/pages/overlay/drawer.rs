@@ -1,7 +1,7 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Drawer, Flex, Text, Title},
+    components::{Button, Drawer, Text, Title},
     sx::sx,
 };
 
@@ -14,31 +14,12 @@ pub fn DrawerPage() -> Element {
             title: "Drawer",
             lead: rsx! {
                 Text {
-                    "A panel anchored to one edge - Temporary is a modal drawer (portaled, "
-                    "dimmed, focus-trapped); Static is a plain in-flow panel, e.g. a sidebar."
+                    "A portaled, dimmed, focus-trapped panel docked to one edge, closing on "
+                    "Escape or a backdrop click. For an in-flow panel, see Sidebar."
                 }
             },
             DocSection {
-                title: "Static",
-                Flex {
-                    direction: "row",
-                    sx: sx().height("120px").border("1px solid").border_color("grey.3"),
-                    Drawer {
-                        variant: "static",
-                        anchor: "left",
-                        size: "xs",
-                        sx: sx().padding("12px"),
-                        Text { "Static panel" }
-                    }
-                    Flex {
-                        direction: "column",
-                        sx: sx().flex("1").padding("12px"),
-                        Text { "Rest of the layout" }
-                    }
-                }
-            }
-            DocSection {
-                title: "Temporary",
+                title: "Usage",
                 Button { variant: "outlined", onclick: move |_| open.set(true), "Open drawer" }
                 if open() {
                     Drawer {

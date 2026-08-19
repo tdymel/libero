@@ -4,7 +4,6 @@
 mod common;
 
 use common::{attributes_of, body, classes_of, has_rule_for, render};
-use std::sync::atomic::{AtomicBool, Ordering};
 
 use dioxus::prelude::*;
 use libero::{
@@ -12,7 +11,7 @@ use libero::{
     components::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Code, Container, DataList,
         DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
-        List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select,
+        List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
         Splitter, Text, Title, Tree, TreeNode, VisuallyHidden,
     },
     theme::{Color, Size},
@@ -449,18 +448,53 @@ fn a_modal_renders_through_the_portal_outlet() {
 }
 
 #[test]
-fn a_static_drawer_renders_in_place() {
+fn a_drawer_renders_through_the_portal_outlet() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Drawer { variant: "static", onclose: |_| {}, "drawer content" }
+                Drawer { anchor: "right", onclose: |_| {}, "drawer content" }
             }
         }
     }
 
     let html = render(app);
 
-    assert!(body(&html).contains("drawer content"));
+    assert_eq!(html.matches("drawer content").count(), 1);
+    assert!(
+        html.contains(r#"data-state="size-md anchor-right""#),
+        "got {html}"
+    );
+}
+
+#[test]
+fn a_sidebar_renders_in_place() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sidebar { "sidebar content" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(body(&html).contains("sidebar content"));
+}
+
+#[test]
+fn a_sidebar_names_its_side_in_data_state() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Sidebar { side: "right", "sidebar content" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    let state = &attributes_of(&html, "div")["data-state"];
+    assert!(state.contains("side-right"), "got {state}");
 }
 
 #[test]
@@ -574,46 +608,6 @@ fn tree_renders_a_labelled_row_per_node() {
     assert_eq!(attributes_of(&html, "ul")["aria-label"], "Files");
     assert!(body.contains("Alpha"));
     assert!(body.contains("Beta"));
-}
-
-/// The bug this pins (fixed 2026-08-30): `Drawer` called `use_css`/
-/// `use_portal` *after* an early return for the `Static` variant, so
-/// flipping a mounted drawer between variants shifted every later hook by
-/// one slot and left its content registered in the portal forever.
-#[test]
-fn a_drawer_survives_a_variant_flip() {
-    static STATIC_VARIANT: AtomicBool = AtomicBool::new(false);
-
-    fn app() -> Element {
-        let variant = if STATIC_VARIANT.load(Ordering::Relaxed) {
-            "static"
-        } else {
-            "temporary"
-        };
-
-        rsx! {
-            LiberoProvider {
-                Drawer { variant, onclose: |_| {}, "drawer content" }
-            }
-        }
-    }
-
-    let mut dom = VirtualDom::new(app);
-    dom.rebuild_in_place();
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    let temporary = dioxus_ssr::render(&dom);
-
-    STATIC_VARIANT.store(true, Ordering::Relaxed);
-    dom.mark_dirty(ScopeId::APP);
-    dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    let statically = dioxus_ssr::render(&dom);
-
-    assert_eq!(temporary.matches("drawer content").count(), 1);
-    assert_eq!(
-        statically.matches("drawer content").count(),
-        1,
-        "the temporary drawer's portal entry outlived the flip"
-    );
 }
 
 #[test]

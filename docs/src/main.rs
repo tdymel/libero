@@ -8,19 +8,19 @@ use libero::{
 
 mod components;
 mod icons;
+mod nav;
 mod pages;
-mod sidebar;
 
 use icons::BurgerIcon;
 
+use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, CodePage,
     ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage, FloatPage,
     FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage,
-    ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage, SplitterPage,
-    TextPage, TitlePage, TreePage, VisuallyHiddenPage,
+    ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage, SidebarPage,
+    SplitterPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
 };
-use sidebar::Sidebar;
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
 
@@ -75,6 +75,8 @@ pub(crate) enum Route {
     HeaderPage {},
     #[route("/layout/scroll-area")]
     ScrollAreaPage {},
+    #[route("/layout/sidebar")]
+    SidebarPage {},
     #[route("/layout/splitter")]
     SplitterPage {},
 
@@ -162,9 +164,9 @@ fn AppShell() -> Element {
                     Title { size: "lg", component: "span", "Libero" }
                 }
             }
-            // This row itself never scrolls - `Sidebar` scrolls its own
-            // content internally (`Drawer`'s `Static` variant), and only the
-            // rest of the row (everything the sidebar doesn't take up)
+            // This row itself never scrolls - the nav scrolls its own
+            // content internally (`Sidebar` does), and only the rest of the
+            // row (everything the nav doesn't take up)
             // should scroll. So `ScrollArea` - not `Container` - is the flex
             // item filling that remaining space; `Container` just sizes/
             // centers the actual page content inside it, and is free to grow
@@ -173,7 +175,7 @@ fn AppShell() -> Element {
                 direction: "row",
                 align: "stretch",
                 sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT.value(Size::Md))),
-                Sidebar { open }
+                DocsNav { open }
                 ScrollArea {
                     sx: sx()
                         .flex("1")

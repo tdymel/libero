@@ -1,13 +1,12 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
-    ButtonSizeLevel, CenterDefaults,
-    CodeDefaults, Color, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
-    DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor,
-    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NavLinkDefaults, OverlayDefaults,
-    Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
-    ScrollbarVisibility, SelectDefaults, SelectSizeLevel, Size, Sizes, SplitterDefaults,
-    TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults, ZIndexDefaults,
+    ButtonSizeLevel, CenterDefaults, CodeDefaults, Color, ContainerDefaults, DataListDefaults,
+    DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults,
+    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
+    MarkDefaults, NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
+    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
+    SelectSizeLevel, SidebarDefaults, Size, Sizes, SplitterDefaults, TextDefaults, TextSize,
+    TitleDefaults, TitleSize, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -30,6 +29,7 @@ pub struct Theme {
     pub z_index: ZIndexDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
+    pub sidebar: SidebarDefaults,
     pub divider: DividerDefaults,
     pub splitter: SplitterDefaults,
     pub scroll_area: ScrollAreaDefaults,
@@ -106,6 +106,9 @@ impl Theme {
             size: Sizes::new(240, 300, 510, 600, 750, 900),
         },
         drawer: DrawerDefaults {
+            size: Sizes::new(200, 240, 280, 320, 400, 480),
+        },
+        sidebar: SidebarDefaults {
             size: Sizes::new(200, 240, 280, 320, 400, 480),
         },
         divider: DividerDefaults { spacing: None },

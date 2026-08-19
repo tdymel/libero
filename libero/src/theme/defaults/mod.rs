@@ -22,6 +22,7 @@ mod overlay;
 mod qr_code;
 mod scroll_area;
 mod select;
+mod sidebar;
 mod splitter;
 mod text;
 mod title;
@@ -65,6 +66,7 @@ pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVi
 pub use select::{
     SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SelectDefaults, SelectSizeLevel,
 };
+pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
 pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
