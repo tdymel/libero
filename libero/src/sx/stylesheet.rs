@@ -1,5 +1,6 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
 use crate::tokens::{NamedColorCss, Size};
+use crate::utils::warn;
 
 use super::{
     Property, StaticSx, Sx, SxEntry, SxModifierKey, SxPropertyKey, ThemeAwareValue,
@@ -60,6 +61,15 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     for entry in sx.entries() {
         if let SxEntry::Nested { modifier, sx } = entry {
             let next = apply_modifier(context, modifier);
+            // An all-whitespace `when()`/`selector()` expands to nothing, and
+            // a scope with no selector renders as a `{..}` block the browser
+            // silently discards.
+            if next.selectors.is_empty() {
+                warn(&format!(
+                    "Sx: {modifier:?} names no selector, its block is dropped."
+                ));
+                continue;
+            }
             collect_scopes(scopes, sx, &next);
         }
     }
@@ -314,6 +324,23 @@ mod tests {
         let css = stylesheet.as_str();
 
         assert!(css.contains("[data-state~=\"horizontal\"][data-state~=\"label\"]{height:1px;}"));
+    }
+
+    /// Without the guard these render `.lsx-x{color:blue;}{color:red;}` - a
+    /// selectorless block the browser drops with no diagnostic.
+    #[test]
+    fn a_modifier_naming_no_selector_drops_its_block() {
+        for base in [
+            sx().color("blue").when("", sx().color("red")),
+            sx().color("blue").when("  ", sx().color("red")),
+            sx().color("blue").selector("", sx().color("red")),
+            sx().color("blue").selector(" , ", sx().color("red")),
+        ] {
+            let css = Stylesheet::from(&base).as_str().to_string();
+
+            assert!(!css.contains("{color:red;}"), "kept a dropped block: {css}");
+            assert!(!css.contains("}{"), "emitted a selectorless block: {css}");
+        }
     }
 
     #[test]
