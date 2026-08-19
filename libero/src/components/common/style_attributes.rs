@@ -36,7 +36,7 @@ pub(crate) fn use_style_attributes(
 
     let variables_style = variables
         .as_ref()
-        .map(Variables::to_string)
+        .map(Variables::render)
         .filter(|style| !style.is_empty());
 
     StyleAttributes {

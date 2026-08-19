@@ -32,6 +32,26 @@ impl Variables {
     }
 }
 
+impl Variables {
+    /// `write!` per entry costs more than the whole rest of the style
+    /// attribute; these are plain concatenations, so they skip `fmt`.
+    pub(crate) fn render(&self) -> String {
+        let mut out = String::with_capacity(
+            self.0
+                .iter()
+                .map(|(name, value)| name.name().len() + value.len() + 2)
+                .sum(),
+        );
+        for (name, value) in &self.0 {
+            out.push_str(name.name());
+            out.push(':');
+            out.push_str(value);
+            out.push(';');
+        }
+        out
+    }
+}
+
 impl Display for Variables {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (name, value) in &self.0 {
@@ -50,6 +70,18 @@ mod tests {
     use super::*;
 
     const COLOR: CssVar = CssVar::new("--lsx-test-color");
+
+    /// `render` is the hot path and `Display` the general one; they must not
+    /// drift.
+    #[test]
+    fn render_matches_the_display_impl() {
+        let variables = variables()
+            .with(COLOR, "red".to_string())
+            .with(CssVar::new("--lsx-a"), "1rem".to_string());
+
+        assert_eq!(variables.render(), variables.to_string());
+        assert_eq!(Variables::new().render(), String::new());
+    }
 
     #[test]
     fn renders_as_style_attribute_declarations() {
