@@ -1,7 +1,7 @@
 use crate::{
     CssLayer,
     components::{ClassList, Input, States, Variables},
-    hooks::use_css,
+    hooks::{SxSource, use_css},
     sx::{StaticSx, Sx},
 };
 
@@ -25,7 +25,14 @@ pub(crate) fn use_style_attributes(
 ) -> StyleAttributes {
     let focus_class = use_css(Some(&BOX_FOCUS_SX), CssLayer::Framework);
     let framework_class = use_css(framework_sx, CssLayer::Framework);
-    let static_class = use_css(sx.as_ref(), CssLayer::UserStatic);
+    // Not `sx.as_ref()`: that collapses the lifetime, so a caller's `static`
+    // is rehashed and rebuilt as if it were freshly built this render.
+    let sx_source = match sx {
+        Input::None => None,
+        Input::Value(sx) => Some(SxSource::Owned(sx)),
+        Input::Static(sx) => Some(SxSource::Static(sx)),
+    };
+    let static_class = use_css(sx_source, CssLayer::UserStatic);
 
     let variables_style = variables
         .as_ref()

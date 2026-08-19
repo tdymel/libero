@@ -6,13 +6,32 @@ use crate::{
 
 use crate::sx::ThemeAwareValue;
 
-#[derive(Clone, Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, Default)]
 pub enum Input<T: 'static> {
     #[default]
     None,
     Value(T),
     Static(&'static T),
 }
+
+/// Hand-written only for the `Static` fast path; every other pair compares
+/// exactly as the derive did, cross-variant included.
+impl<T: PartialEq + 'static> PartialEq for Input<T> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::None, Self::None) => true,
+            (Self::Value(a), Self::Value(b)) => a == b,
+            // The same `static` on both sides is what props diffing sees on
+            // an unchanged render, and settling it by address is what keeps
+            // that off the value's own `PartialEq` - for an `Sx`, a walk of
+            // the whole entry tree.
+            (Self::Static(a), Self::Static(b)) => std::ptr::eq(*a, *b) || a == b,
+            _ => false,
+        }
+    }
+}
+
+impl<T: Eq + 'static> Eq for Input<T> {}
 
 impl<T: 'static> Input<T> {
     pub fn as_ref(&self) -> Option<&T> {
@@ -149,5 +168,51 @@ where
             Some(value) => Self::Value(value.into()),
             None => Self::None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::sx::{StaticSx, sx};
+
+    static PADDING: StaticSx = StaticSx::new(|| sx().padding("lg"));
+    static SAME_PADDING: StaticSx = StaticSx::new(|| sx().padding("lg"));
+
+    #[test]
+    fn the_same_static_is_equal_to_itself() {
+        assert_eq!(Input::Static(&*PADDING), Input::Static(&*PADDING));
+    }
+
+    /// The fast path is an optimisation, not a narrowing: distinct statics
+    /// still fall through to the content compare the derive did.
+    #[test]
+    fn two_statics_with_equal_content_are_equal() {
+        assert_eq!(Input::Static(&*PADDING), Input::Static(&*SAME_PADDING));
+    }
+
+    /// Derive parity: a different variant is never equal, however the
+    /// contents compare.
+    #[test]
+    fn a_static_never_equals_an_owned_value() {
+        assert_ne!(Input::Static(&*PADDING), Input::Value(sx().padding("lg")));
+    }
+
+    #[test]
+    fn owned_values_compare_by_content() {
+        assert_eq!(
+            Input::Value(sx().padding("lg")),
+            Input::Value(sx().padding("lg"))
+        );
+        assert_ne!(
+            Input::Value(sx().padding("lg")),
+            Input::Value(sx().color("red"))
+        );
+    }
+
+    #[test]
+    fn none_equals_only_none() {
+        assert_eq!(Input::<Sx>::None, Input::<Sx>::None);
+        assert_ne!(Input::None, Input::Value(sx().padding("lg")));
     }
 }

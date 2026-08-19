@@ -1,4 +1,9 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, hash_map::DefaultHasher},
+    hash::{Hash, Hasher},
+    rc::Rc,
+};
 
 use dioxus::prelude::*;
 
@@ -37,32 +42,68 @@ impl CssSource for &Sx {
 }
 
 thread_local! {
-    /// A `StaticSx` renders to byte-identical CSS however many components
+    /// A `'static` `Sx` renders to byte-identical CSS however many components
     /// mount it, so the conversion is done once per static instead of once
     /// per mount. Keyed by address, the way `regex_api`'s `CompiledKey` keys
-    /// a pattern - sound because the impl below is on `&'static StaticSx`, so
-    /// an entry's address can never be reused by something else. Unbounded on
-    /// purpose: every `StaticSx` is a `static` item, so the map reaches a
+    /// a pattern - sound because every key comes from a `&'static Sx`, so an
+    /// entry's address can never be reused by something else. Unbounded on
+    /// purpose: every one of them is a `static` item, so the map reaches a
     /// fixed size.
     static STATIC_SX_CSS: RefCell<HashMap<usize, Stylesheet>> = RefCell::new(HashMap::new());
+}
+
+fn build_static(sx: &'static Sx) -> Stylesheet {
+    STATIC_SX_CSS.with(|cache| {
+        cache
+            .borrow_mut()
+            .entry(std::ptr::from_ref(sx) as usize)
+            .or_insert_with(|| Stylesheet::from(sx))
+            .clone()
+    })
 }
 
 /// `'static` so the address is a stable identity - see [`STATIC_SX_CSS`].
 impl CssSource for &'static StaticSx {
     /// The address, not a hash of the entries: a `static` is its own identity,
     /// and hashing the entry tree on every render is the cost being removed.
+    /// The *inner* `Sx`'s address, so a static reached through `framework_sx`
+    /// and through `sx` shares one cache entry.
     fn identity_hash(&self) -> u64 {
-        std::ptr::from_ref(*self) as u64
+        std::ptr::from_ref::<Sx>(self) as u64
     }
 
     fn build(self) -> Stylesheet {
-        STATIC_SX_CSS.with(|cache| {
-            cache
-                .borrow_mut()
-                .entry(std::ptr::from_ref(self) as usize)
-                .or_insert_with(|| Stylesheet::from(self))
-                .clone()
-        })
+        build_static(self)
+    }
+}
+
+/// A caller's `sx` prop, which carries whether it was built this render or
+/// declared as a `static` - see [`SxSource::identity_hash`]. Overlapping impls
+/// on `&Sx` and `&'static Sx` would not compile, so the two share one type.
+pub(crate) enum SxSource<'a> {
+    Owned(&'a Sx),
+    Static(&'static Sx),
+}
+
+impl CssSource for SxSource<'_> {
+    /// Hashed with the variant, so a `Static` address can never be mistaken
+    /// for an `Owned` content hash in a slot whose caller alternates.
+    fn identity_hash(&self) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        std::mem::discriminant(self).hash(&mut hasher);
+        match self {
+            // Its entries, since a fresh `Sx` has no identity but its content.
+            Self::Owned(sx) => sx.content_hash().hash(&mut hasher),
+            Self::Static(sx) => std::ptr::from_ref(*sx).hash(&mut hasher),
+        }
+        hasher.finish()
+    }
+
+    fn build(self) -> Stylesheet {
+        match self {
+            Self::Owned(sx) => Stylesheet::from(sx),
+            Self::Static(sx) => build_static(sx),
+        }
     }
 }
 
@@ -202,5 +243,60 @@ mod tests {
         let color: &'static StaticSx = &COLOR;
 
         assert_ne!(padding.build().as_str(), color.build().as_str());
+    }
+
+    /// What a caller's `sx: &STATIC` buys: an unchanged render re-derives an
+    /// identity without touching the entries, and the CSS is built once.
+    #[test]
+    fn a_static_sx_source_identifies_by_address() {
+        let first = SxSource::Static(&PADDING);
+        let second = SxSource::Static(&PADDING);
+        let other = SxSource::Static(&SAME_PADDING);
+
+        assert_eq!(first.identity_hash(), second.identity_hash());
+        assert_ne!(first.identity_hash(), other.identity_hash());
+    }
+
+    /// Same CSS either way - the variant only decides how the identity is
+    /// derived, never what gets registered.
+    #[test]
+    fn a_static_and_an_owned_sx_source_build_the_same_sheet() {
+        let owned = sx().padding("lg");
+
+        assert_eq!(
+            SxSource::Static(&PADDING).build(),
+            SxSource::Owned(&owned).build()
+        );
+    }
+
+    /// Equal content, different variant: the discriminant is hashed in, so
+    /// alternating between the two in one hook slot can't look unchanged.
+    #[test]
+    fn a_static_and_an_owned_sx_source_do_not_share_an_identity() {
+        let owned = sx().padding("lg");
+
+        assert_ne!(
+            SxSource::Static(&PADDING).identity_hash(),
+            SxSource::Owned(&owned).identity_hash()
+        );
+    }
+
+    /// One cache entry per static, whichever prop reached it - `framework_sx`
+    /// takes the `&'static StaticSx` impl, `sx` the `SxSource` one.
+    #[test]
+    fn a_static_reached_through_either_prop_shares_one_cache_entry() {
+        let framework: &'static StaticSx = &COLOR;
+        framework.build();
+        SxSource::Static(&COLOR).build();
+
+        let entries = STATIC_SX_CSS.with(|cache| {
+            cache
+                .borrow()
+                .keys()
+                .filter(|key| **key == std::ptr::from_ref::<Sx>(&COLOR) as usize)
+                .count()
+        });
+
+        assert_eq!(entries, 1);
     }
 }
