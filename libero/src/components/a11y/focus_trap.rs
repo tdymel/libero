@@ -8,7 +8,18 @@ use crate::{
 
 use super::visually_hidden::VISUALLY_HIDDEN_SX;
 
-const FOCUSABLE_SELECTOR: &str = "a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"])";
+/// `FocusTrap` wraps arbitrary consumer children, so the tab order has to
+/// exclude what a browser would never focus. The `:not(..)` tail drops
+/// `hidden`/`inert`/`aria-hidden` elements *and their descendants* - without
+/// it, Tab strands focus on something invisible. Deliberately still matched:
+/// a visually-hidden-but-focusable element, which is what
+/// [`FocusTrapInitialFocus`] is.
+const FOCUSABLE_SELECTOR: &str = concat!(
+    ":is(a[href], button:not([disabled]), textarea:not([disabled]), ",
+    "input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]))",
+    ":not([hidden], [inert], [aria-hidden=\"true\"], ",
+    "[hidden] *, [inert] *, [aria-hidden=\"true\"] *)"
+);
 
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
