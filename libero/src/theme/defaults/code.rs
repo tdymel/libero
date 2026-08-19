@@ -6,6 +6,8 @@ pub const CODE_BACKGROUND: CssVar = CssVar::new("--lsx-code-background");
 pub const CODE_BORDER: CssVar = CssVar::new("--lsx-code-border");
 pub const CODE_MUTED_TEXT: CssVar = CssVar::new("--lsx-code-muted-text");
 pub const CODE_LINE_NUMBER: CssVar = CssVar::new("--lsx-code-line-number");
+pub const CODE_COPY_HOVER_BACKGROUND: CssVar = CssVar::new("--lsx-code-copy-hover-background");
+pub const CODE_COPY_HOVER_TEXT: CssVar = CssVar::new("--lsx-code-copy-hover-text");
 pub const CODE_TOK_KEYWORD: CssVar = CssVar::new("--lsx-code-tok-keyword");
 pub const CODE_TOK_STRING: CssVar = CssVar::new("--lsx-code-tok-string");
 pub const CODE_TOK_COMMENT: CssVar = CssVar::new("--lsx-code-tok-comment");
@@ -27,6 +29,8 @@ pub struct CodeDefaults {
     pub border: &'static str,
     pub muted_text: &'static str,
     pub line_number: &'static str,
+    pub copy_hover_background: &'static str,
+    pub copy_hover_text: &'static str,
     pub tok_keyword: &'static str,
     pub tok_string: &'static str,
     pub tok_comment: &'static str,
@@ -47,6 +51,8 @@ impl ToCssDeclarations for CodeDefaults {
             CODE_BORDER.declare(self.border),
             CODE_MUTED_TEXT.declare(self.muted_text),
             CODE_LINE_NUMBER.declare(self.line_number),
+            CODE_COPY_HOVER_BACKGROUND.declare(self.copy_hover_background),
+            CODE_COPY_HOVER_TEXT.declare(self.copy_hover_text),
             CODE_TOK_KEYWORD.declare(self.tok_keyword),
             CODE_TOK_STRING.declare(self.tok_string),
             CODE_TOK_COMMENT.declare(self.tok_comment),

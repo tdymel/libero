@@ -9,8 +9,8 @@ use crate::{
     hooks::{Clipboard, use_clipboard},
     sx::{StaticSx, Sx, sx},
     theme::{
-        CODE_BACKGROUND, CODE_BORDER, CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT,
-        ColorCss, ColorShade,
+        CODE_BACKGROUND, CODE_BORDER, CODE_COPY_HOVER_BACKGROUND, CODE_COPY_HOVER_TEXT,
+        CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT, ColorCss, ColorShade,
     },
 };
 
@@ -58,7 +58,10 @@ static CODE_COPY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().border_radius("6px")
         .padding("5px")
         .color(CODE_MUTED_TEXT.value())
-        .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
+        .hover(
+            sx().background(CODE_COPY_HOVER_BACKGROUND.value())
+                .color(CODE_COPY_HOVER_TEXT.value()),
+        )
 });
 
 // Centered on the first code line, not the container, which would drift on a
@@ -74,7 +77,10 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         .border_radius("6px")
         .padding("5px")
         .color(CODE_MUTED_TEXT.value())
-        .hover(sx().background("rgba(31, 35, 40, 0.08)").color("#1f2328"))
+        .hover(
+            sx().background(CODE_COPY_HOVER_BACKGROUND.value())
+                .color(CODE_COPY_HOVER_TEXT.value()),
+        )
 });
 
 static CODE_BLOCK_SCROLL_SX: StaticSx = StaticSx::new(|| sx().overflow("auto"));

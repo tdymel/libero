@@ -295,6 +295,8 @@ impl Theme {
             border: "#d0d7de",
             muted_text: "#57606a",
             line_number: "#8c959f",
+            copy_hover_background: "rgba(31, 35, 40, 0.08)",
+            copy_hover_text: "#1f2328",
             tok_keyword: "#cf222e",
             tok_string: "#0a3069",
             tok_comment: "#6e7781",
