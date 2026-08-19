@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use stylesheet_registry::StylesheetRegistry;
@@ -18,7 +20,9 @@ const SCROLL_LOCK_CSS: &str = "body:has([data-lsx-scroll-lock]) { overflow: hidd
 pub struct LiberoContext {
     pub theme: &'static Theme,
     pub(crate) layer_order_css: &'static str,
-    pub(crate) theme_css: Stylesheet,
+    /// `Rc<str>`, not a `Stylesheet`: every `use_context::<LiberoContext>()`
+    /// clones this struct, and only `LiberoProvider` ever reads this field.
+    pub(crate) theme_css: Rc<str>,
     pub(crate) stylesheet_registry: StylesheetRegistry,
     pub(crate) stylesheet_registry_version: Signal<u64>,
 }
@@ -28,7 +32,7 @@ impl LiberoContext {
         Self {
             theme,
             layer_order_css: CssLayer::order_css(),
-            theme_css: Stylesheet::from(theme),
+            theme_css: Rc::from(Stylesheet::from(theme).as_str()),
             stylesheet_registry: StylesheetRegistry::new(),
             stylesheet_registry_version,
         }
@@ -77,7 +81,7 @@ pub fn LiberoProvider(
             dangerous_inner_html: "{context.layer_order_css}"
         }
         style {
-            dangerous_inner_html: "{context.theme_css.as_str()}"
+            dangerous_inner_html: "{context.theme_css}"
         }
         style {
             dangerous_inner_html: SCROLL_LOCK_CSS
