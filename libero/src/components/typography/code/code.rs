@@ -5,12 +5,11 @@ use dioxus::prelude::*;
 use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
 use super::token_theme::use_token_theme;
 use crate::{
-    CssLayer,
     components::{
         ActionIcon, Box, Input, States, Variables,
-        common::{base_props, class_list, variables},
+        common::{base_props, variables},
     },
-    hooks::{Clipboard, use_clipboard, use_css},
+    hooks::{Clipboard, use_clipboard},
     sx::{StaticSx, Sx, sx},
     theme::{
         CODE_BACKGROUND, CODE_BORDER, CODE_COPY_HOVER_BACKGROUND, CODE_COPY_HOVER_TEXT,
@@ -361,24 +360,18 @@ fn code_lines(
 fn CopyButton(source: String, floating: bool) -> Element {
     let mut clipboard: Clipboard = use_clipboard();
     // No `variant`/`color`, so `ActionIcon` adds no background of its own and
-    // these fully control the look.
-    //
-    // Registered here and passed as a class rather than through `ActionIcon`'s
-    // `sx`, which would clone the static into an owned `Sx` and so re-render
-    // it to CSS per instance - `use_css` memoizes only a `&'static StaticSx`.
-    // Still `UserStatic`, because that is what puts it above
-    // `ACTION_ICON_BASE_SX`'s own `padding`/`border-radius` in the cascade.
+    // these fully control the look. Passed as `Input::Static`, so the CSS is
+    // built once for the process rather than per copy button.
     let button_sx: &'static StaticSx = if floating {
         &CODE_COPY_BUTTON_FLOATING_SX
     } else {
         &CODE_COPY_BUTTON_SX
     };
-    let button_class = use_css(Some(button_sx), CssLayer::UserStatic);
 
     rsx! {
         ActionIcon {
             aria_label: "Copy code",
-            class: class_list().with(button_class),
+            sx: button_sx,
             onclick: move |_| clipboard.copy(source.clone()),
             onmouseleave: move |_| clipboard.reset(),
             if clipboard.copied() {
