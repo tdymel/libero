@@ -368,6 +368,27 @@ fn splitter_renders_both_panes_around_a_divider() {
     assert!(body.contains("--lsx-splitter-a:50%;"));
 }
 
+/// `touch-action: none` on the drag target is what lets a touch drag start
+/// at all - without it the browser claims the gesture for scrolling and no
+/// `pointermove` ever arrives. Nothing visible regresses if it goes missing,
+/// so assert it reaches the rendered CSS. The drag itself needs real pointer
+/// input, which SSR cannot produce.
+#[test]
+fn splitter_hit_target_opts_out_of_browser_touch_gestures() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Splitter { initial_size: 50.0,
+                    div { "left" }
+                    div { "right" }
+                }
+            }
+        }
+    }
+
+    assert!(render(app).contains("touch-action:none"));
+}
+
 #[test]
 fn scroll_area_renders_its_content() {
     fn app() -> Element {

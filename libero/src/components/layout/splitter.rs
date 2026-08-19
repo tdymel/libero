@@ -80,7 +80,10 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
 // actual clickable/draggable target is comfortably larger than the thin
 // visible line, without the panes themselves leaving a gap for it.
 static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
-    let base = sx().position("absolute");
+    // `touch-action: none` is what makes a touch drag possible at all -
+    // without it the browser treats the gesture as a scroll and never
+    // delivers the `pointermove`s.
+    let base = sx().position("absolute").touch_action("none");
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         let inset = format!(
@@ -186,11 +189,13 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     let on_resize = props.on_resize;
 
-    // No `onmouseleave` - leaving the drag state alone when the cursor
-    // exits the container just pauses updates (`onmousemove` only fires
-    // while over it) rather than aborting the drag; it resumes if the
-    // cursor comes back, and only `onmouseup` actually ends it.
-    let onmousedown = move |event: Event<MouseData>| {
+    // Pointer events rather than mouse ones, so touch and pen drag too, and
+    // the container captures the pointer at `pointerdown`: every further
+    // move/up is delivered here no matter where the pointer travels, so a
+    // drag continues (rather than pausing) outside the container and can't
+    // be left stuck by a release outside it. Capture ends on its own at
+    // `pointerup`/`pointercancel`, so there is nothing to release by hand.
+    let onpointerdown = move |event: Event<PointerData>| {
         event.prevent_default();
         let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
             return;
@@ -212,6 +217,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
         } else {
             coordinates.y
         };
+        // Only once a drag is actually starting - and best-effort, since a
+        // failure costs just the out-of-container tracking, not the drag.
+        let _ = container.set_pointer_capture(event.pointer_id());
         drag.set(Some(DragState {
             start_client,
             start_a: a(),
@@ -220,7 +228,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
         on_resize.call(SplitterResizeEvent::Start(a(), 100.0 - a()));
     };
 
-    let onmousemove = move |event: Event<MouseData>| {
+    let onpointermove = move |event: Event<PointerData>| {
         let Some(state) = drag() else {
             return;
         };
@@ -236,12 +244,17 @@ pub fn Splitter(props: SplitterProps) -> Element {
         on_resize.call(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
     };
 
-    let onmouseup = move |_| {
+    let mut end_drag = move || {
         if drag().is_some() {
             drag.set(None);
             on_resize.call(SplitterResizeEvent::End(a(), 100.0 - a()));
         }
     };
+
+    let onpointerup = move |_| end_drag();
+    // The OS can revoke a pointer mid-drag (a system gesture, an incoming
+    // call) - without this the drag would stay stuck open.
+    let onpointercancel = move |_| end_drag();
 
     let onkeydown = move |event: Event<KeyboardData>| {
         let step = if event.modifiers().shift() {
@@ -295,8 +308,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
             variables,
             framework_sx: &SPLITTER_BASE_SX,
             attributes: props.attributes,
-            onmousemove,
-            onmouseup,
+            onpointermove,
+            onpointerup,
+            onpointercancel,
             Box {
                 framework_sx: &SPLITTER_PANEL_A_SX,
                 {panel_a}
@@ -313,7 +327,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     "aria-valuenow": "{a() as i64}",
                     "aria-valuemin": "{min_size as i64}",
                     "aria-valuemax": "{(100.0 - min_size) as i64}",
-                    onmousedown,
+                    onpointerdown,
                     onkeydown,
                 }
             }

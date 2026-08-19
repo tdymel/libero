@@ -36,6 +36,12 @@ pub trait ElementApi {
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 
+    /// Routes every further event from `pointer_id` to this element until
+    /// the pointer is released - so a drag keeps tracking once the pointer
+    /// leaves the element, and still delivers its `pointerup`. Released
+    /// automatically on `pointerup`/`pointercancel`, hence no counterpart.
+    fn set_pointer_capture(&self, pointer_id: i32) -> Result<(), PlatformError>;
+
     /// Finds the first descendant matching `selector`, scoped to this
     /// element's own subtree.
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError>;

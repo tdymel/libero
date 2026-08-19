@@ -80,6 +80,12 @@ mod web {
             Ok(())
         }
 
+        fn set_pointer_capture(&self, pointer_id: i32) -> Result<(), PlatformError> {
+            self.element
+                .set_pointer_capture(pointer_id)
+                .map_err(|_| PlatformError::NotFound)
+        }
+
         fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError> {
             let element = self
                 .element
