@@ -79,3 +79,24 @@ pub fn classes_of(html: &str, tag: &str) -> Vec<String> {
 pub fn has_rule_for(html: &str, class: &str) -> bool {
     html.contains(&format!(".{class}"))
 }
+
+/// Every `id` on the first `<tag>`, duplicates included - `attributes_of`
+/// keys by name, so it cannot see the one browsers silently resolve.
+pub fn ids_of(html: &str, tag: &str) -> Vec<String> {
+    let start = html
+        .find(&format!("<{tag}"))
+        .unwrap_or_else(|| panic!("no <{tag}> in the rendered output:\n{html}"));
+    let open_tag = &html[start..][..html[start..].find('>').expect("an unterminated tag")];
+
+    let mut ids = Vec::new();
+    let mut rest = open_tag;
+
+    while let Some(at) = rest.find(" id=\"") {
+        rest = &rest[at + " id=\"".len()..];
+        let end = rest.find('"').expect("an unterminated attribute value");
+        ids.push(rest[..end].to_string());
+        rest = &rest[end + 1..];
+    }
+
+    ids
+}

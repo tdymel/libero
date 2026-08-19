@@ -7,7 +7,7 @@ use crate::{
         Input, List, States,
         common::{base_props, dom_api},
     },
-    hooks::{use_id, use_theme},
+    hooks::{use_root_id, use_theme},
     sx::Sx,
     theme::{LIST_GAP, Size},
 };
@@ -229,7 +229,7 @@ base_props! {
 #[component]
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
-    let root_id = use_id();
+    let root_id = use_root_id(&props.attributes);
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
 

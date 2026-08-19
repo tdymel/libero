@@ -5,7 +5,7 @@ use crate::{
         Box, Input, States, Variables,
         common::{base_props, dom_api, input_from_str, variables},
     },
-    hooks::{use_id, use_theme},
+    hooks::{use_root_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
 };
@@ -127,7 +127,7 @@ base_props! {
 #[component]
 pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
-    let root_id = use_id();
+    let root_id = use_root_id(&props.attributes);
 
     let scrollbars = props.scrollbars.copied_or(theme.scroll_area.scrollbars);
     let visibility = props

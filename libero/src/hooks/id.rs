@@ -1,11 +1,41 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use dioxus::prelude::*;
+use dioxus::{core::AttributeValue, prelude::*};
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(0);
+
+fn next_id() -> String {
+    format!("lsx-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed))
+}
 
 /// A process-unique DOM id, stable for the component's lifetime - for the
 /// `dom_api()` lookups that scope an interaction to one instance.
 pub fn use_id() -> Signal<String> {
-    use_signal(|| format!("lsx-{}", NEXT_ID.fetch_add(1, Ordering::Relaxed)))
+    use_signal(next_id)
+}
+
+/// [`use_id`], except a caller's own `id` attribute takes over. Components
+/// that both need an id for lookups and spread `attributes` must use this -
+/// emitting both would render two `id`s and the browser keeps the caller's,
+/// breaking every lookup.
+pub fn use_root_id(attributes: &[Attribute]) -> Signal<String> {
+    let caller = caller_id(attributes);
+    let mut id = use_signal(|| caller.clone().unwrap_or_else(next_id));
+
+    if let Some(caller) = caller
+        && *id.peek() != caller
+    {
+        id.set(caller);
+    }
+
+    id
+}
+
+fn caller_id(attributes: &[Attribute]) -> Option<String> {
+    attributes.iter().rev().find_map(|attribute| {
+        match (attribute.name, &attribute.value) {
+            ("id", AttributeValue::Text(value)) => Some(value.clone()),
+            _ => None,
+        }
+    })
 }

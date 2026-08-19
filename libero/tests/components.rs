@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::{attributes_of, body, classes_of, has_rule_for, render};
+use common::{attributes_of, body, classes_of, has_rule_for, ids_of, render};
 
 use dioxus::prelude::*;
 use libero::{
@@ -670,4 +670,46 @@ fn the_first_render_already_carries_the_component_css() {
         html.contains(&format!(".{class}")),
         "the class's own CSS is missing from the first render"
     );
+}
+
+/// The four components that look their own root up through `dom_api()` also
+/// spread `attributes`, so a caller's `id` used to render *beside* theirs.
+/// Browsers keep the first, which broke every lookup - scroll positions,
+/// splitter drag, tree keyboard nav, focus trapping.
+#[test]
+fn a_root_id_component_renders_the_callers_id_once() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ScrollArea { id: "mine", "scrollable content" }
+                Splitter { id: "mine", initial_size: 50.0,
+                    div { "left" }
+                    div { "right" }
+                }
+                Tree { id: "mine", aria_label: "Files", data: vec![TreeNode::new("a", "Alpha".to_string())] }
+                FocusTrap { id: "mine", "trapped" }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert_eq!(body.matches("id=\"mine\"").count(), 4);
+    assert!(!body.contains("id=\"lsx-"), "a generated id shadowed the caller's:\n{body}");
+}
+
+#[test]
+fn a_root_id_component_falls_back_to_a_generated_id() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ScrollArea { "scrollable content" }
+            }
+        }
+    }
+
+    let ids = ids_of(&body(&render(app)), "div");
+
+    assert_eq!(ids.len(), 1);
+    assert!(ids[0].starts_with("lsx-"), "unexpected generated id: {}", ids[0]);
 }

@@ -5,7 +5,7 @@ use crate::{
         Box, Input, Orientation, States, Variables,
         common::{base_props, dom_api, variables},
     },
-    hooks::{DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_id, use_theme},
+    hooks::{DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_root_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
     utils::warn,
@@ -151,7 +151,7 @@ base_props! {
 #[component]
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
-    let root_id = use_id();
+    let root_id = use_root_id(&props.attributes);
     let (panel_a, panel_b) = resolve_panels(props.children);
 
     let orientation = props.orientation.copied_or(Orientation::Vertical);

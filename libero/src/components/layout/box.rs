@@ -47,9 +47,18 @@ pub fn Box(props: BoxProps) -> Element {
     );
     let component = props.component.copied_or_default();
 
+    // A component that sets its own root id and also spreads `attributes`
+    // sends two `id`s here. Browsers keep the first; `use_root_id` makes both
+    // the caller's, so dropping the rest is enough.
+    let mut seen_id = false;
     let attributes = props
         .attributes
         .into_iter()
+        .filter(move |attribute| {
+            let duplicate = attribute.name == "id" && seen_id;
+            seen_id |= attribute.name == "id";
+            !duplicate
+        })
         .chain(
             [
                 props.alt.map(|value| attr("alt", value)),

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{Box, Input, States, common::base_props, common::dom_api},
-    hooks::use_id,
+    hooks::use_root_id,
     sx::{StaticSx, Sx, sx},
 };
 
@@ -64,7 +64,7 @@ base_props! {
 
 #[component]
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
-    let id = use_id();
+    let id = use_root_id(&props.attributes);
 
     rsx! {
         Box {
