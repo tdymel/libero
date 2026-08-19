@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Input, List, States,
-        common::{base_props, dom_api},
+        common::{base_props, css_string, dom_api},
     },
     hooks::{use_root_id, use_theme},
     sx::Sx,
@@ -96,7 +96,8 @@ fn click_tree_item(root_id: &str, target_id: &str) {
     let Ok(root) = dom_api().query_selector(&format!("#{root_id}")) else {
         return;
     };
-    let selector = format!("[data-tree-id={target_id:?}] a, [data-tree-id={target_id:?}] button");
+    let id = css_string(target_id);
+    let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
     let _ = root.query_selector(&selector).and_then(|el| el.click());
 }
 
@@ -110,7 +111,7 @@ fn has_shortcut_modifier(event: &Event<KeyboardData>) -> bool {
 // Keyboard nav only applies while the active row itself holds focus. Anything
 // else (an input or editable inside a row) owns its own keystrokes.
 fn tree_item_focused(root_id: &str, target_id: &str) -> bool {
-    let selector = format!("#{root_id} [data-tree-id={target_id:?}]");
+    let selector = format!("#{root_id} [data-tree-id={}]", css_string(target_id));
     dom_api()
         .query_selector(&selector)
         .is_ok_and(|el| el.is_focused())
@@ -118,7 +119,7 @@ fn tree_item_focused(root_id: &str, target_id: &str) -> bool {
 
 // Scoped to `root_id`, so two `Tree`s can reuse node ids without colliding.
 fn focus_tree_item(root_id: &str, target_id: &str) {
-    let selector = format!("#{root_id} [data-tree-id={target_id:?}]");
+    let selector = format!("#{root_id} [data-tree-id={}]", css_string(target_id));
     let _ = dom_api()
         .query_selector(&selector)
         .and_then(|el| el.focus());
