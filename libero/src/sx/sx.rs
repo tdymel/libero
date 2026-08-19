@@ -87,6 +87,15 @@ impl Sx {
         }
     }
 
+    /// At most one declaration per property, and re-declaring one *moves it
+    /// to the end* rather than overwriting in place - deliberately unlike
+    /// [`Sx::with_modifier`]. Source order is what decides a shorthand
+    /// against a longhand (`padding` vs `padding-top`) within a single rule,
+    /// so the most recently declared property has to end up last for
+    /// "re-declaring wins" to hold; overwriting in place would leave an
+    /// earlier shorthand clobbering the override. `with_modifier` can keep
+    /// its position because nested blocks carry a `[data-state~=..]`
+    /// selector, so specificity rather than order settles them.
     fn with_declaration(mut self, property: SxPropertyKey, value: ThemeAwareValue) -> Self {
         // At most one declaration per property, so stop at the first hit.
         let existing = self.entries.iter().position(|entry| {
@@ -125,6 +134,16 @@ impl Sx {
         self
     }
 
+    /// Merges `other` on top of `self` - `other` wins every property and
+    /// modifier they both declare. A property `other` re-declares moves to
+    /// the end (see [`Sx::with_declaration`]), which is what lets it beat a
+    /// shorthand `self` declared earlier. A consequence worth knowing: the
+    /// emitted declaration order depends on how an `Sx` was built, so two
+    /// `Sx` with identical effective styling can render different CSS text
+    /// and therefore land under different class names. Cheap in practice -
+    /// every `and` call site composes a `StaticSx` once per process, and the
+    /// user-`sx`/`framework_sx` override path never merges at all (those are
+    /// separate classes on separate CSS layers, see `use_style_attributes`).
     pub fn and(mut self, other: Sx) -> Self {
         for entry in other.entries {
             match entry {
@@ -225,6 +244,30 @@ mod tests {
         });
 
         assert_eq!(helpers.class_name(), folded.class_name());
+    }
+
+    /// The ordering `with_declaration` deliberately produces: a re-declared
+    /// property moves to the end, so it still beats a shorthand declared
+    /// before it. Overwriting in place instead would emit
+    /// `padding-top:4px;padding:8px`, letting the shorthand win and silently
+    /// swallowing the override - which is what the framework's own `and`
+    /// compositions (`Flex`, `Divider`, `DataList`) rely on not happening.
+    #[test]
+    fn a_re_declared_property_moves_last_so_it_beats_an_earlier_shorthand() {
+        use crate::css::Stylesheet;
+
+        let merged = super::sx()
+            .padding_top("2px")
+            .padding("8px")
+            .and(super::sx().padding_top("4px"));
+
+        assert!(
+            Stylesheet::from(&merged)
+                .as_str()
+                .contains("padding:8px;padding-top:4px;"),
+            "re-declared property must render last, got {}",
+            Stylesheet::from(&merged).as_str()
+        );
     }
 
     #[test]
