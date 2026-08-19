@@ -1,4 +1,4 @@
-/// Declares a component `Props` struct, prepending `attributes` (extends
+/// Declares a component `Props` struct, appending `attributes` (extends
 /// `GlobalAttributes`, so it also captures DOM events), `class`, `sx` and
 /// `states`. The body lists only what's specific to the component.
 ///
@@ -39,6 +39,11 @@ macro_rules! base_props {
         $(#[$struct_meta])*
         #[derive(Props, Clone, PartialEq)]
         $vis struct $name {
+            // The component's own fields come first, and `children` with them,
+            // so the derived `PartialEq` that `memoize` runs bails on the
+            // never-equal `children` before it compares the four expensive
+            // shared fields below.
+            $($fields)*
             #[props(extends = GlobalAttributes $($extra_extends)*)]
             attributes: Vec<Attribute>,
             #[props(default, into)]
@@ -47,7 +52,6 @@ macro_rules! base_props {
             sx: Input<Sx>,
             #[props(default, into)]
             states: Input<States>,
-            $($fields)*
         }
     };
 
