@@ -105,9 +105,11 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
 
-    let children = rsx! {
-        {row_content}
-        if is_expanded == Some(true) {
+    // Split on `is_expanded` instead of putting an `if` in one block: a
+    // conditional node costs its slot on every render of every *leaf* too.
+    let children = match is_expanded {
+        Some(true) => rsx! {
+            {row_content}
             List {
                 "role": "group",
                 sx: sx()
@@ -132,7 +134,8 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                     }
                 }
             }
-        }
+        },
+        _ => row_content,
     };
 
     row.attr("role", "treeitem")
