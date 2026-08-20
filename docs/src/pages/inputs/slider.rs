@@ -2,11 +2,14 @@ use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::components::{Code, Flex, Slider, SliderChangeEvent, SliderMark, Text};
 
+const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
+
 #[component]
 pub fn SliderPage() -> Element {
     let mut volume = use_signal(|| 40.0);
     let mut zoom = use_signal(|| 1.0);
     let mut committed = use_signal(|| 40.0);
+    let mut size_index = use_signal(|| 2.0);
 
     rsx! {
         DocPage {
@@ -42,7 +45,7 @@ pub fn SliderPage() -> Element {
                 Flex {
                     direction: "column",
                     gap: "lg",
-                    for size in ["xs", "sm", "md", "lg", "xl"] {
+                    for size in SIZES {
                         Slider {
                             key: "{size}",
                             size,
@@ -127,6 +130,32 @@ pub fn SliderPage() -> Element {
                         ],
                         on_change: move |event: SliderChangeEvent| volume.set(event.value()),
                     }
+                }
+            }
+            DocSection {
+                title: "Discrete steps",
+                Text {
+                    "A "
+                    Code { "step" }
+                    " of one over an index makes the slider pick from a list instead of a "
+                    "number - here the size scale, with a mark per step and a "
+                    Code { "label" }
+                    " that names it. This one resizes itself as you drag."
+                }
+                Slider {
+                    aria_label: "Size",
+                    size: SIZES[size_index() as usize],
+                    min: 0.0,
+                    max: (SIZES.len() - 1) as f64,
+                    step: 1.0,
+                    value: size_index(),
+                    label: Callback::new(|value: f64| SIZES[value as usize].to_string()),
+                    marks: SIZES
+                        .iter()
+                        .enumerate()
+                        .map(|(index, size)| SliderMark::labeled(index as f64, *size))
+                        .collect(),
+                    on_change: move |event: SliderChangeEvent| size_index.set(event.value()),
                 }
             }
             DocSection {
