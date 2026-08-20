@@ -157,6 +157,18 @@ impl<'a> BoxBuilder<'a> {
     }
 }
 
+/// A [`BoxStyle`] from styling a component already resolved itself with
+/// `use_style_attributes` - so it can hand the pieces to something that is not
+/// an element on one path (`InternalAnchor`'s `Link`) and render the element
+/// on the other, without resolving twice.
+pub(crate) fn box_style(style: StyleAttributes) -> BoxStyle {
+    BoxStyle {
+        own: Vec::new(),
+        fallback: Vec::new(),
+        style,
+    }
+}
+
 /// The attribute, unless its value renders nothing: a `false` boolean or a
 /// `None` costs ~135 ns to diff and produces no markup either way. Dropping it
 /// is safe - a shrinking attribute list still clears what went away, which

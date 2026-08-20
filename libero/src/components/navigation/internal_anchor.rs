@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, styling_attributes, use_style_attributes},
+        layout::box_style,
     },
     sx::{StaticSx, Sx},
 };
@@ -45,9 +46,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         &props.sx,
         &props.states,
         &props.variables,
-        // Cloned: the plain-`<a>` branch below hands the same string to `Box`,
-        // which resolves the styling a second time.
-        props.style.clone(),
+        props.style,
     );
 
     let is_blank = props.target.as_deref() == Some("_blank");
@@ -75,20 +74,13 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         };
     }
 
-    rsx! {
-        Box {
-            component: "a",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables: props.variables,
-            style: props.style,
-            framework_sx: props.framework_sx,
-            href: Some(navigation_target_href(props.to)),
-            target: props.target,
-            onmounted: props.onmounted,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    let onmounted = props.onmounted;
+
+    box_style(style_attributes)
+        .attr("href", navigation_target_href(props.to))
+        .attr("target", props.target)
+        .event("onmounted", move |event: MountedEvent| {
+            onmounted.call(event)
+        })
+        .render(HtmlTag::A, props.attributes, props.children)
 }

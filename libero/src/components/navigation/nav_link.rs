@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, Variables, common::base_props, variables},
+    components::{
+        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
@@ -97,12 +99,14 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         NavigationTarget::External(_) => false,
     });
 
-    let variables = nav_link_variables(props.color.as_ref(), theme.nav_link.color);
-    let states = props
+    let variables: Input<Variables> =
+        nav_link_variables(props.color.as_ref(), theme.nav_link.color).into();
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
-        .with("active", is_active);
+        .with("active", is_active)
+        .into();
     let aria_current = is_active.then_some("page");
 
     let scroll_into_view = props.scroll_into_view.unwrap_or(false);
@@ -128,21 +132,20 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         }
     }));
 
+    // One hook for every path, above the branch - see `Button`.
+    let boxed = use_box()
+        .framework_sx(&NAV_LINK_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare();
+
     if disabled {
-        return rsx! {
-            Box {
-                component: "a",
-                class: props.class,
-                sx: props.sx,
-                states,
-                variables,
-                framework_sx: &NAV_LINK_BASE_SX,
-                "aria-disabled": "true",
-                tabindex: "-1",
-                attributes: props.attributes,
-                {props.children}
-            }
-        };
+        return boxed
+            .attr("aria-disabled", "true")
+            .attr("tabindex", "-1")
+            .render(HtmlTag::A, props.attributes, props.children);
     }
 
     rsx! {

@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, Input, Modal, States, Variables,
+        Box, Dialog, HtmlTag, Input, Modal, States, Variables,
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
+        layout::use_box,
     },
     hooks::{use_focus_return, use_portal, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -105,44 +106,66 @@ pub fn Image(props: ImageProps) -> Element {
     };
 
     let fit = props.fit.copied_or(use_theme().image.fit);
-    let variables = image_variables(props.radius.as_ref());
+    let variables: Input<Variables> = image_variables(props.radius.as_ref()).into();
 
     let on_error_src = props.src.clone();
 
     let decorative_role = props.alt.is_empty().then_some("presentation");
 
-    if !props.zoomable {
-        let states = props
+    // Both paths' styling is resolved here, above the branch: `prepare` is a
+    // hook. The root is the `<img>` itself when it can't zoom, and the zoom
+    // `<button>` when it can, so the two differ in every input.
+    let img_states: Input<States> = match props.zoomable {
+        true => states().with(fit.state_name(), true).into(),
+        false => props
             .states
+            .clone()
             .unwrap_or_default()
-            .with(fit.state_name(), true);
-        use_portal(None);
-        return rsx! {
-            Box {
-                component: "img",
-                class: props.class,
-                sx: props.sx,
-                states,
-                variables,
-                framework_sx: &IMAGE_BASE_SX,
-                src: src,
-                alt: props.alt,
-                role: decorative_role,
-                onerror: move |_| errored_src.set(Some(on_error_src.clone())),
-                attributes: props.attributes,
-            }
-        };
-    }
+            .with(fit.state_name(), true)
+            .into(),
+    };
+    let button_states: Input<States> = props
+        .states
+        .clone()
+        .unwrap_or_default()
+        .with("zoomed", zoomed())
+        .into();
 
-    let img_states = states().with(fit.state_name(), true);
+    let (root_sx, root_states, root_variables) = match props.zoomable {
+        true => (&ZOOM_BUTTON_SX, &button_states, &Input::None),
+        false => (&IMAGE_BASE_SX, &img_states, &variables),
+    };
+    let root = use_box()
+        .framework_sx(root_sx)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(root_states)
+        .variables(root_variables)
+        .prepare();
+    // Only the zoomable path renders it, but the hook runs either way.
+    let inner_image = use_box()
+        .framework_sx(&IMAGE_BASE_SX)
+        .states(&img_states)
+        .variables(&variables)
+        .prepare();
+
+    if !props.zoomable {
+        use_portal(None);
+        return root
+            .attr("src", src)
+            .attr("alt", props.alt)
+            .attr("role", decorative_role)
+            .event("onerror", move |_: Event<ImageData>| {
+                errored_src.set(Some(on_error_src.clone()))
+            })
+            .render(HtmlTag::Img, props.attributes, rsx! {});
+    }
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
     let mut close_zoom = move || {
         zoomed.set(false);
         focus_return.restore();
     };
-
-    let button_states = props.states.unwrap_or_default().with("zoomed", zoomed());
 
     let label = match (props.alt.is_empty(), zoomed()) {
         (true, false) => "Zoom in".to_string(),
@@ -184,30 +207,23 @@ pub fn Image(props: ImageProps) -> Element {
     });
     use_portal(portal_content);
 
-    rsx! {
-        Box {
-            component: "button",
-            r#type: "button",
-            class: props.class,
-            sx: props.sx,
-            states: button_states,
-            framework_sx: &ZOOM_BUTTON_SX,
-            "aria-pressed": zoomed().to_string(),
-            aria_label: label.clone(),
-            onmounted: move |event: Event<MountedData>| focus_return.remember(event),
-            onclick: move |_| zoomed.toggle(),
-            Box {
-                component: "img",
-                states: img_states,
-                variables,
-                framework_sx: &IMAGE_BASE_SX,
-                src: src.clone(),
-                alt: "",
-                role: "presentation",
-                onerror: move |_| errored_src.set(Some(on_error_src.clone())),
-            }
-        }
-    }
+    let image = inner_image
+        .attr("src", src.clone())
+        .attr("alt", "")
+        .attr("role", "presentation")
+        .event("onerror", move |_: Event<ImageData>| {
+            errored_src.set(Some(on_error_src.clone()))
+        })
+        .render(HtmlTag::Img, Vec::new(), rsx! {});
+
+    root.attr("type", "button")
+        .attr("aria-pressed", zoomed().to_string())
+        .attr("aria-label", label.clone())
+        .event("onmounted", move |event: Event<MountedData>| {
+            focus_return.remember(event)
+        })
+        .event("onclick", move |_: Event<MouseData>| zoomed.toggle())
+        .render(HtmlTag::Button, props.attributes, image)
 }
 
 #[cfg(test)]

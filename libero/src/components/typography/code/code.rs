@@ -5,11 +5,13 @@ use dioxus::prelude::*;
 use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
 use super::token_theme::use_token_theme;
 use crate::{
+    CssLayer,
     components::{
-        ActionIcon, Box, Input, States, Variables,
+        ActionIcon, Box, HtmlTag, Input, States, Variables,
         common::{base_props, variables},
+        layout::use_box,
     },
-    hooks::{Clipboard, use_clipboard},
+    hooks::{Clipboard, use_clipboard, use_css},
     sx::{StaticSx, Sx, sx},
     theme::{
         CODE_BACKGROUND, CODE_BORDER, CODE_COPY_HOVER_BACKGROUND, CODE_COPY_HOVER_TEXT,
@@ -407,6 +409,23 @@ pub fn Code(props: CodeProps) -> Element {
         }
     }));
 
+    // Every path roots in one element, so one `prepare()` above the branch
+    // covers them all - only which framework style it carries differs.
+    let boxed = use_box()
+        .framework_sx(match props.block {
+            true => &CODE_BLOCK_CONTAINER_SX,
+            false => &CODE_INLINE_SX,
+        })
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare();
+    // `None` registers nothing, so the inline paths pay only the hook slot.
+    let header_class = use_css(
+        (props.block && props.header).then_some(&CODE_BLOCK_HEADER_SX),
+        CssLayer::Framework,
+    );
+
     if props.block {
         // Diff statuses need the markers still present.
         let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
@@ -442,18 +461,12 @@ pub fn Code(props: CodeProps) -> Element {
             None => sx(),
         };
 
-        return rsx! {
-            Box {
-                component: "div",
-                class: props.class,
-                sx: props.sx,
-                states: props.states,
-                framework_sx: &CODE_BLOCK_CONTAINER_SX,
-                attributes: props.attributes,
+        return boxed.render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
                 if props.header {
-                    Box {
-                        component: "div",
-                        framework_sx: &CODE_BLOCK_HEADER_SX,
+                    div { class: header_class,
                         span { {label} }
                         if let Some(copy_source) = copy_source.clone() {
                             CopyButton { source: copy_source, floating: false }
@@ -476,19 +489,15 @@ pub fn Code(props: CodeProps) -> Element {
                         }
                     }
                 }
-            }
-        };
+            },
+        );
     }
 
     if let Some(source) = props.source.clone() {
-        return rsx! {
-            Box {
-                component: "code",
-                class: props.class,
-                sx: props.sx,
-                states: props.states,
-                framework_sx: &CODE_INLINE_SX,
-                attributes: props.attributes,
+        return boxed.render(
+            HtmlTag::Code,
+            props.attributes,
+            rsx! {
                 if let Some(lines) = highlighted.read().clone().flatten() {
                     for line in lines.iter() {
                         for (text, class) in line.iter() {
@@ -498,21 +507,11 @@ pub fn Code(props: CodeProps) -> Element {
                 } else {
                     {source.as_str()}
                 }
-            }
-        };
+            },
+        );
     }
 
-    rsx! {
-        Box {
-            component: "code",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            framework_sx: &CODE_INLINE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    boxed.render(HtmlTag::Code, props.attributes, props.children)
 }
 
 #[cfg(test)]

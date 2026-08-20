@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, dom_api, input_from_str, variables},
+        layout::use_box,
     },
     hooks::{use_root_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -238,33 +239,31 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         let _ = container.scroll_to(x, y);
     }));
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(scrollbars.state_name(), true)
         .with(visibility_token(visibility), true)
-        .with(size.state_name(), true);
+        .with(size.state_name(), true)
+        .into();
 
-    let variables = scroll_area_variables(props.scrollbar_color.as_ref());
+    let variables: Input<Variables> = scroll_area_variables(props.scrollbar_color.as_ref()).into();
 
-    rsx! {
-        Box {
-            id: "{root_id}",
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &SCROLL_AREA_BASE_SX,
-            // Chromium makes an overflowing `overflow: auto` region an
-            // implicit tab stop unless opted out. Always the case here, and
-            // the content carries its own focusable elements.
-            tabindex: "-1",
-            attributes: props.attributes,
-            onscroll,
-            onscrollend,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&SCROLL_AREA_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .attr("id", root_id())
+        // Chromium makes an overflowing `overflow: auto` region an implicit
+        // tab stop unless opted out. Always the case here, and the content
+        // carries its own focusable elements.
+        .attr("tabindex", "-1")
+        .event("onscroll", onscroll)
+        .event("onscrollend", onscrollend)
+        .render(HtmlTag::Div, props.attributes, props.children)
 }
 
 #[cfg(test)]

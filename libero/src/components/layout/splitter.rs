@@ -1,11 +1,15 @@
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
-        Box, Input, Orientation, States, Variables,
+        Box, HtmlTag, Input, Orientation, States, Variables,
         common::{base_props, dom_api, variables},
+        layout::use_box,
     },
-    hooks::{DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_root_id, use_theme},
+    hooks::{
+        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_root_id, use_theme,
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
     utils::warn,
@@ -235,59 +239,69 @@ pub fn Splitter(props: SplitterProps) -> Element {
         }
     };
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("vertical", vertical)
         .with("horizontal", !vertical)
-        .with("dragging", (drag.dragging)());
+        .with("dragging", (drag.dragging)())
+        .into();
 
-    let divider_states = States::default()
+    let divider_states: Input<States> = States::default()
         .with("vertical", vertical)
         .with("horizontal", !vertical)
-        .with(size.state_name(), true);
+        .with(size.state_name(), true)
+        .into();
 
-    let variables = splitter_variables(a(), props.divider_color.as_ref());
+    let variables: Input<Variables> = splitter_variables(a(), props.divider_color.as_ref()).into();
     let aria_orientation = if vertical { "vertical" } else { "horizontal" };
 
-    rsx! {
-        Box {
-            id: "{root_id}",
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &SPLITTER_BASE_SX,
-            attributes: props.attributes,
-            onpointermove: drag.onpointermove,
-            onpointerup: drag.onpointerup,
-            onpointercancel: drag.onpointercancel,
-            Box {
-                framework_sx: &SPLITTER_PANEL_A_SX,
-                {panel_a}
-            }
-            Box {
-                framework_sx: &SPLITTER_BAR_SX,
-                states: divider_states.clone(),
-                Box {
-                    framework_sx: &SPLITTER_HIT_SX,
-                    states: divider_states,
-                    role: "separator",
-                    tabindex: "0",
-                    "aria-orientation": aria_orientation,
-                    "aria-valuenow": "{a() as i64}",
-                    "aria-valuemin": "{min_size as i64}",
-                    "aria-valuemax": "{(100.0 - min_size) as i64}",
-                    onpointerdown: drag.onpointerdown,
-                    onkeydown,
-                }
-            }
-            Box {
-                framework_sx: &SPLITTER_PANEL_B_SX,
-                {panel_b}
-            }
-        }
-    }
+    // The two panes carry a static framework style and nothing else, so they
+    // are classes on plain elements rather than component scopes.
+    let panel_a_class = use_css(Some(&SPLITTER_PANEL_A_SX), CssLayer::Framework);
+    let panel_b_class = use_css(Some(&SPLITTER_PANEL_B_SX), CssLayer::Framework);
+
+    let bar = use_box()
+        .framework_sx(&SPLITTER_BAR_SX)
+        .states(&divider_states)
+        .prepare();
+    let hit = use_box()
+        .framework_sx(&SPLITTER_HIT_SX)
+        .states(&divider_states)
+        .prepare();
+
+    let hit = hit
+        .attr("role", "separator")
+        .attr("tabindex", "0")
+        .attr("aria-orientation", aria_orientation)
+        .attr("aria-valuenow", (a() as i64).to_string())
+        .attr("aria-valuemin", (min_size as i64).to_string())
+        .attr("aria-valuemax", ((100.0 - min_size) as i64).to_string())
+        .event("onpointerdown", drag.onpointerdown)
+        .event("onkeydown", onkeydown)
+        .render(HtmlTag::Div, Vec::new(), rsx! {});
+    let bar = bar.render(HtmlTag::Div, Vec::new(), hit);
+
+    use_box()
+        .framework_sx(&SPLITTER_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .attr("id", root_id())
+        .event("onpointermove", drag.onpointermove)
+        .event("onpointerup", drag.onpointerup)
+        .event("onpointercancel", drag.onpointercancel)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                div { class: panel_a_class, {panel_a} }
+                {bar}
+                div { class: panel_b_class, {panel_b} }
+            },
+        )
 }
 
 #[cfg(test)]
