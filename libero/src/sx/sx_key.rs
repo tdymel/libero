@@ -129,6 +129,7 @@ properties! {
     TextAlign => "text-align", text_align;
     ScrollMargin => "scroll-margin", scroll_margin;
     Transform => "transform", transform;
+    Animation => "animation", animation;
     Visibility => "visibility", visibility;
 }
 

@@ -1,4 +1,5 @@
 use dioxus::core::{AttributeValue, IntoAttributeValue};
+use dioxus::html::{EventHandlerValue, PlatformEventData};
 use dioxus::prelude::*;
 
 use crate::{
@@ -165,14 +166,21 @@ impl BoxStyle {
 
     /// An event handler the component sets itself. Hand-building the
     /// `Attribute` is the one thing `rsx!` does that a plain call cannot.
-    pub fn event<T: 'static>(
+    ///
+    /// The handler has to go through `EventHandlerValue`: a renderer delivers
+    /// `PlatformEventData`, and only that conversion turns it into `T`. A bare
+    /// `AttributeValue::listener::<T>` panics on the first real event.
+    pub fn event<T, Marker>(
         mut self,
         name: &'static str,
-        handler: impl FnMut(Event<T>) + 'static,
-    ) -> Self {
+        handler: impl EventHandlerValue<T, Marker>,
+    ) -> Self
+    where
+        T: for<'a> From<&'a PlatformEventData> + 'static,
+    {
         self.own.push(Attribute::new(
             name,
-            AttributeValue::listener(handler),
+            AttributeValue::Listener(handler.into_platform_listener().erase()),
             None,
             false,
         ));

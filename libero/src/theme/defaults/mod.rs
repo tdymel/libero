@@ -34,7 +34,7 @@ pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION,
-    BUTTON_RIPPLE_KEYFRAMES, ButtonDefaults, ButtonSizeLevel,
+    BUTTON_RIPPLE_KEYFRAMES, BUTTON_RIPPLE_STATE, ButtonDefaults, ButtonSizeLevel,
 };
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use code::{

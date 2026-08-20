@@ -13,7 +13,7 @@ use crate::{
     hooks::use_theme,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_RIPPLE_ANIMATION, ButtonDefaults, CssVar, Size},
+    theme::{BUTTON_RIPPLE_ANIMATION, BUTTON_RIPPLE_STATE, ButtonDefaults, CssVar, Size},
 };
 
 // Optional, since a Button is only a link when set. Costs the direct
@@ -30,7 +30,8 @@ impl From<NavigationTarget> for Input<NavigationTarget> {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct Ripple {
-    id: u64,
+    /// Which of the two animation names to run - see [`BUTTON_RIPPLE_ANIMATION`].
+    which: usize,
     x: f64,
     y: f64,
 }
@@ -50,6 +51,8 @@ input_from_str!(ButtonVariant);
 const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
 const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
+const BUTTON_RIPPLE_X_VAR: CssVar = CssVar::new("--lsx-ripple-x");
+const BUTTON_RIPPLE_Y_VAR: CssVar = CssVar::new("--lsx-ripple-y");
 
 /// Structural chrome for `variant`. The three arguments are `var()` names,
 /// not resolved values, so `ActionIcon` reuses this under its own.
@@ -115,11 +118,47 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .pointer_events("none"),
         )
         .when("full-width", sx().width("100%"))
+        // The ripple: a pseudo-element on the button, not a child node. A
+        // rendered child costs ~1,000 ns per button per render even while no
+        // ripple is showing - see the render-cost notes.
+        .selector(
+            "::after",
+            sx().content("\"\"")
+                .position("absolute")
+                .left(BUTTON_RIPPLE_X_VAR.value_or("50%"))
+                .top(BUTTON_RIPPLE_Y_VAR.value_or("50%"))
+                .width("300%")
+                .height("300%")
+                .border_radius("50%")
+                .background("currentColor")
+                .opacity("0")
+                .transform("translate(-50%, -50%) scale(0)")
+                .pointer_events("none"),
+        )
+        .when(
+            BUTTON_RIPPLE_STATE[0],
+            sx().selector("::after", ripple_animation_sx(0)),
+        )
+        .when(
+            BUTTON_RIPPLE_STATE[1],
+            sx().selector("::after", ripple_animation_sx(1)),
+        )
         // The base outline is suppressed above and re-added only here.
         .focus_visible(focus_ring_sx())
 });
 
-fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> Variables {
+fn ripple_animation_sx(which: usize) -> Sx {
+    sx().animation(format!(
+        "{} 550ms ease-out forwards",
+        BUTTON_RIPPLE_ANIMATION[which]
+    ))
+}
+
+fn button_variables(
+    variant: ButtonVariant,
+    base: &ThemeAwareValue,
+    ripple: Option<&Ripple>,
+) -> Variables {
     let contrast = contrast_color(base);
     let hover = hover_color(base, variant == ButtonVariant::Filled);
 
@@ -127,6 +166,8 @@ fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> Variables
         .with(BUTTON_COLOR_VAR, base.resolve(None))
         .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, hover)
+        .with(BUTTON_RIPPLE_X_VAR, ripple.map(|r| format!("{}px", r.x)))
+        .with(BUTTON_RIPPLE_Y_VAR, ripple.map(|r| format!("{}px", r.y)))
 }
 
 base_props! {
@@ -164,51 +205,43 @@ pub fn Button(props: ButtonProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
 
-    // One at a time; a new click overrides the last.
-    let mut ripple_signal = use_signal(|| None::<Ripple>);
-    let mut next_ripple_id = use_signal(|| 0u64);
+    // One at a time; a new click overrides the last. `which` alternates so the
+    // animation name changes and the browser replays it.
+    let mut ripple = use_signal(|| None::<Ripple>);
 
     let size = props.size.copied_or(theme.button.size);
     let radius = props.radius.copied_or(theme.button.radius);
 
-    let variables: Input<Variables> = button_variables(variant, &color).into();
+    let showing = ripple();
+    let variables: Input<Variables> = button_variables(variant, &color, showing.as_ref()).into();
 
-    let states: Input<States> = props
+    let states = props
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
         .with("full-width", full_width)
         .with(variant.state_name(), true)
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
-        .into();
+        .with(radius.radius_state_name(), true);
+
+    let states: Input<States> = match showing.as_ref() {
+        Some(ripple) => states.with(BUTTON_RIPPLE_STATE[ripple.which], true),
+        None => states,
+    }
+    .into();
 
     let handle_click = move |event: Event<MouseData>| {
         let point = event.element_coordinates();
-        let id = next_ripple_id();
-        next_ripple_id += 1;
-        ripple_signal.set(Some(Ripple {
-            id,
+        let which = ripple
+            .peek()
+            .as_ref()
+            .map_or(0, |last: &Ripple| 1 - last.which);
+        ripple.set(Some(Ripple {
+            which,
             x: point.x,
             y: point.y,
         }));
         props.onclick.call(event);
-    };
-
-    // A plain `span`, not a `Box`: the ripple has no class, `sx`, states or
-    // theming - only a position and an animation - so a `Box` would buy it a
-    // scope and a styling pass for nothing.
-    //
-    // `key` is load-bearing: a new ripple must be a *new* element, or the diff
-    // reuses the old one and the CSS animation never restarts.
-    let ripple_span = rsx! {
-        if let Some(ripple) = ripple_signal() {
-            span {
-                key: "{ripple.id}",
-                style: "position:absolute;left:{ripple.x}px;top:{ripple.y}px;width:300%;height:300%;border-radius:50%;background:currentColor;opacity:0.3;transform:translate(-50%, -50%) scale(0);animation:{BUTTON_RIPPLE_ANIMATION} 550ms ease-out forwards;pointer-events:none;",
-                onanimationend: move |_| ripple_signal.set(None),
-            }
-        }
     };
 
     // One hook for every path, above the branch: `prepare` is where
@@ -254,14 +287,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .event("onclick", handle_click)
         .attr("disabled", disabled)
         .attr("type", "button")
-        .render(
-            HtmlTag::Button,
-            props.attributes,
-            rsx! {
-                {ripple_span}
-                {props.children}
-            },
-        )
+        .render(HtmlTag::Button, props.attributes, props.children)
 }
 
 #[cfg(test)]
@@ -273,8 +299,8 @@ mod tests {
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
-        let filled = button_variables(ButtonVariant::Filled, &base).to_string();
-        let outlined = button_variables(ButtonVariant::Outlined, &base).to_string();
+        let filled = button_variables(ButtonVariant::Filled, &base, None).to_string();
+        let outlined = button_variables(ButtonVariant::Outlined, &base, None).to_string();
 
         assert!(filled.contains(&format!(
             "{}:{};",
@@ -291,7 +317,7 @@ mod tests {
     #[test]
     fn the_color_variable_is_the_base_color_itself() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
-        let variables = button_variables(ButtonVariant::Filled, &base).to_string();
+        let variables = button_variables(ButtonVariant::Filled, &base, None).to_string();
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
@@ -305,7 +331,7 @@ mod tests {
     #[test]
     fn an_unparseable_color_emits_no_contrast() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(ButtonVariant::Filled, &base).to_string();
+        let variables = button_variables(ButtonVariant::Filled, &base, None).to_string();
 
         assert!(!variables.contains(BUTTON_CONTRAST_VAR.name()));
     }
