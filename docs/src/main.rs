@@ -19,7 +19,7 @@ use pages::{
     CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage,
     FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage,
     MarkPage, ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage,
-    SidebarPage, SplitterPage, TextPage, TitlePage, TreePage, VisuallyHiddenPage,
+    SidebarPage, SplitterPage, TextPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -95,6 +95,8 @@ pub(crate) enum Route {
     ModalPage {},
     #[route("/overlay/overlay")]
     OverlayPage {},
+    #[route("/overlay/tooltip")]
+    TooltipPage {},
 
     #[route("/surface/dialog")]
     DialogPage {},

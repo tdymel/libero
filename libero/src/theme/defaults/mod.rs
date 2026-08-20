@@ -28,6 +28,7 @@ mod sidebar;
 mod splitter;
 mod text;
 mod title;
+mod tooltip;
 mod tree;
 mod z_index;
 
@@ -79,6 +80,10 @@ pub use text::{
 pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,
     TitleDefaults, TitleSize,
+};
+pub use tooltip::{
+    TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
+    TooltipPlacement,
 };
 pub use tree::TreeDefaults;
 pub use z_index::{Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, ZIndexDefaults};

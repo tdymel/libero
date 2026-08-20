@@ -154,6 +154,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::DrawerPage {}, "Drawer"),
                 page(Route::ModalPage {}, "Modal"),
                 page(Route::OverlayPage {}, "Overlay"),
+                page(Route::TooltipPage {}, "Tooltip"),
             ],
         ),
         group(

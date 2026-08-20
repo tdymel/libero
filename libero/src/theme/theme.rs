@@ -6,8 +6,8 @@ use super::{
     ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults,
     OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis,
     ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel, SidebarDefaults, Size,
-    Sizes, SplitterDefaults, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
-    ZIndexDefaults,
+    Sizes, SplitterDefaults, TextDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults,
+    TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -42,6 +42,7 @@ pub struct Theme {
     pub tree: TreeDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
+    pub tooltip: TooltipDefaults,
     pub code: CodeDefaults,
     pub header: HeaderDefaults,
     pub icon: IconDefaults,
@@ -326,6 +327,17 @@ impl Theme {
                     line_height: "1.65",
                 }, // xxl
             ),
+        },
+        tooltip: TooltipDefaults {
+            placement: TooltipPlacement::Top,
+            gap: Size::Xs,
+            size: Size::Sm,
+            open_delay: 0,
+            close_delay: 0,
+            duration: 150,
+            font_size: Sizes::new(10, 12, 13, 14, 16, 18),
+            background: "#1f2328",
+            color: "#ffffff",
         },
         code: CodeDefaults {
             font_family: MONO_FONT_FAMILY,

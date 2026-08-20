@@ -135,6 +135,7 @@ fn render_cost_per_component() {
         "Modal" { Modal { "x" } }
         "Drawer" { Drawer { "x" } }
         "Dialog" { Dialog { "x" } }
+        "Tooltip" { Tooltip { label: rsx! { "t" }, "x" } }
 
         "FocusTrap" { FocusTrap { "x" } }
         "VisuallyHidden" { VisuallyHidden { "x" } }

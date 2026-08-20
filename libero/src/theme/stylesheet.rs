@@ -94,6 +94,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         data_list,
         titles,
         texts,
+        tooltip,
         code,
         header,
         icon,
@@ -143,6 +144,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(data_list.to_css_declarations());
     declarations.extend(titles.to_css_declarations());
     declarations.extend(texts.to_css_declarations());
+    declarations.extend(tooltip.to_css_declarations());
     declarations.extend(code.to_css_declarations());
     declarations.extend(header.to_css_declarations());
     declarations.extend(icon.to_css_declarations());

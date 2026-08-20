@@ -17,6 +17,6 @@ pub use layout::{
     HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,
 };
 pub use navigation::{AnchorPage, NavLinkPage, TreePage};
-pub use overlay::{DrawerPage, ModalPage, OverlayPage};
+pub use overlay::{DrawerPage, ModalPage, OverlayPage, TooltipPage};
 pub use surface::DialogPage;
 pub use typography::{CodePage, KbdPage, MarkPage, TextPage, TitlePage};
