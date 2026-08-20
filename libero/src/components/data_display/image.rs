@@ -48,6 +48,13 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
 });
 
 // Only rendered while zoomed, so its cursor is a fixed "zoom-out".
+static IMAGE_ZOOM_DIALOG_SX: StaticSx = StaticSx::new(|| {
+    sx().background("transparent")
+        .width("auto")
+        .padding("0")
+        .box_shadow("none")
+});
+
 static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .position("relative")
@@ -186,11 +193,7 @@ pub fn Image(props: ImageProps) -> Element {
                 Dialog {
                     aria_label: label.clone(),
                     size: "none",
-                    sx: sx()
-                        .background("transparent")
-                        .width("auto")
-                        .padding("0")
-                        .box_shadow("none"),
+                    sx: &IMAGE_ZOOM_DIALOG_SX,
                     Box {
                         component: "button",
                         r#type: "button",

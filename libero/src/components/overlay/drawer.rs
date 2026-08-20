@@ -44,12 +44,17 @@ static DRAWER_SX: StaticSx = StaticSx::new(|| {
 
 /// A corner `Float` placement already pins two adjacent sides with no
 /// `transform`, so an anchor only needs the third offset to reach a full edge.
-fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, Sx) {
+// Static, so the CSS is built once for the process rather than per render,
+// and `Float`'s props settle by address instead of walking the entry tree.
+static DRAWER_FLOAT_VERTICAL_SX: StaticSx = StaticSx::new(|| sx().bottom("0"));
+static DRAWER_FLOAT_HORIZONTAL_SX: StaticSx = StaticSx::new(|| sx().right("0"));
+
+fn drawer_float_placement(anchor: DrawerAnchor) -> (Placement, &'static StaticSx) {
     match anchor {
-        DrawerAnchor::Left => (Placement::TopStart, sx().bottom("0")),
-        DrawerAnchor::Right => (Placement::TopEnd, sx().bottom("0")),
-        DrawerAnchor::Top => (Placement::TopStart, sx().right("0")),
-        DrawerAnchor::Bottom => (Placement::BottomStart, sx().right("0")),
+        DrawerAnchor::Left => (Placement::TopStart, &DRAWER_FLOAT_VERTICAL_SX),
+        DrawerAnchor::Right => (Placement::TopEnd, &DRAWER_FLOAT_VERTICAL_SX),
+        DrawerAnchor::Top => (Placement::TopStart, &DRAWER_FLOAT_HORIZONTAL_SX),
+        DrawerAnchor::Bottom => (Placement::BottomStart, &DRAWER_FLOAT_HORIZONTAL_SX),
     }
 }
 
@@ -119,7 +124,7 @@ pub fn Drawer(props: DrawerProps) -> Element {
             Float {
                 placement: Input::Value(placement),
                 z_index: z_index.clone(),
-                sx: float_sx.clone(),
+                sx: float_sx,
                 Dialog {
                     class: class.clone(),
                     sx: sx.clone(),

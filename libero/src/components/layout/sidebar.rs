@@ -16,6 +16,8 @@ input_from_str!(SidebarSide);
 
 // A sidebar is usually a flex item that must not be squeezed. This only sizes
 // the panel; the scrolling is `ScrollArea`'s job.
+static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
+
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
     let border = format!("1px solid {}", ColorCss::GREY.value(ColorShade::S4));
 
@@ -80,7 +82,7 @@ pub fn Sidebar(props: SidebarProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                ScrollArea { sx: sx().padding("lg"), {props.children} }
+                ScrollArea { sx: &SIDEBAR_SCROLL_SX, {props.children} }
             },
         )
 }
