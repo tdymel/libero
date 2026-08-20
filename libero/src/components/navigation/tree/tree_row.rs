@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, List, common::focus_ring_sx},
+    components::{HtmlTag, List, common::focus_ring_sx, common::states, layout::use_box},
     sx::{StaticSx, sx},
     theme::{LIST_GAP, LIST_INDENT, Size},
 };
@@ -81,7 +81,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let id = node.id.clone();
     let onexpandedchange = props.onexpandedchange;
 
-    let onclick = move |_| {
+    let onclick = move |_: Event<MouseData>| {
         if disabled {
             return;
         }
@@ -91,25 +91,23 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         }
     };
 
-    rsx! {
-        Box {
-            component: "li",
-            framework_sx: &TREE_ROW_SX,
-            states: crate::components::common::states().with("disabled", disabled),
-            "role": "treeitem",
-            "data-tree-id": "{node.id}",
-            "aria-expanded": is_expanded.map(|value| value.to_string()),
-            "aria-disabled": disabled.then_some("true"),
-            tabindex: li_tabindex,
-            // `onclick` sits on this inner div, not the `<li>`: the children
-            // `List` is its sibling, so a child's click can't bubble here and
-            // toggle the parent - no `stop_propagation` needed.
-            Box {
-                framework_sx: &TREE_ROW_CONTENT_SX,
-                onclick,
-                {content}
-            }
-            if is_expanded == Some(true) {
+    let row_states = states().with("disabled", disabled).into();
+    let row = use_box()
+        .framework_sx(&TREE_ROW_SX)
+        .states(&row_states)
+        .prepare();
+    // `onclick` sits on this inner div, not the `<li>`: the children `List` is
+    // its sibling, so a child's click can't bubble here and toggle the parent -
+    // no `stop_propagation` needed.
+    let row_content = use_box()
+        .framework_sx(&TREE_ROW_CONTENT_SX)
+        .prepare()
+        .event("onclick", onclick)
+        .render(HtmlTag::Div, Vec::new(), content);
+
+    let children = rsx! {
+        {row_content}
+        if is_expanded == Some(true) {
                 List {
                     "role": "group",
                     sx: sx()
@@ -135,6 +133,12 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                     }
                 }
             }
-        }
-    }
+    };
+
+    row.attr("role", "treeitem")
+        .attr("data-tree-id", node.id.to_string())
+        .attr("aria-expanded", is_expanded.map(|value| value.to_string()))
+        .attr("aria-disabled", disabled.then_some("true"))
+        .attr("tabindex", li_tabindex)
+        .render(HtmlTag::Li, Vec::new(), children)
 }

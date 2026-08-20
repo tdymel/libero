@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props, common::dom_api},
+    components::{
+        HtmlTag, Input, States,
+        common::{base_props, dom_api},
+        layout::use_box,
+    },
     hooks::use_root_id,
     sx::{StaticSx, Sx, sx},
 };
@@ -79,27 +83,30 @@ base_props! {
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
     let id = use_root_id(&props.attributes);
 
-    rsx! {
-        Box {
-            id: "{id}",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            framework_sx: &FOCUS_TRAP_SX,
-            onkeydown: move |event: Event<KeyboardData>| {
-                if event.key() == Key::Tab && cycle_focus(&id(), event.modifiers().shift()) {
-                    event.prevent_default();
-                }
-            },
-            attributes: props.attributes,
-            span {
-                "aria-hidden": "true",
-                style: "display:none",
-                onmounted: move |_| focus_first(&id()),
+    use_box()
+        .framework_sx(&FOCUS_TRAP_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .attr("id", id())
+        .event("onkeydown", move |event: Event<KeyboardData>| {
+            if event.key() == Key::Tab && cycle_focus(&id(), event.modifiers().shift()) {
+                event.prevent_default();
             }
-            {props.children}
-        }
-    }
+        })
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                span {
+                    "aria-hidden": "true",
+                    style: "display:none",
+                    onmounted: move |_| focus_first(&id()),
+                }
+                {props.children}
+            },
+        )
 }
 
 /// A hidden placeholder that soaks up initial focus, then leaves the tab
@@ -108,13 +115,11 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
 pub fn FocusTrapInitialFocus() -> Element {
     let mut used = use_signal(|| false);
 
-    rsx! {
-        Box {
-            component: "span",
-            framework_sx: &VISUALLY_HIDDEN_SX,
-            tabindex: if used() { "-1" } else { "0" },
-            "data-autofocus": true,
-            onblur: move |_| used.set(true),
-        }
-    }
+    use_box()
+        .framework_sx(&VISUALLY_HIDDEN_SX)
+        .prepare()
+        .attr("tabindex", if used() { "-1" } else { "0" })
+        .attr("data-autofocus", true)
+        .event("onblur", move |_: Event<FocusData>| used.set(true))
+        .render(HtmlTag::Span, Vec::new(), rsx! {})
 }

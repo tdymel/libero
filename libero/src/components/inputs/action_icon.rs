@@ -2,10 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, IconVariant, Input, States, Variables,
+        HtmlTag, IconVariant, Input, States, Variables,
         common::base_props,
         common::{base_color, contrast_color, hover_color},
         data_display::icon_variant_sx,
+        layout::use_box,
         navigation::InternalAnchor,
         variables,
     },
@@ -152,34 +153,34 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
     let variant = props.variant.copied_or_default();
-    let variables = action_icon_variables(&props, has_variant_styling);
+    let variables: Input<Variables> = action_icon_variables(&props, has_variant_styling).into();
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
-        .with(variant.state_name(), has_variant_styling);
+        .with(variant.state_name(), has_variant_styling)
+        .into();
+
+    // One hook for every path, above the branch - see `Button`.
+    let boxed = use_box()
+        .framework_sx(&ACTION_ICON_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare();
 
     if let Some(to) = props.to.as_ref().cloned() {
         // `<a>` has no native `disabled`: dropping `to` stops navigation,
         // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
         // `InternalAnchor` can't do this - it always resolves a real link.
         if disabled {
-            return rsx! {
-                Box {
-                    component: "a",
-                    class: props.class,
-                    sx: props.sx,
-                    states,
-                    variables,
-                    framework_sx: &ACTION_ICON_BASE_SX,
-                    "aria-label": props.aria_label,
-                    "aria-disabled": "true",
-                    tabindex: "-1",
-                    attributes: props.attributes,
-                    {props.children}
-                }
-            };
+            return boxed
+                .attr("aria-label", props.aria_label)
+                .attr("aria-disabled", "true")
+                .attr("tabindex", "-1")
+                .render(HtmlTag::A, props.attributes, props.children);
         }
 
         return rsx! {
@@ -198,21 +199,11 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         };
     }
 
-    rsx! {
-        Box {
-            component: "button",
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &ACTION_ICON_BASE_SX,
-            "aria-label": props.aria_label,
-            r#type: "button",
-            disabled,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    boxed
+        .attr("aria-label", props.aria_label)
+        .attr("disabled", disabled)
+        .attr_default("type", "button")
+        .render(HtmlTag::Button, props.attributes, props.children)
 }
 
 #[cfg(test)]

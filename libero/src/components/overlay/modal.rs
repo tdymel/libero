@@ -1,9 +1,13 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, FocusTrap, Input, Overlay, States, common::base_props, variables},
+    CssLayer,
+    components::{
+        FocusTrap, HtmlTag, Input, Overlay, States, Variables, common::base_props, layout::use_box,
+        variables,
+    },
     context::ModalContext,
-    hooks::use_modal_z_index,
+    hooks::{use_css, use_modal_z_index},
     sx::{StaticSx, Sx, sx},
     theme::CssVar,
 };
@@ -55,7 +59,9 @@ pub fn Modal(props: ModalProps) -> Element {
     use_context_provider(|| ModalContext { onclose });
 
     let z_index = use_modal_z_index();
-    let variables = variables().with(MODAL_Z_INDEX_VAR, z_index.to_string());
+    let variables: Input<Variables> = variables()
+        .with(MODAL_Z_INDEX_VAR, z_index.to_string())
+        .into();
 
     // Deferred a microtask: closing synchronously from an event still
     // bubbling through the torn-down modal re-enters the same `EventHandler`
@@ -66,25 +72,30 @@ pub fn Modal(props: ModalProps) -> Element {
         });
     };
 
-    rsx! {
-        Box {
-            "data-lsx-scroll-lock": true,
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &MODAL_SX,
-            onkeydown: move |event: Event<KeyboardData>| {
-                if event.key() == Key::Escape {
-                    close();
+    // Static styling only, so a class rather than a component scope.
+    let content_class = use_css(Some(&MODAL_CONTENT_SX), CssLayer::Framework);
+
+    use_box()
+        .framework_sx(&MODAL_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .attr("data-lsx-scroll-lock", true)
+        .event("onkeydown", move |event: Event<KeyboardData>| {
+            if event.key() == Key::Escape {
+                close();
+            }
+        })
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                Overlay { z_index: 0, onclick: move |_| close() }
+                div { class: content_class,
+                    FocusTrap { {props.children} }
                 }
             },
-            attributes: props.attributes,
-            Overlay { z_index: 0, onclick: move |_| close() }
-            Box {
-                framework_sx: &MODAL_CONTENT_SX,
-                FocusTrap { {props.children} }
-            }
-        }
-    }
+        )
 }

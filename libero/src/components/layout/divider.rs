@@ -1,11 +1,14 @@
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
-        Box, Input, Orientation, States, Variables,
+        HtmlTag, Input, Orientation, States, Variables,
         common::{base_props, input_from_str},
+        layout::use_box,
         variables,
     },
+    hooks::use_css,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, ColorValue, CssVar, DividerDefaults, SizeCss},
@@ -163,29 +166,38 @@ pub fn Divider(props: DividerProps) -> Element {
         .with("label-start", label_position == LabelPosition::Start)
         .with("label-end", label_position == LabelPosition::End);
 
-    let variables = divider_variables(props.color.as_ref(), props.spacing.as_ref());
+    let variables: Input<Variables> =
+        divider_variables(props.color.as_ref(), props.spacing.as_ref()).into();
     let data_state = divider_states.data_state();
     let aria_orientation = vertical.then_some("vertical");
 
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            variables,
-            framework_sx: &DIVIDER_BASE_SX,
-            role: "separator",
-            "aria-orientation": aria_orientation,
-            "data-state": data_state,
-            attributes: props.attributes,
-            if has_label {
-                Box {
-                    component: "span",
-                    framework_sx: if vertical { &DIVIDER_LABEL_VERTICAL_SX } else { &DIVIDER_LABEL_HORIZONTAL_SX },
-                    {props.children}
-                }
-            }
-        }
-    }
+    // The label span carries only a static framework style, so it needs a
+    // class rather than a component: `use_css` unconditionally, then the
+    // element only when there is a label.
+    let label_class = use_css(
+        Some(if vertical {
+            &DIVIDER_LABEL_VERTICAL_SX
+        } else {
+            &DIVIDER_LABEL_HORIZONTAL_SX
+        }),
+        CssLayer::Framework,
+    );
+
+    let label = match props.children {
+        Some(children) => rsx! { span { class: label_class, {children} } },
+        None => rsx! {},
+    };
+
+    use_box()
+        .framework_sx(&DIVIDER_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .variables(&variables)
+        .prepare()
+        .attr("role", "separator")
+        .attr("aria-orientation", aria_orientation)
+        .attr("data-state", data_state)
+        .render(HtmlTag::Div, props.attributes, label)
 }
 
 #[cfg(test)]

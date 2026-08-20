@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
     sx::Sx,
 };
 
@@ -27,17 +27,19 @@ base_props! {
 /// ```
 #[component]
 pub fn DataListItem(props: DataListItemProps) -> Element {
+    // The `<dd>`s carry no styling of their own, so they are plain elements -
+    // a `Box` per description would be a component scope for nothing.
+    let term = use_box()
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .render(HtmlTag::Dt, props.attributes, props.label);
+
     rsx! {
-        Box {
-            component: "dt",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            attributes: props.attributes,
-            {props.label}
-        }
+        {term}
         for (index, value) in props.children.into_iter().enumerate() {
-            Box { component: "dd", key: "{index}", {value} }
+            dd { key: "{index}", {value} }
         }
     }
 }

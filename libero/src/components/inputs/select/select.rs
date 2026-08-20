@@ -1,11 +1,13 @@
 use dioxus::prelude::*;
 
 use crate::{
+    CssLayer,
     components::{
-        Box, Input, States,
+        HtmlTag, Input, States,
         common::{base_props, focus_ring_sx},
+        layout::use_box,
     },
-    hooks::use_theme,
+    hooks::{use_css, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{SelectDefaults, Size},
 };
@@ -53,11 +55,12 @@ pub fn Select(props: SelectProps) -> Element {
     let size = props.size.copied_or(theme.select.size);
     let radius = props.radius.copied_or(theme.select.radius);
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true);
+        .with(radius.radius_state_name(), true)
+        .into();
 
     // The `<option>`s mount in the same pass as the `<select>`, so on the
     // creating render there is nothing for `value` to select and the browser
@@ -67,24 +70,37 @@ pub fn Select(props: SelectProps) -> Element {
     use_effect(move || mounted.set(true));
     let value = mounted().then(|| props.value.clone());
 
-    rsx! {
-        Box {
-            component: "label",
-            class: props.class,
-            sx: props.sx,
-            framework_sx: &SELECT_WRAPPER_SX,
-            if let Some(label) = &props.label {
-                Box { component: "span", framework_sx: &SELECT_LABEL_SX, {label.clone()} }
-            }
-            Box {
-                component: "select",
-                states,
-                framework_sx: &SELECT_BASE_SX,
-                value: value,
-                onchange: move |event: FormEvent| props.onchange.call(event.value()),
-                attributes: props.attributes,
-                {props.children}
-            }
-        }
-    }
+    // Both `prepare()`s and the `use_css` run unconditionally: they are hooks,
+    // and the label below is optional.
+    let wrapper = use_box()
+        .framework_sx(&SELECT_WRAPPER_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .prepare();
+    let select = use_box()
+        .framework_sx(&SELECT_BASE_SX)
+        .states(&states)
+        .prepare();
+    let label_class = use_css(Some(&SELECT_LABEL_SX), CssLayer::Framework);
+
+    let label = match &props.label {
+        Some(label) => rsx! { span { class: label_class, {label.clone()} } },
+        None => rsx! {},
+    };
+
+    let select = select
+        .attr("value", value)
+        .event("onchange", move |event: FormEvent| {
+            props.onchange.call(event.value())
+        })
+        .render(HtmlTag::Select, props.attributes, props.children);
+
+    wrapper.render(
+        HtmlTag::Label,
+        Vec::new(),
+        rsx! {
+            {label}
+            {select}
+        },
+    )
 }
