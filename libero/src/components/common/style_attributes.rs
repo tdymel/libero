@@ -6,7 +6,7 @@ use crate::{
 
 /// The class / `data-state` / `style` triple the styling props resolve to.
 pub(crate) struct StyleAttributes {
-    pub class: ClassList,
+    pub class: String,
     pub data_state: Option<String>,
     pub style: Option<String>,
 }
@@ -29,8 +29,7 @@ pub(crate) fn use_style_attributes(
         Input::Value(sx) => Some(SxSource::Owned(sx)),
         Input::Static(sx) => Some(SxSource::Static(sx)),
     };
-    let (focus_class, framework_class, static_class) =
-        use_box_css(&BOX_FOCUS_SX, framework_sx, sx_source);
+    let class = use_box_css(class, &BOX_FOCUS_SX, framework_sx, sx_source);
 
     let variables_style = variables
         .as_ref()
@@ -38,13 +37,7 @@ pub(crate) fn use_style_attributes(
         .filter(|style| !style.is_empty());
 
     StyleAttributes {
-        class: class
-            .as_ref()
-            .cloned()
-            .unwrap_or_default()
-            .with(framework_class)
-            .with(focus_class)
-            .with(static_class),
+        class,
         data_state: states.as_ref().and_then(States::data_state),
         style: match (variables_style, style) {
             (Some(variables), Some(raw)) => Some(format!("{variables}{raw}")),

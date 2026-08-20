@@ -84,7 +84,7 @@ macro_rules! html_tags {
         /// all 111.
         pub(crate) fn render_polymorphic(
             component: HtmlTag,
-            class: crate::components::ClassList,
+            class: String,
             data_state: Option<String>,
             style: Option<String>,
             attributes: Vec<Attribute>,
@@ -130,12 +130,12 @@ macro_rules! html_tags {
 /// `Link`, which renders its own `class` slot. A caller's `class` attribute is
 /// then left where it is, since there is nothing here to merge it into.
 pub(crate) fn styling_attributes(
-    class: Option<crate::components::ClassList>,
+    class: Option<String>,
     data_state: Option<String>,
     style: Option<String>,
     mut attributes: Vec<Attribute>,
 ) -> Vec<Attribute> {
-    let mut class = class.map(|class| class.to_string());
+    let mut class = class;
     let mut style = style;
 
     attributes.retain_mut(|attribute| match (attribute.name, &attribute.value) {
@@ -311,7 +311,6 @@ html_tags! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::ClassList;
 
     fn text(name: &'static str, value: &str) -> Attribute {
         super::super::attr(name, value.to_string())
@@ -330,7 +329,7 @@ mod tests {
     #[test]
     fn ours_come_first_then_the_callers() {
         let out = styling_attributes(
-            Some(ClassList::from("ours")),
+            Some("ours".to_string()),
             Some("size-md".into()),
             None,
             vec![text("id", "x"), text("aria-label", "y")],
@@ -350,7 +349,7 @@ mod tests {
     #[test]
     fn a_callers_class_joins_ours_instead_of_duplicating() {
         let out = styling_attributes(
-            Some(ClassList::from("ours")),
+            Some("ours".to_string()),
             None,
             None,
             vec![text("class", "theirs")],
@@ -362,7 +361,7 @@ mod tests {
     #[test]
     fn a_callers_style_joins_ours_and_wins_the_cascade() {
         let out = styling_attributes(
-            Some(ClassList::new()),
+            Some(String::new()),
             None,
             Some("color:red;".into()),
             vec![text("style", "color:blue;")],
@@ -380,7 +379,7 @@ mod tests {
     #[test]
     fn a_missing_semicolon_is_inserted_between_the_two() {
         let out = styling_attributes(
-            Some(ClassList::new()),
+            Some(String::new()),
             None,
             Some("color:red".into()),
             vec![text("style", "color:blue")],
@@ -392,7 +391,7 @@ mod tests {
     #[test]
     fn a_callers_style_survives_when_we_have_none() {
         let out = styling_attributes(
-            Some(ClassList::new()),
+            Some(String::new()),
             None,
             None,
             vec![text("style", "color:blue;")],

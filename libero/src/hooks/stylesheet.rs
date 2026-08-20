@@ -9,6 +9,7 @@ use dioxus::prelude::*;
 
 use crate::{
     CssLayer,
+    components::{ClassList, Input},
     context::{LiberoContext, StylesheetKey},
     css::Stylesheet,
     sx::{StaticSx, Sx},
@@ -128,21 +129,21 @@ struct CssRegistration {
 }
 
 /// Registers one source into the registry, reusing the previous registration
-/// when the source is unchanged. Returns whether the registry was touched.
+/// when the source is unchanged. Returns whether the registry was touched; the
+/// class name stays in the slot, so composing borrows it instead of cloning.
 fn register(
     slot: &mut Option<CssRegistration>,
     source: Option<impl CssSource>,
     layer: CssLayer,
     context: &mut LiberoContext,
-) -> (Option<String>, bool) {
+) -> bool {
     let identity_hash = source.as_ref().map(CssSource::identity_hash);
 
     match slot.take() {
         // Same content as last render - the registry is already correct.
         Some(prev) if prev.identity_hash == identity_hash => {
-            let class_name = prev.class_name.clone();
             *slot = Some(prev);
-            (class_name, false)
+            false
         }
         prev => {
             let stylesheet = source.map(CssSource::build);
@@ -165,14 +166,13 @@ fn register(
                 _ => None,
             };
 
-            let class_name = key.and(class_name);
             *slot = Some(CssRegistration {
                 identity_hash,
+                class_name: key.and(class_name),
                 key,
-                class_name: class_name.clone(),
             });
 
-            (class_name, changed)
+            changed
         }
     }
 }
@@ -232,56 +232,76 @@ fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
     let state = use_css_registrations(1);
     let context = &mut *state.context.borrow_mut();
+    let slots = &mut *state.slots.borrow_mut();
 
-    let (class_name, changed) = register(&mut state.slots.borrow_mut()[0], source, layer, context);
+    let changed = register(&mut slots[0], source, layer, context);
     bump_if_changed(changed, context);
 
-    class_name
+    class_name(&slots[0]).map(str::to_string)
 }
 
-/// The three registrations every `Box`-shaped component makes, behind one
-/// hook slot.
+fn class_name(slot: &Option<CssRegistration>) -> Option<&str> {
+    slot.as_ref()
+        .and_then(|registration| registration.class_name.as_deref())
+}
+
+/// The three registrations every `Box`-shaped component makes, behind one hook
+/// slot, composed straight into the element's `class` value.
 ///
 /// Three `use_css` calls cost ~180 ns each of which only ~28 ns is real work -
 /// the rest is per-hook plumbing. Sharing it is worth ~360 ns per component.
 pub(crate) fn use_box_css(
+    class: &Input<ClassList>,
     focus: &'static StaticSx,
     framework: Option<&'static StaticSx>,
     sx: Option<SxSource<'_>>,
-) -> (Option<String>, Option<String>, Option<String>) {
+) -> String {
     let state = use_css_registrations(3);
     let context = &mut *state.context.borrow_mut();
+    let slots = &mut *state.slots.borrow_mut();
+    let (head, sx_slot) = slots.split_at_mut(2);
+    let (focus_slot, framework_slot) = head.split_at_mut(1);
 
-    let (focus_class, framework_class, static_class, changed) = {
-        let mut slots = state.slots.borrow_mut();
-        let (slots, sx_slot) = slots.split_at_mut(2);
-        let (focus_slot, framework_slot) = slots.split_at_mut(1);
+    let focus_changed = register(
+        &mut focus_slot[0],
+        Some(focus),
+        CssLayer::Framework,
+        context,
+    );
+    let framework_changed = register(
+        &mut framework_slot[0],
+        framework,
+        CssLayer::Framework,
+        context,
+    );
+    let sx_changed = register(&mut sx_slot[0], sx, CssLayer::UserStatic, context);
+    bump_if_changed(focus_changed || framework_changed || sx_changed, context);
 
-        let (focus_class, focus_changed) = register(
-            &mut focus_slot[0],
-            Some(focus),
-            CssLayer::Framework,
-            context,
-        );
-        let (framework_class, framework_changed) = register(
-            &mut framework_slot[0],
-            framework,
-            CssLayer::Framework,
-            context,
-        );
-        let (static_class, sx_changed) =
-            register(&mut sx_slot[0], sx, CssLayer::UserStatic, context);
-
-        (
-            focus_class,
-            framework_class,
-            static_class,
-            focus_changed || framework_changed || sx_changed,
-        )
+    // Composed straight into the attribute value. Going through `ClassList`
+    // meant a `Vec`, a `String` per registration and a joining pass - five
+    // allocations for what one `String` holds. The order is the caller's
+    // classes, then framework, focus, static.
+    let caller = class.as_ref();
+    let names = || {
+        caller
+            .into_iter()
+            .flat_map(ClassList::iter)
+            .chain(class_name(&framework_slot[0]))
+            .chain(class_name(&focus_slot[0]))
+            .chain(class_name(&sx_slot[0]))
     };
-    bump_if_changed(changed, context);
 
-    (focus_class, framework_class, static_class)
+    // Sized first: growing from empty reallocated three times for a component
+    // with a `framework_sx`, which cost more than the `ClassList` it replaced.
+    let capacity = names().map(|name| name.len() + 1).sum::<usize>();
+    let mut composed = String::with_capacity(capacity);
+    for name in names() {
+        if !composed.is_empty() {
+            composed.push(' ');
+        }
+        composed.push_str(name);
+    }
+    composed
 }
 
 #[cfg(test)]

@@ -9,6 +9,12 @@ impl ClassList {
         Self::default()
     }
 
+    /// The entries, for composing a class attribute without going through
+    /// `Display` (which allocates a second time).
+    pub(crate) fn iter(&self) -> impl Iterator<Item = &str> {
+        self.0.iter().map(String::as_str)
+    }
+
     /// Skips `None`/empty, so `use_css`'s output chains directly.
     pub fn with(mut self, class: impl Into<Option<String>>) -> Self {
         if let Some(class) = class.into().filter(|class| !class.is_empty()) {

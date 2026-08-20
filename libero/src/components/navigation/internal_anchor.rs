@@ -61,7 +61,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         return rsx! {
             Link {
                 to: props.to,
-                class: Some(style_attributes.class.to_string()),
+                class: Some(style_attributes.class),
                 new_tab: is_blank,
                 onmounted: move |event| props.onmounted.call(event),
                 attributes,
