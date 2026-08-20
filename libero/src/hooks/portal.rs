@@ -16,20 +16,24 @@ static NEXT_PORTAL_ID: AtomicU64 = AtomicU64::new(0);
 /// cross-scope read, and a real hazard if your scope unmounts first.
 pub fn use_portal(content: Option<Element>) {
     let mut host = use_context::<PortalHost>();
-    let id = use_signal(|| NEXT_PORTAL_ID.fetch_add(1, Ordering::Relaxed));
+    // A plain `u64`, not a `Signal`: it never changes, and the lookup below
+    // reads it once per entry - as a signal that was one read per entry per
+    // portal per render, which is what made a page with many portals scale
+    // quadratically.
+    let id = use_hook(|| NEXT_PORTAL_ID.fetch_add(1, Ordering::Relaxed));
 
     {
         let mut entries = host.entries.write();
-        match entries.iter_mut().find(|entry| entry.id == id()) {
+        match entries.iter_mut().find(|entry| entry.id == id) {
             Some(entry) => entry.render = content,
             None => entries.push(PortalEntry {
-                id: id(),
+                id,
                 render: content,
             }),
         }
     }
 
     use_drop(move || {
-        host.entries.write().retain(|entry| entry.id != id());
+        host.entries.write().retain(|entry| entry.id != id);
     });
 }
