@@ -8,6 +8,7 @@ pub fn ToggleButtonGroupPage() -> Element {
     let mut alignment = use_signal(|| vec!["left".to_string()]);
     let mut formats = use_signal(Vec::<String>::new);
     let mut vertical = use_signal(|| vec!["b".to_string()]);
+    let mut gapped = use_signal(|| vec!["a".to_string()]);
     let mut range = use_signal(|| vec!["day".to_string()]);
     let mut disabled = use_signal(|| vec!["a".to_string()]);
     // One entry per demo group, so the looped examples below do not all move
@@ -120,6 +121,22 @@ pub fn ToggleButtonGroupPage() -> Element {
                     ToggleButton { value: "a", "Top" }
                     ToggleButton { value: "b", "Middle" }
                     ToggleButton { value: "c", "Bottom" }
+                }
+            }
+            DocSection {
+                title: "Gap",
+                Text {
+                    Code { "gap" }
+                    " separates the buttons, so each keeps its own border and its own radius "
+                    "instead of sharing them with its neighbours."
+                }
+                ToggleButtonGroup {
+                    gap: "xs",
+                    value: gapped(),
+                    onchange: move |next| gapped.set(next),
+                    ToggleButton { value: "a", "One" }
+                    ToggleButton { value: "b", "Two" }
+                    ToggleButton { value: "c", "Three" }
                 }
             }
             DocSection {

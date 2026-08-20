@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::Size,
+    theme::{Size, SizeCss},
     utils::warn,
 };
 
@@ -38,15 +38,16 @@ pub(crate) struct ToggleGroupContext {
 }
 
 static TOGGLE_GROUP_SX: StaticSx = StaticSx::new(|| {
-    // Nested under the orientation `when`, these render as
-    // `.cls[data-state~="horizontal"] > [data-state]:not(:first-child)` -
-    // (0,4,0) against `Button`'s own (0,2,0) radius rules. Source order cannot
-    // settle this: the two live in different stylesheets, and the registry
-    // emits them in hash order.
+    // Nested under the `collapsed` and orientation `when`s, these render as
+    // `.cls[data-state~="collapsed"][data-state~="horizontal"] >
+    // [data-state]:not(:first-child)` - (0,5,0) against `Button`'s own (0,2,0)
+    // radius rules. Source order cannot settle this: the two live in different
+    // stylesheets, and the registry emits them in hash order.
     let collapse_start = "& > [data-state]:not(:first-child)";
     let collapse_end = "& > [data-state]:not(:last-child)";
 
-    sx().display("inline-flex")
+    let base = sx()
+        .display("inline-flex")
         .align_items("center")
         // Pins its own size, so a `Flex` column's `stretch` cannot widen it.
         .width("max-content")
@@ -57,26 +58,32 @@ static TOGGLE_GROUP_SX: StaticSx = StaticSx::new(|| {
         .selector("& > *[data-state~=\"checked\"]", sx().z_index("1"))
         .selector("& > *:focus-visible", sx().z_index("2"))
         .when(
-            Orientation::Horizontal.state_name(),
-            sx().selector(
-                collapse_start,
-                sx().margin_left("-1px")
-                    .border_top_left_radius("0")
-                    .border_bottom_left_radius("0"),
-            )
-            .selector(
-                collapse_end,
-                sx().border_top_right_radius("0")
-                    .border_bottom_right_radius("0"),
-            ),
-        )
-        .when(
             Orientation::Vertical.state_name(),
             // Stretch, or each button sizes to its own label and the column
             // steps in and out down its edges.
-            sx().flex_direction("column")
-                .align_items("stretch")
+            sx().flex_direction("column").align_items("stretch"),
+        )
+        // `gap` separates the buttons, so they keep their own borders and
+        // radii - only an ungapped group shares them.
+        .when(
+            "collapsed",
+            sx().when(
+                Orientation::Horizontal.state_name(),
+                sx().selector(
+                    collapse_start,
+                    sx().margin_left("-1px")
+                        .border_top_left_radius("0")
+                        .border_bottom_left_radius("0"),
+                )
                 .selector(
+                    collapse_end,
+                    sx().border_top_right_radius("0")
+                        .border_bottom_right_radius("0"),
+                ),
+            )
+            .when(
+                Orientation::Vertical.state_name(),
+                sx().selector(
                     collapse_start,
                     sx().margin_top("-1px")
                         .border_top_left_radius("0")
@@ -87,6 +94,7 @@ static TOGGLE_GROUP_SX: StaticSx = StaticSx::new(|| {
                     sx().border_bottom_left_radius("0")
                         .border_bottom_right_radius("0"),
                 ),
+            ),
         )
         // Only the row shares out its main axis; in a column `flex` would
         // stretch the buttons' heights past their size scale, and
@@ -98,7 +106,11 @@ static TOGGLE_GROUP_SX: StaticSx = StaticSx::new(|| {
                 Orientation::Horizontal.state_name(),
                 sx().selector("& > *", sx().flex("1 1 0")),
             ),
-        )
+        );
+
+    Size::ALL.into_iter().fold(base, |base, size| {
+        base.when(size.state_name(), sx().gap(SizeCss::SPACING.value(size)))
+    })
 });
 
 base_props! {
@@ -125,6 +137,10 @@ base_props! {
         /// Corner radius of the group's outer corners; inner ones are square.
         #[props(default, into)]
         radius: Input<Size>,
+        /// Space between the buttons. Set it and they stop sharing borders -
+        /// each keeps its own, and its own radius.
+        #[props(default, into)]
+        gap: Input<Size>,
         /// Buttons share the width evenly instead of sizing to their label.
         #[props(default)]
         full_width: Option<bool>,
@@ -176,12 +192,16 @@ pub fn ToggleButtonGroup(props: ToggleButtonGroupProps) -> Element {
         signal.set(state);
     }
 
-    let states: Input<States> = props
+    let mut states = props
         .states
         .unwrap_or_default()
         .with(orientation.state_name(), true)
         .with("full-width", full_width)
-        .into();
+        .with("collapsed", props.gap.as_ref().is_none());
+    if let Some(gap) = props.gap.as_ref().copied() {
+        states = states.with(gap.state_name(), true);
+    }
+    let states: Input<States> = states.into();
 
     use_box()
         .framework_sx(&TOGGLE_GROUP_SX)

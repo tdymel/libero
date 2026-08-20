@@ -1,3 +1,5 @@
+use crate::utils::warn;
+
 #[repr(u8)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum Size {
@@ -77,7 +79,7 @@ impl Size {
 impl From<&str> for Size {
     fn from(value: &str) -> Self {
         Self::parse_dynamic(value).unwrap_or_else(|| {
-            debug_assert!(false, "unknown size `{value}`, falling back to md");
+            warn(&format!("unknown size `{value}`, falling back to md"));
             Self::Md
         })
     }

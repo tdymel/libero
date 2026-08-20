@@ -1,3 +1,5 @@
+use crate::utils::warn;
+
 /// Which mix curve `HexColor::shade` walks. A neutral grey needs a much wider
 /// spread than a hue to cover the same perceptual range.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -37,7 +39,7 @@ impl ColorShade {
             Some("8") => Self::S8,
             Some("9") => Self::S9,
             Some(other) => {
-                debug_assert!(false, "unknown color shade `{other}`, falling back to 6");
+                warn(&format!("unknown color shade `{other}`, falling back to 6"));
                 Self::DEFAULT
             }
         }

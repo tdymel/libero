@@ -61,7 +61,7 @@ fn a_toggle_group_marks_only_the_selected_button_pressed() {
     let group = attributes_of(&body, "div");
 
     assert_eq!(group["role"], "group");
-    assert_eq!(group["data-state"], "horizontal");
+    assert_eq!(group["data-state"], "horizontal collapsed");
 
     let pressed: Vec<&str> = body
         .match_indices("aria-pressed=\"")
@@ -99,7 +99,37 @@ fn a_toggle_group_marks_only_the_selected_button_pressed() {
     let group_class = classes_of(&body, "div");
     let group_class = group_class.first().expect("a framework class");
     assert!(html.contains(&format!(
-        ".{group_class}[data-state~=\"horizontal\"] > [data-state]:not(:first-child)"
+        ".{group_class}[data-state~=\"collapsed\"][data-state~=\"horizontal\"] > [data-state]:not(:first-child)"
+    )));
+}
+
+#[test]
+fn a_gapped_toggle_group_keeps_every_button_s_own_corners() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ToggleButtonGroup {
+                    gap: "xs",
+                    value: vec!["bold".to_string()],
+                    onchange: move |_| {},
+                    ToggleButton { value: "bold", "B" }
+                    ToggleButton { value: "italic", "I" }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let group = attributes_of(&body, "div");
+
+    // No `collapsed`, so the corner-squashing rules below cannot match.
+    assert_eq!(group["data-state"], "horizontal size-xs");
+
+    let group_class = classes_of(&body, "div");
+    let group_class = group_class.first().expect("a framework class");
+    assert!(html.contains(&format!(
+        ".{group_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"
     )));
 }
 
