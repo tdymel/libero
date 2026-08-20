@@ -25,15 +25,24 @@ impl States {
     }
 
     /// The element's `data-state` value, or `None` when nothing is active.
+    /// Built directly rather than `collect().join(" ")` - the intermediate
+    /// `Vec` is a second allocation on a path every component walks.
     pub fn data_state(&self) -> Option<String> {
-        let value = self
-            .0
-            .iter()
-            .filter_map(|(state, active)| active.then_some(*state))
-            .collect::<Vec<_>>()
-            .join(" ");
+        let active = || self.0.iter().filter(|(_, active)| *active).map(|(s, _)| *s);
 
-        (!value.is_empty()).then_some(value)
+        let length: usize = active().map(|state| state.len() + 1).sum();
+        if length == 0 {
+            return None;
+        }
+
+        let mut value = String::with_capacity(length - 1);
+        for state in active() {
+            if !value.is_empty() {
+                value.push(' ');
+            }
+            value.push_str(state);
+        }
+        Some(value)
     }
 }
 

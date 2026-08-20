@@ -198,8 +198,11 @@ base_props! {
         full_width: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
+        /// `Option`, not a bare `EventHandler`: a defaulted one allocates a
+        /// `GenerationalBox` on every render of every button - ~300 ns - even
+        /// where no caller ever passes a handler.
         #[props(default)]
-        onclick: EventHandler<MouseEvent>,
+        onclick: Option<EventHandler<MouseEvent>>,
         /// Renders a router-aware link instead of a `<button>`. No
         /// ripple/`onclick` then - see `is_link` below.
         #[props(default, into)]
@@ -237,20 +240,30 @@ pub fn Button(props: ButtonProps) -> Element {
     };
     let style = Some(style).filter(|style| !style.is_empty());
 
-    let states = props
-        .states
-        .unwrap_or_default()
-        .with("disabled", disabled)
-        .with("full-width", full_width)
-        .with(variant.state_name(), true)
-        .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true);
-
-    let states: Input<States> = match showing.as_ref() {
-        Some(ripple) => states.with(BUTTON_RIPPLE_STATE[ripple.which], true),
-        None => states,
+    // Built in one allocation rather than through `.with()`, which is a
+    // `retain` scan and a possible regrow per state. The caller's own states,
+    // which are usually absent, keep the merging path.
+    let mut own = Vec::with_capacity(6);
+    own.extend([
+        ("disabled", disabled),
+        ("full-width", full_width),
+        (variant.state_name(), true),
+        (size.state_name(), true),
+        (radius.radius_state_name(), true),
+    ]);
+    if let Some(ripple) = showing.as_ref() {
+        own.push((BUTTON_RIPPLE_STATE[ripple.which], true));
     }
-    .into();
+
+    let states: Input<States> = match props.states.as_ref() {
+        Some(caller) => own
+            .into_iter()
+            .fold(caller.clone(), |states, (state, active)| {
+                states.with(state, active)
+            })
+            .into(),
+        None => States::from(own).into(),
+    };
 
     let handle_click = move |event: Event<MouseData>| {
         let point = event.element_coordinates();
@@ -263,7 +276,9 @@ pub fn Button(props: ButtonProps) -> Element {
             x: point.x,
             y: point.y,
         }));
-        props.onclick.call(event);
+        if let Some(onclick) = &props.onclick {
+            onclick.call(event);
+        }
     };
 
     // One hook for every path, above the branch: `prepare` is where
