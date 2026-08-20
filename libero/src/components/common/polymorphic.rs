@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use dioxus::core::AttributeValue;
+
 use crate::components::Input;
 
 macro_rules! html_tags {
@@ -88,27 +90,15 @@ macro_rules! html_tags {
             attributes: Vec<Attribute>,
             children: Element,
         ) -> Element {
-            let class = class.to_string();
+            let attributes = styling_attributes(Some(class), data_state, style, attributes);
             match component {
                 $(HtmlTag::$dvariant => rsx! {
-                    $dtag {
-                        class: class,
-                        "data-state": data_state,
-                        style: style,
-                        ..attributes,
-                        {children}
-                    }
+                    $dtag { ..attributes, {children} }
                 },)*
                 $(
                     #[cfg(feature = "full-polymorphism")]
                     HtmlTag::$fvariant => rsx! {
-                        $ftag {
-                            class: class,
-                            "data-state": data_state,
-                            style: style,
-                            ..attributes,
-                            {children}
-                        }
+                        $ftag { ..attributes, {children} }
                     },
                 )*
                 // The value is fine, the build configuration is not - a
@@ -120,19 +110,80 @@ macro_rules! html_tags {
                          feature, rendering as <div>.",
                         component.as_str()
                     ));
-                    rsx! {
-                        div {
-                            class: class,
-                            "data-state": data_state,
-                            style: style,
-                            ..attributes,
-                            {children}
-                        }
-                    }
+                    rsx! { div { ..attributes, {children} } }
                 },
             }
         }
     };
+}
+
+/// Merges the styling triple into a caller's attributes, so the element carries
+/// one spread instead of three dynamic slots. A slot is diffed every render even
+/// when its value is `None`; a `Vec` entry that is not there costs nothing.
+///
+/// A caller's own `class`/`style` is merged with ours rather than emitted twice:
+/// a duplicate attribute silently drops one of the two, and which one depends on
+/// the renderer (SSR keeps the first, the DOM the last). Ours go first, so a
+/// caller's declarations win the cascade.
+///
+/// `class` is `None` for a caller that carries the class itself - the router
+/// `Link`, which renders its own `class` slot. A caller's `class` attribute is
+/// then left where it is, since there is nothing here to merge it into.
+pub(crate) fn styling_attributes(
+    class: Option<crate::components::ClassList>,
+    data_state: Option<String>,
+    style: Option<String>,
+    mut attributes: Vec<Attribute>,
+) -> Vec<Attribute> {
+    let mut class = class.map(|class| class.to_string());
+    let mut style = style;
+
+    attributes.retain_mut(|attribute| match (attribute.name, &attribute.value) {
+        ("class", AttributeValue::Text(value)) => match &mut class {
+            Some(class) => {
+                join(class, value, ' ');
+                false
+            }
+            None => true,
+        },
+        ("style", AttributeValue::Text(value)) => {
+            match &mut style {
+                Some(style) => join(style, value, ';'),
+                None => style = Some(value.clone()),
+            }
+            false
+        }
+        _ => true,
+    });
+
+    // Pushed then rotated to the front: prepending in place is a memmove,
+    // where `splice` at index 0 is a generic reallocating path.
+    let mut ours = 0;
+    if let Some(class) = class {
+        attributes.push(super::attr("class", class));
+        ours += 1;
+    }
+    if let Some(data_state) = data_state {
+        attributes.push(super::attr("data-state", data_state));
+        ours += 1;
+    }
+    if let Some(style) = style {
+        attributes.push(super::attr("style", style));
+        ours += 1;
+    }
+    attributes.rotate_right(ours);
+    attributes
+}
+
+/// Appends `value`, inserting `separator` only where one is missing.
+fn join(into: &mut String, value: &str, separator: char) {
+    if value.is_empty() {
+        return;
+    }
+    if !into.is_empty() && !into.trim_end().ends_with(separator) {
+        into.push(separator);
+    }
+    into.push_str(value);
 }
 
 // `default` is every tag `libero` and `docs` actually render, so both work on
@@ -254,5 +305,120 @@ html_tags! {
         Var => var,
         Video => video,
         Wbr => wbr,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::components::ClassList;
+
+    fn text(name: &'static str, value: &str) -> Attribute {
+        super::super::attr(name, value.to_string())
+    }
+
+    fn named(attributes: &[Attribute]) -> Vec<(&str, String)> {
+        attributes
+            .iter()
+            .map(|attribute| match &attribute.value {
+                AttributeValue::Text(value) => (attribute.name, value.clone()),
+                _ => (attribute.name, String::new()),
+            })
+            .collect()
+    }
+
+    #[test]
+    fn ours_come_first_then_the_callers() {
+        let out = styling_attributes(
+            Some(ClassList::from("ours")),
+            Some("size-md".into()),
+            None,
+            vec![text("id", "x"), text("aria-label", "y")],
+        );
+
+        assert_eq!(
+            named(&out),
+            [
+                ("class", "ours".into()),
+                ("data-state", "size-md".into()),
+                ("id", "x".into()),
+                ("aria-label", "y".into()),
+            ]
+        );
+    }
+
+    #[test]
+    fn a_callers_class_joins_ours_instead_of_duplicating() {
+        let out = styling_attributes(
+            Some(ClassList::from("ours")),
+            None,
+            None,
+            vec![text("class", "theirs")],
+        );
+
+        assert_eq!(named(&out), [("class", "ours theirs".into())]);
+    }
+
+    #[test]
+    fn a_callers_style_joins_ours_and_wins_the_cascade() {
+        let out = styling_attributes(
+            Some(ClassList::new()),
+            None,
+            Some("color:red;".into()),
+            vec![text("style", "color:blue;")],
+        );
+
+        assert_eq!(
+            named(&out),
+            [
+                ("class", String::new()),
+                ("style", "color:red;color:blue;".into())
+            ]
+        );
+    }
+
+    #[test]
+    fn a_missing_semicolon_is_inserted_between_the_two() {
+        let out = styling_attributes(
+            Some(ClassList::new()),
+            None,
+            Some("color:red".into()),
+            vec![text("style", "color:blue")],
+        );
+
+        assert_eq!(named(&out)[1], ("style", "color:red;color:blue".into()));
+    }
+
+    #[test]
+    fn a_callers_style_survives_when_we_have_none() {
+        let out = styling_attributes(
+            Some(ClassList::new()),
+            None,
+            None,
+            vec![text("style", "color:blue;")],
+        );
+
+        assert_eq!(named(&out)[1], ("style", "color:blue;".into()));
+    }
+
+    /// The `Link` path: the class stays a prop, so a caller's `class`
+    /// attribute is left alone rather than merged into nothing.
+    #[test]
+    fn without_a_class_of_ours_the_callers_is_untouched() {
+        let out = styling_attributes(
+            None,
+            Some("size-md".into()),
+            Some("color:red;".into()),
+            vec![text("class", "theirs"), text("style", "color:blue;")],
+        );
+
+        assert_eq!(
+            named(&out),
+            [
+                ("data-state", "size-md".into()),
+                ("style", "color:red;color:blue;".into()),
+                ("class", "theirs".into()),
+            ]
+        );
     }
 }

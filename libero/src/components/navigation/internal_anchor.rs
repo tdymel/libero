@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Input, States, Variables,
-        common::{attr, base_props, use_style_attributes},
+        common::{base_props, styling_attributes, use_style_attributes},
     },
     sx::{StaticSx, Sx},
 };
@@ -49,16 +49,14 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     let router_can_handle_target = props.target.is_none() || is_blank;
 
     if router_can_handle_target && try_router().is_some() {
-        let attributes = props
-            .attributes
-            .into_iter()
-            .chain(
-                style_attributes
-                    .data_state
-                    .map(|value| attr("data-state", value)),
-            )
-            .chain(style_attributes.style.map(|value| attr("style", value)))
-            .collect::<Vec<_>>();
+        // `Link` renders its own `class` slot, so the class stays a prop and
+        // only the other two are folded in.
+        let attributes = styling_attributes(
+            None,
+            style_attributes.data_state,
+            style_attributes.style,
+            props.attributes,
+        );
 
         return rsx! {
             Link {
