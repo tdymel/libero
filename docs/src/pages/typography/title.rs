@@ -1,6 +1,6 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Text, Title};
+use libero::components::{Code, HtmlTag, Input, Text, Title};
 
 #[component]
 pub fn TitlePage() -> Element {
@@ -15,22 +15,30 @@ pub fn TitlePage() -> Element {
                 }
             },
             DocSection {
-                title: "Variants",
-                Flex {
-                    direction: "column",
-                    gap: "sm",
-                    Title { size: "xxl", "Heading one" }
-                    Title { size: "xl", "Heading two" }
-                    Title { size: "lg", "Heading three" }
-                    Title { size: "md", "Heading four" }
-                    Title { size: "sm", "Heading five" }
-                    Title { size: "xs", "Heading six" }
+                title: "Usage",
+                Demo {
+                    component: "Title",
+                    children_text: "The quick brown fox",
+                    controls: vec![
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("xxl"),
+                        Control::slider(
+                            "component",
+                            ["auto", "h1", "h2", "h3", "h4", "h5", "h6"],
+                        ),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Title {
+                            size: values.str("size"),
+                            component: match values.str("component").as_str() {
+                                // The default follows `size`, so leave the prop unset.
+                                "auto" => Input::None,
+                                tag => Input::Value(HtmlTag::from(tag)),
+                            },
+                            "The quick brown fox"
+                        }
+                    },
                 }
-            }
-            DocSection {
-                title: "Decoupled tag",
-                Text { "Sized like h1, but rendered as a p - doesn't affect the page's heading order." }
-                Title { size: "xxl", component: "p", "Looks like h1, isn't one" }
             }
         }
     }
