@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+use super::divider::{SPLITTER_DIVIDER_COLOR_VAR, SplitterDivider};
 use crate::{
     CssLayer,
     components::{
@@ -7,11 +8,9 @@ use crate::{
         common::{base_props, dom_api, variables},
         layout::use_box,
     },
-    hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_root_id, use_theme,
-    },
+    hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_root_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
+    theme::{CssVar, Size},
     utils::warn,
 };
 
@@ -24,7 +23,6 @@ pub enum SplitterResizeEvent {
 }
 
 const SPLITTER_A_VAR: CssVar = CssVar::new("--lsx-splitter-a");
-const SPLITTER_DIVIDER_COLOR_VAR: CssVar = CssVar::new("--lsx-splitter-divider-color");
 
 static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -42,57 +40,6 @@ static SPLITTER_PANEL_A_SX: StaticSx = StaticSx::new(|| {
 
 static SPLITTER_PANEL_B_SX: StaticSx =
     StaticSx::new(|| sx().flex("1 1 0%").min_width("0").min_height("0"));
-
-// Only as thick as `divider_size`, so the panes sit flush. The larger hit
-// target is a child overlay taking no flex space of its own.
-static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
-    let base = sx()
-        .position("relative")
-        .flex_shrink("0")
-        .align_self("stretch")
-        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::GREY.value(ColorShade::S4)));
-
-    Size::ALL.into_iter().fold(base, |acc, size| {
-        acc.when(
-            format!("vertical && {}", size.state_name()),
-            sx().width(SPLITTER_DIVIDER_SIZE.value(size)),
-        )
-        .when(
-            format!("horizontal && {}", size.state_name()),
-            sx().height(SPLITTER_DIVIDER_SIZE.value(size)),
-        )
-    })
-});
-
-// Invisible, and negatively inset past the bar into both panes, so the drag
-// target is larger than the visible line without the panes leaving a gap.
-static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
-    let base = sx().position("absolute").and(drag_handle_sx());
-
-    Size::ALL.into_iter().fold(base, |acc, size| {
-        let inset = format!(
-            "calc(({} - {}) / 2)",
-            SPLITTER_DIVIDER_SIZE.value(size),
-            SPLITTER_HIT_SIZE.value(size)
-        );
-        acc.when(
-            format!("vertical && {}", size.state_name()),
-            sx().top("0")
-                .bottom("0")
-                .left(inset.clone())
-                .right(inset.clone())
-                .cursor("col-resize"),
-        )
-        .when(
-            format!("horizontal && {}", size.state_name()),
-            sx().left("0")
-                .right("0")
-                .top(inset.clone())
-                .bottom(inset)
-                .cursor("row-resize"),
-        )
-    })
-});
 
 fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variables {
     variables()
@@ -218,7 +165,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
         }),
     });
 
-    let onkeydown = move |event: Event<KeyboardData>| {
+    let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         let step = if event.modifiers().shift() {
             theme.splitter.big_step
         } else {
@@ -242,7 +189,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             Key::End => go_to(100.0 - min_size),
             _ => {}
         }
-    };
+    });
 
     let states: Input<States> = props
         .states
@@ -252,40 +199,12 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .with("dragging", (drag.dragging)())
         .into();
 
-    let divider_states: Input<States> = States::default()
-        .with("vertical", vertical)
-        .with("horizontal", !vertical)
-        .with(size.state_name(), true)
-        .into();
-
     let variables: Input<Variables> = splitter_variables(a(), props.divider_color.as_ref()).into();
-    let aria_orientation = if vertical { "vertical" } else { "horizontal" };
 
     // The two panes carry a static framework style and nothing else, so they
     // are classes on plain elements rather than component scopes.
     let panel_a_class = use_css(Some(&SPLITTER_PANEL_A_SX), CssLayer::Framework);
     let panel_b_class = use_css(Some(&SPLITTER_PANEL_B_SX), CssLayer::Framework);
-
-    let bar = use_box()
-        .framework_sx(&SPLITTER_BAR_SX)
-        .states(&divider_states)
-        .prepare();
-    let hit = use_box()
-        .framework_sx(&SPLITTER_HIT_SX)
-        .states(&divider_states)
-        .prepare();
-
-    let hit = hit
-        .attr("role", "separator")
-        .attr("tabindex", "0")
-        .attr("aria-orientation", aria_orientation)
-        .attr("aria-valuenow", (a() as i64).to_string())
-        .attr("aria-valuemin", (min_size as i64).to_string())
-        .attr("aria-valuemax", ((100.0 - min_size) as i64).to_string())
-        .event("onpointerdown", drag.onpointerdown)
-        .event("onkeydown", onkeydown)
-        .render(HtmlTag::Div, Vec::new(), ());
-    let bar = bar.render(HtmlTag::Div, Vec::new(), hit);
 
     use_box()
         .framework_sx(&SPLITTER_BASE_SX)
@@ -303,7 +222,16 @@ pub fn Splitter(props: SplitterProps) -> Element {
             props.attributes,
             vec![
                 rsx! { div { class: panel_a_class, {panel_a} } },
-                bar,
+                rsx! {
+                    SplitterDivider {
+                        a,
+                        vertical,
+                        size,
+                        min_size,
+                        onpointerdown: drag.onpointerdown,
+                        onkeydown,
+                    }
+                },
                 rsx! { div { class: panel_b_class, {panel_b} } },
             ],
         )
