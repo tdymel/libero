@@ -105,37 +105,35 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
 
-    let children = vec![
-        row_content,
-        rsx! {
-            if is_expanded == Some(true) {
-                List {
-                    "role": "group",
-                    sx: sx()
-                        .apply_if(props.gap, |sx, gap| sx.gap(LIST_GAP.value(gap)))
-                        .apply_if(props.indent, |sx, indent| {
-                            sx.padding_left(LIST_INDENT.value(indent))
-                        }),
-                    size: props.size,
-                    for child in &node.children {
-                        TreeRow {
-                            key: "{child.id}",
-                            node: child.clone(),
-                            size: props.size,
-                            gap: props.gap,
-                            indent: props.indent,
-                            depth: props.depth + 1,
-                            expanded: props.expanded,
-                            resolved_active: props.resolved_active.clone(),
-                            active_id: props.active_id,
-                            render_node: props.render_node.clone(),
-                            onexpandedchange: props.onexpandedchange,
-                        }
+    let children = rsx! {
+        {row_content}
+        if is_expanded == Some(true) {
+            List {
+                "role": "group",
+                sx: sx()
+                    .apply_if(props.gap, |sx, gap| sx.gap(LIST_GAP.value(gap)))
+                    .apply_if(props.indent, |sx, indent| {
+                        sx.padding_left(LIST_INDENT.value(indent))
+                    }),
+                size: props.size,
+                for child in &node.children {
+                    TreeRow {
+                        key: "{child.id}",
+                        node: child.clone(),
+                        size: props.size,
+                        gap: props.gap,
+                        indent: props.indent,
+                        depth: props.depth + 1,
+                        expanded: props.expanded,
+                        resolved_active: props.resolved_active.clone(),
+                        active_id: props.active_id,
+                        render_node: props.render_node.clone(),
+                        onexpandedchange: props.onexpandedchange,
                     }
                 }
             }
-        },
-    ];
+        }
+    };
 
     row.attr("role", "treeitem")
         .attr("data-tree-id", node.id.to_string())

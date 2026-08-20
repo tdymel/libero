@@ -98,16 +98,14 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .render(
             HtmlTag::Div,
             props.attributes,
-            vec![
-                rsx! {
-                    span {
-                        "aria-hidden": "true",
-                        style: "display:none",
-                        onmounted: move |_| focus_first(&id()),
-                    }
-                },
-                props.children,
-            ],
+            rsx! {
+                span {
+                    "aria-hidden": "true",
+                    style: "display:none",
+                    onmounted: move |_| focus_first(&id()),
+                }
+                {props.children}
+            },
         )
 }
 

@@ -464,36 +464,32 @@ pub fn Code(props: CodeProps) -> Element {
         return boxed.render(
             HtmlTag::Div,
             props.attributes,
-            vec![
-                rsx! {
-                    if props.header {
-                        div { class: header_class,
-                            span { {label} }
-                            if let Some(copy_source) = copy_source.clone() {
-                                CopyButton { source: copy_source, floating: false }
-                            }
-                        }
-                    } else if let Some(copy_source) = copy_source.clone() {
-                        CopyButton { source: copy_source, floating: true }
-                    }
-                },
-                rsx! {
-                    Box {
-                        component: "div",
-                        framework_sx: &CODE_BLOCK_SCROLL_SX,
-                        sx: scroll_sx,
-                        if let Some(lines) = &lines {
-                            {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
-                        } else {
-                            Box {
-                                component: "pre",
-                                framework_sx: &CODE_PLAIN_PRE_SX,
-                                Box { component: "code", {props.children} }
-                            }
+            rsx! {
+                if props.header {
+                    div { class: header_class,
+                        span { {label} }
+                        if let Some(copy_source) = copy_source.clone() {
+                            CopyButton { source: copy_source, floating: false }
                         }
                     }
-                },
-            ],
+                } else if let Some(copy_source) = copy_source.clone() {
+                    CopyButton { source: copy_source, floating: true }
+                }
+                Box {
+                    component: "div",
+                    framework_sx: &CODE_BLOCK_SCROLL_SX,
+                    sx: scroll_sx,
+                    if let Some(lines) = &lines {
+                        {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
+                    } else {
+                        Box {
+                            component: "pre",
+                            framework_sx: &CODE_PLAIN_PRE_SX,
+                            Box { component: "code", {props.children} }
+                        }
+                    }
+                }
+            },
         );
     }
 
