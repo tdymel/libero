@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, Variables, common::base_props, variables},
+    components::{
+        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+    },
     sx::{StaticSx, Sx, sx},
     theme::CENTER_DISPLAY,
 };
@@ -33,19 +35,16 @@ base_props! {
 
 #[component]
 pub fn Center(props: CenterProps) -> Element {
-    let variables = center_variables(&props);
+    let variables: Input<Variables> = center_variables(&props).into();
 
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &CENTER_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&CENTER_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Div, props.attributes, props.children)
 }
 
 #[cfg(test)]

@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props, variables},
+    components::{
+        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+    },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{OVERLAY_BLUR, OVERLAY_OPACITY, Z_INDEX_OVERLAY},
 };
@@ -40,7 +42,7 @@ fn px_value(value: &ThemeAwareValue) -> Option<String> {
 /// Dims/blurs what's behind it. Render it conditionally - there is no `open`.
 #[component]
 pub fn Overlay(props: OverlayProps) -> Element {
-    let variables = variables()
+    let variables: Input<Variables> = variables()
         .with(OVERLAY_OPACITY.override_var(), props.opacity.resolve(None))
         .with(Z_INDEX_OVERLAY.override_var(), props.z_index.resolve(None))
         .with(
@@ -50,17 +52,19 @@ pub fn Overlay(props: OverlayProps) -> Element {
                 .as_ref()
                 .and_then(px_value)
                 .map(|blur| format!("blur({blur})")),
-        );
+        )
+        .into();
 
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &OVERLAY_BASE_SX,
-            attributes: props.attributes,
-            {props.children.unwrap_or_else(|| rsx! {})}
-        }
-    }
+    use_box()
+        .framework_sx(&OVERLAY_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            props.children.unwrap_or_else(|| rsx! {}),
+        )
 }

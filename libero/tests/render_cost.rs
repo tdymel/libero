@@ -150,7 +150,11 @@ fn render_cost_per_component() {
 
     println!();
     for (name, ns) in &measured {
-        let memoized = if *ns < leaf && *name != "span" { "  memoized" } else { "" };
+        let memoized = if *ns < leaf && *name != "span" {
+            "  memoized"
+        } else {
+            ""
+        };
         println!("{name:<16} {ns:>8.0} {:>6.2}x{memoized}", ns / leaf);
     }
     println!();

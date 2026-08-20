@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, input_from_str},
+        layout::use_box,
         variables,
     },
     str_enum::str_enum,
@@ -110,26 +111,23 @@ base_props! {
 #[component]
 pub fn Header(props: HeaderProps) -> Element {
     let position = props.position.copied_or_default();
-    let variables = header_variables(&props);
+    let variables: Input<Variables> = header_variables(&props).into();
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("static", position == HeaderPosition::Static)
-        .with("fixed", position == HeaderPosition::Fixed);
+        .with("fixed", position == HeaderPosition::Fixed)
+        .into();
 
-    rsx! {
-        Box {
-            component: HtmlTag::Header,
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &HEADER_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&HEADER_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Header, props.attributes, props.children)
 }
 
 #[cfg(test)]

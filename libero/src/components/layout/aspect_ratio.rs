@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, variables},
+        layout::use_box,
     },
     sx::{StaticSx, Sx, sx},
     theme::ASPECT_RATIO,
@@ -30,19 +31,16 @@ base_props! {
 
 #[component]
 pub fn AspectRatio(props: AspectRatioProps) -> Element {
-    let variables = aspect_ratio_variables(props.ratio.as_ref());
+    let variables: Input<Variables> = aspect_ratio_variables(props.ratio.as_ref()).into();
 
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &ASPECT_RATIO_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&ASPECT_RATIO_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Div, props.attributes, props.children)
 }
 
 #[cfg(test)]

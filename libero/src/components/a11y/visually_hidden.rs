@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -25,15 +25,11 @@ base_props! {
 
 #[component]
 pub fn VisuallyHidden(props: VisuallyHiddenProps) -> Element {
-    rsx! {
-        Box {
-            component: "span",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            framework_sx: &VISUALLY_HIDDEN_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&VISUALLY_HIDDEN_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .render(HtmlTag::Span, props.attributes, props.children)
 }

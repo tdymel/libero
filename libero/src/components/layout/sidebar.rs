@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, ScrollArea, States,
+        HtmlTag, Input, ScrollArea, States,
         common::{base_props, input_from_str},
+        layout::use_box,
     },
     sx::{StaticSx, Sx, sx},
     theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
@@ -62,23 +63,24 @@ pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();
     let size = props.size.copied_or(Size::Md);
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .active(side.state_name())
-        .active(size.state_name());
+        .active(size.state_name())
+        .into();
 
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            states,
-            framework_sx: &SIDEBAR_BASE_SX,
-            attributes: props.attributes,
-            ScrollArea {
-                sx: sx().padding("lg"),
-                {props.children}
-            }
-        }
-    }
+    use_box()
+        .framework_sx(&SIDEBAR_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .prepare()
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                ScrollArea { sx: sx().padding("lg"), {props.children} }
+            },
+        )
 }

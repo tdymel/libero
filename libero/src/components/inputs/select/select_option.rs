@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
     sx::Sx,
 };
 
@@ -16,15 +16,11 @@ base_props! {
 
 #[component]
 pub fn Option(props: OptionProps) -> Element {
-    rsx! {
-        Box {
-            component: "option",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            value: props.value,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .attr("value", props.value)
+        .render(HtmlTag::Option, props.attributes, props.children)
 }

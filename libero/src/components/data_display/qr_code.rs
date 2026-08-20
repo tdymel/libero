@@ -6,8 +6,9 @@ use fast_qr::{ECL, QRBuilder};
 
 use crate::{
     components::{
-        Box, Input, States,
+        HtmlTag, Input, States,
         common::{base_props, input_from_str},
+        layout::use_box,
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
@@ -94,18 +95,23 @@ pub fn QrCode(props: QrCodeProps) -> Element {
         generate_svg_lazy(data, robustness).await
     }));
 
-    rsx! {
-        if let Some(svg) = svg.read().clone().flatten() {
-            Box {
-                class: props.class,
-                sx: props.sx,
-                states: props.states,
-                framework_sx: &QR_CODE_BASE_SX,
-                role: "img",
-                "aria-label": props.aria_label,
-                attributes: props.attributes,
-                div { dangerous_inner_html: "{svg}" }
-            }
-        }
-    }
+    let boxed = use_box()
+        .framework_sx(&QR_CODE_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare();
+
+    let Some(svg) = svg.read().clone().flatten() else {
+        return rsx! {};
+    };
+
+    boxed
+        .attr("role", "img")
+        .attr("aria-label", props.aria_label)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! { div { dangerous_inner_html: "{svg}" } },
+        )
 }

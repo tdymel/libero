@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, Orientation, States, common::base_props},
+    components::{HtmlTag, Input, Orientation, States, common::base_props, layout::use_box},
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
     theme::{DataListDefaults, Size},
@@ -58,21 +58,18 @@ pub fn DataList(props: DataListProps) -> Element {
 
     let gap = props.gap.copied_or(theme.data_list.size);
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(gap.state_name(), true)
-        .with("horizontal", is_horizontal);
+        .with("horizontal", is_horizontal)
+        .into();
 
-    rsx! {
-        Box {
-            component: "dl",
-            class: props.class,
-            sx: props.sx,
-            states,
-            framework_sx: &DATA_LIST_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&DATA_LIST_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .prepare()
+        .render(HtmlTag::Dl, props.attributes, props.children)
 }

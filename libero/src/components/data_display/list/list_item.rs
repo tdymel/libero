@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -17,15 +17,11 @@ base_props! {
 
 #[component]
 pub fn ListItem(props: ListItemProps) -> Element {
-    rsx! {
-        Box {
-            component: "li",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            framework_sx: &LIST_ITEM_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&LIST_ITEM_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .render(HtmlTag::Li, props.attributes, props.children)
 }

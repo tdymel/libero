@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, input_from_str},
+        layout::use_box,
         variables,
     },
     hooks::use_theme,
@@ -74,9 +75,9 @@ base_props! {
 pub fn Float(props: FloatProps) -> Element {
     let theme = use_theme();
     let placement = props.placement.copied_or(theme.float.placement);
-    let variables = float_variables(&props);
+    let variables: Input<Variables> = float_variables(&props).into();
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(
@@ -120,17 +121,15 @@ pub fn Float(props: FloatProps) -> Element {
                 placement,
                 Placement::TopEnd | Placement::CenterEnd | Placement::BottomEnd
             ),
-        );
+        )
+        .into();
 
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &FLOAT_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&FLOAT_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Div, props.attributes, props.children)
 }

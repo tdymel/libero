@@ -117,6 +117,12 @@ impl<'a> BoxBuilder<'a> {
         self
     }
 
+    #[inline]
+    pub fn variables(mut self, variables: &'a Input<Variables>) -> Self {
+        self.variables = Some(variables);
+        self
+    }
+
     /// Raw `style` declarations, appended after `variables`. For a component
     /// that caches its own custom properties as a rendered string.
     #[inline]

@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, focus_ring_sx, variables},
+        layout::use_box,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CONTAINER_GUTTERS, CONTAINER_SIZE, SizeCss},
@@ -47,20 +48,20 @@ base_props! {
 
 #[component]
 pub fn Container(props: ContainerProps) -> Element {
-    let variables = container_variables(&props);
+    let variables: Input<Variables> = container_variables(&props).into();
 
-    rsx! {
-        Box {
-            component: props.component,
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &CONTAINER_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&CONTAINER_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .render(
+            props.component.copied_or_default(),
+            props.attributes,
+            props.children,
+        )
 }
 
 #[cfg(test)]

@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, Variables, common::base_props, variables},
+    components::{
+        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+    },
     context::ModalContext,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, Size, SizeCss},
@@ -56,20 +58,19 @@ base_props! {
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = try_use_context::<ModalContext>().is_some();
-    let variables = dialog_variables(&props).merge(props.variables.unwrap_or_default());
+    let variables: Input<Variables> = dialog_variables(&props)
+        .merge(props.variables.unwrap_or_default())
+        .into();
 
-    rsx! {
-        Box {
-            role: "dialog",
-            "aria-modal": is_modal.then_some("true"),
-            "aria-label": props.aria_label.clone(),
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &DIALOG_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&DIALOG_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .attr("role", "dialog")
+        .attr("aria-modal", is_modal.then_some("true"))
+        .attr("aria-label", props.aria_label.clone())
+        .render(HtmlTag::Div, props.attributes, props.children)
 }

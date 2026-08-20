@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_color, base_props, contrast_color, input_from_str},
+        layout::use_box,
         variables,
     },
     str_enum::str_enum,
@@ -106,25 +107,22 @@ base_props! {
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
     let variant = props.variant.copied_or_default();
-    let variables = icon_variables(&props);
+    let variables: Input<Variables> = icon_variables(&props).into();
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(variant.state_name(), true);
+        .with(variant.state_name(), true)
+        .into();
 
-    rsx! {
-        Box {
-            component,
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &ICON_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&ICON_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .render(component, props.attributes, props.children)
 }
 
 #[cfg(test)]

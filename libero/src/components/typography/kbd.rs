@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, common::base_props},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
     sx::{StaticSx, Sx},
     theme::{KbdDefaults, Size},
 };
@@ -29,20 +29,17 @@ pub fn Kbd(props: KbdProps) -> Element {
     // Matches Mantine's own default.
     let size = props.size.copied_or(Size::Sm);
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(size.state_name(), true);
+        .with(size.state_name(), true)
+        .into();
 
-    rsx! {
-        Box {
-            component: "kbd",
-            class: props.class,
-            sx: props.sx,
-            states,
-            framework_sx: &KBD_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&KBD_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .prepare()
+        .render(HtmlTag::Kbd, props.attributes, props.children)
 }

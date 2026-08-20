@@ -2,8 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, focus_ring_sx, input_from_str, variables},
+        layout::use_box,
     },
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -115,7 +116,7 @@ base_props! {
 #[component]
 pub fn Flex(props: FlexProps) -> Element {
     let direction = props.direction.copied_or_default();
-    let variables = flex_variables(&props);
+    let variables: Input<Variables> = flex_variables(&props).into();
 
     let mut states = props
         .states
@@ -124,27 +125,29 @@ pub fn Flex(props: FlexProps) -> Element {
     if let Some(gap) = props.gap.as_ref().copied() {
         states = states.with(gap.state_name(), true);
     }
+    let states: Input<States> = states.into();
 
     let last_index = props.children.len().saturating_sub(1);
-
-    rsx! {
-        Box {
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &FLEX_BASE_SX,
-            attributes: props.attributes,
+    let children = match props.divider {
+        None => rsx! { {props.children.into_iter()} },
+        Some(divider) => rsx! {
             for (index, child) in props.children.into_iter().enumerate() {
                 {child}
                 if index != last_index {
-                    if let Some(divider) = props.divider.clone() {
-                        {divider}
-                    }
+                    {divider.clone()}
                 }
             }
-        }
-    }
+        },
+    };
+
+    use_box()
+        .framework_sx(&FLEX_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Div, props.attributes, children)
 }
 
 #[cfg(test)]

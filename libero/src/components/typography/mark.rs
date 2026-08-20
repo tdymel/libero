@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Input, States, Variables, common::base_props, variables},
+    components::{
+        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+    },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar},
@@ -54,20 +56,16 @@ base_props! {
 #[component]
 pub fn Mark(props: MarkProps) -> Element {
     let theme = use_theme();
-    let variables = mark_variables(props.color.as_ref(), theme.mark.color);
+    let variables: Input<Variables> = mark_variables(props.color.as_ref(), theme.mark.color).into();
 
-    rsx! {
-        Box {
-            component: "mark",
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            variables,
-            framework_sx: &MARK_BASE_SX,
-            attributes: props.attributes,
-            {props.children}
-        }
-    }
+    use_box()
+        .framework_sx(&MARK_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .variables(&variables)
+        .prepare()
+        .render(HtmlTag::Mark, props.attributes, props.children)
 }
 
 #[cfg(test)]
