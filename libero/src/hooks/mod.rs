@@ -7,6 +7,7 @@ mod local_state;
 mod modal;
 mod portal;
 mod presence;
+mod ripple;
 mod stylesheet;
 mod theme;
 
@@ -20,6 +21,7 @@ pub(crate) use modal::use_modal_z_index;
 pub use modal::{ModalHandle, use_modal, use_modal_context};
 pub use portal::use_portal;
 pub use presence::{Presence, use_presence};
+pub(crate) use ripple::{ripple_sx, use_ripple};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::use_theme;

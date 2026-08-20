@@ -20,6 +20,7 @@ mod mark;
 mod nav_link;
 mod overlay;
 mod qr_code;
+mod ripple;
 mod scroll_area;
 mod select;
 mod sidebar;
@@ -33,8 +34,7 @@ pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use button::{
-    BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, BUTTON_RIPPLE_ANIMATION,
-    BUTTON_RIPPLE_KEYFRAMES, BUTTON_RIPPLE_STATE, ButtonDefaults, ButtonSizeLevel,
+    BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
 };
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use code::{
@@ -63,6 +63,7 @@ pub use mark::MarkDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
+pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use select::{
     SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SelectDefaults, SelectSizeLevel,

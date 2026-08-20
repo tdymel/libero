@@ -8,7 +8,7 @@ start:
     {{dx}} serve --platform web --debug-symbols=false --hotpatch
 
 start_release:
-    {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false --wasm-split
+    {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false --wasm-split --features wasm-split
 
 public := justfile_directory() / ".." / "target" / "dx" / "docs"
 
@@ -17,7 +17,7 @@ build:
     ./preload_wasm.sh {{public}}/debug/web/public
 
 build_release:
-    {{dx}} build --platform web --debug-symbols=false --release --wasm-split
+    {{dx}} build --platform web --debug-symbols=false --release --wasm-split --features wasm-split
     ./preload_wasm.sh {{public}}/release/web/public
 
 # Serve a built bundle with brotli/gzip content negotiation, the way a real

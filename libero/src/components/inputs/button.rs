@@ -10,10 +10,10 @@ use crate::{
         layout::use_box,
         navigation::InternalAnchor,
     },
-    hooks::{use_cache, use_local_state, use_theme},
+    hooks::{ripple_sx, use_cache, use_ripple, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_RIPPLE_ANIMATION, BUTTON_RIPPLE_STATE, ButtonDefaults, CssVar, Size},
+    theme::{ButtonDefaults, CssVar, Size},
 };
 
 // Optional, since a Button is only a link when set. Costs the direct
@@ -26,14 +26,6 @@ impl From<NavigationTarget> for Input<NavigationTarget> {
     fn from(value: NavigationTarget) -> Self {
         Input::Value(value)
     }
-}
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Ripple {
-    /// Which of the two animation names to run - see [`BUTTON_RIPPLE_ANIMATION`].
-    which: usize,
-    x: f64,
-    y: f64,
 }
 
 str_enum! {
@@ -51,8 +43,6 @@ input_from_str!(ButtonVariant);
 const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
 const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
-const BUTTON_RIPPLE_X_VAR: CssVar = CssVar::new("--lsx-ripple-x");
-const BUTTON_RIPPLE_Y_VAR: CssVar = CssVar::new("--lsx-ripple-y");
 
 /// Structural chrome for `variant`. The three arguments are `var()` names,
 /// not resolved values, so `ActionIcon` reuses this under its own.
@@ -82,12 +72,10 @@ pub(crate) fn button_variant_sx(
 }
 
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
-    let base = ButtonDefaults::theme_vars()
+    let base = ripple_sx(ButtonDefaults::theme_vars())
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
-        .position("relative")
-        .overflow("hidden")
         .border_style("solid")
         .border_width("1px")
         .font_weight("600")
@@ -118,41 +106,9 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .pointer_events("none"),
         )
         .when("full-width", sx().width("100%"))
-        // The ripple: a pseudo-element on the button, not a child node. A
-        // rendered child costs ~1,000 ns per button per render even while no
-        // ripple is showing - see the render-cost notes.
-        .selector(
-            "::after",
-            sx().content("\"\"")
-                .position("absolute")
-                .left(BUTTON_RIPPLE_X_VAR.value_or("50%"))
-                .top(BUTTON_RIPPLE_Y_VAR.value_or("50%"))
-                .width("300%")
-                .height("300%")
-                .border_radius("50%")
-                .background("currentColor")
-                .opacity("0")
-                .transform("translate(-50%, -50%) scale(0)")
-                .pointer_events("none"),
-        )
-        .when(
-            BUTTON_RIPPLE_STATE[0],
-            sx().selector("::after", ripple_animation_sx(0)),
-        )
-        .when(
-            BUTTON_RIPPLE_STATE[1],
-            sx().selector("::after", ripple_animation_sx(1)),
-        )
         // The base outline is suppressed above and re-added only here.
         .focus_visible(focus_ring_sx())
 });
-
-fn ripple_animation_sx(which: usize) -> Sx {
-    sx().animation(format!(
-        "{} 550ms ease-out forwards",
-        BUTTON_RIPPLE_ANIMATION[which]
-    ))
-}
 
 /// The colour half of the `style` attribute, already rendered. Depends on
 /// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
@@ -166,21 +122,6 @@ fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> String {
         .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, hover)
         .render()
-}
-
-/// The ripple's click point, appended to the cached colour variables. Only a
-/// button that has been clicked pays for this.
-fn with_ripple_point(mut style: String, ripple: &Ripple) -> String {
-    for (name, value) in [
-        (BUTTON_RIPPLE_X_VAR, ripple.x),
-        (BUTTON_RIPPLE_Y_VAR, ripple.y),
-    ] {
-        style.push_str(name.name());
-        style.push(':');
-        style.push_str(&value.to_string());
-        style.push_str("px;");
-    }
-    style
 }
 
 base_props! {
@@ -222,21 +163,19 @@ pub fn Button(props: ButtonProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
 
-    // One at a time; a new click overrides the last. `which` alternates so the
-    // animation name changes and the browser replays it.
-    let ripple = use_local_state(|| None::<Ripple>);
+    let ripple = use_ripple();
 
     let size = props.size.copied_or(theme.button.size);
     let radius = props.radius.copied_or(theme.button.radius);
 
-    let showing = ripple.get();
+    let showing = ripple.showing();
     // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
     // the same on almost every render of almost every button.
     let style = use_cache((variant, color), |(variant, color)| {
         button_variables(*variant, color)
     });
     let style = match showing.as_ref() {
-        Some(ripple) => with_ripple_point(style, ripple),
+        Some(ripple) => ripple.with_point(style),
         None => style,
     };
     let style = Some(style).filter(|style| !style.is_empty());
@@ -253,7 +192,7 @@ pub fn Button(props: ButtonProps) -> Element {
         (radius.radius_state_name(), true),
     ]);
     if let Some(ripple) = showing.as_ref() {
-        own.push((BUTTON_RIPPLE_STATE[ripple.which], true));
+        own.push((ripple.state(), true));
     }
 
     let states: Input<States> = match props.states.as_ref() {
@@ -267,13 +206,7 @@ pub fn Button(props: ButtonProps) -> Element {
     };
 
     let handle_click = move |event: Event<MouseData>| {
-        let point = event.element_coordinates();
-        let which = ripple.get().map_or(0, |last| 1 - last.which);
-        ripple.set(Some(Ripple {
-            which,
-            x: point.x,
-            y: point.y,
-        }));
+        ripple.press(&event);
         if let Some(onclick) = &props.onclick {
             onclick.call(event);
         }

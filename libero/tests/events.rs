@@ -6,7 +6,10 @@
 use dioxus::core::{AttributeValue, ElementId, WriteMutations};
 use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Button};
+use libero::{
+    LiberoProvider,
+    components::{ActionIcon, Button},
+};
 use std::rc::Rc;
 
 /// Records the element the `click` listener landed on, which is the only way
@@ -130,27 +133,42 @@ fn click_event() -> Rc<dyn std::any::Any> {
     Rc::new(PlatformEventData::new(Box::new(FakeMouse)))
 }
 
+/// Empty where the component set no state at all - an unstyled `ActionIcon`
+/// only grows the attribute once it has a ripple.
 fn data_state(html: &str) -> String {
     html.split("data-state=\"")
         .nth(1)
-        .expect("no data-state")
+        .unwrap_or("")
         .split('"')
         .next()
         .unwrap()
         .to_string()
 }
 
-fn app() -> Element {
+fn button_app() -> Element {
     rsx! { LiberoProvider { Button { "Click" } } }
+}
+
+fn action_icon_app() -> Element {
+    rsx! { LiberoProvider { ActionIcon { aria_label: "Click", "x" } } }
 }
 
 #[test]
 fn clicking_a_button_runs_its_ripple() {
+    assert_ripple_alternates(button_app);
+}
+
+#[test]
+fn clicking_an_action_icon_runs_its_ripple() {
+    assert_ripple_alternates(action_icon_app);
+}
+
+fn assert_ripple_alternates(app: fn() -> Element) {
     dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindClickListener::default();
     dom.rebuild(&mut find);
-    let button = find.click.expect("Button registered no click listener");
+    let button = find.click.expect("registered no click listener");
 
     assert!(!data_state(&dioxus_ssr::render(&dom)).contains("ripple"));
 

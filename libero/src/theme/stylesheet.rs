@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
-    BUTTON_RIPPLE_KEYFRAMES, Color, ColorShade, ColorValue, HexColor, NamedColorCss, Size, SizeCss,
+    Color, ColorShade, ColorValue, HexColor, NamedColorCss, RIPPLE_KEYFRAMES, Size, SizeCss,
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
     Theme,
 };
@@ -24,7 +24,7 @@ impl From<&Theme> for Stylesheet {
         scopes.extend(global_reset_scopes(theme));
         scopes.push(body_scope(theme));
         let mut css = Stylesheet::new(scopes).as_str().to_string();
-        css.push_str(BUTTON_RIPPLE_KEYFRAMES);
+        css.push_str(RIPPLE_KEYFRAMES);
         Stylesheet::from(css)
     }
 }
@@ -226,7 +226,7 @@ mod tests {
 
         assert!(css.as_str().starts_with(":root{"));
         assert!(css.as_str().ends_with("}"));
-        assert!(css.as_str().contains(BUTTON_RIPPLE_KEYFRAMES));
+        assert!(css.as_str().contains(RIPPLE_KEYFRAMES));
     }
 
     #[test]

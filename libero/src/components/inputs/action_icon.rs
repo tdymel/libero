@@ -10,6 +10,7 @@ use crate::{
         navigation::InternalAnchor,
         variables,
     },
+    hooks::{ripple_sx, use_ripple},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, SizeCss},
 };
@@ -45,7 +46,8 @@ fn action_icon_variant_sx(
 // means a plain declaration here would beat a `:hover` rule from their
 // lower-priority `sx`.
 static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline-flex")
+    ripple_sx(sx())
+        .display("inline-flex")
         .align_items("center")
         .justify_content("center")
         .flex_shrink("0")
@@ -136,8 +138,12 @@ base_props! {
         aria_label: String,
         #[props(default)]
         disabled: Option<bool>,
+        /// `Option`, not a bare `EventHandler` - see `Button`.
+        #[props(default)]
+        onclick: Option<EventHandler<MouseEvent>>,
         /// Renders a router-aware link instead of a `<button>`. No
-        /// `onclick`/`onmouseleave` then - real navigation happens instead.
+        /// ripple/`onclick`/`onmouseleave` then - real navigation happens
+        /// instead.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
@@ -155,12 +161,26 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     let variant = props.variant.copied_or_default();
     let variables: Input<Variables> = action_icon_variables(&props, has_variant_styling).into();
 
-    let states: Input<States> = props
+    let ripple = use_ripple();
+    let showing = ripple.showing();
+
+    let states = props
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
-        .with(variant.state_name(), has_variant_styling)
-        .into();
+        .with(variant.state_name(), has_variant_styling);
+    let states: Input<States> = match showing.as_ref() {
+        Some(ripple) => states.with(ripple.state(), true),
+        None => states,
+    }
+    .into();
+
+    let handle_click = move |event: Event<MouseData>| {
+        ripple.press(&event);
+        if let Some(onclick) = &props.onclick {
+            onclick.call(event);
+        }
+    };
 
     // One hook for every path, above the branch - see `Button`.
     let boxed = use_box()
@@ -169,6 +189,8 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .variables(&variables)
+        // Only a button that has been clicked pays for this.
+        .style(showing.map(|ripple| ripple.with_point(String::new())))
         .prepare();
 
     if let Some(to) = props.to.as_ref().cloned() {
@@ -200,6 +222,7 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     }
 
     boxed
+        .event("onclick", handle_click)
         .attr("aria-label", props.aria_label)
         .attr("disabled", disabled)
         .attr_default("type", "button")
@@ -223,6 +246,7 @@ mod tests {
             radius: Input::None,
             aria_label: "test".to_string(),
             disabled: None,
+            onclick: None,
             to: Input::None,
             target: None,
             children: rsx! {},
