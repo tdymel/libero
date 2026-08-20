@@ -133,13 +133,14 @@ pub fn SliderPage() -> Element {
                 title: "Label",
                 Text {
                     Code { "label" }
-                    " formats a bubble over the thumb, and the thumb's "
+                    " formats the bubble over the thumb, and the thumb's "
                     Code { "aria-valuetext" }
-                    " with it. It fades in while dragging and while the thumb has keyboard "
-                    "focus - drag the thumb, or tab to it and press an arrow key, to see it. "
-                    "Without "
+                    " with it. The bubble is a "
+                    Code { "Tooltip" }
+                    ", shown on hover, while dragging and while the thumb has keyboard "
+                    "focus. Without "
                     Code { "label" }
-                    " there is no bubble at all."
+                    " it shows the bare value."
                 }
                 Slider {
                     size: "lg",

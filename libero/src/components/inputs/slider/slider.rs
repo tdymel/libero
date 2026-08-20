@@ -5,8 +5,9 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color, dom_api, variables},
+        common::{base_color, base_props, dom_api, variables},
         layout::use_box,
+        overlay::Tooltip,
     },
     hooks::{
         DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_id,
@@ -19,10 +20,6 @@ use crate::{
 
 const SLIDER_FILLED: CssVar = CssVar::new("--lsx-slider-filled");
 const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
-const SLIDER_CONTRAST: CssVar = CssVar::new("--lsx-slider-contrast");
-// Inherited down to the bubble, which cannot see the root's `data-state` or
-// the thumb's `:focus-visible` itself.
-const SLIDER_LABEL_OPACITY: CssVar = CssVar::new("--lsx-slider-label-opacity");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
 
 /// Where the value went, and how far along the interaction is. `Start` and
@@ -120,11 +117,21 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         .border_radius("inherit")
 });
 
-static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
+/// Carries the thumb's position, because the `Tooltip` between them styles
+/// only its own bubble - its wrapper cannot be positioned from outside.
+static SLIDER_THUMB_ANCHOR_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("50%")
         .left(SLIDER_FILLED.value_or("0%"))
         .transform("translate(-50%, -50%)")
+        // Not inline: the tooltip's inline-block wrapper would sit on a
+        // baseline and pull the thumb off the track's centre.
+        .display("flex")
+});
+
+static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
+    // A `span`, because the tooltip's wrapper is one - so it needs a box.
+    sx().display("block")
         .width(SLIDER_THUMB.value())
         .height(SLIDER_THUMB.value())
         .border_radius("50%")
@@ -133,24 +140,6 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         .border_width("2px")
         .border_color(SLIDER_COLOR.value())
         .cursor("grab")
-        // The ring itself comes from `Box`; only the bubble is new here.
-        .focus_visible(sx().var(SLIDER_LABEL_OPACITY, "1"))
-});
-
-static SLIDER_LABEL_SX: StaticSx = StaticSx::new(|| {
-    sx().position("absolute")
-        .bottom(format!("calc(100% + {})", SizeCss::SPACING.value(Size::Xs)))
-        .left("50%")
-        .transform("translateX(-50%)")
-        .padding_left(SizeCss::SPACING.value(Size::Xs))
-        .padding_right(SizeCss::SPACING.value(Size::Xs))
-        .border_radius(SizeCss::RADIUS.value(Size::Sm))
-        .background(SLIDER_COLOR.value())
-        .color(SLIDER_CONTRAST.value_or("white"))
-        .white_space("nowrap")
-        .pointer_events("none")
-        .opacity(SLIDER_LABEL_OPACITY.value_or("0"))
-        .transition("opacity 100ms ease")
 });
 
 static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
@@ -182,15 +171,10 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
 });
 
-fn slider_variables(filled: f64, base: &ThemeAwareValue, dragging: bool) -> Variables {
+fn slider_variables(filled: f64, base: &ThemeAwareValue) -> Variables {
     variables()
         .with(SLIDER_FILLED, Some(format!("{}%", filled * 100.0)))
         .with(SLIDER_COLOR, base.resolve(None))
-        .with(
-            SLIDER_CONTRAST,
-            contrast_color(base).and_then(|color| color.resolve(None)),
-        )
-        .with(SLIDER_LABEL_OPACITY, dragging.then(|| "1".to_string()))
 }
 
 base_props! {
@@ -214,8 +198,8 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default)]
         disabled: Option<bool>,
-        /// Formats the bubble shown while dragging or focused, and the
-        /// thumb's `aria-valuetext`. Without it there is no bubble.
+        /// Formats the bubble shown on hover, drag and keyboard focus, and
+        /// sets the thumb's `aria-valuetext`. Defaults to the bare value.
         #[props(default)]
         label: Option<Callback<f64, String>>,
         /// Ticks on the track; a labeled one gets a caption below it.
@@ -378,20 +362,19 @@ pub fn Slider(props: SliderProps) -> Element {
 
     let filled = fraction(value, min, max);
     let root_variables: Input<Variables> =
-        slider_variables(filled, &color, (drag.dragging)()).into();
+        slider_variables(filled, &color).into();
 
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
     let bar_class = use_css(Some(&SLIDER_BAR_SX), CssLayer::Framework);
     let mark_class = use_css(Some(&SLIDER_MARK_SX), CssLayer::Framework);
     let mark_label_class = use_css(Some(&SLIDER_MARK_LABEL_SX), CssLayer::Framework);
-    let label_class = use_css(Some(&SLIDER_LABEL_SX), CssLayer::Framework);
+    let anchor_class = use_css(Some(&SLIDER_THUMB_ANCHOR_SX), CssLayer::Framework);
     let thumb = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
 
+    // Only a custom label is worth an `aria-valuetext` - the bare value is
+    // already in `aria-valuenow`.
     let text = props.label.map(|label| label.call(value));
-
-    let bubble = text
-        .clone()
-        .map(|text| rsx! { span { class: label_class, {text} } });
+    let bubble_text = text.clone().unwrap_or_else(|| value.to_string());
 
     let marks = props.marks.iter().map(|mark| {
         let at = variables()
@@ -423,7 +406,20 @@ pub fn Slider(props: SliderProps) -> Element {
         .event("onkeydown", move |event: Event<KeyboardData>| {
             onkeydown.call(event)
         })
-        .render(HtmlTag::Div, Vec::new(), bubble);
+        .render(HtmlTag::Span, Vec::new(), rsx! {});
+
+    // The drag keeps it open once the pointer has left the thumb; hover and
+    // keyboard focus are the tooltip's own doing.
+    let thumb = rsx! {
+        span { class: anchor_class,
+            Tooltip {
+                label: rsx! { {bubble_text} },
+                size,
+                opened: (drag.dragging)().then_some(true),
+                {thumb}
+            }
+        }
+    };
 
     let name = props.name.clone();
 

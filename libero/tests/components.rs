@@ -68,6 +68,8 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     assert!(html.contains("aria-valuenow=25"));
     assert!(html.contains("--lsx-slider-mark-at:50%"));
     assert!(body(&html).contains(">half<"));
+    // The value bubble is a `Tooltip`.
+    assert!(html.contains(r#"role="tooltip""#));
     assert!(body(&html).contains(">25%<"));
 }
 
@@ -908,3 +910,4 @@ fn tooltip_opens_on_hover_and_a_controlled_state_wins_by_source_order() {
     );
     assert_eq!(attributes_of(&html, "span")["data-state"], "opened");
 }
+
