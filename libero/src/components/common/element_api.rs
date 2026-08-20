@@ -21,6 +21,9 @@ pub trait ElementApi {
     /// This element's rendered pixel size.
     fn dimensions(&self) -> Result<Dimensions, PlatformError>;
 
+    /// Top-left corner in client (viewport) coordinates.
+    fn client_offset(&self) -> Result<(f64, f64), PlatformError>;
+
     /// Total scrollable content size (`scrollWidth`/`scrollHeight`).
     fn scroll_size(&self) -> Result<Dimensions, PlatformError>;
 

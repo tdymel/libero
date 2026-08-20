@@ -60,6 +60,11 @@ mod web {
             })
         }
 
+        fn client_offset(&self) -> Result<(f64, f64), PlatformError> {
+            let rect = self.element.get_bounding_client_rect();
+            Ok((rect.left(), rect.top()))
+        }
+
         fn scroll_size(&self) -> Result<Dimensions, PlatformError> {
             Ok(Dimensions {
                 width: self.element.scroll_width() as f64,

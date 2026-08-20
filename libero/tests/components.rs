@@ -12,7 +12,7 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, Container, DataList,
         DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
         List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
-        Splitter, Text, Title, Tooltip, Tree, TreeNode, VisuallyHidden,
+        Slider, SliderMark, Splitter, Text, Title, Tooltip, Tree, TreeNode, VisuallyHidden,
     },
     theme::{Color, Size},
 };
@@ -38,6 +38,37 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
     let span = attributes_of(&html, "span");
     assert_eq!(span["data-state"], "outlined size-md radius-xl checked");
     assert!(body(&html).contains(">tag<"));
+}
+
+#[test]
+fn slider_renders_a_thumb_with_the_value_and_its_marks() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: 25.0,
+                    aria_label: "Volume",
+                    marks: vec![SliderMark::labeled(50.0, "half")],
+                    label: Callback::new(|value: f64| format!("{value}%")),
+                    on_change: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let root = attributes_of(&html, "div");
+
+    assert_eq!(root["data-state"], "size-md radius-xl marks-labeled");
+    assert!(root["style"].contains("--lsx-slider-filled:25%;"));
+
+    // The thumb carries the a11y contract; the mark carries its position.
+    assert!(html.contains(r#"role="slider""#));
+    assert!(html.contains(r#"aria-label="Volume""#));
+    assert!(html.contains("aria-valuenow=25"));
+    assert!(html.contains("--lsx-slider-mark-at:50%"));
+    assert!(body(&html).contains(">half<"));
+    assert!(body(&html).contains(">25%<"));
 }
 
 #[test]

@@ -25,6 +25,7 @@ mod ripple;
 mod scroll_area;
 mod select;
 mod sidebar;
+mod slider;
 mod splitter;
 mod text;
 mod title;
@@ -72,6 +73,10 @@ pub use select::{
     SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SelectDefaults, SelectSizeLevel,
 };
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
+pub use slider::{
+    SLIDER_FONT_SIZE, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK,
+    SLIDER_TRACK_SIZE, SliderDefaults, SliderSizeLevel,
+};
 pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,

@@ -6,8 +6,8 @@ use super::{
     ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults,
     OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis,
     ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel, SidebarDefaults, Size,
-    Sizes, SplitterDefaults, TextDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults,
-    TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults, TextDefaults, TextSize,
+    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -37,6 +37,7 @@ pub struct Theme {
     pub button: ButtonDefaults,
     pub chip: ChipDefaults,
     pub select: SelectDefaults,
+    pub slider: SliderDefaults,
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
     pub tree: TreeDefaults,
@@ -235,6 +236,44 @@ impl Theme {
                     padding_x: "18px",
                 },
             ),
+        },
+        slider: SliderDefaults {
+            size: Size::Md,
+            radius: Size::Xl,
+            sizes: Sizes::new(
+                SliderSizeLevel {
+                    track_size: "2px",
+                    thumb_size: "12px",
+                    font_size: "0.6875rem",
+                },
+                SliderSizeLevel {
+                    track_size: "3px",
+                    thumb_size: "14px",
+                    font_size: "0.75rem",
+                },
+                SliderSizeLevel {
+                    track_size: "4px",
+                    thumb_size: "16px",
+                    font_size: "0.8125rem",
+                },
+                SliderSizeLevel {
+                    track_size: "6px",
+                    thumb_size: "20px",
+                    font_size: "0.875rem",
+                },
+                SliderSizeLevel {
+                    track_size: "8px",
+                    thumb_size: "24px",
+                    font_size: "0.9375rem",
+                },
+                SliderSizeLevel {
+                    track_size: "10px",
+                    thumb_size: "28px",
+                    font_size: "1rem",
+                },
+            ),
+            step: 1.0,
+            big_step: 10.0,
         },
         list: ListDefaults {
             size: Size::Md,
