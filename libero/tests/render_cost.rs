@@ -4,30 +4,28 @@
 //! only mean anything in a release build:
 //!
 //! ```text
-//! cargo test --release -p libero -- --ignored --nocapture
-//! ```
-//!
-//! Baseline on the development machine, 2026-09-02:
-//!
-//! ```text
-//! span      140    0.14x
-//! Leaf      970    1.00x
-//! Box     1,545    1.59x
-//! Text    1,610    1.66x
-//! Button  2,335    2.41x
+//! cargo test --release -p libero --test render_cost -- --ignored --nocapture
 //! ```
 //!
 //! `span` is a bare element with no scope; `Leaf` the cheapest possible
 //! component. The ratios travel between machines, the absolutes do not - so
-//! compare a change against a run of `main` on the same machine, not against
-//! the table above.
+//! compare a change against a run of `main` on the same machine, not against a
+//! number written down anywhere. The current baseline table lives in
+//! `memory/performance.md`.
+//!
+//! Every shape renders its component in the plainest configuration that
+//! compiles: what is measured is the framework overhead a caller pays for
+//! reaching for the component at all, not any particular feature of it.
+//!
+//! A row marked `memoized` came in below `Leaf`. That component takes no
+//! `children`, so its props compare equal and dioxus skips the re-render
+//! entirely - the number is the parent's diff, not the component's render.
+//! Price those with a first render instead.
 
 use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
-use libero::{
-    LiberoProvider,
-    components::{Box, Button, Text},
-};
+use libero::components::{Option, Title};
+use libero::{LiberoProvider, components::*};
 
 /// A shape to measure: what to call it, and the app that renders
 /// [`CHILDREN`] of it.
@@ -38,30 +36,29 @@ type Shape = (&'static str, fn() -> Element);
 const CHILDREN: usize = 200;
 const ROUNDS: usize = 80;
 
+/// One [`Shape`] per entry: a label, and the `rsx!` body to repeat.
+macro_rules! shapes {
+    ($($label:literal { $($item:tt)* })*) => {
+        &[$((
+            $label,
+            {
+                fn app() -> Element {
+                    rsx! {
+                        LiberoProvider {
+                            div { for _ in 0..CHILDREN { $($item)* } }
+                        }
+                    }
+                }
+                app as fn() -> Element
+            },
+        )),*]
+    };
+}
+
 /// The cheapest component that can exist: one scope, one element, no styling.
 #[component]
 fn Leaf(children: Element) -> Element {
     rsx! { span { {children} } }
-}
-
-fn app_span() -> Element {
-    rsx! { LiberoProvider { div { for _ in 0..CHILDREN { span { "x" } } } } }
-}
-
-fn app_leaf() -> Element {
-    rsx! { LiberoProvider { div { for _ in 0..CHILDREN { Leaf { "x" } } } } }
-}
-
-fn app_box() -> Element {
-    rsx! { LiberoProvider { div { for _ in 0..CHILDREN { Box { "x" } } } } }
-}
-
-fn app_text() -> Element {
-    rsx! { LiberoProvider { div { for _ in 0..CHILDREN { Text { "x" } } } } }
-}
-
-fn app_button() -> Element {
-    rsx! { LiberoProvider { div { for _ in 0..CHILDREN { Button { "x" } } } } }
 }
 
 /// Nanoseconds to re-render one instance of each shape.
@@ -96,23 +93,65 @@ fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
 #[test]
 #[ignore = "a measurement; needs --release to mean anything"]
 fn render_cost_per_component() {
-    let measured = measure(&[
-        ("span", app_span),
-        ("Leaf", app_leaf),
-        ("Box", app_box),
-        ("Text", app_text),
-        ("Button", app_button),
-    ]);
+    let measured = measure(shapes! {
+        // Controls. Everything below is read as a multiple of `Leaf`.
+        "span" { span { "x" } }
+        "Leaf" { Leaf { "x" } }
 
-    let leaf = measured
-        .iter()
-        .find(|(name, _)| *name == "Leaf")
-        .expect("the Leaf baseline")
-        .1;
+        "Box" { Box { "x" } }
+        "Flex" { Flex { "x" } }
+        "Center" { Center { "x" } }
+        "Container" { Container { "x" } }
+        "AspectRatio" { AspectRatio { "x" } }
+        "Divider" { Divider {} }
+        "Float" { Float { "x" } }
+        "Header" { Header { "x" } }
+        "ScrollArea" { ScrollArea { "x" } }
+        "Sidebar" { Sidebar { "x" } }
+        "Splitter" { Splitter { initial_size: 50.0, div { "l" } div { "r" } } }
+
+        "Text" { Text { "x" } }
+        "Title" { Title { "x" } }
+        "Kbd" { Kbd { "x" } }
+        "Mark" { Mark { "x" } }
+        "Code" { Code { "let x = 1;" } }
+
+        "Button" { Button { "x" } }
+        "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
+        "Select" { Select { value: "a", Option { value: "a", "x" } } }
+
+        "Icon" { Icon { "x" } }
+        "Image" { Image { src: "/x.png" } }
+        "QrCode" { QrCode { data: "x", aria_label: "a" } }
+        "List" { List { ListItem { "x" } } }
+        "DataList" { DataList { DataListItem { label: rsx! { "l" }, "x" } } }
+
+        "Anchor" { Anchor { to: "https://example.com", "x" } }
+        "NavLink" { NavLink { to: "https://example.com", "x" } }
+        "Tree" { Tree { aria_label: "a", data: vec![TreeNode::new("a", "Alpha".to_string())] } }
+
+        "Overlay" { Overlay {} }
+        "Modal" { Modal { "x" } }
+        "Drawer" { Drawer { "x" } }
+        "Dialog" { Dialog { "x" } }
+
+        "FocusTrap" { FocusTrap { "x" } }
+        "VisuallyHidden" { VisuallyHidden { "x" } }
+    });
+
+    let cost = |wanted: &str| {
+        measured
+            .iter()
+            .find(|(name, _)| *name == wanted)
+            .unwrap_or_else(|| panic!("{wanted} was not measured"))
+            .1
+    };
+    let leaf = cost("Leaf");
 
     println!();
     for (name, ns) in &measured {
-        println!("{name:<8} {ns:>8.0} {:>6.2}x", ns / leaf);
+        let memoized = if *ns < leaf && *name != "span" { "  memoized" } else { "" };
+        println!("{name:<16} {ns:>8.0} {:>6.2}x{memoized}", ns / leaf);
     }
     println!();
 
@@ -123,22 +162,12 @@ fn render_cost_per_component() {
 
     // Tripwires, not targets. They catch a component growing a scope or an
     // uncached per-render build, and stay quiet for ordinary drift.
-    let cost = |wanted: &str| {
-        measured
-            .iter()
-            .find(|(name, _)| *name == wanted)
-            .expect("a measured shape")
-            .1
-    };
-
-    assert!(
-        cost("Box") < leaf * 3.0,
-        "Box regressed: {:.0} ns",
-        cost("Box")
-    );
-    assert!(
-        cost("Text") < leaf * 5.0,
-        "Text regressed: {:.0} ns",
-        cost("Text")
-    );
+    for (name, ceiling) in [("Box", 3.0), ("Text", 5.0), ("Button", 6.0)] {
+        assert!(
+            cost(name) < leaf * ceiling,
+            "{name} regressed: {:.0} ns, {:.1}x Leaf",
+            cost(name),
+            cost(name) / leaf
+        );
+    }
 }
