@@ -18,24 +18,6 @@ const CHIP_COLOR_VAR: CssVar = CssVar::new("--lsx-chip-color");
 const CHIP_CONTRAST_VAR: CssVar = CssVar::new("--lsx-chip-contrast");
 const CHIP_HOVER_VAR: CssVar = CssVar::new("--lsx-chip-hover");
 
-/// `Button`'s chrome, except that an outlined chip keeps the surface's own
-/// text colour instead of the accent. A chip is a label first: the border
-/// carries the colour, and the text stays readable against what it sits on -
-/// which is what `inherit` resolves to, `body`'s contrast against the page.
-fn chip_variant_sx(variant: ButtonVariant) -> Sx {
-    let base = button_variant_sx(
-        variant,
-        &CHIP_COLOR_VAR,
-        &CHIP_CONTRAST_VAR,
-        &CHIP_HOVER_VAR,
-    );
-
-    match variant {
-        ButtonVariant::Outlined => base.color("inherit"),
-        ButtonVariant::Filled | ButtonVariant::Text => base,
-    }
-}
-
 static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ChipDefaults::theme_vars()
         .display("inline-flex")
@@ -51,12 +33,28 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     ButtonVariant::ALL
         .iter()
         .fold(base, |base, &variant| {
-            base.when(variant.state_name(), chip_variant_sx(variant))
+            base.when(
+                variant.state_name(),
+                button_variant_sx(
+                    variant,
+                    &CHIP_COLOR_VAR,
+                    &CHIP_CONTRAST_VAR,
+                    &CHIP_HOVER_VAR,
+                ),
+            )
         })
         // Folded after the variants, which is what makes it win: equal
         // specificity, so source order decides. `variant` describes the
         // unselected look and a selected chip is always filled.
-        .when("checked", chip_variant_sx(ButtonVariant::Filled))
+        .when(
+            "checked",
+            button_variant_sx(
+                ButtonVariant::Filled,
+                &CHIP_COLOR_VAR,
+                &CHIP_CONTRAST_VAR,
+                &CHIP_HOVER_VAR,
+            ),
+        )
         .when(
             "disabled",
             sx().opacity("0.5")

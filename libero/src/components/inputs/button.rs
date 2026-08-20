@@ -58,10 +58,13 @@ pub(crate) fn button_variant_sx(
             .border_color(color_var.value())
             .color(contrast_var.value_or("inherit"))
             .hover(sx().background(hover_var.value_or(color_var.value()))),
+        // The border carries the colour; the label keeps the surface's own
+        // text colour. Accent-on-transparent is the low-contrast pairing of
+        // the three, and it is the only one whose colour is decorative.
         ButtonVariant::Outlined => sx()
             .background("transparent")
             .border_color(color_var.value())
-            .color(color_var.value())
+            .color("inherit")
             .hover(sx().background(hover_var.value_or("transparent"))),
         ButtonVariant::Text => sx()
             .background("transparent")
