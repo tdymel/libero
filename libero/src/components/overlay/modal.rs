@@ -1,13 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{
         FocusTrap, HtmlTag, Input, Overlay, States, Variables, common::base_props, layout::use_box,
         variables,
     },
     context::ModalContext,
-    hooks::{use_css, use_modal_z_index},
+    hooks::use_modal_z_index,
     sx::{StaticSx, Sx, sx},
     theme::CssVar,
 };
@@ -23,6 +22,8 @@ static MODAL_SX: StaticSx = StaticSx::new(|| {
 // Fixed + inset so it spans the viewport: `Dialog`'s `margin:auto` needs real
 // free space on this flex container to push against. `pointer-events:none` so
 // clicks in the empty area reach the `Overlay` below; the content restores it.
+// Goes on the `FocusTrap` itself rather than a wrapper - as an `sx` it lands in
+// `lsx-user-static`, which beats the trap's own `display:contents`.
 static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
@@ -76,9 +77,6 @@ pub fn Modal(props: ModalProps) -> Element {
         });
     };
 
-    // Static styling only, so a class rather than a component scope.
-    let content_class = use_css(Some(&MODAL_CONTENT_SX), CssLayer::Framework);
-
     use_box()
         .framework_sx(&MODAL_SX)
         .class(&props.class)
@@ -98,9 +96,7 @@ pub fn Modal(props: ModalProps) -> Element {
             vec![
                 rsx! { Overlay { z_index: 0, onclick: move |_| close() } },
                 rsx! {
-                    div { class: content_class,
-                        FocusTrap { {props.children} }
-                    }
+                    FocusTrap { sx: &MODAL_CONTENT_SX, {props.children} }
                 },
             ],
         )
