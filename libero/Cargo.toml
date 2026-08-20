@@ -53,14 +53,14 @@ default = [
     "code-lang-html",
     "code-lang-css",
 ]
-# `Code`'s syntax highlighting and `QrCode`'s encoding both pull in code
-# that's only needed lazily - with this on, they're `#[wasm_split]` out into
-# a chunk fetched on first use instead of the main bundle, which only pays
-# off if the consumer's own build also passes `dx build`/`dx serve
-# --wasm-split`. Turn this off (via `default-features = false`) to get a
-# plain, un-split build that works with a normal `dx serve`/`dx build` -
-# both components render identically either way, just from the main bundle
-# instead of a lazy-loaded one.
+# Turns on dioxus's wasm-split support, which makes its router put every
+# route in its own lazily fetched chunk - measured 2026-09-02 on the docs
+# app, that is 299 KB brotli of main bundle instead of 414 KB. `libero`
+# itself no longer splits anything by hand; the router's per-route chunks
+# already carry `Code`'s highlighter and `QrCode`'s encoder to the pages
+# that use them. Only pays off if the consumer's own build also passes
+# `dx build`/`dx serve --wasm-split`; turn it off (via
+# `default-features = false`) for a plain build with a normal `dx serve`.
 wasm-split = ["dioxus/wasm-split"]
 # `Box` (and anything built on it - `Title`, `Text`, `Icon`, ...) can render
 # as any of the full HTML5 element set via `component: HtmlTag::...`/a tag

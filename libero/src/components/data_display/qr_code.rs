@@ -1,6 +1,4 @@
 use dioxus::prelude::*;
-#[cfg(feature = "wasm-split")]
-use dioxus::wasm_split;
 use fast_qr::convert::{Builder, svg::SvgBuilder};
 use fast_qr::{ECL, QRBuilder};
 
@@ -64,25 +62,6 @@ fn generate_svg(data: String, robustness: QrRobustness) -> Option<String> {
         })
 }
 
-// `#[wasm_split]` rebuilds the fn from its signature alone and so drops
-// visibility on wasm32; `generate_svg_lazy` re-exposes it.
-#[cfg(feature = "wasm-split")]
-#[wasm_split::wasm_split(qr_code)]
-async fn generate_svg_split(data: String, robustness: QrRobustness) -> Option<String> {
-    generate_svg(data, robustness)
-}
-
-/// [`generate_svg`], but under the `wasm-split` feature `fast_qr` lives in a
-/// separate chunk fetched on first call. Without it this is a plain async
-/// call, so no `--wasm-split` build is required.
-async fn generate_svg_lazy(data: String, robustness: QrRobustness) -> Option<String> {
-    #[cfg(feature = "wasm-split")]
-    return generate_svg_split(data, robustness).await;
-
-    #[cfg(not(feature = "wasm-split"))]
-    return generate_svg(data, robustness);
-}
-
 /// `data` as a scalable QR code SVG, colored from `Theme::qr_code`. Renders
 /// nothing if `data` is too long for the chosen `robustness` to encode.
 #[component]
@@ -92,7 +71,7 @@ pub fn QrCode(props: QrCodeProps) -> Element {
     let data = props.data.clone();
 
     let svg = use_resource(use_reactive!(|data, robustness| async move {
-        generate_svg_lazy(data, robustness).await
+        generate_svg(data, robustness)
     }));
 
     let boxed = use_box()

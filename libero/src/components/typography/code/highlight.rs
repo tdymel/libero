@@ -4,9 +4,6 @@
 //! claimed, dropping Prism's rarer greedy rematch across already-tokenized
 //! siblings. The hand-ported grammars in `languages/` don't need it.
 
-#[cfg(feature = "wasm-split")]
-use dioxus::wasm_split;
-
 use crate::components::Input;
 use crate::components::common::{PreparedText, RegexMatch, regex_api};
 
@@ -297,14 +294,6 @@ fn flatten<'a>(
     }
 }
 
-/// [`highlight`]'s shape with no language, so `Code` keeps one render path.
-pub(crate) fn plain_lines(source: &str) -> Vec<HighlightedLine> {
-    source
-        .lines()
-        .map(|line| vec![(line.to_string(), None)])
-        .collect()
-}
-
 pub(crate) fn highlight(source: &str, language: Language) -> Vec<HighlightedLine> {
     if source.is_empty() {
         return Vec::new();
@@ -347,31 +336,12 @@ fn split_into_lines(
         }
     }
 
-    // No trailing empty line from a trailing newline, matching `str::lines()`
-    // and therefore `plain_lines`.
+    // No trailing empty line from a trailing newline, matching `str::lines()`.
     if source_ends_with_newline && lines.last().is_some_and(Vec::is_empty) {
         lines.pop();
     }
 
     lines
-}
-
-// `#[wasm_split]` rebuilds the fn from its signature alone and so drops
-// visibility on wasm32; `highlight_lazy` re-exposes it.
-#[cfg(feature = "wasm-split")]
-#[wasm_split::wasm_split(code_highlighting)]
-async fn highlight_split(source: String, language: Language) -> Vec<HighlightedLine> {
-    highlight(&source, language)
-}
-
-/// [`highlight`], but under the `wasm-split` feature the engine lives in a
-/// separate chunk fetched on first call. Without it, a plain async call.
-pub(crate) async fn highlight_lazy(source: String, language: Language) -> Vec<HighlightedLine> {
-    #[cfg(feature = "wasm-split")]
-    return highlight_split(source, language).await;
-
-    #[cfg(not(feature = "wasm-split"))]
-    return highlight(&source, language);
 }
 
 #[cfg(test)]

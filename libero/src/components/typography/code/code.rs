@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 
-use super::highlight::{HighlightedLine, Language, highlight_lazy, plain_lines};
+use super::highlight::{HighlightedLine, Language, highlight};
 use super::token_theme::use_token_theme;
 use crate::{
     CssLayer,
@@ -404,7 +404,7 @@ pub fn Code(props: CodeProps) -> Element {
     let source = display_source.clone();
     let highlighted = use_resource(use_reactive!(|source, language| async move {
         match (source, language) {
-            (Some(source), Some(language)) => Some(highlight_lazy(source, language).await),
+            (Some(source), Some(language)) => Some(highlight(&source, language)),
             _ => None,
         }
     }));
@@ -437,13 +437,11 @@ pub fn Code(props: CodeProps) -> Element {
         } else {
             Vec::new()
         };
-        let lines = display_source.as_deref().map(|source| {
-            highlighted
-                .read()
-                .clone()
-                .flatten()
-                .unwrap_or_else(|| plain_lines(source))
-        });
+        // Only the highlighted rows. While highlighting is in flight the
+        // block renders as one `pre` below rather than a full row tree that
+        // is thrown away the moment it resolves - ~330 ns/line of wasted
+        // build on every block.
+        let lines = highlighted.read().clone().flatten();
         let label = language
             .map(Language::label)
             .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
@@ -479,14 +477,23 @@ pub fn Code(props: CodeProps) -> Element {
                     component: "div",
                     framework_sx: &CODE_BLOCK_SCROLL_SX,
                     sx: scroll_sx,
-                    if let Some(lines) = &lines {
-                        {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
-                    } else {
-                        Box {
-                            component: "pre",
-                            framework_sx: &CODE_PLAIN_PRE_SX,
-                            Box { component: "code", {props.children} }
-                        }
+                    match &lines {
+                        Some(lines) => rsx! {
+                            {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
+                        },
+                        None => rsx! {
+                            Box {
+                                component: "pre",
+                                framework_sx: &CODE_PLAIN_PRE_SX,
+                                Box {
+                                    component: "code",
+                                    match &display_source {
+                                        Some(source) => rsx! { {source.as_str()} },
+                                        None => rsx! { {props.children} },
+                                    }
+                                }
+                            }
+                        },
                     }
                 }
             },

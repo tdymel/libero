@@ -44,13 +44,10 @@ pub fn GettingStarted() -> Element {
                 Text {
                     "Libero's "
                     Code { "wasm-split" }
-                    " feature (on by default) puts the "
-                    Code { "Code" }
-                    " component's syntax highlighting and "
-                    Code { "QrCode" }
-                    "'s encoding into their own wasm chunks, loaded only when one actually "
-                    "renders, instead of bloating every page's initial bundle. This relies on "
-                    "Dioxus's (experimental) wasm-split support, which "
+                    " feature (on by default) turns on Dioxus's wasm-split support, which puts "
+                    "every route in its own chunk, fetched when it is first visited instead of "
+                    "bloating every page's initial bundle. On this docs site that is 299 KB of "
+                    "brotli-compressed main bundle instead of 414 KB. It is experimental, and "
                     Code { "dx" }
                     " only enables when asked - if the feature is on, always build and serve "
                     "with "
@@ -68,9 +65,9 @@ pub fn GettingStarted() -> Element {
                     Code { "Cargo.toml" }
                     " and skip "
                     Code { "--wasm-split" }
-                    " entirely - both components render identically either way, just from the "
-                    "main bundle instead of a lazy-loaded one. This docs site does exactly that, "
-                    "keeping only the languages its own examples use:"
+                    " entirely - the app renders identically either way, just from one bundle "
+                    "instead of per-route chunks. Either way, keep only the languages your own "
+                    "examples use:"
                 }
                 Code {
                     block: true,
