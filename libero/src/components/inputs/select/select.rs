@@ -98,12 +98,5 @@ pub fn Select(props: SelectProps) -> Element {
         })
         .render(HtmlTag::Select, props.attributes, props.children);
 
-    wrapper.render(
-        HtmlTag::Label,
-        Vec::new(),
-        rsx! {
-            {label}
-            {select}
-        },
-    )
+    wrapper.render(HtmlTag::Label, Vec::new(), vec![label, select])
 }

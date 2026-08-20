@@ -105,9 +105,10 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .event("onclick", onclick)
         .render(HtmlTag::Div, Vec::new(), content);
 
-    let children = rsx! {
-        {row_content}
-        if is_expanded == Some(true) {
+    let children = vec![
+        row_content,
+        rsx! {
+            if is_expanded == Some(true) {
                 List {
                     "role": "group",
                     sx: sx()
@@ -133,7 +134,8 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
                     }
                 }
             }
-    };
+        },
+    ];
 
     row.attr("role", "treeitem")
         .attr("data-tree-id", node.id.to_string())

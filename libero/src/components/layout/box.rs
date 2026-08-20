@@ -5,7 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States, Variables,
-        common::{StyleAttributes, attr, base_props, render_polymorphic, use_style_attributes},
+        common::{
+            IntoChildren, StyleAttributes, attr, base_props, render_polymorphic,
+            use_style_attributes,
+        },
     },
     sx::{StaticSx, Sx},
 };
@@ -254,7 +257,7 @@ impl BoxStyle {
         self,
         component: HtmlTag,
         attributes: Vec<Attribute>,
-        children: Element,
+        children: impl IntoChildren,
     ) -> Element {
         // A component that sets its own root id and also spreads `attributes`
         // sends two `id`s here. Browsers keep the first; `use_root_id` makes
@@ -283,7 +286,7 @@ impl BoxStyle {
             self.style.data_state,
             self.style.style,
             attributes,
-            children,
+            children.into_children(),
         )
     }
 }

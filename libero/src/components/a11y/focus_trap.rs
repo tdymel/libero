@@ -98,14 +98,16 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .render(
             HtmlTag::Div,
             props.attributes,
-            rsx! {
-                span {
-                    "aria-hidden": "true",
-                    style: "display:none",
-                    onmounted: move |_| focus_first(&id()),
-                }
-                {props.children}
-            },
+            vec![
+                rsx! {
+                    span {
+                        "aria-hidden": "true",
+                        style: "display:none",
+                        onmounted: move |_| focus_first(&id()),
+                    }
+                },
+                props.children,
+            ],
         )
 }
 
@@ -122,5 +124,5 @@ pub fn FocusTrapInitialFocus() -> Element {
         .attr("tabindex", if used.get() { "-1" } else { "0" })
         .attr("data-autofocus", true)
         .event("onblur", move |_: Event<FocusData>| mark_used.set(true))
-        .render(HtmlTag::Span, Vec::new(), rsx! {})
+        .render(HtmlTag::Span, Vec::new(), ())
 }

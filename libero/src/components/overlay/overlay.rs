@@ -62,9 +62,5 @@ pub fn Overlay(props: OverlayProps) -> Element {
         .states(&props.states)
         .variables(&variables)
         .prepare()
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            props.children.unwrap_or_else(|| rsx! {}),
-        )
+        .render(HtmlTag::Div, props.attributes, props.children)
 }

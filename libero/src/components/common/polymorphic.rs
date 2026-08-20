@@ -88,17 +88,17 @@ macro_rules! html_tags {
             data_state: Option<String>,
             style: Option<String>,
             attributes: Vec<Attribute>,
-            children: Element,
+            children: Vec<Element>,
         ) -> Element {
             let attributes = styling_attributes(Some(class), data_state, style, attributes);
             match component {
                 $(HtmlTag::$dvariant => rsx! {
-                    $dtag { ..attributes, {children} }
+                    $dtag { ..attributes, {children.into_iter()} }
                 },)*
                 $(
                     #[cfg(feature = "full-polymorphism")]
                     HtmlTag::$fvariant => rsx! {
-                        $ftag { ..attributes, {children} }
+                        $ftag { ..attributes, {children.into_iter()} }
                     },
                 )*
                 // The value is fine, the build configuration is not - a
@@ -110,11 +110,46 @@ macro_rules! html_tags {
                          feature, rendering as <div>.",
                         component.as_str()
                     ));
-                    rsx! { div { ..attributes, {children} } }
+                    rsx! { div { ..attributes, {children.into_iter()} } }
                 },
             }
         }
     };
+}
+
+/// What a component hands to `render` as its children.
+///
+/// Anything but a single `Element` splices its nodes straight into the
+/// element's template. Wrapping them in one more `Element` - which is what an
+/// `rsx! {}` block at the call site does - costs a dynamic node every render,
+/// and an empty one costs it for nothing.
+pub(crate) trait IntoChildren {
+    fn into_children(self) -> Vec<Element>;
+}
+
+/// No children at all.
+impl IntoChildren for () {
+    fn into_children(self) -> Vec<Element> {
+        Vec::new()
+    }
+}
+
+impl IntoChildren for Element {
+    fn into_children(self) -> Vec<Element> {
+        vec![self]
+    }
+}
+
+impl IntoChildren for Option<Element> {
+    fn into_children(self) -> Vec<Element> {
+        self.into_iter().collect()
+    }
+}
+
+impl IntoChildren for Vec<Element> {
+    fn into_children(self) -> Vec<Element> {
+        self
+    }
 }
 
 /// Merges the styling triple into a caller's attributes, so the element carries

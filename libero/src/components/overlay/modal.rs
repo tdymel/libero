@@ -95,11 +95,13 @@ pub fn Modal(props: ModalProps) -> Element {
         .render(
             HtmlTag::Div,
             props.attributes,
-            rsx! {
-                Overlay { z_index: 0, onclick: move |_| close() }
-                div { class: content_class,
-                    FocusTrap { {props.children} }
-                }
-            },
+            vec![
+                rsx! { Overlay { z_index: 0, onclick: move |_| close() } },
+                rsx! {
+                    div { class: content_class,
+                        FocusTrap { {props.children} }
+                    }
+                },
+            ],
         )
 }

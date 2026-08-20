@@ -284,7 +284,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .attr("aria-valuemax", ((100.0 - min_size) as i64).to_string())
         .event("onpointerdown", drag.onpointerdown)
         .event("onkeydown", onkeydown)
-        .render(HtmlTag::Div, Vec::new(), rsx! {});
+        .render(HtmlTag::Div, Vec::new(), ());
     let bar = bar.render(HtmlTag::Div, Vec::new(), hit);
 
     use_box()
@@ -301,11 +301,11 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .render(
             HtmlTag::Div,
             props.attributes,
-            rsx! {
-                div { class: panel_a_class, {panel_a} }
-                {bar}
-                div { class: panel_b_class, {panel_b} }
-            },
+            vec![
+                rsx! { div { class: panel_a_class, {panel_a} } },
+                bar,
+                rsx! { div { class: panel_b_class, {panel_b} } },
+            ],
         )
 }
 

@@ -158,7 +158,7 @@ pub fn Image(props: ImageProps) -> Element {
             .event("onerror", move |_: Event<ImageData>| {
                 errored_src.set(Some(on_error_src.clone()))
             })
-            .render(HtmlTag::Img, props.attributes, rsx! {});
+            .render(HtmlTag::Img, props.attributes, ());
     }
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
 
@@ -219,7 +219,7 @@ pub fn Image(props: ImageProps) -> Element {
         .event("onerror", move |_: Event<ImageData>| {
             errored_src.set(Some(on_error_src.clone()))
         })
-        .render(HtmlTag::Img, Vec::new(), rsx! {});
+        .render(HtmlTag::Img, Vec::new(), ());
 
     root.attr("type", "button")
         .attr("aria-pressed", zoomed.get().to_string())
