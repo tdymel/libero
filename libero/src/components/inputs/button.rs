@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{
             base_color, base_props, contrast_color, focus_ring_sx, hover_color, input_from_str,
             variables,
@@ -195,10 +195,15 @@ pub fn Button(props: ButtonProps) -> Element {
         props.onclick.call(event);
     };
 
+    // A plain `span`, not a `Box`: the ripple has no class, `sx`, states or
+    // theming - only a position and an animation - so a `Box` would buy it a
+    // scope and a styling pass for nothing.
+    //
+    // `key` is load-bearing: a new ripple must be a *new* element, or the diff
+    // reuses the old one and the CSS animation never restarts.
     let ripple_span = rsx! {
         if let Some(ripple) = ripple_signal() {
-            Box {
-                component: "span",
+            span {
                 key: "{ripple.id}",
                 style: "position:absolute;left:{ripple.x}px;top:{ripple.y}px;width:300%;height:300%;border-radius:50%;background:currentColor;opacity:0.3;transform:translate(-50%, -50%) scale(0);animation:{BUTTON_RIPPLE_ANIMATION} 550ms ease-out forwards;pointer-events:none;",
                 onanimationend: move |_| ripple_signal.set(None),
