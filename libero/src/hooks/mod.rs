@@ -15,7 +15,7 @@ pub use clipboard::{Clipboard, use_clipboard};
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub use id::{use_id, use_root_id};
-pub(crate) use local_state::use_local_state;
+pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use modal::use_modal_z_index;
 pub use modal::{ModalHandle, use_modal, use_modal_context};
 pub use portal::use_portal;

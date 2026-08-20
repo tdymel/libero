@@ -6,7 +6,7 @@ use crate::{
         common::{base_props, dom_api},
         layout::use_box,
     },
-    hooks::use_root_id,
+    hooks::{use_local_state, use_root_id},
     sx::{StaticSx, Sx, sx},
 };
 
@@ -113,13 +113,14 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
 /// order once blurred. Mantine's `FocusTrap.InitialFocus` equivalent.
 #[component]
 pub fn FocusTrapInitialFocus() -> Element {
-    let mut used = use_signal(|| false);
+    let used = use_local_state(|| false);
+    let mark_used = used.clone();
 
     use_box()
         .framework_sx(&VISUALLY_HIDDEN_SX)
         .prepare()
-        .attr("tabindex", if used() { "-1" } else { "0" })
+        .attr("tabindex", if used.get() { "-1" } else { "0" })
         .attr("data-autofocus", true)
-        .event("onblur", move |_: Event<FocusData>| used.set(true))
+        .event("onblur", move |_: Event<FocusData>| mark_used.set(true))
         .render(HtmlTag::Span, Vec::new(), rsx! {})
 }

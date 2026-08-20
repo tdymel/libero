@@ -7,7 +7,7 @@ use crate::{
         common::{base_props, focus_ring_sx},
         layout::use_box,
     },
-    hooks::{use_css, use_theme},
+    hooks::{use_css, use_local_state, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{SelectDefaults, Size},
 };
@@ -41,7 +41,7 @@ base_props! {
         #[props(into)]
         value: String,
         #[props(default)]
-        onchange: EventHandler<String>,
+        onchange: Option<EventHandler<String>>,
         #[props(default)]
         label: Option<String>,
         children: Element,
@@ -66,9 +66,10 @@ pub fn Select(props: SelectProps) -> Element {
     // creating render there is nothing for `value` to select and the browser
     // silently takes the first option. Emitting no `value` until `use_effect`
     // fires defers it to an update, by which point the options exist.
-    let mut mounted = use_signal(|| false);
-    use_effect(move || mounted.set(true));
-    let value = mounted().then(|| props.value.clone());
+    let mounted = use_local_state(|| false);
+    let set_mounted = mounted.clone();
+    use_effect(move || set_mounted.set(true));
+    let value = mounted.get().then(|| props.value.clone());
 
     // Both `prepare()`s and the `use_css` run unconditionally: they are hooks,
     // and the label below is optional.
@@ -91,7 +92,9 @@ pub fn Select(props: SelectProps) -> Element {
     let select = select
         .attr("value", value)
         .event("onchange", move |event: FormEvent| {
-            props.onchange.call(event.value())
+            if let Some(onchange) = &props.onchange {
+                onchange.call(event.value());
+            }
         })
         .render(HtmlTag::Select, props.attributes, props.children);
 

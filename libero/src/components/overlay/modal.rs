@@ -36,7 +36,7 @@ static MODAL_CONTENT_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     pub struct ModalProps {
         #[props(default)]
-        onclose: EventHandler<()>,
+        onclose: Option<EventHandler<()>>,
         children: Element,
     }
 }
@@ -55,7 +55,11 @@ pub fn Modal(props: ModalProps) -> Element {
     // values it captured - from mount. `use_callback` swaps its inner closure
     // each render behind a handle stable enough to provide once.
     let onclose = props.onclose;
-    let onclose = use_callback(move |()| onclose.call(()));
+    let onclose = use_callback(move |()| {
+        if let Some(onclose) = &onclose {
+            onclose.call(());
+        }
+    });
     use_context_provider(|| ModalContext { onclose });
 
     let z_index = use_modal_z_index();

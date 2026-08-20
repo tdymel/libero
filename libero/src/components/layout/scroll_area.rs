@@ -120,15 +120,15 @@ base_props! {
         /// Percent (0-100) along the vertical axis - see `scroll_position_x`.
         scroll_position_y: Option<f64>,
         #[props(default)]
-        on_scroll: EventHandler<ScrollPositionEvent>,
+        on_scroll: Option<EventHandler<ScrollPositionEvent>>,
         #[props(default)]
-        on_top_reached: EventHandler<()>,
+        on_top_reached: Option<EventHandler<()>>,
         #[props(default)]
-        on_bottom_reached: EventHandler<()>,
+        on_bottom_reached: Option<EventHandler<()>>,
         #[props(default)]
-        on_left_reached: EventHandler<()>,
+        on_left_reached: Option<EventHandler<()>>,
         #[props(default)]
-        on_right_reached: EventHandler<()>,
+        on_right_reached: Option<EventHandler<()>>,
         children: Element,
     }
 }
@@ -167,6 +167,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut edges = use_signal(|| EdgeState::AT_ORIGIN);
 
     let on_scroll = props.on_scroll;
+    let scrolled = move |event: ScrollPositionEvent| {
+        if let Some(on_scroll) = &on_scroll {
+            on_scroll.call(event);
+        }
+    };
+    let reached = |handler: Option<EventHandler<()>>| {
+        if let Some(handler) = handler {
+            handler.call(());
+        }
+    };
     let on_top_reached = props.on_top_reached;
     let on_bottom_reached = props.on_bottom_reached;
     let on_left_reached = props.on_left_reached;
@@ -177,10 +187,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         let (x_pct, y_pct, max_x, max_y) = scroll_metrics(&data);
 
         if is_scrolling() {
-            on_scroll.call(ScrollPositionEvent::Change(x_pct, y_pct));
+            scrolled(ScrollPositionEvent::Change(x_pct, y_pct));
         } else {
             is_scrolling.set(true);
-            on_scroll.call(ScrollPositionEvent::Start(x_pct, y_pct));
+            scrolled(ScrollPositionEvent::Start(x_pct, y_pct));
         }
 
         let new_edges = EdgeState {
@@ -191,16 +201,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         };
         let previous = edges();
         if new_edges.top && !previous.top {
-            on_top_reached.call(());
+            reached(on_top_reached);
         }
         if new_edges.bottom && !previous.bottom {
-            on_bottom_reached.call(());
+            reached(on_bottom_reached);
         }
         if new_edges.left && !previous.left {
-            on_left_reached.call(());
+            reached(on_left_reached);
         }
         if new_edges.right && !previous.right {
-            on_right_reached.call(());
+            reached(on_right_reached);
         }
         edges.set(new_edges);
     };
@@ -209,7 +219,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         if is_scrolling() {
             is_scrolling.set(false);
             let (x_pct, y_pct, ..) = scroll_metrics(&event.data());
-            on_scroll.call(ScrollPositionEvent::End(x_pct, y_pct));
+            scrolled(ScrollPositionEvent::End(x_pct, y_pct));
         }
     };
 

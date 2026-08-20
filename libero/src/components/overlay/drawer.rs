@@ -77,7 +77,7 @@ base_props! {
         /// Requested by Escape or a backdrop click. `Drawer` tracks no
         /// open/closed state.
         #[props(default)]
-        onclose: EventHandler<()>,
+        onclose: Option<EventHandler<()>>,
         children: Element,
     }
 }
@@ -111,7 +111,11 @@ pub fn Drawer(props: DrawerProps) -> Element {
 
     use_portal(Some(rsx! {
         Modal {
-            onclose: move |_| onclose.call(()),
+            onclose: move |_| {
+                if let Some(onclose) = &onclose {
+                    onclose.call(());
+                }
+            },
             Float {
                 placement: Input::Value(placement),
                 z_index: z_index.clone(),

@@ -144,7 +144,7 @@ base_props! {
         #[props(default, into)]
         divider_color: Input<ThemeAwareValue>,
         #[props(default)]
-        on_resize: EventHandler<SplitterResizeEvent>,
+        on_resize: Option<EventHandler<SplitterResizeEvent>>,
         /// Exactly 2: `A` (left/top) then `B`. Nest for more.
         children: Vec<Element>,
     }
@@ -176,6 +176,11 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let mut start_a = use_signal(|| 0.0_f64);
 
     let on_resize = props.on_resize;
+    let notify = move |event: SplitterResizeEvent| {
+        if let Some(on_resize) = &on_resize {
+            on_resize.call(event);
+        }
+    };
 
     let drag = use_drag(DragOptions {
         capture: root_id,
@@ -197,7 +202,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
             container_size.set(size);
             start_a.set(a());
-            on_resize.call(SplitterResizeEvent::Start(a(), 100.0 - a()));
+            notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
             true
         }),
         on_move: Callback::new(move |event: DragMove| {
@@ -206,10 +211,10 @@ pub fn Splitter(props: SplitterProps) -> Element {
             let delta_pct = pixels / container_size() * 100.0;
             let new_a = (start_a() + delta_pct).clamp(min_size, 100.0 - min_size);
             a.set(new_a);
-            on_resize.call(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
+            notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
         }),
         on_end: Callback::new(move |_| {
-            on_resize.call(SplitterResizeEvent::End(a(), 100.0 - a()));
+            notify(SplitterResizeEvent::End(a(), 100.0 - a()));
         }),
     });
 
@@ -225,7 +230,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             event.prevent_default();
             let new_a = new_a.clamp(min_size, 100.0 - min_size);
             a.set(new_a);
-            on_resize.call(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
+            notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
         };
 
         match event.key() {

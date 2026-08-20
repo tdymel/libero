@@ -29,7 +29,7 @@ base_props! {
         #[props(default)]
         style: Option<String>,
         #[props(default)]
-        onmounted: EventHandler<MountedEvent>,
+        onmounted: Option<EventHandler<MountedEvent>>,
         children: Element,
     }
 }
@@ -67,20 +67,27 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
                 to: props.to,
                 class: Some(style_attributes.class),
                 new_tab: is_blank,
-                onmounted: move |event| props.onmounted.call(event),
+                onmounted: move |event| {
+                    if let Some(onmounted) = &props.onmounted {
+                        onmounted.call(event);
+                    }
+                },
                 attributes,
                 {props.children}
             }
         };
     }
 
-    let onmounted = props.onmounted;
-
-    box_style(style_attributes)
+    // Attached only when the caller wants it: an unused listener still costs a
+    // diff every render.
+    let mut anchor = box_style(style_attributes)
         .attr("href", navigation_target_href(props.to))
-        .attr("target", props.target)
-        .event("onmounted", move |event: MountedEvent| {
+        .attr("target", props.target);
+    if let Some(onmounted) = props.onmounted {
+        anchor = anchor.event("onmounted", move |event: MountedEvent| {
             onmounted.call(event)
-        })
-        .render(HtmlTag::A, props.attributes, props.children)
+        });
+    }
+
+    anchor.render(HtmlTag::A, props.attributes, props.children)
 }

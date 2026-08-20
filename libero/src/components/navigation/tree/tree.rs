@@ -87,14 +87,16 @@ fn typeahead_match(order: &[VisibleNode], current: &str, ch: char) -> Option<Str
 pub(super) fn toggle_expanded(
     id: &str,
     mut expanded: Signal<HashSet<String>>,
-    onexpandedchange: EventHandler<HashSet<String>>,
+    onexpandedchange: Option<EventHandler<HashSet<String>>>,
 ) {
     let mut next = expanded.read().clone();
     if !next.remove(id) {
         next.insert(id.to_string());
     }
     expanded.set(next.clone());
-    onexpandedchange.call(next);
+    if let Some(onexpandedchange) = onexpandedchange {
+        onexpandedchange.call(next);
+    }
 }
 
 // A leaf's real link/button is kept out of the tab order (see
@@ -168,7 +170,7 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     default_expanded: HashSet<String>,
     /// Notification only - it doesn't drive rendering.
     #[props(default)]
-    onexpandedchange: EventHandler<HashSet<String>>,
+    onexpandedchange: Option<EventHandler<HashSet<String>>>,
 }
 
 /// Generic shim: erases `props.data`/`render_node` once, then hands off to the
@@ -246,7 +248,7 @@ base_props! {
         #[props(default)]
         default_expanded: HashSet<String>,
         #[props(default)]
-        onexpandedchange: EventHandler<HashSet<String>>,
+        onexpandedchange: Option<EventHandler<HashSet<String>>>,
     }
 }
 

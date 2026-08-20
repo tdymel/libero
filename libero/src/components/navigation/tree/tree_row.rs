@@ -51,7 +51,7 @@ pub(super) struct TreeRowProps {
     pub resolved_active: Option<String>,
     pub active_id: Signal<Option<String>>,
     pub render_node: ErasedRenderNode,
-    pub onexpandedchange: EventHandler<HashSet<String>>,
+    pub onexpandedchange: Option<EventHandler<HashSet<String>>>,
 }
 
 #[component]
