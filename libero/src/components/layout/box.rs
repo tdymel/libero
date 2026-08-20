@@ -1,4 +1,6 @@
-use dioxus::core::{AttributeValue, IntoAttributeValue};
+use std::marker::PhantomData;
+
+use dioxus::core::{AttributeValue, IntoAttributeValue, ListenerCallback};
 use dioxus::html::{EventHandlerValue, PlatformEventData};
 use dioxus::prelude::*;
 
@@ -172,6 +174,40 @@ pub(crate) fn box_style(style: StyleAttributes) -> BoxStyle {
     }
 }
 
+/// A handler for [`BoxStyle::event`]: one, or an `Option` of one. A `None`
+/// pushes no attribute, for the reason a `None` [`BoxStyle::attr`] does not.
+///
+/// Two impls of one trait need two distinct `Marker`s, or they overlap - the
+/// same trick `EventHandlerValue` itself plays. Neither is ever named.
+pub(crate) trait EventValue<T, Marker> {
+    fn into_listener(self) -> Option<ListenerCallback<PlatformEventData>>;
+}
+
+#[doc(hidden)]
+pub(crate) struct Given<Marker>(PhantomData<Marker>);
+#[doc(hidden)]
+pub(crate) struct Maybe<Marker>(PhantomData<Marker>);
+
+impl<T, Marker, H> EventValue<T, Given<Marker>> for H
+where
+    T: for<'a> From<&'a PlatformEventData> + 'static,
+    H: EventHandlerValue<T, Marker>,
+{
+    fn into_listener(self) -> Option<ListenerCallback<PlatformEventData>> {
+        Some(self.into_platform_listener())
+    }
+}
+
+impl<T, Marker, H> EventValue<T, Maybe<Marker>> for Option<H>
+where
+    T: for<'a> From<&'a PlatformEventData> + 'static,
+    H: EventHandlerValue<T, Marker>,
+{
+    fn into_listener(self) -> Option<ListenerCallback<PlatformEventData>> {
+        self.map(EventHandlerValue::into_platform_listener)
+    }
+}
+
 /// The attribute, unless its value renders nothing: a `false` boolean or a
 /// `None` costs ~135 ns to diff and produces no markup either way. Dropping it
 /// is safe - a shrinking attribute list still clears what went away, which
@@ -239,17 +275,19 @@ impl BoxStyle {
     pub fn event<T, Marker>(
         mut self,
         name: &'static str,
-        handler: impl EventHandlerValue<T, Marker>,
+        handler: impl EventValue<T, Marker>,
     ) -> Self
     where
         T: for<'a> From<&'a PlatformEventData> + 'static,
     {
-        self.own.push(Attribute::new(
-            name,
-            AttributeValue::Listener(handler.into_platform_listener().erase()),
-            None,
-            false,
-        ));
+        if let Some(listener) = handler.into_listener() {
+            self.own.push(Attribute::new(
+                name,
+                AttributeValue::Listener(listener.erase()),
+                None,
+                false,
+            ));
+        }
         self
     }
 

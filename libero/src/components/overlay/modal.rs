@@ -77,6 +77,10 @@ pub fn Modal(props: ModalProps) -> Element {
         });
     };
 
+    // Stable identity, so `Overlay`'s props memoize - a closure here would be
+    // a fresh listener attribute every render and re-render it.
+    let on_backdrop_click = use_callback(move |_: MouseEvent| close());
+
     use_box()
         .framework_sx(&MODAL_SX)
         .class(&props.class)
@@ -94,7 +98,7 @@ pub fn Modal(props: ModalProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                Overlay { z_index: 0, onclick: move |_| close() }
+                Overlay { z_index: 0, onclick: on_backdrop_click }
                 FocusTrap { sx: &MODAL_CONTENT_SX, {props.children} }
             },
         )

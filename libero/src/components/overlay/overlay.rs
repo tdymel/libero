@@ -27,6 +27,9 @@ base_props! {
         opacity: Input<ThemeAwareValue>,
         #[props(default, into)]
         blur: Input<ThemeAwareValue>,
+        /// A `Callback` rather than a closure so the props still memoize.
+        #[props(default)]
+        onclick: Option<EventHandler<MouseEvent>>,
         children: Option<Element>,
     }
 }
@@ -62,5 +65,6 @@ pub fn Overlay(props: OverlayProps) -> Element {
         .states(&props.states)
         .variables(&variables)
         .prepare()
+        .event("onclick", props.onclick)
         .render(HtmlTag::Div, props.attributes, props.children)
 }
