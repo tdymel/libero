@@ -1,7 +1,7 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, DataList, DataListItem, Text},
+    components::{Chip, Code, DataList, DataListItem, Text},
     sx::sx,
 };
 
@@ -40,7 +40,10 @@ pub fn DataListPage() -> Element {
             DocSection {
                 title: "Vertical (default)",
                 DataList {
-                    DataListItem { label: rsx! { "Status" }, "Active" }
+                    DataListItem {
+                        label: rsx! { "Status" },
+                        Chip { variant: "filled", color: "success", size: "xs", "Active" }
+                    }
                     DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
                     DataListItem {
                         label: rsx! { "Phone" },

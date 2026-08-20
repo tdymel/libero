@@ -3,6 +3,7 @@ mod anchor;
 mod aspect_ratio;
 mod button;
 mod center;
+mod chip;
 mod code;
 mod container;
 mod data_list;
@@ -37,6 +38,7 @@ pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
 };
 pub use center::{CENTER_DISPLAY, CenterDefaults};
+pub use chip::{CHIP_FONT_SIZE, CHIP_HEIGHT, CHIP_PADDING_X, ChipDefaults, ChipSizeLevel};
 pub use code::{
     CODE_BACKGROUND, CODE_BORDER, CODE_COPY_HOVER_BACKGROUND, CODE_COPY_HOVER_TEXT,
     CODE_FONT_FAMILY, CODE_LINE_NUMBER, CODE_MUTED_TEXT, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT,

@@ -9,13 +9,36 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, AspectRatio, Box, Button, Center, Code, Container, DataList,
+        ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, Container, DataList,
         DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
         List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
         Splitter, Text, Title, Tree, TreeNode, VisuallyHidden,
     },
     theme::{Color, Size},
 };
+
+#[test]
+fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { checked: true, onchange: move |_| {}, "tag" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let input = attributes_of(&html, "input");
+
+    assert_eq!(input["type"], "checkbox");
+    assert!(html.contains("checked=true"));
+    // The label points at the input, so clicking the text toggles it.
+    assert_eq!(attributes_of(&html, "label")["for"], input["id"]);
+
+    let span = attributes_of(&html, "span");
+    assert_eq!(span["data-state"], "outlined size-md radius-xl checked");
+    assert!(body(&html).contains(">tag<"));
+}
 
 #[test]
 fn button_renders_its_class_state_and_variables() {

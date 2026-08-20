@@ -1,12 +1,13 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
-    ButtonSizeLevel, CenterDefaults, CodeDefaults, Color, ContainerDefaults, DataListDefaults,
-    DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults,
-    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
-    MarkDefaults, NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
-    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
-    SelectSizeLevel, SidebarDefaults, Size, Sizes, SplitterDefaults, TextDefaults, TextSize,
-    TitleDefaults, TitleSize, TreeDefaults, ZIndexDefaults,
+    ButtonSizeLevel, CenterDefaults, ChipDefaults, ChipSizeLevel, CodeDefaults, Color,
+    ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
+    FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor, IconDefaults,
+    ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults,
+    OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis,
+    ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel, SidebarDefaults, Size,
+    Sizes, SplitterDefaults, TextDefaults, TextSize, TitleDefaults, TitleSize, TreeDefaults,
+    ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -34,6 +35,7 @@ pub struct Theme {
     pub splitter: SplitterDefaults,
     pub scroll_area: ScrollAreaDefaults,
     pub button: ButtonDefaults,
+    pub chip: ChipDefaults,
     pub select: SelectDefaults,
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
@@ -158,6 +160,42 @@ impl Theme {
                     font_size: "1.375rem",
                     height: "72px",
                     padding_x: "34px",
+                },
+            ),
+        },
+        chip: ChipDefaults {
+            size: Size::Md,
+            radius: Size::Xl,
+            sizes: Sizes::new(
+                ChipSizeLevel {
+                    font_size: "0.6875rem",
+                    height: "20px",
+                    padding_x: "8px",
+                },
+                ChipSizeLevel {
+                    font_size: "0.75rem",
+                    height: "24px",
+                    padding_x: "10px",
+                },
+                ChipSizeLevel {
+                    font_size: "0.8125rem",
+                    height: "28px",
+                    padding_x: "12px",
+                },
+                ChipSizeLevel {
+                    font_size: "0.875rem",
+                    height: "32px",
+                    padding_x: "14px",
+                },
+                ChipSizeLevel {
+                    font_size: "0.9375rem",
+                    height: "36px",
+                    padding_x: "16px",
+                },
+                ChipSizeLevel {
+                    font_size: "1rem",
+                    height: "40px",
+                    padding_x: "18px",
                 },
             ),
         },

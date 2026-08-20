@@ -119,6 +119,7 @@ fn render_cost_per_component() {
         "Button" { Button { "x" } }
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
         "Select" { Select { value: "a", Option { value: "a", "x" } } }
+        "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
 
         "Icon" { Icon { "x" } }
         "Image" { Image { src: "/x.png" } }

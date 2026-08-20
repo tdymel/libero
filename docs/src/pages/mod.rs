@@ -11,7 +11,7 @@ mod typography;
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage};
 pub use getting_started::GettingStarted;
-pub use inputs::{ActionIconPage, ButtonPage, SelectPage};
+pub use inputs::{ActionIconPage, ButtonPage, ChipPage, SelectPage};
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,
     HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,

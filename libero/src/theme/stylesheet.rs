@@ -88,6 +88,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         divider,
         splitter,
         button,
+        chip,
         select,
         list,
         data_list,
@@ -136,6 +137,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(divider.to_css_declarations());
     declarations.extend(splitter.to_css_declarations());
     declarations.extend(button.to_css_declarations());
+    declarations.extend(chip.to_css_declarations());
     declarations.extend(select.to_css_declarations());
     declarations.extend(list.to_css_declarations());
     declarations.extend(data_list.to_css_declarations());

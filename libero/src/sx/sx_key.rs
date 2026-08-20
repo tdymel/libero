@@ -127,6 +127,7 @@ properties! {
     BackdropFilter => "backdrop-filter", backdrop_filter;
     BoxShadow => "box-shadow", box_shadow;
     TextAlign => "text-align", text_align;
+    TextOverflow => "text-overflow", text_overflow;
     ScrollMargin => "scroll-margin", scroll_margin;
     Transform => "transform", transform;
     Animation => "animation", animation;
