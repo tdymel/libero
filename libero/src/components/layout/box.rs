@@ -161,8 +161,20 @@ pub(crate) struct BoxStyle {
 
 impl BoxStyle {
     /// An attribute the component sets itself, e.g. `type="button"`.
+    ///
+    /// A `false` boolean or a `None` is **not** pushed: it renders nothing
+    /// either way, but an attribute in the list still costs ~135 ns to diff.
+    /// Dropping it is safe - when the list shrinks, dioxus emits a `None` for
+    /// the attribute that went away, so a `disabled` button that becomes
+    /// enabled still loses the attribute in the DOM (`tests/attributes.rs`).
     pub fn attr<T>(mut self, name: &'static str, value: impl IntoAttributeValue<T>) -> Self {
-        self.own.push(attr(name, value));
+        let attribute = attr(name, value);
+        if !matches!(
+            attribute.value,
+            AttributeValue::None | AttributeValue::Bool(false)
+        ) {
+            self.own.push(attribute);
+        }
         self
     }
 

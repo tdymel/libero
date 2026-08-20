@@ -10,7 +10,7 @@ use crate::{
         layout::use_box,
         navigation::InternalAnchor,
     },
-    hooks::{use_cache, use_theme},
+    hooks::{use_cache, use_local_state, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, BUTTON_RIPPLE_STATE, ButtonDefaults, CssVar, Size},
@@ -223,12 +223,12 @@ pub fn Button(props: ButtonProps) -> Element {
 
     // One at a time; a new click overrides the last. `which` alternates so the
     // animation name changes and the browser replays it.
-    let mut ripple = use_signal(|| None::<Ripple>);
+    let ripple = use_local_state(|| None::<Ripple>);
 
     let size = props.size.copied_or(theme.button.size);
     let radius = props.radius.copied_or(theme.button.radius);
 
-    let showing = ripple();
+    let showing = ripple.get();
     // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
     // the same on almost every render of almost every button.
     let style = use_cache((variant, color), |(variant, color)| {
@@ -267,10 +267,7 @@ pub fn Button(props: ButtonProps) -> Element {
 
     let handle_click = move |event: Event<MouseData>| {
         let point = event.element_coordinates();
-        let which = ripple
-            .peek()
-            .as_ref()
-            .map_or(0, |last: &Ripple| 1 - last.which);
+        let which = ripple.get().map_or(0, |last| 1 - last.which);
         ripple.set(Some(Ripple {
             which,
             x: point.x,

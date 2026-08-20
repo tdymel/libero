@@ -14,7 +14,7 @@
 //! Leaf      970    1.00x
 //! Box     1,545    1.59x
 //! Text    1,610    1.66x
-//! Button  2,645    2.72x
+//! Button  2,335    2.41x
 //! ```
 //!
 //! `span` is a bare element with no scope; `Leaf` the cheapest possible
