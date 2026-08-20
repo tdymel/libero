@@ -42,14 +42,26 @@ pub fn GettingStarted() -> Element {
             DocSection {
                 title: "Building for the Web",
                 Text {
-                    "Libero's "
+                    "Dioxus's "
                     Code { "wasm-split" }
-                    " feature (on by default) turns on Dioxus's wasm-split support, which puts "
-                    "every route in its own chunk, fetched when it is first visited instead of "
-                    "bloating every page's initial bundle. On this docs site that is 299 KB of "
-                    "brotli-compressed main bundle instead of 414 KB. It is experimental, and "
+                    " feature puts every route in its own chunk, fetched when it is first "
+                    "visited instead of bloating every page's initial bundle. On this docs site "
+                    "that is 297 KB of brotli-compressed main bundle instead of 414 KB. Libero "
+                    "adds no split points of its own - the per-route chunks already carry "
+                    Code { "Code" }
+                    "'s highlighter and "
+                    Code { "QrCode" }
+                    "'s encoder to the pages that use them."
+                }
+                Code {
+                    block: true,
+                    source: "dioxus = {{ version = \"*\", features = [\"router\", \"wasm-split\"] }}",
+                    language: "toml",
+                }
+                Text {
+                    "It is experimental, and "
                     Code { "dx" }
-                    " only enables when asked - if the feature is on, always build and serve "
+                    " only enables it when asked - with the feature on, always build and serve "
                     "with "
                     Code { "--wasm-split" }
                     ", or the app will fail to load entirely (a dangling module import, not a "
@@ -61,9 +73,7 @@ pub fn GettingStarted() -> Element {
                     language: "shell",
                 }
                 Text {
-                    "Don't need the lazy-loading? Turn the feature off in "
-                    Code { "Cargo.toml" }
-                    " and skip "
+                    "Don't need it? Drop the feature and skip "
                     Code { "--wasm-split" }
                     " entirely - the app renders identically either way, just from one bundle "
                     "instead of per-route chunks. Either way, keep only the languages your own "

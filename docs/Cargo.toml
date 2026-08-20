@@ -6,7 +6,10 @@ edition = "2024"
 [dependencies]
 # TEMPORARY: see the matching comment in libero/Cargo.toml - local path dep
 # against .dioxus-fork instead of crates.io, unwind before any real release.
-dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = true, features = ["router"] }
+# `wasm-split` puts every route in its own lazily fetched chunk (297 KB
+# brotli of main bundle instead of 414 KB, measured 2026-09-02). It needs
+# `dx build`/`dx serve --wasm-split` too - see `justfile`.
+dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = true, features = ["router", "wasm-split"] }
 libero = { path = "../libero", default-features = false, features = [
     "code-lang-rust",
     "code-lang-bash",
