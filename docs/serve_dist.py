@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Serves a built bundle the way a real static host would.
 
+Also rewrites unknown paths to `index.html`, the way a static host serving a
+client-routed app has to - without it a refresh on any route but `/` 404s.
+
 `python3 -m http.server` ignores the `.br` siblings `pre_compress` emits, so
 the wasm goes over the wire uncompressed and a measurement against it says
 nothing about compression. This serves the precompressed file when the client
@@ -11,6 +14,7 @@ uncompressed and look like compression did nothing.
 
 import functools
 import gzip
+import os
 import sys
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
@@ -18,6 +22,14 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 class Handler(SimpleHTTPRequestHandler):
     def send_head(self):
         path = self.translate_path(self.path)
+
+        # The routing is client-side, so a refresh on /tree asks the host for
+        # a file that was never built. A real static host rewrites that to the
+        # shell; anything that looks like a file is still left to 404.
+        if not os.path.exists(path) and not os.path.splitext(path)[1]:
+            self.path = "/index.html"
+            path = self.translate_path(self.path)
+
         accepted = self.headers.get("Accept-Encoding", "")
 
         if "br" in accepted:
