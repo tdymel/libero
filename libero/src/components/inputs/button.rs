@@ -184,6 +184,7 @@ fn with_ripple_point(mut style: String, ripple: &Ripple) -> String {
 }
 
 base_props! {
+    extends(button);
     pub struct ButtonProps {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
@@ -317,10 +318,13 @@ pub fn Button(props: ButtonProps) -> Element {
         };
     }
 
+    // `<button>` defaults to `submit`, which submits an enclosing form; a
+    // `Button` defaults to `button`. `attr_default`, so a caller asking for
+    // `submit` or `reset` still gets it.
     boxed
         .event("onclick", handle_click)
         .attr("disabled", disabled)
-        .attr("type", "button")
+        .attr_default("type", "button")
         .render(HtmlTag::Button, props.attributes, props.children)
 }
 

@@ -61,6 +61,23 @@ pub fn ButtonPage() -> Element {
                 }
             }
             DocSection {
+                title: "Form type",
+                Text {
+                    sx: sx().color("grey.6"),
+                    "A plain "
+                    Code { "<button>" }
+                    " submits an enclosing form. Ours defaults to "
+                    Code { "type=\"button\"" }
+                    " instead - set it yourself for a submit or reset button.",
+                }
+                Flex {
+                    direction: "row",
+                    gap: "md",
+                    Button { variant: "filled", r#type: "submit", "Submit" }
+                    Button { variant: "outlined", r#type: "reset", "Reset" }
+                }
+            }
+            DocSection {
                 title: "As a link",
                 Text {
                     sx: sx().color("grey.6"),

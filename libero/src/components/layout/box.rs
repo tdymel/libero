@@ -138,6 +138,7 @@ impl<'a> BoxBuilder<'a> {
 
         BoxStyle {
             own: Vec::new(),
+            fallback: Vec::new(),
             style: use_style_attributes(
                 self.class.unwrap_or(&NONE_CLASS),
                 self.framework_sx,
@@ -150,13 +151,30 @@ impl<'a> BoxBuilder<'a> {
     }
 }
 
+/// The attribute, unless its value renders nothing: a `false` boolean or a
+/// `None` costs ~135 ns to diff and produces no markup either way. Dropping it
+/// is safe - a shrinking attribute list still clears what went away, which
+/// `tests/attributes.rs` pins down.
+fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Option<Attribute> {
+    let attribute = attr(name, value);
+    match attribute.value {
+        AttributeValue::None | AttributeValue::Bool(false) => None,
+        _ => Some(attribute),
+    }
+}
+
 /// Resolved styling, ready to render as any element. Pure - no hooks - so it
 /// can be used in a branch, or not at all.
 pub(crate) struct BoxStyle {
     style: StyleAttributes,
-    /// The component's own attributes, rendered **after** the caller's so the
-    /// caller keeps winning a duplicate, which is what `Box` always did.
+    /// The component's own attributes, rendered **after** the caller's - so on
+    /// a duplicate name the component wins, not the caller (`id` is the one
+    /// exception, deduped in `render`).
     own: Vec<Attribute>,
+    /// Attributes the component supplies only where the caller supplied none -
+    /// see [`BoxStyle::attr_default`]. Kept apart from `own` because whether
+    /// they apply is not known until `render` receives the caller's.
+    fallback: Vec<Attribute>,
 }
 
 impl BoxStyle {
@@ -168,12 +186,25 @@ impl BoxStyle {
     /// the attribute that went away, so a `disabled` button that becomes
     /// enabled still loses the attribute in the DOM (`tests/attributes.rs`).
     pub fn attr<T>(mut self, name: &'static str, value: impl IntoAttributeValue<T>) -> Self {
-        let attribute = attr(name, value);
-        if !matches!(
-            attribute.value,
-            AttributeValue::None | AttributeValue::Bool(false)
-        ) {
+        if let Some(attribute) = meaningful(name, value) {
             self.own.push(attribute);
+        }
+        self
+    }
+
+    /// An attribute the component supplies only where the caller supplied
+    /// none - a default, not an override.
+    ///
+    /// [`BoxStyle::attr`] would win the duplicate and silently replace what
+    /// the caller asked for, which is exactly the bug `Button`'s hardcoded
+    /// `type="button"` was.
+    pub fn attr_default<T>(
+        mut self,
+        name: &'static str,
+        value: impl IntoAttributeValue<T>,
+    ) -> Self {
+        if let Some(attribute) = meaningful(name, value) {
+            self.fallback.push(attribute);
         }
         self
     }
@@ -220,6 +251,13 @@ impl BoxStyle {
                 !duplicate
             })
             .collect::<Vec<_>>();
+
+        let mut attributes = attributes;
+        for attribute in self.fallback {
+            if !attributes.iter().any(|set| set.name == attribute.name) {
+                attributes.push(attribute);
+            }
+        }
 
         render_polymorphic(
             component,

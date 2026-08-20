@@ -742,3 +742,28 @@ fn splitter_survives_a_min_size_past_the_midpoint() {
     assert!(body.contains("aria-valuemin=\"50\""));
     assert!(body.contains("--lsx-splitter-a:50%;"));
 }
+
+/// `<button>`'s HTML default is `submit`; ours is `button`, but only as a
+/// fallback - a caller asking for a submit button has to get one.
+#[test]
+fn a_button_defaults_to_type_button_and_yields_to_the_caller() {
+    fn plain() -> Element {
+        rsx! { LiberoProvider { Button { "Save" } } }
+    }
+    fn submit() -> Element {
+        rsx! { LiberoProvider { Button { r#type: "submit", "Save" } } }
+    }
+
+    assert_eq!(
+        attributes_of(&render(plain), "button")
+            .get("type")
+            .map(String::as_str),
+        Some("button")
+    );
+    assert_eq!(
+        attributes_of(&render(submit), "button")
+            .get("type")
+            .map(String::as_str),
+        Some("submit")
+    );
+}
