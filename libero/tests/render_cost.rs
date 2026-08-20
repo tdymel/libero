@@ -108,7 +108,7 @@ fn render_cost_per_component() {
         "Header" { Header { "x" } }
         "ScrollArea" { ScrollArea { "x" } }
         "Sidebar" { Sidebar { "x" } }
-        "Splitter" { Splitter { initial_size: 50.0, div { "l" } div { "r" } } }
+        "Splitter" { Splitter { initial_size: 50.0, panel_a: rsx! { div { "l" } }, panel_b: rsx! { div { "r" } } } }
 
         "Text" { Text { "x" } }
         "Title" { Title { "x" } }

@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    components::{
+        HtmlTag, Input, States,
+        common::{IntoChildren, base_props},
+        layout::use_box,
+    },
     sx::Sx,
 };
 
@@ -10,9 +14,13 @@ base_props! {
         /// The term (`<dt>`). `sx`/`class`/`states` decorate this element
         /// only - nothing wraps a term together with its descriptions.
         label: Element,
-        /// Descriptions for `label`. A `Vec` because a `<dt>` may have any
-        /// number of `<dd>`s - each child gets its own.
+        /// Descriptions for `label`. A `<dt>` may have any number of
+        /// `<dd>`s, so each child gets its own - except against upstream main,
+        /// where they all collapse into a single `<dd>`.
+        #[cfg(feature = "dioxus-fork")]
         children: Vec<Element>,
+        #[cfg(not(feature = "dioxus-fork"))]
+        children: Element,
     }
 }
 
@@ -38,7 +46,7 @@ pub fn DataListItem(props: DataListItemProps) -> Element {
 
     rsx! {
         {term}
-        for (index, value) in props.children.into_iter().enumerate() {
+        for (index, value) in props.children.into_children().into_iter().enumerate() {
             dd { key: "{index}", {value} }
         }
     }

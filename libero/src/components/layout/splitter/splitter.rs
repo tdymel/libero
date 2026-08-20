@@ -4,14 +4,13 @@ use super::divider::{SPLITTER_DIVIDER_COLOR_VAR, SplitterDivider};
 use crate::{
     CssLayer,
     components::{
-        Box, HtmlTag, Input, Orientation, States, Variables,
+        HtmlTag, Input, Orientation, States, Variables,
         common::{base_props, dom_api, variables},
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_root_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
-    utils::warn,
 };
 
 /// Both panes' resulting sizes as percentages, `A` (left/top) first.
@@ -50,9 +49,20 @@ fn splitter_variables(a: f64, divider_color: Option<&ThemeAwareValue>) -> Variab
         )
 }
 
-/// Exactly 2 children. A missing one renders empty, extras are dropped; both
-/// warn.
-fn resolve_panels(children: Vec<Element>) -> (Element, Element) {
+/// Fork only: `panel_a`/`panel_b` win, otherwise exactly 2 children fill what
+/// they leave. A missing pane renders empty, extras are dropped; both warn.
+#[cfg(feature = "dioxus-fork")]
+fn resolve_panels(
+    panel_a: Option<Element>,
+    panel_b: Option<Element>,
+    children: Vec<Element>,
+) -> (Element, Element) {
+    use crate::{components::Box, utils::warn};
+
+    if let (Some(a), Some(b)) = (panel_a, panel_b) {
+        return (a, b);
+    }
+
     let count = children.len();
     let mut children = children.into_iter();
     let panel_a = children.next();
@@ -92,7 +102,22 @@ base_props! {
         divider_color: Input<ThemeAwareValue>,
         #[props(default)]
         on_resize: Option<EventHandler<SplitterResizeEvent>>,
-        /// Exactly 2: `A` (left/top) then `B`. Nest for more.
+        /// Pane A (left/top). Required against upstream main, which cannot
+        /// split `children` apart; on the fork it falls back to the first
+        /// child.
+        #[cfg(feature = "dioxus-fork")]
+        #[props(default)]
+        panel_a: Option<Element>,
+        #[cfg(not(feature = "dioxus-fork"))]
+        panel_a: Element,
+        /// Pane B (right/bottom). Same rules as `panel_a`, second child.
+        #[cfg(feature = "dioxus-fork")]
+        #[props(default)]
+        panel_b: Option<Element>,
+        #[cfg(not(feature = "dioxus-fork"))]
+        panel_b: Element,
+        /// Fork only: exactly 2, `A` then `B`. `panel_a`/`panel_b` win.
+        #[cfg(feature = "dioxus-fork")]
         children: Vec<Element>,
     }
 }
@@ -103,7 +128,10 @@ base_props! {
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
     let root_id = use_root_id(&props.attributes);
-    let (panel_a, panel_b) = resolve_panels(props.children);
+    #[cfg(feature = "dioxus-fork")]
+    let (panel_a, panel_b) = { resolve_panels(props.panel_a, props.panel_b, props.children) };
+    #[cfg(not(feature = "dioxus-fork"))]
+    let (panel_a, panel_b) = (props.panel_a, props.panel_b);
 
     let orientation = props.orientation.copied_or(Orientation::Vertical);
     let vertical = orientation == Orientation::Vertical;

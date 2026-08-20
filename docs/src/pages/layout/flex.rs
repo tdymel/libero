@@ -35,6 +35,7 @@ pub fn FlexPage() -> Element {
             DocSection {
                 title: "Divider",
                 Text { "Rendered between each child - not before the first or after the last." }
+                Text { "Needs the `dioxus-fork` build; upstream dioxus main merges children into one node, so no divider appears." }
                 Flex {
                     direction: "column",
                     gap: "sm",

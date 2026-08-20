@@ -1,6 +1,6 @@
 [workspace]
 members = ["libero", "docs"]
-exclude = [".dioxus-fork"]
+exclude = [".dioxus-fork", ".dioxus-main", ".dioxus-active"]
 resolver = "3"
 
 [profile.release]

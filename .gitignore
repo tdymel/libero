@@ -4,6 +4,9 @@ target
 writeups
 feature_creep
 memory
+.dioxus-main
+.dioxus-active
+.cargo
 
 # added by gcma: paths removed from history
 .agents/*

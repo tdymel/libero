@@ -30,7 +30,11 @@ pub fn DataListPage() -> Element {
                     Code { "dd" }
                     " with no extra ceremony over a single description - including from a "
                     Code { "for" }
-                    " loop, which flattens the same way."
+                    " loop, which flattens the same way. Needs the "
+                    Code { "dioxus-fork" }
+                    " build - against upstream dioxus main the descriptions collapse into a single "
+                    Code { "dd" }
+                    "."
                 }
             },
             DocSection {

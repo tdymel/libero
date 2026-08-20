@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_props, focus_ring_sx, input_from_str, variables},
+        common::{IntoChildren, base_props, focus_ring_sx, input_from_str, variables},
         layout::use_box,
     },
     str_enum::str_enum,
@@ -107,9 +107,13 @@ base_props! {
         #[props(default, into)]
         wrap: Input<FlexWrap>,
         /// Between each child, not before the first or after the last.
+        /// Ignored against upstream main, which cannot split children apart.
         #[props(default)]
         divider: Option<Element>,
+        #[cfg(feature = "dioxus-fork")]
         children: Vec<Element>,
+        #[cfg(not(feature = "dioxus-fork"))]
+        children: Element,
     }
 }
 
@@ -127,17 +131,25 @@ pub fn Flex(props: FlexProps) -> Element {
     }
     let states: Input<States> = states.into();
 
-    let last_index = props.children.len().saturating_sub(1);
+    let own_children = props.children.into_children();
+    let last_index = own_children.len().saturating_sub(1);
     let children = match props.divider {
-        None => rsx! { {props.children.into_iter()} },
-        Some(divider) => rsx! {
-            for (index, child) in props.children.into_iter().enumerate() {
-                {child}
-                if index != last_index {
-                    {divider.clone()}
+        None => rsx! { {own_children.into_iter()} },
+        Some(divider) => {
+            #[cfg(not(feature = "dioxus-fork"))]
+            crate::utils::warn(
+                "Flex `divider` needs the \"dioxus-fork\" feature - upstream main merges \
+                 children into one node, so no divider is rendered.",
+            );
+            rsx! {
+                for (index, child) in own_children.into_iter().enumerate() {
+                    {child}
+                    if index != last_index {
+                        {divider.clone()}
+                    }
                 }
             }
-        },
+        }
     };
 
     use_box()
@@ -166,7 +178,10 @@ mod variables_tests {
             direction: Input::None,
             wrap,
             divider: None,
+            #[cfg(feature = "dioxus-fork")]
             children: Vec::new(),
+            #[cfg(not(feature = "dioxus-fork"))]
+            children: rsx! {},
         }
     }
 

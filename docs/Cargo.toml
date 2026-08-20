@@ -5,8 +5,9 @@ edition = "2024"
 
 [dependencies]
 # TEMPORARY: see the matching comment in libero/Cargo.toml - local path dep
-# against .dioxus-fork instead of crates.io, unwind before any real release.
-dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = true, features = ["router"] }
+# against the `.dioxus-active` symlink instead of crates.io, unwind before any
+# real release.
+dioxus = { path = "../.dioxus-active/packages/dioxus", default-features = true, features = ["router"] }
 libero = { path = "../libero", default-features = false, features = [
     "code-lang-rust",
     "code-lang-bash",
@@ -16,8 +17,12 @@ libero = { path = "../libero", default-features = false, features = [
 ] }
 
 [features]
+# Build against `.dioxus-fork`; must match whichever tree `.dioxus-active`
+# points at. Set by `just mode-fork`.
+dioxus-fork = ["libero/dioxus-fork"]
 # Every route in its own lazily fetched chunk (297 KB brotli of main bundle
 # instead of 414 KB, measured 2026-09-02). Off by default: the split wasm
 # imports `__wasm_split.js`, which only `dx --wasm-split` emits, so a build
-# without both fails to load - see `justfile`'s release recipes.
-wasm-split = ["dioxus/wasm-split"]
+# without both fails to load - see `justfile`'s release recipes. The
+# wasm-split-cli fixes it relies on are fork-only, so this implies fork mode.
+wasm-split = ["dioxus/wasm-split", "dioxus-fork"]

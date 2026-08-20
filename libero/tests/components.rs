@@ -351,9 +351,10 @@ fn splitter_renders_both_panes_around_a_divider() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Splitter { initial_size: 50.0,
-                    div { "left" }
-                    div { "right" }
+                Splitter {
+                    initial_size: 50.0,
+                    panel_a: rsx! { div { "left" } },
+                    panel_b: rsx! { div { "right" } },
                 }
             }
         }
@@ -377,9 +378,10 @@ fn splitter_hit_target_opts_out_of_browser_touch_gestures() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Splitter { initial_size: 50.0,
-                    div { "left" }
-                    div { "right" }
+                Splitter {
+                    initial_size: 50.0,
+                    panel_a: rsx! { div { "left" } },
+                    panel_b: rsx! { div { "right" } },
                 }
             }
         }
@@ -682,9 +684,11 @@ fn a_root_id_component_renders_the_callers_id_once() {
         rsx! {
             LiberoProvider {
                 ScrollArea { id: "mine", "scrollable content" }
-                Splitter { id: "mine", initial_size: 50.0,
-                    div { "left" }
-                    div { "right" }
+                Splitter {
+                    id: "mine",
+                    initial_size: 50.0,
+                    panel_a: rsx! { div { "left" } },
+                    panel_b: rsx! { div { "right" } },
                 }
                 Tree { id: "mine", aria_label: "Files", data: vec![TreeNode::new("a", "Alpha".to_string())] }
                 FocusTrap { id: "mine", "trapped" }
@@ -728,9 +732,11 @@ fn splitter_survives_a_min_size_past_the_midpoint() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Splitter { initial_size: 50.0, min_size: 70.0,
-                    div { "left" }
-                    div { "right" }
+                Splitter {
+                    initial_size: 50.0,
+                    min_size: 70.0,
+                    panel_a: rsx! { div { "left" } },
+                    panel_b: rsx! { div { "right" } },
                 }
             }
         }

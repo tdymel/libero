@@ -1,23 +1,66 @@
-# Local patched fork (see .dioxus-fork/BUGS.md), tracking dioxus's real
-# `main` (not the v0.7.10 we depend on - dx isn't tightly version-locked to
-# it, just warns on the mismatch) plus our own still-needed fixes on top.
-# Not checked in; rebuild with `just build-dx` after pulling fork changes.
-dx := justfile_directory() / ".." / ".dioxus-fork" / "target" / "release" / "dx"
+root := justfile_directory() / ".."
 
-start:
-    {{dx}} serve --platform web --debug-symbols=false --hotpatch
+# Both crates path-depend on `../.dioxus-active`, a symlink pointing at either
+# `.dioxus-main` (upstream, the default) or `.dioxus-fork` (upstream plus our
+# still-needed fixes - see .dioxus-fork/BUGS.md). `just mode-main`/`mode-fork`
+# flip it, and give each mode its own target dir so switching doesn't rebuild
+# the world. `dx` resolves through the same symlink, so the CLI and the crate
+# it builds always come from one tree - the versions aren't tightly locked,
+# but a mismatch means wire-protocol skew. Neither tree is checked in; rebuild
+# the active one's CLI with `just build-dx`.
+dx := root / ".dioxus-active" / "target" / "release" / "dx"
 
-start_release:
-    {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false --wasm-split --features wasm-split
+# Fork-only APIs are behind libero's `dioxus-fork` feature, so every recipe
+# below picks its flags from the active mode. Wrong mode = compile error.
+fork := `test "$(readlink ../.dioxus-active)" = .dioxus-fork && echo 1 || echo ""`
+feat := if fork == "1" { "--features dioxus-fork" } else { "" }
+# --wasm-split needs the fork's wasm-split-cli fixes, and docs' `wasm-split`
+# feature already implies `dioxus-fork` - so this replaces `feat`, not adds.
+split := if fork == "1" { "--wasm-split --features wasm-split" } else { "" }
 
-public := justfile_directory() / ".." / "target" / "dx" / "docs"
+# Build against upstream dioxus main (default).
+mode-main:
+    ln -sfn .dioxus-main {{root}}/.dioxus-active
+    @just _target-dir main
 
-build:
-    {{dx}} build --platform web --debug-symbols=false
+# Build against .dioxus-fork (fix/combined) and its fork-only APIs.
+mode-fork:
+    ln -sfn .dioxus-fork {{root}}/.dioxus-active
+    @just _target-dir fork
+
+# Per-mode target dir, so `cargo` picks it up too - not just these recipes.
+_target-dir mode:
+    mkdir -p {{root}}/.cargo
+    printf '# Written by `just mode-main` / `just mode-fork` - do not edit.\n[build]\ntarget-dir = "target/%s"\n' {{mode}} > {{root}}/.cargo/config.toml
+    @echo "mode: {{mode}}"
+
+# Which tree is active, and does the feature flag follow it.
+mode:
+    @echo "tree:    $(readlink {{root}}/.dioxus-active)"
+    @echo "flags:   {{feat}}"
+
+# The whole workspace, in the active mode.
+test:
+    cd {{root}} && cargo test --workspace {{ if fork == "1" { "--features libero/dioxus-fork" } else { "" } }}
+
+# Fails with a bare `No such file` otherwise - each tree's dx is built once.
+_dx:
+    @test -x {{dx}} || (echo "no dx in $(readlink {{root}}/.dioxus-active) - run \`just build-dx\`" && exit 1)
+
+start: _dx
+    {{dx}} serve --platform web --debug-symbols=false --hotpatch {{feat}}
+
+start_release: _dx
+    {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false {{split}}
+
+public := root / "target" / (if fork == "1" { "fork" } else { "main" }) / "dx" / "docs"
+
+build: _dx
+    {{dx}} build --platform web --debug-symbols=false {{feat}}
     ./preload_wasm.sh {{public}}/debug/web/public
 
-build_release:
-    {{dx}} build --platform web --debug-symbols=false --release --wasm-split --features wasm-split
+build_release: _dx
+    {{dx}} build --platform web --debug-symbols=false --release {{split}}
     ./preload_wasm.sh {{public}}/release/web/public
 
 # Serve a built bundle with brotli/gzip content negotiation, the way a real
@@ -26,6 +69,7 @@ build_release:
 serve_dist port="8080":
     ./serve_dist.py {{public}}/release/web/public {{port}}
 
-# Rebuild the local dx binary from .dioxus-fork (branch fix/combined)
+# Rebuild the dx binary from whichever tree is active. Each tree keeps its own
+# target/, so both binaries survive a mode flip.
 build-dx:
-    cd {{justfile_directory() / ".." / ".dioxus-fork"}} && cargo build --release -p dioxus-cli --bin dx
+    cd {{root}}/.dioxus-active && cargo build --release -p dioxus-cli --bin dx

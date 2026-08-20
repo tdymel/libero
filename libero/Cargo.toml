@@ -13,15 +13,17 @@ keywords = ["components", "ui", "design-system", "dioxus"]
 categories = ["gui", "wasm", "web-programming"]
 
 [dependencies]
-# TEMPORARY: local path dep against .dioxus-fork (tracks dioxus main, plus
-# our own still-needed fixes - see .dioxus-fork/BUGS.md) instead of the
-# crates.io 0.7.10 release, so this crate and the `dx` CLI building it are
-# always built from identical source - avoids wire-protocol version-skew
-# bugs between the two (see BUGS.md, "Building docs against main's dx").
+# TEMPORARY: local path dep against `.dioxus-active`, a symlink `just
+# mode-main` / `just mode-fork` points at `.dioxus-main` (upstream main) or
+# `.dioxus-fork` (main + our still-needed fixes, see .dioxus-fork/BUGS.md)
+# instead of the crates.io 0.7.10 release, so this crate and the `dx` CLI
+# building it are always built from identical source - avoids wire-protocol
+# version-skew bugs between the two. Fork mode also needs `--features
+# dioxus-fork`; a mismatch is a compile error, not silent breakage.
 # Unwind back to a crates.io version before any real release - a path dep
-# blocks publishing to crates.io entirely, and .dioxus-fork isn't checked
-# in, so nobody else can build this as-is.
-dioxus = { path = "../.dioxus-fork/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "router", "logger"] }
+# blocks publishing to crates.io entirely, and neither tree is checked in,
+# so nobody else can build this as-is.
+dioxus = { path = "../.dioxus-active/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "router", "logger"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
@@ -39,12 +41,17 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlE
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 regex = "1"
 
-# Render-to-string, for the component tests in `tests/` - the fork's own copy,
-# so the tests build against exactly the dioxus this crate does.
+# Render-to-string, for the component tests in `tests/` - the active tree's
+# own copy, so the tests build against exactly the dioxus this crate does.
 [dev-dependencies]
-dioxus-ssr = { path = "../.dioxus-fork/packages/ssr" }
+dioxus-ssr = { path = "../.dioxus-active/packages/ssr" }
 
 [features]
+# Build against `.dioxus-fork` instead of upstream main. Only the fork lets a
+# component declare `children: Vec<Element>`, which is what splits a caller's
+# children into individually wrappable nodes - see `common::Children`. Set by
+# `just mode-fork`; wrong mode is a compile error.
+dioxus-fork = []
 default = [
     "code-lang-rust",
     "code-lang-bash",

@@ -11,7 +11,7 @@ pub fn SplitterPage() -> Element {
         DocPage {
             title: "Splitter",
             lead: rsx! {
-                Text { "Splits two panes with a draggable/keyboard-resizable divider. Only two panes - nest another `Splitter` inside a pane for more." }
+                Text { "Splits two panes with a draggable/keyboard-resizable divider. Panes go in `panel_a` and `panel_b`; nest another `Splitter` in a pane for more than two." }
             },
             DocSection {
                 title: "Vertical (default)",
@@ -20,8 +20,8 @@ pub fn SplitterPage() -> Element {
                     sx: sx().height("160px").border("1px solid var(--lsx-grey-3)"),
                     Splitter {
                         initial_size: 50.0,
-                        Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" }
-                        Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" }
+                        panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } },
+                        panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
                     }
                 }
             }
@@ -34,8 +34,8 @@ pub fn SplitterPage() -> Element {
                         orientation: "horizontal",
                         initial_size: 30.0,
                         min_size: 15.0,
-                        Box { sx: sx().height("100%").padding("md").background("primary.1"), "Top" }
-                        Box { sx: sx().height("100%").padding("md").background("secondary.1"), "Bottom" }
+                        panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "Top" } },
+                        panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "Bottom" } },
                     }
                 }
             }
@@ -46,13 +46,15 @@ pub fn SplitterPage() -> Element {
                     sx: sx().height("260px").border("1px solid var(--lsx-grey-3)"),
                     Splitter {
                         initial_size: 35.0,
-                        Box { sx: sx().height("100%").padding("md").background("primary.1"), "Sidebar" }
-                        Splitter {
-                            orientation: "horizontal",
-                            initial_size: 65.0,
-                            Box { sx: sx().height("100%").padding("md").background("secondary.1"), "Main" }
-                            Box { sx: sx().height("100%").padding("md").background("info.1"), "Panel" }
-                        }
+                        panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "Sidebar" } },
+                        panel_b: rsx! {
+                            Splitter {
+                                orientation: "horizontal",
+                                initial_size: 65.0,
+                                panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "Main" } },
+                                panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("info.1"), "Panel" } },
+                            }
+                        },
                     }
                 }
             }
