@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States,
         common::{
             base_color, base_props, contrast_color, focus_ring_sx, hover_color, input_from_str,
             variables,
@@ -10,7 +10,7 @@ use crate::{
         layout::use_box,
         navigation::InternalAnchor,
     },
-    hooks::use_theme,
+    hooks::{use_cache, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_RIPPLE_ANIMATION, BUTTON_RIPPLE_STATE, ButtonDefaults, CssVar, Size},
@@ -154,11 +154,10 @@ fn ripple_animation_sx(which: usize) -> Sx {
     ))
 }
 
-fn button_variables(
-    variant: ButtonVariant,
-    base: &ThemeAwareValue,
-    ripple: Option<&Ripple>,
-) -> Variables {
+/// The colour half of the `style` attribute, already rendered. Depends on
+/// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
+/// it off the render path.
+fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> String {
     let contrast = contrast_color(base);
     let hover = hover_color(base, variant == ButtonVariant::Filled);
 
@@ -166,8 +165,22 @@ fn button_variables(
         .with(BUTTON_COLOR_VAR, base.resolve(None))
         .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, hover)
-        .with(BUTTON_RIPPLE_X_VAR, ripple.map(|r| format!("{}px", r.x)))
-        .with(BUTTON_RIPPLE_Y_VAR, ripple.map(|r| format!("{}px", r.y)))
+        .render()
+}
+
+/// The ripple's click point, appended to the cached colour variables. Only a
+/// button that has been clicked pays for this.
+fn with_ripple_point(mut style: String, ripple: &Ripple) -> String {
+    for (name, value) in [
+        (BUTTON_RIPPLE_X_VAR, ripple.x),
+        (BUTTON_RIPPLE_Y_VAR, ripple.y),
+    ] {
+        style.push_str(name.name());
+        style.push(':');
+        style.push_str(&value.to_string());
+        style.push_str("px;");
+    }
+    style
 }
 
 base_props! {
@@ -213,7 +226,16 @@ pub fn Button(props: ButtonProps) -> Element {
     let radius = props.radius.copied_or(theme.button.radius);
 
     let showing = ripple();
-    let variables: Input<Variables> = button_variables(variant, &color, showing.as_ref()).into();
+    // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
+    // the same on almost every render of almost every button.
+    let style = use_cache((variant, color), |(variant, color)| {
+        button_variables(*variant, color)
+    });
+    let style = match showing.as_ref() {
+        Some(ripple) => with_ripple_point(style, ripple),
+        None => style,
+    };
+    let style = Some(style).filter(|style| !style.is_empty());
 
     let states = props
         .states
@@ -252,7 +274,7 @@ pub fn Button(props: ButtonProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .variables(&variables)
+        .style(style.clone())
         .prepare();
 
     // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
@@ -276,7 +298,7 @@ pub fn Button(props: ButtonProps) -> Element {
                 sx: props.sx,
                 framework_sx: &BUTTON_BASE_SX,
                 states,
-                variables,
+                style,
                 attributes: props.attributes,
                 {props.children}
             }
@@ -299,8 +321,8 @@ mod tests {
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
-        let filled = button_variables(ButtonVariant::Filled, &base, None).to_string();
-        let outlined = button_variables(ButtonVariant::Outlined, &base, None).to_string();
+        let filled = button_variables(ButtonVariant::Filled, &base);
+        let outlined = button_variables(ButtonVariant::Outlined, &base);
 
         assert!(filled.contains(&format!(
             "{}:{};",
@@ -317,7 +339,7 @@ mod tests {
     #[test]
     fn the_color_variable_is_the_base_color_itself() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
-        let variables = button_variables(ButtonVariant::Filled, &base, None).to_string();
+        let variables = button_variables(ButtonVariant::Filled, &base);
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
@@ -331,7 +353,7 @@ mod tests {
     #[test]
     fn an_unparseable_color_emits_no_contrast() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(ButtonVariant::Filled, &base, None).to_string();
+        let variables = button_variables(ButtonVariant::Filled, &base);
 
         assert!(!variables.contains(BUTTON_CONTRAST_VAR.name()));
     }

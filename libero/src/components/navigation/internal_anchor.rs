@@ -24,6 +24,9 @@ base_props! {
         target: Option<String>,
         #[props(default, into)]
         variables: Input<Variables>,
+        /// Raw `style` declarations, appended after `variables`.
+        #[props(default)]
+        style: Option<String>,
         #[props(default)]
         onmounted: EventHandler<MountedEvent>,
         children: Element,
@@ -42,7 +45,9 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         &props.sx,
         &props.states,
         &props.variables,
-        None,
+        // Cloned: the plain-`<a>` branch below hands the same string to `Box`,
+        // which resolves the styling a second time.
+        props.style.clone(),
     );
 
     let is_blank = props.target.as_deref() == Some("_blank");
@@ -77,6 +82,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
             sx: props.sx,
             states: props.states,
             variables: props.variables,
+            style: props.style,
             framework_sx: props.framework_sx,
             href: Some(navigation_target_href(props.to)),
             target: props.target,

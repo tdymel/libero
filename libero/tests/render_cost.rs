@@ -7,14 +7,14 @@
 //! cargo test --release -p libero -- --ignored --nocapture
 //! ```
 //!
-//! Baseline on the development machine, 2026-09-01:
+//! Baseline on the development machine, 2026-09-02:
 //!
 //! ```text
-//! span      146    0.15x
-//! Leaf      956    1.00x
-//! Box     1,530    1.62x
-//! Text    1,593    1.69x
-//! Button  3,641    3.81x
+//! span      140    0.14x
+//! Leaf      970    1.00x
+//! Box     1,550    1.60x
+//! Text    1,620    1.67x
+//! Button  3,035    3.13x
 //! ```
 //!
 //! `span` is a bare element with no scope; `Leaf` the cheapest possible

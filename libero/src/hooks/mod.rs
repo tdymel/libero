@@ -1,3 +1,4 @@
+mod cache;
 mod clipboard;
 mod drag;
 mod focus_return;
@@ -8,6 +9,7 @@ mod presence;
 mod stylesheet;
 mod theme;
 
+pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub use focus_return::{FocusReturn, use_focus_return};
