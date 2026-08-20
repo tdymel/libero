@@ -1,13 +1,15 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Flex, Text, ToggleButton, ToggleButtonGroup},
+    components::{
+        Box, Code, Flex, Slider, SliderChangeEvent, Text, ToggleButton, ToggleButtonGroup,
+    },
     sx::sx,
     theme::{CODE_BORDER, Size},
 };
 
 use crate::icons::CheckmarkIcon;
 
-use super::Control;
+use super::{Control, ControlKind};
 
 /// `"color"` -> `"Color"`. Prop names are the control labels.
 fn label(name: &str) -> String {
@@ -107,52 +109,100 @@ pub fn Demo(
                                 sx: sx().font_weight("600"),
                                 {label(control.name)}
                             }
-                            ToggleButtonGroup {
-                                size: "sm",
-                                full_width: true,
-                                // Swatches read as separate chips, not one
-                                // segmented control.
-                                gap: "xs",
-                                variant: "text",
-                                value: vec![values().str(control.name)],
-                                // Clicking the selected swatch would otherwise
-                                // clear it, leaving the prop with no value.
-                                onchange: move |next: Vec<String>| {
-                                    if let Some(value) = next.into_iter().next() {
-                                        values.write().0[index].1 = value;
-                                    }
-                                },
-                                for option in control.options.iter() {
-                                    ToggleButton {
-                                        key: "{option}",
-                                        value: "{option}",
-                                        aria_label: "{option}",
-                                        // The swatch is the whole button, so
-                                        // the fill reaches the border.
-                                        sx: sx().padding("0"),
-                                        Box {
-                                            sx: sx()
-                                                .width("100%")
-                                                .height("100%")
-                                                .border_radius("inherit")
-                                                .background(option.clone())
-                                                // The palette's own contrast
-                                                // color, so the tick reads on
-                                                // every swatch.
-                                                .color(format!("{option}-contrast"))
-                                                .display("flex")
-                                                .align_items("center")
-                                                .justify_content("center")
-                                                .selector(
-                                                    "& svg",
-                                                    sx().width("18px").height("18px"),
-                                                ),
-                                            if values().str(control.name) == *option {
-                                                CheckmarkIcon {}
+                            match control.kind {
+                                ControlKind::Color => rsx! {
+                                    ToggleButtonGroup {
+                                        size: "sm",
+                                        full_width: true,
+                                        // Swatches read as separate chips, not one
+                                        // segmented control.
+                                        gap: "xs",
+                                        variant: "text",
+                                        value: vec![values().str(control.name)],
+                                        // Clicking the selected swatch would otherwise
+                                        // clear it, leaving the prop with no value.
+                                        onchange: move |next: Vec<String>| {
+                                            if let Some(value) = next.into_iter().next() {
+                                                values.write().0[index].1 = value;
+                                            }
+                                        },
+                                        for option in control.options.iter() {
+                                            ToggleButton {
+                                                key: "{option}",
+                                                value: "{option}",
+                                                aria_label: "{option}",
+                                                // The swatch is the whole button, so
+                                                // the fill reaches the border.
+                                                sx: sx().padding("0"),
+                                                Box {
+                                                    sx: sx()
+                                                        .width("100%")
+                                                        .height("100%")
+                                                        .border_radius("inherit")
+                                                        .background(option.clone())
+                                                        // The palette's own contrast
+                                                        // color, so the tick reads on
+                                                        // every swatch.
+                                                        .color(format!("{option}-contrast"))
+                                                        .display("flex")
+                                                        .align_items("center")
+                                                        .justify_content("center")
+                                                        .selector(
+                                                            "& svg",
+                                                            sx().width("18px").height("18px"),
+                                                        ),
+                                                    if values().str(control.name) == *option {
+                                                        CheckmarkIcon {}
+                                                    }
+                                                }
                                             }
                                         }
                                     }
-                                }
+                                },
+                                ControlKind::Slider => rsx! {
+                                    Slider {
+                                        size: "lg",
+                                        aria_label: control.name,
+                                        min: 0.0,
+                                        max: (control.options.len() - 1) as f64,
+                                        step: 1.0,
+                                        value: control.step_of(&values().str(control.name)),
+                                        // The step index means nothing to a
+                                        // reader - the bubble shows the value
+                                        // it stands for.
+                                        label: {
+                                            let options = control.options.clone();
+                                            move |at: f64| options[at as usize].clone()
+                                        },
+                                        marks: control.marks(),
+                                        on_change: {
+                                            let options = control.options.clone();
+                                            move |event: SliderChangeEvent| {
+                                                let at = event.value() as usize;
+                                                values.write().0[index].1 = options[at].clone();
+                                            }
+                                        },
+                                    }
+                                },
+                                ControlKind::Toggle => rsx! {
+                                    ToggleButtonGroup {
+                                        size: "sm",
+                                        full_width: true,
+                                        value: vec![values().str(control.name)],
+                                        onchange: move |next: Vec<String>| {
+                                            if let Some(value) = next.into_iter().next() {
+                                                values.write().0[index].1 = value;
+                                            }
+                                        },
+                                        for option in control.options.iter() {
+                                            ToggleButton {
+                                                key: "{option}",
+                                                value: "{option}",
+                                                "{option}"
+                                            }
+                                        }
+                                    }
+                                },
                             }
                         }
                     }

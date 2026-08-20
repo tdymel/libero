@@ -1,9 +1,6 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Flex, Text},
-    sx::sx,
-};
+use libero::components::Text;
 
 #[component]
 pub fn TextPage() -> Element {
@@ -14,23 +11,22 @@ pub fn TextPage() -> Element {
                 Text { "Body copy - renders a p by default, sized via the theme's text scale." }
             },
             DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "column",
-                    gap: "sm",
-                    Text { size: "xs", "Extra small" }
-                    Text { size: "sm", "Small" }
-                    Text { size: "md", "Medium (default)" }
-                    Text { size: "lg", "Large" }
-                    Text { size: "xl", "Extra large" }
-                }
-            }
-            DocSection {
-                title: "As a span",
-                Text {
-                    "Inline text with "
-                    Text { component: "span", sx: sx().font_weight("700"), "bold inline text" }
-                    " in the middle."
+                title: "Usage",
+                Demo {
+                    component: "Text",
+                    children_text: "The quick brown fox jumps over the lazy dog.",
+                    controls: vec![
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::toggle("component", ["p", "span", "div"]),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Text {
+                            size: values.str("size"),
+                            component: values.str("component"),
+                            "The quick brown fox jumps over the lazy dog."
+                        }
+                    },
                 }
             }
         }
