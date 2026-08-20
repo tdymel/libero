@@ -26,6 +26,6 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{render_polymorphic, styling_attributes};
 pub(crate) use regex_api::{PreparedText, RegexMatch, regex_api};
 pub use states::{States, states};
-pub(crate) use style_attributes::use_style_attributes;
+pub(crate) use style_attributes::{StyleAttributes, use_style_attributes};
 pub(crate) use util::{attr, css_string, focus_ring_sx};
 pub use variables::{Variables, variables};

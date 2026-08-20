@@ -2,11 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Input, States, Variables,
+        Box, HtmlTag, Input, States, Variables,
         common::{
             base_color, base_props, contrast_color, focus_ring_sx, hover_color, input_from_str,
             variables,
         },
+        layout::use_box,
         navigation::InternalAnchor,
     },
     hooks::use_theme,
@@ -170,16 +171,17 @@ pub fn Button(props: ButtonProps) -> Element {
     let size = props.size.copied_or(theme.button.size);
     let radius = props.radius.copied_or(theme.button.radius);
 
-    let variables = button_variables(variant, &color);
+    let variables: Input<Variables> = button_variables(variant, &color).into();
 
-    let states = props
+    let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
         .with("full-width", full_width)
         .with(variant.state_name(), true)
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true);
+        .with(radius.radius_state_name(), true)
+        .into();
 
     let handle_click = move |event: Event<MouseData>| {
         let point = event.element_coordinates();
@@ -204,6 +206,17 @@ pub fn Button(props: ButtonProps) -> Element {
         }
     };
 
+    // One hook for every path, above the branch: `prepare` is where
+    // `use_style_attributes` runs, and hook order has to be the same on every
+    // render. The renders below are pure.
+    let boxed = use_box()
+        .framework_sx(&BUTTON_BASE_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&states)
+        .variables(&variables)
+        .prepare();
+
     // `InternalAnchor` has no `onclick`: a link-mode Button navigates for
     // real and loses the ripple, which only makes sense on a `<button>`.
     if let Some(to) = props.to.as_ref().cloned() {
@@ -211,20 +224,10 @@ pub fn Button(props: ButtonProps) -> Element {
         // `aria-disabled`/`tabindex` handle the a11y tree and tab order.
         // `InternalAnchor` can't do this - it always resolves a real link.
         if disabled {
-            return rsx! {
-                Box {
-                    component: "a",
-                    class: props.class,
-                    sx: props.sx,
-                    states,
-                    variables,
-                    framework_sx: &BUTTON_BASE_SX,
-                    "aria-disabled": "true",
-                    tabindex: "-1",
-                    attributes: props.attributes,
-                    {props.children}
-                }
-            };
+            return boxed
+                .attr("aria-disabled", "true")
+                .attr("tabindex", "-1")
+                .render(HtmlTag::A, props.attributes, props.children);
         }
 
         return rsx! {
@@ -242,22 +245,18 @@ pub fn Button(props: ButtonProps) -> Element {
         };
     }
 
-    rsx! {
-        Box {
-            component: "button",
-            class: props.class,
-            sx: props.sx,
-            states,
-            variables,
-            framework_sx: &BUTTON_BASE_SX,
-            onclick: handle_click,
-            disabled,
-            r#type: "button",
-            attributes: props.attributes,
-            {ripple_span}
-            {props.children}
-        }
-    }
+    boxed
+        .event("onclick", handle_click)
+        .attr("disabled", disabled)
+        .attr("type", "button")
+        .render(
+            HtmlTag::Button,
+            props.attributes,
+            rsx! {
+                {ripple_span}
+                {props.children}
+            },
+        )
 }
 
 #[cfg(test)]

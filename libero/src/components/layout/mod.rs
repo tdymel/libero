@@ -12,6 +12,7 @@ mod splitter;
 
 pub use aspect_ratio::AspectRatio;
 pub use r#box::Box;
+pub(crate) use r#box::use_box;
 pub use center::Center;
 pub use container::Container;
 pub use divider::{Divider, DividerProps, LabelPosition};

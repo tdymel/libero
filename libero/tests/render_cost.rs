@@ -10,11 +10,11 @@
 //! Baseline on the development machine, 2026-09-01:
 //!
 //! ```text
-//! span      136    0.15x
-//! Leaf      926    1.00x
-//! Box     1,518    1.64x
-//! Text    2,550    2.75x
-//! Button  7,000    7.56x
+//! span      146    0.15x
+//! Leaf      956    1.00x
+//! Box     1,530    1.62x
+//! Text    1,593    1.69x
+//! Button  5,281    5.61x
 //! ```
 //!
 //! `span` is a bare element with no scope; `Leaf` the cheapest possible
