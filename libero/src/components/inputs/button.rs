@@ -5,7 +5,7 @@ use crate::{
         HtmlTag, Input, States,
         common::{
             base_color, base_props, contrast_color, focus_ring_sx, hover_color, input_from_str,
-            variables,
+            selected_color, variables,
         },
         layout::use_box,
         navigation::InternalAnchor,
@@ -14,6 +14,7 @@ use crate::{
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ButtonDefaults, CssVar, Size},
+    utils::warn,
 };
 
 // Optional, since a Button is only a link when set. Costs the direct
@@ -43,6 +44,7 @@ input_from_str!(ButtonVariant);
 const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
 const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
+const BUTTON_SELECTED_VAR: CssVar = CssVar::new("--lsx-button-selected");
 
 /// Structural chrome for `variant`. The three arguments are `var()` names,
 /// not resolved values, so `ActionIcon` reuses this under its own.
@@ -74,6 +76,26 @@ pub(crate) fn button_variant_sx(
     }
 }
 
+/// The `selected` look for `variant`, nested inside that variant's own block.
+/// Ties that block's own `:hover` on specificity, so it has to stay *after* it
+/// in `button_variant_sx`'s output - source order is what settles the two.
+///
+/// Only the background moves: the enclosing variant already sets the label
+/// colour every arm here would want, bar `Text`, whose accent label on its own
+/// tint is ~2.3:1. A literal `color` has no shade scale and so no selected
+/// tint - falling back to the base colour would paint a full-strength
+/// background under an `inherit` label, so the untinted variants fall back to
+/// nothing at all.
+fn button_selected_sx(variant: ButtonVariant, color_var: &CssVar, selected_var: &CssVar) -> Sx {
+    match variant {
+        ButtonVariant::Filled => sx().background(selected_var.value_or(color_var.value())),
+        ButtonVariant::Outlined => sx().background(selected_var.value_or("transparent")),
+        ButtonVariant::Text => sx()
+            .background(selected_var.value_or("transparent"))
+            .color("inherit"),
+    }
+}
+
 static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ripple_sx(ButtonDefaults::theme_vars())
         .display("inline-flex")
@@ -98,6 +120,11 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                     &BUTTON_COLOR_VAR,
                     &BUTTON_CONTRAST_VAR,
                     &BUTTON_HOVER_VAR,
+                )
+                // After the variant's `:hover`, which it ties on specificity.
+                .when(
+                    "checked",
+                    button_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
                 ),
             )
         })
@@ -116,14 +143,19 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
 /// The colour half of the `style` attribute, already rendered. Depends on
 /// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
 /// it off the render path.
-fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue) -> String {
+fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue, selectable: bool) -> String {
+    let filled = variant == ButtonVariant::Filled;
     let contrast = contrast_color(base);
-    let hover = hover_color(base, variant == ButtonVariant::Filled);
+    let hover = hover_color(base, filled);
+    // Only a toggle button ever reads it, and every other button would pay
+    // for the extra declaration in its `style` attribute.
+    let selected = selectable.then(|| selected_color(base, filled)).flatten();
 
     variables()
         .with(BUTTON_COLOR_VAR, base.resolve(None))
         .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, hover)
+        .with(BUTTON_SELECTED_VAR, selected)
         .render()
 }
 
@@ -141,6 +173,10 @@ base_props! {
         size: Input<Size>,
         #[props(default)]
         full_width: Option<bool>,
+        /// Toggle button: renders `aria-pressed` and the selected look.
+        /// `None` leaves the button a plain action.
+        #[props(default)]
+        selected: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
         /// `Option`, not a bare `EventHandler`: a defaulted one allocates a
@@ -165,6 +201,14 @@ pub fn Button(props: ButtonProps) -> Element {
     let color = base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);
+    let selectable = props.selected.is_some();
+    let selected = props.selected.unwrap_or(false);
+
+    if selectable && props.to.as_ref().is_some() {
+        warn(
+            "Button: a link keeps the `selected` look but not `aria-pressed`, which `<a>` has no use for.",
+        );
+    }
 
     let ripple = use_ripple();
 
@@ -174,9 +218,10 @@ pub fn Button(props: ButtonProps) -> Element {
     let showing = ripple.showing();
     // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
     // the same on almost every render of almost every button.
-    let style = use_cache((variant, color), |(variant, color)| {
-        button_variables(*variant, color)
-    });
+    let style = use_cache(
+        (variant, color, selectable),
+        |(variant, color, selectable)| button_variables(*variant, color, *selectable),
+    );
     let style = match showing.as_ref() {
         Some(ripple) => ripple.with_point(style),
         None => style,
@@ -186,10 +231,11 @@ pub fn Button(props: ButtonProps) -> Element {
     // Built in one allocation rather than through `.with()`, which is a
     // `retain` scan and a possible regrow per state. The caller's own states,
     // which are usually absent, keep the merging path.
-    let mut own = Vec::with_capacity(6);
+    let mut own = Vec::with_capacity(7);
     own.extend([
         ("disabled", disabled),
         ("full-width", full_width),
+        ("checked", selected),
         (variant.state_name(), true),
         (size.state_name(), true),
         (radius.radius_state_name(), true),
@@ -261,6 +307,10 @@ pub fn Button(props: ButtonProps) -> Element {
         .event("onclick", handle_click)
         .attr("disabled", disabled)
         .attr_default("type", "button")
+        .attr_default(
+            "aria-pressed",
+            selectable.then_some(if selected { "true" } else { "false" }),
+        )
         .render(HtmlTag::Button, props.attributes, props.children)
 }
 
@@ -273,8 +323,8 @@ mod tests {
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
-        let filled = button_variables(ButtonVariant::Filled, &base);
-        let outlined = button_variables(ButtonVariant::Outlined, &base);
+        let filled = button_variables(ButtonVariant::Filled, &base, false);
+        let outlined = button_variables(ButtonVariant::Outlined, &base, false);
 
         assert!(filled.contains(&format!(
             "{}:{};",
@@ -291,7 +341,7 @@ mod tests {
     #[test]
     fn the_color_variable_is_the_base_color_itself() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
-        let variables = button_variables(ButtonVariant::Filled, &base);
+        let variables = button_variables(ButtonVariant::Filled, &base, false);
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
@@ -305,7 +355,7 @@ mod tests {
     #[test]
     fn an_unparseable_color_emits_no_contrast() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(ButtonVariant::Filled, &base);
+        let variables = button_variables(ButtonVariant::Filled, &base, false);
 
         assert!(!variables.contains(BUTTON_CONTRAST_VAR.name()));
     }

@@ -8,7 +8,7 @@ use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Button},
+    components::{ActionIcon, Button, ToggleButton, ToggleButtonGroup},
 };
 use std::rc::Rc;
 
@@ -161,6 +161,60 @@ fn clicking_a_button_runs_its_ripple() {
 #[test]
 fn clicking_an_action_icon_runs_its_ripple() {
     assert_ripple_alternates(action_icon_app);
+}
+
+/// The group hands its state to the buttons through a context, which
+/// `use_context` reads exactly once - so this asserts the *second* render
+/// sees the new selection, not the one captured at mount.
+#[test]
+fn clicking_a_toggle_button_moves_the_group_selection() {
+    fn app() -> Element {
+        let mut value = use_signal(Vec::<String>::new);
+
+        rsx! {
+            LiberoProvider {
+                ToggleButtonGroup {
+                    value: value(),
+                    onchange: move |next| value.set(next),
+                    ToggleButton { value: "bold", "B" }
+                    ToggleButton { value: "italic", "I" }
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    // The last listener registered, i.e. the second button.
+    let italic = find.click.expect("registered no click listener");
+
+    assert_eq!(
+        pressed_states(&dioxus_ssr::render(&dom)),
+        ["false", "false"]
+    );
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), italic);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(pressed_states(&dioxus_ssr::render(&dom)), ["false", "true"]);
+
+    // Exclusive by default, so clicking it again clears rather than keeps it.
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), italic);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(
+        pressed_states(&dioxus_ssr::render(&dom)),
+        ["false", "false"]
+    );
+}
+
+fn pressed_states(html: &str) -> Vec<String> {
+    html.split("aria-pressed=\"")
+        .skip(1)
+        .map(|rest| rest.split('"').next().unwrap().to_string())
+        .collect()
 }
 
 fn assert_ripple_alternates(app: fn() -> Element) {

@@ -119,6 +119,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ButtonPage {}, "Button"),
                 page(Route::ChipPage {}, "Chip"),
                 page(Route::SwitchPage {}, "Switch"),
+                page(Route::ToggleButtonGroupPage {}, "ToggleButtonGroup"),
                 page(Route::SelectPage {}, "Select"),
                 page(Route::SliderPage {}, "Slider"),
             ],

@@ -19,8 +19,8 @@ use pages::{
     CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage,
     FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage,
     MarkPage, ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage,
-    SidebarPage, SliderPage, SplitterPage, SwitchPage, TextPage, TitlePage, TooltipPage, TreePage,
-    VisuallyHiddenPage,
+    SidebarPage, SliderPage, SplitterPage, SwitchPage, TextPage, TitlePage, ToggleButtonGroupPage,
+    TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -59,6 +59,8 @@ pub(crate) enum Route {
     ChipPage {},
     #[route("/inputs/switch")]
     SwitchPage {},
+    #[route("/inputs/toggle-button-group")]
+    ToggleButtonGroupPage {},
     #[route("/inputs/select")]
     SelectPage {},
     #[route("/inputs/slider")]

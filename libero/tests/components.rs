@@ -12,7 +12,8 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, Container, DataList,
         DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
         List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
-        Slider, SliderMark, Splitter, Switch, Text, Title, Tooltip, Tree, TreeNode, VisuallyHidden,
+        Slider, SliderMark, Splitter, Switch, Text, Title, ToggleButton, ToggleButtonGroup,
+        Tooltip, Tree, TreeNode, VisuallyHidden,
     },
     theme::{Color, Size},
 };
@@ -38,6 +39,68 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
     let span = attributes_of(&html, "span");
     assert_eq!(span["data-state"], "outlined size-md radius-xl checked");
     assert!(body(&html).contains(">tag<"));
+}
+
+#[test]
+fn a_toggle_group_marks_only_the_selected_button_pressed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ToggleButtonGroup {
+                    value: vec!["bold".to_string()],
+                    onchange: move |_| {},
+                    ToggleButton { value: "bold", "B" }
+                    ToggleButton { value: "italic", "I" }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let group = attributes_of(&body, "div");
+
+    assert_eq!(group["role"], "group");
+    assert_eq!(group["data-state"], "horizontal");
+
+    let pressed: Vec<&str> = body
+        .match_indices("aria-pressed=\"")
+        .map(|(at, _)| {
+            let value = &body[at + "aria-pressed=\"".len()..];
+            &value[..value.find('"').expect("an unterminated attribute")]
+        })
+        .collect();
+    assert_eq!(pressed, ["true", "false"]);
+
+    // The selected look is a `data-state`, so one class serves both buttons -
+    // `classes_of` only ever reads the first tag, hence the split.
+    let first_at = body.find("<button").expect("a button");
+    let (first, second) =
+        body.split_at(first_at + body[first_at + 1..].find("<button").expect("two buttons") + 1);
+    assert_eq!(classes_of(first, "button"), classes_of(second, "button"));
+    assert!(attributes_of(first, "button")["data-state"].contains("checked"));
+    assert!(!attributes_of(second, "button")["data-state"].contains("checked"));
+
+    // The framework class comes first; the second is shared with the group.
+    let button_class = classes_of(&body, "button");
+    let button_class = button_class.first().expect("a framework class");
+    assert!(has_rule_for(&html, button_class));
+    // The selected block ties the variant's own `:hover` on specificity, so it
+    // has to be emitted after it - a swap would silently lose the selected
+    // background under the pointer.
+    let selected = format!(".{button_class}[data-state~=\"outlined\"][data-state~=\"checked\"]");
+    let hover = format!(".{button_class}[data-state~=\"outlined\"]:hover");
+    assert!(
+        html.find(&selected).expect("no selected rule") > html.find(&hover).expect("no hover rule")
+    );
+
+    // The inner corners have to beat `Button`'s own radius rule, which is
+    // (0,2,0) in another stylesheet - so the attribute selector is load-bearing.
+    let group_class = classes_of(&body, "div");
+    let group_class = group_class.first().expect("a framework class");
+    assert!(html.contains(&format!(
+        ".{group_class}[data-state~=\"horizontal\"] > [data-state]:not(:first-child)"
+    )));
 }
 
 #[test]

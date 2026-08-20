@@ -122,6 +122,7 @@ fn render_cost_per_component() {
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
+        "ToggleButtonGroup" { ToggleButtonGroup { ToggleButton { value: "a", "x" } } }
 
         "Icon" { Icon { "x" } }
         "Image" { Image { src: "/x.png" } }

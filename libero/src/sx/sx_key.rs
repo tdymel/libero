@@ -112,6 +112,10 @@ properties! {
     Clip => "clip", clip;
     ObjectFit => "object-fit", object_fit;
     BorderRadius => "border-radius", border_radius, SizeCss::RADIUS;
+    BorderTopLeftRadius => "border-top-left-radius", border_top_left_radius, SizeCss::RADIUS;
+    BorderTopRightRadius => "border-top-right-radius", border_top_right_radius, SizeCss::RADIUS;
+    BorderBottomLeftRadius => "border-bottom-left-radius", border_bottom_left_radius, SizeCss::RADIUS;
+    BorderBottomRightRadius => "border-bottom-right-radius", border_bottom_right_radius, SizeCss::RADIUS;
     Cursor => "cursor", cursor;
     Opacity => "opacity", opacity;
     PointerEvents => "pointer-events", pointer_events;

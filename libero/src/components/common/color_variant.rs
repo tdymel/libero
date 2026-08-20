@@ -8,6 +8,13 @@ const DEFAULT_SHADE: ColorShade = ColorShade::S6;
 // Transparent at rest, so these tint on hover instead of darkening.
 const HOVER_TINT_SHADE: ColorShade = ColorShade::S1;
 
+// One step past the hover tint, so a selected control still reads as selected
+// while the pointer is over it.
+const SELECTED_TINT_SHADE: ColorShade = ColorShade::S2;
+
+// Same, for a filled control, whose hover is already one step darker.
+const SELECTED_DARKER_STEPS: usize = 2;
+
 /// The base color a filled/outlined/plain variant is built from. Anything but
 /// a bare theme color name passes through untouched.
 pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
@@ -29,6 +36,23 @@ pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> 
         ),
         _ => None,
     }
+}
+
+/// Background for a selected/pressed control: one step past what
+/// [`hover_color`] would give, in the same direction, so a selected control
+/// still reads as selected under the pointer. `None` for a literal base.
+pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<String> {
+    let ThemeAwareValue::ColorValue(ColorValue::Shade(color, shade)) = base else {
+        return None;
+    };
+
+    let selected = if filled {
+        (0..SELECTED_DARKER_STEPS).fold(*shade, |shade, _| shade.darker())
+    } else {
+        SELECTED_TINT_SHADE
+    };
+
+    Some(ColorValue::Shade(*color, selected).value())
 }
 
 /// Hover color for `base`: darker when `base` is already the background, a
