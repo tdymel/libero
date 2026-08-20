@@ -180,7 +180,10 @@ pub fn Chip(props: ChipProps) -> Element {
         .attr("id", id())
         .attr("checked", checked)
         .attr("disabled", disabled)
-        .event("onchange", move |_: Event<FormData>| {
+        // `onclick`, not `onchange`: cancelling the click reverts the
+        // browser's own flip, so Rust state stays the only source of truth.
+        .event("onclick", move |event: Event<MouseData>| {
+            event.prevent_default();
             if let Some(onchange) = &onchange {
                 onchange.call(!checked);
             }
