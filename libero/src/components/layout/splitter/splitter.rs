@@ -220,20 +220,18 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .render(
             HtmlTag::Div,
             props.attributes,
-            vec![
-                rsx! { div { class: panel_a_class, {panel_a} } },
-                rsx! {
-                    SplitterDivider {
-                        a,
-                        vertical,
-                        size,
-                        min_size,
-                        onpointerdown: drag.onpointerdown,
-                        onkeydown,
-                    }
-                },
-                rsx! { div { class: panel_b_class, {panel_b} } },
-            ],
+            rsx! {
+                div { class: panel_a_class, {panel_a} }
+                SplitterDivider {
+                    a,
+                    vertical,
+                    size,
+                    min_size,
+                    onpointerdown: drag.onpointerdown,
+                    onkeydown,
+                }
+                div { class: panel_b_class, {panel_b} }
+            },
         )
 }
 
