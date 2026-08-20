@@ -177,20 +177,43 @@ fn register(
     }
 }
 
-/// Releases every key a hook still holds, bumping the version once if any went.
-fn release_all(state: &RefCell<Vec<Option<CssRegistration>>>, context: &mut LiberoContext) {
-    let released = state
-        .borrow_mut()
-        .drain(..)
-        .filter_map(|slot| slot.and_then(|prev| prev.key))
-        .fold(false, |_, key| {
-            context.stylesheet_registry.release(key);
-            true
-        });
+/// The registrations one component holds, released when its scope goes.
+///
+/// One hook slot for the context, the slots and the teardown together. A slot
+/// costs ~51 ns per render, and `use_context`/`use_hook`/`use_drop` are three
+/// of them - `use_drop` is itself just a `use_hook` holding an `Rc` with a
+/// `Drop`, so doing it by hand runs at exactly the same point in teardown.
+struct CssRegistrations {
+    context: RefCell<LiberoContext>,
+    slots: RefCell<Vec<Option<CssRegistration>>>,
+}
 
-    if released {
-        *context.stylesheet_registry_version.write() += 1;
+impl Drop for CssRegistrations {
+    fn drop(&mut self) {
+        let context = self.context.get_mut();
+        let released = self
+            .slots
+            .get_mut()
+            .drain(..)
+            .filter_map(|slot| slot.and_then(|prev| prev.key))
+            .fold(false, |_, key| {
+                context.stylesheet_registry.release(key);
+                true
+            });
+
+        if released {
+            *context.stylesheet_registry_version.write() += 1;
+        }
     }
+}
+
+fn use_css_registrations(slots: usize) -> Rc<CssRegistrations> {
+    use_hook(|| {
+        Rc::new(CssRegistrations {
+            context: RefCell::new(consume_context::<LiberoContext>()),
+            slots: RefCell::new((0..slots).map(|_| None).collect()),
+        })
+    })
 }
 
 /// A signal write during render, sound only because `StyleOutlet` renders
@@ -207,23 +230,17 @@ fn bump_if_changed(changed: bool, context: &mut LiberoContext) {
 /// Takes an `Option` so a caller with nothing to register still calls it:
 /// hook slots are positional.
 pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option<String> {
-    let mut context = use_context::<LiberoContext>();
-    let state = use_hook(|| Rc::new(RefCell::new(vec![None::<CssRegistration>])));
+    let state = use_css_registrations(1);
+    let context = &mut *state.context.borrow_mut();
 
-    let (class_name, changed) = register(&mut state.borrow_mut()[0], source, layer, &mut context);
-    bump_if_changed(changed, &mut context);
-
-    use_drop({
-        let state = state.clone();
-        let mut context = context;
-        move || release_all(&state, &mut context)
-    });
+    let (class_name, changed) = register(&mut state.slots.borrow_mut()[0], source, layer, context);
+    bump_if_changed(changed, context);
 
     class_name
 }
 
-/// The three registrations every `Box`-shaped component makes, behind **one**
-/// hook slot, one context read and one `use_drop`.
+/// The three registrations every `Box`-shaped component makes, behind one
+/// hook slot.
 ///
 /// Three `use_css` calls cost ~180 ns each of which only ~28 ns is real work -
 /// the rest is per-hook plumbing. Sharing it is worth ~360 ns per component.
@@ -232,11 +249,11 @@ pub(crate) fn use_box_css(
     framework: Option<&'static StaticSx>,
     sx: Option<SxSource<'_>>,
 ) -> (Option<String>, Option<String>, Option<String>) {
-    let mut context = use_context::<LiberoContext>();
-    let state = use_hook(|| Rc::new(RefCell::new(vec![None, None, None])));
+    let state = use_css_registrations(3);
+    let context = &mut *state.context.borrow_mut();
 
     let (focus_class, framework_class, static_class, changed) = {
-        let mut slots = state.borrow_mut();
+        let mut slots = state.slots.borrow_mut();
         let (slots, sx_slot) = slots.split_at_mut(2);
         let (focus_slot, framework_slot) = slots.split_at_mut(1);
 
@@ -244,16 +261,16 @@ pub(crate) fn use_box_css(
             &mut focus_slot[0],
             Some(focus),
             CssLayer::Framework,
-            &mut context,
+            context,
         );
         let (framework_class, framework_changed) = register(
             &mut framework_slot[0],
             framework,
             CssLayer::Framework,
-            &mut context,
+            context,
         );
         let (static_class, sx_changed) =
-            register(&mut sx_slot[0], sx, CssLayer::UserStatic, &mut context);
+            register(&mut sx_slot[0], sx, CssLayer::UserStatic, context);
 
         (
             focus_class,
@@ -262,13 +279,7 @@ pub(crate) fn use_box_css(
             focus_changed || framework_changed || sx_changed,
         )
     };
-    bump_if_changed(changed, &mut context);
-
-    use_drop({
-        let state = state.clone();
-        let mut context = context;
-        move || release_all(&state, &mut context)
-    });
+    bump_if_changed(changed, context);
 
     (focus_class, framework_class, static_class)
 }
