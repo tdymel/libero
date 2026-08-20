@@ -120,6 +120,7 @@ fn render_cost_per_component() {
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
         "Select" { Select { value: "a", Option { value: "a", "x" } } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
+        "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
 
         "Icon" { Icon { "x" } }

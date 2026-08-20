@@ -6,8 +6,9 @@ use super::{
     ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults,
     OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis,
     ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel, SidebarDefaults, Size,
-    Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults, TextDefaults, TextSize,
-    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    TextDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
+    TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -36,6 +37,7 @@ pub struct Theme {
     pub scroll_area: ScrollAreaDefaults,
     pub button: ButtonDefaults,
     pub chip: ChipDefaults,
+    pub switch: SwitchDefaults,
     pub select: SelectDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
@@ -198,6 +200,48 @@ impl Theme {
                     font_size: "1rem",
                     height: "40px",
                     padding_x: "18px",
+                },
+            ),
+        },
+        switch: SwitchDefaults {
+            size: Size::Md,
+            radius: Size::Xl,
+            sizes: Sizes::new(
+                SwitchSizeLevel {
+                    track_width: "30px",
+                    track_height: "16px",
+                    thumb_size: "12px",
+                    font_size: "0.75rem",
+                },
+                SwitchSizeLevel {
+                    track_width: "34px",
+                    track_height: "18px",
+                    thumb_size: "14px",
+                    font_size: "0.8125rem",
+                },
+                SwitchSizeLevel {
+                    track_width: "42px",
+                    track_height: "22px",
+                    thumb_size: "18px",
+                    font_size: "0.875rem",
+                },
+                SwitchSizeLevel {
+                    track_width: "50px",
+                    track_height: "26px",
+                    thumb_size: "22px",
+                    font_size: "0.9375rem",
+                },
+                SwitchSizeLevel {
+                    track_width: "58px",
+                    track_height: "30px",
+                    thumb_size: "26px",
+                    font_size: "1rem",
+                },
+                SwitchSizeLevel {
+                    track_width: "66px",
+                    track_height: "34px",
+                    thumb_size: "30px",
+                    font_size: "1.0625rem",
                 },
             ),
         },

@@ -19,7 +19,7 @@ use pages::{
     CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage,
     FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage,
     MarkPage, ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage,
-    SidebarPage, SliderPage, SplitterPage, TextPage, TitlePage, TooltipPage, TreePage,
+    SidebarPage, SliderPage, SplitterPage, SwitchPage, TextPage, TitlePage, TooltipPage, TreePage,
     VisuallyHiddenPage,
 };
 
@@ -57,6 +57,8 @@ pub(crate) enum Route {
     ButtonPage {},
     #[route("/inputs/chip")]
     ChipPage {},
+    #[route("/inputs/switch")]
+    SwitchPage {},
     #[route("/inputs/select")]
     SelectPage {},
     #[route("/inputs/slider")]

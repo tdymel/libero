@@ -89,6 +89,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         splitter,
         button,
         chip,
+        switch,
         select,
         slider,
         list,
@@ -140,6 +141,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(splitter.to_css_declarations());
     declarations.extend(button.to_css_declarations());
     declarations.extend(chip.to_css_declarations());
+    declarations.extend(switch.to_css_declarations());
     declarations.extend(select.to_css_declarations());
     declarations.extend(slider.to_css_declarations());
     declarations.extend(list.to_css_declarations());
@@ -248,6 +250,9 @@ mod tests {
     #[test]
     fn theme_css_declares_component_defaults() {
         assert_declares(&[
+            ("--lsx-switch-track-width-md", "42px"),
+            ("--lsx-switch-track-height-md", "22px"),
+            ("--lsx-switch-thumb-size-md", "18px"),
             ("--lsx-button-font-size-md", "1rem"),
             ("--lsx-button-height-md", "42px"),
             ("--lsx-button-padding-x-md", "18px"),

@@ -12,7 +12,7 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, Container, DataList,
         DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
         List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
-        Slider, SliderMark, Splitter, Text, Title, Tooltip, Tree, TreeNode, VisuallyHidden,
+        Slider, SliderMark, Splitter, Switch, Text, Title, Tooltip, Tree, TreeNode, VisuallyHidden,
     },
     theme::{Color, Size},
 };
@@ -38,6 +38,46 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
     let span = attributes_of(&html, "span");
     assert_eq!(span["data-state"], "outlined size-md radius-xl checked");
     assert!(body(&html).contains(">tag<"));
+}
+
+#[test]
+fn a_switch_renders_a_checkbox_its_label_points_at() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Switch { checked: true, onchange: move |_| {}, "wifi" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let input = attributes_of(&html, "input");
+
+    assert_eq!(input["type"], "checkbox");
+    assert_eq!(input["role"], "switch");
+    assert!(html.contains("checked=true"));
+    // The label points at the input, and wraps the track - so clicking the
+    // visible switch toggles it, not just the text.
+    assert_eq!(attributes_of(&html, "label")["for"], input["id"]);
+
+    let span = attributes_of(&html, "span");
+    assert_eq!(span["data-state"], "size-md radius-xl checked");
+    assert!(body(&html).contains(">wifi<"));
+}
+
+#[test]
+fn a_switch_without_children_is_named_by_its_aria_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Switch { aria_label: "Airplane mode", checked: false, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(attributes_of(&html, "input")["aria-label"], "Airplane mode");
 }
 
 #[test]
@@ -910,4 +950,3 @@ fn tooltip_opens_on_hover_and_a_controlled_state_wins_by_source_order() {
     );
     assert_eq!(attributes_of(&html, "span")["data-state"], "opened");
 }
-
