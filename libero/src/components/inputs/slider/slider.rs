@@ -18,9 +18,22 @@ use crate::{
     utils::warn,
 };
 
+/// A unitless 0-1 fraction, not a percentage: everything positioned along the
+/// track multiplies it by the travel, which is a `calc` of two lengths.
 const SLIDER_FILLED: CssVar = CssVar::new("--lsx-slider-filled");
 const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
+
+/// Where a 0-1 `fraction` sits along the track. The track is the full width,
+/// so the thumb travels inset by half its own width and never overhangs -
+/// which is also what keeps stacked sliders of different sizes aligned.
+fn along_track(fraction: CssVar) -> String {
+    let thumb = SLIDER_THUMB.value();
+    format!(
+        "calc({thumb} / 2 + {} * (100% - {thumb}))",
+        fraction.value_or("0")
+    )
+}
 
 /// Where the value went, and how far along the interaction is. `Start` and
 /// `End` bracket one pointer drag; a key press emits a lone `Change`.
@@ -72,13 +85,9 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .position("relative")
         // A flex/grid parent sizes to content, and the track is empty - so
-        // without this the whole slider collapses to its two paddings.
+        // without this the whole slider collapses to nothing.
         .width("100%")
         .min_height(SLIDER_THUMB.value())
-        // Mantine's reserve: the track's own thickness, not the thumb's - the
-        // thumb is centred on its value and overhangs the ends by design.
-        .padding_left(SLIDER_TRACK.value())
-        .padding_right(SLIDER_TRACK.value())
         .user_select("none")
         // Captions sit below the root, so they need reserved space or they
         // overlap whatever follows. Padding, not margin: a margin collapses
@@ -112,7 +121,7 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         .top("0")
         .bottom("0")
         .left("0")
-        .width(SLIDER_FILLED.value_or("0%"))
+        .width(along_track(SLIDER_FILLED))
         .background(SLIDER_COLOR.value())
         .border_radius("inherit")
 });
@@ -122,7 +131,7 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
 static SLIDER_THUMB_ANCHOR_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("50%")
-        .left(SLIDER_FILLED.value_or("0%"))
+        .left(along_track(SLIDER_FILLED))
         .transform("translate(-50%, -50%)")
         // Not inline: the tooltip's inline-block wrapper would sit on a
         // baseline and pull the thumb off the track's centre.
@@ -145,7 +154,7 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
 static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("50%")
-        .left(SLIDER_MARK_AT.value_or("0%"))
+        .left(along_track(SLIDER_MARK_AT))
         .transform("translate(-50%, -50%)")
         .width(format!("calc({} + 2px)", SLIDER_TRACK.value()))
         .height(format!("calc({} + 2px)", SLIDER_TRACK.value()))
@@ -165,7 +174,7 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
             SLIDER_THUMB.value(),
             SizeCss::SPACING.value(Size::Xs)
         ))
-        .left(SLIDER_MARK_AT.value_or("0%"))
+        .left(along_track(SLIDER_MARK_AT))
         .transform("translateX(-50%)")
         .color("grey.7")
         .white_space("nowrap")
@@ -173,7 +182,7 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
 
 fn slider_variables(filled: f64, base: &ThemeAwareValue) -> Variables {
     variables()
-        .with(SLIDER_FILLED, Some(format!("{}%", filled * 100.0)))
+        .with(SLIDER_FILLED, Some(filled.to_string()))
         .with(SLIDER_COLOR, base.resolve(None))
 }
 
@@ -245,6 +254,7 @@ pub fn Slider(props: SliderProps) -> Element {
     // Measured off the track at pointerdown, when layout is known settled.
     let track_left = use_local_state(|| 0.0_f64);
     let track_width = use_local_state(|| 0.0_f64);
+    let thumb_width = use_local_state(|| 0.0_f64);
     // What `End` reports: the drag's own last value, which a controlled
     // parent may not have echoed back yet.
     let latest = use_local_state(|| value);
@@ -263,14 +273,21 @@ pub fn Slider(props: SliderProps) -> Element {
     // A `Callback`, not a closure: `LocalState` is not `Copy`, and two drag
     // handlers need this.
     let value_at = {
-        let (track_left, track_width) = (track_left.clone(), track_width.clone());
+        let (track_left, track_width, thumb_width) = (
+            track_left.clone(),
+            track_width.clone(),
+            thumb_width.clone(),
+        );
         use_callback(move |client_x: f64| {
-            let width = track_width.get();
-            if width <= 0.0 {
+            let thumb = thumb_width.get();
+            // The thumb's centre only travels between the two half-thumb
+            // insets, so the pointer has to be mapped over that span too.
+            let travel = track_width.get() - thumb;
+            if travel <= 0.0 {
                 return None;
             }
             Some(snap(
-                min + (client_x - track_left.get()) / width * (max - min),
+                min + (client_x - track_left.get() - thumb / 2.0) / travel * (max - min),
                 min,
                 max,
                 step,
@@ -295,17 +312,20 @@ pub fn Slider(props: SliderProps) -> Element {
                 return false;
             }
 
+            let Ok(thumb) = dom_api().query_selector(&format!("#{}", thumb_id())) else {
+                return false;
+            };
+
             track_left.set(left);
             track_width.set(dimensions.width);
+            thumb_width.set(thumb.dimensions().map_or(0.0, |size| size.width));
 
             match value_at.call(event.client.x) {
                 Some(value) => {
                     // `use_drag` cancels the pointerdown, which cancels the
                     // browser's own focus - so the keyboard would be
                     // unreachable after a mouse drag.
-                    let _ = dom_api()
-                        .query_selector(&format!("#{}", thumb_id()))
-                        .and_then(|thumb| thumb.focus());
+                    let _ = thumb.focus();
                     emit.call(SliderChangeEvent::Start(value));
                     true
                 }
@@ -380,7 +400,7 @@ pub fn Slider(props: SliderProps) -> Element {
         let at = variables()
             .with(
                 SLIDER_MARK_AT,
-                Some(format!("{}%", fraction(mark.value, min, max) * 100.0)),
+                Some(fraction(mark.value, min, max).to_string()),
             )
             .render();
         let caption = mark.label.clone().map(|label| {

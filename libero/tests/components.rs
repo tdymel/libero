@@ -60,13 +60,13 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     let root = attributes_of(&html, "div");
 
     assert_eq!(root["data-state"], "size-md radius-xl marks-labeled");
-    assert!(root["style"].contains("--lsx-slider-filled:25%;"));
+    assert!(root["style"].contains("--lsx-slider-filled:0.25;"));
 
     // The thumb carries the a11y contract; the mark carries its position.
     assert!(html.contains(r#"role="slider""#));
     assert!(html.contains(r#"aria-label="Volume""#));
     assert!(html.contains("aria-valuenow=25"));
-    assert!(html.contains("--lsx-slider-mark-at:50%"));
+    assert!(html.contains("--lsx-slider-mark-at:0.5"));
     assert!(body(&html).contains(">half<"));
     // The value bubble is a `Tooltip`.
     assert!(html.contains(r#"role="tooltip""#));
