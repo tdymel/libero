@@ -12,8 +12,9 @@ use crate::icons::CheckmarkIcon;
 
 use super::{Control, ControlKind};
 
-/// `"color"` -> `"Color"`. Prop names are the control labels.
+/// `"line_numbers"` -> `"Line numbers"`. Prop names are the control labels.
 fn label(name: &str) -> String {
+    let name = name.replace('_', " ");
     let mut chars = name.chars();
     match chars.next() {
         Some(first) => first.to_uppercase().collect::<String>() + chars.as_str(),
@@ -47,6 +48,22 @@ impl PartialEq for Wrap {
     }
 }
 
+/// The child the generated rsx prints, when a control decides it. A
+/// page-level constant, so two are always equal.
+#[derive(Clone, Copy)]
+pub struct Child(pub fn(&DemoValues) -> String);
+
+impl PartialEq for Child {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
+/// Indents generated rsx one level, for a `Wrap` that nests it.
+pub fn indent(code: &str) -> String {
+    code.lines().map(|line| format!("    {line}\n")).collect()
+}
+
 /// A live example: `render` on the left, a control per prop on the right,
 /// and the rsx those values add up to below.
 #[component]
@@ -58,6 +75,9 @@ pub fn Demo(
     /// Must match what `render` draws around the component - the code block is
     /// a promise that copy-pasting reproduces the preview.
     wrap: Option<Wrap>,
+    /// Overrides `children_text` per control state, for a child a control turns
+    /// on and off.
+    child: Option<Child>,
 ) -> Element {
     let mut values = use_signal(|| {
         DemoValues(
@@ -68,6 +88,10 @@ pub fn Demo(
         )
     });
 
+    let children_text = match child {
+        Some(Child(child)) => child(&values()),
+        None => children_text.clone(),
+    };
     let source = super::generate_code(&component, &children_text, &controls, &values());
     let source = match wrap {
         Some(Wrap(wrap)) => wrap(&values(), &source),

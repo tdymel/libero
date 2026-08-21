@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -103,7 +103,7 @@ fn wrap_inline(values: &DemoValues, code: &str) -> String {
         return code.to_string();
     }
     let (before, _, after) = inline_example(&values.str("language"));
-    let indented: String = code.lines().map(|line| format!("    {line}\n")).collect();
+    let indented = indent(code);
     format!("Text {{\n    {before:?}\n{indented}    {after:?}\n}}")
 }
 
