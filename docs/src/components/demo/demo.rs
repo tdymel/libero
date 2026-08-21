@@ -5,7 +5,7 @@ use libero::{
         ToggleButton, ToggleButtonGroup,
     },
     sx::sx,
-    theme::{CODE_BORDER, Size},
+    theme::{CODE_BORDER, Size, TEXT_FONT_SIZE},
 };
 
 use crate::icons::CheckmarkIcon;
@@ -70,6 +70,9 @@ pub fn indent(code: &str) -> String {
 pub fn Demo(
     component: String,
     children_text: String,
+    /// Literal rsx for the children, printed verbatim - for children that are
+    /// a subtree rather than one string. Wins over `children_text`.
+    children_code: Option<String>,
     controls: Vec<Control>,
     render: Callback<DemoValues, Element>,
     /// Must match what `render` draws around the component - the code block is
@@ -92,7 +95,13 @@ pub fn Demo(
         Some(Child(child)) => child(&values()),
         None => children_text.clone(),
     };
-    let source = super::generate_code(&component, &children_text, &controls, &values());
+    let source = super::generate_code(
+        &component,
+        &children_text,
+        children_code.as_deref(),
+        &controls,
+        &values(),
+    );
     let source = match wrap {
         Some(Wrap(wrap)) => wrap(&values(), &source),
         None => source,
@@ -126,7 +135,7 @@ pub fn Demo(
                 }
                 Flex {
                     direction: "column",
-                    gap: "md",
+                    gap: "lg",
                     // Wrapped, the controls sit below the preview, so the
                     // divider has to move with them.
                     sx: sx()
@@ -147,7 +156,9 @@ pub fn Demo(
                         Flex {
                             key: "{control.name}",
                             direction: "column",
-                            gap: "xs",
+                            // The slider's bubble sits above its track, so it
+                            // needs more room under the label than the rest.
+                            gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
                             // `Select` renders its own `<label>`, which is
                             // what names it - a second one would duplicate it.
                             if control.kind != ControlKind::Select {
@@ -236,6 +247,11 @@ pub fn Demo(
                                     Select {
                                         size: "sm",
                                         label: label(control.name),
+                                        // Matches the `Text { size: "sm" }`
+                                        // label every other control kind gets.
+                                        label_sx: sx()
+                                            .font_weight("600")
+                                            .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
                                         value: values().str(control.name),
                                         onchange: move |value: String| {
                                             values.write().0[index].1 = value;

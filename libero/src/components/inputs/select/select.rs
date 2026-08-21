@@ -1,13 +1,12 @@
 use dioxus::prelude::*;
 
 use crate::{
-    CssLayer,
     components::{
         HtmlTag, Input, States,
         common::{base_props, focus_ring_sx},
         layout::use_box,
     },
-    hooks::{use_css, use_local_state, use_theme},
+    hooks::{use_local_state, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{SelectDefaults, Size},
 };
@@ -15,7 +14,7 @@ use crate::{
 static SELECT_WRAPPER_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").flex_direction("column").gap("4px"));
 
-static SELECT_LABEL_SX: StaticSx = StaticSx::new(|| sx().font_size("0.75rem").color("grey.7"));
+static SELECT_LABEL_SX: StaticSx = StaticSx::new(|| sx().font_size("0.75rem"));
 
 static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
     SelectDefaults::theme_vars()
@@ -44,6 +43,9 @@ base_props! {
         onchange: Option<EventHandler<String>>,
         #[props(default)]
         label: Option<String>,
+        /// Styles the label alone - the rest of `sx` lands on the wrapper.
+        #[props(default, into)]
+        label_sx: Input<Sx>,
         children: Element,
     }
 }
@@ -82,10 +84,13 @@ pub fn Select(props: SelectProps) -> Element {
         .framework_sx(&SELECT_BASE_SX)
         .states(&states)
         .prepare();
-    let label_class = use_css(Some(&SELECT_LABEL_SX), CssLayer::Framework);
+    let label_box = use_box()
+        .framework_sx(&SELECT_LABEL_SX)
+        .sx(&props.label_sx)
+        .prepare();
 
     let label = match &props.label {
-        Some(label) => rsx! { span { class: label_class, {label.clone()} } },
+        Some(label) => label_box.render(HtmlTag::Span, Vec::new(), rsx! { {label.clone()} }),
         None => rsx! {},
     };
 

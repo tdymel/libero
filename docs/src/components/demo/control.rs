@@ -151,6 +151,7 @@ impl Control {
 pub fn generate_code(
     component: &str,
     children_text: &str,
+    children_code: Option<&str>,
     controls: &[Control],
     values: &DemoValues,
 ) -> String {
@@ -169,9 +170,12 @@ pub fn generate_code(
         .collect();
 
     // A component driven entirely by props (`Code`'s `source`) has no child.
-    let child = (!children_text.is_empty()).then(|| format!("{children_text:?}"));
+    let child = children_code
+        .map(str::to_string)
+        .or_else(|| (!children_text.is_empty()).then(|| format!("{children_text:?}")));
+    let one_line = child.as_ref().is_none_or(|child| !child.contains('\n'));
 
-    match (set.is_empty(), &child) {
+    match (set.is_empty() && one_line, &child) {
         (true, None) => format!("{component} {{}}"),
         (true, Some(child)) => format!("{component} {{ {child} }}"),
         (false, _) => {
@@ -179,10 +183,7 @@ pub fn generate_code(
                 .iter()
                 .map(|prop| format!("    {prop},\n"))
                 .collect::<String>();
-            let child = child
-                .as_ref()
-                .map(|child| format!("    {child}\n"))
-                .unwrap_or_default();
+            let child = child.as_deref().map(super::indent).unwrap_or_default();
             format!("{component} {{\n{props}{child}}}")
         }
     }

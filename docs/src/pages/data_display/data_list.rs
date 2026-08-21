@@ -30,11 +30,16 @@ pub fn DataListPage() -> Element {
                     Code { source: "dd" }
                     " with no extra ceremony over a single description - including from a "
                     Code { source: "for" }
-                    " loop, which flattens the same way. Needs the "
-                    Code { source: "dioxus-fork" }
-                    " build - against upstream dioxus main the descriptions collapse into a single "
-                    Code { source: "dd" }
-                    "."
+                    " loop, which flattens the same way."
+                    // The split is a fork-only capability, so on main the page
+                    // says what this build actually does instead.
+                    if !cfg!(feature = "dioxus-fork") {
+                        " Needs the "
+                        Code { source: "dioxus-fork" }
+                        " build - against upstream dioxus main the descriptions collapse into a single "
+                        Code { source: "dd" }
+                        "."
+                    }
                 }
             },
             DocSection {
