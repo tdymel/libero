@@ -1,4 +1,4 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Flex, Text};
 
@@ -21,37 +21,51 @@ pub fn ChipPage() -> Element {
                 }
             },
             DocSection {
-                title: "Variants",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Chip { variant: "filled", "Filled" }
-                    Chip { variant: "outlined", "Outlined" }
-                    Chip { variant: "text", "Text" }
-                }
-            }
-            DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    align: "center",
-                    Chip { size: "xs", "Extra small" }
-                    Chip { size: "sm", "Small" }
-                    Chip { size: "md", "Medium" }
-                    Chip { size: "lg", "Large" }
-                    Chip { size: "xl", "Extra large" }
-                }
-            }
-            DocSection {
-                title: "Colors",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Chip { color: "primary", "Primary" }
-                    Chip { color: "success", "Success" }
-                    Chip { color: "error", "Error" }
-                    Chip { color: "warning", "Warning" }
+                title: "Usage",
+                Demo {
+                    component: "Chip",
+                    children_text: "rust",
+                    controls: vec![
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        ),
+                        Control::toggle("variant", ["outlined", "filled", "text"]),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("xl"),
+                        // Controlled state is `checked` + `onchange`; the
+                        // library warns about one without the other.
+                        Control::switch("checked").code(|_, values| {
+                            match values.str("checked").as_str() {
+                                "true" => vec![
+                                    "checked: true".to_string(),
+                                    "onchange: move |_| {}".to_string(),
+                                ],
+                                _ => vec![],
+                            }
+                        }),
+                        Control::switch("disabled"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Chip {
+                            color: values.str("color"),
+                            variant: values.str("variant"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            // Both or neither: `checked` alone can never
+                            // change, `onchange` alone can never look selected.
+                            checked: match values.str("checked").as_str() {
+                                "true" => Some(true),
+                                _ => None,
+                            },
+                            onchange: (values.str("checked") == "true")
+                                .then(|| EventHandler::new(move |_: bool| {})),
+                            disabled: values.str("disabled") == "true",
+                            "rust"
+                        }
+                    },
                 }
             }
             DocSection {
@@ -90,16 +104,6 @@ pub fn ChipPage() -> Element {
                     }
                 }
                 Text { "Selected: {selected():?}" }
-            }
-            DocSection {
-                title: "Disabled",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Chip { variant: "filled", disabled: true, "Filled" }
-                    Chip { disabled: true, "Outlined" }
-                    Chip { disabled: true, checked: true, onchange: move |_| {}, "Selected" }
-                }
             }
         }
     }
