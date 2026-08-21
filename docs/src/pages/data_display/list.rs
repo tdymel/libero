@@ -1,4 +1,4 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Flex, Icon, List, ListItem, Text},
@@ -49,6 +49,19 @@ fn TreeFile(label: &'static str) -> Element {
     }
 }
 
+/// The items are the fixture here - `size` is the only prop - so the code
+/// block prints them verbatim. Only the outer list carries `size`: nested
+/// indent comes from the *parent*'s `& ul` rule.
+const CHILDREN: &str = r#"ListItem { "First item" }
+ListItem { "Second item" }
+ListItem {
+    "Third item, with a nested list"
+    List {
+        ListItem { "Nested one" }
+        ListItem { "Nested two" }
+    }
+}"#;
+
 #[component]
 pub fn ListPage() -> Element {
     rsx! {
@@ -69,17 +82,29 @@ pub fn ListPage() -> Element {
                 }
             },
             DocSection {
-                title: "Example",
-                List {
-                    ListItem { "First item" }
-                    ListItem { "Second item" }
-                    ListItem {
-                        "Third item, with a nested list"
+                title: "Usage",
+                Demo {
+                    component: "List",
+                    children_text: "",
+                    children_code: CHILDREN,
+                    controls: vec![
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
                         List {
-                            ListItem { "Nested one" }
-                            ListItem { "Nested two" }
+                            size: values.str("size"),
+                            ListItem { "First item" }
+                            ListItem { "Second item" }
+                            ListItem {
+                                "Third item, with a nested list"
+                                List {
+                                    ListItem { "Nested one" }
+                                    ListItem { "Nested two" }
+                                }
+                            }
                         }
-                    }
+                    },
                 }
             }
             DocSection {
