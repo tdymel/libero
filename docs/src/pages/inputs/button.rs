@@ -1,4 +1,4 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Flex, Text},
@@ -18,46 +18,41 @@ pub fn ButtonPage() -> Element {
                 }
             },
             DocSection {
-                title: "Variants",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Button { variant: "filled", "Filled" }
-                    Button { variant: "outlined", "Outlined" }
-                    Button { variant: "text", "Text" }
-                }
-            }
-            DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    align: "center",
-                    Button { variant: "filled", size: "xs", "Extra small" }
-                    Button { variant: "filled", size: "sm", "Small" }
-                    Button { variant: "filled", size: "md", "Medium" }
-                    Button { variant: "filled", size: "lg", "Large" }
-                    Button { variant: "filled", size: "xl", "Extra large" }
-                }
-            }
-            DocSection {
-                title: "Colors",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Button { variant: "filled", color: "primary", "Primary" }
-                    Button { variant: "filled", color: "success", "Success" }
-                    Button { variant: "filled", color: "error", "Error" }
-                    Button { variant: "filled", color: "warning", "Warning" }
-                }
-            }
-            DocSection {
-                title: "Disabled",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Button { variant: "filled", disabled: true, "Filled" }
-                    Button { variant: "outlined", disabled: true, "Outlined" }
+                title: "Usage",
+                Demo {
+                    component: "Button",
+                    children_text: "Save changes",
+                    controls: vec![
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        ),
+                        Control::toggle("variant", ["outlined", "filled", "text"]),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::switch("full_width"),
+                        Control::switch("selected"),
+                        Control::switch("disabled"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Button {
+                            color: values.str("color"),
+                            variant: values.str("variant"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            full_width: values.str("full_width") == "true",
+                            // `Some(false)` is still a toggle button
+                            // (`aria-pressed="false"`); unset is not.
+                            selected: match values.str("selected").as_str() {
+                                "true" => Some(true),
+                                _ => None,
+                            },
+                            disabled: values.str("disabled") == "true",
+                            "Save changes"
+                        }
+                    },
                 }
             }
             DocSection {
