@@ -423,6 +423,25 @@ fn select_renders_its_options_and_current_value() {
 }
 
 #[test]
+fn a_disabled_select_renders_the_attribute() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Select {
+                    value: "a",
+                    disabled: true,
+                    Option { value: "a", "First" }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(body(&html).contains("disabled"));
+}
+
+#[test]
 fn divider_renders_as_a_separator() {
     fn app() -> Element {
         rsx! {

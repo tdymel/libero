@@ -27,6 +27,12 @@ static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
         .color("black")
         .cursor("pointer")
         .hover(sx().border_color("grey.7"))
+        .when(
+            "disabled",
+            sx().opacity("0.5")
+                .cursor("not-allowed")
+                .background("grey.1"),
+        )
         .focus_visible(focus_ring_sx())
 });
 
@@ -41,6 +47,8 @@ base_props! {
         value: String,
         #[props(default)]
         onchange: Option<EventHandler<String>>,
+        #[props(default)]
+        disabled: Option<bool>,
         #[props(default)]
         label: Option<String>,
         /// Styles the label alone - the rest of `sx` lands on the wrapper.
@@ -57,11 +65,13 @@ pub fn Select(props: SelectProps) -> Element {
     let size = props.size.copied_or(theme.select.size);
     let radius = props.radius.copied_or(theme.select.radius);
 
+    let disabled = props.disabled.unwrap_or(false);
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true)
+        .with("disabled", disabled)
         .into();
 
     // The `<option>`s mount in the same pass as the `<select>`, so on the
@@ -96,6 +106,7 @@ pub fn Select(props: SelectProps) -> Element {
 
     let select = select
         .attr("value", value)
+        .attr("disabled", disabled)
         .event("onchange", move |event: FormEvent| {
             if let Some(onchange) = &props.onchange {
                 onchange.call(event.value());
