@@ -1,11 +1,26 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
 use dioxus::prelude::*;
 use libero::{
-    components::{ActionIcon, Code, Flex, Text},
+    components::{ActionIcon, Code, Input, Text},
     sx::sx,
 };
 
 use crate::icons::CheckmarkIcon;
+
+/// The svg the button wraps - a subtree, so the code block prints it verbatim.
+const CHILDREN: &str = "CheckmarkIcon {}";
+
+/// `"none"` is unset, and unset is what makes the button inherit its
+/// surroundings rather than draw a badge.
+fn or_plain<T>(value: String) -> Input<T>
+where
+    Input<T>: From<String>,
+{
+    match value.as_str() {
+        "none" => Input::None,
+        _ => Input::from(value),
+    }
+}
 
 #[component]
 pub fn ActionIconPage() -> Element {
@@ -22,37 +37,46 @@ pub fn ActionIconPage() -> Element {
                 }
             },
             DocSection {
-                title: "Variants",
-                Flex {
-                    direction: "row",
-                    gap: "xxl",
-                    Flex {
-                        direction: "column",
-                        align: "center",
-                        gap: "sm",
-                        ActionIcon { variant: "filled", color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
-                        Text { size: "sm", "Filled" }
-                    }
-                    Flex {
-                        direction: "column",
-                        align: "center",
-                        gap: "sm",
-                        ActionIcon { variant: "outlined", color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
-                        Text { size: "sm", "Outlined" }
-                    }
-                    Flex {
-                        direction: "column",
-                        align: "center",
-                        gap: "sm",
-                        ActionIcon { variant: "transparent", color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
-                        Text { size: "sm", "Transparent" }
-                    }
+                title: "Usage",
+                Demo {
+                    component: "ActionIcon",
+                    children_text: "",
+                    children_code: CHILDREN,
+                    fixed: vec!["aria_label: \"Confirm\"".to_string()],
+                    controls: vec![
+                        Control::toggle("variant", ["none", "filled", "outlined", "transparent"]),
+                        // A bare `primary` is what an unset `color` resolves
+                        // to, so that swatch prints nothing.
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        ),
+                        Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                        Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                        Control::switch("disabled"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        ActionIcon {
+                            variant: or_plain(values.str("variant")),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
+                            },
+                            size: or_unset(values.str("size")),
+                            radius: or_unset(values.str("radius")),
+                            disabled: values.str("disabled") == "true",
+                            aria_label: "Confirm",
+                            CheckmarkIcon {}
+                        }
+                    },
                 }
             }
             DocSection {
                 title: "No variant or color",
                 Text {
-                    "With neither set, "
+                    "With neither set - the demo's "
+                    Code { source: "none" }
+                    " variant - "
                     Code { source: "ActionIcon" }
                     " contributes no background/color of its own - it inherits "
                     "the surrounding text color instead of defaulting to a filled badge like "
@@ -62,41 +86,6 @@ pub fn ActionIconPage() -> Element {
                     " block header without fighting a default look. This is how "
                     Code { source: "Code" }
                     "'s own copy button is built."
-                }
-                ActionIcon { aria_label: "Confirm", CheckmarkIcon {} }
-            }
-            DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    align: "center",
-                    ActionIcon { color: "primary", size: "xs", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "primary", size: "sm", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "primary", size: "md", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "primary", size: "lg", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "primary", size: "xl", aria_label: "Confirm", CheckmarkIcon {} }
-                }
-            }
-            DocSection {
-                title: "Colors",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    ActionIcon { color: "primary", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "success", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "error", aria_label: "Confirm", CheckmarkIcon {} }
-                    ActionIcon { color: "warning", aria_label: "Confirm", CheckmarkIcon {} }
-                }
-            }
-            DocSection {
-                title: "Disabled",
-                ActionIcon {
-                    variant: "filled",
-                    color: "primary",
-                    disabled: true,
-                    aria_label: "Confirm",
-                    CheckmarkIcon {}
                 }
             }
             DocSection {

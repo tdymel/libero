@@ -152,22 +152,21 @@ pub fn generate_code(
     component: &str,
     children_text: &str,
     children_code: Option<&str>,
+    fixed: &[String],
     controls: &[Control],
     values: &DemoValues,
 ) -> String {
-    let set: Vec<String> = controls
-        .iter()
-        .flat_map(|control| {
-            let value = values.str(control.name);
-            match control.code {
-                Some(code) => code(control, values),
-                None if value != control.default => {
-                    vec![format!("{}: {value:?}", control.name)]
-                }
-                None => vec![],
+    let mut set: Vec<String> = fixed.to_vec();
+    set.extend(controls.iter().flat_map(|control| {
+        let value = values.str(control.name);
+        match control.code {
+            Some(code) => code(control, values),
+            None if value != control.default => {
+                vec![format!("{}: {value:?}", control.name)]
             }
-        })
-        .collect();
+            None => vec![],
+        }
+    }));
 
     // A component driven entirely by props (`Code`'s `source`) has no child.
     let child = children_code

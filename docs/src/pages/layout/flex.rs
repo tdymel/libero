@@ -102,7 +102,8 @@ pub fn FlexPage() -> Element {
                     render: move |values: DemoValues| rsx! {
                         Box {
                             sx: sx()
-                                .width("260px")
+                                .width("400px")
+                                .height("400px")
                                 .padding("8px")
                                 .background("grey.1"),
                             Flex {

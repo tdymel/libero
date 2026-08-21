@@ -85,6 +85,10 @@ pub fn Demo(
     /// Literal rsx for the children, printed verbatim - for children that are
     /// a subtree rather than one string. Wins over `children_text`.
     children_code: Option<String>,
+    /// Props the demo holds constant but the code block must still print - a
+    /// required one like `aria_label`, which no control varies.
+    #[props(default)]
+    fixed: Vec<String>,
     controls: Vec<Control>,
     render: Callback<DemoValues, Element>,
     /// Must match what `render` draws around the component - the code block is
@@ -111,6 +115,7 @@ pub fn Demo(
         &component,
         &children_text,
         children_code.as_deref(),
+        &fixed,
         &controls,
         &values(),
     );
