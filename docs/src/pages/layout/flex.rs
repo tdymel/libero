@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Flex, Input, Text},
+    components::{Box, Flex, Text},
     sx::sx,
 };
 
@@ -82,17 +82,6 @@ fn controls() -> Vec<Control> {
     ));
 
     controls
-}
-
-/// `"auto"` is how a control says "leave it to the theme".
-fn or_unset<T>(value: String) -> Input<T>
-where
-    Input<T>: From<String>,
-{
-    match value.as_str() {
-        "auto" => Input::None,
-        _ => Input::from(value),
-    }
 }
 
 #[component]

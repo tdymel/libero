@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, Flex, Option as SelectOption, Select, Slider, SliderChangeEvent, Switch, Text,
-        ToggleButton, ToggleButtonGroup,
+        Box, Code, Flex, Input, Option as SelectOption, Select, Slider, SliderChangeEvent, Switch,
+        Text, ToggleButton, ToggleButtonGroup,
     },
     sx::sx,
     theme::{CODE_BORDER, Size, TEXT_FONT_SIZE},
@@ -56,6 +56,18 @@ pub struct Child(pub fn(&DemoValues) -> String);
 impl PartialEq for Child {
     fn eq(&self, _: &Self) -> bool {
         true
+    }
+}
+
+/// `"auto"` is how a control says "leave it to the theme" - a control can
+/// never produce *no* value.
+pub fn or_unset<T>(value: String) -> Input<T>
+where
+    Input<T>: From<String>,
+{
+    match value.as_str() {
+        "auto" => Input::None,
+        _ => Input::from(value),
     }
 }
 

@@ -1,8 +1,11 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Icon, Text};
+use libero::components::{Code, Icon, Input, Text};
 
 use crate::icons::CheckmarkIcon;
+
+/// The svg the badge wraps - a subtree, so the code block prints it verbatim.
+const CHILDREN: &str = "CheckmarkIcon {}";
 
 #[component]
 pub fn IconPage() -> Element {
@@ -19,57 +22,36 @@ pub fn IconPage() -> Element {
                 }
             },
             DocSection {
-                title: "Variants",
-                Flex {
-                    direction: "row",
-                    gap: "xxl",
-                    Flex {
-                        direction: "column",
-                        align: "center",
-                        gap: "sm",
-                        Icon { variant: "filled", color: "primary", CheckmarkIcon {} }
-                        Text { size: "sm", "Filled" }
-                    }
-                    Flex {
-                        direction: "column",
-                        align: "center",
-                        gap: "sm",
-                        Icon { variant: "outlined", color: "primary", CheckmarkIcon {} }
-                        Text { size: "sm", "Outlined" }
-                    }
-                    Flex {
-                        direction: "column",
-                        align: "center",
-                        gap: "sm",
-                        Icon { variant: "transparent", color: "primary", CheckmarkIcon {} }
-                        Text { size: "sm", "Transparent" }
-                    }
-                }
-            }
-
-            DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    align: "center",
-                    Icon { size: "xs", CheckmarkIcon {} }
-                    Icon { size: "sm", CheckmarkIcon {} }
-                    Icon { size: "md", CheckmarkIcon {} }
-                    Icon { size: "lg", CheckmarkIcon {} }
-                    Icon { size: "xl", CheckmarkIcon {} }
-                }
-            }
-
-            DocSection {
-                title: "Colors",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    Icon { color: "primary", CheckmarkIcon {} }
-                    Icon { color: "success", CheckmarkIcon {} }
-                    Icon { color: "error", CheckmarkIcon {} }
-                    Icon { color: "warning", CheckmarkIcon {} }
+                title: "Usage",
+                Demo {
+                    component: "Icon",
+                    children_text: "",
+                    children_code: CHILDREN,
+                    controls: vec![
+                        Control::toggle("variant", ["filled", "outlined", "transparent"]),
+                        // A bare `primary` is what an unset `color` resolves
+                        // to, so that swatch prints nothing.
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        ),
+                        Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                        Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                        Control::toggle("component", ["span", "div"]),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Icon {
+                            variant: values.str("variant"),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
+                            },
+                            size: or_unset(values.str("size")),
+                            radius: or_unset(values.str("radius")),
+                            component: values.str("component"),
+                            CheckmarkIcon {}
+                        }
+                    },
                 }
             }
         }
