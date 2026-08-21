@@ -1,6 +1,6 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Kbd, Text};
+use libero::components::{Code, Kbd, Text};
 
 #[component]
 pub fn KbdPage() -> Element {
@@ -21,16 +21,17 @@ pub fn KbdPage() -> Element {
                 }
             },
             DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    align: "center",
-                    Kbd { size: "xs", "Ctrl" }
-                    Kbd { size: "sm", "Ctrl" }
-                    Kbd { size: "md", "Ctrl" }
-                    Kbd { size: "lg", "Ctrl" }
-                    Kbd { size: "xl", "Ctrl" }
+                title: "Usage",
+                Demo {
+                    component: "Kbd",
+                    children_text: "Ctrl",
+                    controls: vec![
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("sm"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Kbd { size: values.str("size"), "Ctrl" }
+                    },
                 }
             }
         }
