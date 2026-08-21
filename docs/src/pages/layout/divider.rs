@@ -43,6 +43,8 @@ pub fn DividerPage() -> Element {
                     children_text: "OR",
                     controls: vec![
                         Control::toggle("orientation", ["horizontal", "vertical"]),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("xs"),
                         Control::switch("with_label").default("true").code(|_, _| vec![]),
                         // Meaningless without a label, so it doesn't print then.
                         Control::toggle("label_position", ["center", "start", "end"]).code(
@@ -73,6 +75,7 @@ pub fn DividerPage() -> Element {
                         let divider = rsx! {
                             Divider {
                                 orientation: values.str("orientation"),
+                                size: values.str("size"),
                                 label_position: values.str("label_position"),
                                 // A bare `grey` is grey-3; *unset* is grey-4,
                                 // and unset is what the code block prints.

@@ -11,7 +11,9 @@ use crate::{
     hooks::use_css,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ColorCss, ColorShade, ColorValue, CssVar, DividerDefaults, SizeCss},
+    theme::{
+        ColorCss, ColorShade, ColorValue, CssVar, DIVIDER_LINE, DividerDefaults, Size, SizeCss,
+    },
 };
 
 fn divider_color_value(value: &ThemeAwareValue) -> ThemeAwareValue {
@@ -42,19 +44,25 @@ fn divider_color() -> String {
     DIVIDER_COLOR_VAR.value_or(ColorCss::GREY.value(ColorShade::S4))
 }
 
+/// The line thickness for the current `size`.
+fn divider_line() -> String {
+    DIVIDER_LINE.value()
+}
+
 /// The caller's `spacing` if they set one, else none.
 fn divider_spacing() -> String {
     DIVIDER_SPACING_VAR.value_or(0)
 }
 
 static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().flex_shrink("0")
+    sx().per_size(DividerDefaults::size_sx)
+        .flex_shrink("0")
         .border_width("0")
         .border_style("solid")
         .border_color(divider_color())
         .when(
             "vertical",
-            sx().border_right(format!("1px solid {}", divider_color()))
+            sx().border_right(format!("{} solid {}", divider_line(), divider_color()))
                 .align_self("stretch")
                 .margin_left(divider_spacing())
                 .margin_right(divider_spacing())
@@ -62,8 +70,8 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "horizontal",
-            sx().border_bottom(format!("1px solid {}", divider_color()))
-                .height("1px")
+            sx().border_bottom(format!("{} solid {}", divider_line(), divider_color()))
+                .height(divider_line())
                 .margin_top(divider_spacing())
                 .margin_bottom(divider_spacing())
                 .and(DividerDefaults::horizontal_sx()),
@@ -86,13 +94,13 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().border_bottom("0")
                 .height("auto")
                 .width("100%")
-                .selector("&::before, &::after", sx().height("1px")),
+                .selector("&::before, &::after", sx().height(divider_line())),
         )
         .when(
             "vertical && label",
             sx().flex_direction("column")
                 .align_self("stretch")
-                .selector("&::before, &::after", sx().width("1px")),
+                .selector("&::before, &::after", sx().width(divider_line())),
         )
         // Only with "label" - out-specificities its even-flex
         // ::before/::after above.
@@ -140,6 +148,9 @@ base_props! {
         /// `"horizontal"` (the default) or `"vertical"`.
         #[props(default, into)]
         orientation: Input<Orientation>,
+        /// Line thickness. Defaults to `xs`.
+        #[props(default, into)]
+        size: Input<Size>,
         #[props(default, into)]
         label_position: Input<LabelPosition>,
         #[props(default, into)]
@@ -156,10 +167,12 @@ pub fn Divider(props: DividerProps) -> Element {
     let vertical = orientation == Orientation::Vertical;
     let has_label = props.children.is_some();
     let label_position = props.label_position.copied_or_default();
+    let size = props.size.copied_or(Size::Xs);
 
     let divider_states = props
         .states
         .unwrap_or_default()
+        .with(size.state_name(), true)
         .with("vertical", vertical)
         .with("horizontal", !vertical)
         .with("label", has_label)

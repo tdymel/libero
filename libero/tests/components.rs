@@ -438,6 +438,21 @@ fn divider_renders_as_a_separator() {
 }
 
 #[test]
+fn a_dividers_size_reaches_its_data_state() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Divider { size: Size::Lg }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(attributes_of(&html, "div")["data-state"].contains("size-lg"));
+}
+
+#[test]
 fn container_and_center_render_their_children() {
     fn app() -> Element {
         rsx! {

@@ -117,7 +117,10 @@ impl Theme {
         sidebar: SidebarDefaults {
             size: Sizes::new(200, 240, 280, 320, 400, 480),
         },
-        divider: DividerDefaults { spacing: None },
+        divider: DividerDefaults {
+            spacing: None,
+            thickness: Sizes::new(1, 2, 3, 4, 5, 6),
+        },
         splitter: SplitterDefaults {
             size: Size::Sm,
             divider_size: Sizes::new(1, 1, 2, 3, 4, 6),

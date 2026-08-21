@@ -273,11 +273,8 @@ pub fn Slider(props: SliderProps) -> Element {
     // A `Callback`, not a closure: `LocalState` is not `Copy`, and two drag
     // handlers need this.
     let value_at = {
-        let (track_left, track_width, thumb_width) = (
-            track_left.clone(),
-            track_width.clone(),
-            thumb_width.clone(),
-        );
+        let (track_left, track_width, thumb_width) =
+            (track_left.clone(), track_width.clone(), thumb_width.clone());
         use_callback(move |client_x: f64| {
             let thumb = thumb_width.get();
             // The thumb's centre only travels between the two half-thumb
@@ -381,8 +378,7 @@ pub fn Slider(props: SliderProps) -> Element {
         .into();
 
     let filled = fraction(value, min, max);
-    let root_variables: Input<Variables> =
-        slider_variables(filled, &color).into();
+    let root_variables: Input<Variables> = slider_variables(filled, &color).into();
 
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
     let bar_class = use_css(Some(&SLIDER_BAR_SX), CssLayer::Framework);

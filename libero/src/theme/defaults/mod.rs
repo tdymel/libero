@@ -51,7 +51,7 @@ pub use code::{
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use data_list::{DATA_LIST_GAP, DataListDefaults};
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
-pub use divider::{DIVIDER_SPACING, DividerDefaults};
+pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use flex::{
     FLEX_ALIGN_VAR, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP,
