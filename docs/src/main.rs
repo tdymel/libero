@@ -24,6 +24,11 @@ use pages::{
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
+/// A 16:9 landscape, for docs examples where the logo's square shape hides
+/// what the example is about.
+pub(crate) static SAMPLE_IMAGE: Asset = asset!("/assets/sample.svg");
+/// Stands in for a source that failed to load.
+pub(crate) static FALLBACK_IMAGE: Asset = asset!("/assets/fallback.svg");
 
 fn main() {
     dioxus::launch(App);
