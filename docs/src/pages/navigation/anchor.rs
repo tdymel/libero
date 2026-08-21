@@ -1,9 +1,11 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Anchor, Flex, Text},
+    components::{Anchor, Text},
     sx::sx,
 };
+
+const HREF: &str = "https://dioxuslabs.com";
 
 #[component]
 pub fn AnchorPage() -> Element {
@@ -17,24 +19,37 @@ pub fn AnchorPage() -> Element {
                 }
             },
             DocSection {
-                title: "Underline",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    Anchor { to: "https://dioxuslabs.com", underline: "always", "Always" }
-                    Anchor { to: "https://dioxuslabs.com", underline: "hover", "Hover (default)" }
-                    Anchor { to: "https://dioxuslabs.com", underline: "never", "Never" }
-                }
-            }
-            DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "row",
-                    gap: "lg",
-                    align: "baseline",
-                    Anchor { to: "https://dioxuslabs.com", size: "xs", "Extra small" }
-                    Anchor { to: "https://dioxuslabs.com", size: "md", "Medium" }
-                    Anchor { to: "https://dioxuslabs.com", size: "xl", "Extra large" }
+                title: "Usage",
+                Demo {
+                    component: "Anchor",
+                    children_text: "Read the Dioxus docs",
+                    controls: vec![
+                        // `to` is required, so it always prints.
+                        Control::toggle("underline", ["hover", "always", "never"]).code(
+                            |control, values| {
+                                let mut set = vec![
+                                    format!("to: {HREF:?}"),
+                                    "target: \"_blank\"".to_string(),
+                                ];
+                                let value = values.str("underline");
+                                if value != control.default {
+                                    set.push(format!("underline: {value:?}"));
+                                }
+                                set
+                            },
+                        ),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Anchor {
+                            to: HREF,
+                            target: "_blank",
+                            underline: values.str("underline"),
+                            size: values.str("size"),
+                            "Read the Dioxus docs"
+                        }
+                    },
                 }
             }
             DocSection {
