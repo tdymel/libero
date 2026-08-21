@@ -1,53 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Box, Code, Flex, Icon, List, ListItem, Text},
-    sx::sx,
-    theme::{ICON_SIZE, Size},
-};
-
-use crate::icons::{ChevronIcon, FileIcon, FolderIcon};
-
-// `ListItem` is a plain block-level `<li>` - a nested `List` placed inside
-// one stacks below its label instead of beside it, which is what lets these
-// two compose without any tree-specific code.
-#[component]
-fn TreeFolder(label: &'static str, expanded: bool, children: Element) -> Element {
-    rsx! {
-        ListItem {
-            Flex { direction: "row", align: "center", gap: "sm",
-                Icon {
-                    variant: "transparent",
-                    size: "xs",
-                    color: "grey.6",
-                    sx: sx().transition("transform 120ms ease")
-                        .transform(if expanded { "rotate(90deg)" } else { "rotate(0deg)" }),
-                    ChevronIcon {}
-                }
-                Icon { variant: "transparent", size: "sm", color: "primary", FolderIcon {} }
-                Text { {label} }
-            }
-            if expanded {
-                List { {children} }
-            }
-        }
-    }
-}
-
-#[component]
-fn TreeFile(label: &'static str) -> Element {
-    rsx! {
-        ListItem {
-            Flex { direction: "row", align: "center", gap: "sm",
-                // Matches the chevron's reserved width so file labels align
-                // under folder labels, not under the chevron.
-                Box { sx: sx().flex_shrink("0").width(ICON_SIZE.value(Size::Xs)) }
-                Icon { variant: "transparent", size: "sm", color: "grey.6", FileIcon {} }
-                Text { {label} }
-            }
-        }
-    }
-}
+use libero::components::{Code, List, ListItem, Text};
 
 /// The items are the fixture here - `size` is the only prop - so the code
 /// block prints them verbatim. Only the outer list carries `size`: nested
@@ -105,32 +58,6 @@ pub fn ListPage() -> Element {
                             }
                         }
                     },
-                }
-            }
-            DocSection {
-                title: "File tree",
-                Text {
-                    "Purely visual - no interactivity or state, just "
-                    Code { source: "List" }
-                    "/"
-                    Code { source: "ListItem" }
-                    " nested arbitrarily deep, which is exactly the composition a future "
-                    Code { source: "Tree" }
-                    " component would build on."
-                }
-                List {
-                    TreeFolder { label: "src", expanded: true,
-                        TreeFolder { label: "components", expanded: true,
-                            TreeFile { label: "list.rs" }
-                            TreeFile { label: "list_item.rs" }
-                            TreeFile { label: "button.rs" }
-                        }
-                        TreeFolder { label: "hooks", expanded: false }
-                        TreeFile { label: "lib.rs" }
-                        TreeFile { label: "main.rs" }
-                    }
-                    TreeFile { label: "Cargo.toml" }
-                    TreeFile { label: "README.md" }
                 }
             }
         }
