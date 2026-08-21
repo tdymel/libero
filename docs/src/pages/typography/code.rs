@@ -1,4 +1,4 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -7,45 +7,61 @@ const RUST_EXAMPLE: &str = r#"fn shout(word: &str) -> String {
     format!("{}!", word.to_uppercase())
 }"#;
 
-const SHELL_EXAMPLE: &str =
+const RUST_DIFF: &str = r#"fn shout(word: &str) -> String {
+    // Rust
+-    format!("{}", word)
++    format!("{}!", word.to_uppercase())
+}"#;
+
+const BASH_EXAMPLE: &str =
     "if [ -f Cargo.toml ]; then\n  cargo build --release # release build\nfi";
+
+const BASH_DIFF: &str =
+    "if [ -f Cargo.toml ]; then\n-  cargo build\n+  cargo build --release # release build\nfi";
 
 const MARKDOWN_EXAMPLE: &str =
     "# Libero\n\nA Dioxus component library, focused on *DX* and **a11y**.";
 
+const MARKDOWN_DIFF: &str = "# Libero\n\n-A Dioxus component library, focused on *DX*.\n+A Dioxus component library, focused on *DX* and **a11y**.";
+
 const HTML_EXAMPLE: &str = "<div class=\"card\">\n  <h2>Title</h2>\n</div>";
+
+const HTML_DIFF: &str = "-<div>\n+<div class=\"card\">\n  <h2>Title</h2>\n</div>";
 
 const CSS_EXAMPLE: &str = ".card {\n  color: red;\n  padding: 8px;\n}";
 
-const LONG_RUST_EXAMPLE: &str = r#"struct Config {
-    name: String,
-    retries: u32,
+const CSS_DIFF: &str = ".card {\n-  color: crimson;\n+  color: red;\n  padding: 8px;\n}";
+
+/// A real, recognized language that this build doesn't compile in - the
+/// demo's "python" option shows that falling back to plain text.
+const PYTHON_EXAMPLE: &str = "def shout(word):\n    # Python\n    return word.upper() + \"!\"";
+
+const PYTHON_DIFF: &str =
+    "def shout(word):\n    # Python\n-    return word.upper()\n+    return word.upper() + \"!\"";
+
+/// The demo's `source` follows its `language` - a Rust snippet under
+/// `language: "css"` would only show the highlighter failing - and its `diff`,
+/// which needs a source written as one. Every `*_DIFF`'s `+` lines are exactly
+/// its plain twin, so each diff reads as the edit that produced the example.
+/// Returns the const's name alongside it, since the code block prints the name
+/// a caller would write.
+fn example(values: &DemoValues) -> (&'static str, &'static str) {
+    let diff = values.str("diff") == "true";
+    match (values.str("language").as_str(), diff) {
+        ("bash", false) => ("BASH_EXAMPLE", BASH_EXAMPLE),
+        ("bash", true) => ("BASH_DIFF", BASH_DIFF),
+        ("markdown", false) => ("MARKDOWN_EXAMPLE", MARKDOWN_EXAMPLE),
+        ("markdown", true) => ("MARKDOWN_DIFF", MARKDOWN_DIFF),
+        ("html", false) => ("HTML_EXAMPLE", HTML_EXAMPLE),
+        ("html", true) => ("HTML_DIFF", HTML_DIFF),
+        ("css", false) => ("CSS_EXAMPLE", CSS_EXAMPLE),
+        ("css", true) => ("CSS_DIFF", CSS_DIFF),
+        ("python", false) => ("PYTHON_EXAMPLE", PYTHON_EXAMPLE),
+        ("python", true) => ("PYTHON_DIFF", PYTHON_DIFF),
+        (_, false) => ("RUST_EXAMPLE", RUST_EXAMPLE),
+        (_, true) => ("RUST_DIFF", RUST_DIFF),
+    }
 }
-
-impl Config {
-    fn new(name: &str) -> Self {
-        Self { name: name.to_string(), retries: 3 }
-    }
-
-    fn with_retries(mut self, retries: u32) -> Self {
-        self.retries = retries;
-        self
-    }
-}"#;
-
-const LONG_LINE_EXAMPLE: &str = r#"let url = "https://example.com/api/v2/accounts/12345/transactions?from=2024-01-01&to=2024-12-31&status=settled";"#;
-
-const HIGHLIGHT_LINES_EXAMPLE: &str = r#"fn divide(a: i32, b: i32) -> Option<i32> {
-    if b == 0 {
-        return None;
-    }
-    Some(a / b)
-}"#;
-
-const DIFF_EXAMPLE: &str = r#"fn greet(name: &str) -> String {
--    format!("Hi, {}", name)
-+    format!("Hello, {}!", name)
-}"#;
 
 #[component]
 pub fn CodePage() -> Element {
@@ -55,175 +71,118 @@ pub fn CodePage() -> Element {
             lead: rsx! {
                 Text {
                     "Inline "
-                    Code { "code" }
+                    Code { source: "code" }
                     " by default, or a "
-                    Code { "pre" }
-                    "-wrapped block. Pass "
-                    Code { "source" }
-                    " and "
-                    Code { "language" }
-                    " to syntax-highlight a runtime string instead of plain "
-                    Code { "children" }
-                    ". Every color here - background, border, line numbers, diff/highlight "
+                    Code { source: "pre" }
+                    "-wrapped block. Content is always "
+                    Code { source: "source" }
+                    ", a plain string - line numbers and the copy button need one to split. "
+                    "Add "
+                    Code { source: "language" }
+                    " to syntax-highlight it. Every color here - background, border, line numbers, diff/highlight "
                     "tints, and the syntax token colors - comes from "
-                    Code { "Theme.code" }
+                    Code { source: "Theme.code" }
                     " and can be overridden per-app."
                 }
             },
             DocSection {
-                title: "No language",
-                Text {
-                    "No "
-                    Code { "language" }
-                    ", or one that isn't recognized - both are the same state, so both render "
-                    "the same: unhighlighted text, still with the header, line numbers, and "
-                    "copy button, since those only need the source text."
+                title: "Usage",
+                Demo {
+                    component: "Code",
+                    children_text: "",
+                    controls: vec![
+                        // Picks `source` as well, so it always prints - the
+                        // preview would otherwise show code the block below
+                        // never mentions. "none" is the real default.
+                        Control::select(
+                            "language",
+                            ["rust", "bash", "markdown", "html", "css", "python"],
+                        )
+                            // `python` is a real, recognized name whose
+                            // `code-lang-*` feature this build leaves off.
+                            .labels([
+                                "rust",
+                                "bash",
+                                "markdown",
+                                "html",
+                                "css",
+                                "python (not enabled)",
+                            ])
+                            .code(|_, values| {
+                                let language = values.str("language");
+                                vec![
+                                    format!("source: {}", example(values).0),
+                                    format!("language: {language:?}"),
+                                ]
+                            }),
+                        // On by default here, though `Code`'s own default is
+                        // inline - a block is what the other props are about.
+                        // The printed rsx still follows the real default.
+                        Control::switch("block").default("true").code(|_, values| {
+                            match values.str("block").as_str() {
+                                "true" => vec!["block: true".to_string()],
+                                _ => vec![],
+                            }
+                        }),
+                        Control::switch("diff"),
+                        Control::switch("header").default("true"),
+                        Control::switch("copyable").default("true"),
+                        Control::switch("line_numbers").default("true"),
+                        Control::switch("highlight_lines").code(|_, values| {
+                            match values.str("highlight_lines").as_str() {
+                                "true" => vec!["highlight_lines: \"2,3\"".to_string()],
+                                _ => vec![],
+                            }
+                        }),
+                        Control::slider("max_lines", ["auto", "2", "3"]).code(|_, values| {
+                            match values.str("max_lines").as_str() {
+                                "auto" => vec![],
+                                lines => vec![format!("max_lines: {lines}")],
+                            }
+                        }),
+                    ],
+                    render: move |values: DemoValues| {
+                        rsx! {
+                            Code {
+                                source: example(&values).1,
+                                language: values.str("language"),
+                                block: values.str("block") == "true",
+                                diff: values.str("diff") == "true",
+                                header: values.str("header") == "true",
+                                copyable: values.str("copyable") == "true",
+                                line_numbers: values.str("line_numbers") == "true",
+                                highlight_lines: match values.str("highlight_lines").as_str() {
+                                    "true" => Some("2,3".to_string()),
+                                    _ => None,
+                                },
+                                max_lines: values.str("max_lines").parse::<u32>().ok(),
+                            }
+                        }
+                    },
                 }
-                Code { block: true, source: "cargo add libero" }
             }
             DocSection {
                 title: "Recognized, but not enabled",
                 Text {
                     "Libero recognizes far more languages than any one build compiles in - "
-                    Code { "language: \"python\"" }
+                    Code { source: "language: \"python\"" }
                     " is a real, known name, but this site only turns on "
-                    Code { "code-lang-rust" }
+                    Code { source: "code-lang-rust" }
                     ", "
-                    Code { "code-lang-bash" }
+                    Code { source: "code-lang-bash" }
                     ", "
-                    Code { "code-lang-markdown" }
+                    Code { source: "code-lang-markdown" }
                     ", "
-                    Code { "code-lang-html" }
+                    Code { source: "code-lang-html" }
                     ", and "
-                    Code { "code-lang-css" }
-                    " - so it still falls back to unhighlighted text, the same as an "
-                    "unrecognized name would."
-                }
-                Code { block: true, source: "print(\"hello\")", language: "python" }
-            }
-            DocSection {
-                title: "Highlighted - Rust",
-                Code { block: true, source: RUST_EXAMPLE, language: "rust" }
-            }
-            DocSection {
-                title: "Highlighted - Shell",
-                Code { block: true, source: SHELL_EXAMPLE, language: "shell" }
-            }
-            DocSection {
-                title: "Highlighted - Markdown",
-                Code { block: true, source: MARKDOWN_EXAMPLE, language: "markdown" }
-            }
-            DocSection {
-                title: "Highlighted - HTML",
-                Code { block: true, source: HTML_EXAMPLE, language: "html" }
-            }
-            DocSection {
-                title: "Highlighted - CSS",
-                Code { block: true, source: CSS_EXAMPLE, language: "css" }
-            }
-            DocSection {
-                title: "Inline highlighting",
-                Text {
-                    "Works inline too - "
-                    Code { source: "let x: u32 = 5;", language: "rust" }
-                    " stays a single line, colored the same way."
-                }
-            }
-            DocSection {
-                title: "Without a header",
-                Text {
-                    Code { "header: false" }
-                    " drops the bar - the copy button (if "
-                    Code { "copyable" }
-                    ") floats in the top-right corner instead, aligned to the first line "
-                    "either way."
-                }
-                Code { block: true, source: "cargo build --release", language: "shell", header: false }
-                Code { block: true, source: RUST_EXAMPLE, language: "rust", header: false }
-            }
-            DocSection {
-                title: "Without a copy button",
-                Text { Code { "copyable: false" } " keeps the header, drops the button." }
-                Code {
-                    block: true,
-                    source: CSS_EXAMPLE,
-                    language: "css",
-                    copyable: false,
-                }
-            }
-            DocSection {
-                title: "Max lines",
-                Text {
-                    Code { "max_lines" }
-                    " caps the visible height to roughly that many lines, scrolling "
-                    "vertically past it instead of growing the block forever."
-                }
-                Code {
-                    block: true,
-                    source: LONG_RUST_EXAMPLE,
-                    language: "rust",
-                    max_lines: 6,
-                }
-            }
-            DocSection {
-                title: "Long lines",
-                Text { "A single line wider than the block scrolls horizontally on its own." }
-                Code { block: true, source: LONG_LINE_EXAMPLE, language: "rust" }
-            }
-            DocSection {
-                title: "Line numbers",
-                Text { Code { "line_numbers: false" } " drops the gutter entirely." }
-                Code {
-                    block: true,
-                    source: "console.log(\"no gutter here\")",
-                    language: "javascript",
-                    line_numbers: false,
-                }
-            }
-            DocSection {
-                title: "Highlighted lines",
-                Text {
-                    Code { "highlight_lines" }
-                    " emphasizes specific rows - a comma-separated list of line numbers "
-                    "and/or ranges, e.g. "
-                    Code { "\"2,4-5\"" }
-                    "."
-                }
-                Code {
-                    block: true,
-                    source: HIGHLIGHT_LINES_EXAMPLE,
-                    language: "rust",
-                    highlight_lines: "2,4-5",
-                }
-            }
-            DocSection {
-                title: "Diff",
-                Text {
-                    Code { "diff: true" }
-                    " reads a leading "
-                    Code { "+" }
-                    "/"
-                    Code { "-" }
-                    " on each line of "
-                    Code { "source" }
-                    " as added/removed, coloring that row - the marker itself is stripped "
-                    "from what's displayed and copied, only the color stays."
-                }
-                Code { block: true, source: DIFF_EXAMPLE, diff: true }
-            }
-            DocSection {
-                title: "Opaque children",
-                Text {
-                    "Without "
-                    Code { "source" }
-                    ", "
-                    Code { "children" }
-                    " still works (e.g. for markup richer than plain text) - same header "
-                    "chrome, but no line numbers or copy button, since there's no string to "
-                    "split or copy."
-                }
-                Code { block: true,
-                    "cargo add libero"
+                    Code { source: "code-lang-css" }
+                    " - so it falls back to unhighlighted text, exactly as an unrecognized "
+                    "name would. Pick "
+                    Code { source: "python" }
+                    " above to see it: a real language, no grammar compiled in to apply. "
+                    "Leaving "
+                    Code { source: "language" }
+                    " off entirely lands in the same state."
                 }
             }
         }

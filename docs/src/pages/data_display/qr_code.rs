@@ -13,12 +13,12 @@ pub fn QrCodePage() -> Element {
             lead: rsx! {
                 Text {
                     "Encodes "
-                    Code { "data" }
+                    Code { source: "data" }
                     " as a scalable QR code, rendered as an inline SVG. Background/"
                     "foreground colors come from the theme ("
-                    Code { "Theme::qr_code" }
+                    Code { source: "Theme::qr_code" }
                     "), not per-instance props - "
-                    Code { "robustness" }
+                    Code { source: "robustness" }
                     " is the only thing you tune per code."
                 }
             },
@@ -38,7 +38,7 @@ pub fn QrCodePage() -> Element {
                     "Error-correction level - higher levels tolerate more damage/"
                     "occlusion at the cost of a denser code for the same data. Falls "
                     "back to the theme's "
-                    Code { "Theme::qr_code.robustness" }
+                    Code { source: "Theme::qr_code.robustness" }
                     " (Medium) when unset."
                 }
                 Flex {
@@ -100,9 +100,9 @@ pub fn QrCodePage() -> Element {
                 Text {
                     sx: sx().color("grey.6"),
                     "The generated SVG has no fixed width/height, just a square "
-                    Code { "viewBox" }
+                    Code { source: "viewBox" }
                     " - it fills its container, so "
-                    Code { "sx" }
+                    Code { source: "sx" }
                     " width/height (or the container's own size) controls the "
                     "rendered size."
                 }

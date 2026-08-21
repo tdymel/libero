@@ -767,7 +767,7 @@ fn code_renders_its_source() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Code { "let x = 1;" }
+                Code { source: "let x = 1;" }
             }
         }
     }

@@ -17,11 +17,11 @@ pub fn SliderPage() -> Element {
             lead: rsx! {
                 Text {
                     "A value dragged along a track. Controlled: it renders "
-                    Code { "value" }
+                    Code { source: "value" }
                     " and asks for a new one through "
-                    Code { "on_change" }
+                    Code { source: "on_change" }
                     ". Pointer, touch and keyboard all drive it - the thumb is a "
-                    Code { "role=\"slider\"" }
+                    Code { source: "role=\"slider\"" }
                     " with arrows, Page keys, Home and End."
                 }
             },
@@ -37,9 +37,9 @@ pub fn SliderPage() -> Element {
             DocSection {
                 title: "Sizes",
                 Text {
-                    Code { "size" }
+                    Code { source: "size" }
                     " scales the track and thumb; "
-                    Code { "radius" }
+                    Code { source: "radius" }
                     " rounds the track independently."
                 }
                 Flex {
@@ -75,13 +75,13 @@ pub fn SliderPage() -> Element {
             DocSection {
                 title: "Steps and range",
                 Text {
-                    Code { "step" }
+                    Code { source: "step" }
                     " is the grid the value snaps to, measured from "
-                    Code { "min" }
+                    Code { source: "min" }
                     " - and it sets how many decimals an emitted value keeps, so "
-                    Code { "0.1" }
+                    Code { source: "0.1" }
                     " never reports "
-                    Code { "0.30000000000000004" }
+                    Code { source: "0.30000000000000004" }
                     "."
                 }
                 Slider {
@@ -97,11 +97,11 @@ pub fn SliderPage() -> Element {
             DocSection {
                 title: "Marks",
                 Text {
-                    Code { "marks" }
+                    Code { source: "marks" }
                     " puts ticks on the track. A "
-                    Code { "SliderMark::labeled" }
+                    Code { source: "SliderMark::labeled" }
                     " one gets a caption under it, and the slider reserves the room for it; "
-                    Code { "SliderMark::new" }
+                    Code { source: "SliderMark::new" }
                     " is a bare tick."
                 }
                 Flex {
@@ -136,10 +136,10 @@ pub fn SliderPage() -> Element {
                 title: "Discrete steps",
                 Text {
                     "A "
-                    Code { "step" }
+                    Code { source: "step" }
                     " of one over an index makes the slider pick from a list instead of a "
                     "number - here the size scale, with a mark per step and a "
-                    Code { "label" }
+                    Code { source: "label" }
                     " that names it. This one resizes itself as you drag."
                 }
                 Slider {
@@ -161,14 +161,14 @@ pub fn SliderPage() -> Element {
             DocSection {
                 title: "Label",
                 Text {
-                    Code { "label" }
+                    Code { source: "label" }
                     " formats the bubble over the thumb, and the thumb's "
-                    Code { "aria-valuetext" }
+                    Code { source: "aria-valuetext" }
                     " with it. The bubble is a "
-                    Code { "Tooltip" }
+                    Code { source: "Tooltip" }
                     ", shown on hover, while dragging and while the thumb has keyboard "
                     "focus. Without "
-                    Code { "label" }
+                    Code { source: "label" }
                     " it shows the bare value."
                 }
                 Slider {
@@ -181,13 +181,13 @@ pub fn SliderPage() -> Element {
             DocSection {
                 title: "Change events",
                 Text {
-                    Code { "Start" }
+                    Code { source: "Start" }
                     " and "
-                    Code { "End" }
+                    Code { source: "End" }
                     " bracket one drag, "
-                    Code { "Change" }
+                    Code { source: "Change" }
                     " carries every value in between - so expensive work can wait for "
-                    Code { "End" }
+                    Code { source: "End" }
                     "."
                 }
                 Slider {

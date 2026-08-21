@@ -12,9 +12,9 @@ pub fn IconPage() -> Element {
             lead: rsx! {
                 Text {
                     "Wraps an svg child in a sized, colored badge. "
-                    Code { "color" }
+                    Code { source: "color" }
                     " sets the container's CSS color, which any child svg using "
-                    Code { "currentColor" }
+                    Code { source: "currentColor" }
                     " for its fill/stroke then inherits."
                 }
             },

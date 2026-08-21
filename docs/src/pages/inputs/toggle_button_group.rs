@@ -21,9 +21,9 @@ pub fn ToggleButtonGroupPage() -> Element {
             lead: rsx! {
                 Text {
                     "A row of connected buttons sharing one selection. Each member is a real "
-                    Code { "button" }
+                    Code { source: "button" }
                     " carrying "
-                    Code { "aria-pressed" }
+                    Code { source: "aria-pressed" }
                     ", so tab order and Space/Enter are the browser's own."
                 }
             },
@@ -31,9 +31,9 @@ pub fn ToggleButtonGroupPage() -> Element {
                 title: "Basic",
                 Text {
                     "Strictly controlled: "
-                    Code { "value" }
+                    Code { source: "value" }
                     " drives the look, "
-                    Code { "onchange" }
+                    Code { source: "onchange" }
                     " reports the selection the group should take next."
                 }
                 ToggleButtonGroup {
@@ -49,7 +49,7 @@ pub fn ToggleButtonGroupPage() -> Element {
                 title: "Multiple",
                 Text {
                     "Selection is exclusive by default. Set "
-                    Code { "exclusive: false" }
+                    Code { source: "exclusive: false" }
                     " to let any number of buttons be pressed at once."
                 }
                 ToggleButtonGroup {
@@ -65,7 +65,7 @@ pub fn ToggleButtonGroupPage() -> Element {
             DocSection {
                 title: "Variants and colors",
                 Text {
-                    Code { "variant" }
+                    Code { source: "variant" }
                     " is the unselected look; a selected button keeps it and tints its background."
                 }
                 Flex {
@@ -111,7 +111,7 @@ pub fn ToggleButtonGroupPage() -> Element {
             DocSection {
                 title: "Vertical",
                 Text {
-                    Code { "orientation: \"vertical\"" }
+                    Code { source: "orientation: \"vertical\"" }
                     " stacks the buttons and moves the shared corners to the top and bottom."
                 }
                 ToggleButtonGroup {
@@ -126,7 +126,7 @@ pub fn ToggleButtonGroupPage() -> Element {
             DocSection {
                 title: "Gap",
                 Text {
-                    Code { "gap" }
+                    Code { source: "gap" }
                     " separates the buttons, so each keeps its own border and its own radius "
                     "instead of sharing them with its neighbours."
                 }
@@ -142,7 +142,7 @@ pub fn ToggleButtonGroupPage() -> Element {
             DocSection {
                 title: "Full width",
                 Text {
-                    Code { "full_width" }
+                    Code { source: "full_width" }
                     " spreads the group across its container. A horizontal group shares the width "
                     "out evenly; a vertical one is already as wide as its widest button."
                 }
@@ -158,9 +158,9 @@ pub fn ToggleButtonGroupPage() -> Element {
             DocSection {
                 title: "Disabled",
                 Text {
-                    Code { "disabled" }
+                    Code { source: "disabled" }
                     " on the group covers every button; a single "
-                    Code { "ToggleButton" }
+                    Code { source: "ToggleButton" }
                     " can set its own."
                 }
                 Flex {
@@ -186,20 +186,20 @@ pub fn ToggleButtonGroupPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "The group is a "
-                    Code { "role=\"group\"" }
+                    Code { source: "role=\"group\"" }
                     " of ordinary buttons, each carrying "
-                    Code { "aria-pressed" }
+                    Code { source: "aria-pressed" }
                     ". Tab reaches every button and Space or Enter toggles it - there is no "
                     "arrow-key navigation to learn, and none is added."
                 }
                 Text {
                     "For a single-select group, APG would prefer a "
-                    Code { "radiogroup" }
+                    Code { source: "radiogroup" }
                     ". Following MUI, this component stays with pressed buttons: the roving "
                     "tabindex a radiogroup requires costs more than it returns here, and a "
                     "toggle button reads correctly to a screen reader either way. Name the group "
                     "with an "
-                    Code { "aria_label" }
+                    Code { source: "aria_label" }
                     " where its purpose is not obvious from the buttons themselves."
                 }
                 ToggleButtonGroup {

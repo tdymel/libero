@@ -13,7 +13,7 @@ pub fn SwitchPage() -> Element {
             lead: rsx! {
                 Text {
                     "A checkbox styled as a track and thumb. A visually hidden "
-                    Code { "input" }
+                    Code { source: "input" }
                     " does the real work, so it is announced as a switch and Space toggles it."
                 }
             },
@@ -21,9 +21,9 @@ pub fn SwitchPage() -> Element {
                 title: "Basic",
                 Text {
                     "Strictly controlled: "
-                    Code { "checked" }
+                    Code { source: "checked" }
                     " drives the look, "
-                    Code { "onchange" }
+                    Code { source: "onchange" }
                     " reports the value it should take next. The click is cancelled, so the "
                     "switch only moves when its state does."
                 }
@@ -80,7 +80,7 @@ pub fn SwitchPage() -> Element {
                 title: "Radius",
                 Text {
                     "Independent of "
-                    Code { "size" }
+                    Code { source: "size" }
                     "; the thumb stays a circle."
                 }
                 Flex {
@@ -95,9 +95,9 @@ pub fn SwitchPage() -> Element {
                 title: "Without a label",
                 Text {
                     "Give it an "
-                    Code { "aria_label" }
+                    Code { source: "aria_label" }
                     " - "
-                    Code { "attributes" }
+                    Code { source: "attributes" }
                     " land on the root, not on the input that carries the role."
                 }
                 Switch { aria_label: "Airplane mode", checked: true, onchange: move |_| {} }

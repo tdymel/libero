@@ -14,9 +14,9 @@ pub fn KbdPage() -> Element {
                     " + "
                     Kbd { "S" }
                     ". Renders a real "
-                    Code { "<kbd>" }
+                    Code { source: "<kbd>" }
                     ", styled entirely from the theme ("
-                    Code { "Theme::kbd" }
+                    Code { source: "Theme::kbd" }
                     ") - size is the only prop."
                 }
             },

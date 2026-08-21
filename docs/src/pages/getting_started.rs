@@ -33,7 +33,7 @@ pub fn GettingStarted() -> Element {
                 title: "Quick Start",
                 Text {
                     "Wrap your app in "
-                    Code { "LiberoProvider" }
+                    Code { source: "LiberoProvider" }
                     " once, at the root - it registers the theme and every style your components use."
                 }
                 Code { block: true, source: QUICK_START_EXAMPLE, language: "rust" }
@@ -43,14 +43,14 @@ pub fn GettingStarted() -> Element {
                 title: "Building for the Web",
                 Text {
                     "Dioxus's "
-                    Code { "wasm-split" }
+                    Code { source: "wasm-split" }
                     " feature puts every route in its own chunk, fetched when it is first "
                     "visited instead of bloating every page's initial bundle. On this docs site "
                     "that is 297 KB of brotli-compressed main bundle instead of 414 KB. Libero "
                     "adds no split points of its own - the per-route chunks already carry "
-                    Code { "Code" }
+                    Code { source: "Code" }
                     "'s highlighter and "
-                    Code { "QrCode" }
+                    Code { source: "QrCode" }
                     "'s encoder to the pages that use them."
                 }
                 Code {
@@ -60,10 +60,10 @@ pub fn GettingStarted() -> Element {
                 }
                 Text {
                     "It is experimental, and "
-                    Code { "dx" }
+                    Code { source: "dx" }
                     " only enables it when asked - with the feature on, always build and serve "
                     "with "
-                    Code { "--wasm-split" }
+                    Code { source: "--wasm-split" }
                     ", or the app will fail to load entirely (a dangling module import, not a "
                     "graceful fallback)."
                 }
@@ -74,7 +74,7 @@ pub fn GettingStarted() -> Element {
                 }
                 Text {
                     "Don't need it? Drop the feature and skip "
-                    Code { "--wasm-split" }
+                    Code { source: "--wasm-split" }
                     " entirely - the app renders identically either way, just from one bundle "
                     "instead of per-route chunks. Either way, keep only the languages your own "
                     "examples use:"

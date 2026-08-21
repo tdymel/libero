@@ -17,9 +17,9 @@ pub fn MarkPage() -> Element {
                     "Highlight "
                     Mark { "this chunk" }
                     " of the text. Renders a real "
-                    Code { "<mark>" }
+                    Code { source: "<mark>" }
                     ", tinted with a light shade of the theme's "
-                    Code { "warning" }
+                    Code { source: "warning" }
                     " color by default."
                 }
             },

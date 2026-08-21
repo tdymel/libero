@@ -119,42 +119,42 @@ pub fn TreePage() -> Element {
             lead: rsx! {
                 Text {
                     "Data-driven, not composed via children - pass "
-                    Code { "Vec<TreeNode<T>>" }
+                    Code { source: "Vec<TreeNode<T>>" }
                     " where "
-                    Code { "T" }
+                    Code { source: "T" }
                     " is entirely your own data shape. "
-                    Code { "T" }
+                    Code { source: "T" }
                     " only needs to implement "
-                    Code { "TreeLabel" }
+                    Code { source: "TreeLabel" }
                     " (one method, "
-                    Code { "fn tree_label(&self) -> String" }
+                    Code { source: "fn tree_label(&self) -> String" }
                     "), which is used for keyboard typeahead and as the default row "
                     "rendering. A "
-                    Code { "String" }
+                    Code { source: "String" }
                     " already implements it, so a plain tree needs nothing further."
                 }
                 Text {
                     "Which nodes are expanded is "
-                    Code { "Tree" }
+                    Code { source: "Tree" }
                     "'s own business, not the caller's - "
-                    Code { "default_expanded" }
+                    Code { source: "default_expanded" }
                     " only seeds the initial state. Selection and what happens on click, "
                     "though, are entirely "
-                    Code { "render_node" }
+                    Code { source: "render_node" }
                     "'s call: "
-                    Code { "Tree" }
+                    Code { source: "Tree" }
                     " doesn't assume clicking a leaf means \"select it\" - a leaf might just "
                     "as well be a real link (see the sidebar on this page for that case)."
                 }
                 Text {
                     "Fully keyboard-navigable: arrow keys move between visible rows, "
-                    Code { "Left" }
+                    Code { source: "Left" }
                     "/"
-                    Code { "Right" }
+                    Code { source: "Right" }
                     " collapse/expand (or jump to the parent/first child), "
-                    Code { "Home" }
+                    Code { source: "Home" }
                     "/"
-                    Code { "End" }
+                    Code { source: "End" }
                     " jump to the first/last row, and typing a letter jumps to the next match."
                 }
             },
@@ -162,13 +162,13 @@ pub fn TreePage() -> Element {
                 title: "Basic",
                 Text {
                     "Plain "
-                    Code { "String" }
+                    Code { source: "String" }
                     " data. Branches use "
-                    Code { "Tree" }
+                    Code { source: "Tree" }
                     "'s own default rendering; leaves add a click handler that sets "
-                    Code { "basic_selected" }
+                    Code { source: "basic_selected" }
                     " - selection is this page's own state, not "
-                    Code { "Tree" }
+                    Code { source: "Tree" }
                     "'s."
                 }
                 Tree {
@@ -206,9 +206,9 @@ pub fn TreePage() -> Element {
                 title: "Custom rendering",
                 Text {
                     "A "
-                    Code { "render_node" }
+                    Code { source: "render_node" }
                     " closure gets the node's own data plus its live "
-                    Code { "expanded" }
+                    Code { source: "expanded" }
                     " state, so content - like which folder icon to show - can react to it."
                 }
                 Tree {
@@ -247,7 +247,7 @@ pub fn TreePage() -> Element {
                     },
                 }
                 if let Some(selected) = files_selected() {
-                    Text { "Selected: " Code { "{selected}" } }
+                    Text { "Selected: " Code { source: "{selected}" } }
                 }
             }
         }

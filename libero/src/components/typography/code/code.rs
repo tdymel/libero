@@ -159,8 +159,8 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         .padding(format!("{}px 16px", CODE_LINES_VERTICAL_PADDING_PX / 2))
         .font_family(CODE_FONT_FAMILY.value())
         .font_size("0.875rem")
-        // Matches `CODE_LINES_SX`, so `max_lines` is right for the opaque
-        // `children` path too.
+        // Matches `CODE_LINES_SX`, so `max_lines` is right while highlighting
+        // is still in flight.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
 
@@ -202,10 +202,11 @@ base_props! {
         /// Renders as a `pre`-wrapped, multi-line block instead of inline `code`.
         #[props(default)]
         block: bool,
-        /// Text to syntax-highlight, mutually exclusive with `children`. Line
-        /// numbers and the copy button need a real string, so they need this.
-        #[props(default, into)]
-        source: Option<String>,
+        /// The text to render, highlighted when `language` names a grammar
+        /// this build compiles in. Line numbers and the copy button need a
+        /// real string, so this is the only way to pass content.
+        #[props(into)]
+        source: String,
         /// Unrecognized values fall back to no highlighting rather than a guess.
         #[props(default, into)]
         language: Input<Language>,
@@ -214,8 +215,7 @@ base_props! {
         /// `code-lang-*` feature is off.
         #[props(default = true)]
         header: bool,
-        /// `block` only, and only takes effect with `source` (nothing to copy
-        /// from `children`). Without `header`, floats in the top-right corner.
+        /// `block` only. Without `header`, floats in the top-right corner.
         #[props(default = true)]
         copyable: bool,
         /// `block` only. Caps the visible height to roughly this many lines
@@ -223,20 +223,18 @@ base_props! {
         /// horizontally regardless.
         #[props(default)]
         max_lines: Option<u32>,
-        /// `block` only, and only takes effect with `source`. Toggles the
-        /// line-number gutter.
+        /// `block` only. Toggles the line-number gutter.
         #[props(default = true)]
         line_numbers: bool,
-        /// `block` + `source` only. 1-indexed lines to emphasize, e.g.
+        /// `block` only. 1-indexed lines to emphasize, e.g.
         /// `"1,5-7,10"`. Malformed segments are skipped, not rejected.
         #[props(default, into)]
         highlight_lines: Option<String>,
-        /// `block` + `source` only. Reads `source` as a unified diff: a
+        /// `block` only. Reads `source` as a unified diff: a
         /// leading `+`/`-` colors the row and is stripped from what's shown,
         /// highlighted and copied. Wins over `highlight_lines`.
         #[props(default)]
         diff: bool,
-        children: Element,
     }
 }
 
@@ -392,21 +390,16 @@ pub fn Code(props: CodeProps) -> Element {
     let language = props.language.as_ref().copied();
     // Everything shown or copied uses the stripped version, so the two match.
     // Only `block` has markers; inline code is verbatim.
-    let display_source = props.source.as_ref().map(|source| {
-        if props.diff && props.block {
-            strip_diff_markers(source)
-        } else {
-            source.clone()
-        }
-    });
+    let display_source = if props.diff && props.block {
+        strip_diff_markers(&props.source)
+    } else {
+        props.source.clone()
+    };
     // Hoisted above both branches: hook slots are positional, so a
     // `use_resource` inside `if props.block` would swap slots when it flips.
     let source = display_source.clone();
     let highlighted = use_resource(use_reactive!(|source, language| async move {
-        match (source, language) {
-            (Some(source), Some(language)) => Some(highlight(&source, language)),
-            _ => None,
-        }
+        language.map(|language| highlight(&source, language))
     }));
 
     // Every path roots in one element, so one `prepare()` above the branch
@@ -429,11 +422,7 @@ pub fn Code(props: CodeProps) -> Element {
     if props.block {
         // Diff statuses need the markers still present.
         let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
-            props
-                .source
-                .as_deref()
-                .map(|source| source.lines().map(diff_status).collect())
-                .unwrap_or_default()
+            props.source.lines().map(diff_status).collect()
         } else {
             Vec::new()
         };
@@ -445,7 +434,7 @@ pub fn Code(props: CodeProps) -> Element {
         let label = language
             .map(Language::label)
             .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
-        let copy_source = display_source.clone().filter(|_| props.copyable);
+        let copy_source = props.copyable.then(|| display_source.clone());
         let highlighted_lines = props
             .highlight_lines
             .as_deref()
@@ -487,10 +476,7 @@ pub fn Code(props: CodeProps) -> Element {
                                 framework_sx: &CODE_PLAIN_PRE_SX,
                                 Box {
                                     component: "code",
-                                    match &display_source {
-                                        Some(source) => rsx! { {source.as_str()} },
-                                        None => rsx! { {props.children} },
-                                    }
+                                    {display_source.as_str()}
                                 }
                             }
                         },
@@ -500,25 +486,21 @@ pub fn Code(props: CodeProps) -> Element {
         );
     }
 
-    if let Some(source) = props.source.clone() {
-        return boxed.render(
-            HtmlTag::Code,
-            props.attributes,
-            rsx! {
-                if let Some(lines) = highlighted.read().clone().flatten() {
-                    for line in lines.iter() {
-                        for (text, class) in line.iter() {
-                            span { class: *class, {text.as_str()} }
-                        }
+    boxed.render(
+        HtmlTag::Code,
+        props.attributes,
+        rsx! {
+            if let Some(lines) = highlighted.read().clone().flatten() {
+                for line in lines.iter() {
+                    for (text, class) in line.iter() {
+                        span { class: *class, {text.as_str()} }
                     }
-                } else {
-                    {source.as_str()}
                 }
-            },
-        );
-    }
-
-    boxed.render(HtmlTag::Code, props.attributes, props.children)
+            } else {
+                {display_source.as_str()}
+            }
+        },
+    )
 }
 
 #[cfg(test)]

@@ -13,11 +13,11 @@ pub fn NavLinkPage() -> Element {
             lead: rsx! {
                 Text {
                     "A navigation list item - "
-                    Code { "Anchor" }
+                    Code { source: "Anchor" }
                     " plus a themed active/hover background and "
-                    Code { "aria-current" }
+                    Code { source: "aria-current" }
                     ", for a sidebar or nav bar link. Colors come from the theme ("
-                    Code { "Theme::nav_link" }
+                    Code { source: "Theme::nav_link" }
                     ") by default."
                 }
             },
@@ -26,9 +26,9 @@ pub fn NavLinkPage() -> Element {
                 Text {
                     sx: sx().color("grey.6"),
                     "Auto-detected by comparing "
-                    Code { "to" }
+                    Code { source: "to" }
                     " against the current route when "
-                    Code { "active" }
+                    Code { source: "active" }
                     " is unset - the first link below is this very page, so it reads as "
                     "active on its own.",
                 }

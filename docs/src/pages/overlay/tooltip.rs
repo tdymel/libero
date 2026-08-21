@@ -13,7 +13,7 @@ pub fn TooltipPage() -> Element {
                 Text {
                     "A label that appears while its child is hovered or focused. Pure CSS - it "
                     "wraps the trigger in a "
-                    Code { "span" }
+                    Code { source: "span" }
                     " and needs no state, so there are no open/close callbacks."
                 }
             },
@@ -43,7 +43,7 @@ pub fn TooltipPage() -> Element {
             DocSection {
                 title: "Sizes and gap",
                 Text {
-                    Code { "gap" }
+                    Code { source: "gap" }
                     " is rendered as transparent padding, not empty space, so the pointer can "
                     "travel from the trigger into the bubble without it closing."
                 }
@@ -64,9 +64,9 @@ pub fn TooltipPage() -> Element {
             DocSection {
                 title: "Delays",
                 Text {
-                    Code { "open_delay" }
+                    Code { source: "open_delay" }
                     " and "
-                    Code { "close_delay" }
+                    Code { source: "close_delay" }
                     " are milliseconds. A delay on open keeps a row of triggers quiet while the "
                     "pointer crosses it."
                 }
@@ -88,11 +88,11 @@ pub fn TooltipPage() -> Element {
             DocSection {
                 title: "Controlled",
                 Text {
-                    Code { "opened" }
+                    Code { source: "opened" }
                     " forces the bubble open or closed and overrides hover; leave it "
-                    Code { "None" }
+                    Code { source: "None" }
                     " for the default behaviour. "
-                    Code { "disabled" }
+                    Code { source: "disabled" }
                     " renders the trigger bare."
                 }
                 Flex {
@@ -111,9 +111,9 @@ pub fn TooltipPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "The wrapper is not focusable, so an "
-                    Code { "aria-describedby" }
+                    Code { source: "aria-describedby" }
                     " on it would never be announced. Give the bubble an id with "
-                    Code { "label_id" }
+                    Code { source: "label_id" }
                     " and point your own trigger at it instead."
                 }
                 Tooltip {
@@ -123,7 +123,7 @@ pub fn TooltipPage() -> Element {
                 }
                 Text {
                     "Escape does not dismiss it, and an ancestor with "
-                    Code { "overflow: hidden" }
+                    Code { source: "overflow: hidden" }
                     " - a scroll container, a card - clips it. Both need measurement and state; "
                     "reach for a popover there."
                 }
@@ -131,11 +131,11 @@ pub fn TooltipPage() -> Element {
             DocSection {
                 title: "Styling",
                 Text {
-                    Code { "sx" }
+                    Code { source: "sx" }
                     ", "
-                    Code { "class" }
+                    Code { source: "class" }
                     ", "
-                    Code { "states" }
+                    Code { source: "states" }
                     " and spread attributes land on the bubble, not the wrapper - the bubble is "
                     "the part worth styling."
                 }

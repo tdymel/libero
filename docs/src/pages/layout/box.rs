@@ -14,15 +14,15 @@ pub fn BoxPage() -> Element {
                 Text {
                     "The polymorphic primitive every other component is built on - renders "
                     "as any tag via "
-                    Code { "component" }
+                    Code { source: "component" }
                     ", plus "
-                    Code { "sx" }
+                    Code { source: "sx" }
                     "/"
-                    Code { "states" }
+                    Code { source: "states" }
                     " styling and escape-hatch attributes like "
-                    Code { "href" }
+                    Code { source: "href" }
                     "/"
-                    Code { "src" }
+                    Code { source: "src" }
                     "."
                 }
             },

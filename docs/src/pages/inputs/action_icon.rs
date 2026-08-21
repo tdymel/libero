@@ -14,9 +14,9 @@ pub fn ActionIconPage() -> Element {
             title: "ActionIcon",
             lead: rsx! {
                 Text {
-                    Code { "Icon" }
+                    Code { source: "Icon" }
                     "'s sizing, color, and variant system, rendered as a real "
-                    Code { "<button>" }
+                    Code { source: "<button>" }
                     " with click handling and required a11y - for icon-only actions like a "
                     "copy, close, or delete button."
                 }
@@ -53,14 +53,14 @@ pub fn ActionIconPage() -> Element {
                 title: "No variant or color",
                 Text {
                     "With neither set, "
-                    Code { "ActionIcon" }
+                    Code { source: "ActionIcon" }
                     " contributes no background/color of its own - it inherits "
                     "the surrounding text color instead of defaulting to a filled badge like "
-                    Code { "Icon" }
+                    Code { source: "Icon" }
                     " does, so it drops cleanly into a toolbar or a "
-                    Code { "Code" }
+                    Code { source: "Code" }
                     " block header without fighting a default look. This is how "
-                    Code { "Code" }
+                    Code { source: "Code" }
                     "'s own copy button is built."
                 }
                 ActionIcon { aria_label: "Confirm", CheckmarkIcon {} }

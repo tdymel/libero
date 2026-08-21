@@ -202,7 +202,7 @@ fn AppShell() -> Element {
                         .min_width("0"),
                     Container {
                         component: "main",
-                        size: "sm",
+                        size: "lg",
                         // Unreachable behind the open mobile drawer
                         // otherwise - still in the DOM, just visually
                         // covered. No-op at desktop widths, since `open`

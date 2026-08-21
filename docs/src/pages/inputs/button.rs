@@ -13,7 +13,7 @@ pub fn ButtonPage() -> Element {
             lead: rsx! {
                 Text {
                     "A clickable control, or a router-aware link when "
-                    Code { "to" }
+                    Code { source: "to" }
                     " is set."
                 }
             },
@@ -65,9 +65,9 @@ pub fn ButtonPage() -> Element {
                 Text {
                     sx: sx().color("grey.6"),
                     "A plain "
-                    Code { "<button>" }
+                    Code { source: "<button>" }
                     " submits an enclosing form. Ours defaults to "
-                    Code { "type=\"button\"" }
+                    Code { source: "type=\"button\"" }
                     " instead - set it yourself for a submit or reset button.",
                 }
                 Flex {

@@ -57,14 +57,14 @@ pub fn ListPage() -> Element {
             lead: rsx! {
                 Text {
                     "Renders a "
-                    Code { "ul" }
+                    Code { source: "ul" }
                     "/"
-                    Code { "li" }
+                    Code { source: "li" }
                     " pair with the browser's default list styling removed - nested lists "
                     "indent relative to their own content. "
-                    Code { "size" }
+                    Code { source: "size" }
                     " (xs-xxl, default "
-                    Code { "md" }
+                    Code { source: "md" }
                     ") controls item gap and nested-list indent together."
                 }
             },
@@ -86,11 +86,11 @@ pub fn ListPage() -> Element {
                 title: "File tree",
                 Text {
                     "Purely visual - no interactivity or state, just "
-                    Code { "List" }
+                    Code { source: "List" }
                     "/"
-                    Code { "ListItem" }
+                    Code { source: "ListItem" }
                     " nested arbitrarily deep, which is exactly the composition a future "
-                    Code { "Tree" }
+                    Code { source: "Tree" }
                     " component would build on."
                 }
                 List {

@@ -10,7 +10,7 @@ pub fn TitlePage() -> Element {
             lead: rsx! {
                 Text {
                     "A heading, h1 through h6 - "
-                    Code { "component" }
+                    Code { source: "component" }
                     " decouples the semantic tag from the visual size, for a11y heading order."
                 }
             },

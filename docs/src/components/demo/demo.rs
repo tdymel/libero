@@ -1,7 +1,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, Flex, Slider, SliderChangeEvent, Text, ToggleButton, ToggleButtonGroup,
+        Box, Code, Flex, Option as SelectOption, Select, Slider, SliderChangeEvent, Switch, Text,
+        ToggleButton, ToggleButtonGroup,
     },
     sx::sx,
     theme::{CODE_BORDER, Size},
@@ -52,7 +53,7 @@ pub fn Demo(
         )
     });
 
-    let source = super::generate_code(&component, &children_text, &controls, &values().0);
+    let source = super::generate_code(&component, &children_text, &controls, &values());
     // The color belongs *inside* each shorthand: a later `border-left: 1px
     // solid` would otherwise reset the color to `currentColor`.
     let border = format!("1px solid {}", CODE_BORDER.value());
@@ -104,10 +105,14 @@ pub fn Demo(
                             key: "{control.name}",
                             direction: "column",
                             gap: "xs",
-                            Text {
-                                size: "sm",
-                                sx: sx().font_weight("600"),
-                                {label(control.name)}
+                            // `Select` renders its own `<label>`, which is
+                            // what names it - a second one would duplicate it.
+                            if control.kind != ControlKind::Select {
+                                Text {
+                                    size: "sm",
+                                    sx: sx().font_weight("600"),
+                                    {label(control.name)}
+                                }
                             }
                             match control.kind {
                                 ControlKind::Color => rsx! {
@@ -181,6 +186,32 @@ pub fn Demo(
                                                 let at = event.value() as usize;
                                                 values.write().0[index].1 = options[at].clone();
                                             }
+                                        },
+                                    }
+                                },
+                                ControlKind::Select => rsx! {
+                                    Select {
+                                        size: "sm",
+                                        label: label(control.name),
+                                        value: values().str(control.name),
+                                        onchange: move |value: String| {
+                                            values.write().0[index].1 = value;
+                                        },
+                                        for option in control.options.iter() {
+                                            SelectOption {
+                                                key: "{option}",
+                                                value: "{option}",
+                                                {control.label_of(option)}
+                                            }
+                                        }
+                                    }
+                                },
+                                ControlKind::Switch => rsx! {
+                                    Switch {
+                                        aria_label: control.name,
+                                        checked: control.is_on(&values().str(control.name)),
+                                        onchange: move |on: bool| {
+                                            values.write().0[index].1 = on.to_string();
                                         },
                                     }
                                 },

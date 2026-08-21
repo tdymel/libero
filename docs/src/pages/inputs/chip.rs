@@ -12,11 +12,11 @@ pub fn ChipPage() -> Element {
             lead: rsx! {
                 Text {
                     "A compact token. With "
-                    Code { "onchange" }
+                    Code { source: "onchange" }
                     " it is a real checkbox - a visually hidden "
-                    Code { "input" }
+                    Code { source: "input" }
                     " plus a "
-                    Code { "label" }
+                    Code { source: "label" }
                     ", so selection is announced and Space toggles it. Without it, a plain tag."
                 }
             },
@@ -58,14 +58,14 @@ pub fn ChipPage() -> Element {
                 title: "Selectable",
                 Text {
                     "Strictly controlled: "
-                    Code { "checked" }
+                    Code { source: "checked" }
                     " drives the look, "
-                    Code { "onchange" }
+                    Code { source: "onchange" }
                     " reports the value it should take next. A checked chip is filled "
                     "whatever its "
-                    Code { "variant" }
+                    Code { source: "variant" }
                     ", so "
-                    Code { "variant" }
+                    Code { source: "variant" }
                     " describes the unselected state."
                 }
                 Flex {

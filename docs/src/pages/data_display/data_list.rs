@@ -15,25 +15,25 @@ pub fn DataListPage() -> Element {
             lead: rsx! {
                 Text {
                     "Renders a "
-                    Code { "dl" }
+                    Code { source: "dl" }
                     " of term/description pairs. Unlike "
-                    Code { "List" }
+                    Code { source: "List" }
                     ", a term can have more than one description - "
-                    Code { "DataListItem" }
+                    Code { source: "DataListItem" }
                     "'s "
-                    Code { "children" }
+                    Code { source: "children" }
                     " is a "
-                    Code { "Vec<Element>" }
+                    Code { source: "Vec<Element>" }
                     ", not a single "
-                    Code { "Element" }
+                    Code { source: "Element" }
                     ", so writing more than one child gives each one its own "
-                    Code { "dd" }
+                    Code { source: "dd" }
                     " with no extra ceremony over a single description - including from a "
-                    Code { "for" }
+                    Code { source: "for" }
                     " loop, which flattens the same way. Needs the "
-                    Code { "dioxus-fork" }
+                    Code { source: "dioxus-fork" }
                     " build - against upstream dioxus main the descriptions collapse into a single "
-                    Code { "dd" }
+                    Code { source: "dd" }
                     "."
                 }
             },
