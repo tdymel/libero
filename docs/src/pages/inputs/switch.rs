@@ -1,11 +1,10 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::components::{Code, Flex, Switch, Text};
 
 #[component]
 pub fn SwitchPage() -> Element {
     let mut notifications = use_signal(|| true);
-    let mut colors = use_signal(Vec::<String>::new);
 
     rsx! {
         DocPage {
@@ -18,7 +17,53 @@ pub fn SwitchPage() -> Element {
                 }
             },
             DocSection {
-                title: "Basic",
+                title: "Usage",
+                Demo {
+                    component: "Switch",
+                    children_text: "Notifications",
+                    controls: vec![
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        ),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("xl"),
+                        // Controlled state is `checked` + `onchange`; the
+                        // library warns about one without the other.
+                        Control::switch("checked").code(|_, values| {
+                            match values.str("checked").as_str() {
+                                "true" => vec![
+                                    "checked: true".to_string(),
+                                    "onchange: move |_| {}".to_string(),
+                                ],
+                                _ => vec![],
+                            }
+                        }),
+                        Control::switch("disabled"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Switch {
+                            color: values.str("color"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            // Both or neither: `checked` alone can never
+                            // change, `onchange` alone can never look selected.
+                            checked: match values.str("checked").as_str() {
+                                "true" => Some(true),
+                                _ => None,
+                            },
+                            onchange: (values.str("checked") == "true")
+                                .then(|| EventHandler::new(move |_: bool| {})),
+                            disabled: values.str("disabled") == "true",
+                            "Notifications"
+                        }
+                    },
+                }
+            }
+            DocSection {
+                title: "Controlled",
                 Text {
                     "Strictly controlled: "
                     Code { source: "checked" }
@@ -40,58 +85,6 @@ pub fn SwitchPage() -> Element {
                 Text { "Notifications: {notifications()}" }
             }
             DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "column",
-                    gap: "md",
-                    Switch { size: "xs", "Extra small" }
-                    Switch { size: "sm", "Small" }
-                    Switch { size: "md", "Medium" }
-                    Switch { size: "lg", "Large" }
-                    Switch { size: "xl", "Extra large" }
-                }
-            }
-            DocSection {
-                title: "Colors",
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    for color in ["primary", "success", "error", "warning"] {
-                        Switch {
-                            key: "{color}",
-                            color: "{color}",
-                            checked: colors().iter().any(|c| c == color),
-                            onchange: move |next: bool| {
-                                colors
-                                    .with_mut(|colors| {
-                                        if next {
-                                            colors.push(color.to_string());
-                                        } else {
-                                            colors.retain(|c| c != color);
-                                        }
-                                    });
-                            },
-                            "{color}"
-                        }
-                    }
-                }
-            }
-            DocSection {
-                title: "Radius",
-                Text {
-                    "Independent of "
-                    Code { source: "size" }
-                    "; the thumb stays a circle."
-                }
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    align: "center",
-                    Switch { radius: "xs", checked: true, onchange: move |_| {}, "Square" }
-                    Switch { radius: "xl", checked: true, onchange: move |_| {}, "Pill" }
-                }
-            }
-            DocSection {
                 title: "Without a label",
                 Text {
                     "Give it an "
@@ -101,15 +94,6 @@ pub fn SwitchPage() -> Element {
                     " land on the root, not on the input that carries the role."
                 }
                 Switch { aria_label: "Airplane mode", checked: true, onchange: move |_| {} }
-            }
-            DocSection {
-                title: "Disabled",
-                Flex {
-                    direction: "column",
-                    gap: "md",
-                    Switch { disabled: true, "Off" }
-                    Switch { disabled: true, checked: true, onchange: move |_| {}, "On" }
-                }
             }
         }
     }
