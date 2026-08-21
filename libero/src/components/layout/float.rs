@@ -9,7 +9,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, Z_INDEX_FLOAT},
+    theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, SizeCss, Z_INDEX_FLOAT},
 };
 
 pub use crate::theme::Placement;
@@ -47,8 +47,16 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn float_variables(props: &FloatProps) -> Variables {
     variables()
-        .with(FLOAT_OFFSET_X_VAR, props.offset_x.resolve(None))
-        .with(FLOAT_OFFSET_Y_VAR, props.offset_y.resolve(None))
+        // Through the spacing scale, so a size token is an offset like
+        // anywhere else - `resolve(None)` dropped one silently.
+        .with(
+            FLOAT_OFFSET_X_VAR,
+            props.offset_x.resolve(Some(SizeCss::SPACING)),
+        )
+        .with(
+            FLOAT_OFFSET_Y_VAR,
+            props.offset_y.resolve(Some(SizeCss::SPACING)),
+        )
         .with(Z_INDEX_FLOAT.override_var(), props.z_index.resolve(None))
 }
 
@@ -132,4 +140,50 @@ pub fn Float(props: FloatProps) -> Element {
         .variables(&variables)
         .prepare()
         .render(HtmlTag::Div, props.attributes, props.children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tokens::Size;
+
+    fn props(offset_x: Input<ThemeAwareValue>) -> FloatProps {
+        FloatProps {
+            class: Default::default(),
+            sx: Default::default(),
+            states: Input::None,
+            attributes: Vec::new(),
+            placement: Input::None,
+            offset_x,
+            offset_y: Input::None,
+            z_index: Input::None,
+            children: rsx! {},
+        }
+    }
+
+    /// A size token has no meaning without a scale, and `resolve(None)` used
+    /// to drop it - the offset silently did nothing.
+    #[test]
+    fn a_size_offset_resolves_through_the_spacing_scale() {
+        let variables = float_variables(&props(Size::Md.into()));
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:{};",
+                FLOAT_OFFSET_X_VAR.name(),
+                SizeCss::SPACING.value(Size::Md)
+            )
+        );
+    }
+
+    #[test]
+    fn a_css_length_offset_passes_through() {
+        let variables = float_variables(&props(Input::from("-8px")));
+
+        assert_eq!(
+            variables.to_string(),
+            format!("{}:-8px;", FLOAT_OFFSET_X_VAR.name())
+        );
+    }
 }
