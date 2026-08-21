@@ -22,7 +22,7 @@ Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 fn wrap_flex(_values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
     format!(
-        "Box {{\n    sx: sx().width(\"260px\").padding(\"8px\").background(\"grey.1\"),\n{indented}}}"
+        "Box {{\n    sx: sx().width(\"400px\").height(\"400px\").padding(\"8px\").background(\"grey.1\"),\n{indented}}}"
     )
 }
 

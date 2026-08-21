@@ -1,19 +1,17 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
 use dioxus::prelude::*;
-use libero::components::{Code, Flex, Text, ToggleButton, ToggleButtonGroup};
-use std::collections::HashMap;
+use libero::components::{Code, Flex, Input, Text, ToggleButton, ToggleButtonGroup};
+
+/// The buttons are the fixture - every prop belongs to the group - so the code
+/// block prints them verbatim.
+const CHILDREN: &str = r#"ToggleButton { value: "left", "Left" }
+ToggleButton { value: "center", "Center" }
+ToggleButton { value: "right", "Right" }"#;
 
 #[component]
 pub fn ToggleButtonGroupPage() -> Element {
     let mut alignment = use_signal(|| vec!["left".to_string()]);
-    let mut formats = use_signal(Vec::<String>::new);
-    let mut vertical = use_signal(|| vec!["b".to_string()]);
-    let mut gapped = use_signal(|| vec!["a".to_string()]);
-    let mut range = use_signal(|| vec!["day".to_string()]);
-    let mut disabled = use_signal(|| vec!["a".to_string()]);
-    // One entry per demo group, so the looped examples below do not all move
-    // together.
-    let mut groups = use_signal(HashMap::<&'static str, Vec<String>>::new);
+    let mut disabled_one = use_signal(|| vec!["a".to_string()]);
 
     rsx! {
         DocPage {
@@ -24,159 +22,83 @@ pub fn ToggleButtonGroupPage() -> Element {
                     Code { source: "button" }
                     " carrying "
                     Code { source: "aria-pressed" }
-                    ", so tab order and Space/Enter are the browser's own."
-                }
-            },
-            DocSection {
-                title: "Basic",
-                Text {
-                    "Strictly controlled: "
+                    ", so tab order and Space/Enter are the browser's own. Strictly controlled: "
                     Code { source: "value" }
                     " drives the look, "
                     Code { source: "onchange" }
                     " reports the selection the group should take next."
                 }
-                ToggleButtonGroup {
-                    value: alignment(),
-                    onchange: move |next| alignment.set(next),
-                    ToggleButton { value: "left", "Left" }
-                    ToggleButton { value: "center", "Center" }
-                    ToggleButton { value: "right", "Right" }
-                }
-                Text { "Alignment: {alignment():?}" }
-            }
+            },
             DocSection {
-                title: "Multiple",
-                Text {
-                    "Selection is exclusive by default. Set "
-                    Code { source: "exclusive: false" }
-                    " to let any number of buttons be pressed at once."
-                }
-                ToggleButtonGroup {
-                    exclusive: false,
-                    value: formats(),
-                    onchange: move |next| formats.set(next),
-                    ToggleButton { value: "bold", "Bold" }
-                    ToggleButton { value: "italic", "Italic" }
-                    ToggleButton { value: "underline", "Underline" }
-                }
-                Text { "Formats: {formats():?}" }
-            }
-            DocSection {
-                title: "Variants and colors",
-                Text {
-                    Code { source: "variant" }
-                    " is the unselected look; a selected button keeps it and tints its background."
-                }
-                Flex {
-                    direction: "column",
-                    gap: "md",
-                    align: "start",
-                    for variant in ["outlined", "filled", "text"] {
+                title: "Usage",
+                Demo {
+                    component: "ToggleButtonGroup",
+                    children_text: "",
+                    children_code: CHILDREN,
+                    // Required as a pair, and neither is a value a control
+                    // varies - the group is only ever as selected as its owner.
+                    fixed: vec![
+                        "value: alignment()".to_string(),
+                        "onchange: move |next| alignment.set(next)".to_string(),
+                    ],
+                    controls: vec![
+                        Control::toggle("variant", ["outlined", "filled", "text"]),
+                        // A bare `primary` is what an unset `color` resolves
+                        // to, so that swatch prints nothing.
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        ),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                        Control::toggle("orientation", ["horizontal", "vertical"]),
+                        // "auto" is no gap at all: the buttons stay connected
+                        // and share their borders.
+                        Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                        Control::switch("exclusive").default("true"),
+                        Control::switch("full_width"),
+                        Control::switch("disabled"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
                         ToggleButtonGroup {
-                            key: "{variant}",
-                            variant: "{variant}",
-                            color: "primary",
-                            value: groups().get(variant).cloned().unwrap_or_default(),
-                            onchange: move |next| {
-                                groups.with_mut(|groups| groups.insert(variant, next));
+                            variant: values.str("variant"),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
                             },
-                            ToggleButton { value: "list", "List" }
-                            ToggleButton { value: "grid", "Grid" }
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            orientation: values.str("orientation"),
+                            gap: or_unset(values.str("gap")),
+                            exclusive: values.str("exclusive") == "true",
+                            full_width: values.str("full_width") == "true",
+                            disabled: values.str("disabled") == "true",
+                            value: alignment(),
+                            onchange: move |next| alignment.set(next),
+                            ToggleButton { value: "left", "Left" }
+                            ToggleButton { value: "center", "Center" }
+                            ToggleButton { value: "right", "Right" }
                         }
-                    }
+                    },
                 }
             }
             DocSection {
-                title: "Sizes",
-                Flex {
-                    direction: "column",
-                    gap: "md",
-                    align: "start",
-                    for size in ["xs", "sm", "md", "lg", "xl"] {
-                        ToggleButtonGroup {
-                            key: "{size}",
-                            size: "{size}",
-                            value: groups().get(size).cloned().unwrap_or_default(),
-                            onchange: move |next| {
-                                groups.with_mut(|groups| groups.insert(size, next));
-                            },
-                            ToggleButton { value: "a", "A" }
-                            ToggleButton { value: "b", "B" }
-                            ToggleButton { value: "c", "C" }
-                        }
-                    }
-                }
-            }
-            DocSection {
-                title: "Vertical",
-                Text {
-                    Code { source: "orientation: \"vertical\"" }
-                    " stacks the buttons and moves the shared corners to the top and bottom."
-                }
-                ToggleButtonGroup {
-                    orientation: "vertical",
-                    value: vertical(),
-                    onchange: move |next| vertical.set(next),
-                    ToggleButton { value: "a", "Top" }
-                    ToggleButton { value: "b", "Middle" }
-                    ToggleButton { value: "c", "Bottom" }
-                }
-            }
-            DocSection {
-                title: "Gap",
-                Text {
-                    Code { source: "gap" }
-                    " separates the buttons, so each keeps its own border and its own radius "
-                    "instead of sharing them with its neighbours."
-                }
-                ToggleButtonGroup {
-                    gap: "xs",
-                    value: gapped(),
-                    onchange: move |next| gapped.set(next),
-                    ToggleButton { value: "a", "One" }
-                    ToggleButton { value: "b", "Two" }
-                    ToggleButton { value: "c", "Three" }
-                }
-            }
-            DocSection {
-                title: "Full width",
-                Text {
-                    Code { source: "full_width" }
-                    " spreads the group across its container. A horizontal group shares the width "
-                    "out evenly; a vertical one is already as wide as its widest button."
-                }
-                ToggleButtonGroup {
-                    full_width: true,
-                    value: range(),
-                    onchange: move |next| range.set(next),
-                    ToggleButton { value: "day", "Day" }
-                    ToggleButton { value: "week", "Week" }
-                    ToggleButton { value: "month", "Month" }
-                }
-            }
-            DocSection {
-                title: "Disabled",
+                title: "Per-button disabled",
                 Text {
                     Code { source: "disabled" }
                     " on the group covers every button; a single "
                     Code { source: "ToggleButton" }
-                    " can set its own."
+                    " can set its own instead."
                 }
                 Flex {
                     direction: "column",
                     gap: "md",
                     align: "start",
                     ToggleButtonGroup {
-                        disabled: true,
-                        value: vec!["a".to_string()],
-                        onchange: move |_| {},
-                        ToggleButton { value: "a", "One" }
-                        ToggleButton { value: "b", "Two" }
-                    }
-                    ToggleButtonGroup {
-                        value: disabled(),
-                        onchange: move |next| disabled.set(next),
+                        value: disabled_one(),
+                        onchange: move |next| disabled_one.set(next),
                         ToggleButton { value: "a", "One" }
                         ToggleButton { value: "b", disabled: true, "Two" }
                     }
