@@ -35,6 +35,18 @@ impl DemoValues {
     }
 }
 
+/// Wraps the generated rsx in whatever the preview puts around it - for a
+/// component whose point is how it sits inside something else. A page-level
+/// constant, so two are always equal.
+#[derive(Clone, Copy)]
+pub struct Wrap(pub fn(&DemoValues, &str) -> String);
+
+impl PartialEq for Wrap {
+    fn eq(&self, _: &Self) -> bool {
+        true
+    }
+}
+
 /// A live example: `render` on the left, a control per prop on the right,
 /// and the rsx those values add up to below.
 #[component]
@@ -43,6 +55,9 @@ pub fn Demo(
     children_text: String,
     controls: Vec<Control>,
     render: Callback<DemoValues, Element>,
+    /// Must match what `render` draws around the component - the code block is
+    /// a promise that copy-pasting reproduces the preview.
+    wrap: Option<Wrap>,
 ) -> Element {
     let mut values = use_signal(|| {
         DemoValues(
@@ -54,6 +69,10 @@ pub fn Demo(
     });
 
     let source = super::generate_code(&component, &children_text, &controls, &values());
+    let source = match wrap {
+        Some(Wrap(wrap)) => wrap(&values(), &source),
+        None => source,
+    };
     // The color belongs *inside* each shorthand: a later `border-left: 1px
     // solid` would otherwise reset the color to `currentColor`.
     let border = format!("1px solid {}", CODE_BORDER.value());

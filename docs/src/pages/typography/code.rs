@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap};
 use dioxus::prelude::*;
 use libero::components::{Code, Text};
 
@@ -63,6 +63,60 @@ fn example(values: &DemoValues) -> (&'static str, &'static str) {
     }
 }
 
+/// Inline `Code` earns its keep mid-sentence, so the demo shows it there
+/// rather than alone: (before, source, after).
+fn inline_example(language: &str) -> (&'static str, &'static str, &'static str) {
+    match language {
+        "bash" => (
+            "Run ",
+            "cargo build --release",
+            " before you profile anything.",
+        ),
+        "markdown" => (
+            "Wrap a word in ",
+            "**bold**",
+            " when it has to carry the sentence.",
+        ),
+        "html" => (
+            "Every card opens with an ",
+            "<h2>",
+            " so the outline reads right.",
+        ),
+        "css" => (
+            "Set ",
+            "color: crimson;",
+            " on the card and the heading follows.",
+        ),
+        "python" => ("Call ", "word.upper()", " when the label has to shout."),
+        _ => (
+            "Bind it with ",
+            "let width: u32 = 320;",
+            " before the first draw.",
+        ),
+    }
+}
+
+/// The inline preview draws a sentence around the `Code`, so the code block
+/// has to print that sentence too.
+fn wrap_inline(values: &DemoValues, code: &str) -> String {
+    if values.str("block") == "true" {
+        return code.to_string();
+    }
+    let (before, _, after) = inline_example(&values.str("language"));
+    let indented: String = code.lines().map(|line| format!("    {line}\n")).collect();
+    format!("Text {{\n    {before:?}\n{indented}    {after:?}\n}}")
+}
+
+/// `block`-only props print nothing while the demo is inline - `Code` ignores
+/// them there, so printing them would be a lie.
+fn block_only(control: &Control, values: &DemoValues) -> Vec<String> {
+    let value = values.str(control.name);
+    match values.str("block") == "true" && value != control.default {
+        true => vec![format!("{}: {value}", control.name)],
+        false => vec![],
+    }
+}
+
 #[component]
 pub fn CodePage() -> Element {
     rsx! {
@@ -110,10 +164,15 @@ pub fn CodePage() -> Element {
                             ])
                             .code(|_, values| {
                                 let language = values.str("language");
-                                vec![
-                                    format!("source: {}", example(values).0),
-                                    format!("language: {language:?}"),
-                                ]
+                                // Inline sources are one short line, so they
+                                // print as a literal rather than a const.
+                                let source = match values.str("block") == "true" {
+                                    true => format!("source: {}", example(values).0),
+                                    false => {
+                                        format!("source: {:?}", inline_example(&language).1)
+                                    }
+                                };
+                                vec![source, format!("language: {language:?}")]
                             }),
                         // On by default here, though `Code`'s own default is
                         // inline - a block is what the other props are about.
@@ -124,29 +183,43 @@ pub fn CodePage() -> Element {
                                 _ => vec![],
                             }
                         }),
-                        Control::switch("diff"),
-                        Control::switch("header").default("true"),
-                        Control::switch("copyable").default("true"),
-                        Control::switch("line_numbers").default("true"),
+                        Control::switch("diff").code(block_only),
+                        Control::switch("header").default("true").code(block_only),
+                        Control::switch("copyable").default("true").code(block_only),
+                        Control::switch("line_numbers").default("true").code(block_only),
                         Control::switch("highlight_lines").code(|_, values| {
-                            match values.str("highlight_lines").as_str() {
-                                "true" => vec!["highlight_lines: \"2,3\"".to_string()],
-                                _ => vec![],
+                            match values.str("block") == "true"
+                                && values.str("highlight_lines") == "true"
+                            {
+                                true => vec!["highlight_lines: \"2,3\"".to_string()],
+                                false => vec![],
                             }
                         }),
                         Control::slider("max_lines", ["auto", "2", "3"]).code(|_, values| {
                             match values.str("max_lines").as_str() {
                                 "auto" => vec![],
+                                _ if values.str("block") != "true" => vec![],
                                 lines => vec![format!("max_lines: {lines}")],
                             }
                         }),
                     ],
                     render: move |values: DemoValues| {
+                        let language = values.str("language");
+                        if values.str("block") != "true" {
+                            let (before, source, after) = inline_example(&language);
+                            return rsx! {
+                                Text {
+                                    {before}
+                                    Code { source, language }
+                                    {after}
+                                }
+                            };
+                        }
                         rsx! {
                             Code {
+                                block: true,
                                 source: example(&values).1,
-                                language: values.str("language"),
-                                block: values.str("block") == "true",
+                                language,
                                 diff: values.str("diff") == "true",
                                 header: values.str("header") == "true",
                                 copyable: values.str("copyable") == "true",
@@ -159,6 +232,7 @@ pub fn CodePage() -> Element {
                             }
                         }
                     },
+                    wrap: Wrap(wrap_inline),
                 }
             }
             DocSection {
