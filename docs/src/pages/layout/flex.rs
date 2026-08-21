@@ -103,7 +103,7 @@ pub fn FlexPage() -> Element {
                         Box {
                             sx: sx()
                                 .width("400px")
-                                .height("400px")
+                                .height("200px")
                                 .padding("8px")
                                 .background("grey.1"),
                             Flex {

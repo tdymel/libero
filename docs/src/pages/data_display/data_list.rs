@@ -1,9 +1,21 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Chip, Code, DataList, DataListItem, Text},
-    sx::sx,
-};
+use libero::components::{Chip, Code, DataList, DataListItem, Text};
+
+/// The pairs are the fixture - `orientation` and `gap` are the props - so the
+/// code block prints them verbatim, `for` loop included: that loop is the
+/// multi-description claim the lead makes.
+const CHILDREN: &str = r#"DataListItem {
+    label: rsx! { "Status" },
+    Chip { variant: "filled", color: "success", size: "xs", "Active" }
+}
+DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
+DataListItem {
+    label: rsx! { "Phone" },
+    for phone in &phones {
+        "{phone}"
+    }
+}"#;
 
 #[component]
 pub fn DataListPage() -> Element {
@@ -43,39 +55,33 @@ pub fn DataListPage() -> Element {
                 }
             },
             DocSection {
-                title: "Vertical (default)",
-                DataList {
-                    DataListItem {
-                        label: rsx! { "Status" },
-                        Chip { variant: "filled", color: "success", size: "xs", "Active" }
-                    }
-                    DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
-                    DataListItem {
-                        label: rsx! { "Phone" },
-                        for phone in &phones {
-                            "{phone}"
+                title: "Usage",
+                Demo {
+                    component: "DataList",
+                    children_text: "",
+                    children_code: CHILDREN,
+                    controls: vec![
+                        Control::toggle("orientation", ["vertical", "horizontal"]),
+                        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        DataList {
+                            orientation: values.str("orientation"),
+                            gap: values.str("gap"),
+                            DataListItem {
+                                label: rsx! { "Status" },
+                                Chip { variant: "filled", color: "success", size: "xs", "Active" }
+                            }
+                            DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
+                            DataListItem {
+                                label: rsx! { "Phone" },
+                                for phone in phones.clone() {
+                                    "{phone}"
+                                }
+                            }
                         }
-                    }
-                }
-            }
-            DocSection {
-                title: "Horizontal",
-                Text {
-                    "Terms and descriptions sit in two aligned columns. A term with several "
-                    "descriptions still lines up correctly - each extra description just adds "
-                    "another row under the value column, without repeating the term."
-                }
-                DataList {
-                    orientation: "horizontal",
-                    sx: sx().max_width("360px"),
-                    DataListItem { label: rsx! { "Status" }, "Active" }
-                    DataListItem { label: rsx! { "Owner" }, "Jamie Chen" }
-                    DataListItem {
-                        label: rsx! { "Phone" },
-                        for phone in &phones {
-                            "{phone}"
-                        }
-                    }
+                    },
                 }
             }
         }
