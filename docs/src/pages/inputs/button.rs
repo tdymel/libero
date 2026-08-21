@@ -27,7 +27,8 @@ pub fn ButtonPage() -> Element {
                             "color",
                             ["primary", "secondary", "success", "error", "warning", "info"],
                         ),
-                        Control::toggle("variant", ["outlined", "filled", "text"]),
+                        Control::toggle("variant", ["outlined", "filled", "text"])
+                            .labels(["Outlined", "Filled", "Text"]),
                         Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                             .default("md"),
                         Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

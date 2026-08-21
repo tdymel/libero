@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Text},
@@ -16,15 +16,11 @@ const CHILDREN: &str = r#"Box { sx: sx().padding("8px 16px").background("primary
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
 Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 
-/// `justify` and `wrap` are measured against the container's own width, so the
-/// preview gives the flex a fixed one to fill. Height stays free - a fixed one
-/// only makes the children overflow it. The code block prints that wrapper.
-fn wrap_flex(_values: &DemoValues, code: &str) -> String {
-    let indented = indent(code);
-    format!(
-        "Box {{\n    sx: sx().width(\"400px\").height(\"400px\").padding(\"8px\").background(\"grey.1\"),\n{indented}}}"
-    )
-}
+/// `align` and `justify` distribute *spare* space, so the flex needs a box
+/// bigger than its children - its own, not a wrapper's, or the children only
+/// ever fill it.
+const BOX_SX: &str =
+    r#"sx: sx().width("400px").height("200px").padding("8px").background("grey.1")"#;
 
 /// The divider a row needs is vertical; a column's is the default rule.
 #[cfg(feature = "dioxus-fork")]
@@ -98,37 +94,35 @@ pub fn FlexPage() -> Element {
                     component: "Flex",
                     children_text: "",
                     children_code: CHILDREN,
+                    fixed: vec![BOX_SX.to_string()],
                     controls: controls(),
                     render: move |values: DemoValues| rsx! {
-                        Box {
+                        Flex {
                             sx: sx()
                                 .width("400px")
                                 .height("200px")
                                 .padding("8px")
                                 .background("grey.1"),
-                            Flex {
-                                direction: values.str("direction"),
-                                gap: or_unset(values.str("gap")),
-                                align: or_unset(values.str("align")),
-                                justify: or_unset(values.str("justify")),
-                                wrap: or_unset(values.str("wrap")),
-                                divider: divider_element(&values),
-                                Box {
-                                    sx: sx().padding("8px 16px").background("primary.1"),
-                                    "One"
-                                }
-                                Box {
-                                    sx: sx().padding("8px 16px").background("primary.1"),
-                                    "Two"
-                                }
-                                Box {
-                                    sx: sx().padding("8px 16px").background("primary.1"),
-                                    "Three"
-                                }
+                            direction: values.str("direction"),
+                            gap: or_unset(values.str("gap")),
+                            align: or_unset(values.str("align")),
+                            justify: or_unset(values.str("justify")),
+                            wrap: or_unset(values.str("wrap")),
+                            divider: divider_element(&values),
+                            Box {
+                                sx: sx().padding("8px 16px").background("primary.1"),
+                                "One"
+                            }
+                            Box {
+                                sx: sx().padding("8px 16px").background("primary.1"),
+                                "Two"
+                            }
+                            Box {
+                                sx: sx().padding("8px 16px").background("primary.1"),
+                                "Three"
                             }
                         }
                     },
-                    wrap: Wrap(wrap_flex),
                 }
             }
             if cfg!(feature = "dioxus-fork") {

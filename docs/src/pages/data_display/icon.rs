@@ -28,7 +28,8 @@ pub fn IconPage() -> Element {
                     children_text: "",
                     children_code: CHILDREN,
                     controls: vec![
-                        Control::toggle("variant", ["filled", "outlined", "transparent"]),
+                        Control::toggle("variant", ["filled", "outlined", "transparent"])
+                            .labels(["Filled", "Outlined", "Transparent"]),
                         // A bare `primary` is what an unset `color` resolves
                         // to, so that swatch prints nothing.
                         Control::color(

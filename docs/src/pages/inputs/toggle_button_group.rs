@@ -42,7 +42,8 @@ pub fn ToggleButtonGroupPage() -> Element {
                         "onchange: move |next| alignment.set(next)".to_string(),
                     ],
                     controls: vec![
-                        Control::toggle("variant", ["outlined", "filled", "text"]),
+                        Control::toggle("variant", ["outlined", "filled", "text"])
+                            .labels(["Outlined", "Filled", "Text"]),
                         // A bare `primary` is what an unset `color` resolves
                         // to, so that swatch prints nothing.
                         Control::color(

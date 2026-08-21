@@ -44,7 +44,8 @@ pub fn ActionIconPage() -> Element {
                     children_code: CHILDREN,
                     fixed: vec!["aria_label: \"Confirm\"".to_string()],
                     controls: vec![
-                        Control::toggle("variant", ["none", "filled", "outlined", "transparent"]),
+                        Control::toggle("variant", ["none", "filled", "outlined", "transparent"])
+                            .labels(["None", "Filled", "Outlined", "Transparent"]),
                         // A bare `primary` is what an unset `color` resolves
                         // to, so that swatch prints nothing.
                         Control::color(

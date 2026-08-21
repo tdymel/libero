@@ -163,9 +163,9 @@ pub fn Demo(
                         .breakpoint(
                             Size::Sm,
                             sx()
-                                // 220px of controls plus the padding either
+                                // 270px of controls plus the padding either
                                 // side - `box-sizing` is border-box here.
-                                .width("268px")
+                                .width("318px")
                                 .border_top("none")
                                 .border_left(border.clone()),
                         ),
@@ -305,7 +305,7 @@ pub fn Demo(
                                             ToggleButton {
                                                 key: "{option}",
                                                 value: "{option}",
-                                                "{option}"
+                                                {control.label_of(option)}
                                             }
                                         }
                                     }
