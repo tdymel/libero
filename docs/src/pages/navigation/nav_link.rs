@@ -1,12 +1,38 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, NavLink, Text},
     sx::sx,
+    use_theme,
 };
+
+/// Two links, so `active: auto` can be seen deciding *between* them - one is
+/// this very page, the other is not. Only `to` and the label differ, so each
+/// is spliced into its own copy of the generated rsx.
+fn wrap_links(_: &DemoValues, code: &str) -> String {
+    let body = code
+        .strip_prefix("NavLink {")
+        .unwrap_or(code)
+        .trim_end_matches('}');
+    // No props left at all collapses to `NavLink {}` - the child still needs
+    // its own line.
+    let body = match body.is_empty() {
+        true => "\n",
+        false => body,
+    };
+    let link = |to: &str, label: &str| format!("NavLink {{\n    to: {to},{body}    {label:?}\n}}");
+
+    format!(
+        "Flex {{\n    direction: \"column\",\n    gap: \"xs\",\n    sx: sx().width(\"240px\"),\n{}{}}}",
+        indent(&link("Route::GettingStarted {}", "Getting Started")),
+        indent(&link("Route::NavLinkPage {}", "NavLink")),
+    )
+}
 
 #[component]
 pub fn NavLinkPage() -> Element {
+    let theme = use_theme();
+
     rsx! {
         DocPage {
             title: "NavLink",
@@ -18,60 +44,60 @@ pub fn NavLinkPage() -> Element {
                     Code { source: "aria-current" }
                     ", for a sidebar or nav bar link. Colors come from the theme ("
                     Code { source: "Theme::nav_link" }
-                    ") by default."
+                    ") by default, and only show once a link is active."
                 }
             },
             DocSection {
-                title: "Active state",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "Auto-detected by comparing "
-                    Code { source: "to" }
-                    " against the current route when "
-                    Code { source: "active" }
-                    " is unset - the first link below is this very page, so it reads as "
-                    "active on its own.",
-                }
-                Flex {
-                    direction: "column",
-                    gap: "xs",
-                    sx: sx().width("240px"),
-                    NavLink { to: crate::Route::NavLinkPage {}, "This page (auto-active)" }
-                    NavLink { to: crate::Route::GettingStarted {}, "Another page" }
-                    NavLink {
-                        to: "https://dioxuslabs.com",
-                        target: "_blank",
-                        active: true,
-                        "Forced active (external link)",
-                    }
-                }
-            }
-
-            DocSection {
-                title: "Colors",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "Forced active here to show the tint - color only shows once a link is "
-                    "active.",
-                }
-                Flex {
-                    direction: "column",
-                    gap: "xs",
-                    sx: sx().width("240px"),
-                    NavLink { to: "#", active: true, "Primary (default)" }
-                    NavLink { to: "#", active: true, color: "success", "Success" }
-                    NavLink { to: "#", active: true, color: "error", "Error" }
-                    NavLink { to: "#", active: true, color: "warning", "Warning" }
-                }
-            }
-
-            DocSection {
-                title: "Disabled",
-                Flex {
-                    direction: "column",
-                    gap: "xs",
-                    sx: sx().width("240px"),
-                    NavLink { to: "#", disabled: true, "Disabled" }
+                title: "Usage",
+                Demo {
+                    component: "NavLink",
+                    children_text: "",
+                    controls: vec![
+                        // Unset compares `to` against the current route, which
+                        // is why the second link reads active on its own.
+                        Control::toggle("active", ["auto", "true", "false"]).code(
+                            |_, values| match values.str("active").as_str() {
+                                "auto" => vec![],
+                                active => vec![format!("active: {active}")],
+                            },
+                        ),
+                        Control::color(
+                            "color",
+                            ["primary", "secondary", "success", "error", "warning", "info"],
+                        )
+                        .default(theme.nav_link.color.as_str()),
+                        Control::switch("disabled"),
+                    ],
+                    render: move |values: DemoValues| {
+                        let active = match values.str("active").as_str() {
+                            "auto" => None,
+                            active => Some(active == "true"),
+                        };
+                        let color = values.str("color");
+                        let disabled = (values.str("disabled") == "true").then_some(true);
+                        rsx! {
+                            Flex {
+                                direction: "column",
+                                gap: "xs",
+                                sx: sx().width("240px"),
+                                NavLink {
+                                    to: crate::Route::GettingStarted {},
+                                    active,
+                                    color: color.clone(),
+                                    disabled,
+                                    "Getting Started"
+                                }
+                                NavLink {
+                                    to: crate::Route::NavLinkPage {},
+                                    active,
+                                    color,
+                                    disabled,
+                                    "NavLink"
+                                }
+                            }
+                        }
+                    },
+                    wrap: Wrap(wrap_links),
                 }
             }
         }
