@@ -177,8 +177,21 @@ pub fn Demo(
                             .flex_shrink("0")
                             .padding("24px")
                             .border_top(border.clone())
+                            // `Md`, not `Sm`, and the gap between them is the
+                            // whole point: whether the panel *wraps* depends on
+                            // the card's width, but a media query can only ask
+                            // about the viewport. Under the docs shell the card
+                            // is roughly `viewport - 280 (nav) - 56 (gutters and
+                            // page padding)`, so 240px of preview plus 388px of
+                            // panel only fit from ~956px up. At `Sm` (768px) the
+                            // panel wrapped below the preview while the query
+                            // still gave it a fixed width and a left border.
+                            // `Md` (992px) clears it with room to spare, and
+                            // errs towards stacking - which always looks right.
+                            // The real fix is a container query; `Sx` has no
+                            // `@container` yet.
                             .breakpoint(
-                                Size::Sm,
+                                Size::Md,
                                 sx()
                                     // 340px of controls plus the padding either
                                     // side - `box-sizing` is border-box here.
