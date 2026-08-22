@@ -207,15 +207,20 @@ pub fn Demo(
                                     .border_top("none")
                                     .border_left(border()),
                             ),
-                        for (index, control) in controls.iter().enumerate() {
+                        // A hidden control is one the current mode does not
+                        // have at all, so it is gone rather than greyed: the
+                        // control that swaps the set sits above them and stays
+                        // put under the pointer.
+                        // Enumerated before the filter: `index` addresses
+                        // `DemoValues`, which keeps every control's value,
+                        // hidden or not.
+                        for (index, control) in controls
+                            .iter()
+                            .enumerate()
+                            .filter(|(_, control)| !control.is_hidden(&values()))
+                        {
                             Flex {
                                 key: "{control.name}",
-                                // Greyed out, not gone: a control that vanishes
-                                // moves every one below it under the pointer.
-                                sx: sx().opacity(match control.is_inert(&values()) {
-                                    true => "0.4",
-                                    false => "1",
-                                }),
                                 direction: "column",
                                 // The slider's bubble sits above its track, so it
                                 // needs more room under the label than the rest.
@@ -234,7 +239,6 @@ pub fn Demo(
                                         ToggleButtonGroup {
                                             size: "sm",
                                             full_width: true,
-                                            disabled: control.is_inert(&values()),
                                             // Swatches read as separate chips, not one
                                             // segmented control.
                                             gap: "xs",
@@ -287,7 +291,6 @@ pub fn Demo(
                                     ControlKind::Slider => rsx! {
                                         Slider {
                                             size: "lg",
-                                            disabled: control.is_inert(&values()),
                                             aria_label: control.name,
                                             min: 0.0,
                                             max: (control.options.len() - 1) as f64,
@@ -313,7 +316,6 @@ pub fn Demo(
                                     ControlKind::Select => rsx! {
                                         Select {
                                             size: "sm",
-                                            disabled: control.is_inert(&values()),
                                             label: label(control.name),
                                             // Matches the `Text { size: "sm" }`
                                             // label every other control kind gets.
@@ -336,7 +338,6 @@ pub fn Demo(
                                     ControlKind::Switch => rsx! {
                                         Switch {
                                             aria_label: control.name,
-                                            disabled: control.is_inert(&values()),
                                             checked: control.is_on(&values().str(control.name)),
                                             onchange: move |on: bool| {
                                                 values.write().0[index].1 = on.to_string();
@@ -347,7 +348,6 @@ pub fn Demo(
                                         ToggleButtonGroup {
                                             size: "sm",
                                             full_width: true,
-                                            disabled: control.is_inert(&values()),
                                             value: vec![values().str(control.name)],
                                             onchange: move |next: Vec<String>| {
                                                 if let Some(value) = next.into_iter().next() {

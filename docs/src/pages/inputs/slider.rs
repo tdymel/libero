@@ -9,14 +9,8 @@ use libero::{
 
 const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
 
-const LABEL: &str = r#"label: Callback::new(|value: f64| format!("{value}%"))"#;
-
-/// Everything else a discrete slider needs - the range, the step grid, one
-/// mark per option and every caption - comes from `SliderValue`.
-const DISCRETE: [&str; 2] = [
-    "value: size()",
-    "on_change: move |event: SliderChangeEvent<Size>| { size.set(event.value()); last_size.set(event) }",
-];
+/// Every `Size`, since that is what a discrete slider over one shows.
+const VALUES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
 
 const SLIDER_VALUE: &str = r#"#[derive(Clone, Copy, PartialEq)]
 enum Quality { Low, Medium, High }
@@ -50,15 +44,74 @@ rsx! {
 }"#;
 
 fn discrete(values: &DemoValues) -> bool {
-    values.str("discrete") == "true"
+    values.str("mode") == "discrete"
 }
 
-/// `min`/`max`/`step` all print as unquoted floats, and `auto` is the
-/// component's own default. Discrete mode pins all three, so they go quiet.
+fn continuous(values: &DemoValues) -> bool {
+    !discrete(values)
+}
+
+fn is_on(values: &DemoValues, name: &str) -> bool {
+    values.str(name) == "true"
+}
+
+/// The value type decides `value`, `on_change` and the name the thumb reports,
+/// so the mode control prints all three.
+fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    match discrete(values) {
+        true => vec![
+            r#"aria_label: "Size""#.to_string(),
+            "value: size()".to_string(),
+            "on_change: move |event: SliderChangeEvent<Size>| { size.set(event.value()); last_size.set(event) }"
+                .to_string(),
+        ],
+        false => vec![
+            r#"aria_label: "Volume""#.to_string(),
+            "value: volume()".to_string(),
+            "on_change: move |event: SliderChangeEvent| { volume.set(event.value()); last.set(event) }"
+                .to_string(),
+        ],
+    }
+}
+
+/// A bound in the value's own type. Quiet at the option the slider would pick
+/// anyway - the first for `min`, the last for `max`.
+fn bound_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    let value = values.str(control.name);
+    match continuous(values) || value == control.default {
+        true => vec![],
+        false => vec![format!(
+            "{}: Size::{}{}",
+            control.name,
+            value[..1].to_uppercase(),
+            &value[1..]
+        )],
+    }
+}
+
+/// A stride over the options - `1` is every one of them, which is the default.
+fn stride_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    if continuous(values) {
+        return vec![];
+    }
+    match values.str(control.name).as_str() {
+        "1" => vec![],
+        stride => vec![format!("step: {stride}")],
+    }
+}
+
+/// `min`/`max`/`step` print as unquoted floats, under their real prop names -
+/// the control is `min_value` only because the discrete `min` owns that name.
 fn number_code(control: &Control, values: &DemoValues) -> Vec<String> {
-    match (discrete(values), values.str(control.name).as_str()) {
-        (true, _) | (_, "auto") => vec![],
-        (_, value) => vec![format!("{}: {value}", control.name)],
+    if discrete(values) {
+        return vec![];
+    }
+    match values.str(control.name).as_str() {
+        "auto" => vec![],
+        value => vec![format!(
+            "{}: {value}",
+            control.name.trim_end_matches("_value")
+        )],
     }
 }
 
@@ -69,15 +122,60 @@ fn number(values: &DemoValues, name: &str) -> Option<f64> {
 /// Ticks at both ends and the midpoint of the *current* range - a mark at 50
 /// means nothing on a 0.5-to-3 slider.
 fn mark_values(values: &DemoValues) -> [f64; 3] {
-    let min = values.str("min").parse().unwrap_or(0.0);
-    let max = values.str("max").parse().unwrap_or(100.0);
+    let min = values.str("min_value").parse().unwrap_or(0.0);
+    let max = values.str("max_value").parse().unwrap_or(100.0);
     [min, (min + max) / 2.0, max]
 }
 
-fn marks(values: &DemoValues) -> Vec<SliderMark> {
+/// Discretely, `marks` *replaces* the one-per-option set the type derives;
+/// continuously there is nothing to derive, so it adds them.
+fn marks_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    if !is_on(values, "marks") {
+        return vec![];
+    }
     match discrete(values) {
-        true => Vec::new(),
-        false if values.str("marks") == "true" => {
+        true => vec![
+            r#"marks: vec![SliderMark::labeled(Size::Xs, "small"), SliderMark::labeled(Size::Xxl, "large")]"#
+                .to_string(),
+        ],
+        false => {
+            let [min, mid, max] = mark_values(values);
+            vec![format!(
+                "marks: vec![SliderMark::labeled({min:?}, \"{min}\"), SliderMark::new({mid:?}), SliderMark::labeled({max:?}, \"{max}\")]"
+            )]
+        }
+    }
+}
+
+fn label_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    match (is_on(values, "label"), discrete(values)) {
+        (false, _) => vec![],
+        (true, true) => {
+            vec![r#"label: Callback::new(|size: Size| format!("{size:?} size"))"#.to_string()]
+        }
+        (true, false) => {
+            vec![r#"label: Callback::new(|value: f64| format!("{value}%"))"#.to_string()]
+        }
+    }
+}
+
+fn size_of(values: &DemoValues, name: &str) -> Size {
+    Size::from(values.str(name).as_str())
+}
+
+fn discrete_marks(values: &DemoValues) -> Vec<SliderMark<Size>> {
+    match is_on(values, "marks") {
+        true => vec![
+            SliderMark::labeled(Size::Xs, "small"),
+            SliderMark::labeled(Size::Xxl, "large"),
+        ],
+        false => Vec::new(),
+    }
+}
+
+fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
+    match is_on(values, "marks") {
+        true => {
             let [min, mid, max] = mark_values(values);
             vec![
                 SliderMark::labeled(min, min.to_string()),
@@ -131,74 +229,59 @@ pub fn SliderPage() -> Element {
                     component: "Slider",
                     children_text: "",
                     controls: vec![
-                        // Drives `value` and `on_change` too: a picker over a
-                        // list needs its own index signal, not the percentage.
-                        Control::switch("discrete").code(|_, values| match discrete(values) {
-                            true => [r#"aria_label: "Size""#]
-                                .iter()
-                                .chain(DISCRETE.iter())
-                                .map(|line| line.to_string())
-                                .collect(),
-                            false => vec![
-                                r#"aria_label: "Volume""#.to_string(),
-                                "value: volume()".to_string(),
-                                "on_change: move |event: SliderChangeEvent| { volume.set(event.value()); last.set(event) }"
-                                    .to_string(),
-                            ],
-                        }),
+                        // The value's type is the mode: an ordered enum makes
+                        // the slider discrete, `f64` leaves it continuous. Each
+                        // brings its own props, so the set below swaps with it.
+                        Control::toggle("mode", ["discrete", "continuous"])
+                            .labels(["Discrete", "Continuous"])
+                            .code(mode_code),
                         Control::slider("size", SIZES).default(theme.slider.size.as_str()),
                         Control::slider("radius", SIZES).default(theme.slider.radius.as_str()),
                         Control::color(
                             "color",
                             ["primary", "secondary", "success", "error", "warning", "info"],
                         ),
-                        Control::slider("min", ["auto", "0.5", "10.0", "50.0"])
+                        Control::slider("min", VALUES).code(bound_code).hidden_when(continuous),
+                        Control::slider("max", VALUES)
+                            .default("xxl")
+                            .code(bound_code)
+                            .hidden_when(continuous),
+                        Control::slider("step", ["1", "2", "3"])
+                            .code(stride_code)
+                            .hidden_when(continuous),
+                        Control::slider("min_value", ["auto", "0.5", "10.0", "50.0"])
                             .code(number_code)
-                            .inert_when(discrete),
-                        Control::slider("max", ["auto", "3.0", "50.0", "200.0"])
+                            .hidden_when(discrete),
+                        Control::slider("max_value", ["auto", "3.0", "50.0", "200.0"])
                             .code(number_code)
-                            .inert_when(discrete),
-                        Control::slider("step", ["auto", "0.1", "5.0", "10.0", "25.0"])
+                            .hidden_when(discrete),
+                        Control::slider("step_value", ["auto", "0.1", "5.0", "10.0", "25.0"])
                             .code(number_code)
-                            .inert_when(discrete),
-                        // The ticks follow the range, so the printed vec is
-                        // built from the current `min`/`max`.
-                        Control::switch("marks").code(|_, values| {
-                            match !discrete(values) && values.str("marks") == "true" {
-                                false => vec![],
-                                true => {
-                                    let [min, mid, max] = mark_values(values);
-                                    vec![format!(
-                                        "marks: vec![SliderMark::labeled({min:?}, \"{min}\"), SliderMark::new({mid:?}), SliderMark::labeled({max:?}, \"{max}\")]"
-                                    )]
-                                }
-                            }
-                        })
-                        .inert_when(discrete),
-                        Control::switch("label").code(|_, values| {
-                            match !discrete(values) && values.str("label") == "true" {
-                                true => vec![LABEL.to_string()],
-                                false => vec![],
-                            }
-                        })
-                        .inert_when(discrete),
+                            .hidden_when(discrete),
+                        Control::switch("marks").code(marks_code),
+                        Control::switch("label").code(label_code),
                         Control::switch("disabled"),
                     ],
                     render: move |values: DemoValues| {
-                        let discrete = discrete(&values);
                         rsx! {
                             Flex {
                                 direction: "column",
                                 gap: "sm",
                                 sx: sx().width("100%"),
-                                if discrete {
+                                if discrete(&values) {
                                     Slider {
                                         aria_label: "Size",
                                         value: size(),
                                         size: values.str("size"),
                                         radius: values.str("radius"),
                                         color: values.str("color"),
-                                        disabled: (values.str("disabled") == "true").then_some(true),
+                                        min: size_of(&values, "min"),
+                                        max: size_of(&values, "max"),
+                                        step: values.str("step").parse::<usize>().unwrap_or(1),
+                                        marks: discrete_marks(&values),
+                                        label: is_on(&values, "label")
+                                            .then(|| Callback::new(|size: Size| format!("{size:?} size"))),
+                                        disabled: is_on(&values, "disabled").then_some(true),
                                         on_change: move |event: SliderChangeEvent<Size>| {
                                             size.set(event.value());
                                             last_size.set(event)
@@ -212,13 +295,13 @@ pub fn SliderPage() -> Element {
                                         size: values.str("size"),
                                         radius: values.str("radius"),
                                         color: values.str("color"),
-                                        min: number(&values, "min"),
-                                        max: number(&values, "max"),
-                                        step: number(&values, "step"),
-                                        marks: marks(&values),
-                                        label: (values.str("label") == "true")
+                                        min: number(&values, "min_value"),
+                                        max: number(&values, "max_value"),
+                                        step: number(&values, "step_value"),
+                                        marks: continuous_marks(&values),
+                                        label: is_on(&values, "label")
                                             .then(|| Callback::new(|value: f64| format!("{value}%"))),
-                                        disabled: (values.str("disabled") == "true").then_some(true),
+                                        disabled: is_on(&values, "disabled").then_some(true),
                                         on_change: move |event: SliderChangeEvent| {
                                             volume.set(event.value());
                                             last.set(event)
