@@ -133,6 +133,7 @@ fn render_cost_per_component() {
         "Anchor" { Anchor { to: "https://example.com", "x" } }
         "NavLink" { NavLink { to: "https://example.com", "x" } }
         "Tree" { Tree { aria_label: "a", data: vec![TreeNode::new("a", "Alpha".to_string())] } }
+        "TreeItem" { TreeItem { "x" } }
 
         "Overlay" { Overlay {} }
         "Modal" { Modal { "x" } }

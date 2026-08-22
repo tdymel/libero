@@ -74,6 +74,7 @@ properties! {
     GridColumn => "grid-column", grid_column;
     MaxWidth => "max-width", max_width, SizeCss::BREAKPOINT;
     MaxHeight => "max-height", max_height;
+    Font => "font", font;
     FontFamily => "font-family", font_family;
     FontSize => "font-size", font_size;
     FontWeight => "font-weight", font_weight;

@@ -13,7 +13,7 @@ use libero::{
         DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
         List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
         Slider, SliderMark, Splitter, Switch, Text, Title, ToggleButton, ToggleButtonGroup,
-        Tooltip, Tree, TreeNode, VisuallyHidden,
+        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
     },
     theme::{Color, Size},
 };
@@ -439,6 +439,31 @@ fn a_disabled_select_renders_the_attribute() {
     let html = render(app);
 
     assert!(body(&html).contains("disabled"));
+}
+
+/// The row hands its content the tab stop and the `disabled` flag through
+/// context, so a `TreeItem` needs neither at the call site.
+#[test]
+fn a_tree_item_takes_its_tabindex_from_the_row() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data: vec![TreeNode::new("a", "Alpha".to_string())],
+                    render_node: move |_: TreeNodeRenderArgs<String>| rsx! {
+                        TreeItem { "Alpha" }
+                    },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert!(body.contains("<button"));
+    assert!(body.contains(r#"tabindex="-1""#));
 }
 
 #[test]

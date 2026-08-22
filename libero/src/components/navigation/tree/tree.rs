@@ -9,7 +9,7 @@ use crate::{
     },
     hooks::{use_root_id, use_theme},
     sx::Sx,
-    theme::{LIST_GAP, Size},
+    theme::Size,
 };
 
 use super::{
@@ -145,17 +145,11 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    /// Row gap and per-level indent together - `List`'s scale, since `Tree`
+    /// renders through it. Off-scale, or the two apart, goes through `sx`:
+    /// `sx().gap("4px").selector("& ul", sx().padding_left("24px"))`.
     #[props(default, into)]
     size: Input<Size>,
-    /// Row gap at every level, independent of `size`. Off-scale values go
-    /// through `sx` - see the `& ul` note on `indent`.
-    #[props(default, into)]
-    gap: Input<Size>,
-    /// Per-level indent, independent of `size`. To offset from `render_node`'s
-    /// `depth` yourself, zero it on both the root and its nested groups:
-    /// `sx().padding_left("0").selector("& ul", sx().padding_left("0"))`.
-    #[props(default, into)]
-    indent: Input<Size>,
     /// Required by WAI-ARIA's tree pattern.
     #[props(into)]
     aria_label: String,
@@ -222,8 +216,6 @@ pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> 
             sx: props.sx,
             states: props.states,
             size: props.size,
-            gap: props.gap,
-            indent: props.indent,
             aria_label: props.aria_label,
             data: erased_data,
             render_node: erased_render_node,
@@ -237,10 +229,6 @@ base_props! {
     struct TreeCoreProps {
         #[props(default, into)]
         size: Input<Size>,
-        #[props(default, into)]
-        gap: Input<Size>,
-        #[props(default, into)]
-        indent: Input<Size>,
         #[props(into)]
         aria_label: String,
         data: Vec<TreeNodeErased>,
@@ -363,13 +351,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         }
     };
 
-    let gap = props.gap.as_ref().copied();
-    let indent = props.indent.as_ref().copied();
-    let root_sx = props
-        .sx
-        .into_option()
-        .unwrap_or_default()
-        .apply_if(gap, |sx, gap| sx.gap(LIST_GAP.value(gap)));
+    let root_sx = props.sx.into_option().unwrap_or_default();
 
     rsx! {
         List {
@@ -387,8 +369,6 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     key: "{node.id}",
                     node: node.clone(),
                     size,
-                    gap,
-                    indent,
                     depth: 0,
                     expanded,
                     resolved_active: resolved_active.clone(),
