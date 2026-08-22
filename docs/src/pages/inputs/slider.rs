@@ -1,8 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Input, Slider, SliderChangeEvent, SliderMark, Text},
+    components::{Code, CodeBlock, Flex, Slider, SliderChangeEvent, SliderMark, Text},
     sx::sx,
+    theme::Size,
     use_theme,
 };
 
@@ -10,16 +11,43 @@ const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
 
 const LABEL: &str = r#"label: Callback::new(|value: f64| format!("{value}%"))"#;
 
-/// The props that turn the slider into a picker over `SIZES` - a `step` of one
-/// over an index, with a mark and a name per step.
-const DISCRETE: [&str; 6] = [
-    "value: index()",
-    "min: 0.0",
-    "max: 4.0",
-    "step: 1.0",
-    r#"label: Callback::new(|value: f64| SIZES[value as usize].to_string())"#,
-    "marks: SIZES.iter().enumerate().map(|(i, size)| SliderMark::labeled(i as f64, *size)).collect()",
+/// Everything else a discrete slider needs - the range, the step grid, one
+/// mark per option and every caption - comes from `SliderValue`.
+const DISCRETE: [&str; 2] = [
+    "value: size()",
+    "on_change: move |event: SliderChangeEvent<Size>| { size.set(event.value()); last_size.set(event) }",
 ];
+
+const SLIDER_VALUE: &str = r#"#[derive(Clone, Copy, PartialEq)]
+enum Quality { Low, Medium, High }
+
+impl SliderValue for Quality {
+    type Step = usize;
+
+    fn options() -> Option<&'static [Self]> {
+        Some(&[Self::Low, Self::Medium, Self::High])
+    }
+
+    fn label(&self) -> String {
+        match self {
+            Self::Low => "Low",
+            Self::Medium => "Medium",
+            Self::High => "High",
+        }
+        .to_string()
+    }
+}
+
+// `min`/`max` are written in the value's own type; `step` counts options,
+// so `step: 1.5` is a compile error rather than a surprise at runtime.
+rsx! {
+    Slider {
+        value: quality(),
+        min: Quality::Low,
+        step: 1,
+        on_change: move |event: SliderChangeEvent<Quality>| quality.set(event.value()),
+    }
+}"#;
 
 fn discrete(values: &DemoValues) -> bool {
     values.str("discrete") == "true"
@@ -34,11 +62,8 @@ fn number_code(control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-fn number(values: &DemoValues, name: &str) -> Input<f64> {
-    match values.str(name).parse::<f64>() {
-        Ok(value) => Input::from(value),
-        Err(_) => Input::None,
-    }
+fn number(values: &DemoValues, name: &str) -> Option<f64> {
+    values.str(name).parse::<f64>().ok()
 }
 
 /// Ticks at both ends and the midpoint of the *current* range - a mark at 50
@@ -51,11 +76,7 @@ fn mark_values(values: &DemoValues) -> [f64; 3] {
 
 fn marks(values: &DemoValues) -> Vec<SliderMark> {
     match discrete(values) {
-        true => SIZES
-            .iter()
-            .enumerate()
-            .map(|(i, size)| SliderMark::labeled(i as f64, *size))
-            .collect(),
+        true => Vec::new(),
         false if values.str("marks") == "true" => {
             let [min, mid, max] = mark_values(values);
             vec![
@@ -72,12 +93,12 @@ fn marks(values: &DemoValues) -> Vec<SliderMark> {
 /// bracket one drag, `Change` carries every value in between - so it belongs
 /// in the preview, and the code block prints it.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
-    let signal = match discrete(values) {
-        true => "index()",
-        false => "volume()",
+    let (signal, last) = match discrete(values) {
+        true => ("size():?", "last_size()"),
+        false => ("volume()", "last()"),
     };
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{last():?}}\" }}\n}}",
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{{last}:?}}\" }}\n}}",
         indent(code)
     )
 }
@@ -86,8 +107,9 @@ fn wrap_readout(values: &DemoValues, code: &str) -> String {
 pub fn SliderPage() -> Element {
     let theme = use_theme();
     let mut volume = use_signal(|| 40.0);
-    let mut index = use_signal(|| 2.0);
+    let mut size = use_signal(|| Size::Md);
     let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
+    let mut last_size = use_signal(|| SliderChangeEvent::Change(Size::Md));
 
     rsx! {
         DocPage {
@@ -116,10 +138,6 @@ pub fn SliderPage() -> Element {
                                 .iter()
                                 .chain(DISCRETE.iter())
                                 .map(|line| line.to_string())
-                                .chain([
-                                    "on_change: move |event: SliderChangeEvent| { index.set(event.value()); last.set(event) }"
-                                        .to_string(),
-                                ])
                                 .collect(),
                             false => vec![
                                 r#"aria_label: "Volume""#.to_string(),
@@ -173,56 +191,61 @@ pub fn SliderPage() -> Element {
                                 direction: "column",
                                 gap: "sm",
                                 sx: sx().width("100%"),
-                                Slider {
-                                    aria_label: if discrete { "Size" } else { "Volume" },
-                                    value: if discrete { index() } else { volume() },
-                                    size: values.str("size"),
-                                    radius: values.str("radius"),
-                                    color: values.str("color"),
-                                    min: match discrete {
-                                        true => Input::from(0.0),
-                                        false => number(&values, "min"),
-                                    },
-                                    max: match discrete {
-                                        true => Input::from((SIZES.len() - 1) as f64),
-                                        false => number(&values, "max"),
-                                    },
-                                    step: match discrete {
-                                        true => Input::from(1.0),
-                                        false => number(&values, "step"),
-                                    },
-                                    marks: marks(&values),
-                                    label: match (discrete, values.str("label") == "true") {
-                                        (true, _) => Some(Callback::new(|value: f64| {
-                                            SIZES[value as usize].to_string()
-                                        })),
-                                        (false, true) => Some(Callback::new(|value: f64| {
-                                            format!("{value}%")
-                                        })),
-                                        (false, false) => None,
-                                    },
-                                    disabled: (values.str("disabled") == "true").then_some(true),
-                                    on_change: move |event: SliderChangeEvent| {
-                                        match discrete {
-                                            true => index.set(event.value()),
-                                            false => volume.set(event.value()),
-                                        }
-                                        last.set(event)
-                                    },
-                                }
-                                Text {
-                                    size: "sm",
-                                    if discrete {
-                                        "value: {index()} - last event: {last():?}"
-                                    } else {
-                                        "value: {volume()} - last event: {last():?}"
+                                if discrete {
+                                    Slider {
+                                        aria_label: "Size",
+                                        value: size(),
+                                        size: values.str("size"),
+                                        radius: values.str("radius"),
+                                        color: values.str("color"),
+                                        disabled: (values.str("disabled") == "true").then_some(true),
+                                        on_change: move |event: SliderChangeEvent<Size>| {
+                                            size.set(event.value());
+                                            last_size.set(event)
+                                        },
                                     }
+                                    Text { size: "sm", "value: {size():?} - last event: {last_size():?}" }
+                                } else {
+                                    Slider {
+                                        aria_label: "Volume",
+                                        value: volume(),
+                                        size: values.str("size"),
+                                        radius: values.str("radius"),
+                                        color: values.str("color"),
+                                        min: number(&values, "min"),
+                                        max: number(&values, "max"),
+                                        step: number(&values, "step"),
+                                        marks: marks(&values),
+                                        label: (values.str("label") == "true")
+                                            .then(|| Callback::new(|value: f64| format!("{value}%"))),
+                                        disabled: (values.str("disabled") == "true").then_some(true),
+                                        on_change: move |event: SliderChangeEvent| {
+                                            volume.set(event.value());
+                                            last.set(event)
+                                        },
+                                    }
+                                    Text { size: "sm", "value: {volume()} - last event: {last():?}" }
                                 }
                             }
                         }
                     },
                     wrap: Wrap(wrap_readout),
                 }
+            }
+            DocSection {
+                title: "Discrete values",
+                Text {
+                    "A value type that lists its options makes the slider discrete. "
+                    Code { source: "SliderValue" }
+                    " is what the component slides over - libero implements it for "
+                    Code { source: "f64" }
+                    " (continuous) and for "
+                    Code { source: "Size" }
+                    ", and an ordered enum of your own needs the two methods it "
+                    "cannot guess. The value goes in and comes back as that type; "
+                    "nothing indexes an array."
+                }
+                CodeBlock { source: SLIDER_VALUE, language: "rust" }
             }
         }
     }

@@ -207,6 +207,66 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     assert!(body(&html).contains(">25%<"));
 }
 
+/// An ordered enum makes the slider discrete: range, step grid, marks and
+/// every caption come from `SliderValue::options`.
+#[test]
+fn a_discrete_slider_derives_its_scale_from_the_value_type() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Size::Md,
+                    aria_label: "Size",
+                    on_change: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let root = attributes_of(&html, "div");
+
+    // `Md` is the third of six options, so the scale is 0..=5.
+    assert!(root["style"].contains("--lsx-slider-filled:0.4;"));
+    assert!(html.contains("aria-valuenow=2"));
+    assert!(html.contains("aria-valuemax=5"));
+    assert!(html.contains(r#"aria-valuetext="md""#));
+    assert!(root["data-state"].contains("marks-labeled"));
+    for size in ["xs", "sm", "md", "lg", "xl", "xxl"] {
+        assert!(body(&html).contains(&format!(">{size}<")));
+    }
+}
+
+/// `min`/`max` are written in the value's own type, and `step` is a stride
+/// over the options - `step: 1.5` on a `Size` slider does not compile.
+#[test]
+fn a_discrete_sliders_bounds_are_typed_and_its_step_counts_options() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Size::Lg,
+                    min: Size::Sm,
+                    max: Size::Xl,
+                    step: 2,
+                    aria_label: "Size",
+                    on_change: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("aria-valuemin=1"));
+    assert!(html.contains("aria-valuemax=4"));
+    // Marks at `sm` and `lg` only - every second option from `min`.
+    assert!(body(&html).contains(">sm<"));
+    assert!(body(&html).contains(">lg<"));
+    assert!(!body(&html).contains(">md<"));
+    assert!(!body(&html).contains(">xl<"));
+}
+
 #[test]
 fn button_renders_its_class_state_and_variables() {
     fn app() -> Element {
