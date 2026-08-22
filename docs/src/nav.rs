@@ -91,7 +91,16 @@ fn group(
 
 fn nav_tree() -> Vec<TreeNode<NavEntry>> {
     vec![
-        page(Route::GettingStarted {}, "Getting Started"),
+        group(
+            "about",
+            "About",
+            vec![
+                page(Route::GettingStarted {}, "Getting Started"),
+                page(Route::StylingPage {}, "Styling"),
+                page(Route::ThemingPage {}, "Theming"),
+                page(Route::PerformancePage {}, "Performance"),
+            ],
+        ),
         group(
             "a11y",
             "A11y",

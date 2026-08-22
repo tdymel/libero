@@ -92,7 +92,8 @@ pub fn GettingStarted() -> Element {
                 Divider {}
                 Text {
                     sx: sx().color("grey.6"),
-                    "More documentation is on the way."
+                    "Styling, Theming and Performance cover how the library works; the rest "
+                    "of the sidebar is one page per component."
                 }
             }
         }

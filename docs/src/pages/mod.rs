@@ -1,6 +1,6 @@
 mod a11y;
+mod about;
 mod data_display;
-mod getting_started;
 mod inputs;
 mod layout;
 mod navigation;
@@ -9,8 +9,8 @@ mod surface;
 mod typography;
 
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
+pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage};
-pub use getting_started::GettingStarted;
 pub use inputs::{
     ActionIconPage, ButtonPage, ChipPage, SelectPage, SliderPage, SwitchPage, ToggleButtonGroupPage,
 };

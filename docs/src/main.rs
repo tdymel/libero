@@ -18,9 +18,9 @@ use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, ChipPage,
     CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage,
     FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage,
-    MarkPage, ModalPage, NavLinkPage, OverlayPage, QrCodePage, ScrollAreaPage, SelectPage,
-    SidebarPage, SliderPage, SplitterPage, SwitchPage, TextPage, TitlePage, ToggleButtonGroupPage,
-    TooltipPage, TreePage, VisuallyHiddenPage,
+    MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage, ScrollAreaPage,
+    SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TextPage,
+    ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -39,6 +39,13 @@ pub(crate) enum Route {
     #[layout(AppShell)]
     #[route("/")]
     GettingStarted {},
+
+    #[route("/about/styling")]
+    StylingPage {},
+    #[route("/about/theming")]
+    ThemingPage {},
+    #[route("/about/performance")]
+    PerformancePage {},
 
     #[route("/a11y/focus-trap")]
     FocusTrapPage {},
