@@ -13,8 +13,8 @@ use libero::{
         DataList, DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Grid, GridArea,
         GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
         Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
-        Splitter, Switch, Text, Title, ToggleButton, ToggleButtonGroup, Tooltip, Tree, TreeItem,
-        TreeNode, TreeNodeRenderArgs, VisuallyHidden, sp,
+        SliderValue, Splitter, Switch, Text, Title, ToggleButton, ToggleButtonGroup, Tooltip, Tree,
+        TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, sp,
     },
     theme::{Color, Size},
 };
@@ -207,6 +207,28 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     assert!(body(&html).contains(">25%<"));
 }
 
+/// A hand-written `SliderValue`, which is what a caller with a foreign enum
+/// writes - and what covers the trait's default `position`/`at`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Tier {
+    Free,
+    Pro,
+    Team,
+    Enterprise,
+}
+
+impl SliderValue for Tier {
+    type Step = usize;
+
+    fn options() -> Option<&'static [Self]> {
+        Some(&[Self::Free, Self::Pro, Self::Team, Self::Enterprise])
+    }
+
+    fn label(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
 /// An ordered enum makes the slider discrete: range, step grid, marks and
 /// every caption come from `SliderValue::options`.
 #[test]
@@ -215,8 +237,8 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
         rsx! {
             LiberoProvider {
                 Slider {
-                    value: Size::Md,
-                    aria_label: "Size",
+                    value: Tier::Pro,
+                    aria_label: "Tier",
                     on_change: move |_| {},
                 }
             }
@@ -226,30 +248,30 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
     let html = render(app);
     let root = attributes_of(&html, "div");
 
-    // `Md` is the third of six options, so the scale is 0..=5.
-    assert!(root["style"].contains("--lsx-slider-filled:0.4;"));
-    assert!(html.contains("aria-valuenow=2"));
-    assert!(html.contains("aria-valuemax=5"));
-    assert!(html.contains(r#"aria-valuetext="md""#));
+    // `Pro` is the second of four options, so the scale is 0..=3.
+    assert!(root["style"].contains("--lsx-slider-filled:0.3333333333333333;"));
+    assert!(html.contains("aria-valuenow=1"));
+    assert!(html.contains("aria-valuemax=3"));
+    assert!(html.contains(r#"aria-valuetext="Pro""#));
     assert!(root["data-state"].contains("marks-labeled"));
-    for size in ["xs", "sm", "md", "lg", "xl", "xxl"] {
-        assert!(body(&html).contains(&format!(">{size}<")));
+    for tier in ["Free", "Pro", "Team", "Enterprise"] {
+        assert!(body(&html).contains(&format!(">{tier}<")));
     }
 }
 
 /// `min`/`max` are written in the value's own type, and `step` is a stride
-/// over the options - `step: 1.5` on a `Size` slider does not compile.
+/// over the options - `step: 1.5` on a `Tier` slider does not compile.
 #[test]
 fn a_discrete_sliders_bounds_are_typed_and_its_step_counts_options() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
                 Slider {
-                    value: Size::Lg,
-                    min: Size::Sm,
-                    max: Size::Xl,
+                    value: Tier::Team,
+                    min: Tier::Pro,
+                    max: Tier::Enterprise,
                     step: 2,
-                    aria_label: "Size",
+                    aria_label: "Tier",
                     on_change: move |_| {},
                 }
             }
@@ -259,12 +281,47 @@ fn a_discrete_sliders_bounds_are_typed_and_its_step_counts_options() {
     let html = render(app);
 
     assert!(html.contains("aria-valuemin=1"));
-    assert!(html.contains("aria-valuemax=4"));
-    // Marks at `sm` and `lg` only - every second option from `min`.
-    assert!(body(&html).contains(">sm<"));
-    assert!(body(&html).contains(">lg<"));
-    assert!(!body(&html).contains(">md<"));
-    assert!(!body(&html).contains(">xl<"));
+    assert!(html.contains("aria-valuemax=3"));
+    // Marks at `Pro` and `Enterprise` only - every second option from `min`.
+    assert!(body(&html).contains(">Pro<"));
+    assert!(body(&html).contains(">Enterprise<"));
+    assert!(!body(&html).contains(">Free<"));
+    assert!(!body(&html).contains(">Team<"));
+}
+
+/// `#[derive(SliderValue)]` is the whole discrete impl: variants in
+/// declaration order are the options, their names are the labels.
+#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
+enum Quality {
+    Low,
+    #[slider(label = "Med")]
+    Medium,
+    High,
+}
+
+#[test]
+fn a_derived_slider_value_names_and_orders_its_own_options() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Quality::Medium,
+                    aria_label: "Quality",
+                    on_change: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("aria-valuemax=2"));
+    assert!(html.contains("aria-valuenow=1"));
+    // The overridden label reaches both the bubble and `aria-valuetext`.
+    assert!(html.contains(r#"aria-valuetext="Med""#));
+    for label in [">Low<", ">Med<", ">High<"] {
+        assert!(body(&html).contains(label));
+    }
 }
 
 #[test]

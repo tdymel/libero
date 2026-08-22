@@ -1,8 +1,9 @@
 //! What a `Slider` can be dragged over: a continuous range, or a finite
 //! ordered set. The component itself is `f64`-only - this is the layer that
 //! maps a caller's own type onto it.
-
-use crate::theme::Size;
+//!
+//! `f64` is the only impl libero ships: a slider's values are the caller's
+//! domain, not ours. An ordered enum of theirs derives the rest.
 
 /// How far one arrow press or one `step` moves. A count over the options in
 /// a discrete set, a distance in a continuous one - so `step: 1.5` on an
@@ -28,6 +29,8 @@ impl SliderStep for usize {
 /// A discrete type lists its `options` and gets its range, step grid, marks
 /// and captions derived from them; the default `position`/`at` walk that
 /// list. A continuous one returns `None` and must override both.
+///
+/// `#[derive(SliderValue)]` writes the discrete impl for an ordered enum.
 pub trait SliderValue: Clone + PartialEq + 'static {
     type Step: SliderStep;
 
@@ -77,18 +80,6 @@ impl SliderValue for f64 {
 
     fn at(position: f64) -> Self {
         position
-    }
-}
-
-impl SliderValue for Size {
-    type Step = usize;
-
-    fn options() -> Option<&'static [Self]> {
-        Some(&Self::ALL)
-    }
-
-    fn label(&self) -> String {
-        self.as_str().to_string()
     }
 }
 

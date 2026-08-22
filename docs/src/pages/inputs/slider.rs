@@ -1,47 +1,49 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, CodeBlock, Flex, Slider, SliderChangeEvent, SliderMark, Text},
+    components::{Code, Flex, Slider, SliderChangeEvent, SliderMark, SliderValue, Text},
     sx::sx,
-    theme::Size,
     use_theme,
 };
 
 const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
 
-/// Every `Size`, since that is what a discrete slider over one shows.
-const VALUES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
+/// The demo's own discrete type, so the code block can show the derive that
+/// makes it one - the preview slides over exactly this enum.
+#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
+enum Quality {
+    Low,
+    Medium,
+    High,
+    #[slider(label = "Max")]
+    Ultra,
+}
 
-const SLIDER_VALUE: &str = r#"#[derive(Clone, Copy, PartialEq)]
-enum Quality { Low, Medium, High }
+impl Quality {
+    const ALL: [&'static str; 4] = ["low", "medium", "high", "ultra"];
 
-impl SliderValue for Quality {
-    type Step = usize;
-
-    fn options() -> Option<&'static [Self]> {
-        Some(&[Self::Low, Self::Medium, Self::High])
-    }
-
-    fn label(&self) -> String {
-        match self {
-            Self::Low => "Low",
-            Self::Medium => "Medium",
-            Self::High => "High",
+    fn parse(value: &str) -> Self {
+        match value {
+            "low" => Self::Low,
+            "medium" => Self::Medium,
+            "high" => Self::High,
+            _ => Self::Ultra,
         }
-        .to_string()
     }
 }
 
-// `min`/`max` are written in the value's own type; `step` counts options,
-// so `step: 1.5` is a compile error rather than a surprise at runtime.
-rsx! {
-    Slider {
-        value: quality(),
-        min: Quality::Low,
-        step: 1,
-        on_change: move |event: SliderChangeEvent<Quality>| quality.set(event.value()),
-    }
-}"#;
+/// Printed above the rsx in discrete mode: without the derive there is no
+/// discrete slider, so it is part of the example, not a separate section.
+const QUALITY: &str = r#"#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
+enum Quality {
+    Low,
+    Medium,
+    High,
+    #[slider(label = "Max")]
+    Ultra,
+}
+
+"#;
 
 fn discrete(values: &DemoValues) -> bool {
     values.str("mode") == "discrete"
@@ -60,9 +62,9 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
 fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match discrete(values) {
         true => vec![
-            r#"aria_label: "Size""#.to_string(),
-            "value: size()".to_string(),
-            "on_change: move |event: SliderChangeEvent<Size>| { size.set(event.value()); last_size.set(event) }"
+            r#"aria_label: "Quality""#.to_string(),
+            "value: quality()".to_string(),
+            "on_change: move |event: SliderChangeEvent<Quality>| { quality.set(event.value()); last_quality.set(event) }"
                 .to_string(),
         ],
         false => vec![
@@ -81,7 +83,7 @@ fn bound_code(control: &Control, values: &DemoValues) -> Vec<String> {
     match continuous(values) || value == control.default {
         true => vec![],
         false => vec![format!(
-            "{}: Size::{}{}",
+            "{}: Quality::{}{}",
             control.name,
             value[..1].to_uppercase(),
             &value[1..]
@@ -135,7 +137,7 @@ fn marks_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
     match discrete(values) {
         true => vec![
-            r#"marks: vec![SliderMark::labeled(Size::Xs, "small"), SliderMark::labeled(Size::Xxl, "large")]"#
+            r#"marks: vec![SliderMark::labeled(Quality::Low, "cheap"), SliderMark::labeled(Quality::Ultra, "pricey")]"#
                 .to_string(),
         ],
         false => {
@@ -151,7 +153,10 @@ fn label_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match (is_on(values, "label"), discrete(values)) {
         (false, _) => vec![],
         (true, true) => {
-            vec![r#"label: Callback::new(|size: Size| format!("{size:?} size"))"#.to_string()]
+            vec![
+                r#"label: Callback::new(|quality: Quality| format!("{quality:?} quality"))"#
+                    .to_string(),
+            ]
         }
         (true, false) => {
             vec![r#"label: Callback::new(|value: f64| format!("{value}%"))"#.to_string()]
@@ -159,15 +164,15 @@ fn label_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-fn size_of(values: &DemoValues, name: &str) -> Size {
-    Size::from(values.str(name).as_str())
+fn quality_of(values: &DemoValues, name: &str) -> Quality {
+    Quality::parse(&values.str(name))
 }
 
-fn discrete_marks(values: &DemoValues) -> Vec<SliderMark<Size>> {
+fn discrete_marks(values: &DemoValues) -> Vec<SliderMark<Quality>> {
     match is_on(values, "marks") {
         true => vec![
-            SliderMark::labeled(Size::Xs, "small"),
-            SliderMark::labeled(Size::Xxl, "large"),
+            SliderMark::labeled(Quality::Low, "cheap"),
+            SliderMark::labeled(Quality::Ultra, "pricey"),
         ],
         false => Vec::new(),
     }
@@ -191,12 +196,12 @@ fn continuous_marks(values: &DemoValues) -> Vec<SliderMark> {
 /// bracket one drag, `Change` carries every value in between - so it belongs
 /// in the preview, and the code block prints it.
 fn wrap_readout(values: &DemoValues, code: &str) -> String {
-    let (signal, last) = match discrete(values) {
-        true => ("size():?", "last_size()"),
-        false => ("volume()", "last()"),
+    let (declaration, signal, last) = match discrete(values) {
+        true => (QUALITY, "quality():?", "last_quality()"),
+        false => ("", "volume()", "last()"),
     };
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{{last}:?}}\" }}\n}}",
+        "{declaration}Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n{}    Text {{ size: \"sm\", \"value: {{{signal}}} - last event: {{{last}:?}}\" }}\n}}",
         indent(code)
     )
 }
@@ -205,9 +210,9 @@ fn wrap_readout(values: &DemoValues, code: &str) -> String {
 pub fn SliderPage() -> Element {
     let theme = use_theme();
     let mut volume = use_signal(|| 40.0);
-    let mut size = use_signal(|| Size::Md);
+    let mut quality = use_signal(|| Quality::Medium);
     let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
-    let mut last_size = use_signal(|| SliderChangeEvent::Change(Size::Md));
+    let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
 
     rsx! {
         DocPage {
@@ -221,6 +226,15 @@ pub fn SliderPage() -> Element {
                     ". Pointer, touch and keyboard all drive it - the thumb is a "
                     Code { source: "role=\"slider\"" }
                     " with arrows, Page keys, Home and End."
+                }
+                Text {
+                    "What it slides over is a "
+                    Code { source: "SliderValue" }
+                    ": libero implements it for "
+                    Code { source: "f64" }
+                    " - a continuous range - and an ordered enum of your own derives "
+                    "it. A type that lists its options makes the slider discrete, and "
+                    "the range, step grid, marks and captions all come from that list."
                 }
             },
             DocSection {
@@ -241,9 +255,11 @@ pub fn SliderPage() -> Element {
                             "color",
                             ["primary", "secondary", "success", "error", "warning", "info"],
                         ),
-                        Control::slider("min", VALUES).code(bound_code).hidden_when(continuous),
-                        Control::slider("max", VALUES)
-                            .default("xxl")
+                        Control::slider("min", Quality::ALL)
+                            .code(bound_code)
+                            .hidden_when(continuous),
+                        Control::slider("max", Quality::ALL)
+                            .default("ultra")
                             .code(bound_code)
                             .hidden_when(continuous),
                         Control::slider("step", ["1", "2", "3"])
@@ -270,24 +286,31 @@ pub fn SliderPage() -> Element {
                                 sx: sx().width("100%"),
                                 if discrete(&values) {
                                     Slider {
-                                        aria_label: "Size",
-                                        value: size(),
+                                        aria_label: "Quality",
+                                        value: quality(),
                                         size: values.str("size"),
                                         radius: values.str("radius"),
                                         color: values.str("color"),
-                                        min: size_of(&values, "min"),
-                                        max: size_of(&values, "max"),
+                                        min: quality_of(&values, "min"),
+                                        max: quality_of(&values, "max"),
                                         step: values.str("step").parse::<usize>().unwrap_or(1),
                                         marks: discrete_marks(&values),
                                         label: is_on(&values, "label")
-                                            .then(|| Callback::new(|size: Size| format!("{size:?} size"))),
+                                            .then(|| {
+                                                Callback::new(|quality: Quality| {
+                                                    format!("{quality:?} quality")
+                                                })
+                                            }),
                                         disabled: is_on(&values, "disabled").then_some(true),
-                                        on_change: move |event: SliderChangeEvent<Size>| {
-                                            size.set(event.value());
-                                            last_size.set(event)
+                                        on_change: move |event: SliderChangeEvent<Quality>| {
+                                            quality.set(event.value());
+                                            last_quality.set(event)
                                         },
                                     }
-                                    Text { size: "sm", "value: {size():?} - last event: {last_size():?}" }
+                                    Text {
+                                        size: "sm",
+                                        "value: {quality():?} - last event: {last_quality():?}"
+                                    }
                                 } else {
                                     Slider {
                                         aria_label: "Volume",
@@ -314,21 +337,6 @@ pub fn SliderPage() -> Element {
                     },
                     wrap: Wrap(wrap_readout),
                 }
-            }
-            DocSection {
-                title: "Discrete values",
-                Text {
-                    "A value type that lists its options makes the slider discrete. "
-                    Code { source: "SliderValue" }
-                    " is what the component slides over - libero implements it for "
-                    Code { source: "f64" }
-                    " (continuous) and for "
-                    Code { source: "Size" }
-                    ", and an ordered enum of your own needs the two methods it "
-                    "cannot guess. The value goes in and comes back as that type; "
-                    "nothing indexes an array."
-                }
-                CodeBlock { source: SLIDER_VALUE, language: "rust" }
             }
         }
     }
