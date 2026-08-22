@@ -2,8 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, CodeBlock, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, StaticGridTemplate,
-        Text,
+        Box, Code, CodeBlock, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag,
+        StaticGridTemplate, Text,
     },
     sx::sx,
 };
@@ -268,6 +268,43 @@ pub fn GridPage() -> Element {
                             GridItem { span: *span, {panel(span.as_str(), 32)} }
                         }
                     }
+                }
+            }
+
+            DocSection {
+                title: "Caveats",
+                Text {
+                    "A masonry zone's height is "
+                    Code { source: "derived" }
+                    " from its items, so it cannot also be a viewport. To scroll, put a "
+                    Code { source: "ScrollArea" }
+                    " inside a "
+                    Code { source: "GridItem" }
+                    " - not around the zone. Nesting a masonry zone directly in a "
+                    "container whose width follows its content is the same trap from the "
+                    "other side: taller items make the zone taller, a scrollbar appears, "
+                    "the width changes, and everything re-measures."
+                }
+                Text {
+                    "Masonry packs by giving each item a row span and cancelling the row "
+                    "gap, so an item's "
+                    Code { source: "sx" }
+                    " that sets "
+                    Code { source: "align-self" }
+                    " or "
+                    Code { source: "margin-bottom" }
+                    " overwrites the mechanism. At the default "
+                    Code { source: "stretch" }
+                    " an item's border box becomes its whole row span, the next "
+                    "measurement reports that, and the item grows without bound."
+                }
+                Text {
+                    "Build templates outside the render - a "
+                    Code { source: "StaticGridTemplate" }
+                    " static, as every example here does. Rebuilding one per render "
+                    "re-parses the matrix and hands "
+                    Code { source: "Grid" }
+                    " a new value every time."
                 }
             }
         }

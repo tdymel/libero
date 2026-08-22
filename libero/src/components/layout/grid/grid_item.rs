@@ -24,6 +24,13 @@ static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+/// Row units an item of `height_px` spans, counting the gap that follows it.
+/// `unit_px` is clamped to 1 by the zone that hands it over.
+fn rows_spanned(height_px: f64, unit_px: u32, gap_px: u32) -> u32 {
+    let height = height_px.max(0.0) + f64::from(gap_px);
+    (height / f64::from(unit_px)).ceil().max(1.0) as u32
+}
+
 base_props! {
     pub struct GridItemProps {
         children: Element,
@@ -61,8 +68,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
         let ZoneState {
             unit_px, gap_px, ..
         } = *zone.state.peek();
-        let height = size.height.max(0.0) + f64::from(gap_px);
-        let next = (height / f64::from(unit_px)).ceil().max(1.0) as u32;
+        let next = rows_spanned(size.height, unit_px, gap_px);
 
         // Integer quantisation damps sub-pixel jitter; the explicit no-op
         // is what keeps a container feedback loop (item height -> zone
@@ -99,4 +105,19 @@ pub fn GridItem(props: GridItemProps) -> Element {
             props.attributes,
             props.children,
         )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::rows_spanned;
+
+    #[test]
+    fn an_item_spans_the_rows_it_covers_plus_its_gap() {
+        // 30px tall plus a 10px gap, over a 2px unit.
+        assert_eq!(rows_spanned(30.0, 2, 10), 20);
+        // A partial unit rounds up, or the next item overlaps this one.
+        assert_eq!(rows_spanned(31.0, 2, 10), 21);
+        // Never zero, however small: an unplaced item would collapse the flow.
+        assert_eq!(rows_spanned(0.0, 2, 0), 1);
+    }
 }
