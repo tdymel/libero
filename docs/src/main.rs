@@ -20,8 +20,8 @@ use pages::{
     FlexPage, FloatPage, FocusTrapPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
     KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage,
     ScrollAreaPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage,
-    TablePage, TextPage, ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage,
-    VisuallyHiddenPage,
+    TablePage, TabsPage, TextPage, ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage,
+    TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -110,6 +110,8 @@ pub(crate) enum Route {
     AnchorPage {},
     #[route("/navigation/nav-link")]
     NavLinkPage {},
+    #[route("/navigation/tabs")]
+    TabsPage {},
     #[route("/navigation/tree")]
     TreePage {},
 

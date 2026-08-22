@@ -13,8 +13,9 @@ use libero::{
         DataList, DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Grid, GridArea,
         GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
         Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
-        SliderValue, Splitter, Switch, Table, Text, Title, ToggleButton, ToggleButtonGroup,
-        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        SliderValue, Splitter, Switch, TabValue, Table, Tabs, Text, Title, ToggleButton,
+        ToggleButtonGroup, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
+        column, sp,
     },
     theme::{Color, Size},
 };
@@ -1602,4 +1603,83 @@ fn a_zone_can_shrink_below_the_width_its_twelve_tracks_would_demand() {
     assert!(html.contains("min-width:0"));
     assert!(html.contains("column-gap:min(var(--lsx-grid-zone-gap), 4%)"));
     assert!(html.contains("row-gap:var(--lsx-grid-zone-gap)"));
+}
+
+#[derive(Clone, PartialEq, TabValue)]
+enum Section {
+    Account,
+    #[tab(label = "Admin area")]
+    Admin,
+    Billing,
+}
+
+#[test]
+fn tabs_wire_every_tab_to_its_panel_and_render_only_the_selected_one() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    value: Section::Admin,
+                    onchange: move |_| {},
+                    disabled: vec![Section::Billing],
+                    panel: |section: Section| match section {
+                        Section::Account => rsx! { "account body" },
+                        Section::Admin => rsx! { "admin body" },
+                        Section::Billing => rsx! { "billing body" },
+                    },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    // One button per variant, in declaration order, labelled by the derive.
+    assert_eq!(body.matches("role=\"tab\"").count(), 3);
+    assert!(body.contains("Account"));
+    assert!(body.contains("Admin area"));
+
+    // Only the selected panel is rendered at all.
+    assert!(body.contains("admin body"));
+    assert!(!body.contains("account body"));
+    assert!(!body.contains("billing body"));
+
+    // Exactly one selected tab, and it owns the roving tabindex.
+    assert_eq!(body.matches("aria-selected=\"true\"").count(), 1);
+    assert_eq!(body.matches("tabindex=\"0\"").count(), 2); // the tab and its panel
+    assert_eq!(body.matches("aria-disabled=\"true\"").count(), 1);
+
+    // The panel points back at the tab that controls it.
+    let panel = attributes_of(&body, "div role=\"tabpanel\"");
+    let tab_id = panel["aria-labelledby"].clone();
+    assert!(body.contains(&format!("id=\"{tab_id}\"")));
+    assert!(body.contains(&format!("aria-controls=\"{}\"", panel["id"])));
+}
+
+#[test]
+fn a_tabs_label_prop_renames_every_tab_and_render_label_keeps_the_accessible_name() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    tabs: vec![Section::Account, Section::Billing],
+                    label: |section: Section| format!("t:{}", section.label()),
+                    render_label: |_: Section| rsx! { span { "rich" } },
+                    panel: |_: Section| rsx! { "body" },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    // `tabs` narrows the strip; `label` names them; `render_label` fills them.
+    assert_eq!(body.matches("role=\"tab\"").count(), 2);
+    assert!(body.contains("aria-label=\"t:Account\""));
+    assert!(body.contains("aria-label=\"t:Billing\""));
+    assert_eq!(body.matches("rich").count(), 2);
+    assert!(!body.contains(">Account<"));
 }

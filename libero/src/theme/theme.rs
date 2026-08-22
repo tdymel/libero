@@ -7,8 +7,9 @@ use super::{
     MarkDefaults, NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
     ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
     SelectSizeLevel, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
-    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TextDefaults, TextSize,
-    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel,
+    TextDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
+    TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -44,6 +45,7 @@ pub struct Theme {
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
     pub table: TableDefaults,
+    pub tabs: TabsDefaults,
     pub tree: TreeDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
@@ -339,6 +341,49 @@ impl Theme {
             padding_x: 12,
             padding_y: 10,
             font_size: 14,
+            border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+            hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        },
+        tabs: TabsDefaults {
+            size: Size::Md,
+            sizes: Sizes::new(
+                TabsSizeLevel {
+                    font_size: "12px",
+                    padding_x: "10px",
+                    padding_y: "6px",
+                    indicator: "2px",
+                },
+                TabsSizeLevel {
+                    font_size: "13px",
+                    padding_x: "12px",
+                    padding_y: "8px",
+                    indicator: "2px",
+                },
+                TabsSizeLevel {
+                    font_size: "14px",
+                    padding_x: "16px",
+                    padding_y: "10px",
+                    indicator: "2px",
+                },
+                TabsSizeLevel {
+                    font_size: "16px",
+                    padding_x: "20px",
+                    padding_y: "12px",
+                    indicator: "3px",
+                },
+                TabsSizeLevel {
+                    font_size: "18px",
+                    padding_x: "24px",
+                    padding_y: "14px",
+                    indicator: "3px",
+                },
+                TabsSizeLevel {
+                    font_size: "20px",
+                    padding_x: "28px",
+                    padding_y: "16px",
+                    indicator: "4px",
+                },
+            ),
             border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
             hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
         },

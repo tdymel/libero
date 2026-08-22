@@ -27,6 +27,12 @@ use dioxus::prelude::*;
 use libero::components::{Option, Title};
 use libero::{LiberoProvider, components::*};
 
+#[derive(Clone, PartialEq, TabValue)]
+enum CostPane {
+    One,
+    Two,
+}
+
 /// A shape to measure: what to call it, and the app that renders
 /// [`CHILDREN`] of it.
 type Shape = (&'static str, fn() -> Element);
@@ -125,6 +131,7 @@ fn render_cost_per_component() {
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
         "ToggleButtonGroup" { ToggleButtonGroup { ToggleButton { value: "a", "x" } } }
+        "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
 
         "Icon" { Icon { "x" } }
         "Image" { Image { src: "/x.png" } }

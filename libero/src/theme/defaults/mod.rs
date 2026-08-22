@@ -31,6 +31,7 @@ mod slider;
 mod splitter;
 mod switch;
 mod table;
+mod tabs;
 mod text;
 mod title;
 mod tooltip;
@@ -96,6 +97,10 @@ pub use switch::{
 pub use table::{
     TABLE_BORDER_COLOR, TABLE_FONT_SIZE, TABLE_HOVER, TABLE_PADDING_X, TABLE_PADDING_Y,
     TableDefaults,
+};
+pub use tabs::{
+    TABS_BORDER_COLOR, TABS_FONT_SIZE, TABS_HOVER, TABS_INDICATOR, TABS_LINE, TABS_PAD_X,
+    TABS_PAD_Y, TABS_PADDING_X, TABS_PADDING_Y, TabsDefaults, TabsSizeLevel,
 };
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,

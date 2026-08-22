@@ -107,6 +107,7 @@ properties! {
     AlignSelf => "align-self", align_self;
     WhiteSpace => "white-space", white_space;
     UserSelect => "user-select", user_select;
+    Appearance => "appearance", appearance;
     TouchAction => "touch-action", touch_action;
     Position => "position", position;
     Top => "top", top;

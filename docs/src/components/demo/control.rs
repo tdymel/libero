@@ -195,9 +195,11 @@ pub fn generate_code(
         (true, None) => format!("{component} {{}}"),
         (true, Some(child)) => format!("{component} {{ {child} }}"),
         (false, _) => {
+            // A prop can be several lines (a closure), and every one of them
+            // has to line up under the component, not just the first.
             let props = set
                 .iter()
-                .map(|prop| format!("    {prop},\n"))
+                .map(|prop| format!("{},\n", super::indent(prop).trim_end_matches('\n')))
                 .collect::<String>();
             let child = child.as_deref().map(super::indent).unwrap_or_default();
             format!("{component} {{\n{props}{child}}}")
