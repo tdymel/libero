@@ -1,10 +1,41 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Flex, Text, Tooltip};
+use libero::{
+    components::{Box, Button, Code, Input, Text, Tooltip},
+    sx::sx,
+    use_theme,
+};
+
+const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
+
+const LABEL: &str = r#"label: rsx! { "Saves the current draft" }"#;
+const TRIGGER: &str = r#"Button { variant: "outlined", "Save" }"#;
+const STYLED: &str = r#"sx: sx().background("primary.6").white_space("normal").max_width("12rem")"#;
+
+/// The bubble escapes the trigger's box, and the demo card clips what leaves
+/// it - so the preview keeps a bubble's worth of room on every side.
+fn wrap_room(_: &DemoValues, code: &str) -> String {
+    format!(
+        "Box {{\n    sx: sx().padding(\"40px\"),\n{}}}",
+        indent(code)
+    )
+}
+
+/// Milliseconds print unquoted, and `auto` is the theme's own delay.
+fn delay_code(control: &Control, values: &DemoValues) -> Vec<String> {
+    match values.str(control.name).as_str() {
+        "auto" => vec![],
+        delay => vec![format!("{}: {delay}", control.name)],
+    }
+}
+
+fn delay(value: String) -> Option<u32> {
+    value.parse().ok()
+}
 
 #[component]
 pub fn TooltipPage() -> Element {
-    let mut pinned = use_signal(|| false);
+    let theme = use_theme();
 
     rsx! {
         DocPage {
@@ -14,97 +45,80 @@ pub fn TooltipPage() -> Element {
                     "A label that appears while its child is hovered or focused. Pure CSS - it "
                     "wraps the trigger in a "
                     Code { source: "span" }
-                    " and needs no state, so there are no open/close callbacks."
+                    " and needs no state, so there are no open/close callbacks. "
+                    Code { source: "gap" }
+                    " is rendered as transparent padding, not empty space, so the pointer can "
+                    "travel from the trigger into the bubble without it closing. "
+                    Code { source: "sx" }
+                    ", "
+                    Code { source: "class" }
+                    ", "
+                    Code { source: "states" }
+                    " and spread attributes land on the bubble, not the wrapper."
                 }
             },
             DocSection {
-                title: "Placement",
-                Flex {
-                    direction: "row",
-                    gap: "xl",
-                    Tooltip { label: rsx! { "Above" }, Button { variant: "outlined", "Top" } }
-                    Tooltip {
-                        placement: "right",
-                        label: rsx! { "To the right" },
-                        Button { variant: "outlined", "Right" }
-                    }
-                    Tooltip {
-                        placement: "bottom",
-                        label: rsx! { "Below" },
-                        Button { variant: "outlined", "Bottom" }
-                    }
-                    Tooltip {
-                        placement: "left",
-                        label: rsx! { "To the left" },
-                        Button { variant: "outlined", "Left" }
-                    }
-                }
-            }
-            DocSection {
-                title: "Sizes and gap",
-                Text {
-                    Code { source: "gap" }
-                    " is rendered as transparent padding, not empty space, so the pointer can "
-                    "travel from the trigger into the bubble without it closing."
-                }
-                Flex {
-                    direction: "row",
-                    gap: "xl",
-                    align: "center",
-                    Tooltip { size: "xs", label: rsx! { "Extra small" }, Button { size: "xs", "xs" } }
-                    Tooltip { size: "md", label: rsx! { "Medium" }, Button { size: "md", "md" } }
-                    Tooltip {
-                        size: "xl",
-                        gap: "lg",
-                        label: rsx! { "Extra large, wide gap" },
-                        Button { size: "xl", "xl" }
-                    }
-                }
-            }
-            DocSection {
-                title: "Delays",
-                Text {
-                    Code { source: "open_delay" }
-                    " and "
-                    Code { source: "close_delay" }
-                    " are milliseconds. A delay on open keeps a row of triggers quiet while the "
-                    "pointer crosses it."
-                }
-                Flex {
-                    direction: "row",
-                    gap: "xl",
-                    Tooltip {
-                        open_delay: 500,
-                        label: rsx! { "Waited half a second" },
-                        Button { variant: "outlined", "Slow to open" }
-                    }
-                    Tooltip {
-                        close_delay: 800,
-                        label: rsx! { "Lingers on the way out" },
-                        Button { variant: "outlined", "Slow to close" }
-                    }
-                }
-            }
-            DocSection {
-                title: "Controlled",
-                Text {
-                    Code { source: "opened" }
-                    " forces the bubble open or closed and overrides hover; leave it "
-                    Code { source: "None" }
-                    " for the default behaviour. "
-                    Code { source: "disabled" }
-                    " renders the trigger bare."
-                }
-                Flex {
-                    direction: "row",
-                    gap: "xl",
-                    align: "center",
-                    Tooltip {
-                        opened: pinned(),
-                        label: rsx! { "Pinned open" },
-                        Button { variant: "outlined", "Trigger" }
-                    }
-                    Button { onclick: move |_| pinned.toggle(), "Toggle" }
+                title: "Usage",
+                Demo {
+                    component: "Tooltip",
+                    children_text: "",
+                    children_code: TRIGGER.to_string(),
+                    fixed: vec![LABEL.to_string()],
+                    controls: vec![
+                        Control::toggle("placement", ["top", "right", "bottom", "left"])
+                            .default(theme.tooltip.placement.as_str()),
+                        Control::slider("size", SIZES).default(theme.tooltip.size.as_str()),
+                        Control::slider("gap", SIZES).default(theme.tooltip.gap.as_str()),
+                        Control::slider("open_delay", ["auto", "200", "500", "1000"])
+                            .code(delay_code),
+                        Control::slider("close_delay", ["auto", "200", "500", "1000"])
+                            .code(delay_code),
+                        // `Some(false)` pins it *shut*, which hover cannot
+                        // override - a different thing from leaving it unset.
+                        Control::toggle("opened", ["auto", "true", "false"]).code(
+                            |_, values| match values.str("opened").as_str() {
+                                "auto" => vec![],
+                                opened => vec![format!("opened: {opened}")],
+                            },
+                        ),
+                        Control::switch("disabled"),
+                        // `sx` lands on the bubble, not the wrapper - the
+                        // bubble is the part worth styling.
+                        Control::switch("styled").code(|_, values| {
+                            match values.str("styled").as_str() {
+                                "true" => vec![STYLED.to_string()],
+                                _ => vec![],
+                            }
+                        }),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Box {
+                            sx: sx().padding("40px"),
+                            Tooltip {
+                                label: rsx! { "Saves the current draft" },
+                                placement: values.str("placement"),
+                                size: values.str("size"),
+                                gap: values.str("gap"),
+                                open_delay: delay(values.str("open_delay")),
+                                close_delay: delay(values.str("close_delay")),
+                                opened: match values.str("opened").as_str() {
+                                    "auto" => None,
+                                    opened => Some(opened == "true"),
+                                },
+                                disabled: (values.str("disabled") == "true").then_some(true),
+                                sx: match values.str("styled").as_str() {
+                                    "true" => Input::from(
+                                        sx().background("primary.6")
+                                            .white_space("normal")
+                                            .max_width("12rem"),
+                                    ),
+                                    _ => Input::None,
+                                },
+                                Button { variant: "outlined", "Save" }
+                            }
+                        }
+                    },
+                    wrap: Wrap(wrap_room),
                 }
             }
             DocSection {
@@ -126,23 +140,6 @@ pub fn TooltipPage() -> Element {
                     Code { source: "overflow: hidden" }
                     " - a scroll container, a card - clips it. Both need measurement and state; "
                     "reach for a popover there."
-                }
-            }
-            DocSection {
-                title: "Styling",
-                Text {
-                    Code { source: "sx" }
-                    ", "
-                    Code { source: "class" }
-                    ", "
-                    Code { source: "states" }
-                    " and spread attributes land on the bubble, not the wrapper - the bubble is "
-                    "the part worth styling."
-                }
-                Tooltip {
-                    label: rsx! { "Styled bubble" },
-                    sx: libero::sx::sx().background("primary.6").white_space("normal").max_width("12rem"),
-                    Button { variant: "outlined", "Hover me" }
                 }
             }
         }
