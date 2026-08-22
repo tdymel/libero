@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Table, Text, column},
+    components::{Code, Flex, Table, Text, Title, column},
     sx::sx,
 };
 
@@ -35,7 +35,33 @@ impl PropDoc {
     }
 }
 
-/// Appended to every page's own list: what `base_props!` gives all components.
+/// One component's props: a page documents its subcomponents as further groups.
+#[derive(Clone, PartialEq)]
+pub struct PropGroup {
+    component: String,
+    props: Vec<PropDoc>,
+    base: bool,
+}
+
+/// Starts a Properties block for one component.
+pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
+    PropGroup {
+        component: component.into(),
+        props,
+        base: true,
+    }
+}
+
+impl PropGroup {
+    /// For a type that is not a `base_props!` component - a builder, say.
+    #[allow(dead_code)]
+    pub fn without_base_props(mut self) -> Self {
+        self.base = false;
+        self
+    }
+}
+
+/// Appended to every component's own list: what `base_props!` gives all of them.
 fn base_props() -> Vec<PropDoc> {
     vec![
         prop("class", "ClassList").doc("Extra class names on the root element."),
@@ -46,15 +72,35 @@ fn base_props() -> Vec<PropDoc> {
     ]
 }
 
-/// The Properties tab: the component's own props, then the shared ones.
+/// The Properties tab: one table per component, its own props then the shared ones.
 ///
 /// Two columns, not four - the first reads as a signature (`size: Size`) with
 /// the default beside it, so the table survives a phone without a horizontal
 /// scrollbar and without a tall cell per row.
 #[component]
-pub fn PropertyTable(properties: Vec<PropDoc>) -> Element {
+pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "xl",
+            for group in properties {
+                Flex {
+                    direction: "column",
+                    gap: "sm",
+                    Title { size: "lg", "{group.component}" }
+                    PropRows { properties: group.props, base: group.base }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+fn PropRows(properties: Vec<PropDoc>, base: bool) -> Element {
     let mut rows = properties;
-    rows.extend(base_props());
+    if base {
+        rows.extend(base_props());
+    }
 
     rsx! {
         Table {

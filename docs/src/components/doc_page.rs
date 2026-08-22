@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::components::{Flex, Icon, TabLabel, TabValue, Tabs, Title};
 
-use super::{PropDoc, PropertyTable};
+use super::{PropGroup, PropertyTable};
 use crate::icons::{CodeIcon, FileIcon};
 
 /// The tabs a docs page can show. `Usage` is the page's own sections.
@@ -20,7 +20,7 @@ enum DocTab {
 pub fn DocPage(
     title: String,
     lead: Element,
-    #[props(default)] properties: Vec<PropDoc>,
+    #[props(default)] properties: Vec<PropGroup>,
     children: Element,
 ) -> Element {
     let mut tab = use_signal(|| DocTab::Usage);
