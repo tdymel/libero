@@ -9,11 +9,11 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, Container, DataList,
-        DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon, Image, Kbd,
-        List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar,
-        Slider, SliderMark, Splitter, Switch, Text, Title, ToggleButton, ToggleButtonGroup,
-        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
+        ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Container,
+        DataList, DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Header, Icon,
+        Image, Kbd, List, ListItem, Mark, Modal, NavLink, Option, Overlay, QrCode, ScrollArea,
+        Select, Sidebar, Slider, SliderMark, Splitter, Switch, Text, Title, ToggleButton,
+        ToggleButtonGroup, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
     },
     theme::{Color, Size},
 };
@@ -834,6 +834,22 @@ fn code_renders_its_source() {
     let html = render(app);
 
     assert!(body(&html).contains("<code"));
+    assert!(body(&html).contains("let x = 1;"));
+}
+
+#[test]
+fn code_block_renders_its_source_in_a_pre() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                CodeBlock { source: "let x = 1;" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(body(&html).contains("<pre"));
     assert!(body(&html).contains("let x = 1;"));
 }
 

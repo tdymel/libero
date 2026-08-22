@@ -1,7 +1,7 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, Flex, Text},
+    components::{Box, Code, CodeBlock, Flex, Text},
     sx::sx,
     theme::Size,
     use_theme,
@@ -102,7 +102,7 @@ pub fn ThemingPage() -> Element {
                     " lifetime, so the theme is never cloned per component - reading it is a "
                     "pointer copy."
                 }
-                Code { block: true, source: CUSTOM_THEME, language: "rust" }
+                CodeBlock { source: CUSTOM_THEME, language: "rust" }
             }
 
             DocSection {
@@ -193,7 +193,7 @@ pub fn ThemingPage() -> Element {
                     "repeated at every call site. Nested struct update works the same way, "
                     "seeded from that field of the default."
                 }
-                Code { block: true, source: COMPONENT_DEFAULTS, language: "rust" }
+                CodeBlock { source: COMPONENT_DEFAULTS, language: "rust" }
             }
 
             DocSection {
@@ -208,7 +208,7 @@ pub fn ThemingPage() -> Element {
                     "so a demo control can open on the theme's real default instead of a "
                     "hardcoded one."
                 }
-                Code { block: true, source: READING_THE_THEME, language: "rust" }
+                CodeBlock { source: READING_THE_THEME, language: "rust" }
             }
 
             DocSection {
@@ -219,7 +219,7 @@ pub fn ThemingPage() -> Element {
                     "render time to produce CSS, which is why a component's styles can be "
                     "one cached class no matter what the theme says."
                 }
-                Code { block: true, source: EMITTED_CSS, language: "css" }
+                CodeBlock { source: EMITTED_CSS, language: "css" }
             }
         }
     }

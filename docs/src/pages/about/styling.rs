@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Code, DataList, DataListItem, Flex, States, Text},
+    components::{Box, Code, CodeBlock, DataList, DataListItem, Flex, States, Text},
     sx::{Sx, sx},
     theme::Size,
 };
@@ -189,7 +189,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "border_radius" }
                     " family. Everything else is CSS text, untouched."
                 }
-                Code { block: true, source: THEME_VALUES, language: "rust" }
+                CodeBlock { source: THEME_VALUES, language: "rust" }
             }
 
             DocSection {
@@ -265,7 +265,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "\"&:hover\"" }
                     " the same thing, and a comma list expands to one rule per part."
                 }
-                Code { block: true, source: SELECTORS, language: "rust" }
+                CodeBlock { source: SELECTORS, language: "rust" }
             }
 
             DocSection {
@@ -279,14 +279,14 @@ pub fn StylingPage() -> Element {
                     " media query, so the unnested declarations are the small-screen ones "
                     "and each breakpoint overrides upwards."
                 }
-                Code { block: true, source: RESPONSIVE, language: "rust" }
+                CodeBlock { source: RESPONSIVE, language: "rust" }
                 Text {
                     "When only one property changes, "
                     Code { source: "bp()" }
                     " puts the breakpoints inside the value instead of wrapping a block "
                     "around it:"
                 }
-                Code { block: true, source: RESPONSIVE_VALUE, language: "rust" }
+                CodeBlock { source: RESPONSIVE_VALUE, language: "rust" }
                 Text {
                     "It carries no base value, and a second call to the same property "
                     "replaces the first rather than adding to it - so a property that also "
@@ -303,7 +303,7 @@ pub fn StylingPage() -> Element {
                     wrap: "wrap",
                     gap: "sm",
                     for size in [Size::Xs, Size::Sm, Size::Md, Size::Lg, Size::Xl, Size::Xxl] {
-                        Code {
+                        CodeBlock {
                             key: "{size.as_str()}",
                             source: "{size.as_str()} {size.breakpoint_value()}",
                         }
@@ -322,7 +322,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "GlobalAttributes" }
                     " element accepts is forwarded to the rendered tag."
                 }
-                Code { block: true, source: ESCAPE_HATCHES, language: "rust" }
+                CodeBlock { source: ESCAPE_HATCHES, language: "rust" }
             }
 
             DocSection {
@@ -337,7 +337,7 @@ pub fn StylingPage() -> Element {
                     Code { source: "within" }
                     " a layer."
                 }
-                Code { block: true, source: LAYER_ORDER, language: "css" }
+                CodeBlock { source: LAYER_ORDER, language: "css" }
                 DataList {
                     orientation: "horizontal",
                     DataListItem {
@@ -399,7 +399,7 @@ pub fn StylingPage() -> Element {
                     "is rendered once and cached by address, and the per-render check "
                     "becomes a pointer comparison instead of a content hash."
                 }
-                Code { block: true, source: STATIC_SX, language: "rust" }
+                CodeBlock { source: STATIC_SX, language: "rust" }
                 Text {
                     "Measured at roughly 210 ns per call site per render - too small to "
                     "matter in a page, worth having in a component that a hundred rows "

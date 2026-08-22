@@ -87,6 +87,9 @@ pub(crate) struct PatternDef {
     alias: Option<&'static str>,
 }
 
+// Which builders are used depends on which `code-lang-*` features are on -
+// a narrow feature set orphans the ones only its missing grammars call.
+#[allow(dead_code)]
 impl PatternDef {
     pub(crate) const fn new(pattern: &'static str) -> Self {
         Self {

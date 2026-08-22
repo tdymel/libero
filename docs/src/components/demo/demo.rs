@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, Flex, Input, Option as SelectOption, Select, Slider, SliderChangeEvent, Switch,
-        Text, ToggleButton, ToggleButtonGroup,
+        Box, CodeBlock, Flex, Input, Option as SelectOption, Select, Slider, SliderChangeEvent,
+        Switch, Text, ToggleButton, ToggleButtonGroup,
     },
     sx::sx,
-    theme::{CODE_BORDER, Size, TEXT_FONT_SIZE},
+    theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
 };
 
 use crate::icons::CheckmarkIcon;
@@ -139,7 +139,7 @@ pub fn Demo(
     };
     // The color belongs *inside* each shorthand: a later `border-left: 1px
     // solid` would otherwise reset the color to `currentColor`.
-    let border = format!("1px solid {}", CODE_BORDER.value());
+    let border = format!("1px solid {}", CODE_BLOCK_BORDER.value());
 
     rsx! {
         Box {
@@ -350,8 +350,7 @@ pub fn Demo(
                     }
                 }
             }
-            Code {
-                block: true,
+            CodeBlock {
                 language: "rust",
                 source,
                 header: false,

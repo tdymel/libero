@@ -16,11 +16,12 @@ use icons::BurgerIcon;
 use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, ChipPage,
-    CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FlexPage,
-    FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage, ListPage,
-    MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage, ScrollAreaPage,
-    SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TextPage,
-    ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage, VisuallyHiddenPage,
+    CodeBlockPage, CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage,
+    FlexPage, FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage,
+    ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage,
+    ScrollAreaPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage,
+    TextPage, ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage,
+    VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -122,6 +123,8 @@ pub(crate) enum Route {
 
     #[route("/typography/code")]
     CodePage {},
+    #[route("/typography/code-block")]
+    CodeBlockPage {},
     #[route("/typography/kbd")]
     KbdPage {},
     #[route("/typography/mark")]

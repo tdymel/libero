@@ -8,12 +8,12 @@ edition = "2024"
 # against the `.dioxus-active` symlink instead of crates.io, unwind before any
 # real release.
 dioxus = { path = "../.dioxus-active/packages/dioxus", default-features = true, features = ["router"] }
+# Only what these pages actually highlight.
 libero = { path = "../libero", default-features = false, features = [
     "code-lang-rust",
     "code-lang-bash",
-    "code-lang-markdown",
-    "code-lang-html",
     "code-lang-css",
+    "code-lang-toml",
 ] }
 
 [features]

@@ -21,4 +21,4 @@ pub use layout::{
 pub use navigation::{AnchorPage, NavLinkPage, TreePage};
 pub use overlay::{DrawerPage, ModalPage, OverlayPage, TooltipPage};
 pub use surface::DialogPage;
-pub use typography::{CodePage, KbdPage, MarkPage, TextPage, TitlePage};
+pub use typography::{CodeBlockPage, CodePage, KbdPage, MarkPage, TextPage, TitlePage};

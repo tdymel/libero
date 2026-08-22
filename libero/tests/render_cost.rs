@@ -115,6 +115,7 @@ fn render_cost_per_component() {
         "Kbd" { Kbd { "x" } }
         "Mark" { Mark { "x" } }
         "Code" { Code { source: "let x = 1;" } }
+        "CodeBlock" { CodeBlock { source: "let x = 1;" } }
 
         "Button" { Button { "x" } }
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }

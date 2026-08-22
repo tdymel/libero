@@ -1,6 +1,6 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Code, DataList, DataListItem, Flex, Text};
+use libero::components::{Code, CodeBlock, DataList, DataListItem, Flex, Text};
 
 /// Re-render cost as a multiple of `Leaf` - one scope, one `span`, no
 /// styling. The full table is `tests/render_cost.rs`; this is its shape.
@@ -167,7 +167,7 @@ pub fn PerformancePage() -> Element {
                     "s compare by pointer, so a component that takes children can never "
                     "memoize."
                 }
-                Code { block: true, source: MEMOIZE, language: "rust" }
+                CodeBlock { source: MEMOIZE, language: "rust" }
             }
 
             DocSection {
@@ -209,7 +209,7 @@ pub fn PerformancePage() -> Element {
                     "prints nanoseconds per re-rendered instance. It is ignored by default, "
                     "because the numbers only mean anything in release:"
                 }
-                Code { block: true, source: MEASURE, language: "bash" }
+                CodeBlock { source: MEASURE, language: "bash" }
                 Text {
                     "Four rules make a run trustworthy, in the order of how much grief each "
                     "one saves: price a thing by removing it, not by wrapping it in a "
