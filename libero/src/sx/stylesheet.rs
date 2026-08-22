@@ -1,4 +1,4 @@
-use crate::css::{CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
+use crate::css::{AtRule, CssDeclaration, CssScope, Stylesheet, condition_groups, expand_selector};
 use crate::tokens::{NamedColorCss, Size};
 use crate::utils::warn;
 
@@ -10,7 +10,21 @@ use super::{
 #[derive(Clone, Debug, PartialEq, Eq)]
 struct CssContext {
     selectors: Vec<String>,
-    media_query: Option<String>,
+    /// Ordered outermost-first, since `@media` and `@container` nest.
+    at_rules: Vec<AtRule>,
+}
+
+impl CssContext {
+    /// Appends `at_rule`, folding it into the innermost one where both are
+    /// `@media` so nested breakpoints stay a single `and` query.
+    fn wrapped_in(&self, at_rule: AtRule) -> Vec<AtRule> {
+        let mut at_rules = self.at_rules.clone();
+        match at_rules.last().and_then(|last| last.merged(&at_rule)) {
+            Some(merged) => *at_rules.last_mut().expect("just merged into it") = merged,
+            None => at_rules.push(at_rule),
+        }
+        at_rules
+    }
 }
 
 /// Stands in while the CSS is built, so the sheet can be hashed before its
@@ -22,7 +36,7 @@ impl From<&Sx> for Stylesheet {
         let mut scopes = Vec::new();
         let context = CssContext {
             selectors: vec![format!(".{ROOT_CLASS_PLACEHOLDER}")],
-            media_query: None,
+            at_rules: Vec::new(),
         };
 
         collect_scopes(&mut scopes, sx, &context);
@@ -51,11 +65,10 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     }
 
     if !declarations.is_empty() {
-        let mut scope = CssScope::new(context.selectors.join(", "), declarations);
-        if let Some(media_query) = &context.media_query {
-            scope = scope.in_media_query(media_query.clone());
-        }
-        scopes.push(scope);
+        scopes.push(
+            CssScope::new(context.selectors.join(", "), declarations)
+                .in_at_rules(context.at_rules.clone()),
+        );
     }
 
     for entry in sx.entries() {
@@ -79,7 +92,7 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext 
     match modifier {
         SxModifierKey::Selector(pattern) => CssContext {
             selectors: expand_selector(pattern, &context.selectors),
-            media_query: context.media_query.clone(),
+            at_rules: context.at_rules.clone(),
         },
         SxModifierKey::Condition(condition) => CssContext {
             selectors: condition_groups(condition)
@@ -94,11 +107,18 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext 
                     })
                 })
                 .collect(),
-            media_query: context.media_query.clone(),
+            at_rules: context.at_rules.clone(),
         },
         SxModifierKey::Breakpoint(size) => CssContext {
             selectors: context.selectors.clone(),
-            media_query: Some(format!("(min-width: {})", size.breakpoint_value())),
+            at_rules: context.wrapped_in(breakpoint_at_rule(*size)),
+        },
+        SxModifierKey::Container { name, condition } => CssContext {
+            selectors: context.selectors.clone(),
+            at_rules: context.wrapped_in(AtRule::Container {
+                name: name.clone(),
+                condition: condition.clone(),
+            }),
         },
     }
 }
@@ -127,17 +147,17 @@ fn push_breakpoint_declaration_scope(
     size: Size,
     value: &ThemeAwareValue,
 ) {
-    let mut scope = CssScope::new(
-        context.selectors.join(", "),
-        property_declarations(property, value),
+    scopes.push(
+        CssScope::new(
+            context.selectors.join(", "),
+            property_declarations(property, value),
+        )
+        .in_at_rules(context.wrapped_in(breakpoint_at_rule(size))),
     );
-    let breakpoint_query = format!("(min-width: {})", size.breakpoint_value());
-    let media_query = match &context.media_query {
-        Some(existing) => format!("{existing} and {breakpoint_query}"),
-        None => breakpoint_query,
-    };
-    scope = scope.in_media_query(media_query);
-    scopes.push(scope);
+}
+
+fn breakpoint_at_rule(size: Size) -> AtRule {
+    AtRule::Media(format!("(min-width: {})", size.breakpoint_value()))
 }
 
 /// `background` also publishes `--lsx-focus-contrast`, which inherits, so a
@@ -255,6 +275,66 @@ mod tests {
         assert!(css.contains("@media (min-width: 62rem) and (min-width: 75rem){"));
         assert!(css.contains("background:var(--lsx-secondary-4);"));
         assert!(!css.contains("background:var(--lsx-secondary-2);"));
+    }
+
+    #[test]
+    fn sx_container_marks_and_queries_a_named_container() {
+        let marker = Stylesheet::from(&sx().container("demo-card"));
+        assert!(
+            marker
+                .as_str()
+                .contains("container-type:inline-size;container-name:demo-card;")
+        );
+
+        let css = Stylesheet::from(&sx().container_query(
+            "demo-card",
+            "(min-width: 640px)",
+            sx().width("388px"),
+        ));
+        assert!(
+            css.as_str()
+                .contains("@container demo-card (min-width: 640px){")
+        );
+        assert!(css.as_str().contains("width:388px;"));
+    }
+
+    #[test]
+    fn sx_container_breakpoint_uses_the_size_scale() {
+        let css = Stylesheet::from(&sx().container_breakpoint("card", Size::Md, sx().gap("lg")));
+
+        assert!(css.as_str().contains("@container card (min-width: 62rem){"));
+    }
+
+    /// The `" and "` fold is media-only: a container nested with a breakpoint
+    /// has to come out as two nested at-rules, whichever way round it is.
+    #[test]
+    fn a_container_and_a_breakpoint_nest_in_either_order() {
+        let media_outside = Stylesheet::from(&sx().breakpoint(
+            Size::Md,
+            sx().container_query("card", "(min-width: 640px)", sx().width("388px")),
+        ));
+        assert!(
+            media_outside
+                .as_str()
+                .contains("@media (min-width: 62rem){@container card (min-width: 640px){")
+        );
+
+        let container_outside = Stylesheet::from(&sx().container_query(
+            "card",
+            "(min-width: 640px)",
+            sx().breakpoint(Size::Md, sx().width("388px")),
+        ));
+        assert!(
+            container_outside
+                .as_str()
+                .contains("@container card (min-width: 640px){@media (min-width: 62rem){")
+        );
+
+        assert_eq!(
+            media_outside.as_str().matches("@media").count()
+                + media_outside.as_str().matches("@container").count(),
+            2
+        );
     }
 
     #[test]

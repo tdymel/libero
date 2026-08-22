@@ -82,6 +82,16 @@ const RESPONSIVE: &str = r#"sx()
 
 const RESPONSIVE_VALUE: &str = r#"sx().width(bp().sm("480px").lg("720px"))"#;
 
+const CONTAINER: &str = r#"// The ancestor whose width the answer depends on:
+sx().container("demo-card")
+
+// A descendant, asking about it:
+sx().width("100%")
+    .container_query("demo-card", "(min-width: 640px)", sx().width("388px"))
+
+// Or at a Size's breakpoint:
+sx().container_breakpoint("demo-card", Size::Md, sx().width("388px"))"#;
+
 const LAYER_ORDER: &str = "@layer lsx-framework, lsx-user-static, lsx-user-custom;";
 
 const STATIC_SX: &str = r#"static CARD_SX: StaticSx = StaticSx::new(|| {
@@ -308,6 +318,39 @@ pub fn StylingPage() -> Element {
                             source: "{size.as_str()} {size.breakpoint_value()}",
                         }
                     }
+                }
+            }
+
+            DocSection {
+                title: "Container queries",
+                Text {
+                    Code { source: "breakpoint" }
+                    " asks about the viewport, but "
+                    "\"does this component have room\" is almost always a question about "
+                    "the box it sits in. The two disagree whenever a component lives in a "
+                    "column narrower than the window - a sidebar, a grid cell, a card."
+                }
+                Text {
+                    Code { source: "container" }
+                    " marks an ancestor as a query container and "
+                    Code { source: "container_query" }
+                    " asks about it by name. The name is required: an anonymous container "
+                    "binds the query to the nearest ancestor container, which picks the "
+                    "wrong one as soon as containers nest."
+                }
+                CodeBlock { source: CONTAINER, language: "rust" }
+                Text {
+                    Code { source: "container" }
+                    " emits "
+                    Code { source: "container-type: inline-size" }
+                    ", which is "
+                    Code { source: "contain: layout style inline-size" }
+                    ". The element stops being sized by its own contents in the inline "
+                    "axis, becomes a stacking context, and becomes the containing block "
+                    "for absolutely positioned descendants - so never mark a shrink-to-fit "
+                    "box as a container. Like "
+                    Code { source: "@media" }
+                    ", the condition cannot read a CSS custom property."
                 }
             }
 

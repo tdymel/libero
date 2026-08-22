@@ -1,12 +1,13 @@
 use std::fmt::{self, Display, Formatter};
 
+use super::at_rule::AtRule;
 use super::css_declaration::CssDeclaration;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CssScope {
     selector: String,
     declarations: Vec<CssDeclaration>,
-    media_query: Option<String>,
+    at_rules: Vec<AtRule>,
 }
 
 impl CssScope {
@@ -14,20 +15,20 @@ impl CssScope {
         Self {
             selector: selector.into(),
             declarations,
-            media_query: None,
+            at_rules: Vec::new(),
         }
     }
 
-    pub(crate) fn in_media_query(mut self, media_query: impl Into<String>) -> Self {
-        self.media_query = Some(media_query.into());
+    pub(crate) fn in_at_rules(mut self, at_rules: Vec<AtRule>) -> Self {
+        self.at_rules = at_rules;
         self
     }
 }
 
 impl Display for CssScope {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        if let Some(media_query) = &self.media_query {
-            write!(f, "@media {}{{", media_query)?;
+        for at_rule in &self.at_rules {
+            write!(f, "{at_rule}{{")?;
         }
 
         write!(f, "{}{{", self.selector)?;
@@ -36,7 +37,7 @@ impl Display for CssScope {
         }
         write!(f, "}}")?;
 
-        if self.media_query.is_some() {
+        for _ in &self.at_rules {
             write!(f, "}}")?;
         }
 
@@ -63,6 +64,24 @@ mod tests {
         assert_eq!(
             stylesheet.as_str(),
             ".wambo{width:120px;padding-top:var(--lsx-spacing-sm);}"
+        );
+    }
+
+    #[test]
+    fn at_rules_open_in_order_and_close_in_reverse() {
+        let stylesheet = Stylesheet::new(vec![
+            CssScope::new(".wambo", vec![CssDeclaration::new("width", "120px")]).in_at_rules(vec![
+                AtRule::Media("(min-width: 48rem)".into()),
+                AtRule::Container {
+                    name: "card".into(),
+                    condition: "(min-width: 640px)".into(),
+                },
+            ]),
+        ]);
+
+        assert_eq!(
+            stylesheet.as_str(),
+            "@media (min-width: 48rem){@container card (min-width: 640px){.wambo{width:120px;}}}"
         );
     }
 }

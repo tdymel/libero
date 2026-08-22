@@ -116,6 +116,8 @@ properties! {
     Overflow => "overflow", overflow;
     OverflowX => "overflow-x", overflow_x;
     OverflowY => "overflow-y", overflow_y;
+    ContainerType => "container-type", container_type;
+    ContainerName => "container-name", container_name;
     ScrollbarWidth => "scrollbar-width", scrollbar_width;
     ScrollbarColor => "scrollbar-color", scrollbar_color;
     Clip => "clip", clip;
@@ -175,6 +177,7 @@ pub enum SxModifierKey {
     Selector(String),
     Condition(String),
     Breakpoint(Size),
+    Container { name: String, condition: String },
 }
 
 #[cfg(test)]

@@ -12,6 +12,9 @@ use crate::icons::CheckmarkIcon;
 
 use super::{Control, ControlKind};
 
+/// The card is the query container the control panel keys off.
+const DEMO_CARD: &str = "demo-card";
+
 /// `"line_numbers"` -> `"Line numbers"`. Prop names are the control labels.
 fn label(name: &str) -> String {
     let name = name.replace('_', " ");
@@ -148,7 +151,11 @@ pub fn Demo(
                 .border_radius("6px")
                 // Keeps the code block's own square corners inside the card's
                 // rounded ones.
-                .overflow("hidden"),
+                .overflow("hidden")
+                // Whether the control panel wraps below the preview depends on
+                // this card's width, not the viewport's - under the docs shell
+                // the two disagree by the nav's width.
+                .container(DEMO_CARD),
             Flex {
                 direction: "row",
                 wrap: "wrap",
@@ -177,21 +184,12 @@ pub fn Demo(
                             .flex_shrink("0")
                             .padding("24px")
                             .border_top(border.clone())
-                            // `Md`, not `Sm`, and the gap between them is the
-                            // whole point: whether the panel *wraps* depends on
-                            // the card's width, but a media query can only ask
-                            // about the viewport. Under the docs shell the card
-                            // is roughly `viewport - 280 (nav) - 56 (gutters and
-                            // page padding)`, so 240px of preview plus 388px of
-                            // panel only fit from ~956px up. At `Sm` (768px) the
-                            // panel wrapped below the preview while the query
-                            // still gave it a fixed width and a left border.
-                            // `Md` (992px) clears it with room to spare, and
-                            // errs towards stacking - which always looks right.
-                            // The real fix is a container query; `Sx` has no
-                            // `@container` yet.
-                            .breakpoint(
-                                Size::Md,
+                            // The same 628px the flex row wraps at, plus slack
+                            // so a subpixel rounding at the boundary can't put
+                            // the wrap and the query on opposite sides.
+                            .container_query(
+                                DEMO_CARD,
+                                "(min-width: 640px)",
                                 sx()
                                     // 340px of controls plus the padding either
                                     // side - `box-sizing` is border-box here.

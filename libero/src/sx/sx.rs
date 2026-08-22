@@ -77,6 +77,57 @@ impl Sx {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }
 
+    /// Marks this element as a named inline-size query container, so
+    /// descendants can [`container_query`](Self::container_query) it.
+    ///
+    /// The name is mandatory: an anonymous container binds a query to the
+    /// *nearest* ancestor container, which silently picks the wrong one as
+    /// soon as containers nest.
+    ///
+    /// `container-type: inline-size` is `contain: layout style inline-size` -
+    /// the element stops being sized by its own contents in the inline axis,
+    /// becomes a stacking context, and becomes the containing block for
+    /// absolutely and fixed positioned descendants. Never put it on a
+    /// shrink-to-fit box.
+    pub fn container(self, name: impl Into<String>) -> Self {
+        self.container_type("inline-size")
+            .container_name(name.into())
+    }
+
+    /// Styles that apply while the named ancestor container matches
+    /// `condition`, e.g. `"(min-width: 640px)"`.
+    ///
+    /// Like `@media`, the condition cannot read CSS custom properties.
+    pub fn container_query(
+        self,
+        name: impl Into<String>,
+        condition: impl Into<String>,
+        nested: Sx,
+    ) -> Self {
+        self.modifier(
+            SxModifierKey::Container {
+                name: name.into(),
+                condition: condition.into(),
+            },
+            nested,
+        )
+    }
+
+    /// [`container_query`](Self::container_query) at a `Size`'s breakpoint -
+    /// the container twin of [`breakpoint`](Self::breakpoint).
+    pub fn container_breakpoint(
+        self,
+        name: impl Into<String>,
+        breakpoint: Size,
+        nested: Sx,
+    ) -> Self {
+        self.container_query(
+            name,
+            format!("(min-width: {})", breakpoint.breakpoint_value()),
+            nested,
+        )
+    }
+
     pub fn apply_if<T>(self, value: Option<T>, f: impl FnOnce(Self, T) -> Self) -> Self {
         match value {
             Some(value) => f(self, value),
