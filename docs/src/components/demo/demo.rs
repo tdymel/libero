@@ -164,183 +164,187 @@ pub fn Demo(
                         .justify_content("center"),
                     {render.call(values())}
                 }
-                Flex {
-                    direction: "column",
-                    gap: "lg",
-                    // Wrapped, the controls sit below the preview, so the
-                    // divider has to move with them.
-                    sx: sx()
-                        .width("100%")
-                        .flex_shrink("0")
-                        .padding("24px")
-                        .border_top(border.clone())
-                        .breakpoint(
-                            Size::Sm,
-                            sx()
-                                // 340px of controls plus the padding either
-                                // side - `box-sizing` is border-box here.
-                                // Wide enough for a four-option segmented
-                                // group (`ScrollArea`'s `scrollbars`).
-                                .width("388px")
-                                .border_top("none")
-                                .border_left(border.clone()),
-                        ),
-                    for (index, control) in controls.iter().enumerate() {
-                        Flex {
-                            key: "{control.name}",
-                            // Greyed out, not gone: a control that vanishes
-                            // moves every one below it under the pointer.
-                            sx: sx().opacity(match control.is_inert(&values()) {
-                                true => "0.4",
-                                false => "1",
-                            }),
-                            direction: "column",
-                            // The slider's bubble sits above its track, so it
-                            // needs more room under the label than the rest.
-                            gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
-                            // `Select` renders its own `<label>`, which is
-                            // what names it - a second one would duplicate it.
-                            if control.kind != ControlKind::Select {
-                                Text {
-                                    size: "sm",
-                                    sx: sx().font_weight("600"),
-                                    {label(control.name)}
-                                }
-                            }
-                            match control.kind {
-                                ControlKind::Color => rsx! {
-                                    ToggleButtonGroup {
+                // No props, no panel - the preview and the code block are
+                // the whole demo then.
+                if !controls.is_empty() {
+                    Flex {
+                        direction: "column",
+                        gap: "lg",
+                        // Wrapped, the controls sit below the preview, so the
+                        // divider has to move with them.
+                        sx: sx()
+                            .width("100%")
+                            .flex_shrink("0")
+                            .padding("24px")
+                            .border_top(border.clone())
+                            .breakpoint(
+                                Size::Sm,
+                                sx()
+                                    // 340px of controls plus the padding either
+                                    // side - `box-sizing` is border-box here.
+                                    // Wide enough for a four-option segmented
+                                    // group (`ScrollArea`'s `scrollbars`).
+                                    .width("388px")
+                                    .border_top("none")
+                                    .border_left(border.clone()),
+                            ),
+                        for (index, control) in controls.iter().enumerate() {
+                            Flex {
+                                key: "{control.name}",
+                                // Greyed out, not gone: a control that vanishes
+                                // moves every one below it under the pointer.
+                                sx: sx().opacity(match control.is_inert(&values()) {
+                                    true => "0.4",
+                                    false => "1",
+                                }),
+                                direction: "column",
+                                // The slider's bubble sits above its track, so it
+                                // needs more room under the label than the rest.
+                                gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
+                                // `Select` renders its own `<label>`, which is
+                                // what names it - a second one would duplicate it.
+                                if control.kind != ControlKind::Select {
+                                    Text {
                                         size: "sm",
-                                        full_width: true,
-                                        disabled: control.is_inert(&values()),
-                                        // Swatches read as separate chips, not one
-                                        // segmented control.
-                                        gap: "xs",
-                                        variant: "text",
-                                        value: vec![values().str(control.name)],
-                                        // Clicking the selected swatch would otherwise
-                                        // clear it, leaving the prop with no value.
-                                        onchange: move |next: Vec<String>| {
-                                            if let Some(value) = next.into_iter().next() {
-                                                values.write().0[index].1 = value;
-                                            }
-                                        },
-                                        for option in control.options.iter() {
-                                            ToggleButton {
-                                                key: "{option}",
-                                                value: "{option}",
-                                                aria_label: "{option}",
-                                                // The swatch is the whole button, so
-                                                // the fill reaches the border - and
-                                                // the variant's hover tint would show
-                                                // as a halo around it.
-                                                sx: sx()
-                                                    .padding("0")
-                                                    .hover(sx().background("transparent")),
-                                                Box {
+                                        sx: sx().font_weight("600"),
+                                        {label(control.name)}
+                                    }
+                                }
+                                match control.kind {
+                                    ControlKind::Color => rsx! {
+                                        ToggleButtonGroup {
+                                            size: "sm",
+                                            full_width: true,
+                                            disabled: control.is_inert(&values()),
+                                            // Swatches read as separate chips, not one
+                                            // segmented control.
+                                            gap: "xs",
+                                            variant: "text",
+                                            value: vec![values().str(control.name)],
+                                            // Clicking the selected swatch would otherwise
+                                            // clear it, leaving the prop with no value.
+                                            onchange: move |next: Vec<String>| {
+                                                if let Some(value) = next.into_iter().next() {
+                                                    values.write().0[index].1 = value;
+                                                }
+                                            },
+                                            for option in control.options.iter() {
+                                                ToggleButton {
+                                                    key: "{option}",
+                                                    value: "{option}",
+                                                    aria_label: "{option}",
+                                                    // The swatch is the whole button, so
+                                                    // the fill reaches the border - and
+                                                    // the variant's hover tint would show
+                                                    // as a halo around it.
                                                     sx: sx()
-                                                        .width("100%")
-                                                        .height("100%")
-                                                        .border_radius("inherit")
-                                                        .background(swatch(option).0)
-                                                        .color(swatch(option).1)
-                                                        // A pale swatch needs an edge
-                                                        // to read as a swatch at all.
-                                                        .border(border.clone())
-                                                        .display("flex")
-                                                        .align_items("center")
-                                                        .justify_content("center")
-                                                        .selector(
-                                                            "& svg",
-                                                            sx().width("18px").height("18px"),
-                                                        ),
-                                                    if values().str(control.name) == *option {
-                                                        CheckmarkIcon {}
+                                                        .padding("0")
+                                                        .hover(sx().background("transparent")),
+                                                    Box {
+                                                        sx: sx()
+                                                            .width("100%")
+                                                            .height("100%")
+                                                            .border_radius("inherit")
+                                                            .background(swatch(option).0)
+                                                            .color(swatch(option).1)
+                                                            // A pale swatch needs an edge
+                                                            // to read as a swatch at all.
+                                                            .border(border.clone())
+                                                            .display("flex")
+                                                            .align_items("center")
+                                                            .justify_content("center")
+                                                            .selector(
+                                                                "& svg",
+                                                                sx().width("18px").height("18px"),
+                                                            ),
+                                                        if values().str(control.name) == *option {
+                                                            CheckmarkIcon {}
+                                                        }
                                                     }
                                                 }
                                             }
                                         }
-                                    }
-                                },
-                                ControlKind::Slider => rsx! {
-                                    Slider {
-                                        size: "lg",
-                                        disabled: control.is_inert(&values()),
-                                        aria_label: control.name,
-                                        min: 0.0,
-                                        max: (control.options.len() - 1) as f64,
-                                        step: 1.0,
-                                        value: control.step_of(&values().str(control.name)),
-                                        // The step index means nothing to a
-                                        // reader - the bubble shows the value
-                                        // it stands for.
-                                        label: {
-                                            let options = control.options.clone();
-                                            move |at: f64| options[at as usize].clone()
-                                        },
-                                        marks: control.marks(),
-                                        on_change: {
-                                            let options = control.options.clone();
-                                            move |event: SliderChangeEvent| {
-                                                let at = event.value() as usize;
-                                                values.write().0[index].1 = options[at].clone();
-                                            }
-                                        },
-                                    }
-                                },
-                                ControlKind::Select => rsx! {
-                                    Select {
-                                        size: "sm",
-                                        disabled: control.is_inert(&values()),
-                                        label: label(control.name),
-                                        // Matches the `Text { size: "sm" }`
-                                        // label every other control kind gets.
-                                        label_sx: sx()
-                                            .font_weight("600")
-                                            .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
-                                        value: values().str(control.name),
-                                        onchange: move |value: String| {
-                                            values.write().0[index].1 = value;
-                                        },
-                                        for option in control.options.iter() {
-                                            SelectOption {
-                                                key: "{option}",
-                                                value: "{option}",
-                                                {control.label_of(option)}
-                                            }
+                                    },
+                                    ControlKind::Slider => rsx! {
+                                        Slider {
+                                            size: "lg",
+                                            disabled: control.is_inert(&values()),
+                                            aria_label: control.name,
+                                            min: 0.0,
+                                            max: (control.options.len() - 1) as f64,
+                                            step: 1.0,
+                                            value: control.step_of(&values().str(control.name)),
+                                            // The step index means nothing to a
+                                            // reader - the bubble shows the value
+                                            // it stands for.
+                                            label: {
+                                                let options = control.options.clone();
+                                                move |at: f64| options[at as usize].clone()
+                                            },
+                                            marks: control.marks(),
+                                            on_change: {
+                                                let options = control.options.clone();
+                                                move |event: SliderChangeEvent| {
+                                                    let at = event.value() as usize;
+                                                    values.write().0[index].1 = options[at].clone();
+                                                }
+                                            },
                                         }
-                                    }
-                                },
-                                ControlKind::Switch => rsx! {
-                                    Switch {
-                                        aria_label: control.name,
-                                        disabled: control.is_inert(&values()),
-                                        checked: control.is_on(&values().str(control.name)),
-                                        onchange: move |on: bool| {
-                                            values.write().0[index].1 = on.to_string();
-                                        },
-                                    }
-                                },
-                                ControlKind::Toggle => rsx! {
-                                    ToggleButtonGroup {
-                                        size: "sm",
-                                        full_width: true,
-                                        disabled: control.is_inert(&values()),
-                                        value: vec![values().str(control.name)],
-                                        onchange: move |next: Vec<String>| {
-                                            if let Some(value) = next.into_iter().next() {
+                                    },
+                                    ControlKind::Select => rsx! {
+                                        Select {
+                                            size: "sm",
+                                            disabled: control.is_inert(&values()),
+                                            label: label(control.name),
+                                            // Matches the `Text { size: "sm" }`
+                                            // label every other control kind gets.
+                                            label_sx: sx()
+                                                .font_weight("600")
+                                                .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
+                                            value: values().str(control.name),
+                                            onchange: move |value: String| {
                                                 values.write().0[index].1 = value;
-                                            }
-                                        },
-                                        for option in control.options.iter() {
-                                            ToggleButton {
-                                                key: "{option}",
-                                                value: "{option}",
-                                                {control.label_of(option)}
+                                            },
+                                            for option in control.options.iter() {
+                                                SelectOption {
+                                                    key: "{option}",
+                                                    value: "{option}",
+                                                    {control.label_of(option)}
+                                                }
                                             }
                                         }
-                                    }
-                                },
+                                    },
+                                    ControlKind::Switch => rsx! {
+                                        Switch {
+                                            aria_label: control.name,
+                                            disabled: control.is_inert(&values()),
+                                            checked: control.is_on(&values().str(control.name)),
+                                            onchange: move |on: bool| {
+                                                values.write().0[index].1 = on.to_string();
+                                            },
+                                        }
+                                    },
+                                    ControlKind::Toggle => rsx! {
+                                        ToggleButtonGroup {
+                                            size: "sm",
+                                            full_width: true,
+                                            disabled: control.is_inert(&values()),
+                                            value: vec![values().str(control.name)],
+                                            onchange: move |next: Vec<String>| {
+                                                if let Some(value) = next.into_iter().next() {
+                                                    values.write().0[index].1 = value;
+                                                }
+                                            },
+                                            for option in control.options.iter() {
+                                                ToggleButton {
+                                                    key: "{option}",
+                                                    value: "{option}",
+                                                    {control.label_of(option)}
+                                                }
+                                            }
+                                        }
+                                    },
+                                }
                             }
                         }
                     }
