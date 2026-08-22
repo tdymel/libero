@@ -17,8 +17,8 @@ use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, ChipPage,
     CodeBlockPage, CodePage, ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage,
-    FlexPage, FloatPage, FocusTrapPage, GettingStarted, HeaderPage, IconPage, ImagePage, KbdPage,
-    ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage,
+    FlexPage, FloatPage, FocusTrapPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
+    KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage,
     ScrollAreaPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage,
     TextPage, ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage,
     VisuallyHiddenPage,
@@ -93,6 +93,8 @@ pub(crate) enum Route {
     FlexPage {},
     #[route("/layout/float")]
     FloatPage {},
+    #[route("/layout/grid")]
+    GridPage {},
     #[route("/layout/header")]
     HeaderPage {},
     #[route("/layout/scroll-area")]

@@ -2,13 +2,13 @@ use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
     ButtonSizeLevel, CenterDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
     Color, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
-    FlexAxisDefaults, FlexDefaults, FloatDefaults, HeaderDefaults, HexColor, IconDefaults,
-    ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults,
-    OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis,
-    ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel, SidebarDefaults, Size,
-    Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
-    TextDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
-    TreeDefaults, ZIndexDefaults,
+    FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults, HexColor,
+    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
+    NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults,
+    ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel,
+    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
+    SwitchDefaults, SwitchSizeLevel, TextDefaults, TextSize, TitleDefaults, TitleSize,
+    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -23,6 +23,7 @@ pub struct Theme {
     pub spacing: Sizes<u8>,
     pub radius: Sizes<u8>,
     pub flex: FlexDefaults,
+    pub grid: GridDefaults,
     pub center: CenterDefaults,
     pub container: ContainerDefaults,
     pub aspect_ratio: AspectRatioDefaults,
@@ -86,6 +87,11 @@ impl Theme {
                 spacing: Size::Md,
                 wrap: false,
             },
+        },
+        grid: GridDefaults {
+            gap: Size::Md,
+            zone_gap: Size::Md,
+            row_unit: 2,
         },
         center: CenterDefaults { inline: false },
         container: ContainerDefaults {

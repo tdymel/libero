@@ -16,7 +16,7 @@ pub use inputs::{
 };
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,
-    HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,
+    GridPage, HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,
 };
 pub use navigation::{AnchorPage, NavLinkPage, TreePage};
 pub use overlay::{DrawerPage, ModalPage, OverlayPage, TooltipPage};

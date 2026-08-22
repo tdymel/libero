@@ -13,6 +13,7 @@ mod divider;
 mod drawer;
 mod flex;
 mod float;
+mod grid;
 mod header;
 mod icon;
 mod image;
@@ -63,6 +64,10 @@ pub use flex::{
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
+pub use grid::{
+    GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT,
+    GRID_ZONE_AREA_VAR, GRID_ZONE_GAP, GridDefaults,
+};
 pub use header::{HEADER_HEIGHT, HeaderDefaults};
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};

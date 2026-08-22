@@ -79,6 +79,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         drawer,
         sidebar,
         flex,
+        grid,
         center,
         container,
         aspect_ratio,
@@ -132,6 +133,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(drawer.to_css_declarations());
     declarations.extend(sidebar.to_css_declarations());
     declarations.extend(flex.to_css_declarations());
+    declarations.extend(grid.to_css_declarations());
     declarations.extend(center.to_css_declarations());
     declarations.extend(container.to_css_declarations());
     declarations.extend(aspect_ratio.to_css_declarations());

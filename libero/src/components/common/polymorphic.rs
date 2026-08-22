@@ -233,6 +233,8 @@ fn join(into: &mut String, value: &str, separator: char) {
 html_tags! {
     default {
         A => a,
+        Article => article,
+        Aside => aside,
         Button => button,
         Code => code,
         Dd => dd,
@@ -265,8 +267,6 @@ html_tags! {
         Abbr => abbr,
         Address => address,
         Area => area,
-        Article => article,
-        Aside => aside,
         Audio => audio,
         B => b,
         Base => base,

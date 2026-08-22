@@ -71,7 +71,15 @@ properties! {
     JustifyContent => "justify-content", justify_content;
     Gap => "gap", gap, SizeCss::SPACING;
     GridTemplateColumns => "grid-template-columns", grid_template_columns;
+    GridTemplateAreas => "grid-template-areas", grid_template_areas;
     GridColumn => "grid-column", grid_column;
+    GridRow => "grid-row", grid_row;
+    GridArea => "grid-area", grid_area;
+    GridAutoRows => "grid-auto-rows", grid_auto_rows;
+    GridAutoFlow => "grid-auto-flow", grid_auto_flow;
+    AlignContent => "align-content", align_content;
+    RowGap => "row-gap", row_gap, SizeCss::SPACING;
+    ColumnGap => "column-gap", column_gap, SizeCss::SPACING;
     MaxWidth => "max-width", max_width, SizeCss::BREAKPOINT;
     MaxHeight => "max-height", max_height;
     Font => "font", font;

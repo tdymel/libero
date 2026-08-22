@@ -100,6 +100,7 @@ fn render_cost_per_component() {
 
         "Box" { Box { "x" } }
         "Flex" { Flex { "x" } }
+        "GridZone" { GridZone { GridItem { "x" } } }
         "Center" { Center { "x" } }
         "Container" { Container { "x" } }
         "AspectRatio" { AspectRatio { "x" } }

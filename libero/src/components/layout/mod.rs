@@ -5,6 +5,7 @@ mod container;
 mod divider;
 mod flex;
 mod float;
+mod grid;
 mod header;
 mod scroll_area;
 mod sidebar;
@@ -18,6 +19,11 @@ pub use container::Container;
 pub use divider::{Divider, DividerProps, LabelPosition};
 pub use flex::{Flex, FlexDirection, FlexWrap};
 pub use float::{Float, Placement};
+pub use grid::{
+    AreaName, Grid, GridArea, GridItem, GridItemProps, GridProps, GridSpan, GridTemplate,
+    GridTemplateBuilder, GridTemplateError, GridZone, GridZoneProps, RowBuilder,
+    StaticGridTemplate,
+};
 pub use header::{Header, HeaderPosition};
 pub use scroll_area::{ScrollArea, ScrollPositionEvent};
 pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
