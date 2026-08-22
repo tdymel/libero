@@ -30,6 +30,7 @@ mod sidebar;
 mod slider;
 mod splitter;
 mod switch;
+mod table;
 mod text;
 mod title;
 mod tooltip;
@@ -91,6 +92,10 @@ pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use switch::{
     SWITCH_FONT_SIZE, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_THUMB_SIZE, SWITCH_TRACK_H,
     SWITCH_TRACK_HEIGHT, SWITCH_TRACK_W, SWITCH_TRACK_WIDTH, SwitchDefaults, SwitchSizeLevel,
+};
+pub use table::{
+    TABLE_BORDER_COLOR, TABLE_FONT_SIZE, TABLE_HOVER, TABLE_PADDING_X, TABLE_PADDING_Y,
+    TableDefaults,
 };
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,

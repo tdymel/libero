@@ -118,6 +118,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ImagePage {}, "Image"),
                 page(Route::ListPage {}, "List"),
                 page(Route::QrCodePage {}, "QrCode"),
+                page(Route::TablePage {}, "Table"),
             ],
         ),
         group(

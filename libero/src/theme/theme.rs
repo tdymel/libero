@@ -1,14 +1,14 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
     ButtonSizeLevel, CenterDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
-    Color, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults,
-    FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults, HexColor,
-    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults,
-    ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel,
-    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
-    SwitchDefaults, SwitchSizeLevel, TextDefaults, TextSize, TitleDefaults, TitleSize,
-    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    Color, ColorShade, ColorValue, ContainerDefaults, DataListDefaults, DialogDefaults,
+    DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults,
+    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
+    MarkDefaults, NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
+    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
+    SelectSizeLevel, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TextDefaults, TextSize,
+    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -43,6 +43,7 @@ pub struct Theme {
     pub slider: SliderDefaults,
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
+    pub table: TableDefaults,
     pub tree: TreeDefaults,
     pub titles: TitleDefaults,
     pub texts: TextDefaults,
@@ -333,6 +334,13 @@ impl Theme {
             size: Size::Md,
             gap: Sizes::new(4, 8, 12, 16, 20, 24),
             indent: Sizes::new(8, 12, 16, 20, 24, 28),
+        },
+        table: TableDefaults {
+            padding_x: 12,
+            padding_y: 10,
+            font_size: 14,
+            border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+            hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
         },
         data_list: DataListDefaults {
             size: Size::Md,

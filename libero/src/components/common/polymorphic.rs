@@ -261,6 +261,7 @@ html_tags! {
         Section => section,
         Select => select,
         Span => span,
+        Table => table,
         Ul => ul,
     }
     full {
@@ -329,7 +330,6 @@ html_tags! {
         Sub => sub,
         Summary => summary,
         Sup => sup,
-        Table => table,
         Tbody => tbody,
         Td => td,
         Template => template,

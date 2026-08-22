@@ -10,7 +10,7 @@ mod typography;
 
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
-pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage};
+pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
 pub use inputs::{
     ActionIconPage, ButtonPage, ChipPage, SelectPage, SliderPage, SwitchPage, ToggleButtonGroupPage,
 };

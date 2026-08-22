@@ -20,7 +20,7 @@ use pages::{
     FlexPage, FloatPage, FocusTrapPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
     KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, PerformancePage, QrCodePage,
     ScrollAreaPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage,
-    TextPage, ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage,
+    TablePage, TextPage, ThemingPage, TitlePage, ToggleButtonGroupPage, TooltipPage, TreePage,
     VisuallyHiddenPage,
 };
 
@@ -59,6 +59,8 @@ pub(crate) enum Route {
     IconPage {},
     #[route("/data-display/image")]
     ImagePage {},
+    #[route("/data-display/table")]
+    TablePage {},
     #[route("/data-display/list")]
     ListPage {},
     #[route("/data-display/qr-code")]

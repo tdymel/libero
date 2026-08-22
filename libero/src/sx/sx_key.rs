@@ -147,6 +147,8 @@ properties! {
     Transform => "transform", transform;
     Animation => "animation", animation;
     Visibility => "visibility", visibility;
+    BorderCollapse => "border-collapse", border_collapse;
+    VerticalAlign => "vertical-align", vertical_align;
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

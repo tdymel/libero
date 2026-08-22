@@ -131,6 +131,7 @@ fn render_cost_per_component() {
         "QrCode" { QrCode { data: "x", aria_label: "a" } }
         "List" { List { ListItem { "x" } } }
         "DataList" { DataList { DataListItem { label: rsx! { "l" }, "x" } } }
+        "Table" { Table { data: vec![1u32], columns: vec![column("N").value(|n: &u32| *n)] } }
 
         "Anchor" { Anchor { to: "https://example.com", "x" } }
         "NavLink" { NavLink { to: "https://example.com", "x" } }
