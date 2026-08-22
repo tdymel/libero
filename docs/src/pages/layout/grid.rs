@@ -180,15 +180,21 @@ pub fn GridPage() -> Element {
             DocSection {
                 title: "masonry and dense",
                 Text {
-                    "`dense` backfills gaps a wider item left behind - pure CSS, no "
-                    "measurement, and it only moves items sideways. Vertical dead space under "
-                    "a short card needs `masonry`, which measures every item and packs it "
-                    "against the column above. They compose: a wall of mixed spans wants both."
+                    Code { source: "dense" }
+                    " backfills gaps a wider item left behind - pure CSS, no measurement, "
+                    "and it only moves items sideways. Vertical dead space under a short "
+                    "card needs "
+                    Code { source: "masonry" }
+                    ", which measures every item and packs it against the column above. "
+                    "They compose: a wall of mixed spans wants both."
                 }
                 Text {
-                    "`masonry` costs a `ResizeObserver` per item. Without a browser - during "
-                    "SSR, or on a target with no DOM - nothing measures and the zone renders "
-                    "as an ordinary grid: unpacked, but correct."
+                    Code { source: "masonry" }
+                    " costs a "
+                    Code { source: "ResizeObserver" }
+                    " per item. Without a browser - during SSR, or on a target with no DOM "
+                    "- nothing measures and the zone renders as an ordinary grid: unpacked, "
+                    "but correct."
                 }
                 Text {
                     "Both make visual order diverge from DOM order. Tab order always follows "
@@ -255,8 +261,9 @@ pub fn GridPage() -> Element {
             DocSection {
                 title: "Spans",
                 Text {
-                    "`GridSpan` is closed, so an invalid width is not representable. Every "
-                    "value is an exact twelfth of the zone."
+                    Code { source: "GridSpan" }
+                    " is closed, so an invalid width is not representable. Every value is "
+                    "an exact twelfth of the zone."
                 }
                 Grid {
                     template: SPANS.clone(),

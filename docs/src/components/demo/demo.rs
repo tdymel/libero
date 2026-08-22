@@ -7,6 +7,7 @@ use libero::{
     sx::sx,
     theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
 };
+use std::sync::LazyLock;
 
 use crate::icons::CheckmarkIcon;
 
@@ -14,6 +15,17 @@ use super::{Control, ControlKind};
 
 /// The card is the query container the control panel keys off.
 const DEMO_CARD: &str = "demo-card";
+
+/// The color belongs *inside* the shorthand: a later `border-left: 1px solid`
+/// would otherwise reset the color to `currentColor`. A `&'static str`, not a
+/// local `String`, so the swatch closure can capture it without moving it out
+/// of the `FnMut` it lives in.
+static BORDER: LazyLock<String> =
+    LazyLock::new(|| format!("1px solid {}", CODE_BLOCK_BORDER.value()));
+
+fn border() -> &'static str {
+    BORDER.as_str()
+}
 
 /// `"line_numbers"` -> `"Line numbers"`. Prop names are the control labels.
 fn label(name: &str) -> String {
@@ -140,14 +152,10 @@ pub fn Demo(
         Some(Wrap(wrap)) => wrap(&values(), &source),
         None => source,
     };
-    // The color belongs *inside* each shorthand: a later `border-left: 1px
-    // solid` would otherwise reset the color to `currentColor`.
-    let border = format!("1px solid {}", CODE_BLOCK_BORDER.value());
-
     rsx! {
         Box {
             sx: sx()
-                .border(border.clone())
+                .border(border())
                 .border_radius("6px")
                 // Keeps the code block's own square corners inside the card's
                 // rounded ones.
@@ -160,7 +168,7 @@ pub fn Demo(
                 direction: "row",
                 wrap: "wrap",
                 align: "stretch",
-                sx: sx().border_bottom(border.clone()),
+                sx: sx().border_bottom(border()),
                 Box {
                     sx: sx()
                         .flex("1")
@@ -183,7 +191,7 @@ pub fn Demo(
                             .width("100%")
                             .flex_shrink("0")
                             .padding("24px")
-                            .border_top(border.clone())
+                            .border_top(border())
                             // The same 628px the flex row wraps at, plus slack
                             // so a subpixel rounding at the boundary can't put
                             // the wrap and the query on opposite sides.
@@ -197,7 +205,7 @@ pub fn Demo(
                                     // group (`ScrollArea`'s `scrollbars`).
                                     .width("388px")
                                     .border_top("none")
-                                    .border_left(border.clone()),
+                                    .border_left(border()),
                             ),
                         for (index, control) in controls.iter().enumerate() {
                             Flex {
@@ -260,7 +268,7 @@ pub fn Demo(
                                                             .color(swatch(option).1)
                                                             // A pale swatch needs an edge
                                                             // to read as a swatch at all.
-                                                            .border(border.clone())
+                                                            .border(border())
                                                             .display("flex")
                                                             .align_items("center")
                                                             .justify_content("center")
