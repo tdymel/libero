@@ -14,6 +14,10 @@ pub enum Size {
 impl Size {
     pub(crate) const ALL: [Size; 6] = [Self::Xs, Self::Sm, Self::Md, Self::Lg, Self::Xl, Self::Xxl];
 
+    pub(crate) const fn index(self) -> usize {
+        self as usize
+    }
+
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Xs => "xs",

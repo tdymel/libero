@@ -85,7 +85,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
         .with(GRID_ITEM_ROWS_VAR, measured.map(|rows| rows.to_string()))
         .into();
 
-    let span = props.span.clone().unwrap_or_default();
+    let span = props.span.unwrap_or_default();
     let states: Input<States> = props
         .states
         .unwrap_or_default()
@@ -103,11 +103,10 @@ pub fn GridItem(props: GridItemProps) -> Element {
         "" => props.sx.clone(),
         zone_container => span
             .breakpoints()
-            .iter()
             .fold(sx(), |base, (size, span)| {
                 base.container_breakpoint(
                     container_name(zone_container),
-                    *size,
+                    size,
                     sx().grid_column(format!("span {}", span.columns())),
                 )
             })
