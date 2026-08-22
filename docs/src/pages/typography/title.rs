@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop};
 use dioxus::prelude::*;
 use libero::components::{Code, HtmlTag, Input, Text, Title};
 
@@ -7,6 +7,15 @@ pub fn TitlePage() -> Element {
     rsx! {
         DocPage {
             title: "Title",
+            properties: vec![
+                prop("size", "Size")
+                    .default("xxl")
+                    .doc("Visual size, xs through xxl. Also picks the heading tag."),
+                prop("component", "HtmlTag")
+                    .default("follows size")
+                    .doc("Overrides the heading tag, keeping a size's weight under a different level so h1 -> h2 -> h3 order survives."),
+                prop("children", "Element").doc("The heading text."),
+            ],
             lead: rsx! {
                 Text {
                     "A heading, h1 through h6 - "
@@ -14,9 +23,7 @@ pub fn TitlePage() -> Element {
                     " decouples the semantic tag from the visual size, for a11y heading order."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
+            Demo {
                     component: "Title",
                     children_text: "The quick brown fox",
                     controls: vec![
@@ -37,8 +44,7 @@ pub fn TitlePage() -> Element {
                             },
                             "The quick brown fox"
                         }
-                    },
-                }
+                },
             }
         }
     }

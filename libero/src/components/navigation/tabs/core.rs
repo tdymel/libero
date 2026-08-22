@@ -8,8 +8,8 @@ use crate::{
     },
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_HOVER, TABS_LINE, TABS_PAD_X, TABS_PAD_Y,
-        TabsDefaults,
+        CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
+        TABS_PAD_Y, TabsDefaults,
     },
 };
 
@@ -33,7 +33,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             sx().display("inline-flex")
                 .align_items("center")
                 .justify_content("center")
-                .gap(SizeCss::SPACING.value(Size::Xs))
+                .gap(TABS_GAP.value())
                 .appearance("none")
                 .background("transparent")
                 .border("0")
