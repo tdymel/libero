@@ -1,9 +1,31 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
 use dioxus::prelude::*;
 use libero::{
     components::{Flex, Sidebar, Text},
     sx::sx,
 };
+
+const CONTENT: &str = r#"Text { "Navigation" }"#;
+const REST: &str = r#"Flex {
+    direction: "column",
+    sx: sx().flex("1").padding("12px"),
+    Text { "Rest of the layout" }
+}"#;
+
+/// `side` picks the border and the size axis, not the position - an in-flow
+/// panel sits where its parent's layout puts it, so the wrapper puts it at
+/// the matching end of the DOM, and the code block shows that.
+fn wrap_layout(values: &DemoValues, code: &str) -> String {
+    let panel = indent(code);
+    let rest = indent(REST);
+    let body = match values.str("side").as_str() {
+        "right" => format!("{rest}{panel}"),
+        _ => format!("{panel}{rest}"),
+    };
+    format!(
+        "Flex {{\n    direction: \"row\",\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"grey.3\"),\n{body}}}"
+    )
+}
 
 #[component]
 pub fn SidebarPage() -> Element {
@@ -18,36 +40,45 @@ pub fn SidebarPage() -> Element {
                 }
             },
             DocSection {
-                title: "Left",
-                Flex {
-                    direction: "row",
-                    sx: sx().height("120px").border("1px solid").border_color("grey.3"),
-                    Sidebar {
-                        size: "xs",
-                        Text { "Navigation" }
-                    }
-                    Flex {
-                        direction: "column",
-                        sx: sx().flex("1").padding("12px"),
-                        Text { "Rest of the layout" }
-                    }
-                }
-            }
-            DocSection {
-                title: "Right",
-                Flex {
-                    direction: "row",
-                    sx: sx().height("120px").border("1px solid").border_color("grey.3"),
-                    Flex {
-                        direction: "column",
-                        sx: sx().flex("1").padding("12px"),
-                        Text { "Rest of the layout" }
-                    }
-                    Sidebar {
-                        side: "right",
-                        size: "xs",
-                        Text { "Inspector" }
-                    }
+                title: "Usage",
+                Demo {
+                    component: "Sidebar",
+                    children_text: "",
+                    children_code: CONTENT.to_string(),
+                    controls: vec![
+                        Control::toggle("side", ["left", "right"]),
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default("md"),
+                    ],
+                    render: move |values: DemoValues| {
+                        let panel = rsx! {
+                            Sidebar {
+                                side: values.str("side"),
+                                size: values.str("size"),
+                                Text { "Navigation" }
+                            }
+                        };
+                        let rest = rsx! {
+                            Flex {
+                                direction: "column",
+                                sx: sx().flex("1").padding("12px"),
+                                Text { "Rest of the layout" }
+                            }
+                        };
+                        let (first, second) = match values.str("side").as_str() {
+                            "right" => (rest, panel),
+                            _ => (panel, rest),
+                        };
+                        rsx! {
+                            Flex {
+                                direction: "row",
+                                sx: sx().height("120px").width("100%").border("1px solid").border_color("grey.3"),
+                                {first}
+                                {second}
+                            }
+                        }
+                    },
+                    wrap: Wrap(wrap_layout),
                 }
             }
         }
