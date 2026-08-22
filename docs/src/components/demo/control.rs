@@ -34,6 +34,9 @@ pub struct Control {
     /// Display text per option, when the value alone doesn't read - `"python
     /// (not enabled)"` for a value that stays `"python"`. Positional.
     pub labels: Option<Vec<String>>,
+    /// When this prop is inert because another control pins it - the control
+    /// still renders, greyed out, rather than vanishing under the pointer.
+    pub inert: Option<fn(&DemoValues) -> bool>,
 }
 
 /// `code` is a page-level constant, so whether one is set is all that can
@@ -46,6 +49,7 @@ impl PartialEq for Control {
             && self.default == other.default
             && self.code.is_some() == other.code.is_some()
             && self.labels == other.labels
+            && self.inert.is_some() == other.inert.is_some()
     }
 }
 
@@ -91,6 +95,7 @@ impl Control {
             default,
             code: None,
             labels: None,
+            inert: None,
         }
     }
 
@@ -125,6 +130,17 @@ impl Control {
     pub fn code(mut self, code: fn(&Control, &DemoValues) -> Vec<String>) -> Self {
         self.code = Some(code);
         self
+    }
+
+    /// Greys the control out while `inert` holds - for a prop another
+    /// control has taken over.
+    pub fn inert_when(mut self, inert: fn(&DemoValues) -> bool) -> Self {
+        self.inert = Some(inert);
+        self
+    }
+
+    pub fn is_inert(&self, values: &DemoValues) -> bool {
+        self.inert.is_some_and(|inert| inert(values))
     }
 
     pub fn labels<const N: usize>(mut self, labels: [&str; N]) -> Self {
