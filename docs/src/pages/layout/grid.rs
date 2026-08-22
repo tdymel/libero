@@ -364,14 +364,24 @@ pub fn GridPage() -> Element {
                     "measurement reports that, and the item grows without bound."
                 }
                 Text {
-                    "Every zone is a query container, which means "
+                    "A zone filling a named area is a query container, which means "
                     Code { source: "contain: layout style inline-size" }
-                    ": a zone is a stacking context and the containing block for any "
+                    ": it is a stacking context and the containing block for any "
                     "absolutely positioned descendant. Something inside a "
                     Code { source: "GridItem" }
                     " that positions itself against the page needs a portal, not a "
                     Code { source: "position: absolute" }
                     "."
+                }
+                Text {
+                    "A zone used on its own, outside a "
+                    Code { source: "Grid" }
+                    ", is deliberately not a container: inline-size containment zeroes an "
+                    "element's own contribution to its width, which collapses a "
+                    "shrink-to-fit box to nothing. That also means "
+                    Code { source: "sp()" }
+                    " needs a zone with an area - there is nothing to query otherwise, and "
+                    "the base span stands."
                 }
                 Text {
                     "Build templates outside the render - a "

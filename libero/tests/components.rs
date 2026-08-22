@@ -1280,6 +1280,49 @@ fn a_responsive_span_queries_its_zone_not_the_viewport() {
     assert!(!html.contains("@media (min-width: 62rem){"));
 }
 
+/// Regression: `container-type: inline-size` zeroes an element's intrinsic
+/// contribution, so on a standalone zone - a shrink-to-fit flex item, as in
+/// the docs preview - it collapsed the zone to zero width and stacked every
+/// item at x=0. A zone with no area has no container name to be queried by
+/// either, so it must not be a container at all.
+#[test]
+fn only_a_zone_filling_an_area_is_a_query_container() {
+    fn standalone() -> Element {
+        rsx! {
+            LiberoProvider {
+                GridZone { GridItem { span: GridSpan::Half, "loose" } }
+            }
+        }
+    }
+
+    fn placed() -> Element {
+        rsx! {
+            LiberoProvider {
+                Grid { template: test_template(),
+                    GridZone { area: TestArea::Body, GridItem { span: GridSpan::Half, "placed" } }
+                }
+            }
+        }
+    }
+
+    let loose = render(standalone);
+    assert!(
+        !attributes_of(&nth_div(&loose, 0), "div")
+            .get("data-state")
+            .is_some_and(|state| state.contains("container"))
+    );
+
+    let html = render(placed);
+    assert!(
+        attributes_of(&nth_div(&html, 1), "div")
+            .get("data-state")
+            .expect("the zone states")
+            .contains("container")
+    );
+    assert!(has_rule_for(&html, "lsx-",));
+    assert!(html.contains("[data-state~=\"container\"]{container-type:inline-size;}"));
+}
+
 #[test]
 fn a_plain_span_emits_no_container_query() {
     fn app() -> Element {

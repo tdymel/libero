@@ -53,14 +53,6 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
 
     sx().display("grid")
         .grid_area(GRID_ZONE_AREA_VAR.value_or("auto"))
-        // Every zone is a query container, so a `GridItem` can size itself
-        // against its zone rather than the viewport. The name is a variable
-        // because it varies per zone but the *declaration* does not - the
-        // class stays recycled. Safe here only because both `Grid` and the
-        // zone size tracks as `minmax(0, 1fr)`: inline-size containment
-        // zeroes an element's intrinsic contribution, so a content-sized
-        // track would have collapsed the zone.
-        .container_type("inline-size")
         .container_name(GRID_ZONE_CONTAINER_VAR.value_or("none"))
         .grid_template_columns("repeat(12, minmax(0, 1fr))")
         .align_content("start")
@@ -76,6 +68,13 @@ static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
         // engages under ~300px and wider zones keep the themed gap exactly.
         .column_gap(format!("min({}, 4%)", GRID_ZONE_GAP.value()))
         .row_gap(GRID_ZONE_GAP.value())
+        // Only a zone filling a named area, i.e. one sitting in a `Grid`'s
+        // `minmax(0, 1fr)` track, whose width therefore comes from its parent.
+        // Inline-size containment zeroes an element's intrinsic contribution,
+        // so on a shrink-to-fit box - a standalone zone as a flex item - it
+        // collapses the zone to nothing. A zone with no area has no name to be
+        // queried by either, so it gains nothing from being a container.
+        .when("container", sx().container_type("inline-size"))
         .when("dense", sx().grid_auto_flow("row dense"))
         .when(
             "masonry",
@@ -217,6 +216,7 @@ pub fn GridZone(props: GridZoneProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
+        .with("container", !container.is_empty())
         .with("dense", props.dense)
         .with("masonry", props.masonry)
         .into();
