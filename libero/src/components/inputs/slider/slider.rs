@@ -14,7 +14,10 @@ use crate::{
         use_local_state, use_root_id, use_theme,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_TRACK, Size, SizeCss, SliderDefaults},
+    theme::{
+        Color, ColorShade, ColorValue, CssVar, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_TRACK, Size,
+        SizeCss, SliderDefaults,
+    },
     utils::warn,
 };
 
@@ -23,6 +26,8 @@ use crate::{
 const SLIDER_FILLED: CssVar = CssVar::new("--lsx-slider-filled");
 const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
+/// Set only on marks the bar has already reached, so one class covers both.
+const SLIDER_MARK_FILL: CssVar = CssVar::new("--lsx-slider-mark-fill");
 
 /// Where a 0-1 `fraction` sits along the track. The track is the full width,
 /// so the thumb travels inset by half its own width and never overhangs -
@@ -152,17 +157,19 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
 });
 
 static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
+    // Sized against the thumb, not the track: a 2px track leaves a dot too
+    // small to see, and it has to read against the thumb beside it.
+    let dot = format!("calc({} / 3)", SLIDER_THUMB.value());
     sx().position("absolute")
         .top("50%")
         .left(along_track(SLIDER_MARK_AT))
         .transform("translate(-50%, -50%)")
-        .width(format!("calc({} + 2px)", SLIDER_TRACK.value()))
-        .height(format!("calc({} + 2px)", SLIDER_TRACK.value()))
+        .width(dot.clone())
+        .height(dot)
         .border_radius("50%")
-        .background("white")
-        .border_style("solid")
-        .border_width("1px")
-        .border_color("grey.4")
+        .background(
+            SLIDER_MARK_FILL.value_or(ColorValue::Shade(Color::Grey, ColorShade::S4).value()),
+        )
 });
 
 static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
@@ -175,7 +182,12 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
             SizeCss::SPACING.value(Size::Xs)
         ))
         .left(along_track(SLIDER_MARK_AT))
-        .transform("translateX(-50%)")
+        // Centred in the middle, edge-aligned at the ends: a `-50%` caption
+        // on the first or last mark hangs outside the slider's own box.
+        .transform(format!(
+            "translateX(calc({} * -100%))",
+            SLIDER_MARK_AT.value_or("0")
+        ))
         .color("grey.7")
         .white_space("nowrap")
 });
@@ -393,10 +405,14 @@ pub fn Slider(props: SliderProps) -> Element {
     let bubble_text = text.clone().unwrap_or_else(|| value.to_string());
 
     let marks = props.marks.iter().map(|mark| {
+        let mark_at = fraction(mark.value, min, max);
         let at = variables()
+            .with(SLIDER_MARK_AT, Some(mark_at.to_string()))
+            // White on the filled bar, the way the thumb is - the grey dot
+            // would disappear into it.
             .with(
-                SLIDER_MARK_AT,
-                Some(fraction(mark.value, min, max).to_string()),
+                SLIDER_MARK_FILL,
+                (mark_at <= filled).then(|| "white".to_string()),
             )
             .render();
         let caption = mark.label.clone().map(|label| {
