@@ -8,6 +8,30 @@ use libero::{
 const PANEL_A: &str = r#"panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } }"#;
 const PANEL_B: &str = r#"panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } }"#;
 
+/// `panel_b` holding a nested `Splitter` - the composed case, printed with the
+/// continuation indent the generated prop list expects.
+const NESTED_PANEL_B: &str = r#"panel_b: rsx! {
+        Splitter {
+            orientation: "horizontal",
+            initial_size: 65.0,
+            panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
+            panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("info.1"), "C" } },
+        }
+    }"#;
+
+/// Both panes hang off the `composed` switch, so they are printed by it
+/// rather than held fixed.
+fn panels_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    let nested = values.str("composed") == "true";
+    vec![
+        PANEL_A.to_string(),
+        match nested {
+            true => NESTED_PANEL_B.to_string(),
+            false => PANEL_B.to_string(),
+        },
+    ]
+}
+
 /// A splitter fills its container, so the preview has to give it one. The code
 /// block prints that wrapper.
 fn wrap_splitter(_values: &DemoValues, code: &str) -> String {
@@ -23,6 +47,28 @@ fn percent_code(control: &Control, values: &DemoValues) -> Vec<String> {
     match value == control.default {
         true => vec![],
         false => vec![format!("{}: {value}.0", control.name)],
+    }
+}
+
+/// `B` alone, or `B` plus `C` split the other way - the composed case, where
+/// a pane holds another `Splitter`.
+fn panel_b(values: &DemoValues) -> Element {
+    let pane = |color: &'static str, label: &'static str| {
+        rsx! {
+            Box { sx: sx().height("100%").padding("md").background(color), {label} }
+        }
+    };
+
+    match values.str("composed") == "true" {
+        false => pane("secondary.1", "B"),
+        true => rsx! {
+            Splitter {
+                orientation: "horizontal",
+                initial_size: 65.0,
+                panel_a: pane("secondary.1", "B"),
+                panel_b: pane("info.1", "C"),
+            }
+        },
     }
 }
 
@@ -43,13 +89,8 @@ pub fn SplitterPage() -> Element {
                 Demo {
                     component: "Splitter",
                     children_text: "",
-                    // Required, and both panes are the fixture the props act
-                    // on rather than anything a control varies.
-                    fixed: vec![
-                        "initial_size: 50.0".to_string(),
-                        PANEL_A.to_string(),
-                        PANEL_B.to_string(),
-                    ],
+                    // Required, and not something a control varies.
+                    fixed: vec!["initial_size: 50.0".to_string()],
                     controls: vec![
                         Control::toggle("orientation", ["vertical", "horizontal"]),
                         Control::slider("min_size", ["10", "20", "30", "40"]).code(percent_code),
@@ -61,6 +102,9 @@ pub fn SplitterPage() -> Element {
                             "divider_color",
                             ["grey", "primary", "secondary", "success", "error", "warning", "info"],
                         ),
+                        // Last, so the panes print below the props they
+                        // configure.
+                        Control::switch("composed").code(panels_code),
                     ],
                     render: move |values: DemoValues| rsx! {
                         Box {
@@ -86,38 +130,11 @@ pub fn SplitterPage() -> Element {
                                         "A"
                                     }
                                 },
-                                panel_b: rsx! {
-                                    Box {
-                                        sx: sx()
-                                            .height("100%")
-                                            .padding("md")
-                                            .background("secondary.1"),
-                                        "B"
-                                    }
-                                },
+                                panel_b: panel_b(&values),
                             }
                         }
                     },
                     wrap: Wrap(wrap_splitter),
-                }
-            }
-            DocSection {
-                title: "Composed",
-                Text { "Nesting `Splitter`s composes more than 2 panes - here a horizontal split on the right of a vertical one." }
-                Box {
-                    sx: sx().height("260px").border("1px solid var(--lsx-grey-3)"),
-                    Splitter {
-                        initial_size: 35.0,
-                        panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "Sidebar" } },
-                        panel_b: rsx! {
-                            Splitter {
-                                orientation: "horizontal",
-                                initial_size: 65.0,
-                                panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "Main" } },
-                                panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("info.1"), "Panel" } },
-                            }
-                        },
-                    }
                 }
             }
         }
