@@ -66,7 +66,7 @@ pub use flex::{
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT,
-    GRID_ZONE_AREA_VAR, GRID_ZONE_GAP, GridDefaults,
+    GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,
 };
 pub use header::{HEADER_HEIGHT, HeaderDefaults};
 pub use icon::{ICON_SIZE, IconDefaults};

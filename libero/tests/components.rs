@@ -14,7 +14,7 @@ use libero::{
         GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
         Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
         Splitter, Switch, Text, Title, ToggleButton, ToggleButtonGroup, Tooltip, Tree, TreeItem,
-        TreeNode, TreeNodeRenderArgs, VisuallyHidden,
+        TreeNode, TreeNodeRenderArgs, VisuallyHidden, sp,
     },
     theme::{Color, Size},
 };
@@ -1240,6 +1240,57 @@ fn an_item_writes_the_grid_item_token_the_zone_selects_on() {
     assert!(state.contains("span-two-thirds"));
     // Nothing measures without a browser, so no span is claimed.
     assert!(!state.contains("measured"));
+}
+
+#[test]
+fn a_responsive_span_queries_its_zone_not_the_viewport() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Grid { template: test_template(),
+                    GridZone { area: TestArea::Body,
+                        GridItem { span: sp().base(GridSpan::Full).md(GridSpan::Half), "card" }
+                    }
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let zone = attributes_of(&nth_div(&html, 1), "div");
+
+    // The zone names itself so an item has something to query.
+    assert!(
+        zone.get("style")
+            .expect("the zone container variable")
+            .contains("--lsx-grid-zone-container:lsx-zone-body")
+    );
+
+    // The base span still rides the recycled framework class; only the
+    // breakpoint needs a rule of its own, and it is a container query.
+    let item = attributes_of(&nth_div(&html, 2), "div");
+    assert!(
+        item.get("data-state")
+            .expect("the item states")
+            .contains("span-full")
+    );
+    assert!(html.contains("@container lsx-zone-body (min-width: 62rem){"));
+    assert!(html.contains("grid-column:span 6;"));
+    // A viewport query would be the bug this replaces.
+    assert!(!html.contains("@media (min-width: 62rem){"));
+}
+
+#[test]
+fn a_plain_span_emits_no_container_query() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                GridZone { GridItem { span: GridSpan::Half, "card" } }
+            }
+        }
+    }
+
+    assert!(!render(app).contains("@container"));
 }
 
 #[test]

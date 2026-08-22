@@ -11,7 +11,7 @@ use crate::{
     utils::warn,
 };
 
-use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, ZoneState};
+use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, SpanValue, ZoneState, container_name};
 
 static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
     let base = sx().min_width("0");
@@ -34,9 +34,10 @@ fn rows_spanned(height_px: f64, unit_px: u32, gap_px: u32) -> u32 {
 base_props! {
     pub struct GridItemProps {
         children: Element,
-        /// Width, in twelfths of the zone.
+        /// Width, in twelfths of the zone. A `GridSpan`, or `sp()` for a span
+        /// that changes with the *zone's* width.
         #[props(default, into)]
-        span: Input<GridSpan>,
+        span: Input<SpanValue>,
         #[props(default, into)]
         component: Input<HtmlTag>,
     }
@@ -84,18 +85,40 @@ pub fn GridItem(props: GridItemProps) -> Element {
         .with(GRID_ITEM_ROWS_VAR, measured.map(|rows| rows.to_string()))
         .into();
 
+    let span = props.span.clone().unwrap_or_default();
     let states: Input<States> = props
         .states
         .unwrap_or_default()
         .with(GRID_ITEM_STATE, true)
-        .with(props.span.copied_or_default().state_name(), true)
+        .with(span.base_span().state_name(), true)
         .with("measured", measured.is_some())
         .into();
+
+    // The base span rides the recycled framework class; only the breakpoints
+    // need a sheet of their own, and only an item that has any pays for one.
+    // They go in the user layer because the framework layer's base rule wins
+    // on specificity otherwise, and *before* `props.sx` so a caller's own
+    // `grid-column` still overrides them.
+    let sx = match zone.map(|zone| zone.state.peek().container).unwrap_or("") {
+        "" => props.sx.clone(),
+        zone_container => span
+            .breakpoints()
+            .iter()
+            .fold(sx(), |base, (size, span)| {
+                base.container_breakpoint(
+                    container_name(zone_container),
+                    *size,
+                    sx().grid_column(format!("span {}", span.columns())),
+                )
+            })
+            .and(props.sx.clone().unwrap_or_default())
+            .into(),
+    };
 
     use_box()
         .framework_sx(&GRID_ITEM_SX)
         .class(&props.class)
-        .sx(&props.sx)
+        .sx(&sx)
         .states(&states)
         .variables(&variables)
         .prepare()

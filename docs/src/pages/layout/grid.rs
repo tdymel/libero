@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Box, Code, CodeBlock, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag,
-        StaticGridTemplate, Text,
+        StaticGridTemplate, Text, sp,
     },
     sx::sx,
 };
@@ -279,6 +279,64 @@ pub fn GridPage() -> Element {
             }
 
             DocSection {
+                title: "Responsive spans",
+                Text {
+                    "A zone is almost never as wide as the window, so "
+                    Code { source: "bp()" }
+                    " is the wrong question for a span. "
+                    Code { source: "sp()" }
+                    " keys the span off the "
+                    Code { source: "zone's" }
+                    " width instead, through a container query - a quarter-width sidebar "
+                    "and a three-quarter content zone resolve the same value differently, "
+                    "at one viewport width."
+                }
+                Grid {
+                    template: SPLIT.clone(),
+                    gap: "sm",
+                    sx: sx().background("grey.1").padding("12px").border_radius("sm"),
+                    GridZone {
+                        area: SplitArea::Narrow,
+                        gap: "xs",
+                        for name in ["A", "B"] {
+                            GridItem {
+                                key: "{name}",
+                                span: sp()
+                                    .base(GridSpan::Full)
+                                    .sm(GridSpan::Half)
+                                    .md(GridSpan::Third),
+                                {panel(name, 32)}
+                            }
+                        }
+                    }
+                    GridZone {
+                        area: SplitArea::Wide,
+                        gap: "xs",
+                        for name in ["A", "B", "C"] {
+                            GridItem {
+                                key: "{name}",
+                                span: sp()
+                                    .base(GridSpan::Full)
+                                    .sm(GridSpan::Half)
+                                    .md(GridSpan::Third),
+                                {panel(name, 32)}
+                            }
+                        }
+                    }
+                }
+                CodeBlock { source: RESPONSIVE_SOURCE, language: "rust" }
+                Text {
+                    "The breakpoints are the same "
+                    Code { source: "Size" }
+                    " scale a viewport query uses, so they read the same way - but they "
+                    "measure the zone. A plain "
+                    Code { source: "GridSpan" }
+                    " still costs no query at all: only an item with breakpoints gets a "
+                    "rule of its own."
+                }
+            }
+
+            DocSection {
                 title: "Caveats",
                 Text {
                     "A masonry zone's height is "
@@ -306,6 +364,16 @@ pub fn GridPage() -> Element {
                     "measurement reports that, and the item grows without bound."
                 }
                 Text {
+                    "Every zone is a query container, which means "
+                    Code { source: "contain: layout style inline-size" }
+                    ": a zone is a stacking context and the containing block for any "
+                    "absolutely positioned descendant. Something inside a "
+                    Code { source: "GridItem" }
+                    " that positions itself against the page needs a portal, not a "
+                    Code { source: "position: absolute" }
+                    "."
+                }
+                Text {
                     "Build templates outside the render - a "
                     Code { source: "StaticGridTemplate" }
                     " static, as every example here does. Rebuilding one per render "
@@ -331,3 +399,40 @@ impl GridArea for SpanArea {
 
 static SPANS: StaticGridTemplate<SpanArea> =
     StaticGridTemplate::new(|template| template.row(|row| row.cell(SpanArea::Row)));
+
+#[derive(Clone, Copy, PartialEq)]
+enum SplitArea {
+    Narrow,
+    Wide,
+}
+
+impl GridArea for SplitArea {
+    fn name(&self) -> &'static str {
+        match self {
+            Self::Narrow => "narrow",
+            Self::Wide => "wide",
+        }
+    }
+}
+
+static SPLIT: StaticGridTemplate<SplitArea> = StaticGridTemplate::new(|template| {
+    template.row(|row| row.cell(SplitArea::Narrow).cells(SplitArea::Wide, 3))
+});
+
+const RESPONSIVE_SOURCE: &str = r#"// The same span value in both zones. The narrow zone never reaches `sm`,
+// so its cards stay full width; the wide one resolves further down the list.
+static CARDS: fn() -> SpanValue = || sp().base(GridSpan::Full).sm(GridSpan::Half).md(GridSpan::Third);
+
+rsx! {
+    Grid {
+        template: SPLIT.clone(),
+        GridZone { area: SplitArea::Narrow,
+            GridItem { span: CARDS(), "A" }
+            GridItem { span: CARDS(), "B" }
+        }
+        GridZone { area: SplitArea::Wide,
+            GridItem { span: CARDS(), "A" }
+            GridItem { span: CARDS(), "B" }
+        }
+    }
+}"#;

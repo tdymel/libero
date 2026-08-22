@@ -10,6 +10,9 @@ pub const GRID_ROW_UNIT: CssVar = CssVar::new("--lsx-grid-row-unit");
 pub const GRID_AREAS_VAR: CssVar = CssVar::new("--lsx-grid-areas");
 pub const GRID_COLUMNS_VAR: CssVar = CssVar::new("--lsx-grid-columns");
 pub const GRID_ZONE_AREA_VAR: CssVar = CssVar::new("--lsx-grid-zone-area");
+/// The zone's `@container` name, so an item can key a span off its zone's
+/// width. `none` when the zone has no area to name it after.
+pub const GRID_ZONE_CONTAINER_VAR: CssVar = CssVar::new("--lsx-grid-zone-container");
 pub const GRID_ITEM_ROWS_VAR: CssVar = CssVar::new("--lsx-grid-item-rows");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

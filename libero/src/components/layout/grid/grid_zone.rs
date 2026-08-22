@@ -8,7 +8,10 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, Sx, sx},
-    theme::{GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_GAP, Size, SizeCss},
+    theme::{
+        GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
+        GRID_ZONE_GAP, Size, SizeCss,
+    },
     utils::warn,
 };
 
@@ -23,6 +26,9 @@ pub(crate) struct ZoneState {
     /// row unit or its zone's gap on its own, so the zone hands both over.
     pub unit_px: u32,
     pub gap_px: u32,
+    /// The zone's `@container` name, for an item keying a span off it.
+    /// Empty when the zone has no area, i.e. nothing to name it after.
+    pub container: &'static str,
 }
 
 #[derive(Clone, Copy)]
@@ -35,12 +41,27 @@ pub(crate) struct GridZoneContext {
 /// and crush a stray `Text` into one row.
 pub(crate) const GRID_ITEM_STATE: &str = "grid-item";
 
+/// The zone's `@container` name. Prefixed, so it cannot collide with a name
+/// the caller chose for a container of their own.
+pub(crate) fn container_name(area: &str) -> String {
+    format!("lsx-zone-{area}")
+}
+
 static GRID_ZONE_SX: StaticSx = StaticSx::new(|| {
     let item = format!("& > [data-state~=\"{GRID_ITEM_STATE}\"]");
     let measured = format!("{item}[data-state~=\"measured\"]");
 
     sx().display("grid")
         .grid_area(GRID_ZONE_AREA_VAR.value_or("auto"))
+        // Every zone is a query container, so a `GridItem` can size itself
+        // against its zone rather than the viewport. The name is a variable
+        // because it varies per zone but the *declaration* does not - the
+        // class stays recycled. Safe here only because both `Grid` and the
+        // zone size tracks as `minmax(0, 1fr)`: inline-size containment
+        // zeroes an element's intrinsic contribution, so a content-sized
+        // track would have collapsed the zone.
+        .container_type("inline-size")
+        .container_name(GRID_ZONE_CONTAINER_VAR.value_or("none"))
         .grid_template_columns("repeat(12, minmax(0, 1fr))")
         .align_content("start")
         // A grid item defaults to `min-width: auto`, which refuses to shrink
@@ -125,6 +146,9 @@ base_props! {
 pub fn GridZone(props: GridZoneProps) -> Element {
     let theme = use_theme();
     let grid = try_use_context::<GridContext>();
+    // Read before this zone provides its own: an *enclosing* zone, i.e. a grid
+    // nested inside a `GridItem`.
+    let enclosing = try_use_context::<GridZoneContext>();
 
     let area = props.area;
     if let Some(grid) = grid.as_ref()
@@ -147,10 +171,24 @@ pub fn GridZone(props: GridZoneProps) -> Element {
 
     let gap = props.gap.copied_or(theme.grid.zone_gap);
     let gap_px = theme.spacing.get(gap).into();
+    let container = if area.is_set() { area.name } else { "" };
+    // Zone container names come from the area name, so a nested grid reusing
+    // one leaves the inner zone as the nearest match for both - every
+    // responsive span in the outer zone would silently key off the inner one.
+    if !container.is_empty()
+        && enclosing.is_some_and(|zone| zone.state.peek().container == container)
+    {
+        warn(&format!(
+            "GridZone: a nested zone reuses the area name `{container}`, so a responsive \
+             GridItem span in the outer zone would resolve against the inner one.",
+        ));
+    }
+
     let state = ZoneState {
         masonry: props.masonry,
         unit_px: theme.grid.row_unit.max(1),
         gap_px,
+        container,
     };
 
     let context = use_context_provider(|| GridZoneContext {
@@ -170,6 +208,10 @@ pub fn GridZone(props: GridZoneProps) -> Element {
             area.is_set().then(|| area.name.to_string()),
         )
         .with(GRID_ZONE_GAP, SizeCss::SPACING.value(gap))
+        .with(
+            GRID_ZONE_CONTAINER_VAR,
+            (!container.is_empty()).then(|| container_name(container)),
+        )
         .into();
 
     let states: Input<States> = props

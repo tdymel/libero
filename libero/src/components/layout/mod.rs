@@ -21,8 +21,8 @@ pub use flex::{Flex, FlexDirection, FlexWrap};
 pub use float::{Float, Placement};
 pub use grid::{
     AreaName, Grid, GridArea, GridItem, GridItemProps, GridProps, GridSpan, GridTemplate,
-    GridTemplateBuilder, GridTemplateError, GridZone, GridZoneProps, RowBuilder,
-    StaticGridTemplate,
+    GridTemplateBuilder, GridTemplateError, GridZone, GridZoneProps, RowBuilder, SpanValue,
+    StaticGridTemplate, sp,
 };
 pub use header::{Header, HeaderPosition};
 pub use scroll_area::{ScrollArea, ScrollPositionEvent};
