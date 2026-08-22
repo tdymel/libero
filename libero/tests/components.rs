@@ -13,7 +13,7 @@ use libero::{
         DataList, DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Grid, GridArea,
         GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
         Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
-        SliderValue, Splitter, Switch, TabValue, Table, Tabs, Text, Title, ToggleButton,
+        SliderValue, Splitter, Switch, TabLabel, TabValue, Table, Tabs, Text, Title, ToggleButton,
         ToggleButtonGroup, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
         column, sp,
     },
@@ -1658,7 +1658,7 @@ fn tabs_wire_every_tab_to_its_panel_and_render_only_the_selected_one() {
 }
 
 #[test]
-fn a_tabs_label_prop_renames_every_tab_and_render_label_keeps_the_accessible_name() {
+fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -1666,8 +1666,10 @@ fn a_tabs_label_prop_renames_every_tab_and_render_label_keeps_the_accessible_nam
                     value: Section::Account,
                     onchange: move |_| {},
                     tabs: vec![Section::Account, Section::Billing],
-                    label: |section: Section| format!("t:{}", section.label()),
-                    render_label: |_: Section| rsx! { span { "rich" } },
+                    label: |section: Section| TabLabel::rich(
+                        format!("t:{}", section.label()),
+                        rsx! { span { "rich" } },
+                    ),
                     panel: |_: Section| rsx! { "body" },
                 }
             }

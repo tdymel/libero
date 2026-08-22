@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap};
 use crate::icons::FileIcon;
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, Input, TabValue, Tabs, Text};
+use libero::components::{Code, Icon, Input, TabLabel, TabValue, Tabs, Text};
 
 /// The enum is the tab strip, so the snippet has to show it.
 const SECTION_ENUM: &str = r#"#[derive(Clone, PartialEq, TabValue)]
@@ -16,18 +16,21 @@ enum Section {
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
 /// closure right below - the block is a promise that the two are the same.
-const TRANSLATED: &str = r#"label: |section: Section| match section {
-    Section::Account => "Konto".to_string(),
-    Section::Admin => "Verwaltung".to_string(),
-    Section::Billing => "Rechnung".to_string(),
+const RENAMED: &str = r#"label: |section: Section| match section {
+    Section::Account => "Konto".into(),
+    Section::Admin => "Verwaltung".into(),
+    Section::Billing => "Rechnung".into(),
 }"#;
 
 // A tab is a `button`, so its content has to stay phrasing content: `Icon` is
 // an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a `div`.
-const RICH: &str = r#"render_label: |section: Section| rsx! {
-    Icon { variant: "transparent", size: "sm", FileIcon {} }
-    "{section.label()}"
-}"#;
+const RICH: &str = r#"label: |section: Section| TabLabel::rich(
+    section.label(),
+    rsx! {
+        Icon { variant: "transparent", size: "sm", FileIcon {} }
+        "{section.label()}"
+    },
+)"#;
 
 #[derive(Clone, PartialEq, TabValue)]
 enum Section {
@@ -37,12 +40,22 @@ enum Section {
     Billing,
 }
 
-fn translated(section: Section) -> String {
+fn renamed(section: Section) -> TabLabel {
     match section {
-        Section::Account => "Konto".to_string(),
-        Section::Admin => "Verwaltung".to_string(),
-        Section::Billing => "Rechnung".to_string(),
+        Section::Account => "Konto".into(),
+        Section::Admin => "Verwaltung".into(),
+        Section::Billing => "Rechnung".into(),
     }
+}
+
+fn rich(section: Section) -> TabLabel {
+    TabLabel::rich(
+        section.label(),
+        rsx! {
+            Icon { variant: "transparent", size: "sm", FileIcon {} }
+            "{section.label()}"
+        },
+    )
 }
 
 #[component]
@@ -67,11 +80,10 @@ pub fn TabsPage() -> Element {
                     Code { source: "label" }
                     " overrides what the derive named a tab, and it runs during render - so it "
                     "can read a locale from a signal or from context, and the strip repaints when "
-                    "that changes. "
-                    Code { source: "render_label" }
-                    " fills the tab with rsx instead (an icon, a badge) while "
-                    Code { source: "label" }
-                    " still supplies the accessible name."
+                    "that changes. Return a string to rename a tab, or "
+                    Code { source: "TabLabel::rich" }
+                    " to draw it as rsx (an icon, a badge) - that one asks for the name as well, "
+                    "since the rsx is what a screen reader cannot use."
                 }
             },
             DocSection {
@@ -88,12 +100,10 @@ pub fn TabsPage() -> Element {
                         "panel: |section: Section| match section {\n    Section::Account => rsx! { \"Account settings\" },\n    Section::Admin => rsx! { \"Admin area\" },\n    Section::Billing => rsx! { \"Billing details\" },\n}".to_string(),
                     ],
                     controls: vec![
-                        // `label` and `render_label` are one choice, not two
-                        // switches: a tab has one set of labels.
-                        Control::toggle("labels", ["derived", "translated", "rich"])
-                            .labels(["Derived", "Translated", "Rich"])
+                        Control::toggle("labels", ["derived", "renamed", "rich"])
+                            .labels(["Derived", "Renamed", "Rich"])
                             .code(|_, values| match values.str("labels").as_str() {
-                                "translated" => vec![TRANSLATED.to_string()],
+                                "renamed" => vec![RENAMED.to_string()],
                                 "rich" => vec![RICH.to_string()],
                                 _ => vec![],
                             }),
@@ -114,16 +124,8 @@ pub fn TabsPage() -> Element {
                             size: values.str("size"),
                             full_width: values.str("full_width") == "true",
                             label: match values.str("labels").as_str() {
-                                "translated" => Some(Callback::new(translated)),
-                                _ => None,
-                            },
-                            render_label: match values.str("labels").as_str() {
-                                "rich" => Some(Callback::new(|section: Section| {
-                                    rsx! {
-                                        Icon { variant: "transparent", size: "sm", FileIcon {} }
-                                        "{section.label()}"
-                                    }
-                                })),
+                                "renamed" => Some(Callback::new(renamed)),
+                                "rich" => Some(Callback::new(rich)),
                                 _ => None,
                             },
                             value: section(),

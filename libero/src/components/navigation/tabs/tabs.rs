@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::core::{TabSpec, TabsView, render_tabs};
-use super::tab_value::TabValue;
+use super::tab_value::{TabLabel, TabValue};
 use crate::{
     components::{ClassList, Input, States, common::base_color},
     hooks::{use_root_id, use_theme},
@@ -27,13 +27,13 @@ pub struct TabsProps<T: TabValue> {
     #[props(default)]
     tabs: Option<Vec<T>>,
     /// Overrides `TabValue::label`. Runs during render, so it can read a
-    /// locale from context - which is how a translated strip is written.
+    /// locale from context - which is how a renamed strip stays renamed.
+    ///
+    /// `"Konto".into()` names a tab; `TabLabel::rich(name, rsx! { .. })`
+    /// draws it and names it, because the rsx is what a screen reader cannot
+    /// use.
     #[props(default)]
-    label: Option<Callback<T, String>>,
-    /// Rich tab content (an icon beside the text, a badge). `label` still
-    /// supplies the accessible name.
-    #[props(default)]
-    render_label: Option<Callback<T, Element>>,
+    label: Option<Callback<T, TabLabel>>,
     /// Tabs that render but cannot be picked.
     #[props(default)]
     disabled: Vec<T>,
@@ -78,20 +78,16 @@ pub fn Tabs<T: TabValue>(props: TabsProps<T>) -> Element {
         warn("Tabs: `value` is not one of the tabs, so none is selected.");
     }
 
-    let name = |value: &T| match &props.label {
-        Some(label) => label.call(value.clone()),
-        None => value.label(),
-    };
-
     let tabs: Vec<TabSpec> = values
         .iter()
         .map(|value| {
-            let name = name(value);
+            let label = match &props.label {
+                Some(label) => label.call(value.clone()),
+                None => TabLabel::from(value.label()),
+            };
+            let name = label.name;
             TabSpec {
-                content: match &props.render_label {
-                    Some(render) => render.call(value.clone()),
-                    None => rsx! { "{name}" },
-                },
+                content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
                 name,
                 disabled: props.disabled.contains(value),
             }
