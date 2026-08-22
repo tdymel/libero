@@ -220,9 +220,8 @@ pub fn DocsNav(open: Signal<bool>) -> Element {
                     aria_label: "Documentation pages",
                     size: "xs",
                     // Both zeroed off-scale, so they go through `sx` rather
-                    // than `Tree`'s `Size`-typed `gap`/`indent` props, and
-                    // the `& ul` half is what carries them into every
-                    // nested group as well as the root.
+                    // than `size`, and the `& ul` half is what carries them
+                    // into every nested group as well as the root.
                     //
                     // Zero gap between sibling rows - each `NavLink`'s own
                     // left border then reads as one continuous line down

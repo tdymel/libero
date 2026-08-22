@@ -1,10 +1,9 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset};
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        Box, Code, Icon, Text, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render,
-    },
+    components::{Code, Flex, Icon, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs},
     sx::sx,
+    use_theme,
 };
 
 use crate::icons::{FileIcon, FolderIcon};
@@ -94,24 +93,50 @@ fn file_tree() -> Vec<TreeNode<FileEntry>> {
     ]
 }
 
-fn category_tree() -> Vec<TreeNode<String>> {
-    vec![
-        TreeNode::new("a11y", "A11y".to_string()).children(vec![
-            TreeNode::new("focus-trap", "Focus Trap".to_string()),
-            TreeNode::new("visually-hidden", "Visually Hidden".to_string()),
-        ]),
-        TreeNode::new("data-display", "Data Display".to_string()).children(vec![
-            TreeNode::new("icon", "Icon".to_string()),
-            TreeNode::new("list", "List".to_string()),
-            TreeNode::new("tree", "Tree".to_string()),
-        ]),
-    ]
+fn file_icon(entry: &FileEntry) -> Element {
+    let folder = entry.kind == FileKind::Folder;
+    rsx! {
+        Icon {
+            variant: "transparent",
+            size: "sm",
+            color: if folder { "primary" } else { "grey.6" },
+            if folder { FolderIcon {} } else { FileIcon {} }
+        }
+    }
+}
+
+/// The data, the seeded expansion and the row renderer are the demo's
+/// fixture, not props a control varies - but the code block has to print them,
+/// so they are `fixed`.
+const FIXED: [&str; 4] = [
+    r#"aria_label: "Project files""#,
+    "data: file_tree()",
+    r#"default_expanded: ["src", "src/components"].map(str::to_string).into()"#,
+    r#"render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
+        let id = args.id.clone();
+        rsx! {
+            TreeItem {
+                onclick: move |_| selected.set(Some(id.clone())),
+                {file_icon(&args.data)}
+                "{args.data.name}"
+            }
+        }
+    }"#,
+];
+
+/// Selection is the page's state, not `Tree`'s, so the readout is part of the
+/// example rather than something the component provides.
+fn wrap_selection(_: &DemoValues, code: &str) -> String {
+    format!(
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"320px\"),\n{}    if let Some(selected) = selected() {{\n        Text {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
+        indent(code)
+    )
 }
 
 #[component]
 pub fn TreePage() -> Element {
-    let mut basic_selected = use_signal(|| None::<String>);
-    let mut files_selected = use_signal(|| None::<String>);
+    let theme = use_theme();
+    let mut selected = use_signal(|| None::<String>);
 
     rsx! {
         DocPage {
@@ -131,7 +156,9 @@ pub fn TreePage() -> Element {
                     "), which is used for keyboard typeahead and as the default row "
                     "rendering. A "
                     Code { source: "String" }
-                    " already implements it, so a plain tree needs nothing further."
+                    " already implements it, so a plain tree needs nothing further - and "
+                    Code { source: "default_tree_render(args)" }
+                    " gives one row that rendering back."
                 }
                 Text {
                     "Which nodes are expanded is "
@@ -144,7 +171,24 @@ pub fn TreePage() -> Element {
                     "'s call: "
                     Code { source: "Tree" }
                     " doesn't assume clicking a leaf means \"select it\" - a leaf might just "
-                    "as well be a real link (see the sidebar on this page for that case)."
+                    "as well be a real link (see the sidebar on this page for that case). The "
+                    "closure also gets the row's live "
+                    Code { source: "expanded" }
+                    " state, so content can react to it."
+                }
+                Text {
+                    Code { source: "TreeItem" }
+                    " is the row content a clickable leaf wants: the "
+                    Code { source: "button" }
+                    " Enter/Space activation looks for, with its chrome stripped and the "
+                    "page's type inherited. It takes the row's tab stop and "
+                    Code { source: "disabled" }
+                    " from the row itself, so neither can be forgotten. A row that is a real "
+                    "link is a "
+                    Code { source: "NavLink" }
+                    " instead - pass it "
+                    Code { source: "args.tabindex" }
+                    " yourself."
                 }
                 Text {
                     "Fully keyboard-navigable: arrow keys move between visible rows, "
@@ -157,97 +201,59 @@ pub fn TreePage() -> Element {
                     Code { source: "End" }
                     " jump to the first/last row, and typing a letter jumps to the next match."
                 }
+                Text {
+                    Code { source: "Tree" }
+                    " renders through "
+                    Code { source: "List" }
+                    " and has no size scale of its own: "
+                    Code { source: "size" }
+                    " is the row gap and the per-level indent together. Off-scale, or the "
+                    "two apart, goes through "
+                    Code { source: "sx" }
+                    " - rows are yours, so their type scale is too."
+                }
             },
             DocSection {
-                title: "Basic",
-                Text {
-                    "Plain "
-                    Code { source: "String" }
-                    " data. Branches use "
-                    Code { source: "Tree" }
-                    "'s own default rendering; leaves add a click handler that sets "
-                    Code { source: "basic_selected" }
-                    " - selection is this page's own state, not "
-                    Code { source: "Tree" }
-                    "'s."
-                }
-                Tree {
-                    aria_label: "Component categories",
-                    data: category_tree(),
-                    render_node: move |args: TreeNodeRenderArgs<String>| {
-                        if args.expanded.is_some() {
-                            return default_tree_render(args);
-                        }
-                        rsx! {
-                            Box {
-                                component: "button",
-                                r#type: "button",
-                                // A real `<button>`, not a `<div onclick>` -
-                                // gets real keyboard/click semantics for
-                                // free, and `Tree`'s own Enter/Space
-                                // handling looks for exactly this (an `a`
-                                // or a `button`) to trigger.
-                                sx: sx()
-                                    .border("none")
-                                    .background("none")
-                                    .padding("6px 0")
-                                    .color("inherit")
-                                    .cursor("pointer"),
-                                tabindex: args.tabindex,
-                                onclick: move |_| basic_selected.set(Some(args.id.clone())),
-                                "{args.data}"
+                title: "Usage",
+                Demo {
+                    component: "Tree",
+                    children_text: "",
+                    fixed: FIXED.map(str::to_string).to_vec(),
+                    controls: vec![
+                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                            .default(theme.tree.size.as_str()),
+                    ],
+                    render: move |values: DemoValues| rsx! {
+                        Flex {
+                            direction: "column",
+                            gap: "sm",
+                            // Pinned: the selection readout appearing must not
+                            // reflow the preview under the pointer.
+                            sx: sx().width("320px"),
+                            Tree {
+                                aria_label: "Project files",
+                                data: file_tree(),
+                                default_expanded: ["src", "src/components"]
+                                    .map(str::to_string)
+                                    .into(),
+                                size: or_unset(values.str("size")),
+                                render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
+                                    let id = args.id.clone();
+                                    rsx! {
+                                        TreeItem {
+                                            onclick: move |_| selected.set(Some(id.clone())),
+                                            {file_icon(&args.data)}
+                                            "{args.data.name}"
+                                        }
+                                    }
+                                },
+                            }
+                            if let Some(selected) = selected() {
+                                Text { "Selected: " Code { source: "{selected}" } }
                             }
                         }
                     },
-                }
-            }
-
-            DocSection {
-                title: "Custom rendering",
-                Text {
-                    "A "
-                    Code { source: "render_node" }
-                    " closure gets the node's own data plus its live "
-                    Code { source: "expanded" }
-                    " state, so content - like which folder icon to show - can react to it."
-                }
-                Tree {
-                    aria_label: "Project files",
-                    data: file_tree(),
-                    render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
-                        let icon = if args.data.kind == FileKind::Folder {
-                            rsx! {
-                                Icon { variant: "transparent", size: "sm", color: "primary", FolderIcon {} }
-                            }
-                        } else {
-                            rsx! {
-                                Icon { variant: "transparent", size: "sm", color: "grey.6", FileIcon {} }
-                            }
-                        };
-                        let id = args.id.clone();
-                        rsx! {
-                            Box {
-                                component: "button",
-                                r#type: "button",
-                                sx: sx()
-                                    .display("flex")
-                                    .align_items("center")
-                                    .gap("6px")
-                                    .border("none")
-                                    .background("none")
-                                    .padding("6px 0")
-                                    .color("inherit")
-                                    .cursor("pointer"),
-                                tabindex: args.tabindex,
-                                onclick: move |_| files_selected.set(Some(id.clone())),
-                                {icon}
-                                "{args.data.name}"
-                            }
-                        }
-                    },
-                }
-                if let Some(selected) = files_selected() {
-                    Text { "Selected: " Code { source: "{selected}" } }
+                    wrap: Wrap(wrap_selection),
                 }
             }
         }
