@@ -57,9 +57,10 @@ impl Scale {
         }
     }
 
-    /// One mark per option in range, captioned with the option's own label.
+    /// One mark per option in range, captioned by `name` - the same namer the
+    /// bubble uses, so a translated slider is translated everywhere.
     /// Empty for a continuous scale, which has nothing to enumerate.
-    fn derived_marks<V: SliderValue>(&self) -> Vec<SliderMark> {
+    fn derived_marks<V: SliderValue>(&self, name: impl Fn(&V) -> String) -> Vec<SliderMark> {
         let Self::Discrete {
             first,
             last,
@@ -71,7 +72,7 @@ impl Scale {
         let options = V::options().unwrap_or_default();
         (first..=last)
             .step_by(stride)
-            .map(|index| SliderMark::labeled(index as f64, options[index].label()))
+            .map(|index| SliderMark::labeled(index as f64, name(&options[index])))
             .collect()
     }
 }
@@ -143,8 +144,16 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
     let scale = Scale::of::<V>(props.min.as_ref(), props.max.as_ref(), props.step);
     let (min, max, step) = scale.bounds();
 
+    // A discrete value names itself unless the caller says how - which is the
+    // hook an i18n'd slider hangs on, so every caption has to go through it.
+    let named = props.label;
+    let name = move |value: &V| match &named {
+        Some(label) => label.call(value.clone()),
+        None => value.label(),
+    };
+
     let marks = match props.marks.is_empty() {
-        true => scale.derived_marks::<V>(),
+        true => scale.derived_marks::<V>(&name),
         false => props
             .marks
             .iter()
@@ -158,14 +167,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
     // A discrete value always names itself; a continuous one only when the
     // caller says how, which is what keeps `aria-valuetext` off a bare number.
     let labelled = props.label.is_some() || V::options().is_some();
-    let label = props.label;
-    let label = use_callback(move |position: f64| {
-        let value = V::at(position);
-        match &label {
-            Some(label) => label.call(value),
-            None => value.label(),
-        }
-    });
+    let label = use_callback(move |position: f64| name(&V::at(position)));
 
     let on_change = props.on_change;
     let emit = use_callback(move |event: SliderChangeEvent| {

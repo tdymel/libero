@@ -1683,3 +1683,35 @@ fn a_tabs_label_prop_renames_every_tab_and_render_label_keeps_the_accessible_nam
     assert_eq!(body.matches("rich").count(), 2);
     assert!(!body.contains(">Account<"));
 }
+
+#[derive(Clone, PartialEq, SliderValue)]
+enum Grade {
+    Low,
+    High,
+}
+
+#[test]
+fn a_sliders_label_prop_renames_its_mark_captions_too() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Grade::Low,
+                    on_change: move |_| {},
+                    label: |grade: Grade| match grade {
+                        Grade::Low => "Niedrig".to_string(),
+                        Grade::High => "Hoch".to_string(),
+                    },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    // The bubble, `aria-valuetext` and both captions speak one language.
+    assert!(body.contains("Niedrig"));
+    assert!(body.contains("Hoch"));
+    assert!(!body.contains("Low"));
+    assert!(!body.contains("High"));
+}
