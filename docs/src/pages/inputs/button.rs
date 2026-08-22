@@ -1,9 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Button, Code, Text},
-    sx::sx,
-};
+use libero::components::{Button, Code, Text};
 
 #[component]
 pub fn ButtonPage() -> Element {
@@ -72,7 +69,6 @@ pub fn ButtonPage() -> Element {
             DocSection {
                 title: "As a link",
                 Text {
-                    sx: sx().color("grey.6"),
                     "Renders as a real anchor, or a router Link when to matches an internal route.",
                 }
                 Button {

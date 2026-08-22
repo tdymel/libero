@@ -1,9 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
 use dioxus::prelude::*;
-use libero::{
-    components::{ActionIcon, Code, Input, Text},
-    sx::sx,
-};
+use libero::components::{ActionIcon, Code, Input, Text};
 
 use crate::icons::CheckmarkIcon;
 
@@ -93,7 +90,6 @@ pub fn ActionIconPage() -> Element {
             DocSection {
                 title: "As a link",
                 Text {
-                    sx: sx().color("grey.6"),
                     "Renders as a real anchor, or a router Link when to matches an internal route.",
                 }
                 ActionIcon {

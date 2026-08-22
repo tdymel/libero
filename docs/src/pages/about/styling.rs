@@ -288,7 +288,6 @@ pub fn StylingPage() -> Element {
                 }
                 Code { block: true, source: RESPONSIVE_VALUE, language: "rust" }
                 Text {
-                    sx: sx().color("grey.6"),
                     "It carries no base value, and a second call to the same property "
                     "replaces the first rather than adding to it - so a property that also "
                     "needs a value below the smallest breakpoint wants the nested form for "

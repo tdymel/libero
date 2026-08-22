@@ -1,9 +1,6 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, DataList, DataListItem, Flex, Text},
-    sx::sx,
-};
+use libero::components::{Code, DataList, DataListItem, Flex, Text};
 
 /// Re-render cost as a multiple of `Leaf` - one scope, one `span`, no
 /// styling. The full table is `tests/render_cost.rs`; this is its shape.
@@ -113,7 +110,6 @@ pub fn PerformancePage() -> Element {
                     }
                 }
                 Text {
-                    sx: sx().color("grey.6"),
                     "Ratios travel between machines; absolute nanoseconds do not. So these "
                     "are an ordering - which components to look at first when a screen is "
                     "slow - and not a budget."
@@ -200,7 +196,6 @@ pub fn PerformancePage() -> Element {
                     }
                 }
                 Text {
-                    sx: sx().color("grey.6"),
                     "Props field count is free: nine extra optional fields on a component "
                     "that does nothing else measured at zero. Only the EventHandler is "
                     "expensive, and only because its default allocates."

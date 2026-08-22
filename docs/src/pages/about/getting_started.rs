@@ -1,9 +1,6 @@
 use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, Divider, Flex, Text},
-    sx::sx,
-};
+use libero::components::{Code, Divider, Flex, Text};
 
 const QUICK_START_EXAMPLE: &str = r#"fn App() -> Element {
     rsx! {
@@ -91,7 +88,6 @@ pub fn GettingStarted() -> Element {
                 gap: "lg",
                 Divider {}
                 Text {
-                    sx: sx().color("grey.6"),
                     "Styling, Theming and Performance cover how the library works; the rest "
                     "of the sidebar is one page per component."
                 }
