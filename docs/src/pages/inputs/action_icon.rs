@@ -33,7 +33,25 @@ pub fn ActionIconPage() -> Element {
                     "'s sizing, color, and variant system, rendered as a real "
                     Code { source: "<button>" }
                     " with click handling and required a11y - for icon-only actions like a "
-                    "copy, close, or delete button."
+                    "copy, close, or delete button. "
+                    Code { source: "aria_label" }
+                    " is required, not optional: an icon-only button has no visible text for "
+                    "a screen reader to announce."
+                }
+                Text {
+                    "With neither "
+                    Code { source: "variant" }
+                    " nor "
+                    Code { source: "color" }
+                    " set - the demo's "
+                    Code { source: "none" }
+                    " variant - it contributes no background or color of its own and inherits "
+                    "the surrounding text color, rather than defaulting to a filled badge the "
+                    "way "
+                    Code { source: "Icon" }
+                    " does. That is how "
+                    Code { source: "Code" }
+                    "'s own copy button is built."
                 }
             },
             DocSection {
@@ -73,23 +91,6 @@ pub fn ActionIconPage() -> Element {
                 }
             }
             DocSection {
-                title: "No variant or color",
-                Text {
-                    "With neither set - the demo's "
-                    Code { source: "none" }
-                    " variant - "
-                    Code { source: "ActionIcon" }
-                    " contributes no background/color of its own - it inherits "
-                    "the surrounding text color instead of defaulting to a filled badge like "
-                    Code { source: "Icon" }
-                    " does, so it drops cleanly into a toolbar or a "
-                    Code { source: "Code" }
-                    " block header without fighting a default look. This is how "
-                    Code { source: "Code" }
-                    "'s own copy button is built."
-                }
-            }
-            DocSection {
                 title: "As a link",
                 Text {
                     sx: sx().color("grey.6"),
@@ -102,14 +103,6 @@ pub fn ActionIconPage() -> Element {
                     target: "_blank",
                     aria_label: "Open Dioxus docs",
                     CheckmarkIcon {}
-                }
-            }
-            DocSection {
-                title: "Accessible name",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "aria_label is required, not optional - an icon-only button has no visible "
-                    "text for a screen reader to announce.",
                 }
             }
         }

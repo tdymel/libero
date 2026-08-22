@@ -125,12 +125,6 @@ pub fn FlexPage() -> Element {
                     },
                 }
             }
-            if cfg!(feature = "dioxus-fork") {
-                DocSection {
-                    title: "Divider",
-                    Text { "Rendered between each child - not before the first or after the last." }
-                }
-            }
         }
     }
 }

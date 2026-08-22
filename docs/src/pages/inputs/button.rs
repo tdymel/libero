@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Flex, Text},
+    components::{Button, Code, Text},
     sx::sx,
 };
 
@@ -14,7 +14,11 @@ pub fn ButtonPage() -> Element {
                 Text {
                     "A clickable control, or a router-aware link when "
                     Code { source: "to" }
-                    " is set."
+                    " is set. A plain "
+                    Code { source: "<button>" }
+                    " submits an enclosing form; ours defaults to "
+                    Code { source: "type=\"button\"" }
+                    " instead, so a submit or reset button says so."
                 }
             },
             DocSection {
@@ -36,6 +40,14 @@ pub fn ButtonPage() -> Element {
                         Control::switch("full_width"),
                         Control::switch("selected"),
                         Control::switch("disabled"),
+                        // A `GlobalAttributes` pass-through rather than a
+                        // prop, so it prints as the raw identifier.
+                        Control::toggle("type", ["button", "submit", "reset"]).code(
+                            |control, values| match values.str("type") {
+                                value if value == control.default => vec![],
+                                value => vec![format!("r#type: {value:?}")],
+                            },
+                        ),
                     ],
                     render: move |values: DemoValues| rsx! {
                         Button {
@@ -51,26 +63,10 @@ pub fn ButtonPage() -> Element {
                                 _ => None,
                             },
                             disabled: values.str("disabled") == "true",
+                            r#type: values.str("type"),
                             "Save changes"
                         }
                     },
-                }
-            }
-            DocSection {
-                title: "Form type",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "A plain "
-                    Code { source: "<button>" }
-                    " submits an enclosing form. Ours defaults to "
-                    Code { source: "type=\"button\"" }
-                    " instead - set it yourself for a submit or reset button.",
-                }
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Button { variant: "filled", r#type: "submit", "Submit" }
-                    Button { variant: "outlined", r#type: "reset", "Reset" }
                 }
             }
             DocSection {

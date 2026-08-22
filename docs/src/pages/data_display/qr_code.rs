@@ -22,7 +22,20 @@ pub fn QrCodePage() -> Element {
                     Code { source: "Theme::qr_code" }
                     "), not per-instance props - "
                     Code { source: "robustness" }
-                    " is the only thing you tune per code."
+                    " is the only thing you tune per code: higher levels tolerate more "
+                    "damage or occlusion at the cost of a denser code, and unset takes "
+                    Code { source: "Theme::qr_code.robustness" }
+                    " (Medium)."
+                }
+                Text {
+                    "The SVG has no fixed width or height, just a square "
+                    Code { source: "viewBox" }
+                    ", so it fills its container - which is why the demo carries an "
+                    Code { source: "sx" }
+                    " width. "
+                    Code { source: "aria_label" }
+                    " is required, not optional: a QR code carries real information to a "
+                    "sighted or scanning user and none at all to a screen reader without one."
                 }
             },
             DocSection {
@@ -58,38 +71,6 @@ pub fn QrCodePage() -> Element {
                             sx: sx().width("160px"),
                         }
                     },
-                }
-            }
-            DocSection {
-                title: "Robustness",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "Error-correction level - higher levels tolerate more damage or "
-                    "occlusion at the cost of a denser code for the same data. Falls "
-                    "back to the theme's "
-                    Code { source: "Theme::qr_code.robustness" }
-                    " (Medium) when unset."
-                }
-            }
-            DocSection {
-                title: "Scalable",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "The generated SVG has no fixed width or height, just a square "
-                    Code { source: "viewBox" }
-                    " - it fills its container, so "
-                    Code { source: "sx" }
-                    " width/height (or the container's own size) decides how big it "
-                    "renders. That is why the demo above carries one."
-                }
-            }
-            DocSection {
-                title: "Accessible name",
-                Text {
-                    sx: sx().color("grey.6"),
-                    "aria_label is required, not optional - a QR code conveys real "
-                    "information to a sighted or scanning user, but nothing to a screen "
-                    "reader without one.",
                 }
             }
         }
