@@ -6,7 +6,11 @@
 
 use dioxus::core::{AttributeValue, ElementId, WriteMutations};
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Button};
+use libero::{
+    LiberoProvider,
+    components::{Button, Header, Input},
+    sx::ThemeAwareValue,
+};
 
 #[derive(Default)]
 struct AttributeWrites(Vec<(String, String)>);
@@ -57,6 +61,37 @@ fn a_disabled_button_that_becomes_enabled_clears_the_attribute() {
         disabled,
         Some("None"),
         "the dropped attribute was never cleared: {:?}",
+        writes.0
+    );
+}
+
+static COLOR: GlobalSignal<Input<ThemeAwareValue>> = Signal::global(|| Input::from("primary"));
+
+fn header_app() -> Element {
+    rsx! { LiberoProvider { Header { color: COLOR(), "x" } } }
+}
+
+/// The per-instance CSS variables ride the `style` attribute, which is dropped
+/// entirely once nothing sets one - so the same clearing rule applies.
+#[test]
+fn a_colored_header_that_becomes_unset_clears_its_variables() {
+    let mut dom = VirtualDom::new(header_app);
+    dom.rebuild_in_place();
+
+    dom.in_runtime(|| *COLOR.write() = Input::None);
+    let mut writes = AttributeWrites::default();
+    dom.render_immediate(&mut writes);
+
+    let style = writes
+        .0
+        .iter()
+        .find(|(name, _)| name == "style")
+        .map(|(_, value)| value.as_str());
+
+    assert_eq!(
+        style,
+        Some("None"),
+        "the header kept its old color variables: {:?}",
         writes.0
     );
 }
