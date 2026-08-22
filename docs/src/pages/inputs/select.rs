@@ -53,12 +53,14 @@ pub fn SelectPage() -> Element {
                                 _ => vec![],
                             }
                         }),
+                        Control::switch("disabled"),
                     ],
                     render: move |values: DemoValues| rsx! {
                         Select {
                             size: values.str("size"),
                             radius: values.str("radius"),
                             label: (values.str("label") == "true").then(|| "Size".to_string()),
+                            disabled: (values.str("disabled") == "true").then_some(true),
                             value: value(),
                             onchange: move |v| value.set(v),
                             SelectOption { value: "xs", "Extra small" }
