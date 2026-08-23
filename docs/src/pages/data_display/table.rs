@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, CodeBlock, Table, Text, column};
 
@@ -73,6 +73,19 @@ pub fn TablePage() -> Element {
     rsx! {
         DocPage {
             title: "Table",
+            properties: vec![
+                props("Table", vec![
+                    prop("data", "Vec<T>").doc("One row each, in source order until a column is sorted."),
+                    prop("columns", "Vec<Column<T>>").doc("Built with `column(..)`."),
+                ]),
+                props("column()", vec![
+                    prop("header", "String").doc("The column's title, given as the argument to `column(..)`."),
+                    prop("value", "fn(&T) -> V").doc("Reads one cell out of a row. `V`'s `CellValue` impl decides sort order and alignment, then is erased."),
+                    prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
+                    prop("render", "fn(&T) -> Element").doc("Replaces the cell body. Sorting still uses `value`."),
+                    prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment `value`'s type chose."),
+                ]).without_base_props(),
+            ],
             lead: rsx! {
                 Text {
                     "Data in, table out. Each column is built with "
@@ -103,33 +116,30 @@ pub fn TablePage() -> Element {
                     " changes only what a cell draws, so the Role column below still sorts by its text and not by its chip."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Table",
-                    children_text: "",
-                    fixed: vec![
-                        r#"aria_label: "Team members""#.to_string(),
-                        "data: people".to_string(),
-                        COLUMNS.to_string(),
-                    ],
-                    controls: vec![],
-                    wrap: Wrap(wrap_data),
-                    render: move |_: DemoValues| rsx! {
-                        Table {
-                            aria_label: "Team members",
-                            data: people(),
-                            columns: vec![
-                                column("Name").value(|p: &Person| p.name.clone()).sortable(),
-                                column("Role")
-                                    .value(|p: &Person| p.role.clone())
-                                    .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-                                column("Age").value(|p: &Person| p.age).sortable(),
-                                column("Bonus").value(|p: &Person| p.bonus).sortable(),
-                            ],
-                        }
-                    },
-                }
+            Demo {
+                component: "Table",
+                children_text: "",
+                fixed: vec![
+                    r#"aria_label: "Team members""#.to_string(),
+                    "data: people".to_string(),
+                    COLUMNS.to_string(),
+                ],
+                controls: vec![],
+                wrap: Wrap(wrap_data),
+                render: move |_: DemoValues| rsx! {
+                    Table {
+                        aria_label: "Team members",
+                        data: people(),
+                        columns: vec![
+                            column("Name").value(|p: &Person| p.name.clone()).sortable(),
+                            column("Role")
+                                .value(|p: &Person| p.role.clone())
+                                .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
+                            column("Age").value(|p: &Person| p.age).sortable(),
+                            column("Bonus").value(|p: &Person| p.bonus).sortable(),
+                        ],
+                    }
+                },
             }
             DocSection {
                 title: "The cell type decides",
