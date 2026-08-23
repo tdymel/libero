@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Input, Overlay, Text},
@@ -10,6 +10,15 @@ pub fn OverlayPage() -> Element {
     rsx! {
         DocPage {
             title: "Overlay",
+            properties: vec![
+                props("Overlay", vec![
+                    prop("z_index", "ThemeAwareValue").default("300").doc("Stacking order for the dim/blur layer."),
+                    prop("opacity", "ThemeAwareValue").default("0.6").doc("Alpha of the black dim behind the content."),
+                    prop("blur", "ThemeAwareValue").default("none").doc("A backdrop-filter blur amount."),
+                    prop("onclick", "EventHandler<MouseEvent>").doc("Fires on a click anywhere on the overlay - the backdrop-click case."),
+                    prop("children", "Element").doc("Centred content, e.g. a loading spinner."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "Dims and blurs whatever is behind it - "
@@ -31,39 +40,36 @@ pub fn OverlayPage() -> Element {
                     "it, which is what makes it a loading layer as well as a backdrop."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Overlay",
-                    children_text: "Loading...",
-                    controls: vec![
-                        Control::slider("opacity", ["auto", "0.2", "0.4", "0.6", "0.8"]),
-                        Control::slider("blur", ["auto", "2px", "4px", "8px"]),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Box {
-                            sx: sx()
-                                .position("relative")
-                                .z_index("0")
-                                .height("160px")
-                                .width("100%")
-                                .background("grey.2"),
-                            Text { sx: sx().padding("16px"), "Content behind the overlay" }
-                            Overlay {
-                                opacity: match values.str("opacity").as_str() {
-                                    "auto" => Input::None,
-                                    opacity => Input::from(opacity),
-                                },
-                                blur: match values.str("blur").as_str() {
-                                    "auto" => Input::None,
-                                    blur => Input::from(blur),
-                                },
-                                sx: sx().position("absolute"),
-                                "Loading..."
-                            }
+            Demo {
+                component: "Overlay",
+                children_text: "Loading...",
+                controls: vec![
+                    Control::slider("opacity", ["auto", "0.2", "0.4", "0.6", "0.8"]),
+                    Control::slider("blur", ["auto", "2px", "4px", "8px"]),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Box {
+                        sx: sx()
+                            .position("relative")
+                            .z_index("0")
+                            .height("160px")
+                            .width("100%")
+                            .background("grey.2"),
+                        Text { sx: sx().padding("16px"), "Content behind the overlay" }
+                        Overlay {
+                            opacity: match values.str("opacity").as_str() {
+                                "auto" => Input::None,
+                                opacity => Input::from(opacity),
+                            },
+                            blur: match values.str("blur").as_str() {
+                                "auto" => Input::None,
+                                blur => Input::from(blur),
+                            },
+                            sx: sx().position("absolute"),
+                            "Loading..."
                         }
-                    },
-                }
+                    }
+                },
             }
         }
     }
