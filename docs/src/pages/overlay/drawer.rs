@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Drawer, Text, Title},
@@ -27,6 +27,16 @@ pub fn DrawerPage() -> Element {
     rsx! {
         DocPage {
             title: "Drawer",
+            properties: vec![
+                props("Drawer", vec![
+                    prop("anchor", "DrawerAnchor").default("left").doc("The edge the drawer docks to."),
+                    prop("size", "Size").default("md").doc("Width along the docked edge (or height, for top/bottom)."),
+                    prop("z_index", "ThemeAwareValue").doc("Stacking order for the drawer's Modal layer."),
+                    prop("onclose", "EventHandler<()>")
+                        .doc("Requested by Escape or a backdrop click. Drawer tracks no open/closed state."),
+                    prop("children", "Element").doc("The panel's content, rendered inside a Dialog surface."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "A portaled, dimmed, focus-trapped panel docked to one edge, closing on "
@@ -36,46 +46,43 @@ pub fn DrawerPage() -> Element {
                     "Sidebar."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Drawer",
-                    children_text: "",
-                    children_code: CONTENT.to_string(),
-                    // The close wiring and the panel's padding are the demo's
-                    // fixture, not props a control varies.
-                    fixed: vec![
-                        "onclose: move |_| open.set(false)".to_string(),
-                        r#"sx: sx().padding("16px")"#.to_string(),
-                    ],
-                    controls: vec![
-                        Control::toggle("anchor", ["left", "right", "top", "bottom"]),
-                        Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Button {
-                            variant: "outlined",
-                            onclick: move |_| open.set(true),
-                            "Open drawer"
-                        }
-                        if open() {
-                            Drawer {
-                                anchor: values.str("anchor"),
-                                size: or_unset(values.str("size")),
-                                onclose: move |_| open.set(false),
-                                sx: sx().padding("16px"),
-                                Title { size: "lg", "Temporary drawer" }
-                                Text { "Closes on Escape or backdrop click." }
-                                Button {
-                                    variant: "outlined",
-                                    onclick: move |_| open.set(false),
-                                    "Close"
-                                }
+            Demo {
+                component: "Drawer",
+                children_text: "",
+                children_code: CONTENT.to_string(),
+                // The close wiring and the panel's padding are the demo's
+                // fixture, not props a control varies.
+                fixed: vec![
+                    "onclose: move |_| open.set(false)".to_string(),
+                    r#"sx: sx().padding("16px")"#.to_string(),
+                ],
+                controls: vec![
+                    Control::toggle("anchor", ["left", "right", "top", "bottom"]),
+                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Button {
+                        variant: "outlined",
+                        onclick: move |_| open.set(true),
+                        "Open drawer"
+                    }
+                    if open() {
+                        Drawer {
+                            anchor: values.str("anchor"),
+                            size: or_unset(values.str("size")),
+                            onclose: move |_| open.set(false),
+                            sx: sx().padding("16px"),
+                            Title { size: "lg", "Temporary drawer" }
+                            Text { "Closes on Escape or backdrop click." }
+                            Button {
+                                variant: "outlined",
+                                onclick: move |_| open.set(false),
+                                "Close"
                             }
                         }
-                    },
-                    wrap: Wrap(wrap_trigger),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_trigger),
             }
         }
     }
