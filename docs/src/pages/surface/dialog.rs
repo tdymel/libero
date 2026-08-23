@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Dialog, Text, Title},
@@ -17,6 +17,18 @@ pub fn DialogPage() -> Element {
     rsx! {
         DocPage {
             title: "Dialog",
+            properties: vec![
+                props("Dialog", vec![
+                    prop("aria_label", "String").doc("Accessible name for the dialog."),
+                    prop("radius", "ThemeAwareValue").default("md").doc("Corner radius - the radius scale, or any CSS length."),
+                    prop("size", "ThemeAwareValue")
+                        .default("md")
+                        .doc("Caps the dialog's width from the dialog scale (md is 510px)."),
+                    prop("variables", "Variables")
+                        .doc("Layered onto Dialog's own - e.g. Drawer's anchor/size vars."),
+                    prop("children", "Element").doc("The dialog's content."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "The dialog surface itself - padding, radius, shadow, and the role/"
@@ -26,28 +38,25 @@ pub fn DialogPage() -> Element {
                     " caps its width from the dialog scale (md is 510px)."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Dialog",
-                    children_text: "",
-                    children_code: CONTENT.to_string(),
-                    fixed: FIXED.map(str::to_string).to_vec(),
-                    controls: vec![
-                        Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                        Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl"]),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Dialog {
-                            aria_label: "Dialog surface",
-                            size: or_unset(values.str("size")),
-                            radius: or_unset(values.str("radius")),
-                            sx: sx().margin("0"),
-                            Title { size: "lg", "Dialog surface" }
-                            Text { "Dialog rendered inline, without Modal's portal and backdrop." }
-                        }
-                    },
-                }
+            Demo {
+                component: "Dialog",
+                children_text: "",
+                children_code: CONTENT.to_string(),
+                fixed: FIXED.map(str::to_string).to_vec(),
+                controls: vec![
+                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl"]),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Dialog {
+                        aria_label: "Dialog surface",
+                        size: or_unset(values.str("size")),
+                        radius: or_unset(values.str("radius")),
+                        sx: sx().margin("0"),
+                        Title { size: "lg", "Dialog surface" }
+                        Text { "Dialog rendered inline, without Modal's portal and backdrop." }
+                    }
+                },
             }
         }
     }
