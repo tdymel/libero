@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Mark, Text},
@@ -12,6 +12,12 @@ pub fn MarkPage() -> Element {
     rsx! {
         DocPage {
             title: "Mark",
+            properties: vec![props("Mark", vec![
+                prop("color", "ThemeAwareValue")
+                    .default("warning, tinted")
+                    .doc("Any theme color or literal value; a bare theme color is tinted to a light shade."),
+                prop("children", "Element").doc("The highlighted content."),
+            ])],
             lead: rsx! {
                 Text {
                     "Highlight "
@@ -23,19 +29,16 @@ pub fn MarkPage() -> Element {
                     " color by default."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Mark",
-                    children_text: "this chunk",
-                    controls: vec![
-                        Control::color("color", ["warning", "primary", "success", "error", "info"])
-                            .default(theme.mark.color.as_str()),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Mark { color: values.str("color"), "this chunk" }
-                    },
-                }
+            Demo {
+                component: "Mark",
+                children_text: "this chunk",
+                controls: vec![
+                    Control::color("color", ["warning", "primary", "success", "error", "info"])
+                        .default(theme.mark.color.as_str()),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Mark { color: values.str("color"), "this chunk" }
+                },
             }
         }
     }
