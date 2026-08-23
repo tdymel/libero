@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
 
@@ -12,6 +12,24 @@ pub fn IconPage() -> Element {
     rsx! {
         DocPage {
             title: "Icon",
+            properties: vec![
+                props("Icon", vec![
+                    prop("component", "HtmlTag").default("span").doc("Element to render as."),
+                    prop("variant", "IconVariant")
+                        .default("filled")
+                        .doc("Filled, outlined, or transparent chrome around the svg."),
+                    prop("color", "ThemeAwareValue")
+                        .default("primary")
+                        .doc("Sets the container's CSS color, which a currentColor svg then inherits. A theme color also tints the background under variant filled."),
+                    prop("size", "ThemeAwareValue")
+                        .default("md")
+                        .doc("Badge width and height."),
+                    prop("radius", "ThemeAwareValue")
+                        .default("sm")
+                        .doc("Corner radius of the badge."),
+                    prop("children", "Element").doc("The svg to badge."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "Wraps an svg child in a sized, colored badge. "
@@ -21,39 +39,36 @@ pub fn IconPage() -> Element {
                     " for its fill/stroke then inherits."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Icon",
-                    children_text: "",
-                    children_code: CHILDREN,
-                    controls: vec![
-                        Control::toggle("variant", ["filled", "outlined", "transparent"])
-                            .labels(["Filled", "Outlined", "Transparent"]),
-                        // A bare `primary` is what an unset `color` resolves
-                        // to, so that swatch prints nothing.
-                        Control::color(
-                            "color",
-                            ["primary", "secondary", "success", "error", "warning", "info"],
-                        ),
-                        Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                        Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                        Control::toggle("component", ["span", "div"]),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Icon {
-                            variant: values.str("variant"),
-                            color: match values.str("color").as_str() {
-                                "primary" => Input::None,
-                                color => Input::from(color),
-                            },
-                            size: or_unset(values.str("size")),
-                            radius: or_unset(values.str("radius")),
-                            component: values.str("component"),
-                            CheckmarkIcon {}
-                        }
-                    },
-                }
+            Demo {
+                component: "Icon",
+                children_text: "",
+                children_code: CHILDREN,
+                controls: vec![
+                    Control::toggle("variant", ["filled", "outlined", "transparent"])
+                        .labels(["Filled", "Outlined", "Transparent"]),
+                    // A bare `primary` is what an unset `color` resolves
+                    // to, so that swatch prints nothing.
+                    Control::color(
+                        "color",
+                        ["primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::toggle("component", ["span", "div"]),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Icon {
+                        variant: values.str("variant"),
+                        color: match values.str("color").as_str() {
+                            "primary" => Input::None,
+                            color => Input::from(color),
+                        },
+                        size: or_unset(values.str("size")),
+                        radius: or_unset(values.str("radius")),
+                        component: values.str("component"),
+                        CheckmarkIcon {}
+                    }
+                },
             }
         }
     }
