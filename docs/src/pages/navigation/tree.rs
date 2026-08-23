@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Icon, Text, Tree, TreeItem, TreeLabel, TreeNode, TreeNodeRenderArgs},
@@ -141,6 +141,40 @@ pub fn TreePage() -> Element {
     rsx! {
         DocPage {
             title: "Tree",
+            properties: vec![
+                props("Tree", vec![
+                    prop("size", "Size")
+                        .default("md")
+                        .doc("Row gap and per-level indent together - `List`'s scale, since `Tree` renders through it. Off-scale, or the two apart, goes through `sx`."),
+                    prop("aria_label", "String").doc("Required by WAI-ARIA's tree pattern."),
+                    prop("data", "Vec<TreeNode<T>>").doc("The tree's data, entirely your own shape."),
+                    prop("render_node", "Callback<TreeNodeRenderArgs<T>, Element>")
+                        .default("default_tree_render")
+                        .doc("Each visible row's content. The default can also be called selectively - say, default branches and `NavLink` leaves."),
+                    prop("default_expanded", "HashSet<String>").doc("Seeds `Tree`'s internal state once. Not a controlled prop."),
+                    prop("onexpandedchange", "EventHandler<HashSet<String>>")
+                        .doc("Notification only - it doesn't drive rendering."),
+                ]),
+                props("TreeNode<T>", vec![
+                    prop("id", "String").doc("The node's identity, used for expansion state and keyboard navigation."),
+                    prop("data", "T").doc("The caller's own data for this node."),
+                    prop("children", "Vec<TreeNode<T>>").doc("Nested nodes - an empty vec makes this a leaf."),
+                    prop("disabled", "bool").default("false").doc("Skipped by activation, still visible and reachable by arrow keys."),
+                ]).without_base_props(),
+                props("TreeNodeRenderArgs<T>", vec![
+                    prop("id", "String").doc("The node's id."),
+                    prop("data", "T").doc("The node's data."),
+                    prop("expanded", "bool").doc("`None` for a leaf - no children, no chevron, no `aria-expanded`."),
+                    prop("disabled", "bool").doc("Whether the node is disabled."),
+                    prop("tabindex", "&'static str")
+                        .doc("Apply to any interactive element your content renders - the row is already the roving tab stop, without this a link/button adds a second one arrow keys never move."),
+                    prop("depth", "usize").doc("0 at top level. Lets `render_node` take indentation over entirely."),
+                ]).without_base_props(),
+                props("TreeItem", vec![
+                    prop("onclick", "EventHandler<MouseEvent>").doc("Fires on click."),
+                    prop("children", "Element").doc("The row's content - an icon, the label."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "Data-driven, not composed via children - pass "
@@ -213,48 +247,45 @@ pub fn TreePage() -> Element {
                     " - rows are yours, so their type scale is too."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Tree",
-                    children_text: "",
-                    fixed: FIXED.map(str::to_string).to_vec(),
-                    controls: vec![
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default(theme.tree.size.as_str()),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Flex {
-                            direction: "column",
-                            gap: "sm",
-                            // Pinned: the selection readout appearing must not
-                            // reflow the preview under the pointer.
-                            sx: sx().width("320px"),
-                            Tree {
-                                aria_label: "Project files",
-                                data: file_tree(),
-                                default_expanded: ["src", "src/components"]
-                                    .map(str::to_string)
-                                    .into(),
-                                size: or_unset(values.str("size")),
-                                render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
-                                    let id = args.id.clone();
-                                    rsx! {
-                                        TreeItem {
-                                            onclick: move |_| selected.set(Some(id.clone())),
-                                            {file_icon(&args.data)}
-                                            "{args.data.name}"
-                                        }
+            Demo {
+                component: "Tree",
+                children_text: "",
+                fixed: FIXED.map(str::to_string).to_vec(),
+                controls: vec![
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default(theme.tree.size.as_str()),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Flex {
+                        direction: "column",
+                        gap: "sm",
+                        // Pinned: the selection readout appearing must not
+                        // reflow the preview under the pointer.
+                        sx: sx().width("320px"),
+                        Tree {
+                            aria_label: "Project files",
+                            data: file_tree(),
+                            default_expanded: ["src", "src/components"]
+                                .map(str::to_string)
+                                .into(),
+                            size: or_unset(values.str("size")),
+                            render_node: move |args: TreeNodeRenderArgs<FileEntry>| {
+                                let id = args.id.clone();
+                                rsx! {
+                                    TreeItem {
+                                        onclick: move |_| selected.set(Some(id.clone())),
+                                        {file_icon(&args.data)}
+                                        "{args.data.name}"
                                     }
-                                },
-                            }
-                            if let Some(selected) = selected() {
-                                Text { "Selected: " Code { source: "{selected}" } }
-                            }
+                                }
+                            },
                         }
-                    },
-                    wrap: Wrap(wrap_selection),
-                }
+                        if let Some(selected) = selected() {
+                            Text { "Selected: " Code { source: "{selected}" } }
+                        }
+                    }
+                },
+                wrap: Wrap(wrap_selection),
             }
         }
     }
