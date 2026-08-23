@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, QrCode, Text},
@@ -13,6 +13,16 @@ pub fn QrCodePage() -> Element {
     rsx! {
         DocPage {
             title: "QrCode",
+            properties: vec![
+                props("QrCode", vec![
+                    prop("data", "String").doc("The payload encoded into the code."),
+                    prop("robustness", "QrRobustness")
+                        .default("medium")
+                        .doc("How much damage or occlusion the code tolerates, at the cost of density."),
+                    prop("aria_label", "String")
+                        .doc("Required: a QR code says nothing to a screen reader without one."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "Encodes "
@@ -38,40 +48,37 @@ pub fn QrCodePage() -> Element {
                     "sighted or scanning user and none at all to a screen reader without one."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "QrCode",
-                    children_text: "",
-                    controls: vec![
-                        // Both are required, so they always print alongside
-                        // the one prop there is to tune.
-                        Control::slider("robustness", ["low", "medium", "quartile", "high"])
-                            .default("medium")
-                            .code(|control, values| {
-                                // Required, plus the width the SVG has no
-                                // intrinsic size to supply.
-                                let mut set = vec![
-                                    format!("data: {DATA:?}"),
-                                    format!("aria_label: {LABEL:?}"),
-                                    "sx: sx().width(\"160px\")".to_string(),
-                                ];
-                                let value = values.str("robustness");
-                                if value != control.default {
-                                    set.push(format!("robustness: {value:?}"));
-                                }
-                                set
-                            }),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        QrCode {
-                            data: DATA,
-                            aria_label: LABEL,
-                            robustness: values.str("robustness"),
-                            sx: sx().width("160px"),
-                        }
-                    },
-                }
+            Demo {
+                component: "QrCode",
+                children_text: "",
+                controls: vec![
+                    // Both are required, so they always print alongside
+                    // the one prop there is to tune.
+                    Control::slider("robustness", ["low", "medium", "quartile", "high"])
+                        .default("medium")
+                        .code(|control, values| {
+                            // Required, plus the width the SVG has no
+                            // intrinsic size to supply.
+                            let mut set = vec![
+                                format!("data: {DATA:?}"),
+                                format!("aria_label: {LABEL:?}"),
+                                "sx: sx().width(\"160px\")".to_string(),
+                            ];
+                            let value = values.str("robustness");
+                            if value != control.default {
+                                set.push(format!("robustness: {value:?}"));
+                            }
+                            set
+                        }),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    QrCode {
+                        data: DATA,
+                        aria_label: LABEL,
+                        robustness: values.str("robustness"),
+                        sx: sx().width("160px"),
+                    }
+                },
             }
         }
     }
