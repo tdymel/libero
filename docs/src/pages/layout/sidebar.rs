@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Flex, Sidebar, Text},
@@ -32,6 +32,13 @@ pub fn SidebarPage() -> Element {
     rsx! {
         DocPage {
             title: "Sidebar",
+            properties: vec![props("Sidebar", vec![
+                prop("side", "SidebarSide")
+                    .default("left")
+                    .doc("Which edge this panel borders and which axis `size` applies to. It does not place the panel - an in-flow item is positioned by its parent's layout, so put it at the matching end of the DOM yourself."),
+                prop("size", "Size").default("md").doc("The panel's width (or height, on a top/bottom side)."),
+                prop("children", "Element").doc("The panel's content, scrolled by an inner `ScrollArea`."),
+            ])],
             lead: rsx! {
                 Text {
                     "An in-flow panel bordering one edge of its parent, scrolling its own "
@@ -39,47 +46,44 @@ pub fn SidebarPage() -> Element {
                     "position is your layout's, so place it at the matching end of the DOM."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Sidebar",
-                    children_text: "",
-                    children_code: CONTENT.to_string(),
-                    controls: vec![
-                        Control::toggle("side", ["left", "right"]),
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("md"),
-                    ],
-                    render: move |values: DemoValues| {
-                        let panel = rsx! {
-                            Sidebar {
-                                side: values.str("side"),
-                                size: values.str("size"),
-                                Text { "Navigation" }
-                            }
-                        };
-                        let rest = rsx! {
-                            Flex {
-                                direction: "column",
-                                sx: sx().flex("1").padding("12px"),
-                                Text { "Rest of the layout" }
-                            }
-                        };
-                        let (first, second) = match values.str("side").as_str() {
-                            "right" => (rest, panel),
-                            _ => (panel, rest),
-                        };
-                        rsx! {
-                            Flex {
-                                direction: "row",
-                                sx: sx().height("120px").width("100%").border("1px solid").border_color("grey.3"),
-                                {first}
-                                {second}
-                            }
+            Demo {
+                component: "Sidebar",
+                children_text: "",
+                children_code: CONTENT.to_string(),
+                controls: vec![
+                    Control::toggle("side", ["left", "right"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
+                ],
+                render: move |values: DemoValues| {
+                    let panel = rsx! {
+                        Sidebar {
+                            side: values.str("side"),
+                            size: values.str("size"),
+                            Text { "Navigation" }
                         }
-                    },
-                    wrap: Wrap(wrap_layout),
-                }
+                    };
+                    let rest = rsx! {
+                        Flex {
+                            direction: "column",
+                            sx: sx().flex("1").padding("12px"),
+                            Text { "Rest of the layout" }
+                        }
+                    };
+                    let (first, second) = match values.str("side").as_str() {
+                        "right" => (rest, panel),
+                        _ => (panel, rest),
+                    };
+                    rsx! {
+                        Flex {
+                            direction: "row",
+                            sx: sx().height("120px").width("100%").border("1px solid").border_color("grey.3"),
+                            {first}
+                            {second}
+                        }
+                    }
+                },
+                wrap: Wrap(wrap_layout),
             }
         }
     }
