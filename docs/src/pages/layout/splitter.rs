@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Input, Splitter, Text},
@@ -81,61 +81,72 @@ pub fn SplitterPage() -> Element {
     rsx! {
         DocPage {
             title: "Splitter",
+            properties: vec![props("Splitter", vec![
+                prop("orientation", "Orientation")
+                    .default("vertical")
+                    .doc("Divider line axis - vertical (side-by-side panes) or horizontal (stacked panes)."),
+                prop("initial_size", "f64")
+                    .doc("Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `on_resize` only notifies."),
+                prop("min_size", "f64").default("10").doc("% floor applied to both panes, capped at 50."),
+                prop("divider_size", "Size").default("sm").doc("Which size level the divider uses."),
+                prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
+                prop("on_resize", "EventHandler<SplitterResizeEvent>")
+                    .doc("Fires as the divider moves, with both panes' resulting sizes as percentages."),
+                prop("panel_a", "Element").doc("Pane A (left/top)."),
+                prop("panel_b", "Element").doc("Pane B (right/bottom). Nest another `Splitter` in a pane for more than two."),
+            ])],
             lead: rsx! {
                 Text { "Splits two panes with a draggable/keyboard-resizable divider. Panes go in `panel_a` and `panel_b`; nest another `Splitter` in a pane for more than two." }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Splitter",
-                    children_text: "",
-                    // Required, and not something a control varies.
-                    fixed: vec!["initial_size: 50.0".to_string()],
-                    controls: vec![
-                        Control::toggle("orientation", ["vertical", "horizontal"]),
-                        Control::slider("min_size", ["10", "20", "30", "40"]).code(percent_code),
-                        Control::slider("divider_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("sm"),
-                        // A bare `grey` is what an unset `divider_color`
-                        // falls back to, so that swatch prints nothing.
-                        Control::color(
-                            "divider_color",
-                            ["grey", "primary", "secondary", "success", "error", "warning", "info"],
-                        ),
-                        // Last, so the panes print below the props they
-                        // configure.
-                        Control::switch("composed").code(panels_code),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Box {
-                            sx: sx()
-                                .height("160px")
-                                .width("320px")
-                                .border("1px solid var(--lsx-grey-3)"),
-                            Splitter {
-                                orientation: values.str("orientation"),
-                                initial_size: 50.0,
-                                min_size: percent(values.str("min_size")),
-                                divider_size: or_unset(values.str("divider_size")),
-                                divider_color: match values.str("divider_color").as_str() {
-                                    "grey" => Input::None,
-                                    color => Input::from(color),
-                                },
-                                panel_a: rsx! {
-                                    Box {
-                                        sx: sx()
-                                            .height("100%")
-                                            .padding("md")
-                                            .background("primary.1"),
-                                        "A"
-                                    }
-                                },
-                                panel_b: panel_b(&values),
-                            }
+            Demo {
+                component: "Splitter",
+                children_text: "",
+                // Required, and not something a control varies.
+                fixed: vec!["initial_size: 50.0".to_string()],
+                controls: vec![
+                    Control::toggle("orientation", ["vertical", "horizontal"]),
+                    Control::slider("min_size", ["10", "20", "30", "40"]).code(percent_code),
+                    Control::slider("divider_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
+                    // A bare `grey` is what an unset `divider_color`
+                    // falls back to, so that swatch prints nothing.
+                    Control::color(
+                        "divider_color",
+                        ["grey", "primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    // Last, so the panes print below the props they
+                    // configure.
+                    Control::switch("composed").code(panels_code),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Box {
+                        sx: sx()
+                            .height("160px")
+                            .width("320px")
+                            .border("1px solid var(--lsx-grey-3)"),
+                        Splitter {
+                            orientation: values.str("orientation"),
+                            initial_size: 50.0,
+                            min_size: percent(values.str("min_size")),
+                            divider_size: or_unset(values.str("divider_size")),
+                            divider_color: match values.str("divider_color").as_str() {
+                                "grey" => Input::None,
+                                color => Input::from(color),
+                            },
+                            panel_a: rsx! {
+                                Box {
+                                    sx: sx()
+                                        .height("100%")
+                                        .padding("md")
+                                        .background("primary.1"),
+                                    "A"
+                                }
+                            },
+                            panel_b: panel_b(&values),
                         }
-                    },
-                    wrap: Wrap(wrap_splitter),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_splitter),
             }
         }
     }
