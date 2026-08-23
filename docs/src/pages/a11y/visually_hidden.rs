@@ -1,4 +1,4 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, indent};
+use crate::components::{Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Anchor, Text, VisuallyHidden};
 
@@ -16,6 +16,9 @@ pub fn VisuallyHiddenPage() -> Element {
     rsx! {
         DocPage {
             title: "Visually Hidden",
+            properties: vec![props("VisuallyHidden", vec![
+                prop("children", "Element").doc("The screen-reader-only content."),
+            ])],
             lead: rsx! {
                 Text {
                     "Content available to screen readers but removed from sighted layout - "
@@ -24,23 +27,20 @@ pub fn VisuallyHiddenPage() -> Element {
                     "\"Read more\", a screen reader reads \"Read more about focus management\"."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "VisuallyHidden",
-                    children_text: " about focus management",
-                    controls: vec![],
-                    render: move |_: DemoValues| rsx! {
-                        Text {
-                            Anchor {
-                                to: "https://example.com",
-                                "Read more"
-                                VisuallyHidden { " about focus management" }
-                            }
+            Demo {
+                component: "VisuallyHidden",
+                children_text: " about focus management",
+                controls: vec![],
+                render: move |_: DemoValues| rsx! {
+                    Text {
+                        Anchor {
+                            to: "https://example.com",
+                            "Read more"
+                            VisuallyHidden { " about focus management" }
                         }
-                    },
-                    wrap: Wrap(wrap_link),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_link),
             }
         }
     }
