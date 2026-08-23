@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Code, Text},
@@ -29,6 +29,20 @@ pub fn BoxPage() -> Element {
     rsx! {
         DocPage {
             title: "Box",
+            properties: vec![props("Box", vec![
+                prop("variables", "Variables")
+                    .doc("Per-instance CSS custom properties on the `style` attribute, so `sx` can reference a varying value without a class per value."),
+                prop("component", "HtmlTag")
+                    .default("div")
+                    .doc("Which element to render as."),
+                prop("style", "String")
+                    .doc("Raw `style` declarations, merged after `variables` - not overwritten by it."),
+                prop("alt", "String")
+                    .doc("Escape-hatch attribute, forwarded when `component` renders as `img`."),
+                prop("r#type", "String")
+                    .doc("Escape-hatch attribute, forwarded when `component` renders as `button`."),
+                prop("children", "Element").doc("The element's content."),
+            ])],
             lead: rsx! {
                 Text {
                     "The polymorphic primitive every other component is built on - renders "
@@ -45,30 +59,27 @@ pub fn BoxPage() -> Element {
                     ", which follow whichever tag you picked."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Box",
-                    children_text: "Styled entirely via sx",
-                    fixed: vec![SX.to_string()],
-                    controls: vec![
-                        Control::toggle("component", ["div", "section", "a", "button"])
-                            .code(tag_code),
-                    ],
-                    render: move |values: DemoValues| {
-                        let tag = values.str("component");
-                        rsx! {
-                            Box {
-                                component: tag.clone(),
-                                href: (tag == "a").then(|| HREF.to_string()),
-                                target: (tag == "a").then(|| "_blank".to_string()),
-                                r#type: (tag == "button").then(|| "button".to_string()),
-                                sx: sx().padding("16px").background("grey.1").border_radius("md"),
-                                "Styled entirely via sx"
-                            }
+            Demo {
+                component: "Box",
+                children_text: "Styled entirely via sx",
+                fixed: vec![SX.to_string()],
+                controls: vec![
+                    Control::toggle("component", ["div", "section", "a", "button"])
+                        .code(tag_code),
+                ],
+                render: move |values: DemoValues| {
+                    let tag = values.str("component");
+                    rsx! {
+                        Box {
+                            component: tag.clone(),
+                            href: (tag == "a").then(|| HREF.to_string()),
+                            target: (tag == "a").then(|| "_blank".to_string()),
+                            r#type: (tag == "button").then(|| "button".to_string()),
+                            sx: sx().padding("16px").background("grey.1").border_radius("md"),
+                            "Styled entirely via sx"
                         }
-                    },
-                }
+                    }
+                },
             }
         }
     }
