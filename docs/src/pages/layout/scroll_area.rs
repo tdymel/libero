@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent};
+use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, Flex, Input, ScrollArea, ScrollPositionEvent, Text},
@@ -55,6 +55,30 @@ pub fn ScrollAreaPage() -> Element {
     rsx! {
         DocPage {
             title: "ScrollArea",
+            properties: vec![props("ScrollArea", vec![
+                prop("scrollbars", "ScrollAxis")
+                    .default("vertical")
+                    .doc("Which axes show a scrollbar and allow overflow: vertical, horizontal, both or none."),
+                prop("scrollbar_visibility", "ScrollbarVisibility")
+                    .default("always")
+                    .doc("always, hover, hidden, or scroll (currently identical to hover)."),
+                prop("scrollbar_size", "ScrollbarSize")
+                    .default("thin")
+                    .doc("CSS `scrollbar-width`: thin or auto."),
+                prop("scrollbar_color", "ThemeAwareValue")
+                    .doc("Scrollbar thumb color - the track stays transparent."),
+                prop("scroll_position_x", "f64")
+                    .doc("Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount."),
+                prop("scroll_position_y", "f64")
+                    .doc("Percent (0-100) along the vertical axis - see `scroll_position_x`."),
+                prop("on_scroll", "EventHandler<ScrollPositionEvent>")
+                    .doc("Fires on every scroll tick with the position as a percent of each axis's scrollable range."),
+                prop("on_top_reached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
+                prop("on_bottom_reached", "EventHandler<()>").doc("Fires once when the bottom edge is reached."),
+                prop("on_left_reached", "EventHandler<()>").doc("Fires once when the left edge is reached."),
+                prop("on_right_reached", "EventHandler<()>").doc("Fires once when the right edge is reached."),
+                prop("children", "Element").doc("The scrollable content."),
+            ])],
             lead: rsx! {
                 Text {
                     "Scrolls its content, filling the parent by default. "
@@ -80,87 +104,84 @@ pub fn ScrollAreaPage() -> Element {
                     " work the same way."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "ScrollArea",
-                    children_text: "",
-                    children_code: CONTENT.to_string(),
-                    fixed: FIXED.map(str::to_string).to_vec(),
-                    controls: vec![
-                        Control::toggle("scrollbars", ["vertical", "horizontal", "both", "none"])
-                            .default(theme.scroll_area.scrollbars.as_str()),
-                        Control::toggle("scrollbar_visibility", ["always", "hover", "hidden"])
-                            .default(theme.scroll_area.visibility.as_str()),
-                        Control::toggle("scrollbar_size", ["thin", "auto"])
-                            .default(theme.scroll_area.size.as_str()),
-                        // The unset thumb is grey-5, which a bare `grey` would
-                        // *not* resolve to - so the first swatch is unset.
-                        Control::color(
-                            "scrollbar_color",
-                            [UNSET, "primary", "secondary", "success", "error", "warning"],
-                        ),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Flex {
-                            direction: "column",
-                            gap: "sm",
-                            // Pinned, so a longer `Change at ...` readout
-                            // cannot widen the column mid-scroll.
-                            sx: sx().width("100%"),
-                            Box {
-                                sx: sx()
-                                    .height("160px")
-                                    .width("100%")
-                                    .border("1px solid var(--lsx-grey-3)"),
-                                ScrollArea {
-                                    scrollbars: values.str("scrollbars"),
-                                    scrollbar_visibility: values.str("scrollbar_visibility"),
-                                    scrollbar_size: values.str("scrollbar_size"),
-                                    scrollbar_color: match values.str("scrollbar_color").as_str() {
-                                        UNSET => Input::None,
-                                        color => Input::from(color),
-                                    },
-                                    scroll_position_y: jump(),
-                                    on_scroll: move |event: ScrollPositionEvent| {
-                                        position.set(event)
-                                    },
-                                    on_top_reached: move |_| {
-                                        edge.set("top");
-                                        jump.set(None)
-                                    },
-                                    on_bottom_reached: move |_| {
-                                        edge.set("bottom");
-                                        jump.set(None)
-                                    },
-                                    Box {
-                                        sx: sx().width("150%").padding("md"),
-                                        for i in 0..20 {
-                                            Text { key: "{i}", "Item {i}" }
-                                        }
+            Demo {
+                component: "ScrollArea",
+                children_text: "",
+                children_code: CONTENT.to_string(),
+                fixed: FIXED.map(str::to_string).to_vec(),
+                controls: vec![
+                    Control::toggle("scrollbars", ["vertical", "horizontal", "both", "none"])
+                        .default(theme.scroll_area.scrollbars.as_str()),
+                    Control::toggle("scrollbar_visibility", ["always", "hover", "hidden"])
+                        .default(theme.scroll_area.visibility.as_str()),
+                    Control::toggle("scrollbar_size", ["thin", "auto"])
+                        .default(theme.scroll_area.size.as_str()),
+                    // The unset thumb is grey-5, which a bare `grey` would
+                    // *not* resolve to - so the first swatch is unset.
+                    Control::color(
+                        "scrollbar_color",
+                        [UNSET, "primary", "secondary", "success", "error", "warning"],
+                    ),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Flex {
+                        direction: "column",
+                        gap: "sm",
+                        // Pinned, so a longer `Change at ...` readout
+                        // cannot widen the column mid-scroll.
+                        sx: sx().width("100%"),
+                        Box {
+                            sx: sx()
+                                .height("160px")
+                                .width("100%")
+                                .border("1px solid var(--lsx-grey-3)"),
+                            ScrollArea {
+                                scrollbars: values.str("scrollbars"),
+                                scrollbar_visibility: values.str("scrollbar_visibility"),
+                                scrollbar_size: values.str("scrollbar_size"),
+                                scrollbar_color: match values.str("scrollbar_color").as_str() {
+                                    UNSET => Input::None,
+                                    color => Input::from(color),
+                                },
+                                scroll_position_y: jump(),
+                                on_scroll: move |event: ScrollPositionEvent| {
+                                    position.set(event)
+                                },
+                                on_top_reached: move |_| {
+                                    edge.set("top");
+                                    jump.set(None)
+                                },
+                                on_bottom_reached: move |_| {
+                                    edge.set("bottom");
+                                    jump.set(None)
+                                },
+                                Box {
+                                    sx: sx().width("150%").padding("md"),
+                                    for i in 0..20 {
+                                        Text { key: "{i}", "Item {i}" }
                                     }
                                 }
                             }
-                            Text { size: "sm", "{readout(position())} - last edge: {edge()}" }
-                            Flex {
-                                gap: "sm",
-                                Button {
-                                    size: "sm",
-                                    variant: "outlined",
-                                    onclick: move |_| jump.set(Some(0.0)),
-                                    "Scroll to top"
-                                }
-                                Button {
-                                    size: "sm",
-                                    variant: "outlined",
-                                    onclick: move |_| jump.set(Some(100.0)),
-                                    "Scroll to bottom"
-                                }
+                        }
+                        Text { size: "sm", "{readout(position())} - last edge: {edge()}" }
+                        Flex {
+                            gap: "sm",
+                            Button {
+                                size: "sm",
+                                variant: "outlined",
+                                onclick: move |_| jump.set(Some(0.0)),
+                                "Scroll to top"
+                            }
+                            Button {
+                                size: "sm",
+                                variant: "outlined",
+                                onclick: move |_| jump.set(Some(100.0)),
+                                "Scroll to bottom"
                             }
                         }
-                    },
-                    wrap: Wrap(wrap_frame),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_frame),
             }
         }
     }
