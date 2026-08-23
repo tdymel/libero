@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Flex, Text},
@@ -85,45 +85,60 @@ pub fn FlexPage() -> Element {
     rsx! {
         DocPage {
             title: "Flex",
+            properties: vec![props("Flex", vec![
+                prop("direction", "FlexDirection")
+                    .default("column")
+                    .doc("Row or column layout."),
+                prop("align", "ThemeAwareValue")
+                    .default("follows direction - stretch for column, center for row")
+                    .doc("Cross-axis alignment."),
+                prop("justify", "ThemeAwareValue")
+                    .default("flex-start")
+                    .doc("Main-axis alignment."),
+                prop("gap", "Size")
+                    .default("md")
+                    .doc("Space between children."),
+                prop("wrap", "FlexWrap").default("nowrap").doc("Whether children wrap onto new lines."),
+                prop("divider", "Element")
+                    .doc("Rendered between each child, not before the first or after the last. Needs the dioxus-fork feature - upstream main cannot split children apart."),
+                prop("children", "Element").doc("The flex's children."),
+            ])],
             lead: rsx! {
                 Text { "A flexbox container - direction, gap, align, justify and wrap, all theme-aware." }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Flex",
-                    children_text: "",
-                    children_code: CHILDREN,
-                    fixed: vec![BOX_SX.to_string()],
-                    controls: controls(),
-                    render: move |values: DemoValues| rsx! {
-                        Flex {
-                            sx: sx()
-                                .width("400px")
-                                .height("200px")
-                                .padding("8px")
-                                .background("grey.1"),
-                            direction: values.str("direction"),
-                            gap: or_unset(values.str("gap")),
-                            align: or_unset(values.str("align")),
-                            justify: or_unset(values.str("justify")),
-                            wrap: or_unset(values.str("wrap")),
-                            divider: divider_element(&values),
-                            Box {
-                                sx: sx().padding("8px 16px").background("primary.1"),
-                                "One"
-                            }
-                            Box {
-                                sx: sx().padding("8px 16px").background("primary.1"),
-                                "Two"
-                            }
-                            Box {
-                                sx: sx().padding("8px 16px").background("primary.1"),
-                                "Three"
-                            }
+            Demo {
+                component: "Flex",
+                children_text: "",
+                children_code: CHILDREN,
+                fixed: vec![BOX_SX.to_string()],
+                controls: controls(),
+                render: move |values: DemoValues| rsx! {
+                    Flex {
+                        sx: sx()
+                            .width("400px")
+                            .height("200px")
+                            .padding("8px")
+                            .background("grey.1"),
+                        direction: values.str("direction"),
+                        gap: or_unset(values.str("gap")),
+                        align: or_unset(values.str("align")),
+                        justify: or_unset(values.str("justify")),
+                        wrap: or_unset(values.str("wrap")),
+                        divider: divider_element(&values),
+                        Box {
+                            sx: sx().padding("8px 16px").background("primary.1"),
+                            "One"
                         }
-                    },
-                }
+                        Box {
+                            sx: sx().padding("8px 16px").background("primary.1"),
+                            "Two"
+                        }
+                        Box {
+                            sx: sx().padding("8px 16px").background("primary.1"),
+                            "Three"
+                        }
+                    }
+                },
             }
         }
     }
