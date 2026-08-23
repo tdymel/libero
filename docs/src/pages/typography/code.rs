@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{Anchor, Code, Text};
 
@@ -72,6 +74,11 @@ pub fn CodePage() -> Element {
     rsx! {
         DocPage {
             title: "Code",
+            properties: vec![props("Code", vec![
+                prop("source", "String").doc("The text to render, highlighted when `language` names a grammar this build compiles in."),
+                prop("language", "Language")
+                    .doc("Unrecognized values fall back to no highlighting rather than a guess."),
+            ])],
             lead: rsx! {
                 Text {
                     "A "
@@ -89,42 +96,39 @@ pub fn CodePage() -> Element {
                     " and can be overridden per-app."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Code",
-                    children_text: "",
-                    controls: vec![
-                        // Picks `source` as well, so it always prints - the
-                        // preview would otherwise show code the block below
-                        // never mentions. "none" is the real default.
-                        Control::toggle("language", ["rust", "python"])
-                            // `python` is a real, recognized name whose
-                            // `code-lang-*` feature this build leaves off.
-                            .labels(["rust", "python (off)"])
-                            .code(|_, values| {
-                                let language = values.str("language");
-                                // Inline sources are one short line, so they
-                                // print as a literal rather than a const.
-                                vec![
-                                    format!("source: {:?}", inline_example(&language).1),
-                                    format!("language: {language:?}"),
-                                ]
-                            }),
-                    ],
-                    render: move |values: DemoValues| {
-                        let language = values.str("language");
-                        let (before, source, after) = inline_example(&language);
-                        rsx! {
-                            Text {
-                                {before}
-                                Code { source, language }
-                                {after}
-                            }
+            Demo {
+                component: "Code",
+                children_text: "",
+                controls: vec![
+                    // Picks `source` as well, so it always prints - the
+                    // preview would otherwise show code the block below
+                    // never mentions. "none" is the real default.
+                    Control::toggle("language", ["rust", "python"])
+                        // `python` is a real, recognized name whose
+                        // `code-lang-*` feature this build leaves off.
+                        .labels(["rust", "python (off)"])
+                        .code(|_, values| {
+                            let language = values.str("language");
+                            // Inline sources are one short line, so they
+                            // print as a literal rather than a const.
+                            vec![
+                                format!("source: {:?}", inline_example(&language).1),
+                                format!("language: {language:?}"),
+                            ]
+                        }),
+                ],
+                render: move |values: DemoValues| {
+                    let language = values.str("language");
+                    let (before, source, after) = inline_example(&language);
+                    rsx! {
+                        Text {
+                            {before}
+                            Code { source, language }
+                            {after}
                         }
-                    },
-                    wrap: Wrap(wrap_inline),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_inline),
             }
             {languages_section()}
         }
