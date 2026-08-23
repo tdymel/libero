@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -152,6 +152,27 @@ pub fn GridPage() -> Element {
     rsx! {
         DocPage {
             title: "Grid",
+            properties: vec![
+                props("Grid", vec![
+                    prop("template", "GridTemplate").doc("The named-area matrix. Build it once outside the render."),
+                    prop("gap", "Size").default("md").doc("Between zones."),
+                    prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
+                    prop("children", "Element").doc("`GridZone`s."),
+                ]),
+                props("GridZone", vec![
+                    prop("area", "AreaName").doc("Which of the parent `Grid`'s areas this fills. Omit it to use the zone on its own, without a `Grid` - a plain masonry wall needs no template."),
+                    prop("dense", "bool").default("false").doc("Backfill gaps a wider item left behind. Pure CSS, no measurement."),
+                    prop("masonry", "bool").default("false").doc("Measure item heights and pack them with no vertical dead space. Costs a `ResizeObserver` per item."),
+                    prop("gap", "Size").default("md").doc("Between items."),
+                    prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
+                    prop("children", "Element").doc("`GridItem`s."),
+                ]),
+                props("GridItem", vec![
+                    prop("span", "SpanValue").default("full").doc("Width, in twelfths of the zone. A `GridSpan`, or `sp()` for a span that changes with the zone's width."),
+                    prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
+                    prop("children", "Element").doc("The item's content."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "A named-area matrix. `Grid` holds the shape, each `GridZone` is an "
@@ -160,22 +181,19 @@ pub fn GridPage() -> Element {
                     "no template."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "GridZone",
-                    children_text: "",
-                    children_code: CARDS,
-                    controls: controls(),
-                    render: move |values: DemoValues| rsx! {
-                        GridZone {
-                            masonry: values.str("masonry") == "true",
-                            dense: values.str("dense") == "true",
-                            gap: or_unset(values.str("gap")),
-                            {cards()}
-                        }
-                    },
-                }
+            Demo {
+                component: "GridZone",
+                children_text: "",
+                children_code: CARDS,
+                controls: controls(),
+                render: move |values: DemoValues| rsx! {
+                    GridZone {
+                        masonry: values.str("masonry") == "true",
+                        dense: values.str("dense") == "true",
+                        gap: or_unset(values.str("gap")),
+                        {cards()}
+                    }
+                },
             }
             DocSection {
                 title: "masonry and dense",
