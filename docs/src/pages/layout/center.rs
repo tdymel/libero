@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Center, Code, Text},
@@ -28,6 +28,12 @@ pub fn CenterPage() -> Element {
     rsx! {
         DocPage {
             title: "Center",
+            properties: vec![props("Center", vec![
+                prop("inline", "bool")
+                    .default("false")
+                    .doc("`inline-flex` instead of `flex`, so it doesn't stretch to the parent's width."),
+                prop("children", "Element").doc("The centered content."),
+            ])],
             lead: rsx! {
                 Text {
                     "Centers its child both horizontally and vertically. "
@@ -40,29 +46,26 @@ pub fn CenterPage() -> Element {
                     "the grey band is the parent."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Center",
-                    children_text: "",
-                    children_code: CHILD.to_string(),
-                    fixed: vec![SX.to_string()],
-                    controls: vec![Control::switch("inline")],
-                    render: move |values: DemoValues| rsx! {
-                        Box {
-                            sx: sx().width("260px").background("grey.2"),
-                            Center {
-                                inline: (values.str("inline") == "true").then_some(true),
-                                sx: sx().height("120px").background("primary.1"),
-                                Box {
-                                    sx: sx().padding("8px 16px").background("primary"),
-                                    "Centered"
-                                }
+            Demo {
+                component: "Center",
+                children_text: "",
+                children_code: CHILD.to_string(),
+                fixed: vec![SX.to_string()],
+                controls: vec![Control::switch("inline")],
+                render: move |values: DemoValues| rsx! {
+                    Box {
+                        sx: sx().width("260px").background("grey.2"),
+                        Center {
+                            inline: (values.str("inline") == "true").then_some(true),
+                            sx: sx().height("120px").background("primary.1"),
+                            Box {
+                                sx: sx().padding("8px 16px").background("primary"),
+                                "Centered"
                             }
                         }
-                    },
-                    wrap: Wrap(wrap_parent),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_parent),
             }
         }
     }
