@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Chip, Code, Flex, Text};
 
@@ -9,6 +9,27 @@ pub fn ChipPage() -> Element {
     rsx! {
         DocPage {
             title: "Chip",
+            properties: vec![props("Chip", vec![
+                prop("color", "ThemeAwareValue")
+                    .default("primary")
+                    .doc("Accent color; a theme color name or a literal CSS color."),
+                prop("variant", "ButtonVariant")
+                    .default("outlined")
+                    .doc("The unselected look; a checked chip is always filled."),
+                prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
+                prop("radius", "Size")
+                    .default("xl")
+                    .doc("Corner radius, independent of size."),
+                prop("checked", "bool")
+                    .doc("Strictly controlled selection state - pair it with `onchange`."),
+                prop("disabled", "bool")
+                    .default("false")
+                    .doc("Disables interaction and dims the chip."),
+                prop("onchange", "EventHandler<bool>")
+                    .doc("Called with the value `checked` should take next. Its presence makes the chip a real checkbox."),
+                prop("children", "Element")
+                    .doc("Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
+            ])],
             lead: rsx! {
                 Text {
                     "A compact token. With "
@@ -20,54 +41,51 @@ pub fn ChipPage() -> Element {
                     ", so selection is announced and Space toggles it. Without it, a plain tag."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Chip",
-                    children_text: "rust",
-                    controls: vec![
-                        Control::color(
-                            "color",
-                            ["primary", "secondary", "success", "error", "warning", "info"],
-                        ),
-                        Control::toggle("variant", ["outlined", "filled", "text"])
-                            .labels(["Outlined", "Filled", "Text"]),
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("md"),
-                        Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("xl"),
-                        // Controlled state is `checked` + `onchange`; the
-                        // library warns about one without the other.
-                        Control::switch("checked").code(|_, values| {
-                            match values.str("checked").as_str() {
-                                "true" => vec![
-                                    "checked: true".to_string(),
-                                    "onchange: move |_| {}".to_string(),
-                                ],
-                                _ => vec![],
-                            }
-                        }),
-                        Control::switch("disabled"),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Chip {
-                            color: values.str("color"),
-                            variant: values.str("variant"),
-                            size: values.str("size"),
-                            radius: values.str("radius"),
-                            // Both or neither: `checked` alone can never
-                            // change, `onchange` alone can never look selected.
-                            checked: match values.str("checked").as_str() {
-                                "true" => Some(true),
-                                _ => None,
-                            },
-                            onchange: (values.str("checked") == "true")
-                                .then(|| EventHandler::new(move |_: bool| {})),
-                            disabled: values.str("disabled") == "true",
-                            "rust"
+            Demo {
+                component: "Chip",
+                children_text: "rust",
+                controls: vec![
+                    Control::color(
+                        "color",
+                        ["primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    Control::toggle("variant", ["outlined", "filled", "text"])
+                        .labels(["Outlined", "Filled", "Text"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("xl"),
+                    // Controlled state is `checked` + `onchange`; the
+                    // library warns about one without the other.
+                    Control::switch("checked").code(|_, values| {
+                        match values.str("checked").as_str() {
+                            "true" => vec![
+                                "checked: true".to_string(),
+                                "onchange: move |_| {}".to_string(),
+                            ],
+                            _ => vec![],
                         }
-                    },
-                }
+                    }),
+                    Control::switch("disabled"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Chip {
+                        color: values.str("color"),
+                        variant: values.str("variant"),
+                        size: values.str("size"),
+                        radius: values.str("radius"),
+                        // Both or neither: `checked` alone can never
+                        // change, `onchange` alone can never look selected.
+                        checked: match values.str("checked").as_str() {
+                            "true" => Some(true),
+                            _ => None,
+                        },
+                        onchange: (values.str("checked") == "true")
+                            .then(|| EventHandler::new(move |_: bool| {})),
+                        disabled: values.str("disabled") == "true",
+                        "rust"
+                    }
+                },
             }
             DocSection {
                 title: "Selectable",
