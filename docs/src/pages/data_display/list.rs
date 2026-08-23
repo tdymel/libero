@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, List, ListItem, Text};
 
@@ -20,6 +20,17 @@ pub fn ListPage() -> Element {
     rsx! {
         DocPage {
             title: "List",
+            properties: vec![
+                props("List", vec![
+                    prop("size", "Size")
+                        .default("md")
+                        .doc("Item gap and nested-list indent, together."),
+                    prop("children", "Element").doc("The list's items."),
+                ]),
+                props("ListItem", vec![
+                    prop("children", "Element").doc("The item's content."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "Renders a "
@@ -34,31 +45,28 @@ pub fn ListPage() -> Element {
                     ") controls item gap and nested-list indent together."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "List",
-                    children_text: "",
-                    children_code: CHILDREN,
-                    controls: vec![
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("md"),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        List {
-                            size: values.str("size"),
-                            ListItem { "First item" }
-                            ListItem { "Second item" }
-                            ListItem {
-                                "Third item, with a nested list"
-                                List {
-                                    ListItem { "Nested one" }
-                                    ListItem { "Nested two" }
-                                }
+            Demo {
+                component: "List",
+                children_text: "",
+                children_code: CHILDREN,
+                controls: vec![
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    List {
+                        size: values.str("size"),
+                        ListItem { "First item" }
+                        ListItem { "Second item" }
+                        ListItem {
+                            "Third item, with a nested list"
+                            List {
+                                ListItem { "Nested one" }
+                                ListItem { "Nested two" }
                             }
                         }
-                    },
-                }
+                    }
+                },
             }
         }
     }
