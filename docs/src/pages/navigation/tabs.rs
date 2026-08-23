@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use crate::icons::FileIcon;
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, TabLabel, TabValue, Tabs, Text};
@@ -65,6 +65,26 @@ pub fn TabsPage() -> Element {
     rsx! {
         DocPage {
             title: "Tabs",
+            properties: vec![
+                props("Tabs", vec![
+                    prop("value", "T").doc("The selected tab. Strictly controlled - pair it with `onchange`."),
+                    prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
+                    prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Called for `value` only, so the other panels cost nothing."),
+                    prop("tabs", "Vec<T>").default("T::options()").doc("The tabs to show."),
+                    prop("label", "Callback<T, TabLabel>")
+                        .default("T::label()")
+                        .doc("Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed."),
+                    prop("disabled", "Vec<T>").doc("Tabs that render but cannot be picked."),
+                    prop("size", "Size").default("md").doc("Tab strip size."),
+                    prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
+                    prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
+                ]),
+                props("TabLabel", vec![
+                    prop("name", "String").doc("The tab's visible text and accessible name."),
+                    prop("content", "Element")
+                        .doc("Drawn in place of the name, via `TabLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use."),
+                ]).without_base_props(),
+            ],
             lead: rsx! {
                 Text {
                     "One strip of tabs over an enum, with the selected tab's panel below it. The "
@@ -86,58 +106,55 @@ pub fn TabsPage() -> Element {
                     "since the rsx is what a screen reader cannot use."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Tabs",
-                    children_text: "",
-                    // Printed above the snippet: the strip is the enum, so the
-                    // code block is a lie without it.
-                    wrap: Wrap(|_: &DemoValues, source: &str| format!("{SECTION_ENUM}{source}")),
-                    fixed: vec![
-                        "value: section()".to_string(),
-                        "onchange: move |next| section.set(next)".to_string(),
-                        "panel: |section: Section| match section {\n    Section::Account => rsx! { \"Account settings\" },\n    Section::Admin => rsx! { \"Admin area\" },\n    Section::Billing => rsx! { \"Billing details\" },\n}".to_string(),
-                    ],
-                    controls: vec![
-                        Control::toggle("labels", ["derived", "renamed", "rich"])
-                            .labels(["Derived", "Renamed", "Rich"])
-                            .code(|_, values| match values.str("labels").as_str() {
-                                "renamed" => vec![RENAMED.to_string()],
-                                "rich" => vec![RICH.to_string()],
-                                _ => vec![],
-                            }),
-                        Control::color(
-                            "color",
-                            ["primary", "secondary", "success", "error", "warning", "info"],
-                        ),
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("md"),
-                        Control::switch("full_width"),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Tabs {
-                            color: match values.str("color").as_str() {
-                                "primary" => Input::None,
-                                color => Input::from(color),
-                            },
-                            size: values.str("size"),
-                            full_width: values.str("full_width") == "true",
-                            label: match values.str("labels").as_str() {
-                                "renamed" => Some(Callback::new(renamed)),
-                                "rich" => Some(Callback::new(rich)),
-                                _ => None,
-                            },
-                            value: section(),
-                            onchange: move |next| section.set(next),
-                            panel: |section: Section| match section {
-                                Section::Account => rsx! { "Account settings" },
-                                Section::Admin => rsx! { "Admin area" },
-                                Section::Billing => rsx! { "Billing details" },
-                            },
-                        }
-                    },
-                }
+            Demo {
+                component: "Tabs",
+                children_text: "",
+                // Printed above the snippet: the strip is the enum, so the
+                // code block is a lie without it.
+                wrap: Wrap(|_: &DemoValues, source: &str| format!("{SECTION_ENUM}{source}")),
+                fixed: vec![
+                    "value: section()".to_string(),
+                    "onchange: move |next| section.set(next)".to_string(),
+                    "panel: |section: Section| match section {\n    Section::Account => rsx! { \"Account settings\" },\n    Section::Admin => rsx! { \"Admin area\" },\n    Section::Billing => rsx! { \"Billing details\" },\n}".to_string(),
+                ],
+                controls: vec![
+                    Control::toggle("labels", ["derived", "renamed", "rich"])
+                        .labels(["Derived", "Renamed", "Rich"])
+                        .code(|_, values| match values.str("labels").as_str() {
+                            "renamed" => vec![RENAMED.to_string()],
+                            "rich" => vec![RICH.to_string()],
+                            _ => vec![],
+                        }),
+                    Control::color(
+                        "color",
+                        ["primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
+                    Control::switch("full_width"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Tabs {
+                        color: match values.str("color").as_str() {
+                            "primary" => Input::None,
+                            color => Input::from(color),
+                        },
+                        size: values.str("size"),
+                        full_width: values.str("full_width") == "true",
+                        label: match values.str("labels").as_str() {
+                            "renamed" => Some(Callback::new(renamed)),
+                            "rich" => Some(Callback::new(rich)),
+                            _ => None,
+                        },
+                        value: section(),
+                        onchange: move |next| section.set(next),
+                        panel: |section: Section| match section {
+                            Section::Account => rsx! { "Account settings" },
+                            Section::Admin => rsx! { "Admin area" },
+                            Section::Billing => rsx! { "Billing details" },
+                        },
+                    }
+                },
             }
             DocSection {
                 title: "Accessibility",
