@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
@@ -24,6 +24,30 @@ pub fn ActionIconPage() -> Element {
     rsx! {
         DocPage {
             title: "ActionIcon",
+            properties: vec![props("ActionIcon", vec![
+                prop("variant", "IconVariant")
+                    .doc("Filled/outlined/transparent chrome. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color."),
+                prop("color", "ThemeAwareValue")
+                    .doc("Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`)."),
+                prop("size", "ThemeAwareValue")
+                    .default("md")
+                    .doc("Button size, independent of the wrapped icon's own size."),
+                prop("radius", "ThemeAwareValue")
+                    .default("sm")
+                    .doc("Corner radius, independent of size."),
+                prop("aria_label", "String")
+                    .doc("Required: an icon-only button has no visible text for a screen reader to announce."),
+                prop("disabled", "bool")
+                    .default("false")
+                    .doc("Disables interaction and dims the button."),
+                prop("onclick", "EventHandler<MouseEvent>")
+                    .doc("Click handler; not called when the button renders as a link."),
+                prop("to", "NavigationTarget")
+                    .doc("Renders as a router-aware link instead of a `<button>`."),
+                prop("target", "String")
+                    .doc("The link's `target` attribute, when `to` is set."),
+                prop("children", "Element").doc("The icon to show."),
+            ])],
             lead: rsx! {
                 Text {
                     Code { source: "Icon" }
@@ -51,41 +75,38 @@ pub fn ActionIconPage() -> Element {
                     "'s own copy button is built."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "ActionIcon",
-                    children_text: "",
-                    children_code: CHILDREN,
-                    fixed: vec!["aria_label: \"Confirm\"".to_string()],
-                    controls: vec![
-                        Control::toggle("variant", ["none", "filled", "outlined", "transparent"])
-                            .labels(["None", "Filled", "Outlined", "Transparent"]),
-                        // A bare `primary` is what an unset `color` resolves
-                        // to, so that swatch prints nothing.
-                        Control::color(
-                            "color",
-                            ["primary", "secondary", "success", "error", "warning", "info"],
-                        ),
-                        Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                        Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                        Control::switch("disabled"),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        ActionIcon {
-                            variant: or_plain(values.str("variant")),
-                            color: match values.str("color").as_str() {
-                                "primary" => Input::None,
-                                color => Input::from(color),
-                            },
-                            size: or_unset(values.str("size")),
-                            radius: or_unset(values.str("radius")),
-                            disabled: values.str("disabled") == "true",
-                            aria_label: "Confirm",
-                            CheckmarkIcon {}
-                        }
-                    },
-                }
+            Demo {
+                component: "ActionIcon",
+                children_text: "",
+                children_code: CHILDREN,
+                fixed: vec!["aria_label: \"Confirm\"".to_string()],
+                controls: vec![
+                    Control::toggle("variant", ["none", "filled", "outlined", "transparent"])
+                        .labels(["None", "Filled", "Outlined", "Transparent"]),
+                    // A bare `primary` is what an unset `color` resolves
+                    // to, so that swatch prints nothing.
+                    Control::color(
+                        "color",
+                        ["primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::switch("disabled"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    ActionIcon {
+                        variant: or_plain(values.str("variant")),
+                        color: match values.str("color").as_str() {
+                            "primary" => Input::None,
+                            color => Input::from(color),
+                        },
+                        size: or_unset(values.str("size")),
+                        radius: or_unset(values.str("radius")),
+                        disabled: values.str("disabled") == "true",
+                        aria_label: "Confirm",
+                        CheckmarkIcon {}
+                    }
+                },
             }
             DocSection {
                 title: "As a link",
