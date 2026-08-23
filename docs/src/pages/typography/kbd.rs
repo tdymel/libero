@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Kbd, Text};
 
@@ -7,6 +7,12 @@ pub fn KbdPage() -> Element {
     rsx! {
         DocPage {
             title: "Kbd",
+            properties: vec![props("Kbd", vec![
+                prop("size", "Size")
+                    .default("sm")
+                    .doc("Font size. Everything else about the look is `Theme::kbd` only."),
+                prop("children", "Element").doc("The key label."),
+            ])],
             lead: rsx! {
                 Text {
                     "Save with "
@@ -20,19 +26,16 @@ pub fn KbdPage() -> Element {
                     ") - size is the only prop."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Kbd",
-                    children_text: "Ctrl",
-                    controls: vec![
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("sm"),
-                    ],
-                    render: move |values: DemoValues| rsx! {
-                        Kbd { size: values.str("size"), "Ctrl" }
-                    },
-                }
+            Demo {
+                component: "Kbd",
+                children_text: "Ctrl",
+                controls: vec![
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Kbd { size: values.str("size"), "Ctrl" }
+                },
             }
         }
     }
