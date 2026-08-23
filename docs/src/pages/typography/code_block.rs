@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, CodeBlock, Text};
 
@@ -45,6 +45,28 @@ pub fn CodeBlockPage() -> Element {
     rsx! {
         DocPage {
             title: "CodeBlock",
+            properties: vec![props("CodeBlock", vec![
+                prop("source", "String")
+                    .doc("The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content."),
+                prop("language", "Language")
+                    .doc("Unrecognized values fall back to no highlighting rather than a guess."),
+                prop("header", "bool")
+                    .default("true")
+                    .doc("A bar above the code naming the language, or \"Unrecognized language\" if it isn't in the catalog or its `code-lang-*` feature is off."),
+                prop("copyable", "bool")
+                    .default("true")
+                    .doc("Without `header`, floats in the top-right corner."),
+                prop("max_lines", "Option<u32>")
+                    .doc("Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless."),
+                prop("line_numbers", "bool")
+                    .default("true")
+                    .doc("Toggles the line-number gutter."),
+                prop("highlight_lines", "Option<String>")
+                    .doc("1-indexed lines to emphasize, e.g. `\"1,5-7,10\"`. Malformed segments are skipped, not rejected."),
+                prop("diff", "bool")
+                    .default("false")
+                    .doc("Reads `source` as a unified diff: a leading `+`/`-` colors the row and is stripped from what's shown, highlighted and copied. Wins over `highlight_lines`."),
+            ])],
             lead: rsx! {
                 Text {
                     "A "
@@ -65,9 +87,7 @@ pub fn CodeBlockPage() -> Element {
                     "primary colors."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
+            Demo {
                     component: "CodeBlock",
                     children_text: "",
                     controls: vec![
@@ -118,7 +138,6 @@ pub fn CodeBlockPage() -> Element {
                             }
                         }
                     },
-                }
             }
             {languages_section()}
         }
