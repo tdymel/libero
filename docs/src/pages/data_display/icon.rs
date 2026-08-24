@@ -12,6 +12,8 @@ pub fn IconPage() -> Element {
     rsx! {
         DocPage {
             title: "Icon",
+            source: "libero/src/components/data_display/icon.rs",
+            markdown: "/md/icon.md",
             properties: vec![
                 props("Icon", vec![
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
