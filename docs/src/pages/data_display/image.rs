@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Image, Text},
@@ -63,7 +63,8 @@ pub fn ImagePage() -> Element {
                         ["fill", "contain", "cover", "none", "scale-down"],
                     )
                     .default(theme.image.fit.as_str()),
-                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "50%"]),
+                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "50%"])
+                        .default(theme.image.radius),
                     Control::switch("zoomable"),
                     // Drives `src` too: a fallback only shows once the
                     // real source fails, so the switch has to break it.
@@ -87,7 +88,7 @@ pub fn ImagePage() -> Element {
                         fallback_src: crate::FALLBACK_IMAGE.to_string(),
                         alt: "A stylised landscape",
                         fit: values.str("fit"),
-                        radius: or_unset(values.str("radius")),
+                        radius: values.str("radius"),
                         zoomable: values.str("zoomable") == "true",
                         sx: sx().width("160px").height("160px").background("grey.1"),
                     }

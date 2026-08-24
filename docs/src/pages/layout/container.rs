@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Container, Text},
@@ -42,14 +42,15 @@ pub fn ContainerPage() -> Element {
                 children_text: "Centered, width-capped content.",
                 fixed: vec![SX.to_string()],
                 controls: vec![
-                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                    Control::slider("gutters", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("lg"),
+                    Control::slider("gutters", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
                     Control::toggle("component", ["div", "main", "section"]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Container {
-                        size: or_unset(values.str("size")),
-                        gutters: or_unset(values.str("gutters")),
+                        size: values.str("size"),
+                        gutters: values.str("gutters"),
                         component: values.str("component"),
                         sx: sx().background("grey.1").padding_top("16px").padding_bottom("16px"),
                         "Centered, width-capped content."

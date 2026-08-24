@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Icon, Input, Text};
 
@@ -52,8 +52,9 @@ pub fn IconPage() -> Element {
                         "color",
                         ["primary", "secondary", "success", "error", "warning", "info"],
                     ),
-                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
                     Control::toggle("component", ["span", "div"]),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -63,8 +64,8 @@ pub fn IconPage() -> Element {
                             "primary" => Input::None,
                             color => Input::from(color),
                         },
-                        size: or_unset(values.str("size")),
-                        radius: or_unset(values.str("radius")),
+                        size: values.str("size"),
+                        radius: values.str("radius"),
                         component: values.str("component"),
                         CheckmarkIcon {}
                     }

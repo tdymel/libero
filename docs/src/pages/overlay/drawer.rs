@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Button, Code, Drawer, Text, Title},
@@ -58,7 +58,7 @@ pub fn DrawerPage() -> Element {
                 ],
                 controls: vec![
                     Control::toggle("anchor", ["left", "right", "top", "bottom"]),
-                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Button {
@@ -69,7 +69,7 @@ pub fn DrawerPage() -> Element {
                     if open() {
                         Drawer {
                             anchor: values.str("anchor"),
-                            size: or_unset(values.str("size")),
+                            size: values.str("size"),
                             onclose: move |_| open.set(false),
                             sx: sx().padding("16px"),
                             Title { size: "lg", "Temporary drawer" }

@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
@@ -143,7 +143,7 @@ fn controls() -> Vec<Control> {
     vec![
         Control::switch("masonry"),
         Control::switch("dense"),
-        Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
     ]
 }
 
@@ -190,7 +190,7 @@ pub fn GridPage() -> Element {
                     GridZone {
                         masonry: values.str("masonry") == "true",
                         dense: values.str("dense") == "true",
-                        gap: or_unset(values.str("gap")),
+                        gap: values.str("gap"),
                         {cards()}
                     }
                 },

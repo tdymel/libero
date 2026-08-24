@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Dialog, Text, Title},
@@ -44,14 +44,14 @@ pub fn DialogPage() -> Element {
                 children_code: CONTENT.to_string(),
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
-                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl"]).default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Dialog {
                         aria_label: "Dialog surface",
-                        size: or_unset(values.str("size")),
-                        radius: or_unset(values.str("radius")),
+                        size: values.str("size"),
+                        radius: values.str("radius"),
                         sx: sx().margin("0"),
                         Title { size: "lg", "Dialog surface" }
                         Text { "Dialog rendered inline, without Modal's portal and backdrop." }

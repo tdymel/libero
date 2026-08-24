@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, or_unset, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
@@ -89,8 +89,9 @@ pub fn ActionIconPage() -> Element {
                         "color",
                         ["primary", "secondary", "success", "error", "warning", "info"],
                     ),
-                    Control::slider("size", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
-                    Control::slider("radius", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -100,8 +101,8 @@ pub fn ActionIconPage() -> Element {
                             "primary" => Input::None,
                             color => Input::from(color),
                         },
-                        size: or_unset(values.str("size")),
-                        radius: or_unset(values.str("radius")),
+                        size: values.str("size"),
+                        radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
                         aria_label: "Confirm",
                         CheckmarkIcon {}

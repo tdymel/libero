@@ -48,7 +48,7 @@ fn controls() -> Vec<Control> {
     #[allow(unused_mut)]
     let mut controls = vec![
         Control::toggle("direction", ["column", "row"]),
-        Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
         Control::select(
             "align",
             ["auto", "flex-start", "center", "flex-end", "stretch"],
@@ -64,7 +64,7 @@ fn controls() -> Vec<Control> {
                 "space-around",
             ],
         ),
-        Control::select("wrap", ["auto", "nowrap", "wrap", "wrap-reverse"]),
+        Control::select("wrap", ["nowrap", "wrap", "wrap-reverse"]),
     ];
 
     // A rule between row children has to be the other way round, so the
@@ -120,10 +120,10 @@ pub fn FlexPage() -> Element {
                             .padding("8px")
                             .background("grey.1"),
                         direction: values.str("direction"),
-                        gap: or_unset(values.str("gap")),
+                        gap: values.str("gap"),
                         align: or_unset(values.str("align")),
                         justify: or_unset(values.str("justify")),
-                        wrap: or_unset(values.str("wrap")),
+                        wrap: values.str("wrap"),
                         divider: divider_element(&values),
                         Box {
                             sx: sx().padding("8px 16px").background("primary.1"),

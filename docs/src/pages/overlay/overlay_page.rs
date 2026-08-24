@@ -44,7 +44,7 @@ pub fn OverlayPage() -> Element {
                 component: "Overlay",
                 children_text: "Loading...",
                 controls: vec![
-                    Control::slider("opacity", ["auto", "0.2", "0.4", "0.6", "0.8"]),
+                    Control::slider("opacity", ["0.2", "0.4", "0.6", "0.8"]).default("0.6"),
                     Control::slider("blur", ["auto", "2px", "4px", "8px"]),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -57,10 +57,7 @@ pub fn OverlayPage() -> Element {
                             .background("grey.2"),
                         Text { sx: sx().padding("16px"), "Content behind the overlay" }
                         Overlay {
-                            opacity: match values.str("opacity").as_str() {
-                                "auto" => Input::None,
-                                opacity => Input::from(opacity),
-                            },
+                            opacity: values.str("opacity"),
                             blur: match values.str("blur").as_str() {
                                 "auto" => Input::None,
                                 blur => Input::from(blur),
