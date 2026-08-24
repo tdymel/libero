@@ -1,0 +1,17 @@
+# libero
+
+> A Dioxus component library: typed style props (`Sx`), a theme of design
+> tokens, and accessible components. Written in Rust, rendered to the web.
+
+The docs site is a Dioxus app, so its HTML carries no content until the wasm
+runs. Every docs page therefore also exists as plain markdown under `/md/`.
+
+- [Markdown index](/md/index.md): every docs page as a standalone markdown
+  file, grouped by component group. Start here - each entry links the page's
+  own file, which carries the import line, examples, props, theme defaults,
+  CSS variables and data attributes.
+
+## Source
+
+- [libero on GitHub](https://github.com/tdymel/libero): component source lives
+  at `libero/src/components/<group>/<component>/`.
