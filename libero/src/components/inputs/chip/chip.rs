@@ -7,6 +7,7 @@ use crate::{
         common::{base_color, base_props, contrast_color, focus_ring_sx, hover_color, variables},
         inputs::{ButtonVariant, button_variant_sx},
         layout::use_box,
+        navigation::InternalAnchor,
     },
     hooks::{use_cache, use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -28,7 +29,11 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .font_weight("500")
         .white_space("nowrap")
         .user_select("none")
-        .max_width("100%");
+        .max_width("100%")
+        // A `<button>` root inherits neither, and a chip has to look the same
+        // whichever tag it lands on.
+        .font_family("inherit")
+        .text_decoration("none");
 
     ButtonVariant::ALL
         .iter()
@@ -55,6 +60,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 &CHIP_HOVER_VAR,
             ),
         )
+        .when("clickable", sx().cursor("pointer"))
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -65,6 +71,8 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // is. Scoped to that child so the delete button's own ring - every
         // `Box` gets one - does not draw a second one out here.
         .selector("&:has(> input:focus-visible)", focus_ring_sx())
+        // The `<button>`/`<a>` root focuses itself.
+        .focus_visible(focus_ring_sx())
 });
 
 static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
@@ -110,6 +118,15 @@ base_props! {
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
+        /// A plain action: renders a `<button>` root.
+        #[props(default)]
+        onclick: Option<EventHandler<MouseEvent>>,
+        /// Renders a router-aware link instead. Takes precedence over
+        /// `onclick`, which an `<a>` has no use for.
+        #[props(default, into)]
+        to: Input<NavigationTarget>,
+        #[props(default)]
+        target: Option<String>,
         /// Text and `Icon` only: a `<label>` hijacks clicks on nested controls.
         children: Element,
     }
@@ -128,7 +145,11 @@ pub fn Chip(props: ChipProps) -> Element {
     let radius = props.radius.copied_or(theme.chip.radius);
 
     let selectable = props.onchange.is_some();
+    let clickable = props.onclick.is_some() || props.to.as_ref().is_some();
 
+    if selectable && clickable {
+        warn("Chip: `onchange` ignores `onclick`/`to` - a checkbox chip is not a button.");
+    }
     if props.checked.is_some() && !selectable {
         warn("Chip: `checked` without `onchange` can never change.");
     }
@@ -149,6 +170,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .with(radius.radius_state_name(), true)
         .with("checked", checked)
         .with("disabled", disabled)
+        .with("clickable", clickable && !selectable)
         .into();
 
     let id = use_id();
@@ -161,12 +183,47 @@ pub fn Chip(props: ChipProps) -> Element {
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
-        .style(style)
+        .style(style.clone())
         .prepare();
     let input = use_box().framework_sx(&VISUALLY_HIDDEN_SX).prepare();
     let label = use_box().framework_sx(&CHIP_LABEL_SX).prepare();
 
     if !selectable {
+        // `InternalAnchor` has no `onclick`, so a link chip navigates for real.
+        if let Some(to) = props.to.as_ref().cloned() {
+            // `<a>` has no native `disabled`: dropping `to` stops navigation.
+            if disabled {
+                return root
+                    .attr("aria-disabled", "true")
+                    .attr("tabindex", "-1")
+                    .render(HtmlTag::A, props.attributes, props.children);
+            }
+
+            return rsx! {
+                InternalAnchor {
+                    to,
+                    target: props.target,
+                    class: props.class,
+                    sx: props.sx,
+                    framework_sx: &CHIP_BASE_SX,
+                    states,
+                    style,
+                    attributes: props.attributes,
+                    {props.children}
+                }
+            };
+        }
+
+        if let Some(onclick) = props.onclick {
+            // `<button>` defaults to `submit`; `attr_default` still lets a
+            // caller ask for one.
+            return root
+                .event("onclick", move |event: Event<MouseData>| onclick.call(event))
+                .attr("disabled", disabled)
+                .attr_default("type", "button")
+                .render(HtmlTag::Button, props.attributes, props.children);
+        }
+
         return root.attr("aria-disabled", disabled).render(
             HtmlTag::Span,
             props.attributes,

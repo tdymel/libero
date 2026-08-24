@@ -44,6 +44,26 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
 }
 
 #[test]
+fn a_clickable_chip_is_a_button_and_a_linked_one_an_anchor() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { onclick: move |_| {}, "act" }
+                Chip { to: "https://example.com", target: "_blank", "go" }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(attributes_of(&html, "button")["type"], "button");
+    assert_eq!(attributes_of(&html, "a")["href"], "https://example.com");
+    assert_eq!(attributes_of(&html, "a")["target"], "_blank");
+    // The pointer state both roots need, and no `<span>` root gets.
+    assert!(attributes_of(&html, "button")["data-state"].contains("clickable"));
+}
+
+#[test]
 fn a_toggle_group_marks_only_the_selected_button_pressed() {
     fn app() -> Element {
         rsx! {

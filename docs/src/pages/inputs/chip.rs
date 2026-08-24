@@ -5,10 +5,12 @@ use libero::components::{Chip, Code, Flex, Text};
 #[component]
 pub fn ChipPage() -> Element {
     let mut selected = use_signal(|| vec!["rust".to_string()]);
+    let mut clicks = use_signal(|| 0);
 
     rsx! {
         DocPage {
             title: "Chip",
+            source: "libero/src/components/inputs/chip",
             properties: vec![props("Chip", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
@@ -27,6 +29,12 @@ pub fn ChipPage() -> Element {
                     .doc("Disables interaction and dims the chip."),
                 prop("onchange", "EventHandler<bool>")
                     .doc("Called with the value `checked` should take next. Its presence makes the chip a real checkbox."),
+                prop("onclick", "EventHandler<MouseEvent>")
+                    .doc("A plain action; its presence makes the chip a `button`."),
+                prop("to", "NavigationTarget")
+                    .doc("Renders a router-aware link instead. Takes precedence over `onclick`."),
+                prop("target", "String")
+                    .doc("Link target, e.g. `_blank`. Only with `to`."),
                 prop("children", "Element")
                     .doc("Text and `Icon` only - a `<label>` hijacks clicks on nested controls."),
             ])],
@@ -123,6 +131,32 @@ pub fn ChipPage() -> Element {
                     }
                 }
                 Text { "Selected: {selected():?}" }
+            }
+            DocSection {
+                title: "Actions and links",
+                Text {
+                    Code { source: "onclick" }
+                    " makes the chip a "
+                    Code { source: "button" }
+                    ", "
+                    Code { source: "to" }
+                    " a router-aware link. Neither combines with "
+                    Code { source: "onchange" }
+                    "."
+                }
+                Flex {
+                    direction: "row",
+                    gap: "md",
+                    Chip {
+                        onclick: move |_| clicks += 1,
+                        "Clicked {clicks}x"
+                    }
+                    Chip {
+                        to: "https://dioxuslabs.com",
+                        target: "_blank",
+                        "Dioxus"
+                    }
+                }
             }
         }
     }

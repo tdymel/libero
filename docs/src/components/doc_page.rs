@@ -1,8 +1,10 @@
 use dioxus::prelude::*;
-use libero::components::{Flex, Icon, TabLabel, TabValue, Tabs, Title};
+use libero::components::{Chip, Flex, Icon, TabLabel, TabValue, Tabs, Title};
 
 use super::{PropGroup, PropertyTable};
-use crate::icons::{CodeIcon, FileIcon};
+use crate::icons::{CodeIcon, FileIcon, GitHubIcon};
+
+const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
 
 /// The tabs a docs page can show. `Usage` is the page's own sections.
 #[derive(Clone, PartialEq, TabValue)]
@@ -20,6 +22,9 @@ enum DocTab {
 pub fn DocPage(
     title: String,
     lead: Element,
+    /// Repo-relative path to the component's source, linked beside the title.
+    #[props(default)]
+    source: Option<String>,
     #[props(default)] properties: Vec<PropGroup>,
     children: Element,
 ) -> Element {
@@ -32,7 +37,22 @@ pub fn DocPage(
             Flex {
                 direction: "column",
                 gap: "lg",
-                Title { size: "xxl", "{title}" }
+                Flex {
+                    direction: "row",
+                    align: "center",
+                    gap: "md",
+                    wrap: "wrap",
+                    Title { size: "xxl", "{title}" }
+                    if let Some(source) = source {
+                        Chip {
+                            to: format!("{REPO}{source}"),
+                            target: "_blank",
+                            size: "sm",
+                            Icon { variant: "transparent", size: "sm", color: "inherit", GitHubIcon {} }
+                            "Source"
+                        }
+                    }
+                }
                 {lead}
             }
             if properties.is_empty() {
