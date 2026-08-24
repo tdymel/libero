@@ -276,7 +276,7 @@ State tokens on each root's `data-state`, space separated.
 
 | Token | On | Condition |
 |---|---|---|
-| `<size>` | `Grid` | The zone `gap` in effect. |
+| `size-<size>` | `Grid` | The `gap` in effect. |
 | `container` | `GridZone` | The zone has an area, so it is a query container. |
 | `dense` | `GridZone` | `dense` is set. |
 | `masonry` | `GridZone` | `masonry` is set. |
