@@ -116,7 +116,7 @@ fn PropRows(properties: Vec<PropDoc>, base: bool) -> Element {
                             wrap: "wrap",
                             gap: "xs",
                             align: "baseline",
-                            Code { source: "{p.name}: {p.ty}" }
+                            Code { source: "{p.name}: {p.ty}", language: "rust" }
                             if !p.default.is_empty() {
                                 Text { size: "xs", color: "grey.6", "default: {p.default}" }
                             }
