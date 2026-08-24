@@ -7,6 +7,8 @@ pub fn ButtonPage() -> Element {
     rsx! {
         DocPage {
             title: "Button",
+            source: "libero/src/components/inputs/button.rs",
+            markdown: "/md/button.md",
             properties: vec![props("Button", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
