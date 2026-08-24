@@ -16,6 +16,8 @@ pub fn VisuallyHiddenPage() -> Element {
     rsx! {
         DocPage {
             title: "Visually Hidden",
+            source: "libero/src/components/a11y/visually_hidden.rs",
+            markdown: "/md/visually_hidden.md",
             properties: vec![props("VisuallyHidden", vec![
                 prop("children", "Element").doc("The screen-reader-only content."),
             ])],
