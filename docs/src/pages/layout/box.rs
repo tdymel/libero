@@ -35,14 +35,16 @@ pub fn BoxPage() -> Element {
                 prop("component", "HtmlTag")
                     .default("div")
                     .doc("Which element to render as."),
+                prop("framework_sx", "&'static StaticSx")
+                    .doc("Base styles of a component built on `Box`, on their own CSS layer - below `sx`, so a caller's override still wins."),
                 prop("style", "String")
                     .doc("Raw `style` declarations, merged after `variables` - not overwritten by it."),
                 prop("alt", "String")
-                    .doc("Escape-hatch attribute, forwarded when `component` renders as `img`."),
+                    .doc("The `img` attribute, a field rather than a passed-through attribute because `a` and `button` share the name."),
                 prop("r#type", "String")
-                    .doc("Escape-hatch attribute, forwarded when `component` renders as `button`."),
+                    .doc("The `button` attribute, a field for the same reason as `alt`."),
                 prop("children", "Element").doc("The element's content."),
-            ])],
+            ]).extends("img, a and button")],
             lead: rsx! {
                 Text {
                     "The polymorphic primitive every other component is built on - renders "
