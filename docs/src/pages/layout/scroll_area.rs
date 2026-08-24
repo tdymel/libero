@@ -55,6 +55,8 @@ pub fn ScrollAreaPage() -> Element {
     rsx! {
         DocPage {
             title: "ScrollArea",
+            source: "libero/src/components/layout/scroll_area.rs",
+            markdown: "/md/scroll_area.md",
             properties: vec![props("ScrollArea", vec![
                 prop("scrollbars", "ScrollAxis")
                     .default("vertical")
