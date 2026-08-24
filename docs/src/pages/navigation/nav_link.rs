@@ -36,6 +36,8 @@ pub fn NavLinkPage() -> Element {
     rsx! {
         DocPage {
             title: "NavLink",
+            source: "libero/src/components/navigation/nav_link.rs",
+            markdown: "/md/nav_link.md",
             properties: vec![props("NavLink", vec![
                 prop("to", "NavigationTarget").doc("A plain path/URL or a typed route, same as `Anchor::to`."),
                 prop("target", "String").doc("The link's `target` attribute."),
