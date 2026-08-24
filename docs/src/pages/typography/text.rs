@@ -7,6 +7,8 @@ pub fn TextPage() -> Element {
     rsx! {
         DocPage {
             title: "Text",
+            source: "libero/src/components/typography/text.rs",
+            markdown: "/md/text.md",
             properties: vec![props("Text", vec![
                 prop("size", "Size")
                     .default("md")
