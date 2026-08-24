@@ -37,7 +37,8 @@ pub fn SelectPage() -> Element {
                 props("Option", vec![
                     prop("value", "String").doc("The option's value, reported to `onchange`."),
                     prop("children", "Element").doc("The option's visible label."),
-                ]),
+                ])
+                .extends("option"),
             ],
             lead: rsx! {
                 Text {
