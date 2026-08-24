@@ -9,6 +9,8 @@ pub fn SwitchPage() -> Element {
     rsx! {
         DocPage {
             title: "Switch",
+            source: "libero/src/components/inputs/switch",
+            markdown: "/md/switch.md",
             properties: vec![props("Switch", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")
