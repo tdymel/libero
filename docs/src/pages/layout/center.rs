@@ -28,6 +28,8 @@ pub fn CenterPage() -> Element {
     rsx! {
         DocPage {
             title: "Center",
+            source: "libero/src/components/layout/center.rs",
+            markdown: "/md/center.md",
             properties: vec![props("Center", vec![
                 prop("inline", "bool")
                     .default("false")
