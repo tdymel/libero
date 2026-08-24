@@ -42,6 +42,8 @@ pub fn TooltipPage() -> Element {
     rsx! {
         DocPage {
             title: "Tooltip",
+            source: "libero/src/components/overlay/tooltip.rs",
+            markdown: "/md/tooltip.md",
             properties: vec![props("Tooltip", vec![
                 prop("label", "Element").doc("The bubble's content."),
                 prop("placement", "TooltipPlacement")
