@@ -24,6 +24,8 @@ pub fn DataListPage() -> Element {
     rsx! {
         DocPage {
             title: "DataList",
+            source: "libero/src/components/data_display/data_list",
+            markdown: "/md/data_list.md",
             properties: vec![
                 props("DataList", vec![
                     prop("orientation", "Orientation")
