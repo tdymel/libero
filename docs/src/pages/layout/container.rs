@@ -14,6 +14,8 @@ pub fn ContainerPage() -> Element {
     rsx! {
         DocPage {
             title: "Container",
+            source: "libero/src/components/layout/container.rs",
+            markdown: "/md/container.md",
             properties: vec![props("Container", vec![
                 prop("component", "HtmlTag")
                     .default("div")
