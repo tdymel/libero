@@ -11,6 +11,7 @@ pub fn ChipPage() -> Element {
         DocPage {
             title: "Chip",
             source: "libero/src/components/inputs/chip",
+            markdown: "/md/chip.md",
             properties: vec![props("Chip", vec![
                 prop("color", "ThemeAwareValue")
                     .default("primary")

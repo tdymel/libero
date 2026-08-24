@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use libero::components::{Chip, Flex, Icon, TabLabel, TabValue, Tabs, Title};
 
 use super::{PropGroup, PropertyTable};
-use crate::icons::{CodeIcon, FileIcon, GitHubIcon};
+use crate::icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon};
 
 const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
 
@@ -25,6 +25,10 @@ pub fn DocPage(
     /// Repo-relative path to the component's source, linked beside the title.
     #[props(default)]
     source: Option<String>,
+    /// URL of this page's markdown rendering - a verbatim copy under
+    /// `public/md`, so the link stays a stable, guessable path.
+    #[props(default)]
+    markdown: Option<String>,
     #[props(default)] properties: Vec<PropGroup>,
     children: Element,
 ) -> Element {
@@ -40,16 +44,33 @@ pub fn DocPage(
                 Flex {
                     direction: "row",
                     align: "center",
-                    gap: "md",
+                    gap: "lg",
                     wrap: "wrap",
                     Title { size: "xxl", "{title}" }
-                    if let Some(source) = source {
-                        Chip {
-                            to: format!("{REPO}{source}"),
-                            target: "_blank",
-                            size: "sm",
-                            Icon { variant: "transparent", size: "sm", color: "inherit", GitHubIcon {} }
-                            "Source"
+                    Flex {
+                        direction: "row",
+                        align: "center",
+                        gap: "sm",
+                        wrap: "wrap",
+                        if let Some(source) = source {
+                            Chip {
+                                to: format!("{REPO}{source}"),
+                                target: "_blank",
+                                size: "sm",
+                                Icon { variant: "transparent", size: "sm", color: "inherit", GitHubIcon {} }
+                                "Source"
+                            }
+                        }
+                        if let Some(markdown) = markdown {
+                            Chip {
+                                // `External`, or the router parses the path as
+                                // a route and fails - it is a static file.
+                                to: NavigationTarget::External(markdown),
+                                target: "_blank",
+                                size: "sm",
+                                Icon { variant: "transparent", size: "sm", color: "inherit", MarkdownIcon {} }
+                                "View as markdown"
+                            }
                         }
                     }
                 }
@@ -76,7 +97,11 @@ pub fn DocPage(
                         },
                     ),
                     panel: move |selected| match selected {
-                        DocTab::Usage => rsx! { {children.clone()} },
+                        // The sections carry no spacing of their own - outside
+                        // the tabs the page's own column `Flex` gaps them.
+                        DocTab::Usage => rsx! {
+                            Flex { direction: "column", gap: "xxl", {children.clone()} }
+                        },
                         DocTab::Properties => rsx! {
                             PropertyTable { properties: properties.clone() }
                         },

@@ -104,3 +104,20 @@ pub fn GitHubIcon() -> Element {
         }
     }
 }
+
+#[component]
+pub fn MarkdownIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "2", y: "5", width: "20", height: "14", rx: "2" }
+            polyline { points: "6 15 6 9 9 12 12 9 12 15" }
+            polyline { points: "16 9 16 15 19 15" }
+        }
+    }
+}
