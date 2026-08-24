@@ -102,7 +102,9 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                 Flex {
                     direction: "column",
                     gap: "sm",
-                    Title { size: "lg", "{group.component}" }
+                    // `lg` is an h3, and the page's own title is the h1 - so
+                    // the tag is pinned to h2, as `DocSection`'s xl already is.
+                    Title { size: "lg", component: "h2", "{group.component}" }
                     PropRows {
                         properties: group.props,
                         base: group.base,
