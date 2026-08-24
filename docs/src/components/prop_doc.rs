@@ -94,6 +94,10 @@ fn base_props(extends: &str) -> Vec<PropDoc> {
 /// scrollbar and without a tall cell per row.
 #[component]
 pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
+    // One table needs no heading - the tab already says what it lists, and the
+    // component is the page's own title.
+    let named = properties.len() > 1;
+
     rsx! {
         Flex {
             direction: "column",
@@ -102,9 +106,11 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                 Flex {
                     direction: "column",
                     gap: "sm",
-                    // `lg` is an h3, and the page's own title is the h1 - so
-                    // the tag is pinned to h2, as `DocSection`'s xl already is.
-                    Title { size: "lg", component: "h2", "{group.component}" }
+                    if named {
+                        // `lg` is an h3, and the page's own title is the h1 -
+                        // so the tag is pinned to h2, as `DocSection`'s xl is.
+                        Title { size: "lg", component: "h2", "{group.component}" }
+                    }
                     PropRows {
                         properties: group.props,
                         base: group.base,
