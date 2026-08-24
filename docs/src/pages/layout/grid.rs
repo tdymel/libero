@@ -152,6 +152,8 @@ pub fn GridPage() -> Element {
     rsx! {
         DocPage {
             title: "Grid",
+            source: "libero/src/components/layout/grid",
+            markdown: "/md/grid.md",
             properties: vec![
                 props("Grid", vec![
                     prop("template", "GridTemplate").doc("The named-area matrix. Build it once outside the render."),
