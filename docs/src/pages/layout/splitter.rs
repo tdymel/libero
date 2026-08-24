@@ -81,6 +81,8 @@ pub fn SplitterPage() -> Element {
     rsx! {
         DocPage {
             title: "Splitter",
+            source: "libero/src/components/layout/splitter",
+            markdown: "/md/splitter.md",
             properties: vec![props("Splitter", vec![
                 prop("orientation", "Orientation")
                     .default("vertical")
