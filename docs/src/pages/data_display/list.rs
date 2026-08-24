@@ -20,6 +20,8 @@ pub fn ListPage() -> Element {
     rsx! {
         DocPage {
             title: "List",
+            source: "libero/src/components/data_display/list",
+            markdown: "/md/list.md",
             properties: vec![
                 props("List", vec![
                     prop("size", "Size")
