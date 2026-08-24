@@ -41,6 +41,7 @@ pub struct PropGroup {
     component: String,
     props: Vec<PropDoc>,
     base: bool,
+    extends: String,
 }
 
 /// Starts a Properties block for one component.
@@ -49,26 +50,40 @@ pub fn props(component: impl Into<String>, props: Vec<PropDoc>) -> PropGroup {
         component: component.into(),
         props,
         base: true,
+        extends: String::new(),
     }
 }
 
 impl PropGroup {
     /// For a type that is not a `base_props!` component - a builder, say.
-    #[allow(dead_code)]
     pub fn without_base_props(mut self) -> Self {
         self.base = false;
+        self
+    }
+
+    /// The tags this component's `base_props!` extends, as written there -
+    /// `attributes` then takes their own attributes, not just the global ones.
+    pub fn extends(mut self, tags: impl Into<String>) -> Self {
+        self.extends = tags.into();
         self
     }
 }
 
 /// Appended to every component's own list: what `base_props!` gives all of them.
-fn base_props() -> Vec<PropDoc> {
+fn base_props(extends: &str) -> Vec<PropDoc> {
+    let attributes = match extends.is_empty() {
+        true => "Any global HTML attribute or DOM event handler, passed through to the root."
+            .to_string(),
+        false => format!(
+            "Any global HTML attribute or DOM event handler, plus the ones specific to {extends}, passed through to the root."
+        ),
+    };
+
     vec![
         prop("class", "ClassList").doc("Extra class names on the root element."),
         prop("sx", "Sx").doc("Style overrides, applied after the theme's."),
         prop("states", "States").doc("`data-state` flags on the root, for styling and CSS hooks."),
-        prop("attributes", "Vec<Attribute>")
-            .doc("Any global HTML attribute or DOM event handler, passed through to the root."),
+        prop("attributes", "Vec<Attribute>").doc(attributes),
     ]
 }
 
@@ -88,7 +103,11 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
                     direction: "column",
                     gap: "sm",
                     Title { size: "lg", "{group.component}" }
-                    PropRows { properties: group.props, base: group.base }
+                    PropRows {
+                        properties: group.props,
+                        base: group.base,
+                        extends: group.extends,
+                    }
                 }
             }
         }
@@ -96,10 +115,10 @@ pub fn PropertyTable(properties: Vec<PropGroup>) -> Element {
 }
 
 #[component]
-fn PropRows(properties: Vec<PropDoc>, base: bool) -> Element {
+fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
     let mut rows = properties;
     if base {
-        rows.extend(base_props());
+        rows.extend(base_props(&extends));
     }
 
     rsx! {
