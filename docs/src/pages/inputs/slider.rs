@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Flex, Slider, SliderChangeEvent, SliderMark, SliderValue, Text},
@@ -217,6 +217,46 @@ pub fn SliderPage() -> Element {
     rsx! {
         DocPage {
             title: "Slider",
+            properties: vec![
+                props("Slider", vec![
+                    prop("value", "V").doc("Strictly controlled - pair it with `on_change`."),
+                    prop("min", "V")
+                        .default("first option, or 0.0")
+                        .doc("Lower bound, written in the value's own type."),
+                    prop("max", "V")
+                        .default("last option, or 100.0")
+                        .doc("Upper bound, written in the value's own type."),
+                    prop("step", "V::Step")
+                        .doc("Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps."),
+                    prop("size", "Size").default("md").doc("Controls track, thumb, and font size."),
+                    prop("radius", "Size")
+                        .default("xl")
+                        .doc("Track corner radius; the thumb is always a circle."),
+                    prop("color", "ThemeAwareValue")
+                        .default("primary")
+                        .doc("Accent color; a theme color name or a literal CSS color."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Disables interaction and dims the slider."),
+                    prop("label", "Callback<V, String>")
+                        .default("bare value, or SliderValue::label")
+                        .doc("Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`."),
+                    prop("marks", "Vec<SliderMark<V>>")
+                        .default("one per option, discretely")
+                        .doc("Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives."),
+                    prop("aria_label", "String")
+                        .doc("Names the thumb, which is the `role=\"slider\"` element - an `aria_label` in `attributes` would land on the root instead."),
+                    prop("name", "String")
+                        .doc("Emits a hidden input of that name, so the value posts with a form."),
+                    prop("on_change", "EventHandler<SliderChangeEvent<V>>")
+                        .doc("`Start`/`End` bracket a drag, `Change` carries every new value."),
+                ]),
+                props("SliderMark", vec![
+                    prop("value", "V").doc("Where the tick sits on the track."),
+                    prop("label", "String").doc("Caption shown below the tick; omit for an unlabeled mark."),
+                ])
+                .without_base_props(),
+            ],
             lead: rsx! {
                 Text {
                     "A value dragged along a track. Controlled: it renders "
@@ -237,106 +277,103 @@ pub fn SliderPage() -> Element {
                     "the range, step grid, marks and captions all come from that list."
                 }
             },
-            DocSection {
-                title: "Usage",
-                Demo {
-                    component: "Slider",
-                    children_text: "",
-                    controls: vec![
-                        // The value's type is the mode: an ordered enum makes
-                        // the slider discrete, `f64` leaves it continuous. Each
-                        // brings its own props, so the set below swaps with it.
-                        Control::toggle("mode", ["discrete", "continuous"])
-                            .labels(["Discrete", "Continuous"])
-                            .code(mode_code),
-                        Control::slider("size", SIZES).default(theme.slider.size.as_str()),
-                        Control::slider("radius", SIZES).default(theme.slider.radius.as_str()),
-                        Control::color(
-                            "color",
-                            ["primary", "secondary", "success", "error", "warning", "info"],
-                        ),
-                        Control::slider("min", Quality::ALL)
-                            .code(bound_code)
-                            .hidden_when(continuous),
-                        Control::slider("max", Quality::ALL)
-                            .default("ultra")
-                            .code(bound_code)
-                            .hidden_when(continuous),
-                        Control::slider("step", ["1", "2", "3"])
-                            .code(stride_code)
-                            .hidden_when(continuous),
-                        Control::slider("min_value", ["auto", "0.5", "10.0", "50.0"])
-                            .code(number_code)
-                            .hidden_when(discrete),
-                        Control::slider("max_value", ["auto", "3.0", "50.0", "200.0"])
-                            .code(number_code)
-                            .hidden_when(discrete),
-                        Control::slider("step_value", ["auto", "0.1", "5.0", "10.0", "25.0"])
-                            .code(number_code)
-                            .hidden_when(discrete),
-                        Control::switch("marks").code(marks_code),
-                        Control::switch("label").code(label_code),
-                        Control::switch("disabled"),
-                    ],
-                    render: move |values: DemoValues| {
-                        rsx! {
-                            Flex {
-                                direction: "column",
-                                gap: "sm",
-                                sx: sx().width("100%"),
-                                if discrete(&values) {
-                                    Slider {
-                                        aria_label: "Quality",
-                                        value: quality(),
-                                        size: values.str("size"),
-                                        radius: values.str("radius"),
-                                        color: values.str("color"),
-                                        min: quality_of(&values, "min"),
-                                        max: quality_of(&values, "max"),
-                                        step: values.str("step").parse::<usize>().unwrap_or(1),
-                                        marks: discrete_marks(&values),
-                                        label: is_on(&values, "label")
-                                            .then(|| {
-                                                Callback::new(|quality: Quality| {
-                                                    format!("{quality:?} quality")
-                                                })
-                                            }),
-                                        disabled: is_on(&values, "disabled").then_some(true),
-                                        on_change: move |event: SliderChangeEvent<Quality>| {
-                                            quality.set(event.value());
-                                            last_quality.set(event)
-                                        },
-                                    }
-                                    Text {
-                                        size: "sm",
-                                        "value: {quality():?} - last event: {last_quality():?}"
-                                    }
-                                } else {
-                                    Slider {
-                                        aria_label: "Volume",
-                                        value: volume(),
-                                        size: values.str("size"),
-                                        radius: values.str("radius"),
-                                        color: values.str("color"),
-                                        min: number(&values, "min_value"),
-                                        max: number(&values, "max_value"),
-                                        step: number(&values, "step_value"),
-                                        marks: continuous_marks(&values),
-                                        label: is_on(&values, "label")
-                                            .then(|| Callback::new(|value: f64| format!("{value}%"))),
-                                        disabled: is_on(&values, "disabled").then_some(true),
-                                        on_change: move |event: SliderChangeEvent| {
-                                            volume.set(event.value());
-                                            last.set(event)
-                                        },
-                                    }
-                                    Text { size: "sm", "value: {volume()} - last event: {last():?}" }
+            Demo {
+                component: "Slider",
+                children_text: "",
+                controls: vec![
+                    // The value's type is the mode: an ordered enum makes
+                    // the slider discrete, `f64` leaves it continuous. Each
+                    // brings its own props, so the set below swaps with it.
+                    Control::toggle("mode", ["discrete", "continuous"])
+                        .labels(["Discrete", "Continuous"])
+                        .code(mode_code),
+                    Control::slider("size", SIZES).default(theme.slider.size.as_str()),
+                    Control::slider("radius", SIZES).default(theme.slider.radius.as_str()),
+                    Control::color(
+                        "color",
+                        ["primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    Control::slider("min", Quality::ALL)
+                        .code(bound_code)
+                        .hidden_when(continuous),
+                    Control::slider("max", Quality::ALL)
+                        .default("ultra")
+                        .code(bound_code)
+                        .hidden_when(continuous),
+                    Control::slider("step", ["1", "2", "3"])
+                        .code(stride_code)
+                        .hidden_when(continuous),
+                    Control::slider("min_value", ["auto", "0.5", "10.0", "50.0"])
+                        .code(number_code)
+                        .hidden_when(discrete),
+                    Control::slider("max_value", ["auto", "3.0", "50.0", "200.0"])
+                        .code(number_code)
+                        .hidden_when(discrete),
+                    Control::slider("step_value", ["auto", "0.1", "5.0", "10.0", "25.0"])
+                        .code(number_code)
+                        .hidden_when(discrete),
+                    Control::switch("marks").code(marks_code),
+                    Control::switch("label").code(label_code),
+                    Control::switch("disabled"),
+                ],
+                render: move |values: DemoValues| {
+                    rsx! {
+                        Flex {
+                            direction: "column",
+                            gap: "sm",
+                            sx: sx().width("100%"),
+                            if discrete(&values) {
+                                Slider {
+                                    aria_label: "Quality",
+                                    value: quality(),
+                                    size: values.str("size"),
+                                    radius: values.str("radius"),
+                                    color: values.str("color"),
+                                    min: quality_of(&values, "min"),
+                                    max: quality_of(&values, "max"),
+                                    step: values.str("step").parse::<usize>().unwrap_or(1),
+                                    marks: discrete_marks(&values),
+                                    label: is_on(&values, "label")
+                                        .then(|| {
+                                            Callback::new(|quality: Quality| {
+                                                format!("{quality:?} quality")
+                                            })
+                                        }),
+                                    disabled: is_on(&values, "disabled").then_some(true),
+                                    on_change: move |event: SliderChangeEvent<Quality>| {
+                                        quality.set(event.value());
+                                        last_quality.set(event)
+                                    },
                                 }
+                                Text {
+                                    size: "sm",
+                                    "value: {quality():?} - last event: {last_quality():?}"
+                                }
+                            } else {
+                                Slider {
+                                    aria_label: "Volume",
+                                    value: volume(),
+                                    size: values.str("size"),
+                                    radius: values.str("radius"),
+                                    color: values.str("color"),
+                                    min: number(&values, "min_value"),
+                                    max: number(&values, "max_value"),
+                                    step: number(&values, "step_value"),
+                                    marks: continuous_marks(&values),
+                                    label: is_on(&values, "label")
+                                        .then(|| Callback::new(|value: f64| format!("{value}%"))),
+                                    disabled: is_on(&values, "disabled").then_some(true),
+                                    on_change: move |event: SliderChangeEvent| {
+                                        volume.set(event.value());
+                                        last.set(event)
+                                    },
+                                }
+                                Text { size: "sm", "value: {volume()} - last event: {last():?}" }
                             }
                         }
-                    },
-                    wrap: Wrap(wrap_readout),
-                }
+                    }
+                },
+                wrap: Wrap(wrap_readout),
             }
         }
     }
