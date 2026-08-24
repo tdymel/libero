@@ -74,6 +74,8 @@ pub fn CodePage() -> Element {
     rsx! {
         DocPage {
             title: "Code",
+            source: "libero/src/components/typography/code/code.rs",
+            markdown: "/md/code.md",
             properties: vec![props("Code", vec![
                 prop("source", "String").doc("The text to render, highlighted when `language` names a grammar this build compiles in."),
                 prop("language", "Language")
