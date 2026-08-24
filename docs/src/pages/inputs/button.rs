@@ -35,7 +35,7 @@ pub fn ButtonPage() -> Element {
                 prop("target", "String")
                     .doc("The link's `target` attribute, when `to` is set."),
                 prop("children", "Element").doc("The button's label."),
-            ])],
+            ]).extends("button")],
             lead: rsx! {
                 Text {
                     "A clickable control, or a router-aware link when "
