@@ -45,6 +45,8 @@ pub fn CodeBlockPage() -> Element {
     rsx! {
         DocPage {
             title: "CodeBlock",
+            source: "libero/src/components/typography/code/code_block.rs",
+            markdown: "/md/code_block.md",
             properties: vec![props("CodeBlock", vec![
                 prop("source", "String")
                     .doc("The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content."),
