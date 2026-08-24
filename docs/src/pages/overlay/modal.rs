@@ -27,6 +27,8 @@ pub fn ModalPage() -> Element {
     rsx! {
         DocPage {
             title: "Modal",
+            source: "libero/src/components/overlay/modal.rs",
+            markdown: "/md/modal.md",
             properties: vec![
                 props("Modal", vec![
                     prop("onclose", "EventHandler<()>")
