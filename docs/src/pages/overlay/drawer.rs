@@ -27,6 +27,8 @@ pub fn DrawerPage() -> Element {
     rsx! {
         DocPage {
             title: "Drawer",
+            source: "libero/src/components/overlay/drawer.rs",
+            markdown: "/md/drawer.md",
             properties: vec![
                 props("Drawer", vec![
                     prop("anchor", "DrawerAnchor").default("left").doc("The edge the drawer docks to."),
