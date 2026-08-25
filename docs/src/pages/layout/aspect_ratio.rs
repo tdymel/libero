@@ -22,6 +22,8 @@ pub fn AspectRatioPage() -> Element {
     rsx! {
         DocPage {
             title: "AspectRatio",
+            source: "libero/src/components/layout/aspect_ratio.rs",
+            markdown: "/md/aspect_ratio.md",
             properties: vec![props("AspectRatio", vec![
                 prop("ratio", "f32")
                     .default("1.0")
