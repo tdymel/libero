@@ -19,6 +19,8 @@ pub fn AnchorPage() -> Element {
     rsx! {
         DocPage {
             title: "Anchor",
+            source: "libero/src/components/navigation/anchor.rs",
+            markdown: "/md/anchor.md",
             properties: vec![props("Anchor", vec![
                 prop("size", "Size").default("md").doc("Text size."),
                 prop("to", "NavigationTarget")
