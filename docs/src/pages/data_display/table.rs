@@ -73,6 +73,8 @@ pub fn TablePage() -> Element {
     rsx! {
         DocPage {
             title: "Table",
+            source: "libero/src/components/data_display/table",
+            markdown: "/md/table.md",
             properties: vec![
                 props("Table", vec![
                     prop("data", "Vec<T>").doc("One row each, in source order until a column is sorted."),
