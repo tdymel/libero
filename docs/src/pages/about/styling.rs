@@ -121,6 +121,7 @@ pub fn StylingPage() -> Element {
     rsx! {
         DocPage {
             title: "Styling",
+            markdown: "/md/styling.md",
             lead: rsx! {
                 Text {
                     "Every component takes the same four styling props: "
