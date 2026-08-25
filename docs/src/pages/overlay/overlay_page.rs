@@ -10,6 +10,8 @@ pub fn OverlayPage() -> Element {
     rsx! {
         DocPage {
             title: "Overlay",
+            source: "libero/src/components/overlay/overlay.rs",
+            markdown: "/md/overlay.md",
             properties: vec![
                 props("Overlay", vec![
                     prop("z_index", "ThemeAwareValue").default("300").doc("Stacking order for the dim/blur layer."),
