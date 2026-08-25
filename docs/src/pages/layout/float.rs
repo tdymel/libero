@@ -24,6 +24,8 @@ pub fn FloatPage() -> Element {
     rsx! {
         DocPage {
             title: "Float",
+            source: "libero/src/components/layout/float.rs",
+            markdown: "/md/float.md",
             properties: vec![props("Float", vec![
                 prop("placement", "Placement")
                     .default("center-center")
