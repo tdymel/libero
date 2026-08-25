@@ -24,6 +24,8 @@ pub fn ActionIconPage() -> Element {
     rsx! {
         DocPage {
             title: "ActionIcon",
+            source: "libero/src/components/inputs/action_icon.rs",
+            markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
                 prop("variant", "IconVariant")
                     .doc("Filled/outlined/transparent chrome. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color."),
