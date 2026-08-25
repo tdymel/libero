@@ -17,6 +17,8 @@ pub fn SelectPage() -> Element {
     rsx! {
         DocPage {
             title: "Select",
+            source: "libero/src/components/inputs/select",
+            markdown: "/md/select.md",
             properties: vec![
                 props("Select", vec![
                     prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
