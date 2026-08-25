@@ -32,6 +32,8 @@ pub fn SidebarPage() -> Element {
     rsx! {
         DocPage {
             title: "Sidebar",
+            source: "libero/src/components/layout/sidebar.rs",
+            markdown: "/md/sidebar.md",
             properties: vec![props("Sidebar", vec![
                 prop("side", "SidebarSide")
                     .default("left")
