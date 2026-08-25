@@ -7,6 +7,8 @@ pub fn TitlePage() -> Element {
     rsx! {
         DocPage {
             title: "Title",
+            source: "libero/src/components/typography/title.rs",
+            markdown: "/md/title.md",
             properties: vec![props("Title", vec![
                 prop("size", "Size")
                     .default("xxl")
