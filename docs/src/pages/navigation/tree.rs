@@ -141,6 +141,8 @@ pub fn TreePage() -> Element {
     rsx! {
         DocPage {
             title: "Tree",
+            source: "libero/src/components/navigation/tree",
+            markdown: "/md/tree.md",
             properties: vec![
                 props("Tree", vec![
                     prop("size", "Size")
