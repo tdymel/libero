@@ -1,0 +1,225 @@
+# Tabs
+
+Crate: `libero`
+Import: `use libero::components::{TabLabel, TabValue, Tabs};`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/tabs>
+Index: [index.md](index.md) - every other component's markdown page
+Description: One strip of tabs over an enum, with only the selected tab's panel built.
+
+One strip of tabs over an enum, with the selected tab's panel below it. The tabs
+are the enum's variants - `#[derive(TabValue)]` lists them in declaration order
+and names each one - and `panel` is a match over the same type, so a forgotten or
+misspelled tab is a compile error rather than a blank page. Only the selected
+panel is built at all; the others cost nothing until they are picked.
+
+`label` overrides what the derive named a tab, and it runs during render - so it
+can read a locale from a signal or from context, and the strip repaints when that
+changes. Return a string to rename a tab, or `TabLabel::rich` to draw it as rsx
+(an icon, a badge) - that one asks for the name as well, since the rsx is what a
+screen reader cannot use.
+
+## Usage
+
+The enum *is* the tab strip, so it is part of every snippet. `#[tab(label = ..)]`
+renames a variant whose Rust name is not what a reader should see.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{TabValue, Tabs};
+
+#[derive(Clone, PartialEq, TabValue)]
+enum Section {
+    Account,
+    #[tab(label = "Admin area")]
+    Admin,
+    Billing,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Tabs {
+            value: section(),
+            onchange: move |next| section.set(next),
+            panel: |section: Section| match section {
+                Section::Account => rsx! { "Account settings" },
+                Section::Admin => rsx! { "Admin area" },
+                Section::Billing => rsx! { "Billing details" },
+            },
+        }
+    }
+}
+```
+
+Strictly controlled: `value` is the tab that is drawn as selected, and `onchange`
+asks for the next one. Without `onchange` the selection can never change, and
+without `panel` there is nothing below the strip - the library warns about
+either.
+
+`label` renames the whole strip at once. Because it runs during render, reading a
+locale signal inside it is enough to make the strip follow the language:
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{TabLabel, TabValue, Tabs};
+
+#[derive(Clone, PartialEq, TabValue)]
+enum Section {
+    Account,
+    Admin,
+    Billing,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Tabs {
+            value: section(),
+            onchange: move |next| section.set(next),
+            label: |section: Section| match section {
+                Section::Account => "Konto".into(),
+                Section::Admin => "Verwaltung".into(),
+                Section::Billing => "Rechnung".into(),
+            },
+            panel: |section: Section| match section {
+                Section::Account => rsx! { "Konto" },
+                Section::Admin => rsx! { "Verwaltung" },
+                Section::Billing => rsx! { "Rechnung" },
+            },
+        }
+    }
+}
+```
+
+`TabLabel::rich` draws a tab as rsx and names it separately. A tab is a
+`<button>`, so its content has to stay phrasing content: an [Icon](icon.md) is an
+inline-flex `<span>`, while a [Flex](flex.md) is a `<div>` and does not belong
+there.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Icon, TabLabel, TabValue, Tabs};
+
+#[derive(Clone, PartialEq, TabValue)]
+enum Section {
+    Account,
+    Admin,
+    Billing,
+}
+
+#[component]
+fn Demo() -> Element {
+    let mut section = use_signal(|| Section::Account);
+
+    rsx! {
+        Tabs {
+            value: section(),
+            onchange: move |next| section.set(next),
+            label: |section: Section| TabLabel::rich(
+                section.label(),
+                rsx! {
+                    Icon { variant: "transparent", size: "sm", FileIcon {} }
+                    "{section.label()}"
+                },
+            ),
+            panel: |section: Section| rsx! { "{section.label()}" },
+        }
+    }
+}
+```
+
+`FileIcon` there is your own icon component - any `svg` will do; `Icon` is what
+sizes it.
+
+`tabs` narrows the strip to a subset of the enum's variants, and `disabled` lists
+tabs that render but cannot be picked.
+
+## Accessibility
+
+The strip is a `role="tablist"` of buttons, each pointing at its panel through
+`aria-controls`, and the panel points back with `aria-labelledby`. Only the
+selected tab is in the tab order; Left and Right move between tabs and select as
+they go, Home and End jump to the ends. Focus follows the selection, so the strip
+behaves like one control rather than a row of buttons.
+
+A tab named in `disabled` gets `aria-disabled` rather than the `disabled`
+attribute, so it still reads to a screen reader and the arrow keys simply step
+over it.
+
+`TabLabel::rich` takes the accessible name as its first argument for the same
+reason: the rsx it draws is what a screen reader cannot use, and that name
+becomes the tab's `aria-label`.
+
+## Props
+
+### Tabs
+
+| Prop | Type | Default | Description |
+|---|---|---|---|
+| `value` | `T` | required | The selected tab. Strictly controlled - pair it with `onchange`. |
+| `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
+| `panel` | `Callback<T, Element>` | - | The body of the selected tab. Called for `value` only, so the other panels cost nothing. |
+| `tabs` | `Vec<T>` | `T::options()` | The tabs to show. |
+| `label` | `Callback<T, TabLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
+| `disabled` | `Vec<T>` | - | Tabs that render but cannot be picked. |
+| `size` | `Size` | `md` | Tab strip size. |
+| `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
+| `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |
+
+Like every component, `Tabs` also takes the shared props `sx`, `class`, `style`,
+`states`, and any extra HTML attributes.
+
+### TabLabel
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `name` | `String` | required | The tab's visible text and accessible name. |
+| `content` | `Element` | - | Drawn in place of the name, via `TabLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use. |
+
+`TabLabel` is a value, not a component - it takes no shared props. A bare string
+converts into one (`"Konto".into()`).
+
+## Theme defaults
+
+`TabsDefaults` on the theme; per-size values live in its `sizes` scale.
+
+| Field | Type | Description |
+|---|---|---|
+| `size` | `Size` | Default `size` when the prop is omitted. |
+| `sizes` | `Sizes<TabsSizeLevel>` | `font_size`, `padding_x`, `padding_y`, `indicator`, `icon_gap` per size. |
+| `border_color` | `ColorValue` | The line the whole strip sits on. |
+| `hover_color` | `ColorValue` | Background of an unselected tab while hovered. |
+
+## CSS variables
+
+| Variable | Description |
+|---|---|
+| `--lsx-tabs-font-size-<size>` | `font-size` for that size step. |
+| `--lsx-tabs-padding-x-<size>` | Horizontal tab padding for that size step. |
+| `--lsx-tabs-padding-y-<size>` | Vertical tab padding for that size step. |
+| `--lsx-tabs-indicator-<size>` | Thickness of the selected tab's underline. |
+| `--lsx-tabs-icon-gap-<size>` | Gap between a rich label's icon and its text. |
+| `--lsx-tabs-pad-x` | The picked step's horizontal padding, resolved on the strip so each tab inherits it. |
+| `--lsx-tabs-pad-y` | The picked step's vertical padding. |
+| `--lsx-tabs-line` | The picked step's indicator thickness. |
+| `--lsx-tabs-gap` | The picked step's icon gap. |
+| `--lsx-tabs-border-color` | Color of the strip's 1px line. |
+| `--lsx-tabs-hover` | Hover background of an unselected tab. |
+| `--lsx-tabs-color` | Indicator and selected-label color, from the `color` prop. |
+
+## Data attributes
+
+State tokens on the root's `data-state`, space separated.
+
+| Token | Condition |
+|---|---|
+| `size-<size>` | The `size` in effect. |
+| `full-width` | `full_width` is set. |
+
+The tabs themselves carry no `data-state`; their styling keys off ARIA -
+`[aria-selected="true"]` for the indicator, `[aria-disabled="true"]` for the
+dimmed look.

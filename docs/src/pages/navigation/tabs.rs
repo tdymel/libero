@@ -65,6 +65,8 @@ pub fn TabsPage() -> Element {
     rsx! {
         DocPage {
             title: "Tabs",
+            source: "libero/src/components/navigation/tabs",
+            markdown: "/md/tabs.md",
             properties: vec![
                 props("Tabs", vec![
                     prop("value", "T").doc("The selected tab. Strictly controlled - pair it with `onchange`."),
