@@ -16,6 +16,8 @@ pub fn ToggleButtonGroupPage() -> Element {
     rsx! {
         DocPage {
             title: "ToggleButtonGroup",
+            source: "libero/src/components/inputs/toggle_button_group",
+            markdown: "/md/toggle_button_group.md",
             properties: vec![
                 props("ToggleButtonGroup", vec![
                     prop("value", "Vec<String>")
