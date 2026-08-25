@@ -63,6 +63,7 @@ pub fn ThemingPage() -> Element {
     rsx! {
         DocPage {
             title: "Theming",
+            markdown: "/md/theming.md",
             lead: rsx! {
                 Text {
                     Code { source: "LiberoProvider" }
