@@ -13,6 +13,8 @@ pub fn QrCodePage() -> Element {
     rsx! {
         DocPage {
             title: "QrCode",
+            source: "libero/src/components/data_display/qr_code.rs",
+            markdown: "/md/qr_code.md",
             properties: vec![
                 props("QrCode", vec![
                     prop("data", "String").doc("The payload encoded into the code."),
