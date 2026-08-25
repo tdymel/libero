@@ -64,6 +64,7 @@ pub fn PerformancePage() -> Element {
     rsx! {
         DocPage {
             title: "Performance",
+            markdown: "/md/performance.md",
             lead: rsx! {
                 Text {
                     "Every number on this page was measured by ablation - removing a thing "
