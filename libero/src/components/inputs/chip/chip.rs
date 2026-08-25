@@ -218,7 +218,9 @@ pub fn Chip(props: ChipProps) -> Element {
             // `<button>` defaults to `submit`; `attr_default` still lets a
             // caller ask for one.
             return root
-                .event("onclick", move |event: Event<MouseData>| onclick.call(event))
+                .event("onclick", move |event: Event<MouseData>| {
+                    onclick.call(event)
+                })
                 .attr("disabled", disabled)
                 .attr_default("type", "button")
                 .render(HtmlTag::Button, props.attributes, props.children);
