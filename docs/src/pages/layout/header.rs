@@ -22,6 +22,8 @@ pub fn HeaderPage() -> Element {
     rsx! {
         DocPage {
             title: "Header",
+            source: "libero/src/components/layout/header.rs",
+            markdown: "/md/header.md",
             properties: vec![props("Header", vec![
                 prop("position", "HeaderPosition")
                     .default("sticky")
