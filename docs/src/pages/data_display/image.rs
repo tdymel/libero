@@ -22,6 +22,8 @@ pub fn ImagePage() -> Element {
     rsx! {
         DocPage {
             title: "Image",
+            source: "libero/src/components/data_display/image.rs",
+            markdown: "/md/image.md",
             properties: vec![
                 props("Image", vec![
                     prop("src", "String").doc("The image source."),
