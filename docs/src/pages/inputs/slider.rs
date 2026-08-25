@@ -217,6 +217,8 @@ pub fn SliderPage() -> Element {
     rsx! {
         DocPage {
             title: "Slider",
+            source: "libero/src/components/inputs/slider",
+            markdown: "/md/slider.md",
             properties: vec![
                 props("Slider", vec![
                     prop("value", "V").doc("Strictly controlled - pair it with `on_change`."),
