@@ -17,6 +17,8 @@ pub fn DialogPage() -> Element {
     rsx! {
         DocPage {
             title: "Dialog",
+            source: "libero/src/components/surface/dialog.rs",
+            markdown: "/md/dialog.md",
             properties: vec![
                 props("Dialog", vec![
                     prop("aria_label", "String").doc("Accessible name for the dialog."),
