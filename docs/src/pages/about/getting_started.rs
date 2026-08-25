@@ -15,6 +15,7 @@ pub fn GettingStarted() -> Element {
     rsx! {
         DocPage {
             title: "Getting Started",
+            markdown: "/md/getting_started.md",
             lead: rsx! {
                 Text {
                     "Libero is a Dioxus component library focused on developer experience, UX, accessibility, and configurability."
