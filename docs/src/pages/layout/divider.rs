@@ -33,6 +33,8 @@ pub fn DividerPage() -> Element {
     rsx! {
         DocPage {
             title: "Divider",
+            source: "libero/src/components/layout/divider.rs",
+            markdown: "/md/divider.md",
             properties: vec![props("Divider", vec![
                 prop("orientation", "Orientation")
                     .default("horizontal")
