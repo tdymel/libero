@@ -28,6 +28,8 @@ pub fn FocusTrapPage() -> Element {
     rsx! {
         DocPage {
             title: "Focus Trap",
+            source: "libero/src/components/a11y/focus_trap.rs",
+            markdown: "/md/focus_trap.md",
             properties: vec![props("FocusTrap", vec![
                 prop("children", "Element").doc("The content Tab/Shift+Tab cycling is confined to."),
             ])],
