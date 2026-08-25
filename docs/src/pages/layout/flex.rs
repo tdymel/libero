@@ -85,6 +85,8 @@ pub fn FlexPage() -> Element {
     rsx! {
         DocPage {
             title: "Flex",
+            source: "libero/src/components/layout/flex.rs",
+            markdown: "/md/flex.md",
             properties: vec![props("Flex", vec![
                 prop("direction", "FlexDirection")
                     .default("column")
