@@ -12,6 +12,8 @@ pub fn MarkPage() -> Element {
     rsx! {
         DocPage {
             title: "Mark",
+            source: "libero/src/components/typography/mark.rs",
+            markdown: "/md/mark.md",
             properties: vec![props("Mark", vec![
                 prop("color", "ThemeAwareValue")
                     .default("warning, tinted")
