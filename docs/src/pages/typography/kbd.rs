@@ -7,6 +7,8 @@ pub fn KbdPage() -> Element {
     rsx! {
         DocPage {
             title: "Kbd",
+            source: "libero/src/components/typography/kbd.rs",
+            markdown: "/md/kbd.md",
             properties: vec![props("Kbd", vec![
                 prop("size", "Size")
                     .default("sm")
