@@ -29,6 +29,8 @@ pub fn BoxPage() -> Element {
     rsx! {
         DocPage {
             title: "Box",
+            source: "libero/src/components/layout/box.rs",
+            markdown: "/md/box.md",
             properties: vec![props("Box", vec![
                 prop("variables", "Variables")
                     .doc("Per-instance CSS custom properties on the `style` attribute, so `sx` can reference a varying value without a class per value."),
