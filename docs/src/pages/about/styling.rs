@@ -65,6 +65,7 @@ const THEME_VALUES: &str = r#"sx()
     .color("primary-contrast")    // black or white, whichever reads on it
     .padding("md")                // the theme's spacing scale
     .border_radius("lg")          // the theme's radius scale
+    .margin_top("-sm")            // the same scale, negated
     .width("240px")               // anything else is CSS text, untouched"#;
 
 const SELECTORS: &str = r#"sx()
@@ -198,7 +199,10 @@ pub fn StylingPage() -> Element {
                     Code { source: "gap" }
                     ", radius for the "
                     Code { source: "border_radius" }
-                    " family. Everything else is CSS text, untouched."
+                    " family. Prefix it with a "
+                    Code { source: "-" }
+                    " to read the same scale in the negative direction. Everything else is "
+                    "CSS text, untouched."
                 }
                 CodeBlock { source: THEME_VALUES, language: "rust" }
             }

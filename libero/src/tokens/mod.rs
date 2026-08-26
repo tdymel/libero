@@ -16,5 +16,5 @@ pub(crate) use color_shade::ShadeRamp;
 pub use color_value::ColorValue;
 pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use hex_color::HexColor;
-pub use size::Size;
+pub use size::{NegativeSize, Size};
 pub use sizes::Sizes;

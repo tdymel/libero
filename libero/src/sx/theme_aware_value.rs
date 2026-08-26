@@ -1,5 +1,5 @@
 use crate::tokens::{
-    Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss,
+    Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, NegativeSize, Size, SizeCss,
 };
 
 use super::BreakpointValue;
@@ -9,6 +9,8 @@ pub enum ThemeAwareValue {
     String(String),
     Number(String),
     Size(Size),
+    /// A size read off its scale in the negative direction, e.g. `"-md"`.
+    NegativeSize(Size),
     Color(Color),
     ColorValue(ColorValue),
     CssVar(CssVar),
@@ -28,6 +30,9 @@ impl ThemeAwareValue {
             Self::ColorValue(color_value) => Some(color_value.value()),
             Self::Color(color) => Some(ColorValue::Shade(*color, ColorShade::DEFAULT).value()),
             Self::Size(size) => scale.map(|scale| scale.value(*size)),
+            Self::NegativeSize(size) => {
+                scale.map(|scale| format!("calc(-1 * {})", scale.value(*size)))
+            }
             Self::BreakpointValue(_) => None,
         }
     }
@@ -57,6 +62,10 @@ impl ThemeAwareValue {
     fn parse_borrowed(value: &str) -> Option<Self> {
         if let Some(size) = Size::parse_dynamic(value) {
             return Some(Self::Size(size));
+        }
+
+        if let Some(size) = value.strip_prefix('-').and_then(Size::parse_dynamic) {
+            return Some(Self::NegativeSize(size));
         }
 
         if let Some(color) = Color::parse(value) {
@@ -110,6 +119,12 @@ impl From<&str> for ThemeAwareValue {
 impl From<Size> for ThemeAwareValue {
     fn from(value: Size) -> Self {
         Self::Size(value)
+    }
+}
+
+impl From<NegativeSize> for ThemeAwareValue {
+    fn from(value: NegativeSize) -> Self {
+        Self::NegativeSize(value.0)
     }
 }
 
@@ -180,6 +195,27 @@ mod tests {
         assert_eq!(
             ThemeAwareValue::from("var(--other-var)"),
             ThemeAwareValue::CssVar(CssVar::Owned("--other-var".to_string()))
+        );
+    }
+
+    #[test]
+    fn theme_aware_value_parses_a_negated_size_token() {
+        assert_eq!(
+            ThemeAwareValue::from("-md"),
+            ThemeAwareValue::NegativeSize(Size::Md)
+        );
+        assert_eq!(
+            ThemeAwareValue::from("-md").resolve(Some(SizeCss::SPACING)),
+            Some("calc(-1 * var(--lsx-spacing-md))".to_string())
+        );
+    }
+
+    /// Only a size word is negated - a CSS length keeps its own sign.
+    #[test]
+    fn theme_aware_value_leaves_a_negative_length_alone() {
+        assert_eq!(
+            ThemeAwareValue::from("-8px"),
+            ThemeAwareValue::String("-8px".to_string())
         );
     }
 

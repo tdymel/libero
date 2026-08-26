@@ -45,6 +45,7 @@ bare color name is shade 6; `1` through `9` are generated from that one hex
 value, and `-contrast` is whichever of black or white reads on it. A size word
 (`xs` to `xxl`) resolves through whichever scale the property belongs to -
 spacing for `padding`/`margin`/`gap`, radius for the `border_radius` family.
+Prefix it with a `-` to read the same scale in the negative direction.
 Everything else is CSS text, untouched.
 
 ```rust
@@ -54,6 +55,7 @@ sx()
     .color("primary-contrast")    // black or white, whichever reads on it
     .padding("md")                // the theme's spacing scale
     .border_radius("lg")          // the theme's radius scale
+    .margin_top("-sm")            // the same scale, negated
     .width("240px")               // anything else is CSS text, untouched
 ```
 

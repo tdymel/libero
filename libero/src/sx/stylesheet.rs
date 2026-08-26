@@ -192,6 +192,7 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
         // No scale for this property, so emit the bare keyword.
         None => match value {
             ThemeAwareValue::Size(size) => size.as_str().to_string(),
+            ThemeAwareValue::NegativeSize(size) => format!("-{}", size.as_str()),
             ThemeAwareValue::BreakpointValue(_) => {
                 unreachable!("breakpoint values are expanded before css value conversion")
             }

@@ -8,9 +8,9 @@ Description: Anchors its child to a corner or edge of the nearest positioned anc
 
 Anchors its child to a corner/edge of the nearest `position: relative` ancestor -
 e.g. a badge on an avatar. The parent must set `position: relative` itself.
-`offset_x`/`offset_y` take a size token from the spacing scale, or any CSS length
-- a negative one nudges the child back inward, which is how a badge overlaps its
-anchor.
+`offset_x`/`offset_y` take a size token from the spacing scale, or any CSS
+length, and shift it right/down along the page axes - negate the token (`"-md"`)
+to shift left/up instead.
 
 ## Usage
 
@@ -40,7 +40,10 @@ fn Demo() -> Element {
 `bottom-end`. The centered axes are centered with a `translate(-50%)`, so an
 offset is added on top of it rather than replacing it.
 
-A negative offset pulls the child back over its anchor - the usual badge look:
+Offsets are page axes, not placement-relative: `"md"` shifts right/down, `"-md"`
+left/up. Which of the two leaves the anchor therefore depends on the placement -
+on a `top-end` badge it is a positive `offset_x` and a negative `offset_y` that
+hang it off the corner:
 
 ```rust
 use dioxus::prelude::*;
@@ -53,8 +56,8 @@ fn Demo() -> Element {
             sx: sx().position("relative").width("160px").height("120px").background("primary.1"),
             Float {
                 placement: "top-end",
-                offset_x: "-8px",
-                offset_y: "-8px",
+                offset_x: "sm",
+                offset_y: "-sm",
                 Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }
             }
         }
@@ -67,7 +70,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `placement` | `Placement` | `center-center` | Anchor corner/edge, e.g. `"top-start"`. |
-| `offset_x` | `ThemeAwareValue` | `0px` | Shift along the horizontal axis - a size token from the spacing scale, or any CSS length. Negative nudges the child inward. |
+| `offset_x` | `ThemeAwareValue` | `0px` | Shift along the horizontal axis - a size token from the spacing scale (`"md"`, or `"-md"` for the other direction), or any CSS length. |
 | `offset_y` | `ThemeAwareValue` | `0px` | Shift along the vertical axis. |
 | `z_index` | `ThemeAwareValue` | `200` | Stacking order. |
 | `children` | `Element` | required | The anchored content. |

@@ -177,6 +177,22 @@ mod tests {
         );
     }
 
+    /// The spacing scale has no negative sizes, so pushing a float outward
+    /// from a `top`/`start` edge needs `-md` rather than a raw pixel value.
+    #[test]
+    fn a_negated_size_offset_resolves_through_the_spacing_scale() {
+        let variables = float_variables(&props(Input::from("-md")));
+
+        assert_eq!(
+            variables.to_string(),
+            format!(
+                "{}:calc(-1 * {});",
+                FLOAT_OFFSET_X_VAR.name(),
+                SizeCss::SPACING.value(Size::Md)
+            )
+        );
+    }
+
     #[test]
     fn a_css_length_offset_passes_through() {
         let variables = float_variables(&props(Input::from("-8px")));

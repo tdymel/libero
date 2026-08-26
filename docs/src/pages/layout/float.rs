@@ -32,7 +32,7 @@ pub fn FloatPage() -> Element {
                     .doc("Anchor corner/edge, e.g. `\"top-start\"`."),
                 prop("offset_x", "ThemeAwareValue")
                     .default("0px")
-                    .doc("Shift along the horizontal axis - a size token from the spacing scale, or any CSS length. Negative nudges the child inward."),
+                    .doc("Shift along the horizontal axis - a size token from the spacing scale (`\"md\"`, or `\"-md\"` for the other direction), or any CSS length."),
                 prop("offset_y", "ThemeAwareValue")
                     .default("0px")
                     .doc("Shift along the vertical axis."),
@@ -42,7 +42,7 @@ pub fn FloatPage() -> Element {
                 prop("children", "Element").doc("The anchored content."),
             ])],
             lead: rsx! {
-                Text { "Anchors its child to a corner/edge of the nearest `position: relative` ancestor - e.g. a badge on an avatar. The parent must set `position: relative` itself. `offset_x`/`offset_y` take a size token from the spacing scale, or any CSS length - a negative one nudges the child back inward, which is how a badge overlaps its anchor." }
+                Text { "Anchors its child to a corner/edge of the nearest `position: relative` ancestor - e.g. a badge on an avatar. The parent must set `position: relative` itself. `offset_x`/`offset_y` take a size token from the spacing scale, or any CSS length, and shift it right/down along the page axes - negate the token (`\"-md\"`) to shift left/up instead." }
             },
             Demo {
                 component: "Float",
@@ -64,8 +64,16 @@ pub fn FloatPage() -> Element {
                         ],
                     )
                     .default(theme.float.placement.as_str()),
-                    Control::slider("offset_x", ["auto", "xs", "sm", "md", "lg"]),
-                    Control::slider("offset_y", ["auto", "xs", "sm", "md", "lg"]),
+                    Control::slider(
+                        "offset_x",
+                        ["-lg", "-md", "-sm", "-xs", "auto", "xs", "sm", "md", "lg"],
+                    )
+                    .default("auto"),
+                    Control::slider(
+                        "offset_y",
+                        ["-lg", "-md", "-sm", "-xs", "auto", "xs", "sm", "md", "lg"],
+                    )
+                    .default("auto"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Box {

@@ -94,3 +94,15 @@ impl From<String> for Size {
         Self::from(value.as_str())
     }
 }
+
+/// A [`Size`] read off its scale in the negative direction, e.g. `-Size::Md`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct NegativeSize(pub Size);
+
+impl std::ops::Neg for Size {
+    type Output = NegativeSize;
+
+    fn neg(self) -> NegativeSize {
+        NegativeSize(self)
+    }
+}
