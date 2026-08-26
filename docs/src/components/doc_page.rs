@@ -57,6 +57,10 @@ pub fn DocPage(
                                 to: format!("{REPO}{source}"),
                                 target: "_blank",
                                 size: "sm",
+                                // Page furniture, not an accent: the filled
+                                // default would outrank the page's own title.
+                                variant: "outlined",
+                                color: "neutral",
                                 Icon { variant: "transparent", size: "sm", color: "inherit", GitHubIcon {} }
                                 "Source"
                             }
@@ -68,6 +72,8 @@ pub fn DocPage(
                                 to: NavigationTarget::External(markdown),
                                 target: "_blank",
                                 size: "sm",
+                                variant: "outlined",
+                                color: "neutral",
                                 Icon { variant: "transparent", size: "sm", color: "inherit", MarkdownIcon {} }
                                 "View as markdown"
                             }
