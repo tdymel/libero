@@ -6,7 +6,7 @@ use crate::{
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
         layout::use_box,
     },
-    hooks::{ModalScope, use_modal, use_theme},
+    hooks::{ModalHandle, ModalScope, use_modal, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
 };
@@ -103,14 +103,11 @@ fn zoom_label(alt: &str, zoomed: bool) -> String {
     }
 }
 
-#[component]
-pub fn Image(props: ImageProps) -> Element {
-    let mut errored_src = use_signal(|| None::<String>);
-    // Above the early return, and unconditional: hook slots are positional,
-    // and it is what portals the zoom overlay. Its argument is the source to
-    // show enlarged. Focus returns to the button on its own.
-    let alt = props.alt.clone();
-    let zoom = use_modal(move |s: ModalScope<String>| {
+/// The zoom overlay as its own modal, the way any dialog is built on
+/// [`use_modal`]: `alt` is shared by every opening, the argument is the source
+/// to show enlarged.
+fn use_zoom_modal(alt: String) -> ModalHandle<String> {
+    use_modal(move |s: ModalScope<String>| {
         let label = zoom_label(&alt, true);
 
         rsx! {
@@ -137,7 +134,14 @@ pub fn Image(props: ImageProps) -> Element {
                 }
             }
         }
-    });
+    })
+}
+
+#[component]
+pub fn Image(props: ImageProps) -> Element {
+    let mut errored_src = use_signal(|| None::<String>);
+    // Above the early return, and unconditional: hook slots are positional.
+    let zoom = use_zoom_modal(props.alt.clone());
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
