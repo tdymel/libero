@@ -4,6 +4,7 @@ mod color_variant;
 mod dom_api;
 mod element_api;
 mod input;
+mod mounted_element;
 mod options;
 mod orientation;
 mod platform_error;
@@ -22,6 +23,7 @@ pub(crate) use color_variant::{
 pub use dom_api::{DomApi, dom_api};
 pub use element_api::{Dimensions, ElementApi};
 pub use input::Input;
+pub(crate) use mounted_element::MountedElement;
 pub(crate) use input::input_from_str;
 pub use options::{OptionLabel, Options};
 // The derive and the trait share a name and one import, the way serde's do.

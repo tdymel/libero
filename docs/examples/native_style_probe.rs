@@ -15,7 +15,8 @@ use dioxus::prelude::*;
 use dioxus_native::{DioxusDocument, DocumentConfig};
 use libero::{
     LiberoProvider,
-    components::{Chip, Options, SegmentedControl, Switch},
+    components::{Chip, Options, SegmentedControl, Slider, SliderChangeEvent, Switch},
+    sx::sx,
 };
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -158,6 +159,7 @@ fn thumb(doc: &DioxusDocument) -> String {
     last
 }
 
+static SLID: GlobalSignal<f64> = Global::new(|| 0.0);
 static PICKED: GlobalSignal<Pick> = Global::new(|| Pick::One);
 static CHIPPED: GlobalSignal<bool> = Global::new(|| false);
 
@@ -168,6 +170,14 @@ fn Controls() -> Element {
             SegmentedControl {
                 value: PICKED(),
                 onchange: move |v: Pick| *PICKED.write() = v,
+            }
+            Slider {
+                aria_label: "probe",
+                value: SLID(),
+                on_change: move |event: SliderChangeEvent<f64>| {
+                    *SLID.write() = event.value()
+                },
+                sx: sx().width("400px"),
             }
             Chip {
                 checked: CHIPPED(),
@@ -205,40 +215,8 @@ fn click(doc: &mut DioxusDocument, tag: &str, text: &str) {
         (rect.x + rect.width / 2.0) as f32,
         (rect.y + rect.height / 2.0) as f32,
     );
-    for down in [true, false] {
-        let event = BlitzPointerEvent {
-            id: BlitzPointerId::Mouse,
-            is_primary: true,
-            coords: PointerCoords {
-                page_x: x,
-                page_y: y,
-                screen_x: x,
-                screen_y: y,
-                client_x: x,
-                client_y: y,
-            },
-            button: MouseEventButton::Main,
-            buttons: if down {
-                MouseEventButtons::Primary
-            } else {
-                MouseEventButtons::empty()
-            },
-            mods: Default::default(),
-            details: PointerDetails::default(),
-            element: Point { x: 0.0, y: 0.0 },
-            active_pointers: Default::default(),
-        };
-        blitz_dom::Document::handle_ui_event(
-            doc,
-            if down {
-                UiEvent::PointerDown(event)
-            } else {
-                UiEvent::PointerUp(event)
-            },
-        );
-    }
-    blitz_dom::Document::poll(doc, None);
-    doc.inner.borrow_mut().resolve(0.0);
+    send(doc, UiEvent::PointerDown(pointer(x, y, true)));
+    send(doc, UiEvent::PointerUp(pointer(x, y, false)));
 }
 
 fn picked() -> &'static str {
@@ -246,6 +224,70 @@ fn picked() -> &'static str {
         Pick::One => "One",
         Pick::Two => "Two",
     }
+}
+
+/// Press at the track's left edge, move to three quarters, release - the
+/// shape of a real drag, including the release.
+fn drag(doc: &mut DioxusDocument) {
+    let rect = {
+        let inner = doc.inner.borrow();
+        let mut found = None;
+        inner.visit(|id, node| {
+            if found.is_some() {
+                return;
+            }
+            if node
+                .element_data()
+                .is_some_and(|e| e.attrs.iter().any(|a| *a.name.local == *"role"
+                    && a.value == "slider"))
+            {
+                // The thumb carries the role; its parent chain has the track.
+                found = node.parent.and_then(|p| inner.get_client_bounding_rect(p));
+            }
+        });
+        found
+    };
+    let Some(rect) = rect else {
+        println!("  no slider found");
+        return;
+    };
+    let y = (rect.y + rect.height / 2.0) as f32;
+    let start = (rect.x + 4.0) as f32;
+    let end = (rect.x + rect.width * 0.75) as f32;
+    send(doc, UiEvent::PointerDown(pointer(start, y, true)));
+    send(doc, UiEvent::PointerMove(pointer(end, y, true)));
+    send(doc, UiEvent::PointerUp(pointer(end, y, false)));
+}
+
+fn pointer(x: f32, y: f32, down: bool) -> BlitzPointerEvent {
+    BlitzPointerEvent {
+        id: BlitzPointerId::Mouse,
+        is_primary: true,
+        coords: PointerCoords {
+            page_x: x,
+            page_y: y,
+            screen_x: x,
+            screen_y: y,
+            client_x: x,
+            client_y: y,
+        },
+        button: MouseEventButton::Main,
+        buttons: if down {
+            MouseEventButtons::Primary
+        } else {
+            MouseEventButtons::empty()
+        },
+        mods: Default::default(),
+        details: PointerDetails::default(),
+        element: Point { x: 0.0, y: 0.0 },
+        active_pointers: Default::default(),
+    }
+}
+
+fn send(doc: &mut DioxusDocument, event: UiEvent) {
+    blitz_dom::Document::handle_ui_event(doc, event);
+    blitz_dom::Document::poll(doc, None);
+    doc.inner.borrow_mut().resolve(0.0);
 }
 
 /// Do the two label-wrapped controls actually receive a click?
@@ -271,6 +313,11 @@ fn controls() {
 
     click(&mut doc, "label", "pick me");
     println!("chip after:       {:?}", read(&doc));
+
+    println!("\n=== slider drag ===");
+    println!("before: {}", doc.vdom.in_runtime(|| SLID()));
+    drag(&mut doc);
+    println!("after:  {}", doc.vdom.in_runtime(|| SLID()));
 }
 
 fn main() {

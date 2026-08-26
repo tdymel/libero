@@ -5,13 +5,13 @@ use super::value::{fraction, snap};
 use crate::{
     CssLayer,
     components::{
-        ClassList, HtmlTag, Input, States, Variables,
-        common::{base_color, dom_api, variables},
+        ClassList, ElementApi, HtmlTag, Input, States, Variables,
+        common::{base_color, variables},
         layout::use_box,
         overlay::Tooltip,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_id,
+        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_element, use_id,
         use_local_state, use_root_id, use_theme,
     },
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -189,6 +189,8 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     let root_id = use_root_id(&props.attributes);
     let track_id = use_id();
     let thumb_id = use_id();
+    let track_element = use_element();
+    let thumb_element = use_element();
 
     let (min, max, step) = (props.min, props.max, props.step.max(0.0));
     let size = props.size.copied_or(theme.slider.size);
@@ -250,10 +252,11 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             if !interactive {
                 return false;
             }
-            let Ok(track) = dom_api().query_selector(&format!("#{}", track_id())) else {
-                return false;
-            };
-            let (Ok(dimensions), Ok((left, _))) = (track.dimensions(), track.client_offset())
+            // `use_element`, not a `dom_api()` lookup by id: the calls are
+            // the same `ElementApi`, but a mounted handle works off the web
+            // too, where there is no document to query.
+            let (Ok(dimensions), Ok((left, _))) =
+                (track_element.dimensions(), track_element.client_offset())
             else {
                 return false;
             };
@@ -261,20 +264,16 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
                 return false;
             }
 
-            let Ok(thumb) = dom_api().query_selector(&format!("#{}", thumb_id())) else {
-                return false;
-            };
-
             track_left.set(left);
             track_width.set(dimensions.width);
-            thumb_width.set(thumb.dimensions().map_or(0.0, |size| size.width));
+            thumb_width.set(thumb_element.dimensions().map_or(0.0, |size| size.width));
 
             match value_at.call(event.client.x) {
                 Some(value) => {
                     // `use_drag` cancels the pointerdown, which cancels the
                     // browser's own focus - so the keyboard would be
                     // unreachable after a mouse drag.
-                    let _ = thumb.focus();
+                    let _ = thumb_element.focus();
                     emit.call(SliderChangeEvent::Start(value));
                     true
                 }
@@ -375,6 +374,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         .attr("aria-label", props.aria_label.clone())
         .attr("aria-disabled", !interactive)
         .attr("id", thumb_id())
+        .event("onmounted", thumb_element.mount())
         .event("onkeydown", move |event: Event<KeyboardData>| {
             onkeydown.call(event)
         })
@@ -411,13 +411,24 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                div { class: track_class, id: track_id(),
+                div {
+                    class: track_class,
+                    id: track_id(),
+                    onmounted: track_element.mount(),
                     div { class: bar_class }
                     {marks}
                     {thumb}
                 }
                 if let Some(name) = name {
-                    input { r#type: "hidden", name, value: "{value}", disabled }
+                    // `Some(true)` or nothing - see `SegmentedControl`: a
+                    // `false` bool reaches a native renderer as the string
+                    // "false", which reads as disabled.
+                    input {
+                        r#type: "hidden",
+                        name,
+                        value: "{value}",
+                        disabled: disabled.then_some(true),
+                    }
                 }
             },
         )
