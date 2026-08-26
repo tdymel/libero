@@ -65,6 +65,18 @@ pub(crate) fn shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<S
     Some(ColorValue::Shade(*color, shade).value())
 }
 
+/// Black or white, whichever reads on `base`'s color at `shade` - the label
+/// for a tinted container. Our ramp bottoms out at a 25% black mix, so a dark
+/// tone of the hue itself cannot reach 4.5:1 on its own tint for the lighter
+/// palette colors (`warning` peaks at 2.9:1). `None` for a literal base.
+pub(crate) fn contrast_shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<String> {
+    let ThemeAwareValue::ColorValue(ColorValue::Shade(color, _)) = base else {
+        return None;
+    };
+
+    Some(ColorValue::Contrast(*color, shade).value())
+}
+
 /// Hover color for `base`: darker when `base` is already the background, a
 /// light tint otherwise. `None` for a literal base, which has no shade scale.
 pub(crate) fn hover_color(base: &ThemeAwareValue, filled: bool) -> Option<String> {

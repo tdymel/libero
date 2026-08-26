@@ -38,50 +38,6 @@ fn Demo() -> Element {
 `type` is not a prop but a `<button>` attribute passed straight through, so it
 is written `r#type: "submit"` in rsx.
 
-## Emphasis
-
-The five styles are one ladder, highest emphasis first. `filled` is the action
-that completes a flow; `text` suits several options side by side. `elevated`
-is a tonal button with a shadow, for a button that has to separate itself from
-a patterned or scrolling background.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::{Button, Flex};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Flex {
-            gap: "sm",
-            wrap: "wrap",
-            Button { variant: "filled", "Filled" }
-            Button { variant: "tonal", "Tonal" }
-            Button { variant: "elevated", "Elevated" }
-            Button { variant: "outlined", "Outlined" }
-            Button { variant: "text", "Text" }
-        }
-    }
-}
-```
-
-## Neutral
-
-Every style takes a `color`, and `neutral` is the text-dark one - the button
-that should not compete with the page's accent.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::Button;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Button { variant: "outlined", color: "neutral", "Cancel" }
-    }
-}
-```
-
 ## As a link
 
 Renders as a real anchor, or a router `Link` when `to` matches an internal
@@ -158,8 +114,8 @@ about that pairing.
 | `--lsx-button-contrast` | Text color on top of that accent. |
 | `--lsx-button-hover` | Accent color while hovered. |
 | `--lsx-button-selected` | Background of a selected toggle button. |
-| `--lsx-button-container` | Container fill of `tonal` and `elevated`. |
-| `--lsx-button-on-container` | Label color on that container. |
+| `--lsx-button-container` | Container fill of `tonal`. |
+| `--lsx-button-on-container` | Label color on that container - black or white, whichever reads on it. |
 
 The corner radius comes from the shared radius scale, `--lsx-radius-<size>`,
 and `elevated`'s shadow from the shared elevation scale, `--lsx-shadow-<size>`.

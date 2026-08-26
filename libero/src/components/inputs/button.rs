@@ -4,8 +4,8 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         common::{
-            base_color, base_props, contrast_color, focus_ring_sx, hover_color, input_from_str,
-            selected_color, shade_color, variables,
+            base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
+            hover_color, input_from_str, selected_color, shade_color, variables,
         },
         layout::use_box,
         navigation::InternalAnchor,
@@ -70,6 +70,10 @@ pub(crate) const BUTTON_VARS: VariantVars<'static> = VariantVars {
     on_container: &BUTTON_ON_CONTAINER_VAR,
 };
 
+// The lightest tint on the ramp. A darker one cannot be labelled legibly:
+// black on `S1` clears 12:1 for every palette colour, on `S2` it is closer.
+const TONAL_CONTAINER: ColorShade = ColorShade::S1;
+
 // M3's elevated button rests at level 1 and lifts to level 2 on hover.
 const ELEVATED_REST: Size = Size::Xs;
 const ELEVATED_HOVER: Size = Size::Sm;
@@ -90,14 +94,24 @@ pub(crate) fn button_variant_sx(variant: ButtonVariant, vars: &VariantVars) -> S
             .border_color(color.value())
             .color(contrast.value_or("inherit"))
             .hover(sx().background(hover.value_or(color.value()))),
-        // A light tint of the colour carrying its own dark shade as the
-        // label - M3's secondary-container pairing. A literal colour has no
-        // ramp, so every fallback here lands back on the filled look.
-        ButtonVariant::Tonal => tonal_sx(vars),
-        ButtonVariant::Elevated => tonal_sx(vars)
+        // M3's secondary-container pairing: a light tint of the colour under
+        // the label that reads on it. A literal colour has no ramp, so every
+        // fallback here lands back on the filled look.
+        ButtonVariant::Tonal => sx()
+            .background(vars.container.value_or(color.value()))
+            .border_color("transparent")
+            .color(vars.on_container.value_or(contrast.value_or("inherit")))
+            .hover(sx().background(hover.value_or(color.value()))),
+        // The *surface*, not a tint of the colour - M3's elevated button is
+        // separated from the page by its shadow alone, and the label carries
+        // the accent. An opaque background is what the shadow needs to sit on.
+        ButtonVariant::Elevated => sx()
+            .background("white")
+            .border_color("transparent")
+            .color(color.value())
             .box_shadow(SizeCss::SHADOW.value(ELEVATED_REST))
             .hover(
-                sx().background(hover.value_or(color.value()))
+                sx().background(hover.value_or("white"))
                     .box_shadow(SizeCss::SHADOW.value(ELEVATED_HOVER)),
             ),
         ButtonVariant::Outlined => sx()
@@ -111,18 +125,6 @@ pub(crate) fn button_variant_sx(variant: ButtonVariant, vars: &VariantVars) -> S
             .color(color.value())
             .hover(sx().background(hover.value_or("transparent"))),
     }
-}
-
-/// The tinted container `Tonal` and `Elevated` share; they differ only in
-/// which shades [`variant_colors`] puts behind the vars, and in the shadow.
-fn tonal_sx(vars: &VariantVars) -> Sx {
-    sx().background(vars.container.value_or(vars.color.value()))
-        .border_color("transparent")
-        .color(
-            vars.on_container
-                .value_or(vars.contrast.value_or("inherit")),
-        )
-        .hover(sx().background(vars.hover.value_or(vars.color.value())))
 }
 
 /// Resolved values for the colour vars `variant` reads, from the caller's
@@ -139,25 +141,25 @@ pub(crate) struct VariantColors {
 /// always has.
 pub(crate) fn variant_colors(variant: ButtonVariant, base: &ThemeAwareValue) -> VariantColors {
     let filled = variant == ButtonVariant::Filled;
+    // Only `Tonal` paints a container; `Elevated` sits on the surface itself.
     let (container, on_container) = match variant {
         ButtonVariant::Tonal => (
-            shade_color(base, ColorShade::S2),
-            shade_color(base, ColorShade::S8),
+            shade_color(base, TONAL_CONTAINER),
+            contrast_shade_color(base, TONAL_CONTAINER),
         ),
-        // A near-white container under the colour's own label: the shadow,
-        // not the fill, is what separates it from the surface.
-        ButtonVariant::Elevated => (shade_color(base, ColorShade::S1), base.resolve(None)),
         _ => (None, None),
     };
 
     let (hover, selected) = match variant {
         ButtonVariant::Tonal => (
-            shade_color(base, ColorShade::S3),
-            shade_color(base, ColorShade::S4),
-        ),
-        ButtonVariant::Elevated => (
             shade_color(base, ColorShade::S2),
             shade_color(base, ColorShade::S3),
+        ),
+        // A faint tint over the surface, the way the other unfilled variants
+        // hover - the shadow is what actually moves.
+        ButtonVariant::Elevated => (
+            shade_color(base, ColorShade::S1),
+            shade_color(base, ColorShade::S2),
         ),
         _ => (hover_color(base, filled), selected_color(base, filled)),
     };
@@ -473,18 +475,23 @@ mod tests {
         assert_eq!(classes[0], class_of(ButtonVariant::ALL[0]));
     }
 
-    /// The tinted variants pin absolute shades; the plain ones step from the
-    /// base the way they always have.
+    /// Only `Tonal` paints a container - `Elevated` keeps the surface, so a
+    /// container var would be dead weight in every elevated button's `style`.
     #[test]
-    fn the_tinted_variants_emit_a_container() {
+    fn only_the_tonal_variant_emits_a_container() {
         let base = base_color(None);
 
         let tonal = button_variables(ButtonVariant::Tonal, &base, false);
         assert!(tonal.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(tonal.contains(BUTTON_ON_CONTAINER_VAR.name()));
 
-        let outlined = button_variables(ButtonVariant::Outlined, &base, false);
-        assert!(!outlined.contains(BUTTON_CONTAINER_VAR.name()));
+        for variant in [ButtonVariant::Elevated, ButtonVariant::Outlined] {
+            let variables = button_variables(variant, &base, false);
+            assert!(
+                !variables.contains(BUTTON_CONTAINER_VAR.name()),
+                "{variant:?}"
+            );
+        }
     }
 
     /// A literal color has no ramp, so the vars stay unset and the CSS falls

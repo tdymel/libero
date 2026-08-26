@@ -133,8 +133,8 @@ Like every component, `Chip` also takes the shared props `sx`, `class`,
 | `--lsx-chip-color` | Accent color of the current variant. |
 | `--lsx-chip-contrast` | Text color on top of that accent. |
 | `--lsx-chip-hover` | Accent color while hovered. |
-| `--lsx-chip-container` | Container fill of `tonal` and `elevated`. |
-| `--lsx-chip-on-container` | Label color on that container. |
+| `--lsx-chip-container` | Container fill of `tonal`. |
+| `--lsx-chip-on-container` | Label color on that container - black or white, whichever reads on it. |
 
 ## Data attributes
 

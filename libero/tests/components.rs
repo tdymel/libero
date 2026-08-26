@@ -359,10 +359,32 @@ fn a_derived_slider_value_names_and_orders_its_own_options() {
     }
 }
 
-/// The tinted variants publish a container and its label color; the shadow
-/// comes from the shared elevation scale, not a literal.
+/// The tint is the lightest shade and its label the *contrast* of that shade,
+/// not a darker tone of the hue - which our ramp cannot make legible.
 #[test]
-fn an_elevated_button_tints_its_container_and_reads_the_elevation_scale() {
+fn a_tonal_button_labels_its_container_with_that_shade_s_contrast() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { variant: "tonal", color: Color::Warning, "Tint" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "button");
+
+    assert_eq!(attributes["data-state"], "tonal size-md radius-md");
+    assert!(attributes["style"].contains("--lsx-button-container:var(--lsx-warning-1);"));
+    assert!(
+        attributes["style"].contains("--lsx-button-on-container:var(--lsx-warning-contrast-1);")
+    );
+}
+
+/// Elevated sits on the surface and is separated by its shadow alone - so it
+/// paints no container, and the shadow comes from the shared scale.
+#[test]
+fn an_elevated_button_keeps_the_surface_and_reads_the_elevation_scale() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -375,8 +397,7 @@ fn an_elevated_button_tints_its_container_and_reads_the_elevation_scale() {
     let attributes = attributes_of(&html, "button");
 
     assert_eq!(attributes["data-state"], "elevated size-md radius-md");
-    assert!(attributes["style"].contains("--lsx-button-container:var(--lsx-error-1);"));
-    assert!(attributes["style"].contains("--lsx-button-on-container:var(--lsx-error-6);"));
+    assert!(!attributes["style"].contains("--lsx-button-container:"));
     assert!(html.contains("box-shadow:var(--lsx-shadow-xs)"));
     assert!(html.contains("--lsx-shadow-xs:"));
 }
