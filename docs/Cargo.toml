@@ -31,26 +31,6 @@ dioxus-native = { path = "../.dioxus-active/packages/native", optional = true, d
     "woff",
 ] }
 
-# Without this `cargo test` tries to build the example in a config where
-# `dioxus_native` isn't in the graph.
-[[example]]
-name = "native_style_probe"
-required-features = ["native-vello"]
-
-[[example]]
-name = "has_selector_probe"
-required-features = ["native-vello"]
-
-[[example]]
-name = "report_repro"
-required-features = ["native-vello"]
-
-# Only for `examples/native_style_probe.rs`, which reads Blitz's computed
-# styles headlessly. Drop both when that example goes.
-[dev-dependencies]
-blitz-dom = "0.3.0-beta.2"
-blitz-traits = "0.3.0-beta.2"
-blitz-html = "0.3.0-beta.2"
 
 [features]
 # Render with Blitz (dioxus-native) in a winit window instead of the browser.
