@@ -1,36 +1,36 @@
 # Tabs
 
 Crate: `libero`
-Import: `use libero::components::{TabLabel, TabValue, Tabs};`
+Import: `use libero::components::{OptionLabel, Options, Tabs};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/navigation/tabs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: One strip of tabs over an enum, with only the selected tab's panel built.
 
 One strip of tabs over an enum, with the selected tab's panel below it. The tabs
-are the enum's variants - `#[derive(TabValue)]` lists them in declaration order
+are the enum's variants - `#[derive(Options)]` lists them in declaration order
 and names each one - and `panel` is a match over the same type, so a forgotten or
 misspelled tab is a compile error rather than a blank page. Only the selected
 panel is built at all; the others cost nothing until they are picked.
 
 `label` overrides what the derive named a tab, and it runs during render - so it
 can read a locale from a signal or from context, and the strip repaints when that
-changes. Return a string to rename a tab, or `TabLabel::rich` to draw it as rsx
+changes. Return a string to rename a tab, or `OptionLabel::rich` to draw it as rsx
 (an icon, a badge) - that one asks for the name as well, since the rsx is what a
 screen reader cannot use.
 
 ## Usage
 
-The enum *is* the tab strip, so it is part of every snippet. `#[tab(label = ..)]`
+The enum *is* the tab strip, so it is part of every snippet. `#[option(label = ..)]`
 renames a variant whose Rust name is not what a reader should see.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{TabValue, Tabs};
+use libero::components::{Options, Tabs};
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum Section {
     Account,
-    #[tab(label = "Admin area")]
+    #[option(label = "Admin area")]
     Admin,
     Billing,
 }
@@ -63,9 +63,9 @@ locale signal inside it is enough to make the strip follow the language:
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{TabLabel, TabValue, Tabs};
+use libero::components::{OptionLabel, Options, Tabs};
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum Section {
     Account,
     Admin,
@@ -95,16 +95,16 @@ fn Demo() -> Element {
 }
 ```
 
-`TabLabel::rich` draws a tab as rsx and names it separately. A tab is a
+`OptionLabel::rich` draws a tab as rsx and names it separately. A tab is a
 `<button>`, so its content has to stay phrasing content: an [Icon](icon.md) is an
 inline-flex `<span>`, while a [Flex](flex.md) is a `<div>` and does not belong
 there.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Icon, TabLabel, TabValue, Tabs};
+use libero::components::{Icon, OptionLabel, Options, Tabs};
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum Section {
     Account,
     Admin,
@@ -119,7 +119,7 @@ fn Demo() -> Element {
         Tabs {
             value: section(),
             onchange: move |next| section.set(next),
-            label: |section: Section| TabLabel::rich(
+            label: |section: Section| OptionLabel::rich(
                 section.label(),
                 rsx! {
                     Icon { variant: "transparent", size: "sm", FileIcon {} }
@@ -150,7 +150,7 @@ A tab named in `disabled` gets `aria-disabled` rather than the `disabled`
 attribute, so it still reads to a screen reader and the arrow keys simply step
 over it.
 
-`TabLabel::rich` takes the accessible name as its first argument for the same
+`OptionLabel::rich` takes the accessible name as its first argument for the same
 reason: the rsx it draws is what a screen reader cannot use, and that name
 becomes the tab's `aria-label`.
 
@@ -164,7 +164,7 @@ becomes the tab's `aria-label`.
 | `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
 | `panel` | `Callback<T, Element>` | - | The body of the selected tab. Called for `value` only, so the other panels cost nothing. |
 | `tabs` | `Vec<T>` | `T::options()` | The tabs to show. |
-| `label` | `Callback<T, TabLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
+| `label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
 | `disabled` | `Vec<T>` | - | Tabs that render but cannot be picked. |
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
@@ -173,14 +173,14 @@ becomes the tab's `aria-label`.
 Like every component, `Tabs` also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
-### TabLabel
+### OptionLabel
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `name` | `String` | required | The tab's visible text and accessible name. |
-| `content` | `Element` | - | Drawn in place of the name, via `TabLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use. |
+| `content` | `Element` | - | Drawn in place of the name, via `OptionLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use. |
 
-`TabLabel` is a value, not a component - it takes no shared props. A bare string
+`OptionLabel` is a value, not a component - it takes no shared props. A bare string
 converts into one (`"Konto".into()`).
 
 ## Theme defaults

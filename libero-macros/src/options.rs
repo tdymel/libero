@@ -9,13 +9,13 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
     let Data::Enum(data) = &input.data else {
         return Err(Error::new_spanned(
             &input.ident,
-            "TabValue can only be derived for an enum - the tab strip is its variants",
+            "Options can only be derived for an enum - the choices are its variants",
         ));
     };
     if data.variants.is_empty() {
         return Err(Error::new_spanned(
             &input.ident,
-            "TabValue needs at least one variant to show a tab for",
+            "Options needs at least one variant to show a choice for",
         ));
     }
 
@@ -26,7 +26,7 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
             Fields::Unit => Ok(&variant.ident),
             _ => Err(Error::new_spanned(
                 variant,
-                "TabValue needs unit variants - a variant with fields is not one tab",
+                "Options needs unit variants - a variant with fields is not one choice",
             )),
         })
         .collect::<Result<_>>()?;
@@ -35,12 +35,12 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
     if !input.generics.params.is_empty() {
         return Err(Error::new_spanned(
             &input.generics,
-            "TabValue cannot be derived for a generic type - its tabs are a `&'static [Self]`",
+            "Options cannot be derived for a generic type - its choices are a `&'static [Self]`",
         ));
     }
 
     Ok(quote! {
-        impl ::libero::components::TabValue for #name {
+        impl ::libero::components::Options for #name {
             fn options() -> &'static [Self] {
                 &[#(Self::#variants),*]
             }
@@ -55,13 +55,13 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
     })
 }
 
-/// `#[tab(label = "..")]`, else the variant's own name.
+/// `#[option(label = "..")]`, else the variant's own name.
 fn label_of(variant: &Variant) -> Result<String> {
     let mut label = None;
-    for attribute in variant.attrs.iter().filter(|a| a.path().is_ident("tab")) {
+    for attribute in variant.attrs.iter().filter(|a| a.path().is_ident("option")) {
         attribute.parse_nested_meta(|meta| {
             if !meta.path.is_ident("label") {
-                return Err(meta.error("unknown `tab` option - only `label` is understood"));
+                return Err(meta.error("unknown `option` setting - only `label` is understood"));
             }
             match meta.value()?.parse()? {
                 Expr::Lit(literal) => match literal.lit {

@@ -121,3 +121,54 @@ pub fn MarkdownIcon() -> Element {
         }
     }
 }
+
+#[component]
+pub fn AlignLeftIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            line { x1: "3", y1: "6", x2: "21", y2: "6" }
+            line { x1: "3", y1: "12", x2: "13", y2: "12" }
+            line { x1: "3", y1: "18", x2: "17", y2: "18" }
+        }
+    }
+}
+
+#[component]
+pub fn AlignCenterIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            line { x1: "3", y1: "6", x2: "21", y2: "6" }
+            line { x1: "7", y1: "12", x2: "17", y2: "12" }
+            line { x1: "5", y1: "18", x2: "19", y2: "18" }
+        }
+    }
+}
+
+#[component]
+pub fn AlignRightIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            line { x1: "3", y1: "6", x2: "21", y2: "6" }
+            line { x1: "11", y1: "12", x2: "21", y2: "12" }
+            line { x1: "7", y1: "18", x2: "21", y2: "18" }
+        }
+    }
+}

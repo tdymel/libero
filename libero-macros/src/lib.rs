@@ -1,8 +1,8 @@
 //! Derive macros for `libero`. Re-exported from the crate the trait lives in,
 //! so one import brings both.
 
+mod options;
 mod slider_value;
-mod tab_value;
 
 use proc_macro::TokenStream;
 
@@ -26,20 +26,20 @@ pub fn slider_value(input: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Implements `TabValue` for an enum of unit variants: the variants in
-/// declaration order are the tabs, and each one's name is its label.
+/// Implements `Options` for an enum of unit variants: the variants in
+/// declaration order are the choices, and each one's name is its label.
 ///
 /// ```ignore
-/// #[derive(Clone, PartialEq, TabValue)]
+/// #[derive(Clone, PartialEq, Options)]
 /// enum Section {
 ///     Account,
-///     #[tab(label = "Admin area")]
+///     #[option(label = "Admin area")]
 ///     Admin,
 /// }
 /// ```
-#[proc_macro_derive(TabValue, attributes(tab))]
-pub fn tab_value(input: TokenStream) -> TokenStream {
-    tab_value::derive(input.into())
+#[proc_macro_derive(Options, attributes(option))]
+pub fn options(input: TokenStream) -> TokenStream {
+    options::derive(input.into())
         .unwrap_or_else(syn::Error::into_compile_error)
         .into()
 }

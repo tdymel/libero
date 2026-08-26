@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, CodeBlock, Flex, Input, Option as SelectOption, Select, Slider, SliderChangeEvent,
-        Switch, Text, ToggleButton, ToggleButtonGroup,
+        Box, Button, CodeBlock, Flex, Input, Option as SelectOption, OptionLabel, SegmentedControl,
+        Select, Slider, SliderChangeEvent, Switch, Text,
     },
     sx::sx,
     theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
@@ -235,32 +235,35 @@ pub fn Demo(
                                     }
                                 }
                                 match control.kind {
+                                    // Swatches read as separate chips, not one
+                                    // segmented control - so this is a row of
+                                    // toggle `Button`s, not a `SegmentedControl`.
                                     ControlKind::Color => rsx! {
-                                        ToggleButtonGroup {
-                                            size: "sm",
-                                            full_width: true,
-                                            // Swatches read as separate chips, not one
-                                            // segmented control.
+                                        Flex {
+                                            // `Flex` defaults to a column, and
+                                            // the swatches are a row.
+                                            direction: "row",
                                             gap: "xs",
-                                            variant: "text",
-                                            value: vec![values().str(control.name)],
-                                            // Clicking the selected swatch would otherwise
-                                            // clear it, leaving the prop with no value.
-                                            onchange: move |next: Vec<String>| {
-                                                if let Some(value) = next.into_iter().next() {
-                                                    values.write().0[index].1 = value;
-                                                }
-                                            },
+                                            sx: sx().width("100%"),
                                             for option in control.options.iter() {
-                                                ToggleButton {
+                                                Button {
                                                     key: "{option}",
-                                                    value: "{option}",
+                                                    size: "sm",
+                                                    variant: "text",
                                                     aria_label: "{option}",
+                                                    selected: values().str(control.name) == *option,
+                                                    onclick: {
+                                                        let option = option.clone();
+                                                        move |_| {
+                                                            values.write().0[index].1 = option.clone();
+                                                        }
+                                                    },
                                                     // The swatch is the whole button, so
                                                     // the fill reaches the border - and
                                                     // the variant's hover tint would show
                                                     // as a halo around it.
                                                     sx: sx()
+                                                        .flex("1 1 0")
                                                         .padding("0")
                                                         .hover(sx().background("transparent")),
                                                     Box {
@@ -345,22 +348,21 @@ pub fn Demo(
                                         }
                                     },
                                     ControlKind::Toggle => rsx! {
-                                        ToggleButtonGroup {
+                                        SegmentedControl {
                                             size: "sm",
                                             full_width: true,
-                                            value: vec![values().str(control.name)],
-                                            onchange: move |next: Vec<String>| {
-                                                if let Some(value) = next.into_iter().next() {
-                                                    values.write().0[index].1 = value;
-                                                }
+                                            value: values().str(control.name),
+                                            // A control panel's options are data, so
+                                            // they arrive here rather than from a `T`
+                                            // that could list them statically.
+                                            segments: control.options.clone(),
+                                            label: {
+                                                let control = control.clone();
+                                                move |option: String| OptionLabel::from(control.label_of(&option))
                                             },
-                                            for option in control.options.iter() {
-                                                ToggleButton {
-                                                    key: "{option}",
-                                                    value: "{option}",
-                                                    {control.label_of(option)}
-                                                }
-                                            }
+                                            onchange: move |next: String| {
+                                                values.write().0[index].1 = next;
+                                            },
                                         }
                                     },
                                 }

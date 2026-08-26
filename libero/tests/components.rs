@@ -12,10 +12,9 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Container,
         DataList, DataListItem, Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem,
         GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink,
-        Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark, SliderValue,
-        Splitter, Switch, TabLabel, TabValue, Table, Tabs, Text, Title, ToggleButton,
-        ToggleButtonGroup, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
-        column, sp,
+        Option, OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Select,
+        Sidebar, Slider, SliderMark, SliderValue, Splitter, Switch, Table, Tabs, Text, Title,
+        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -64,16 +63,20 @@ fn a_clickable_chip_is_a_button_and_a_linked_one_an_anchor() {
     assert!(attributes_of(&html, "button")["data-state"].contains("clickable"));
 }
 
+#[derive(Clone, PartialEq, Options)]
+enum Emphasis {
+    Bold,
+    Italic,
+}
+
 #[test]
-fn a_toggle_group_marks_only_the_selected_button_pressed() {
+fn a_segmented_control_checks_only_the_selected_radio() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                ToggleButtonGroup {
-                    value: vec!["bold".to_string()],
+                SegmentedControl {
+                    value: Emphasis::Bold,
                     onchange: move |_| {},
-                    ToggleButton { value: "bold", "B" }
-                    ToggleButton { value: "italic", "I" }
                 }
             }
         }
@@ -81,62 +84,73 @@ fn a_toggle_group_marks_only_the_selected_button_pressed() {
 
     let html = render(app);
     let body = body(&html);
-    let group = attributes_of(&body, "div");
+    let root = attributes_of(&body, "div");
 
-    assert_eq!(group["role"], "group");
-    assert_eq!(group["data-state"], "horizontal collapsed");
+    // A radio group, not a toolbar: exactly one segment is ever selected, so
+    // the semantics are the browser's rather than `aria-pressed`.
+    assert_eq!(root["role"], "radiogroup");
+    assert_eq!(root["data-state"], "horizontal outlined collapsed");
 
-    let pressed: Vec<&str> = body
-        .match_indices("aria-pressed=\"")
+    let checked: Vec<bool> = body
+        .match_indices("<input")
         .map(|(at, _)| {
-            let value = &body[at + "aria-pressed=\"".len()..];
-            &value[..value.find('"').expect("an unterminated attribute")]
+            let tag = &body[at..at + body[at..].find('>').expect("an unterminated tag")];
+            tag.contains("checked")
         })
         .collect();
-    assert_eq!(pressed, ["true", "false"]);
+    assert_eq!(checked, [true, false]);
 
-    // The selected look is a `data-state`, so one class serves both buttons -
+    // A rich label is an icon beside text, so the segment separates its own
+    // children - no caller `sx` should be needed for that.
+    assert!(html.contains(&format!(
+        ".{} > label{{",
+        classes_of(&body, "div").first().expect("a framework class")
+    )));
+    assert!(html.contains("gap:var(--lsx-spacing-xs)"));
+
+    // The derive names the segments, and the radio carries that name because
+    // a rich label's text is not it.
+    assert!(body.contains("aria-label=\"Bold\""));
+    assert!(body.contains("aria-label=\"Italic\""));
+
+    // The selected look is a `data-state`, so one class serves both segments -
     // `classes_of` only ever reads the first tag, hence the split.
-    let first_at = body.find("<button").expect("a button");
+    let first_at = body.find("<label").expect("a label");
     let (first, second) =
-        body.split_at(first_at + body[first_at + 1..].find("<button").expect("two buttons") + 1);
-    assert_eq!(classes_of(first, "button"), classes_of(second, "button"));
-    assert!(attributes_of(first, "button")["data-state"].contains("checked"));
-    assert!(!attributes_of(second, "button")["data-state"].contains("checked"));
+        body.split_at(first_at + body[first_at + 1..].find("<label").expect("two labels") + 1);
+    assert_eq!(classes_of(first, "label"), classes_of(second, "label"));
+    assert!(attributes_of(first, "label")["data-state"].contains("checked"));
+    assert!(!attributes_of(second, "label")["data-state"].contains("checked"));
 
-    // The framework class comes first; the second is shared with the group.
-    let button_class = classes_of(&body, "button");
-    let button_class = button_class.first().expect("a framework class");
-    assert!(has_rule_for(&html, button_class));
+    let root_class = classes_of(&body, "div");
+    let root_class = root_class.first().expect("a framework class");
+    assert!(has_rule_for(&html, root_class));
     // The selected block ties the variant's own `:hover` on specificity, so it
     // has to be emitted after it - a swap would silently lose the selected
     // background under the pointer.
-    let selected = format!(".{button_class}[data-state~=\"outlined\"][data-state~=\"checked\"]");
-    let hover = format!(".{button_class}[data-state~=\"outlined\"]:hover");
+    let selected =
+        format!(".{root_class}[data-state~=\"outlined\"] > label[data-state~=\"checked\"]");
+    let hover = format!(".{root_class}[data-state~=\"outlined\"] > label:hover");
     assert!(
         html.find(&selected).expect("no selected rule") > html.find(&hover).expect("no hover rule")
     );
 
-    // The inner corners have to beat `Button`'s own radius rule, which is
-    // (0,2,0) in another stylesheet - so the attribute selector is load-bearing.
-    let group_class = classes_of(&body, "div");
-    let group_class = group_class.first().expect("a framework class");
+    // The inner corners have to beat the segment's own radius rule, which is
+    // one `when` shallower - so the attribute selectors are load-bearing.
     assert!(html.contains(&format!(
-        ".{group_class}[data-state~=\"collapsed\"][data-state~=\"horizontal\"] > [data-state]:not(:first-child)"
+        ".{root_class}[data-state~=\"collapsed\"][data-state~=\"horizontal\"] > label:not(:first-of-type)"
     )));
 }
 
 #[test]
-fn a_gapped_toggle_group_keeps_every_button_s_own_corners() {
+fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                ToggleButtonGroup {
+                SegmentedControl {
                     gap: "xs",
-                    value: vec!["bold".to_string()],
+                    value: Emphasis::Bold,
                     onchange: move |_| {},
-                    ToggleButton { value: "bold", "B" }
-                    ToggleButton { value: "italic", "I" }
                 }
             }
         }
@@ -144,18 +158,17 @@ fn a_gapped_toggle_group_keeps_every_button_s_own_corners() {
 
     let html = render(app);
     let body = body(&html);
-    let group = attributes_of(&body, "div");
+    let root = attributes_of(&body, "div");
 
     // No `collapsed`, so the corner-squashing rules below cannot match.
-    assert_eq!(group["data-state"], "horizontal size-xs");
+    assert_eq!(root["data-state"], "horizontal outlined size-xs");
 
-    let group_class = classes_of(&body, "div");
-    let group_class = group_class.first().expect("a framework class");
+    let root_class = classes_of(&body, "div");
+    let root_class = root_class.first().expect("a framework class");
     assert!(html.contains(&format!(
-        ".{group_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"
+        ".{root_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"
     )));
 }
-
 #[test]
 fn a_switch_renders_a_checkbox_its_label_points_at() {
     fn app() -> Element {
@@ -1702,10 +1715,10 @@ fn a_zone_can_shrink_below_the_width_its_twelve_tracks_would_demand() {
     assert!(html.contains("row-gap:var(--lsx-grid-zone-gap)"));
 }
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum Section {
     Account,
-    #[tab(label = "Admin area")]
+    #[option(label = "Admin area")]
     Admin,
     Billing,
 }
@@ -1763,7 +1776,7 @@ fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
                     value: Section::Account,
                     onchange: move |_| {},
                     tabs: vec![Section::Account, Section::Billing],
-                    label: |section: Section| TabLabel::rich(
+                    label: |section: Section| OptionLabel::rich(
                         format!("t:{}", section.label()),
                         rsx! { span { "rich" } },
                     ),

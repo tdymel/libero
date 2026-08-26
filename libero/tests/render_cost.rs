@@ -27,7 +27,7 @@ use dioxus::prelude::*;
 use libero::components::{Option, Title};
 use libero::{LiberoProvider, components::*};
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum CostPane {
     One,
     Two,
@@ -130,7 +130,7 @@ fn render_cost_per_component() {
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
-        "ToggleButtonGroup" { ToggleButtonGroup { ToggleButton { value: "a", "x" } } }
+        "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
         "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
 
         "Icon" { Icon { "x" } }

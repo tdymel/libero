@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use libero::components::{Chip, Flex, Icon, TabLabel, TabValue, Tabs, Title};
+use libero::components::{Chip, Flex, Icon, OptionLabel, Options, Tabs, Title};
 
 use super::{PropGroup, PropertyTable};
 use crate::icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon};
@@ -7,7 +7,7 @@ use crate::icons::{CodeIcon, FileIcon, GitHubIcon, MarkdownIcon};
 const REPO: &str = "https://github.com/tdymel/libero/tree/main/";
 
 /// The tabs a docs page can show. `Usage` is the page's own sections.
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum DocTab {
     Usage,
     Properties,
@@ -84,7 +84,7 @@ pub fn DocPage(
                     onchange: move |next| tab.set(next),
                     size: "lg",
                     full_width: true,
-                    label: |selected: DocTab| TabLabel::rich(
+                    label: |selected: DocTab| OptionLabel::rich(
                         selected.label(),
                         rsx! {
                             Icon { variant: "transparent", size: "md",

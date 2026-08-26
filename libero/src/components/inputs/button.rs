@@ -41,10 +41,10 @@ str_enum! {
 input_from_str!(ButtonVariant);
 
 // What `button_variant_sx` references by name.
-const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
-const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
-const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
-const BUTTON_SELECTED_VAR: CssVar = CssVar::new("--lsx-button-selected");
+pub(crate) const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
+pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
+pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
+pub(crate) const BUTTON_SELECTED_VAR: CssVar = CssVar::new("--lsx-button-selected");
 
 /// Structural chrome for `variant`. The three arguments are `var()` names,
 /// not resolved values, so `ActionIcon` reuses this under its own.
@@ -86,7 +86,11 @@ pub(crate) fn button_variant_sx(
 /// tint - falling back to the base colour would paint a full-strength
 /// background under an `inherit` label, so the untinted variants fall back to
 /// nothing at all.
-fn button_selected_sx(variant: ButtonVariant, color_var: &CssVar, selected_var: &CssVar) -> Sx {
+pub(crate) fn button_selected_sx(
+    variant: ButtonVariant,
+    color_var: &CssVar,
+    selected_var: &CssVar,
+) -> Sx {
     match variant {
         ButtonVariant::Filled => sx().background(selected_var.value_or(color_var.value())),
         ButtonVariant::Outlined => sx().background(selected_var.value_or("transparent")),
@@ -143,7 +147,11 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
 /// The colour half of the `style` attribute, already rendered. Depends on
 /// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
 /// it off the render path.
-fn button_variables(variant: ButtonVariant, base: &ThemeAwareValue, selectable: bool) -> String {
+pub(crate) fn button_variables(
+    variant: ButtonVariant,
+    base: &ThemeAwareValue,
+    selectable: bool,
+) -> String {
     let filled = variant == ButtonVariant::Filled;
     let contrast = contrast_color(base);
     let hover = hover_color(base, filled);

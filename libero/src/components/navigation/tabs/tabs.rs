@@ -1,9 +1,8 @@
 use dioxus::prelude::*;
 
 use super::core::{TabSpec, TabsView, render_tabs};
-use super::tab_value::{TabLabel, TabValue};
 use crate::{
-    components::{ClassList, Input, States, common::base_color},
+    components::{ClassList, Input, OptionLabel, Options, States, common::base_color},
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
     theme::Size,
@@ -13,7 +12,7 @@ use crate::{
 // Hand-written rather than `base_props!`, which is not generic - as
 // `SliderProps` is.
 #[derive(Props, Clone, PartialEq)]
-pub struct TabsProps<T: TabValue> {
+pub struct TabsProps<T: Options> {
     /// Strictly controlled - pair it with `onchange`.
     value: T,
     /// Called with the tab that should become selected.
@@ -23,17 +22,17 @@ pub struct TabsProps<T: TabValue> {
     /// panels cost nothing.
     #[props(default)]
     panel: Option<Callback<T, Element>>,
-    /// The tabs to show. Defaults to every `TabValue::options()`.
+    /// The tabs to show. Defaults to every `Options::options()`.
     #[props(default)]
     tabs: Option<Vec<T>>,
-    /// Overrides `TabValue::label`. Runs during render, so it can read a
+    /// Overrides `Options::label`. Runs during render, so it can read a
     /// locale from context - which is how a renamed strip stays renamed.
     ///
-    /// `"Konto".into()` names a tab; `TabLabel::rich(name, rsx! { .. })`
+    /// `"Konto".into()` names a tab; `OptionLabel::rich(name, rsx! { .. })`
     /// draws it and names it, because the rsx is what a screen reader cannot
     /// use.
     #[props(default)]
-    label: Option<Callback<T, TabLabel>>,
+    label: Option<Callback<T, OptionLabel>>,
     /// Tabs that render but cannot be picked.
     #[props(default)]
     disabled: Vec<T>,
@@ -61,7 +60,7 @@ pub struct TabsProps<T: TabValue> {
 /// The tabs are `T::options()` unless `tabs` narrows them, and `panel` is a
 /// match over `T` - so a forgotten or misspelled tab is a compile error.
 #[component]
-pub fn Tabs<T: TabValue>(props: TabsProps<T>) -> Element {
+pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
     let root = use_root_id(&props.attributes);
     let theme = use_theme();
 
@@ -83,7 +82,7 @@ pub fn Tabs<T: TabValue>(props: TabsProps<T>) -> Element {
         .map(|value| {
             let label = match &props.label {
                 Some(label) => label.call(value.clone()),
-                None => TabLabel::from(value.label()),
+                None => OptionLabel::from(value.label()),
             };
             let name = label.name;
             TabSpec {

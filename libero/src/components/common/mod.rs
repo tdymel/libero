@@ -4,6 +4,7 @@ mod color_variant;
 mod dom_api;
 mod element_api;
 mod input;
+mod options;
 mod orientation;
 mod platform_error;
 mod polymorphic;
@@ -20,6 +21,9 @@ pub use dom_api::{DomApi, dom_api};
 pub use element_api::{Dimensions, ElementApi};
 pub use input::Input;
 pub(crate) use input::input_from_str;
+pub use options::{OptionLabel, Options};
+// The derive and the trait share a name and one import, the way serde's do.
+pub use libero_macros::Options;
 pub use orientation::Orientation;
 pub use platform_error::PlatformError;
 pub use polymorphic::HtmlTag;

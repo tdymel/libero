@@ -1,13 +1,13 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use crate::icons::FileIcon;
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, Input, TabLabel, TabValue, Tabs, Text};
+use libero::components::{Code, Icon, Input, OptionLabel, Options, Tabs, Text};
 
 /// The enum is the tab strip, so the snippet has to show it.
-const SECTION_ENUM: &str = r#"#[derive(Clone, PartialEq, TabValue)]
+const SECTION_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
 enum Section {
     Account,
-    #[tab(label = "Admin area")]
+    #[option(label = "Admin area")]
     Admin,
     Billing,
 }
@@ -24,7 +24,7 @@ const RENAMED: &str = r#"label: |section: Section| match section {
 
 // A tab is a `button`, so its content has to stay phrasing content: `Icon` is
 // an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a `div`.
-const RICH: &str = r#"label: |section: Section| TabLabel::rich(
+const RICH: &str = r#"label: |section: Section| OptionLabel::rich(
     section.label(),
     rsx! {
         Icon { variant: "transparent", size: "sm", FileIcon {} }
@@ -32,15 +32,15 @@ const RICH: &str = r#"label: |section: Section| TabLabel::rich(
     },
 )"#;
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
 enum Section {
     Account,
-    #[tab(label = "Admin area")]
+    #[option(label = "Admin area")]
     Admin,
     Billing,
 }
 
-fn renamed(section: Section) -> TabLabel {
+fn renamed(section: Section) -> OptionLabel {
     match section {
         Section::Account => "Konto".into(),
         Section::Admin => "Verwaltung".into(),
@@ -48,8 +48,8 @@ fn renamed(section: Section) -> TabLabel {
     }
 }
 
-fn rich(section: Section) -> TabLabel {
-    TabLabel::rich(
+fn rich(section: Section) -> OptionLabel {
+    OptionLabel::rich(
         section.label(),
         rsx! {
             Icon { variant: "transparent", size: "sm", FileIcon {} }
@@ -73,7 +73,7 @@ pub fn TabsPage() -> Element {
                     prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
                     prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Called for `value` only, so the other panels cost nothing."),
                     prop("tabs", "Vec<T>").default("T::options()").doc("The tabs to show."),
-                    prop("label", "Callback<T, TabLabel>")
+                    prop("label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed."),
                     prop("disabled", "Vec<T>").doc("Tabs that render but cannot be picked."),
@@ -81,17 +81,17 @@ pub fn TabsPage() -> Element {
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
                 ]),
-                props("TabLabel", vec![
+                props("OptionLabel", vec![
                     prop("name", "String").doc("The tab's visible text and accessible name."),
                     prop("content", "Element")
-                        .doc("Drawn in place of the name, via `TabLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use."),
+                        .doc("Drawn in place of the name, via `OptionLabel::rich` - an icon or a badge. `name` still names the tab, since the rsx is what a screen reader cannot use."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
                 Text {
                     "One strip of tabs over an enum, with the selected tab's panel below it. The "
                     "tabs are the enum's variants - "
-                    Code { source: "#[derive(TabValue)]" }
+                    Code { source: "#[derive(Options)]" }
                     " lists them in declaration order and names each one - and "
                     Code { source: "panel" }
                     " is a match over the same type, so a forgotten or misspelled tab is a "
@@ -103,7 +103,7 @@ pub fn TabsPage() -> Element {
                     " overrides what the derive named a tab, and it runs during render - so it "
                     "can read a locale from a signal or from context, and the strip repaints when "
                     "that changes. Return a string to rename a tab, or "
-                    Code { source: "TabLabel::rich" }
+                    Code { source: "OptionLabel::rich" }
                     " to draw it as rsx (an icon, a badge) - that one asks for the name as well, "
                     "since the rsx is what a screen reader cannot use."
                 }

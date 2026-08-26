@@ -8,7 +8,7 @@ use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Button, Dialog, TabValue, Tabs, ToggleButton, ToggleButtonGroup},
+    components::{ActionIcon, Button, Dialog, Options, SegmentedControl, Tabs},
     hooks::{ModalScope, use_modal},
 };
 use std::rc::Rc;
@@ -164,21 +164,19 @@ fn clicking_an_action_icon_runs_its_ripple() {
     assert_ripple_alternates(action_icon_app);
 }
 
-/// The group hands its state to the buttons through a context, which
-/// `use_context` reads exactly once - so this asserts the *second* render
-/// sees the new selection, not the one captured at mount.
+/// The control is strictly controlled and the radio is cancelled on click, so
+/// what is checked after a click comes from Rust alone - never from the flip
+/// the browser did during activation.
 #[test]
-fn clicking_a_toggle_button_moves_the_group_selection() {
+fn clicking_a_segment_moves_the_selection() {
     fn app() -> Element {
-        let mut value = use_signal(Vec::<String>::new);
+        let mut value = use_signal(|| Emphasis::Bold);
 
         rsx! {
             LiberoProvider {
-                ToggleButtonGroup {
+                SegmentedControl {
                     value: value(),
                     onchange: move |next| value.set(next),
-                    ToggleButton { value: "bold", "B" }
-                    ToggleButton { value: "italic", "I" }
                 }
             }
         }
@@ -188,30 +186,40 @@ fn clicking_a_toggle_button_moves_the_group_selection() {
     let mut dom = VirtualDom::new(app);
     let mut find = FindClickListener::default();
     dom.rebuild(&mut find);
-    // The last listener registered, i.e. the second button.
+    // The last listener registered, i.e. the second segment.
     let italic = find.click.expect("registered no click listener");
 
-    assert_eq!(
-        pressed_states(&dioxus_ssr::render(&dom)),
-        ["false", "false"]
-    );
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [true, false]);
 
     dom.runtime()
         .handle_event("click", Event::new(click_event(), true), italic);
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    assert_eq!(pressed_states(&dioxus_ssr::render(&dom)), ["false", "true"]);
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false, true]);
 
-    // Exclusive by default, so clicking it again clears rather than keeps it.
+    // Exactly one is always selected, so clicking it again is a no-op rather
+    // than a deselect - that is the whole difference from a row of toggles.
     dom.runtime()
         .handle_event("click", Event::new(click_event(), true), italic);
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
-    assert_eq!(
-        pressed_states(&dioxus_ssr::render(&dom)),
-        ["false", "false"]
-    );
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false, true]);
 }
 
-#[derive(Clone, PartialEq, TabValue)]
+#[derive(Clone, PartialEq, Options)]
+enum Emphasis {
+    Bold,
+    Italic,
+}
+
+fn checked_states(html: &str) -> Vec<bool> {
+    html.match_indices("<input")
+        .map(|(at, _)| {
+            let tag = &html[at..at + html[at..].find('>').expect("an unterminated tag")];
+            tag.contains("checked")
+        })
+        .collect()
+}
+
+#[derive(Clone, PartialEq, Options)]
 enum Pane {
     First,
     Second,
@@ -272,13 +280,6 @@ fn markup(html: &str) -> String {
     }
     out.push_str(rest);
     out
-}
-
-fn pressed_states(html: &str) -> Vec<String> {
-    html.split("aria-pressed=\"")
-        .skip(1)
-        .map(|rest| rest.split('"').next().unwrap().to_string())
-        .collect()
 }
 
 fn assert_ripple_alternates(app: fn() -> Element) {
