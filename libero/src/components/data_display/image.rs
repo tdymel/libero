@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, HtmlTag, Input, Modal, States, Variables,
+        Box, Dialog, HtmlTag, Input, States, Variables,
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
         layout::use_box,
     },
-    hooks::{FocusReturn, LocalState, use_focus_return, use_local_state, use_portal, use_theme},
+    hooks::{ModalScope, use_modal, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
 };
@@ -94,13 +94,50 @@ base_props! {
     }
 }
 
+fn zoom_label(alt: &str, zoomed: bool) -> String {
+    match (alt.is_empty(), zoomed) {
+        (true, false) => "Zoom in".to_string(),
+        (true, true) => "Zoom out".to_string(),
+        (false, false) => format!("Zoom in: {alt}"),
+        (false, true) => format!("Zoom out: {alt}"),
+    }
+}
+
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
-    let zoomed = use_local_state(|| false);
-    // Hoisted above the early return and paired with the `use_portal(None)`
-    // below: hook slots are positional, so both paths must match.
-    let mut focus_return = use_focus_return();
+    // Above the early return, and unconditional: hook slots are positional,
+    // and it is what portals the zoom overlay. Its argument is the source to
+    // show enlarged. Focus returns to the button on its own.
+    let alt = props.alt.clone();
+    let zoom = use_modal(move |s: ModalScope<String>| {
+        let label = zoom_label(&alt, true);
+
+        rsx! {
+            Dialog {
+                aria_label: label.clone(),
+                // The picture itself is the close button.
+                close_button: false,
+                size: "none",
+                sx: &IMAGE_ZOOM_DIALOG_SX,
+                Box {
+                    component: "button",
+                    r#type: "button",
+                    framework_sx: &ZOOM_OVERLAY_BUTTON_SX,
+                    "data-autofocus": true,
+                    aria_label: label,
+                    onclick: move |_| s.close(),
+                    Box {
+                        component: "img",
+                        framework_sx: &ZOOM_OVERLAY_IMAGE_SX,
+                        src: s.args(),
+                        alt: "",
+                        role: "presentation",
+                    }
+                }
+            }
+        }
+    });
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
@@ -135,7 +172,7 @@ pub fn Image(props: ImageProps) -> Element {
         .states
         .clone()
         .unwrap_or_default()
-        .with("zoomed", zoomed.get())
+        .with("zoomed", zoom.is_open())
         .into();
 
     let (root_sx, root_states, root_variables) = match props.zoomable {
@@ -157,7 +194,6 @@ pub fn Image(props: ImageProps) -> Element {
         .prepare();
 
     if !props.zoomable {
-        use_portal(None);
         return root
             .attr("src", src)
             .attr("alt", props.alt)
@@ -168,54 +204,7 @@ pub fn Image(props: ImageProps) -> Element {
             .render(HtmlTag::Img, props.attributes, ());
     }
     let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
-
-    // `LocalState` is `Clone`, not `Copy`, so each closure gets its own.
-    let close_zoom = |zoomed: LocalState<bool>, focus_return: FocusReturn| {
-        move || {
-            zoomed.set(false);
-            focus_return.restore();
-        }
-    };
-    let close_from_modal = close_zoom(zoomed.clone(), focus_return);
-    let close_from_click = close_zoom(zoomed.clone(), focus_return);
-
-    let label = match (props.alt.is_empty(), zoomed.get()) {
-        (true, false) => "Zoom in".to_string(),
-        (true, true) => "Zoom out".to_string(),
-        (false, false) => format!("Zoom in: {}", props.alt),
-        (false, true) => format!("Zoom out: {}", props.alt),
-    };
-
-    let portal_content = zoomed.get().then(|| {
-        rsx! {
-            Modal {
-                onclose: move |_| close_from_modal(),
-                Dialog {
-                    aria_label: label.clone(),
-                    // The picture itself is the close button.
-                    close_button: false,
-                    size: "none",
-                    sx: &IMAGE_ZOOM_DIALOG_SX,
-                    Box {
-                        component: "button",
-                        r#type: "button",
-                        framework_sx: &ZOOM_OVERLAY_BUTTON_SX,
-                        "data-autofocus": true,
-                        aria_label: label.clone(),
-                        onclick: move |_| close_from_click(),
-                        Box {
-                            component: "img",
-                            framework_sx: &ZOOM_OVERLAY_IMAGE_SX,
-                            src: zoomed_src.clone(),
-                            alt: "",
-                            role: "presentation",
-                        }
-                    }
-                }
-            }
-        }
-    });
-    use_portal(portal_content);
+    let label = zoom_label(&props.alt, zoom.is_open());
 
     let image = inner_image
         .attr("src", src.clone())
@@ -227,13 +216,10 @@ pub fn Image(props: ImageProps) -> Element {
         .render(HtmlTag::Img, Vec::new(), ());
 
     root.attr("type", "button")
-        .attr("aria-pressed", zoomed.get().to_string())
-        .attr("aria-label", label.clone())
-        .event("onmounted", move |event: Event<MountedData>| {
-            focus_return.remember(event)
-        })
+        .attr("aria-pressed", zoom.is_open().to_string())
+        .attr("aria-label", label)
         .event("onclick", move |_: Event<MouseData>| {
-            zoomed.set(!zoomed.get())
+            zoom.open_with(zoomed_src.clone());
         })
         .render(HtmlTag::Button, props.attributes, image)
 }

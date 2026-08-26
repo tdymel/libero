@@ -75,7 +75,7 @@ zooms. Its accessible name is derived from `alt`: `Zoom in: <alt>` closed,
 empty. The inner `<img>` is then `alt=""`/`role="presentation"`, since the button
 already carries the name.
 
-The overlay is a modal layer + `Dialog`, so Escape closes it and focus is trapped
+The overlay is opened with `use_modal`, so Escape closes it, focus is trapped
 inside while it is open; the overlay itself is a button with `data-autofocus`, so
 focus lands there on open and returns to the inline image on close.
 
