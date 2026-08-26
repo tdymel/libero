@@ -28,6 +28,11 @@ impl ElementHandle {
         move |event| self.mounted.set(Some(event.data()))
     }
 
+    /// Reactive: an effect that reads this re-runs once the element mounts.
+    pub fn is_mounted(&self) -> bool {
+        self.mounted.read().is_some()
+    }
+
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
         match self.mounted.read().as_ref() {
             Some(mounted) => Ok(backend::element(mounted)),

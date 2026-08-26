@@ -155,6 +155,7 @@ impl Theme {
             scrollbars: ScrollAxis::Vertical,
             visibility: ScrollbarVisibility::Always,
             size: ScrollbarSize::Thin,
+            overscan: 4,
         },
         button: ButtonDefaults {
             size: Size::Md,

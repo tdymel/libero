@@ -1,5 +1,6 @@
 use dioxus::prelude::*;
 
+use super::viewport::{ContentOffsets, ScrollGeometry, ScrollViewport};
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
@@ -27,6 +28,10 @@ pub enum ScrollPositionEvent {
 }
 
 const SCROLL_AREA_THUMB_VAR: CssVar = CssVar::new("--lsx-scroll-area-thumb-color");
+/// Rows a `Virtualize` child skipped, standing in as padding so the scroll
+/// range still spans the whole list.
+const SCROLL_AREA_LEADING_VAR: CssVar = CssVar::new("--lsx-scroll-area-leading");
+const SCROLL_AREA_TRAILING_VAR: CssVar = CssVar::new("--lsx-scroll-area-trailing");
 
 /// `Scroll` behaves as `Hover`: nothing here can yet fade the scrollbar out
 /// after an idle timeout. See `ScrollbarVisibility`.
@@ -74,8 +79,29 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
+/// Wraps the content so the rows a `Virtualize` skipped have something to be
+/// reserved on. `display: contents` until then, so an ordinary scroll area
+/// lays out exactly as it did without it.
+static SCROLL_AREA_CONTENT_SX: StaticSx = StaticSx::new(|| {
+    sx().display("contents").when(
+        "virtualized",
+        sx().display("block")
+            .padding_top(SCROLL_AREA_LEADING_VAR.value_or("0px"))
+            .padding_bottom(SCROLL_AREA_TRAILING_VAR.value_or("0px")),
+    )
+});
+
 fn scroll_area_variables(color: Option<&ThemeAwareValue>) -> Variables {
     variables().with(SCROLL_AREA_THUMB_VAR, color.and_then(|v| v.resolve(None)))
+}
+
+/// Both are always written, `0px` included. Dropping one leaves the previous
+/// declaration in place - the style attribute is patched property by property,
+/// not replaced - and the last window's reserve outlives the window.
+fn scroll_area_content_variables(offsets: ContentOffsets) -> Variables {
+    variables()
+        .with(SCROLL_AREA_LEADING_VAR, format!("{}px", offsets.leading))
+        .with(SCROLL_AREA_TRAILING_VAR, format!("{}px", offsets.trailing))
 }
 
 /// Which edges the last scroll position rested against, so `on_*_reached`
@@ -167,6 +193,30 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let mut is_scrolling = use_signal(|| false);
     let mut edges = use_signal(|| EdgeState::AT_ORIGIN);
 
+    let content = use_element();
+    let mut geometry = use_signal(|| None::<ScrollGeometry>);
+    let offsets = use_signal(ContentOffsets::default);
+    let virtualized = use_signal(|| false);
+    use_context_provider(|| ScrollViewport::new(content, geometry, offsets, virtualized));
+    // A `Virtualize` child needs the viewport height before anything has been
+    // scrolled, and re-runs once the root is actually mounted.
+    use_effect(move || {
+        if !root.is_mounted() {
+            return;
+        }
+        let (size, offset) = (root.dimensions(), root.scroll_offset());
+        spawn(async move {
+            let measured = match (size.await, offset.await) {
+                (Ok(size), Ok((_, top))) => ScrollGeometry {
+                    offset: top,
+                    viewport: size.height,
+                },
+                _ => ScrollGeometry::default(),
+            };
+            geometry.set(Some(measured));
+        });
+    });
+
     let on_scroll = props.on_scroll;
     let scrolled = move |event: ScrollPositionEvent| {
         if let Some(on_scroll) = &on_scroll {
@@ -186,6 +236,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let onscroll = move |event: Event<ScrollData>| {
         let data = event.data();
         let (x_pct, y_pct, max_x, max_y) = scroll_metrics(&data);
+        geometry.set(Some(ScrollGeometry {
+            offset: data.scroll_top(),
+            viewport: data.client_height() as f64,
+        }));
 
         if is_scrolling() {
             scrolled(ScrollPositionEvent::Change(x_pct, y_pct));
@@ -263,6 +317,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
 
     let variables: Input<Variables> = scroll_area_variables(props.scrollbar_color.as_ref()).into();
 
+    let content_states: Input<States> = States::default().with("virtualized", virtualized()).into();
+    let content_variables: Input<Variables> = scroll_area_content_variables(offsets()).into();
+    let body = use_box()
+        .framework_sx(&SCROLL_AREA_CONTENT_SX)
+        .states(&content_states)
+        .variables(&content_variables)
+        .prepare()
+        .element(&content)
+        .render(HtmlTag::Div, Vec::new(), props.children)?;
+
     use_box()
         .framework_sx(&SCROLL_AREA_BASE_SX)
         .class(&props.class)
@@ -277,7 +341,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .attr("tabindex", "-1")
         .event("onscroll", onscroll)
         .event("onscrollend", onscrollend)
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(HtmlTag::Div, props.attributes, rsx! { {body} })
 }
 
 #[cfg(test)]

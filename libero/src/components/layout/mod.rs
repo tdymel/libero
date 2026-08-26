@@ -25,6 +25,6 @@ pub use grid::{
     StaticGridTemplate, sp,
 };
 pub use header::{Header, HeaderPosition};
-pub use scroll_area::{ScrollArea, ScrollPositionEvent};
+pub use scroll_area::{ScrollArea, ScrollPositionEvent, Virtualize};
 pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
 pub use splitter::{Splitter, SplitterResizeEvent};

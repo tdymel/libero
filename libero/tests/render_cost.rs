@@ -114,6 +114,7 @@ fn render_cost_per_component() {
         "Float" { Float { "x" } }
         "Header" { Header { "x" } }
         "ScrollArea" { ScrollArea { "x" } }
+        "Virtualize" { ScrollArea { Virtualize { count: 1, item: move |_| rsx! { "x" } } } }
         "Sidebar" { Sidebar { "x" } }
         "Splitter" { Splitter { initial_size: 50.0, panel_a: rsx! { div { "l" } }, panel_b: rsx! { div { "r" } } } }
 

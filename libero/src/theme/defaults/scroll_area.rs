@@ -39,4 +39,6 @@ pub struct ScrollAreaDefaults {
     pub scrollbars: ScrollAxis,
     pub visibility: ScrollbarVisibility,
     pub size: ScrollbarSize,
+    /// Rows a `Virtualize` keeps beyond each edge of the viewport.
+    pub overscan: usize,
 }

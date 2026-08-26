@@ -51,7 +51,7 @@ fetch only the file you need.
 - [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
 - [Grid](grid.md): A named-area layout matrix - `Grid` holds the shape, a `GridZone` is a twelve-column packing container with optional masonry, and a `GridItem` takes a fraction of it.
 - [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
-- [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions and per-edge events.
+- [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
 - [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
 - [Splitter](splitter.md): Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
 
