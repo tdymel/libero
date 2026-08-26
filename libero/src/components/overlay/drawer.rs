@@ -4,16 +4,13 @@ use crate::{
     components::{
         Dialog, Float, Input, Modal, Placement, States,
         common::{base_props, input_from_str},
-        variables,
     },
     hooks::use_css,
     hooks::use_portal,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{CssVar, DRAWER_SIZE, Size},
+    theme::{DRAWER_SIZE, Size},
 };
-
-const DRAWER_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-drawer-z-index");
 
 // Rides along as an extra class on `Dialog`'s own. Edge-docking is `Float`'s
 // job; this only fills the slot it anchors.
@@ -93,7 +90,6 @@ base_props! {
 pub fn Drawer(props: DrawerProps) -> Element {
     let anchor = props.anchor.copied_or_default();
     let size = props.size.copied_or(Size::Md);
-    let variables = variables().with(DRAWER_Z_INDEX_VAR, props.z_index.resolve(None));
 
     let states = props
         .states
@@ -129,7 +125,6 @@ pub fn Drawer(props: DrawerProps) -> Element {
                     class: class.clone(),
                     sx: sx.clone(),
                     states: states.clone(),
-                    variables: variables.clone(),
                     attributes: attributes.clone(),
                     {children.clone()}
                 }
