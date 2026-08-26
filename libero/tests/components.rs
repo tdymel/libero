@@ -40,6 +40,11 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
 
     let span = attributes_of(&html, "span");
     assert_eq!(span["data-state"], "filled size-md radius-xl checked");
+    // M3's selected filter chip is a tonal container, and one step past
+    // `Tonal`'s own resting tint - so selecting an already-tonal chip still
+    // reads as a change.
+    assert!(span["style"].contains("--lsx-chip-container:var(--lsx-primary-2);"));
+    assert!(span["style"].contains("--lsx-chip-on-container:var(--lsx-primary-contrast-2);"));
     assert!(body(&html).contains(">tag<"));
 }
 

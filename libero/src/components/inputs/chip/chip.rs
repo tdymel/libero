@@ -4,14 +4,17 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
-        common::{base_color, base_props, contrast_color, focus_ring_sx, variables},
-        inputs::{ButtonVariant, VariantVars, button_variant_sx, variant_colors},
+        common::{
+            base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
+            shade_color, variables,
+        },
+        inputs::{ButtonVariant, VariantColors, VariantVars, button_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
     },
     hooks::{use_cache, use_id, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ChipDefaults, CssVar, Size, SizeCss},
+    theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
 };
 
@@ -54,10 +57,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         })
         // Folded after the variants, which is what makes it win: equal
         // specificity, so source order decides. `variant` describes the
-        // unselected look and a selected chip is always filled.
+        // unselected look; selected is M3's secondary-container - a tint,
+        // which also drops the outline the way the spec asks, since `Tonal`
+        // sets `border-color: transparent`.
         .when(
             "checked",
-            button_variant_sx(ButtonVariant::Filled, &CHIP_VARS, &CHIP_HOVER_VAR),
+            button_variant_sx(ButtonVariant::Tonal, &CHIP_VARS, &CHIP_HOVER_VAR),
         )
         .when("clickable", sx().cursor("pointer"))
         .when(
@@ -85,13 +90,19 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
 fn chip_variables(variant: ButtonVariant, checked: bool, base: &ThemeAwareValue) -> String {
-    // A checked chip is always filled, whatever the unselected look is.
-    let effective = if checked {
-        ButtonVariant::Filled
+    // Selected is a tonal container, whatever the unselected look is - but one
+    // step past `Tonal`'s own resting tint, or selecting a chip that is
+    // already tonal would produce no visible change at all.
+    let colors = if checked {
+        VariantColors {
+            container: shade_color(base, ColorShade::S2),
+            on_container: contrast_shade_color(base, ColorShade::S2),
+            hover: shade_color(base, ColorShade::S3),
+            selected: None,
+        }
     } else {
-        variant
+        variant_colors(variant, base)
     };
-    let colors = variant_colors(effective, base);
 
     variables()
         .with(CHIP_COLOR_VAR, base.resolve(None))

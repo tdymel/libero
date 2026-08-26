@@ -28,7 +28,8 @@ fn Demo() -> Element {
 ## Selectable
 
 Strictly controlled: `checked` drives the look, `onchange` reports the value it
-should take next. A checked chip is filled whatever its `variant`, so `variant`
+should take next. A checked chip is a tinted container - Material 3's selected
+filter chip, which also drops the outline - whatever its `variant`, so `variant`
 describes the unselected state. `checked` without `onchange` can never change,
 and `onchange` without `checked` can never look selected - the library warns
 about either alone.
@@ -99,7 +100,7 @@ any nested control.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `filled` | The unselected look; a checked chip is always filled. |
+| `variant` | `ButtonVariant` | `filled` | The unselected look; a checked chip is a tonal container whatever its variant. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `radius` | `Size` | `xl` | Corner radius, independent of `size`. |
 | `checked` | `bool` | - | Strictly controlled selection state - pair it with `onchange`. |

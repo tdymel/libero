@@ -18,7 +18,7 @@ pub fn ChipPage() -> Element {
                     .doc("Accent color; a theme color name or a literal CSS color."),
                 prop("variant", "ButtonVariant")
                     .default("filled")
-                    .doc("The unselected look; a checked chip is always filled."),
+                    .doc("The unselected look; a checked chip is a tonal container whatever its variant."),
                 prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
                 prop("radius", "Size")
                     .default("xl")
@@ -106,8 +106,8 @@ pub fn ChipPage() -> Element {
                     Code { source: "checked" }
                     " drives the look, "
                     Code { source: "onchange" }
-                    " reports the value it should take next. A checked chip is filled "
-                    "whatever its "
+                    " reports the value it should take next. A checked chip is a tinted "
+                    "container - Material 3's selected filter chip - whatever its "
                     Code { source: "variant" }
                     ", so "
                     Code { source: "variant" }
