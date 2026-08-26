@@ -11,6 +11,7 @@ root := justfile_directory() / ".."
 dx := root / ".dioxus-active" / "target" / "release" / "dx"
 
 import 'native.just'
+import 'android.just'
 
 # Fork-only APIs are behind libero's `dioxus-fork` feature, so every recipe
 # below picks its flags from the active mode. Wrong mode = compile error.

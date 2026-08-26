@@ -14,3 +14,8 @@ pre_compress = true
 # dx concatenates its title into an existing <title>, so setting it here is
 # what stops index.html rendering as "liberodioxus | ⛺".
 title = "libero"
+
+[android]
+# `dx` otherwise makes one up (`com.example.docs`), and it ends up baked into
+# the generated gradle project, the APK and the emulator's package list.
+identifier = "dev.libero.docs"

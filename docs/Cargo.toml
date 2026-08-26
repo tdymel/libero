@@ -66,6 +66,11 @@ native-vello = ["native", "dep:dioxus-native", "dioxus-native/vello"]
 # and `vello-cpu-base` outranks it). So this skips `dioxus/native` and `main`
 # calls `dioxus_native::launch` instead of `dioxus::launch`.
 native-cpu = ["dep:dioxus-native", "dioxus-native/vello-cpu-softbuffer"]
+# WebView (wry) on Android, via `dx --platform android`. Unlike `native`
+# there's no renderer choice to make: the app runs in the system WebView, so
+# the same CSS engine styles it as on the web. `dioxus/mobile` is
+# `dioxus-desktop` with a mobile event loop, so no separate `launch` call.
+mobile = ["dioxus/mobile"]
 # Build against `.dioxus-fork`; must match whichever tree `.dioxus-active`
 # points at. Set by `just mode-fork`.
 dioxus-fork = ["libero/dioxus-fork"]
