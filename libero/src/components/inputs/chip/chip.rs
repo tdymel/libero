@@ -4,8 +4,8 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
-        common::{base_color, base_props, contrast_color, focus_ring_sx, hover_color, variables},
-        inputs::{ButtonVariant, button_variant_sx},
+        common::{base_color, base_props, contrast_color, focus_ring_sx, variables},
+        inputs::{ButtonVariant, VariantVars, button_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
     },
@@ -18,6 +18,16 @@ use crate::{
 const CHIP_COLOR_VAR: CssVar = CssVar::new("--lsx-chip-color");
 const CHIP_CONTRAST_VAR: CssVar = CssVar::new("--lsx-chip-contrast");
 const CHIP_HOVER_VAR: CssVar = CssVar::new("--lsx-chip-hover");
+const CHIP_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-container");
+const CHIP_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-on-container");
+
+const CHIP_VARS: VariantVars<'static> = VariantVars {
+    color: &CHIP_COLOR_VAR,
+    contrast: &CHIP_CONTRAST_VAR,
+    hover: &CHIP_HOVER_VAR,
+    container: &CHIP_CONTAINER_VAR,
+    on_container: &CHIP_ON_CONTAINER_VAR,
+};
 
 static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ChipDefaults::theme_vars()
@@ -38,27 +48,14 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     ButtonVariant::ALL
         .iter()
         .fold(base, |base, &variant| {
-            base.when(
-                variant.state_name(),
-                button_variant_sx(
-                    variant,
-                    &CHIP_COLOR_VAR,
-                    &CHIP_CONTRAST_VAR,
-                    &CHIP_HOVER_VAR,
-                ),
-            )
+            base.when(variant.state_name(), button_variant_sx(variant, &CHIP_VARS))
         })
         // Folded after the variants, which is what makes it win: equal
         // specificity, so source order decides. `variant` describes the
         // unselected look and a selected chip is always filled.
         .when(
             "checked",
-            button_variant_sx(
-                ButtonVariant::Filled,
-                &CHIP_COLOR_VAR,
-                &CHIP_CONTRAST_VAR,
-                &CHIP_HOVER_VAR,
-            ),
+            button_variant_sx(ButtonVariant::Filled, &CHIP_VARS),
         )
         .when("clickable", sx().cursor("pointer"))
         .when(
@@ -86,7 +83,13 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
 fn chip_variables(variant: ButtonVariant, checked: bool, base: &ThemeAwareValue) -> String {
-    let filled = checked || variant == ButtonVariant::Filled;
+    // A checked chip is always filled, whatever the unselected look is.
+    let effective = if checked {
+        ButtonVariant::Filled
+    } else {
+        variant
+    };
+    let colors = variant_colors(effective, base);
 
     variables()
         .with(CHIP_COLOR_VAR, base.resolve(None))
@@ -94,7 +97,9 @@ fn chip_variables(variant: ButtonVariant, checked: bool, base: &ThemeAwareValue)
             CHIP_CONTRAST_VAR,
             contrast_color(base).and_then(|color| color.resolve(None)),
         )
-        .with(CHIP_HOVER_VAR, hover_color(base, filled))
+        .with(CHIP_HOVER_VAR, colors.hover)
+        .with(CHIP_CONTAINER_VAR, colors.container)
+        .with(CHIP_ON_CONTAINER_VAR, colors.on_container)
         .render()
 }
 

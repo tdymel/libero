@@ -101,6 +101,7 @@ impl SizeCss {
     pub const SPACING: SizeCss = SizeCss::new("--lsx-spacing-");
     pub const BREAKPOINT: SizeCss = SizeCss::new("--lsx-breakpoint-");
     pub const RADIUS: SizeCss = SizeCss::new("--lsx-radius-");
+    pub const SHADOW: SizeCss = SizeCss::new("--lsx-shadow-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }
@@ -150,6 +151,7 @@ impl ColorCss {
     pub const WARNING: ColorCss = ColorCss::new("--lsx-warning-");
     pub const INFO: ColorCss = ColorCss::new("--lsx-info-");
     pub const SUCCESS: ColorCss = ColorCss::new("--lsx-success-");
+    pub const NEUTRAL: ColorCss = ColorCss::new("--lsx-neutral-");
     pub const GREY: ColorCss = ColorCss::new("--lsx-grey-");
     pub const PRIMARY_CONTRAST: ColorCss = ColorCss::new("--lsx-primary-contrast-");
     pub const SECONDARY_CONTRAST: ColorCss = ColorCss::new("--lsx-secondary-contrast-");
@@ -157,6 +159,7 @@ impl ColorCss {
     pub const WARNING_CONTRAST: ColorCss = ColorCss::new("--lsx-warning-contrast-");
     pub const INFO_CONTRAST: ColorCss = ColorCss::new("--lsx-info-contrast-");
     pub const SUCCESS_CONTRAST: ColorCss = ColorCss::new("--lsx-success-contrast-");
+    pub const NEUTRAL_CONTRAST: ColorCss = ColorCss::new("--lsx-neutral-contrast-");
     pub const GREY_CONTRAST: ColorCss = ColorCss::new("--lsx-grey-contrast-");
 
     pub const fn new(prefix: &'static str) -> Self {

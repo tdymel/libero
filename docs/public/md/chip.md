@@ -20,7 +20,7 @@ use libero::components::Chip;
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Chip { color: "primary", variant: "outlined", size: "md", radius: "xl", "rust" }
+        Chip { color: "primary", variant: "filled", size: "md", radius: "xl", "rust" }
     }
 }
 ```
@@ -99,7 +99,7 @@ any nested control.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `outlined` | The unselected look; a checked chip is always filled. |
+| `variant` | `ButtonVariant` | `filled` | The unselected look; a checked chip is always filled. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `radius` | `Size` | `xl` | Corner radius, independent of `size`. |
 | `checked` | `bool` | - | Strictly controlled selection state - pair it with `onchange`. |
@@ -133,6 +133,8 @@ Like every component, `Chip` also takes the shared props `sx`, `class`,
 | `--lsx-chip-color` | Accent color of the current variant. |
 | `--lsx-chip-contrast` | Text color on top of that accent. |
 | `--lsx-chip-hover` | Accent color while hovered. |
+| `--lsx-chip-container` | Container fill of `tonal` and `elevated`. |
+| `--lsx-chip-on-container` | Label color on that container. |
 
 ## Data attributes
 
@@ -140,7 +142,7 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `filled` / `outlined` / `text` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `text` | The `variant` in effect. |
 | `size-<size>` | The `size` in effect. |
 | `radius-<size>` | The `radius` in effect. |
 | `checked` | `checked` is set. |

@@ -106,7 +106,7 @@ pub fn SegmentedControlPage() -> Element {
                         .default("horizontal")
                         .doc("Row or column layout."),
                     prop("variant", "ButtonVariant")
-                        .default("outlined")
+                        .default("filled")
                         .doc("The unselected look, shared by every segment."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
@@ -165,13 +165,16 @@ pub fn SegmentedControlPage() -> Element {
                             "rich" => vec![RICH.to_string()],
                             _ => vec![],
                         }),
-                    Control::toggle("variant", ["outlined", "filled", "text"])
-                        .labels(["Outlined", "Filled", "Text"]),
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "text"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color(
                         "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
+                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
                     ),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),

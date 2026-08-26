@@ -24,7 +24,7 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .margin("md")
         .padding("lg")
         .border_radius(DIALOG_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Md)))
-        .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
+        .box_shadow(SizeCss::SHADOW.value(Size::Xl))
 });
 
 static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {

@@ -5,8 +5,8 @@ use crate::{
         ClassList, HtmlTag, Input, States,
         common::{Orientation, focus_ring_sx},
         inputs::{
-            BUTTON_COLOR_VAR, BUTTON_CONTRAST_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR,
-            ButtonVariant, button_selected_sx, button_variant_sx,
+            BUTTON_COLOR_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, ButtonVariant, button_selected_sx,
+            button_variant_sx,
         },
         layout::use_box,
     },
@@ -128,20 +128,12 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
     let base = ButtonVariant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
-            sx().selector(
-                SEGMENT,
-                button_variant_sx(
-                    variant,
-                    &BUTTON_COLOR_VAR,
-                    &BUTTON_CONTRAST_VAR,
-                    &BUTTON_HOVER_VAR,
+            sx().selector(SEGMENT, button_variant_sx(variant, &BUTTON_VARS))
+                // After the variant's own `:hover`, which it ties on specificity.
+                .selector(
+                    "& > label[data-state~=\"checked\"]",
+                    button_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
                 ),
-            )
-            // After the variant's own `:hover`, which it ties on specificity.
-            .selector(
-                "& > label[data-state~=\"checked\"]",
-                button_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
-            ),
         )
     });
 

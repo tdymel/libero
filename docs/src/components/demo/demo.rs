@@ -183,7 +183,12 @@ pub fn Demo(
                 // the whole demo then.
                 if !controls.is_empty() {
                     Flex {
-                        direction: "column",
+                        // A wrapping row, not a column: every control claims a
+                        // full line except a switch, which is a label and a
+                        // 36px track - so a run of them shares one line and the
+                        // panel stops growing a row per boolean.
+                        direction: "row",
+                        wrap: "wrap",
                         gap: "lg",
                         // Wrapped, the controls sit below the preview, so the
                         // divider has to move with them.
@@ -192,18 +197,22 @@ pub fn Demo(
                             .flex_shrink("0")
                             .padding("24px")
                             .border_top(border())
-                            // The same 628px the flex row wraps at, plus slack
+                            // The same 752px the flex row wraps at, plus slack
                             // so a subpixel rounding at the boundary can't put
                             // the wrap and the query on opposite sides.
                             .container_query(
                                 DEMO_CARD,
-                                "(min-width: 640px)",
+                                "(min-width: 768px)",
                                 sx()
-                                    // 340px of controls plus the padding either
+                                    // 464px of controls plus the padding either
                                     // side - `box-sizing` is border-box here.
-                                    // Wide enough for a four-option segmented
-                                    // group (`ScrollArea`'s `scrollbars`).
-                                    .width("388px")
+                                    // Sized for the widest control we have: a
+                                    // five-option segmented group whose longest
+                                    // label is `Elevated` (`Button`'s
+                                    // `variant`). Its segments are `flex: 1 1 0`,
+                                    // so every one is as wide as that longest
+                                    // label needs - ~93px at `sm`, times five.
+                                    .width("512px")
                                     .border_top("none")
                                     .border_left(border()),
                             ),
@@ -222,6 +231,17 @@ pub fn Demo(
                             Flex {
                                 key: "{control.name}",
                                 direction: "column",
+                                // `1 1 0` so a run of switches distributes over
+                                // the whole width; the min stops a long label
+                                // from wrapping under its own switch. Centred,
+                                // because a track is far narrower than its
+                                // share of the row - left-aligned it reads as
+                                // three stray switches rather than a group.
+                                sx: if control.kind == ControlKind::Switch {
+                                    sx().flex("1 1 0").min_width("104px").align_items("center")
+                                } else {
+                                    sx().width("100%")
+                                },
                                 // The slider's bubble sits above its track, so it
                                 // needs more room under the label than the rest.
                                 gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
@@ -351,6 +371,10 @@ pub fn Demo(
                                     },
                                     ControlKind::Toggle => rsx! {
                                         SegmentedControl {
+                                            // The panel is chrome, not the
+                                            // demo - a filled default would
+                                            // shout over the preview.
+                                            variant: "outlined",
                                             size: "sm",
                                             full_width: true,
                                             value: values().str(control.name),

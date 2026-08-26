@@ -44,13 +44,14 @@ const EMITTED_CSS: &str = r#":root {
 }"#;
 
 /// The palette rows: every color with a full 1-9 shade ramp.
-const PALETTE: [&str; 7] = [
+const PALETTE: [&str; 8] = [
     "primary",
     "secondary",
     "success",
     "error",
     "warning",
     "info",
+    "neutral",
     "grey",
 ];
 
@@ -117,8 +118,13 @@ pub fn ThemingPage() -> Element {
                     "a "
                     Code { source: "-contrast" }
                     " twin - black or white, whichever reads on it - which is what lets a "
-                    "component pick legible text for a background it was handed. This is the "
-                    "palette of the theme this site is running:"
+                    "component pick legible text for a background it was handed. "
+                    Code { source: "neutral" }
+                    " is the text-dark role a control reaches for when it should not compete "
+                    "with the page's accent; "
+                    Code { source: "grey" }
+                    " stays the mid-grey of borders and dividers. This is the palette of the "
+                    "theme this site is running:"
                 }
                 Flex {
                     direction: "column",
@@ -183,6 +189,22 @@ pub fn ThemingPage() -> Element {
                     " - carry their own "
                     Code { source: "Sizes" }
                     " in their defaults struct rather than borrowing the spacing scale."
+                }
+                Text {
+                    Code { source: "elevation" }
+                    " is the same shape in "
+                    Code { source: "&'static str" }
+                    ": one "
+                    Code { source: "box-shadow" }
+                    " per step, "
+                    Code { source: "xs" }
+                    " resting to "
+                    Code { source: "xxl" }
+                    " for a modal. It is where a "
+                    Code { source: "Dialog" }
+                    "'s shadow and an "
+                    Code { source: "elevated" }
+                    " button's come from."
                 }
             }
 

@@ -18,6 +18,7 @@ pub enum Color {
     Warning,
     Info,
     Success,
+    Neutral,
     Grey,
     Black,
     White,
@@ -27,7 +28,7 @@ impl Color {
     /// Greys and black/white walk the neutral mix curve, hues the chromatic one.
     pub(crate) const fn shade_ramp(self) -> ShadeRamp {
         match self {
-            Self::Grey | Self::Black | Self::White => ShadeRamp::Neutral,
+            Self::Neutral | Self::Grey | Self::Black | Self::White => ShadeRamp::Neutral,
             _ => ShadeRamp::Chromatic,
         }
     }
@@ -40,6 +41,7 @@ impl Color {
             "warning" => Some(Self::Warning),
             "info" => Some(Self::Info),
             "success" => Some(Self::Success),
+            "neutral" => Some(Self::Neutral),
             "grey" => Some(Self::Grey),
             "black" => Some(Self::Black),
             "white" => Some(Self::White),
@@ -58,6 +60,7 @@ impl Color {
             Self::Warning => ColorVars::Palette(ColorCss::WARNING, ColorCss::WARNING_CONTRAST),
             Self::Info => ColorVars::Palette(ColorCss::INFO, ColorCss::INFO_CONTRAST),
             Self::Success => ColorVars::Palette(ColorCss::SUCCESS, ColorCss::SUCCESS_CONTRAST),
+            Self::Neutral => ColorVars::Palette(ColorCss::NEUTRAL, ColorCss::NEUTRAL_CONTRAST),
             Self::Grey => ColorVars::Palette(ColorCss::GREY, ColorCss::GREY_CONTRAST),
             Self::Black => ColorVars::Named(NamedColorCss::BLACK, NamedColorCss::WHITE),
             Self::White => ColorVars::Named(NamedColorCss::WHITE, NamedColorCss::BLACK),
@@ -72,6 +75,7 @@ impl Color {
             Self::Warning => "warning",
             Self::Info => "info",
             Self::Success => "success",
+            Self::Neutral => "neutral",
             Self::Grey => "grey",
             Self::Black => "black",
             Self::White => "white",

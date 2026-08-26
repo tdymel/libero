@@ -23,6 +23,8 @@ const MONO_FONT_FAMILY: &str = "ui-monospace, SFMono-Regular, Menlo, Consolas, m
 pub struct Theme {
     pub spacing: Sizes<u8>,
     pub radius: Sizes<u8>,
+    /// Drop shadows, `xs` (resting) to `xxl` (a modal). M3's elevation levels.
+    pub elevation: Sizes<&'static str>,
     pub flex: FlexDefaults,
     pub grid: GridDefaults,
     pub center: CenterDefaults,
@@ -67,6 +69,8 @@ pub struct Theme {
     pub warning: HexColor,
     pub info: HexColor,
     pub success: HexColor,
+    /// Text-dark neutral: the label and outline color of a `neutral` control.
+    pub neutral: HexColor,
     pub grey: HexColor,
     pub black: HexColor,
     pub white: HexColor,
@@ -77,6 +81,14 @@ impl Theme {
     pub const DEFAULT: Theme = Theme {
         spacing: Sizes::new(4, 8, 12, 16, 20, 24),
         radius: Sizes::new(2, 4, 8, 16, 32, 64),
+        elevation: Sizes::new(
+            "0 1px 2px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06)",
+            "0 1px 2px rgba(0, 0, 0, 0.10), 0 2px 6px rgba(0, 0, 0, 0.10)",
+            "0 2px 4px rgba(0, 0, 0, 0.10), 0 4px 10px rgba(0, 0, 0, 0.12)",
+            "0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)",
+            "0 8px 16px rgba(0, 0, 0, 0.12), 0 12px 32px rgba(0, 0, 0, 0.18)",
+            "0 12px 24px rgba(0, 0, 0, 0.14), 0 20px 48px rgba(0, 0, 0, 0.22)",
+        ),
         flex: FlexDefaults {
             column: FlexAxisDefaults {
                 align: "stretch",
@@ -555,6 +567,7 @@ impl Theme {
         warning: HexColor::new(0xFAB005),
         info: HexColor::new(0x15AABF),
         success: HexColor::new(0x40C057),
+        neutral: HexColor::new(0x373A3C),
         grey: HexColor::new(0x868E96),
         black: HexColor::new(0x000000),
         white: HexColor::new(0xFFFFFF),

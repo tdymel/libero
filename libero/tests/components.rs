@@ -39,7 +39,7 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
     assert_eq!(attributes_of(&html, "label")["for"], input["id"]);
 
     let span = attributes_of(&html, "span");
-    assert_eq!(span["data-state"], "outlined size-md radius-xl checked");
+    assert_eq!(span["data-state"], "filled size-md radius-xl checked");
     assert!(body(&html).contains(">tag<"));
 }
 
@@ -89,7 +89,7 @@ fn a_segmented_control_checks_only_the_selected_radio() {
     // A radio group, not a toolbar: exactly one segment is ever selected, so
     // the semantics are the browser's rather than `aria-pressed`.
     assert_eq!(root["role"], "radiogroup");
-    assert_eq!(root["data-state"], "horizontal outlined collapsed");
+    assert_eq!(root["data-state"], "horizontal filled collapsed");
 
     let checked: Vec<bool> = body
         .match_indices("<input")
@@ -161,7 +161,7 @@ fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
     let root = attributes_of(&body, "div");
 
     // No `collapsed`, so the corner-squashing rules below cannot match.
-    assert_eq!(root["data-state"], "horizontal outlined size-xs");
+    assert_eq!(root["data-state"], "horizontal filled size-xs");
 
     let root_class = classes_of(&body, "div");
     let root_class = root_class.first().expect("a framework class");
@@ -359,6 +359,28 @@ fn a_derived_slider_value_names_and_orders_its_own_options() {
     }
 }
 
+/// The tinted variants publish a container and its label color; the shadow
+/// comes from the shared elevation scale, not a literal.
+#[test]
+fn an_elevated_button_tints_its_container_and_reads_the_elevation_scale() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Button { variant: "elevated", color: Color::Error, "Lift" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "button");
+
+    assert_eq!(attributes["data-state"], "elevated size-md radius-md");
+    assert!(attributes["style"].contains("--lsx-button-container:var(--lsx-error-1);"));
+    assert!(attributes["style"].contains("--lsx-button-on-container:var(--lsx-error-6);"));
+    assert!(html.contains("box-shadow:var(--lsx-shadow-xs)"));
+    assert!(html.contains("--lsx-shadow-xs:"));
+}
+
 #[test]
 fn button_renders_its_class_state_and_variables() {
     fn app() -> Element {
@@ -373,7 +395,7 @@ fn button_renders_its_class_state_and_variables() {
     let attributes = attributes_of(&html, "button");
 
     assert_eq!(attributes["type"], "button");
-    assert_eq!(attributes["data-state"], "outlined size-md radius-md");
+    assert_eq!(attributes["data-state"], "filled size-md radius-md");
     assert!(attributes["style"].contains("--lsx-button-color:var(--lsx-error-6);"));
     assert!(body(&html).contains(">Save<"));
 

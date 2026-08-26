@@ -46,8 +46,10 @@ value, not a ramp you have to design. A bare name is shade 6, the hex itself.
 Every shade also has a `-contrast` twin - black or white, whichever reads on it -
 which is what lets a component pick legible text for a background it was handed.
 
-The roles are `primary`, `secondary`, `success`, `error`, `warning`, `info` and
-`grey`, plus the plain `black` and `white`. Addressing a shade in `sx` is
+The roles are `primary`, `secondary`, `success`, `error`, `warning`, `info`,
+`neutral` and `grey`, plus the plain `black` and `white`. `neutral` is the
+text-dark role a control reaches for when it should not compete with the
+page's accent; `grey` stays the mid-grey used for borders and dividers. Addressing a shade in `sx` is
 `role.shade`:
 
 ```rust
@@ -69,7 +71,10 @@ fn Demo() -> Element {
 
 `spacing` and `radius` are a `Sizes<u8>` - one pixel value per step from `xs` to
 `xxl`. They are what a size word in `sx` resolves through, and what every
-component's `size`/`gap`/`radius` prop steps along. Components with a size of
+component's `size`/`gap`/`radius` prop steps along. `elevation` is the same
+shape in `&'static str`: one `box-shadow` per step, `xs` resting to `xxl` for a
+modal, which is where a `Dialog`'s shadow and an `elevated` `Button`'s come
+from. Components with a size of
 their own - [`Dialog`](dialog.md), [`Drawer`](drawer.md),
 [`Sidebar`](sidebar.md) - carry their own `Sizes` in their defaults struct rather
 than borrowing the spacing scale.
@@ -131,7 +136,8 @@ theme says.
 |---|---|---|
 | `spacing` | `Sizes<u8>` | Pixels per spacing step; what `gap`/`padding` size words resolve through. |
 | `radius` | `Sizes<u8>` | Pixels per radius step. |
-| `primary`, `secondary`, `success`, `error`, `warning`, `info`, `grey` | `HexColor` | One hex per palette role; the 1-9 shade ramp and its `-contrast` twin are generated. |
+| `elevation` | `Sizes<&'static str>` | One `box-shadow` per elevation step. |
+| `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `grey` | `HexColor` | One hex per palette role; the 1-9 shade ramp and its `-contrast` twin are generated. |
 | `black`, `white` | `HexColor` | The two ends the shades mix towards. |
 | `font_smoothing` | `bool` | Whether the reset asks for antialiased text. |
 | one field per component | `*Defaults` | e.g. `button: ButtonDefaults`, `dialog: DialogDefaults`, `mark: MarkDefaults` - each component's markdown page documents its own struct. |
@@ -146,4 +152,5 @@ Everything the theme emits lives under the `--lsx-` prefix on `:root`.
 | `--lsx-<role>-contrast-<1..9>` | Black or white, whichever reads on that shade. |
 | `--lsx-spacing-<size>` | A step of the spacing scale. |
 | `--lsx-radius-<size>` | A step of the radius scale. |
+| `--lsx-shadow-<size>` | A step of the elevation scale. |
 | `--lsx-<component>-*` | A component's own defaults - see that component's page. |

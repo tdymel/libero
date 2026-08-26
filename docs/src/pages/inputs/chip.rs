@@ -17,7 +17,7 @@ pub fn ChipPage() -> Element {
                     .default("primary")
                     .doc("Accent color; a theme color name or a literal CSS color."),
                 prop("variant", "ButtonVariant")
-                    .default("outlined")
+                    .default("filled")
                     .doc("The unselected look; a checked chip is always filled."),
                 prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
                 prop("radius", "Size")
@@ -56,10 +56,13 @@ pub fn ChipPage() -> Element {
                 controls: vec![
                     Control::color(
                         "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
+                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
                     ),
-                    Control::toggle("variant", ["outlined", "filled", "text"])
-                        .labels(["Outlined", "Filled", "Text"]),
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "text"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

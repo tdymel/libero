@@ -55,6 +55,16 @@ pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<Str
     Some(ColorValue::Shade(*color, selected).value())
 }
 
+/// A specific shade of `base`'s color, for a variant that pins one rather
+/// than stepping from the base. `None` for a literal base, which has no ramp.
+pub(crate) fn shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<String> {
+    let ThemeAwareValue::ColorValue(ColorValue::Shade(color, _)) = base else {
+        return None;
+    };
+
+    Some(ColorValue::Shade(*color, shade).value())
+}
+
 /// Hover color for `base`: darker when `base` is already the background, a
 /// light tint otherwise. `None` for a literal base, which has no shade scale.
 pub(crate) fn hover_color(base: &ThemeAwareValue, filled: bool) -> Option<String> {

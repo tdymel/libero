@@ -215,7 +215,7 @@ mod tests {
     #[test]
     fn an_unknown_string_falls_back_to_the_default_variant() {
         assert_eq!(IconVariant::from("nonsense"), IconVariant::default());
-        assert_eq!(ButtonVariant::from(""), ButtonVariant::Outlined);
+        assert_eq!(ButtonVariant::from(""), ButtonVariant::Filled);
     }
 
     #[test]

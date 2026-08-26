@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Text};
+use libero::components::{Button, Code, Flex, Text};
 
 #[component]
 pub fn ButtonPage() -> Element {
@@ -14,8 +14,8 @@ pub fn ButtonPage() -> Element {
                     .default("primary")
                     .doc("Accent color; a theme color name or a literal CSS color."),
                 prop("variant", "ButtonVariant")
-                    .default("outlined")
-                    .doc("Visual style: outlined border, filled background, or text only."),
+                    .default("filled")
+                    .doc("Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `text`."),
                 prop("radius", "Size")
                     .default("md")
                     .doc("Corner radius, independent of size."),
@@ -55,10 +55,13 @@ pub fn ButtonPage() -> Element {
                 controls: vec![
                     Control::color(
                         "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
+                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
                     ),
-                    Control::toggle("variant", ["outlined", "filled", "text"])
-                        .labels(["Outlined", "Filled", "Text"]),
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "text"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Text"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -93,6 +96,44 @@ pub fn ButtonPage() -> Element {
                         "Save changes"
                     }
                 },
+            }
+            DocSection {
+                title: "Emphasis",
+                Text {
+                    "The five styles are one ladder, highest emphasis first. Reach for "
+                    Code { source: "filled" }
+                    " for the action that completes a flow, and "
+                    Code { source: "text" }
+                    " when several options sit side by side. "
+                    Code { source: "elevated" }
+                    " is a tonal button with a shadow - use it where the button has to separate itself from a patterned or scrolling background."
+                }
+                Flex {
+                    gap: "sm",
+                    wrap: "wrap",
+                    Button { variant: "filled", "Filled" }
+                    Button { variant: "tonal", "Tonal" }
+                    Button { variant: "elevated", "Elevated" }
+                    Button { variant: "outlined", "Outlined" }
+                    Button { variant: "text", "Text" }
+                }
+            }
+            DocSection {
+                title: "Neutral",
+                Text {
+                    "Every style takes a color, and "
+                    Code { source: "neutral" }
+                    " is the text-dark one - the button that should not compete with the page's accent."
+                }
+                Flex {
+                    gap: "sm",
+                    wrap: "wrap",
+                    Button { variant: "filled", color: "neutral", "Filled" }
+                    Button { variant: "tonal", color: "neutral", "Tonal" }
+                    Button { variant: "elevated", color: "neutral", "Elevated" }
+                    Button { variant: "outlined", color: "neutral", "Outlined" }
+                    Button { variant: "text", color: "neutral", "Text" }
+                }
             }
             DocSection {
                 title: "As a link",

@@ -9,8 +9,10 @@ Description: A clickable action, a toggle, or a router-aware link.
 A clickable control, or a router-aware link when `to` is set. A plain
 `<button>` submits an enclosing form; ours defaults to `type="button"`
 instead, so a submit or reset button says so. `variant` picks the chrome,
-`color` the accent, and `selected` turns it into a toggle. For an icon-only
-button see [action_icon.md](action_icon.md).
+`color` the accent, and `selected` turns it into a toggle. The five variants
+are Material 3's, in descending emphasis: `filled`, `tonal`, `elevated`,
+`outlined`, `text`. For an icon-only button see
+[action_icon.md](action_icon.md).
 
 ## Usage
 
@@ -23,7 +25,7 @@ fn Demo() -> Element {
     rsx! {
         Button {
             color: "primary",
-            variant: "outlined",
+            variant: "filled",
             size: "md",
             radius: "md",
             onclick: move |_| {},
@@ -35,6 +37,50 @@ fn Demo() -> Element {
 
 `type` is not a prop but a `<button>` attribute passed straight through, so it
 is written `r#type: "submit"` in rsx.
+
+## Emphasis
+
+The five styles are one ladder, highest emphasis first. `filled` is the action
+that completes a flow; `text` suits several options side by side. `elevated`
+is a tonal button with a shadow, for a button that has to separate itself from
+a patterned or scrolling background.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Button, Flex};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Flex {
+            gap: "sm",
+            wrap: "wrap",
+            Button { variant: "filled", "Filled" }
+            Button { variant: "tonal", "Tonal" }
+            Button { variant: "elevated", "Elevated" }
+            Button { variant: "outlined", "Outlined" }
+            Button { variant: "text", "Text" }
+        }
+    }
+}
+```
+
+## Neutral
+
+Every style takes a `color`, and `neutral` is the text-dark one - the button
+that should not compete with the page's accent.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::Button;
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Button { variant: "outlined", color: "neutral", "Cancel" }
+    }
+}
+```
 
 ## As a link
 
@@ -76,7 +122,7 @@ about that pairing.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `outlined` | Visual style: `outlined` border, `filled` background, or `text` only. |
+| `variant` | `ButtonVariant` | `filled` | Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `text`. |
 | `radius` | `Size` | `md` | Corner radius, independent of `size`. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
@@ -112,8 +158,11 @@ about that pairing.
 | `--lsx-button-contrast` | Text color on top of that accent. |
 | `--lsx-button-hover` | Accent color while hovered. |
 | `--lsx-button-selected` | Background of a selected toggle button. |
+| `--lsx-button-container` | Container fill of `tonal` and `elevated`. |
+| `--lsx-button-on-container` | Label color on that container. |
 
-The corner radius comes from the shared radius scale, `--lsx-radius-<size>`.
+The corner radius comes from the shared radius scale, `--lsx-radius-<size>`,
+and `elevated`'s shadow from the shared elevation scale, `--lsx-shadow-<size>`.
 
 ## Data attributes
 
@@ -121,7 +170,7 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `filled` / `outlined` / `text` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `text` | The `variant` in effect. |
 | `size-<size>` | The `size` in effect. |
 | `radius-<size>` | The `radius` in effect. |
 | `checked` | `selected` is `Some(true)`. |

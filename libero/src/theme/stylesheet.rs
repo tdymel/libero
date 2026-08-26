@@ -75,6 +75,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     let Theme {
         spacing,
         radius,
+        elevation,
         dialog,
         drawer,
         sidebar,
@@ -115,6 +116,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         warning,
         info,
         success,
+        neutral,
         grey,
         black,
         white,
@@ -130,6 +132,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     let mut declarations = Vec::new();
     declarations.extend(spacing.to_css_declarations(SizeCss::SPACING, "px"));
     declarations.extend(radius.to_css_declarations(SizeCss::RADIUS, "px"));
+    declarations.extend(elevation.to_css_declarations(SizeCss::SHADOW, ""));
     push_breakpoint_declarations(&mut declarations);
     declarations.extend(dialog.to_css_declarations());
     declarations.extend(drawer.to_css_declarations());
@@ -172,6 +175,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_color_declarations(&mut declarations, Color::Warning, *warning);
     push_color_declarations(&mut declarations, Color::Info, *info);
     push_color_declarations(&mut declarations, Color::Success, *success);
+    push_color_declarations(&mut declarations, Color::Neutral, *neutral);
     push_color_declarations(&mut declarations, Color::Grey, *grey);
     declarations
 }

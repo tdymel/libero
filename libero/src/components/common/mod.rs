@@ -16,7 +16,9 @@ mod variables;
 
 pub(crate) use base_props::base_props;
 pub use class_list::{ClassList, class_list};
-pub(crate) use color_variant::{base_color, contrast_color, hover_color, selected_color};
+pub(crate) use color_variant::{
+    base_color, contrast_color, hover_color, selected_color, shade_color,
+};
 pub use dom_api::{DomApi, dom_api};
 pub use element_api::{Dimensions, ElementApi};
 pub use input::Input;

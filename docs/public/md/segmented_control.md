@@ -234,7 +234,7 @@ component: those are separate booleans, not one selection. Use a
 | `label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a segment. Runs during render, so it can read a locale from context. |
 | `disabled` | `Vec<T>` | - | Segments that render but cannot be picked. |
 | `orientation` | `Orientation` | `horizontal` | Row or column layout. |
-| `variant` | `ButtonVariant` | `outlined` | The unselected look, shared by every segment. |
+| `variant` | `ButtonVariant` | `filled` | The unselected look, shared by every segment. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
 | `size` | `Size` | `md` | Shared by every segment. |
 | `radius` | `Size` | `md` | Corner radius of the control's outer corners; inner ones are square. |
@@ -278,7 +278,7 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `horizontal` / `vertical` | The `orientation` in effect. |
-| `filled` / `outlined` / `text` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `text` | The `variant` in effect. |
 | `full-width` | `full_width` is set. |
 | `collapsed` | No `gap` - the segments share borders and square off their inner corners. |
 | `size-<size>` | The `gap` step in effect, when `gap` is set. |
