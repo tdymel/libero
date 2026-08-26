@@ -11,7 +11,7 @@ A clickable control, or a router-aware link when `to` is set. A plain
 instead, so a submit or reset button says so. `variant` picks the chrome,
 `color` the accent, and `selected` turns it into a toggle. The five variants
 are Material 3's, in descending emphasis: `filled`, `tonal`, `elevated`,
-`outlined`, `text`. For an icon-only button see
+`outlined`, `standard`. For an icon-only button see
 [action_icon.md](action_icon.md).
 
 ## Usage
@@ -78,7 +78,7 @@ about that pairing.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `filled` | Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `text`. |
+| `variant` | `ButtonVariant` | `filled` | Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `standard` (also spelled `text`). |
 | `radius` | `Size` | `md` | Corner radius, independent of `size`. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
@@ -126,7 +126,7 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `filled` / `tonal` / `elevated` / `outlined` / `text` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |
 | `size-<size>` | The `size` in effect. |
 | `radius-<size>` | The `radius` in effect. |
 | `checked` | `selected` is `Some(true)`. |

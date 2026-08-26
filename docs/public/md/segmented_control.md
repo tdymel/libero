@@ -278,7 +278,7 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `horizontal` / `vertical` | The `orientation` in effect. |
-| `filled` / `tonal` / `elevated` / `outlined` / `text` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |
 | `full-width` | `full_width` is set. |
 | `collapsed` | No `gap` - the segments share borders and square off their inner corners. |
 | `size-<size>` | The `gap` step in effect, when `gap` is set. |

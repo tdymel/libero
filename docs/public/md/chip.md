@@ -142,7 +142,7 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `filled` / `tonal` / `elevated` / `outlined` / `text` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |
 | `size-<size>` | The `size` in effect. |
 | `radius-<size>` | The `radius` in effect. |
 | `checked` | `checked` is set. |

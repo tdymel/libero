@@ -24,7 +24,6 @@ const CHIP_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-on-container");
 const CHIP_VARS: VariantVars<'static> = VariantVars {
     color: &CHIP_COLOR_VAR,
     contrast: &CHIP_CONTRAST_VAR,
-    hover: &CHIP_HOVER_VAR,
     container: &CHIP_CONTAINER_VAR,
     on_container: &CHIP_ON_CONTAINER_VAR,
 };
@@ -48,14 +47,17 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     ButtonVariant::ALL
         .iter()
         .fold(base, |base, &variant| {
-            base.when(variant.state_name(), button_variant_sx(variant, &CHIP_VARS))
+            base.when(
+                variant.state_name(),
+                button_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR),
+            )
         })
         // Folded after the variants, which is what makes it win: equal
         // specificity, so source order decides. `variant` describes the
         // unselected look and a selected chip is always filled.
         .when(
             "checked",
-            button_variant_sx(ButtonVariant::Filled, &CHIP_VARS),
+            button_variant_sx(ButtonVariant::Filled, &CHIP_VARS, &CHIP_HOVER_VAR),
         )
         .when("clickable", sx().cursor("pointer"))
         .when(

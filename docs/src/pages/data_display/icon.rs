@@ -17,9 +17,9 @@ pub fn IconPage() -> Element {
             properties: vec![
                 props("Icon", vec![
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
-                    prop("variant", "IconVariant")
+                    prop("variant", "ButtonVariant")
                         .default("filled")
-                        .doc("Filled, outlined, or transparent chrome around the svg."),
+                        .doc("Chrome around the svg, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Sets the container's CSS color, which a currentColor svg then inherits. A theme color also tints the background under variant filled."),
@@ -46,13 +46,16 @@ pub fn IconPage() -> Element {
                 children_text: "",
                 children_code: CHILDREN,
                 controls: vec![
-                    Control::toggle("variant", ["filled", "outlined", "transparent"])
-                        .labels(["Filled", "Outlined", "Transparent"]),
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color(
                         "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
+                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
                     ),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

@@ -7,18 +7,6 @@ use crate::icons::CheckmarkIcon;
 /// The svg the button wraps - a subtree, so the code block prints it verbatim.
 const CHILDREN: &str = "CheckmarkIcon {}";
 
-/// `"none"` is unset, and unset is what makes the button inherit its
-/// surroundings rather than draw a badge.
-fn or_plain<T>(value: String) -> Input<T>
-where
-    Input<T>: From<String>,
-{
-    match value.as_str() {
-        "none" => Input::None,
-        _ => Input::from(value),
-    }
-}
-
 #[component]
 pub fn ActionIconPage() -> Element {
     rsx! {
@@ -27,8 +15,8 @@ pub fn ActionIconPage() -> Element {
             source: "libero/src/components/inputs/action_icon.rs",
             markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
-                prop("variant", "IconVariant")
-                    .doc("Filled/outlined/transparent chrome. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color."),
+                prop("variant", "ButtonVariant")
+                    .doc("Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color."),
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`)."),
                 prop("size", "ThemeAwareValue")
@@ -66,9 +54,7 @@ pub fn ActionIconPage() -> Element {
                     Code { source: "variant" }
                     " nor "
                     Code { source: "color" }
-                    " set - the demo's "
-                    Code { source: "none" }
-                    " variant - it contributes no background or color of its own and inherits "
+                    " set, it contributes no background or color of its own and inherits "
                     "the surrounding text color, rather than defaulting to a filled badge the "
                     "way "
                     Code { source: "Icon" }
@@ -83,13 +69,13 @@ pub fn ActionIconPage() -> Element {
                 children_code: CHILDREN,
                 fixed: vec!["aria_label: \"Confirm\"".to_string()],
                 controls: vec![
-                    Control::toggle("variant", ["none", "filled", "outlined", "transparent"])
-                        .labels(["None", "Filled", "Outlined", "Transparent"]),
+                    Control::toggle("variant", ["filled", "tonal", "outlined", "standard"])
+                        .labels(["Filled", "Tonal", "Outlined", "Standard"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
                     Control::color(
                         "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
+                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
                     ),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -98,7 +84,7 @@ pub fn ActionIconPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     ActionIcon {
-                        variant: or_plain(values.str("variant")),
+                        variant: values.str("variant"),
                         color: match values.str("color").as_str() {
                             "primary" => Input::None,
                             color => Input::from(color),

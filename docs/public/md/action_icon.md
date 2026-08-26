@@ -89,7 +89,7 @@ gets `aria-disabled="true"` plus `tabindex="-1"` so it leaves the tab order.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `IconVariant` | - | `filled`/`outlined`/`transparent` chrome. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
+| `variant` | `ButtonVariant` | - | Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
 | `color` | `ThemeAwareValue` | - | Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`). |
 | `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
@@ -124,6 +124,8 @@ size scale and the radius through the theme's radius scale.
 | `--lsx-action-icon-color` | Accent color of the current variant. Only set when the button has variant styling. |
 | `--lsx-action-icon-contrast` | Text color on top of that accent. |
 | `--lsx-action-icon-hover` | Accent color while hovered. |
+| `--lsx-action-icon-container` | Container fill of `tonal`. |
+| `--lsx-action-icon-on-container` | Label color on that container - black or white, whichever reads on it. |
 
 ## Data attributes
 
@@ -131,6 +133,6 @@ State tokens on the root's `data-state`, space separated.
 
 | Token | Condition |
 |---|---|
-| `filled` / `outlined` / `transparent` | The `variant` in effect - written only when `variant` or `color` is set. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect - written only when `variant` or `color` is set. |
 | `disabled` | `disabled` is set. |
 | `ripple-a` / `ripple-b` | A click is showing its ripple; the two tokens alternate so consecutive clicks restart the animation. |

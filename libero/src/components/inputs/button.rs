@@ -37,7 +37,9 @@ str_enum! {
         Tonal = "tonal" | "filled-tonal",
         Elevated = "elevated",
         Outlined = "outlined" | "outline",
-        Text = "text",
+        /// M3's name for the lowest-emphasis arm. `text` (its name on a
+        /// button) and `transparent` (its old name on an icon) both parse.
+        Standard = "standard" | "text" | "transparent",
     }
 }
 
@@ -56,7 +58,6 @@ pub(crate) const BUTTON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-button-on-
 pub(crate) struct VariantVars<'a> {
     pub color: &'a CssVar,
     pub contrast: &'a CssVar,
-    pub hover: &'a CssVar,
     pub container: &'a CssVar,
     pub on_container: &'a CssVar,
 }
@@ -65,7 +66,6 @@ pub(crate) struct VariantVars<'a> {
 pub(crate) const BUTTON_VARS: VariantVars<'static> = VariantVars {
     color: &BUTTON_COLOR_VAR,
     contrast: &BUTTON_CONTRAST_VAR,
-    hover: &BUTTON_HOVER_VAR,
     container: &BUTTON_CONTAINER_VAR,
     on_container: &BUTTON_ON_CONTAINER_VAR,
 };
@@ -80,28 +80,29 @@ const ELEVATED_HOVER: Size = Size::Sm;
 
 /// Structural chrome for `variant`, in `var()` names rather than resolved
 /// values - which is what lets a second component reuse it under its own set.
-pub(crate) fn button_variant_sx(variant: ButtonVariant, vars: &VariantVars) -> Sx {
+///
+/// The hover response is [`button_variant_sx`]'s: `Icon` is a static badge and
+/// must not grow one, so it takes the chrome alone.
+pub(crate) fn variant_chrome_sx(variant: ButtonVariant, vars: &VariantVars) -> Sx {
     let VariantVars {
         color,
         contrast,
-        hover,
-        ..
+        container,
+        on_container,
     } = vars;
 
     match variant {
         ButtonVariant::Filled => sx()
             .background(color.value())
             .border_color(color.value())
-            .color(contrast.value_or("inherit"))
-            .hover(sx().background(hover.value_or(color.value()))),
+            .color(contrast.value_or("inherit")),
         // M3's secondary-container pairing: a light tint of the colour under
         // the label that reads on it. A literal colour has no ramp, so every
         // fallback here lands back on the filled look.
         ButtonVariant::Tonal => sx()
-            .background(vars.container.value_or(color.value()))
+            .background(container.value_or(color.value()))
             .border_color("transparent")
-            .color(vars.on_container.value_or(contrast.value_or("inherit")))
-            .hover(sx().background(hover.value_or(color.value()))),
+            .color(on_container.value_or(contrast.value_or("inherit"))),
         // The *surface*, not a tint of the colour - M3's elevated button is
         // separated from the page by its shadow alone, and the label carries
         // the accent. An opaque background is what the shadow needs to sit on.
@@ -109,22 +110,36 @@ pub(crate) fn button_variant_sx(variant: ButtonVariant, vars: &VariantVars) -> S
             .background("white")
             .border_color("transparent")
             .color(color.value())
-            .box_shadow(SizeCss::SHADOW.value(ELEVATED_REST))
-            .hover(
-                sx().background(hover.value_or("white"))
-                    .box_shadow(SizeCss::SHADOW.value(ELEVATED_HOVER)),
-            ),
+            .box_shadow(SizeCss::SHADOW.value(ELEVATED_REST)),
         ButtonVariant::Outlined => sx()
             .background("transparent")
             .border_color(color.value())
-            .color(color.value())
-            .hover(sx().background(hover.value_or("transparent"))),
-        ButtonVariant::Text => sx()
+            .color(color.value()),
+        ButtonVariant::Standard => sx()
             .background("transparent")
             .border_color("transparent")
-            .color(color.value())
-            .hover(sx().background(hover.value_or("transparent"))),
+            .color(color.value()),
     }
+}
+
+/// [`variant_chrome_sx`] plus the hover response an interactive control needs:
+/// a filled or tinted variant darkens, an unfilled one tints, and `Elevated`
+/// lifts a level rather than changing its fill.
+pub(crate) fn button_variant_sx(variant: ButtonVariant, vars: &VariantVars, hover: &CssVar) -> Sx {
+    let color = vars.color;
+
+    let fallback = match variant {
+        ButtonVariant::Filled | ButtonVariant::Tonal => color.value(),
+        ButtonVariant::Elevated => "white".to_string(),
+        ButtonVariant::Outlined | ButtonVariant::Standard => "transparent".to_string(),
+    };
+
+    let mut hovered = sx().background(hover.value_or(fallback));
+    if variant == ButtonVariant::Elevated {
+        hovered = hovered.box_shadow(SizeCss::SHADOW.value(ELEVATED_HOVER));
+    }
+
+    variant_chrome_sx(variant, vars).hover(hovered)
 }
 
 /// Resolved values for the colour vars `variant` reads, from the caller's
@@ -192,7 +207,7 @@ pub(crate) fn button_selected_sx(
             sx().background(selected_var.value_or(color_var.value()))
         }
         // Both label the surface's accent, which is ~2.3:1 on its own tint.
-        ButtonVariant::Outlined | ButtonVariant::Text => sx()
+        ButtonVariant::Outlined | ButtonVariant::Standard => sx()
             .background(selected_var.value_or("transparent"))
             .color("inherit"),
     }
@@ -217,7 +232,7 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .fold(base, |base, &variant| {
             base.when(
                 variant.state_name(),
-                button_variant_sx(variant, &BUTTON_VARS)
+                button_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR)
                     // After the variant's `:hover`, which it ties on specificity.
                     .when(
                         "checked",
@@ -464,7 +479,8 @@ mod tests {
 
     #[test]
     fn each_variant_renders_its_own_css() {
-        let class_of = |variant| button_variant_sx(variant, &BUTTON_VARS).class_name();
+        let class_of =
+            |variant| button_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR).class_name();
 
         let classes: Vec<String> = ButtonVariant::ALL.iter().map(|v| class_of(*v)).collect();
         let mut unique = classes.clone();

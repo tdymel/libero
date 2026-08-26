@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, IconVariant, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::base_props,
-        common::{base_color, contrast_color, hover_color},
-        data_display::icon_variant_sx,
+        common::{base_color, contrast_color},
+        inputs::{ButtonVariant, VariantVars, button_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
         variables,
@@ -18,24 +18,15 @@ use crate::{
 const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
 const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
 const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
+const ACTION_ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-container");
+const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-container");
 
-/// `Icon`'s variant chrome plus `Button`'s hover - darker on `Filled`, a
-/// light tint on `Outlined`/`Transparent`. `hover_var` is a `var()` name, not
-/// a resolved value.
-fn action_icon_variant_sx(
-    variant: IconVariant,
-    color_var: &CssVar,
-    contrast_var: &CssVar,
-    hover_var: &CssVar,
-) -> Sx {
-    let hover_fallback = match variant {
-        IconVariant::Filled => color_var.value(),
-        IconVariant::Outlined | IconVariant::Transparent => "transparent".to_string(),
-    };
-
-    icon_variant_sx(variant, color_var, contrast_var)
-        .hover(sx().background(hover_var.value_or(hover_fallback)))
-}
+const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
+    color: &ACTION_ICON_COLOR_VAR,
+    contrast: &ACTION_ICON_CONTRAST_VAR,
+    container: &ACTION_ICON_CONTAINER_VAR,
+    on_container: &ACTION_ICON_ON_CONTAINER_VAR,
+};
 
 // `Icon`'s sizing plus the resets a native `<button>` needs that its `<span>`
 // never did.
@@ -46,7 +37,7 @@ fn action_icon_variant_sx(
 // means a plain declaration here would beat a `:hover` rule from their
 // lower-priority `sx`.
 static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
-    ripple_sx(sx())
+    let base = ripple_sx(sx())
         .display("inline-flex")
         .align_items("center")
         .justify_content("center")
@@ -59,40 +50,27 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .width(ACTION_ICON_SIZE.overridable())
         .height(ACTION_ICON_SIZE.overridable())
         .border_radius(ACTION_ICON_RADIUS.overridable())
-        .selector("& svg", sx().width("100%").height("100%"))
-        .when(
-            "filled",
-            action_icon_variant_sx(
-                IconVariant::Filled,
-                &ACTION_ICON_COLOR_VAR,
-                &ACTION_ICON_CONTRAST_VAR,
-                &ACTION_ICON_HOVER_VAR,
-            ),
+        .selector("& svg", sx().width("100%").height("100%"));
+
+    let base = ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+        base.when(
+            variant.state_name(),
+            // The ungated base is `border: none` for a caller with its own
+            // `sx`, so the width the variants' `border-color` needs joins
+            // here rather than out there.
+            button_variant_sx(variant, &ACTION_ICON_VARS, &ACTION_ICON_HOVER_VAR)
+                .border_style("solid")
+                .border_width("1px"),
         )
-        .when(
-            "outlined",
-            action_icon_variant_sx(
-                IconVariant::Outlined,
-                &ACTION_ICON_COLOR_VAR,
-                &ACTION_ICON_CONTRAST_VAR,
-                &ACTION_ICON_HOVER_VAR,
-            ),
-        )
-        .when(
-            "transparent",
-            action_icon_variant_sx(
-                IconVariant::Transparent,
-                &ACTION_ICON_COLOR_VAR,
-                &ACTION_ICON_CONTRAST_VAR,
-                &ACTION_ICON_HOVER_VAR,
-            ),
-        )
-        .when(
-            "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
+    });
+
+    // After the variants, so it also stops their `:hover` from triggering.
+    base.when(
+        "disabled",
+        sx().opacity("0.5")
+            .cursor("not-allowed")
+            .pointer_events("none"),
+    )
 });
 
 fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> Variables {
@@ -110,10 +88,9 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
         return result;
     }
 
-    let variant = props.variant.copied_or_default();
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
-    let hover = hover_color(&base, variant == IconVariant::Filled);
+    let colors = variant_colors(props.variant.copied_or_default(), &base);
 
     result
         .with(ACTION_ICON_COLOR_VAR, base.resolve(None))
@@ -121,13 +98,15 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
             ACTION_ICON_CONTRAST_VAR,
             contrast.and_then(|c| c.resolve(None)),
         )
-        .with(ACTION_ICON_HOVER_VAR, hover)
+        .with(ACTION_ICON_HOVER_VAR, colors.hover)
+        .with(ACTION_ICON_CONTAINER_VAR, colors.container)
+        .with(ACTION_ICON_ON_CONTAINER_VAR, colors.on_container)
 }
 
 base_props! {
     pub struct ActionIconProps {
         #[props(default, into)]
-        variant: Input<IconVariant>,
+        variant: Input<ButtonVariant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]

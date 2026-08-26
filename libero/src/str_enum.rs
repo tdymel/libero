@@ -7,12 +7,12 @@
 ///
 /// ```ignore
 /// str_enum! {
-///     /// How an `Icon` paints itself.
-///     pub enum IconVariant {
+///     /// How a control paints itself.
+///     pub enum ButtonVariant {
 ///         #[default]
 ///         Filled = "filled",
 ///         Outlined = "outlined" | "outline",
-///         Transparent = "transparent",
+///         Standard = "standard" | "text" | "transparent",
 ///     }
 /// }
 /// ```
@@ -137,7 +137,7 @@ mod tests {
 
     use crate::components::{
         AnchorUnderline, ButtonVariant, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition,
-        IconVariant, ImageFit, LabelPosition, Orientation, SidebarSide,
+        ImageFit, LabelPosition, Orientation, SidebarSide,
     };
     use crate::theme::{Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 
@@ -150,7 +150,6 @@ mod tests {
             $check!(FlexDirection);
             $check!(FlexWrap);
             $check!(HeaderPosition);
-            $check!(IconVariant);
             $check!(ImageFit);
             $check!(LabelPosition);
             $check!(Orientation);
@@ -208,25 +207,28 @@ mod tests {
 
     #[test]
     fn parses_case_insensitively_and_accepts_aliases() {
-        assert_eq!(IconVariant::from("OUTLINED"), IconVariant::Outlined);
-        assert_eq!(IconVariant::from("outline"), IconVariant::Outlined);
+        assert_eq!(ButtonVariant::from("OUTLINED"), ButtonVariant::Outlined);
+        assert_eq!(ButtonVariant::from("outline"), ButtonVariant::Outlined);
+        // The lowest arm answers to M3's name and to both of ours.
+        assert_eq!(ButtonVariant::from("text"), ButtonVariant::Standard);
+        assert_eq!(ButtonVariant::from("transparent"), ButtonVariant::Standard);
     }
 
     #[test]
     fn an_unknown_string_falls_back_to_the_default_variant() {
-        assert_eq!(IconVariant::from("nonsense"), IconVariant::default());
+        assert_eq!(ButtonVariant::from("nonsense"), ButtonVariant::default());
         assert_eq!(ButtonVariant::from(""), ButtonVariant::Filled);
     }
 
     #[test]
     fn as_str_is_the_canonical_spelling_not_an_alias() {
         assert_eq!(ImageFit::ScaleDown.as_str(), "scale-down");
-        assert_eq!(IconVariant::Outlined.as_str(), "outlined");
+        assert_eq!(ButtonVariant::Standard.as_str(), "standard");
     }
 
     #[test]
     fn state_name_is_as_str_unless_a_prefix_is_declared() {
-        assert_eq!(IconVariant::Outlined.state_name(), "outlined");
+        assert_eq!(ButtonVariant::Outlined.state_name(), "outlined");
         assert_eq!(ImageFit::ScaleDown.state_name(), "fit-scale-down");
     }
 }

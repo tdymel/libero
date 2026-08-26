@@ -3,53 +3,27 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color, input_from_str},
+        common::{base_color, base_props, contrast_color},
+        inputs::{ButtonVariant, VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
         variables,
     },
-    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, ICON_SIZE, Size, SizeCss},
 };
 
-str_enum! {
-    pub enum IconVariant {
-        #[default]
-        Filled = "filled",
-        Outlined = "outlined" | "outline",
-        Transparent = "transparent",
-    }
-}
-
-input_from_str!(IconVariant);
-
-// Matches Button's shade: bold enough to read as a filled badge.
-
-// A bare color name carries no shade, so it takes the default above rather
-// than the sx pipeline's generic one. Everything else passes through.
-/// Structural chrome for `variant`. The arguments are `var()` names, not
-/// resolved values, so `ActionIcon` reuses this under its own.
-pub(crate) fn icon_variant_sx(
-    variant: IconVariant,
-    color_var: &CssVar,
-    contrast_var: &CssVar,
-) -> Sx {
-    match variant {
-        IconVariant::Filled => sx()
-            .background(color_var.value())
-            .color(contrast_var.value_or("inherit")),
-        IconVariant::Outlined => sx()
-            .background("transparent")
-            .border("1px solid")
-            .border_color(color_var.value())
-            .color(color_var.value()),
-        IconVariant::Transparent => sx().background("transparent").color(color_var.value()),
-    }
-}
-
 pub(crate) const ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-icon-color");
 pub(crate) const ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-icon-contrast");
 const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
+const ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-container");
+const ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-on-container");
+
+pub(crate) const ICON_VARS: VariantVars<'static> = VariantVars {
+    color: &ICON_COLOR_VAR,
+    contrast: &ICON_CONTRAST_VAR,
+    container: &ICON_CONTAINER_VAR,
+    on_container: &ICON_ON_CONTAINER_VAR,
+};
 
 static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
@@ -62,21 +36,22 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .border_radius(ICON_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Sm)))
         .selector("& svg", sx().width("100%").height("100%"));
 
-    IconVariant::ALL.iter().fold(base, |base, &variant| {
-        base.when(
-            variant.state_name(),
-            icon_variant_sx(variant, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR),
-        )
+    // Chrome only: a badge is not interactive, so it takes no hover response.
+    ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+        base.when(variant.state_name(), variant_chrome_sx(variant, &ICON_VARS))
     })
 });
 
 fn icon_variables(props: &IconProps) -> Variables {
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
+    let colors = variant_colors(props.variant.copied_or_default(), &base);
 
     variables()
         .with(ICON_COLOR_VAR, base.resolve(None))
         .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
+        .with(ICON_CONTAINER_VAR, colors.container)
+        .with(ICON_ON_CONTAINER_VAR, colors.on_container)
         .with(
             ICON_SIZE.override_var(),
             props.size.resolve(Some(ICON_SIZE)),
@@ -90,7 +65,7 @@ base_props! {
         #[props(default, into)]
         component: Input<HtmlTag>,
         #[props(default, into)]
-        variant: Input<IconVariant>,
+        variant: Input<ButtonVariant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -128,6 +103,7 @@ pub fn Icon(props: IconProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::components::inputs::button_variant_sx;
     use crate::tokens::{Color, ColorShade, ColorValue};
 
     fn icon_props(color: Input<ThemeAwareValue>) -> IconProps {
@@ -166,19 +142,23 @@ mod tests {
         assert!(!variables.contains(ICON_CONTRAST_VAR.name()));
     }
 
+    /// Chrome only - a badge that changed colour under the pointer would be
+    /// claiming to be interactive.
     #[test]
-    fn each_variant_renders_its_own_css() {
-        let class_of =
-            |variant| icon_variant_sx(variant, &ICON_COLOR_VAR, &ICON_CONTRAST_VAR).class_name();
+    fn a_badge_renders_variant_chrome_without_a_hover() {
+        let class_of = |variant| variant_chrome_sx(variant, &ICON_VARS).class_name();
 
+        let classes: Vec<String> = ButtonVariant::ALL.iter().map(|v| class_of(*v)).collect();
+        let mut unique = classes.clone();
+        unique.sort();
+        unique.dedup();
+        assert_eq!(unique.len(), ButtonVariant::ALL.len());
+
+        // The interactive chrome is the same rules plus a `:hover`, so a
+        // matching class name would mean the badge grew one.
         assert_ne!(
-            class_of(IconVariant::Filled),
-            class_of(IconVariant::Outlined)
+            variant_chrome_sx(ButtonVariant::Filled, &ICON_VARS).class_name(),
+            button_variant_sx(ButtonVariant::Filled, &ICON_VARS, &ICON_COLOR_VAR).class_name()
         );
-        assert_ne!(
-            class_of(IconVariant::Outlined),
-            class_of(IconVariant::Transparent)
-        );
-        assert_eq!(class_of(IconVariant::Filled), class_of(IconVariant::Filled));
     }
 }

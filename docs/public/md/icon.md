@@ -77,7 +77,7 @@ with a required `aria_label`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `component` | `HtmlTag` | `span` | Element to render as. |
-| `variant` | `IconVariant` | `filled` | Filled, outlined, or transparent chrome around the svg. |
+| `variant` | `ButtonVariant` | `filled` | Chrome around the svg, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response. |
 | `color` | `ThemeAwareValue` | `primary` | Sets the container's CSS color, which a `currentColor` svg then inherits. A theme color also tints the background under variant `filled`. |
 | `size` | `ThemeAwareValue` | `md` | Badge width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the badge. |
@@ -106,6 +106,8 @@ The `variant`, `color`, `size` and `radius` fallbacks are the component's own
 | `--lsx-icon-color` | Resolved `color`; the svg inherits it as `currentColor`. |
 | `--lsx-icon-contrast` | Text color on top of that accent, for variant `filled`. Unset for a literal CSS color. |
 | `--lsx-icon-radius` | Set by the `radius` prop; falls back to `--lsx-radius-sm`. |
+| `--lsx-icon-container` | Container fill of `tonal`. |
+| `--lsx-icon-on-container` | Label color on that container - black or white, whichever reads on it. |
 
 ## Data attributes
 
@@ -113,4 +115,4 @@ State tokens on the root's `data-state`.
 
 | Token | Condition |
 |---|---|
-| `filled` / `outlined` / `transparent` | The `variant` in effect. |
+| `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect. |

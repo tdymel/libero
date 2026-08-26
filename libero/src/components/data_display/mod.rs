@@ -6,9 +6,8 @@ mod qr_code;
 mod table;
 
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
-pub use icon::{Icon, IconVariant};
+pub use icon::Icon;
 // Shared with `ActionIcon` so it renders identically to a plain `Icon`.
-pub(crate) use icon::icon_variant_sx;
 pub use image::{Image, ImageFit, ImageProps};
 pub use list::{List, ListItem, ListItemProps, ListProps};
 pub use qr_code::QrCode;
