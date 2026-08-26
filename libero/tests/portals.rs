@@ -11,12 +11,22 @@ use std::cell::Cell;
 
 use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Drawer};
+use libero::{LiberoProvider, hooks::use_portal};
 
 thread_local! {
     static SHOW_MIDDLE: Cell<bool> = const { Cell::new(true) };
     /// Bumped per render, so every pass writes content no other pass wrote.
     static PASS: Cell<u32> = const { Cell::new(0) };
+}
+
+/// One portal entry, mounted and unmounted by the test - `use_portal` itself
+/// is what is under test, so nothing is gained by going through a component
+/// that happens to use it.
+#[component]
+fn Portalled(content: String) -> Element {
+    use_portal(Some(rsx! { "{content}" }));
+
+    rsx! {}
 }
 
 fn app() -> Element {
@@ -27,15 +37,15 @@ fn app() -> Element {
 
     rsx! {
         LiberoProvider {
-            Drawer { "first-{phase}" }
+            Portalled { content: "first-{phase}" }
             if SHOW_MIDDLE.with(Cell::get) {
-                Drawer { "middle-{phase}" }
+                Portalled { content: "middle-{phase}" }
             }
             // Two portals after the removable one: with only one, every stale
             // hint lands past the end of the list and the fallback scan hides
             // the bug this test is for.
-            Drawer { "third-{phase}" }
-            Drawer { "last-{phase}" }
+            Portalled { content: "third-{phase}" }
+            Portalled { content: "last-{phase}" }
         }
     }
 }

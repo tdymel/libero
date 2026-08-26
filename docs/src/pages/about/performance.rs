@@ -11,7 +11,7 @@ const RATIOS: [(&str, &str); 7] = [
     ("Button", "2.4x"),
     ("Select", "6.1x"),
     ("Splitter", "8.2x"),
-    ("Drawer", "17.4x"),
+    ("Sidebar", "4.7x"),
 ];
 
 /// Each row is `(what, cost, why it is worth knowing)`.
@@ -97,8 +97,8 @@ pub fn PerformancePage() -> Element {
                     "is paying for markup of its own: "
                     Code { source: "Select" }
                     " renders a label, a trigger and a list; "
-                    Code { source: "Drawer" }
-                    " renders a portal, an overlay and a focus trap. The spread across the "
+                    Code { source: "Sidebar" }
+                    " renders a bordered panel around a scroll area. The spread across the "
                     "library:"
                 }
                 Flex {

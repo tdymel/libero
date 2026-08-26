@@ -9,7 +9,7 @@ Description: An in-flow panel bordering one edge of its parent and scrolling its
 An in-flow panel bordering one edge of its parent, scrolling its own content -
 a sidebar, nav rail or inspector. `side` picks the border and the size axis; the
 panel's actual position is your layout's, so place it at the matching end of the
-DOM. For the portaled, dimmed, focus-trapped kind, see [`Drawer`](drawer.md).
+DOM. For the portaled, dimmed, focus-trapped kind, see [`use_drawer`](drawer.md).
 
 The content is wrapped in a [`ScrollArea`](scroll_area.md), so the panel scrolls
 independently of the page. The panel itself is `flex-shrink: 0` - a sidebar is

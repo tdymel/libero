@@ -59,7 +59,7 @@ base_props! {
 
 /// An in-flow panel bordering one edge of its parent, scrolling its own
 /// content - a sidebar, nav rail or inspector. For the portaled, dimmed,
-/// focus-trapped kind, see `Drawer`.
+/// focus-trapped kind, see [`crate::hooks::use_drawer`].
 #[component]
 pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();

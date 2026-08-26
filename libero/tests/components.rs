@@ -10,14 +10,14 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Container,
-        DataList, DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Grid, GridArea,
-        GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
-        NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
-        SliderValue, Splitter, Switch, TabLabel, TabValue, Table, Tabs, Text, Title, ToggleButton,
+        DataList, DataListItem, Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem,
+        GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink,
+        Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark, SliderValue,
+        Splitter, Switch, TabLabel, TabValue, Table, Tabs, Text, Title, ToggleButton,
         ToggleButtonGroup, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
         column, sp,
     },
-    hooks::{ModalScope, use_modal},
+    hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
 };
 
@@ -981,11 +981,21 @@ fn dismissing_a_modal_settles_its_opening_with_no_result() {
 
 #[test]
 fn a_drawer_renders_through_the_portal_outlet() {
+    #[component]
+    fn Opener() -> Element {
+        let options = DrawerOptions {
+            anchor: "right".into(),
+            ..Default::default()
+        };
+        let nav = use_drawer(options, |_: ModalScope<()>| rsx! { "drawer content" });
+        use_hook(move || nav.open());
+
+        rsx! {}
+    }
+
     fn app() -> Element {
         rsx! {
-            LiberoProvider {
-                Drawer { anchor: "right", onclose: |_| {}, "drawer content" }
-            }
+            LiberoProvider { Opener {} }
         }
     }
 

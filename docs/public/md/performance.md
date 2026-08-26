@@ -20,7 +20,7 @@ A Libero component is one Dioxus component scope plus one styling pass. Measured
 against a component that renders a bare `span` and nothing else, the cheap ones -
 `Box`, `Text`, `Center` - land around 1.5x, and that cluster is the floor.
 Anything above it is paying for markup of its own: `Select` renders a label, a
-trigger and a list; `Drawer` renders a portal, an overlay and a focus trap. The
+trigger and a list; `Sidebar` renders a bordered panel around a scroll area. The
 spread across the library:
 
 | Component | Re-render cost |
@@ -31,7 +31,7 @@ spread across the library:
 | `Button` | 2.4x |
 | `Select` | 6.1x |
 | `Splitter` | 8.2x |
-| `Drawer` | 17.4x |
+| `Sidebar` | 4.7x |
 
 Ratios travel between machines; absolute nanoseconds do not. So these are an
 ordering - which components to look at first when a screen is slow - and not a

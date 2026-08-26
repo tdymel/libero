@@ -1,90 +1,167 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Drawer, Text, Title},
+    components::{Button, Code, CodeBlock, Flex, Text, Title},
+    hooks::{DrawerOptions, ModalScope, use_drawer},
     sx::sx,
 };
 
-/// The panel's own content - a subtree, not one string, so it is printed
-/// verbatim rather than as `children_text`.
-const CONTENT: &str = r#"Title { size: "lg", "Temporary drawer" }
-Text { "Closes on Escape or backdrop click." }
-Button { variant: "outlined", onclick: move |_| open.set(false), "Close" }"#;
+/// The panel's own content - a subtree, so it is printed verbatim rather than
+/// as `children_text`.
+const CONTENT: &str = r#"Flex {
+    direction: "column",
+    gap: "md",
+    sx: sx().padding("16px"),
+    Title { size: "lg", "Temporary drawer" }
+    Text { "Closes on Escape or a backdrop click." }
+    Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+}"#;
 
-/// A drawer only exists while it is open, so the trigger and the page state
-/// that opens it are the example as much as the component is.
-fn wrap_trigger(_: &DemoValues, code: &str) -> String {
+/// A drawer is a hook, so the options and the trigger are the example as much
+/// as the panel is - the generated props are rebuilt here as the struct
+/// literal they actually are.
+fn wrap_hook(values: &DemoValues, _: &str) -> String {
     format!(
-        "Button {{ variant: \"outlined\", onclick: move |_| open.set(true), \"Open drawer\" }}\nif open() {{\n{}}}",
-        indent(code)
+        "let nav = use_drawer(\n    \
+             DrawerOptions {{\n        \
+                 anchor: {:?}.into(),\n        \
+                 size: {:?}.into(),\n        \
+                 ..Default::default()\n    \
+             }},\n    \
+             |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
+         rsx! {{\n    \
+             Button {{ variant: \"outlined\", onclick: move |_| {{ nav.open(); }}, \"Open drawer\" }}\n\
+         }}",
+        values.str("anchor"),
+        values.str("size"),
+        indent(&indent(CONTENT)),
     )
+}
+
+const ARGS_EXAMPLE: &str = r#"// The argument type is the modal's, so a drawer takes per-opening data and
+// answers its caller exactly like any other dialog.
+let details = use_drawer(
+    DrawerOptions { anchor: "right".into(), ..Default::default() },
+    |s: ModalScope<Order, bool>| {
+        let order = s.args();
+
+        rsx! {
+            Title { size: "lg", "Order {order.id}" }
+            Button { onclick: move |_| s.resolve(true), "Mark shipped" }
+        }
+    },
+);
+
+if details.open_with(order).await == Some(true) {
+    refresh().await;
+}"#;
+
+/// The hook needs a scope of its own: `Demo` calls its `render` closure from
+/// its own, where a hook would be invisible to the next reader.
+#[component]
+fn DrawerDemo(anchor: String, size: String) -> Element {
+    let nav = use_drawer(
+        DrawerOptions {
+            anchor: anchor.into(),
+            size: size.into(),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                Flex {
+                    direction: "column",
+                    gap: "md",
+                    sx: sx().padding("16px"),
+                    Title { size: "lg", "Temporary drawer" }
+                    Text { "Closes on Escape or a backdrop click." }
+                    Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
+                }
+            }
+        },
+    );
+
+    rsx! {
+        Button {
+            variant: "outlined",
+            onclick: move |_| {
+                nav.open();
+            },
+            "Open drawer"
+        }
+    }
 }
 
 #[component]
 pub fn DrawerPage() -> Element {
-    let mut open = use_signal(|| false);
-
     rsx! {
         DocPage {
             title: "Drawer",
-            source: "libero/src/components/overlay/drawer.rs",
+            source: "libero/src/hooks/drawer.rs",
             markdown: "/md/drawer.md",
             properties: vec![
-                props("Drawer", vec![
-                    prop("anchor", "DrawerAnchor").default("left").doc("The edge the drawer docks to."),
-                    prop("size", "Size").default("md").doc("Width along the docked edge (or height, for top/bottom)."),
-                    prop("z_index", "ThemeAwareValue").doc("Stacking order for the drawer's modal layer."),
-                    prop("onclose", "EventHandler<()>")
-                        .doc("Requested by Escape or a backdrop click. Drawer tracks no open/closed state."),
-                    prop("children", "Element").doc("The panel's content, rendered inside a Dialog surface."),
+                props("DrawerOptions", vec![
+                    prop("anchor", "Input<DrawerAnchor>").default("left").doc("The edge the panel docks to."),
+                    prop("size", "Input<Size>").default("md").doc("Width along the docked edge, height for top/bottom."),
+                    prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order for the docked panel."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A portaled, dimmed, focus-trapped panel docked to one edge, closing on "
-                    "Escape or a backdrop click. It is mounted only while open - there is no "
-                    Code { source: "opened" }
-                    " prop, the caller's own state is the switch. For an in-flow panel, see "
+                    "A dimmed, focus-trapped panel docked to one edge. It is "
+                    Code { source: "use_modal" }
+                    " with the docking around it, so it has the same handle, the same "
+                    "per-opening arguments and the same results. For an in-flow panel, see "
                     "Sidebar."
                 }
             },
             Demo {
-                component: "Drawer",
+                component: "DrawerOptions",
                 children_text: "",
                 children_code: CONTENT.to_string(),
-                // The close wiring and the panel's padding are the demo's
-                // fixture, not props a control varies.
-                fixed: vec![
-                    "onclose: move |_| open.set(false)".to_string(),
-                    r#"sx: sx().padding("16px")"#.to_string(),
-                ],
                 controls: vec![
                     Control::toggle("anchor", ["left", "right", "top", "bottom"]),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Button {
-                        variant: "outlined",
-                        onclick: move |_| open.set(true),
-                        "Open drawer"
-                    }
-                    if open() {
-                        Drawer {
-                            anchor: values.str("anchor"),
-                            size: values.str("size"),
-                            onclose: move |_| open.set(false),
-                            sx: sx().padding("16px"),
-                            Title { size: "lg", "Temporary drawer" }
-                            Text { "Closes on Escape or backdrop click." }
-                            Button {
-                                variant: "outlined",
-                                onclick: move |_| open.set(false),
-                                "Close"
-                            }
-                        }
-                    }
+                    DrawerDemo { anchor: values.str("anchor"), size: values.str("size") }
                 },
-                wrap: Wrap(wrap_trigger),
+                wrap: Wrap(wrap_hook),
+            }
+
+            DocSection {
+                title: "Arguments and answers",
+                Text {
+                    "Everything on the Modal page applies here unchanged: "
+                    Code { source: "open_with" }
+                    " carries this opening's data, the returned "
+                    Code { source: "Opening" }
+                    " takes a handler or is awaited, and Escape or a backdrop click settles "
+                    "it with "
+                    Code { source: "None" }
+                    "."
+                }
+                CodeBlock { source: ARGS_EXAMPLE, language: "rust" }
+            }
+
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "The panel is a "
+                    Code { source: "Dialog" }
+                    ", so it carries the dialog role and "
+                    Code { source: "aria-modal" }
+                    "; give it a name with "
+                    Code { source: "title" }
+                    " or "
+                    Code { source: "aria_label" }
+                    ". Focus is trapped while it is open and returns to whatever opened it. "
+                    "Unlike a plain "
+                    Code { source: "Dialog" }
+                    ", the panel renders no header close button - a drawer's content usually "
+                    "owns its own dismissal."
+                }
             }
         }
     }

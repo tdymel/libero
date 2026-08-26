@@ -64,7 +64,7 @@ fetch only the file you need.
 
 ## Overlay
 
-- [Drawer](drawer.md): A portaled, dimmed, focus-trapped panel docked to one edge of the viewport.
+- [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
 - [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 - [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.
 - [Tooltip](tooltip.md): A CSS-only label that appears while its child is hovered or focused.

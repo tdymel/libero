@@ -2,11 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Dialog, Float, Input, Modal, Placement, States,
+        Dialog, Float, Input, Placement, States,
         common::{base_props, input_from_str},
     },
     hooks::use_css,
-    hooks::use_portal,
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{DRAWER_SIZE, Size},
@@ -76,18 +75,14 @@ base_props! {
         size: Input<Size>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
-        /// Requested by Escape or a backdrop click. `Drawer` tracks no
-        /// open/closed state.
-        #[props(default)]
-        onclose: Option<EventHandler<()>>,
         children: Element,
     }
 }
 
-/// A portaled, dimmed, focus-trapped panel docked to one edge, closing on
-/// Escape or backdrop click. For an in-flow panel, see `Sidebar`.
+/// The docked panel itself. It knows nothing about being open - the layer,
+/// the portal and the dismissal are [`crate::hooks::use_drawer`]'s.
 #[component]
-pub fn Drawer(props: DrawerProps) -> Element {
+pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let anchor = props.anchor.copied_or_default();
     let size = props.size.copied_or(Size::Md);
 
@@ -104,35 +99,20 @@ pub fn Drawer(props: DrawerProps) -> Element {
     let class = props.class.clone().unwrap_or_default().with(drawer_class);
     let (placement, float_sx) = drawer_float_placement(anchor);
 
-    let onclose = props.onclose;
-    let z_index = props.z_index.clone();
-    let sx = props.sx.clone();
-    let attributes = props.attributes.clone();
-    let children = props.children.clone();
-
-    use_portal(Some(rsx! {
-        Modal {
-            onclose: move |_| {
-                if let Some(onclose) = &onclose {
-                    onclose.call(());
-                }
-            },
-            Float {
-                placement: Input::Value(placement),
-                z_index: z_index.clone(),
-                sx: float_sx,
-                Dialog {
-                    // A drawer's own content owns its dismissal.
-                    close_button: false,
-                    class: class.clone(),
-                    sx: sx.clone(),
-                    states: states.clone(),
-                    attributes: attributes.clone(),
-                    {children.clone()}
-                }
+    rsx! {
+        Float {
+            placement: Input::Value(placement),
+            z_index: props.z_index.clone(),
+            sx: float_sx,
+            Dialog {
+                // A drawer's own content owns its dismissal.
+                close_button: false,
+                class,
+                sx: props.sx.clone(),
+                states,
+                attributes: props.attributes.clone(),
+                {props.children}
             }
         }
-    }));
-
-    rsx! {}
+    }
 }

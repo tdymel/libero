@@ -1,102 +1,124 @@
 # Drawer
 
 Crate: `libero`
-Import: `use libero::components::Drawer;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/drawer.rs>
+Import: `use libero::hooks::{DrawerOptions, ModalScope, use_drawer};`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/drawer.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A portaled, dimmed, focus-trapped panel docked to one edge of the viewport.
+Description: A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
 
-A portaled, dimmed, focus-trapped panel docked to one edge, closing on Escape or
-a backdrop click. It is mounted only while open - there is no `opened` prop, the
-caller's own state is the switch. For an in-flow panel, see
-[Sidebar](sidebar.md).
+A drawer is a hook, not a component. `use_drawer` is [`use_modal`](modal.md)
+with a docked panel around the content: the same handle, the same per-opening
+arguments, the same results. For an in-flow panel, see [Sidebar](sidebar.md).
 
 ## Usage
 
-A drawer only exists while it is open, so the trigger and the state that opens it
-are the example as much as the component is.
+`DrawerOptions` carries what every opening shares - the edge it docks to, how
+wide (or tall) it is, and its stacking order. The closure is the panel's
+content.
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::{Button, Drawer, Text, Title}, sx::sx};
+use libero::{
+    components::{Anchor, Button, Title},
+    hooks::{DrawerOptions, ModalScope, use_drawer},
+};
 
 #[component]
 fn Demo() -> Element {
-    let mut open = use_signal(|| false);
+    let nav = use_drawer(
+        DrawerOptions {
+            anchor: "right".into(),
+            size: "sm".into(),
+            ..Default::default()
+        },
+        |s: ModalScope<()>| {
+            rsx! {
+                Title { size: "lg", "Menu" }
+                Anchor { to: "/", "Home" }
+                Button { variant: "text", onclick: move |_| s.close(), "Close" }
+            }
+        },
+    );
 
     rsx! {
-        Button { variant: "outlined", onclick: move |_| open.set(true), "Open drawer" }
-        if open() {
-            Drawer {
-                onclose: move |_| open.set(false),
-                sx: sx().padding("16px"),
-                Title { size: "lg", "Temporary drawer" }
-                Text { "Closes on Escape or backdrop click." }
-                Button { variant: "outlined", onclick: move |_| open.set(false), "Close" }
-            }
-        }
+        Button { variant: "outlined", onclick: move |_| { nav.open(); }, "Open menu" }
     }
 }
 ```
 
-`anchor` picks the edge - `left`, `right`, `top` or `bottom`. `size` is the width
-along a left/right edge and the height along a top/bottom one, off the theme's
-drawer size scale; the other axis is always the full 100%.
+`anchor` picks the edge - `left`, `right`, `top` or `bottom`. `size` is the
+width along a left/right edge and the height along a top/bottom one, off the
+theme's drawer size scale; the other axis is always the full 100%. Both are read
+on every render, so an anchor held in a signal switches a drawer that is already
+open.
+
+## Arguments and answers
+
+The argument and result types are the modal's, so a drawer takes per-opening
+data and answers its caller exactly like any other dialog - see
+[Modal](modal.md) for `open_with`, `Opening`, `on_result` and `.await`.
 
 ```rust
-use dioxus::prelude::*;
-use libero::{components::{Button, Drawer, Text}, sx::sx};
+let details = use_drawer(
+    DrawerOptions { anchor: "right".into(), ..Default::default() },
+    |s: ModalScope<Order, bool>| {
+        let order = s.args();
 
-#[component]
-fn Demo() -> Element {
-    let mut open = use_signal(|| false);
-
-    rsx! {
-        Button { variant: "outlined", onclick: move |_| open.set(true), "Open drawer" }
-        if open() {
-            Drawer {
-                anchor: "bottom",
-                size: "lg",
-                onclose: move |_| open.set(false),
-                sx: sx().padding("16px"),
-                Text { "Docked to the bottom edge." }
-            }
+        rsx! {
+            Title { size: "lg", "Order {order.id}" }
+            Button { onclick: move |_| s.resolve(true), "Mark shipped" }
         }
-    }
+    },
+);
+
+if details.open_with(order).await == Some(true) {
+    refresh().await;
 }
 ```
 
-The drawer is a [modal](modal.md) layer wrapping a [Float](float.md) wrapping a
-[Dialog](dialog.md) surface: the modal supplies the portal, the backdrop and the
-focus trap, the float does the edge docking, and the dialog is the panel your
-`sx` and `children` land on. That is also why `Drawer` itself renders nothing in
-place - the panel lives in a portal.
+## What it is made of
+
+The hook supplies the portal, the backdrop and the focus trap; a
+[Float](float.md) does the edge docking; and the panel itself is a
+[Dialog](dialog.md) surface, which is where the closure's content lands. That
+last part is why the panel carries the dialog role for free.
 
 ## Accessibility
 
 The panel is a `Dialog`, so it is a modal dialog: focus is trapped inside while
-it is open and Escape closes it. `onclose` is a *request* - Escape and a
-backdrop click both call it, and nothing happens until the caller drops its own
-open state, so a drawer can refuse to close (an unsaved form) simply by not
-acting on it.
+it is open, Escape closes it, and focus returns to whatever opened it - the hook
+records the trigger itself. Escape and a backdrop click settle the `Opening`
+with `None`, so a handler written for an answer never runs on a dismissal.
 
-Give the panel an accessible name where its content does not already provide one:
-`aria_label` passes through to the dialog. Put the trigger's focus back where the
-user expects it by unmounting the drawer from the same state the trigger set.
+Give the panel an accessible name where its content does not already provide
+one, with `Dialog`'s `title` or `aria_label` inside the closure. Unlike a plain
+`Dialog`, the drawer panel renders no header close button - a drawer's content
+usually owns its own dismissal.
 
-## Props
+## API
 
-| Prop | Type | Default | Description |
+### `use_drawer`
+
+```rust
+pub fn use_drawer<S: Clone + 'static, R: Clone + 'static>(
+    options: DrawerOptions,
+    render: impl FnMut(ModalScope<S, R>) -> Element + 'static,
+) -> ModalHandle<S, R>
+```
+
+Returns the same `ModalHandle` as `use_modal`; every method on it, on
+`ModalScope` and on `Opening` behaves identically. See [Modal](modal.md).
+
+### `DrawerOptions`
+
+`Default`, so a literal overrides only what it needs:
+`DrawerOptions { anchor: "right".into(), ..Default::default() }`.
+
+| Field | Type | Default | Description |
 |---|---|---|---|
-| `anchor` | `DrawerAnchor` | `left` | The edge the drawer docks to. |
-| `size` | `Size` | `md` | Width along the docked edge (or height, for top/bottom). |
-| `z_index` | `ThemeAwareValue` | - | Stacking order for the drawer's modal layer. |
-| `onclose` | `EventHandler<()>` | - | Requested by Escape or a backdrop click. `Drawer` tracks no open/closed state. |
-| `children` | `Element` | required | The panel's content, rendered inside a `Dialog` surface. |
-
-Like every component, `Drawer` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes - all of which land on the
-`Dialog` panel, not on an in-flow root.
+| `anchor` | `Input<DrawerAnchor>` | `left` | The edge the panel docks to. |
+| `size` | `Input<Size>` | `md` | Width along the docked edge, height for top/bottom. |
+| `z_index` | `Input<ThemeAwareValue>` | - | Stacking order for the docked panel. |
 
 ## Theme defaults
 
