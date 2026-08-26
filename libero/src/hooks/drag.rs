@@ -18,6 +18,9 @@ pub struct DragPoint {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragStart {
     pub client: DragPoint,
+    /// Abandons the drag - for a handler that only learns the drag is
+    /// impossible after measuring, which off the web is a round-trip away.
+    pub cancel: Callback<()>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -39,8 +42,9 @@ pub struct DragOptions {
     /// Id of the element that takes pointer capture and carries the
     /// move/up/cancel handlers - the one owning the geometry, not the handle.
     pub capture: Signal<String>,
-    /// Return `false` to abort before the drag starts.
-    pub on_start: Callback<DragStart, bool>,
+    /// The geometry a drag needs may take a round-trip to measure, so this
+    /// cannot veto by returning - call [`DragStart::cancel`] once it knows.
+    pub on_start: Callback<DragStart>,
     pub on_move: Callback<DragMove>,
     pub on_end: Callback<()>,
 }
@@ -80,6 +84,11 @@ pub fn use_drag(options: DragOptions) -> Drag {
     let mut active = use_signal(|| Option::<ActiveDrag>::None);
     let mut dragging = use_signal(|| false);
 
+    let cancel = use_callback(move |()| {
+        active.set(None);
+        dragging.set(false);
+    });
+
     let onpointerdown = use_callback(move |event: Event<PointerData>| {
         // A right- or middle-click must not drag; an unreported button (some
         // webviews, and touch) still counts as primary.
@@ -95,9 +104,7 @@ pub fn use_drag(options: DragOptions) -> Drag {
             y: coordinates.y,
         };
 
-        if !on_start.call(DragStart { client }) {
-            return;
-        }
+        on_start.call(DragStart { client, cancel });
 
         // Best-effort: failing costs out-of-element tracking, not the drag.
         if let Ok(element) = dom_api().query_selector(&format!("#{}", capture())) {

@@ -232,21 +232,25 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
             return;
         };
-        let Ok(scroll_size) = container.scroll_size() else {
-            return;
-        };
-        let Ok(viewport) = container.dimensions() else {
-            return;
-        };
-        let Ok((current_x, current_y)) = container.scroll_offset() else {
-            return;
-        };
-        let max_x = (scroll_size.width - viewport.width).max(0.0);
-        let max_y = (scroll_size.height - viewport.height).max(0.0);
+        // Each measurement is a round-trip off the web, so the whole
+        // sequence has to happen in a task rather than inline.
+        spawn(async move {
+            let (Ok(scroll_size), Ok(viewport), Ok((current_x, current_y))) = (
+                container.scroll_size().await,
+                container.dimensions().await,
+                container.scroll_offset().await,
+            ) else {
+                return;
+            };
+            let max_x = (scroll_size.width - viewport.width).max(0.0);
+            let max_y = (scroll_size.height - viewport.height).max(0.0);
 
-        let x = scroll_position_x.map_or(current_x, |pct| max_x * pct.clamp(0.0, 100.0) / 100.0);
-        let y = scroll_position_y.map_or(current_y, |pct| max_y * pct.clamp(0.0, 100.0) / 100.0);
-        let _ = container.scroll_to(x, y);
+            let x =
+                scroll_position_x.map_or(current_x, |pct| max_x * pct.clamp(0.0, 100.0) / 100.0);
+            let y =
+                scroll_position_y.map_or(current_y, |pct| max_y * pct.clamp(0.0, 100.0) / 100.0);
+            let _ = container.scroll_to(x, y);
+        });
     }));
 
     let states: Input<States> = props

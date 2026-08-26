@@ -159,26 +159,31 @@ pub fn Splitter(props: SplitterProps) -> Element {
 
     let drag = use_drag(DragOptions {
         capture: root_id,
-        on_start: Callback::new(move |_: DragStart| {
+        on_start: Callback::new(move |start: DragStart| {
+            let cancel = start.cancel;
             let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
-                return false;
+                cancel.call(());
+                return;
             };
-            let Ok(dimensions) = container.dimensions() else {
-                return false;
-            };
-            let size = if vertical {
-                dimensions.width
-            } else {
-                dimensions.height
-            };
-            if size <= 0.0 {
-                return false;
-            }
+            spawn(async move {
+                let Ok(dimensions) = container.dimensions().await else {
+                    cancel.call(());
+                    return;
+                };
+                let size = if vertical {
+                    dimensions.width
+                } else {
+                    dimensions.height
+                };
+                if size <= 0.0 {
+                    cancel.call(());
+                    return;
+                }
 
-            container_size.set(size);
-            start_a.set(a());
-            notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
-            true
+                container_size.set(size);
+                start_a.set(a());
+                notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
+            });
         }),
         on_move: Callback::new(move |event: DragMove| {
             let delta = event.delta();

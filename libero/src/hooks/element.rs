@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::{Dimensions, ElementApi, MountedElement, PlatformError};
+use crate::components::{Dimensions, ElementApi, MountedElement, PlatformError, Read};
 
 
 /// A handle to one of this component's own elements, implementing
@@ -54,20 +54,32 @@ impl ElementApi for ElementHandle {
         self.get().is_ok_and(|element| element.is_focused())
     }
 
-    fn dimensions(&self) -> Result<Dimensions, PlatformError> {
-        self.get()?.dimensions()
+    fn dimensions(&self) -> Read<Dimensions> {
+        match self.get() {
+            Ok(element) => element.dimensions(),
+            Err(error) => Box::pin(std::future::ready(Err(error))),
+        }
     }
 
-    fn client_offset(&self) -> Result<(f64, f64), PlatformError> {
-        self.get()?.client_offset()
+    fn client_offset(&self) -> Read<(f64, f64)> {
+        match self.get() {
+            Ok(element) => element.client_offset(),
+            Err(error) => Box::pin(std::future::ready(Err(error))),
+        }
     }
 
-    fn scroll_size(&self) -> Result<Dimensions, PlatformError> {
-        self.get()?.scroll_size()
+    fn scroll_size(&self) -> Read<Dimensions> {
+        match self.get() {
+            Ok(element) => element.scroll_size(),
+            Err(error) => Box::pin(std::future::ready(Err(error))),
+        }
     }
 
-    fn scroll_offset(&self) -> Result<(f64, f64), PlatformError> {
-        self.get()?.scroll_offset()
+    fn scroll_offset(&self) -> Read<(f64, f64)> {
+        match self.get() {
+            Ok(element) => element.scroll_offset(),
+            Err(error) => Box::pin(std::future::ready(Err(error))),
+        }
     }
 
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {

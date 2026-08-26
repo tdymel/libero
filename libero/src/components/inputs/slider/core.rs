@@ -250,35 +250,49 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         capture: root_id,
         on_start: Callback::new(move |event: DragStart| {
             if !interactive {
-                return false;
+                event.cancel.call(());
+                return;
             }
+            // `use_drag` cancels the pointerdown, which cancels the browser's
+            // own focus - so the keyboard would be unreachable after a mouse
+            // drag. A command, so it needs no round-trip.
+            let _ = thumb_element.focus();
+
+            let (track_left, track_width, thumb_width) =
+                (track_left.clone(), track_width.clone(), thumb_width.clone());
             // `use_element`, not a `dom_api()` lookup by id: the calls are
             // the same `ElementApi`, but a mounted handle works off the web
-            // too, where there is no document to query.
-            let (Ok(dimensions), Ok((left, _))) =
-                (track_element.dimensions(), track_element.client_offset())
-            else {
-                return false;
-            };
-            if dimensions.width <= 0.0 {
-                return false;
-            }
-
-            track_left.set(left);
-            track_width.set(dimensions.width);
-            thumb_width.set(thumb_element.dimensions().map_or(0.0, |size| size.width));
-
-            match value_at.call(event.client.x) {
-                Some(value) => {
-                    // `use_drag` cancels the pointerdown, which cancels the
-                    // browser's own focus - so the keyboard would be
-                    // unreachable after a mouse drag.
-                    let _ = thumb_element.focus();
-                    emit.call(SliderChangeEvent::Start(value));
-                    true
+            // too, where there is no document to query. Off the web they are
+            // also a round-trip, so the drag starts before the geometry is
+            // known - moves landing first are dropped by `value_at`'s own
+            // zero-travel guard.
+            spawn(async move {
+                let (Ok(dimensions), Ok((left, _))) = (
+                    track_element.dimensions().await,
+                    track_element.client_offset().await,
+                ) else {
+                    event.cancel.call(());
+                    return;
+                };
+                if dimensions.width <= 0.0 {
+                    event.cancel.call(());
+                    return;
                 }
-                None => false,
-            }
+
+                track_left.set(left);
+                track_width.set(dimensions.width);
+                thumb_width.set(
+                    thumb_element
+                        .dimensions()
+                        .await
+                        .map_or(0.0, |size| size.width),
+                );
+
+                match value_at.call(event.client.x) {
+                    Some(value) => emit.call(SliderChangeEvent::Start(value)),
+                    None => event.cancel.call(()),
+                }
+            });
         }),
         on_move: Callback::new(move |event: DragMove| {
             if let Some(value) = value_at.call(event.client.x) {

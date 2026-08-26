@@ -15,7 +15,7 @@ mod web {
     use wasm_bindgen::{JsCast, JsValue};
 
     use super::DomApi;
-    use crate::components::common::{Dimensions, ElementApi, PlatformError};
+    use crate::components::common::{Dimensions, ElementApi, PlatformError, Read};
 
     pub(super) struct WebDomHandle;
 
@@ -43,6 +43,10 @@ mod web {
         }
     }
 
+    fn resolved<T: 'static>(value: T) -> Read<T> {
+        Box::pin(std::future::ready(Ok(value)))
+    }
+
     struct WebElementHandle {
         element: web_sys::HtmlElement,
     }
@@ -68,28 +72,30 @@ mod web {
                 .is_some_and(|active| JsValue::from(active) == JsValue::from(self.element.clone()))
         }
 
-        fn dimensions(&self) -> Result<Dimensions, PlatformError> {
+        // The DOM answers all four immediately - they are futures only
+        // because a webview-backed renderer cannot.
+        fn dimensions(&self) -> Read<Dimensions> {
             let rect = self.element.get_bounding_client_rect();
-            Ok(Dimensions {
+            resolved(Dimensions {
                 width: rect.width(),
                 height: rect.height(),
             })
         }
 
-        fn client_offset(&self) -> Result<(f64, f64), PlatformError> {
+        fn client_offset(&self) -> Read<(f64, f64)> {
             let rect = self.element.get_bounding_client_rect();
-            Ok((rect.left(), rect.top()))
+            resolved((rect.left(), rect.top()))
         }
 
-        fn scroll_size(&self) -> Result<Dimensions, PlatformError> {
-            Ok(Dimensions {
+        fn scroll_size(&self) -> Read<Dimensions> {
+            resolved(Dimensions {
                 width: self.element.scroll_width() as f64,
                 height: self.element.scroll_height() as f64,
             })
         }
 
-        fn scroll_offset(&self) -> Result<(f64, f64), PlatformError> {
-            Ok((
+        fn scroll_offset(&self) -> Read<(f64, f64)> {
+            resolved((
                 self.element.scroll_left() as f64,
                 self.element.scroll_top() as f64,
             ))

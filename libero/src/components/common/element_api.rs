@@ -1,3 +1,5 @@
+use std::{future::Future, pin::Pin};
+
 use crate::components::common::PlatformError;
 
 /// An element's rendered pixel size.
@@ -7,10 +9,17 @@ pub struct Dimensions {
     pub height: f64,
 }
 
+/// A read that has to reach the platform. Already resolved on the web and
+/// under Blitz; a round-trip through the webview off them, which is why it is
+/// a future rather than a plain `Result`.
+pub type Read<T> = Pin<Box<dyn Future<Output = Result<T, PlatformError>>>>;
+
 /// A resolved element, valid only for the call that produced it. Obtained via
 /// [`DomApi::query_selector`](crate::components::common::DomApi::query_selector)
 /// or another `ElementApi`'s scoped queries - never stored.
 pub trait ElementApi {
+    // Commands stay synchronous: nothing reads a result back, so a renderer
+    // that can only queue the work still honours them.
     fn focus(&self) -> Result<(), PlatformError>;
     fn blur(&self) -> Result<(), PlatformError>;
     fn click(&self) -> Result<(), PlatformError>;
@@ -19,16 +28,16 @@ pub trait ElementApi {
     fn is_focused(&self) -> bool;
 
     /// This element's rendered pixel size.
-    fn dimensions(&self) -> Result<Dimensions, PlatformError>;
+    fn dimensions(&self) -> Read<Dimensions>;
 
     /// Top-left corner in client (viewport) coordinates.
-    fn client_offset(&self) -> Result<(f64, f64), PlatformError>;
+    fn client_offset(&self) -> Read<(f64, f64)>;
 
     /// Total scrollable content size (`scrollWidth`/`scrollHeight`).
-    fn scroll_size(&self) -> Result<Dimensions, PlatformError>;
+    fn scroll_size(&self) -> Read<Dimensions>;
 
     /// Current scroll offset in pixels (`scrollLeft`, `scrollTop`).
-    fn scroll_offset(&self) -> Result<(f64, f64), PlatformError>;
+    fn scroll_offset(&self) -> Read<(f64, f64)>;
 
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;

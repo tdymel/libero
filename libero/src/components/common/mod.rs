@@ -21,7 +21,7 @@ pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, hover_color, selected_color, shade_color,
 };
 pub use dom_api::{DomApi, dom_api};
-pub use element_api::{Dimensions, ElementApi};
+pub use element_api::{Dimensions, ElementApi, Read};
 pub use input::Input;
 pub(crate) use mounted_element::MountedElement;
 pub(crate) use input::input_from_str;
