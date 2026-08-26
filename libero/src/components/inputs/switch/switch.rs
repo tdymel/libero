@@ -40,8 +40,6 @@ static SWITCH_ROOT_SX: StaticSx = StaticSx::new(|| {
         // Pins its own size - a flex parent's `stretch` would otherwise
         // decide how wide the row is.
         .width("max-content")
-        .var(SWITCH_ON, "0")
-        .when("checked", sx().var(SWITCH_ON, "1"))
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -101,6 +99,7 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
                 ThemeAwareValue::from("grey.3").resolve(None)
             },
         )
+        .with(SWITCH_ON, Some(if checked { "1" } else { "0" }.to_string()))
         .with(
             SWITCH_THUMB_COLOR,
             if checked {
@@ -197,6 +196,16 @@ pub fn Switch(props: SwitchProps) -> Element {
         // browser's own flip, so Rust state stays the only source of truth.
         .event("onclick", move |event: Event<MouseData>| {
             event.prevent_default();
+            if let Some(onchange) = &onchange {
+                onchange.call(!checked);
+            }
+        })
+        // Blitz forwards a `<label>` click to its input as a default action
+        // that emits `input`, never `click`, so `onclick` alone leaves the
+        // switch dead there. On the web a cancelled click suppresses `input`,
+        // and both handlers compute the same `!checked` anyway, so firing
+        // twice is a no-op rather than a double toggle.
+        .event("oninput", move |_: FormEvent| {
             if let Some(onchange) = &onchange {
                 onchange.call(!checked);
             }

@@ -7,6 +7,7 @@ memory
 .dioxus-main
 .dioxus-active
 .cargo
+.blitz-fork
 
 # added by gcma: paths removed from history
 .agents/*
