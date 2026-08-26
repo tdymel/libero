@@ -32,9 +32,9 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // Pins its own size, so a `Flex` column's `stretch` cannot widen it.
         .width("max-content")
         // The radio is what a screen reader and the keyboard use; the label
-        // around it is the whole of what anyone sees.
+        // beside it is the whole of what anyone sees.
         .selector(
-            "& input",
+            "& > input",
             sx().position("absolute")
                 .width("1px")
                 .height("1px")
@@ -64,8 +64,9 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .selector("& > label:hover", sx().z_index("1"))
         .selector("& > label[data-state~=\"checked\"]", sx().z_index("1"))
         // The ring goes on the label, since the input it belongs to is the
-        // one thing here with no size.
-        .selector("& > label:has(> input:focus-visible)", {
+        // one thing here with no size - reachable as a sibling because the
+        // radio is rendered beside its label rather than inside it.
+        .selector("& > input:focus-visible + label", {
             focus_ring_sx().z_index("2")
         })
         .selector(
@@ -221,8 +222,71 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             attributes,
             rsx! {
                 for (index, segment) in segments.iter().enumerate() {
-                    label {
+                    // The radio sits *beside* its label, not inside it, so the
+                    // focus ring can be `input:focus-visible + label`. Nesting
+                    // it would need `label:has(> input:focus-visible)`, and
+                    // `:has()` is not universally supported - Blitz's stylo
+                    // rejects it at parse time. `for` binds the two, which is
+                    // what forwards a label click to the radio everywhere.
+                    input {
                         key: "{index}",
+                        id: "{root}-segment-{index}",
+                        r#type: "radio",
+                        name: "{root}",
+                        value: "{index}",
+                        // The label's text is not the name when the
+                        // label is an icon, so the radio carries it.
+                        "aria-label": segment.name.clone(),
+                        checked: selected == Some(index),
+                        // `Some(true)` or nothing: dioxus-native writes a
+                        // `false` bool as the string "false", and Blitz
+                        // reads `disabled` by presence - so `false` would
+                        // disable every segment.
+                        disabled: segment.disabled.then_some(true),
+                        // `onclick` and cancelled, not `onchange`: dioxus
+                        // writes `checked` as a DOM property and skips
+                        // unchanged attributes, so a controlled radio that
+                        // the browser flipped stays flipped. A cancelled
+                        // click restores it and leaves Rust the only
+                        // source of truth. Space activates through `click`
+                        // too, so the keyboard needs nothing extra there.
+                        onclick: {
+                            let disabled = segment.disabled;
+                            move |event: Event<MouseData>| {
+                                event.prevent_default();
+                                if !disabled {
+                                    onselect.call(index);
+                                }
+                            }
+                        },
+                        // Blitz forwards a `<label>` click to its input as
+                        // a default action that emits `input`, never
+                        // `click` - see `Switch`, same shape. Both
+                        // handlers select the same index, so the two
+                        // firing together is a no-op rather than a fight.
+                        oninput: {
+                            let disabled = segment.disabled;
+                            move |_: FormEvent| {
+                                if !disabled {
+                                    onselect.call(index);
+                                }
+                            }
+                        },
+                        // A radio takes only Space, on every platform. This is
+                        // one control to its user, not a row of radios, and a
+                        // control answers Enter - the same call `Switch` makes.
+                        onkeydown: {
+                            let disabled = segment.disabled;
+                            move |event: Event<KeyboardData>| {
+                                if event.key() == Key::Enter && !disabled {
+                                    event.prevent_default();
+                                    onselect.call(index);
+                                }
+                            }
+                        },
+                    }
+                    label {
+                        r#for: "{root}-segment-{index}",
                         "data-state": if segment.disabled {
                             format!("{segment_states} disabled")
                         } else if selected == Some(index) {
@@ -230,49 +294,6 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                         } else {
                             segment_states.clone()
                         },
-                        input {
-                            r#type: "radio",
-                            name: "{root}",
-                            value: "{index}",
-                            // The label's text is not the name when the
-                            // label is an icon, so the radio carries it.
-                            "aria-label": segment.name.clone(),
-                            checked: selected == Some(index),
-                            // `Some(true)` or nothing: dioxus-native writes a
-                            // `false` bool as the string "false", and Blitz
-                            // reads `disabled` by presence - so `false` would
-                            // disable every segment.
-                            disabled: segment.disabled.then_some(true),
-                            // `onclick` and cancelled, not `onchange`: dioxus
-                            // writes `checked` as a DOM property and skips
-                            // unchanged attributes, so a controlled radio that
-                            // the browser flipped stays flipped. A cancelled
-                            // click restores it and leaves Rust the only
-                            // source of truth. Space activates through `click`
-                            // too, so the keyboard needs nothing extra.
-                            onclick: {
-                                let disabled = segment.disabled;
-                                move |event: Event<MouseData>| {
-                                    event.prevent_default();
-                                    if !disabled {
-                                        onselect.call(index);
-                                    }
-                                }
-                            },
-                            // Blitz forwards a `<label>` click to its input as
-                            // a default action that emits `input`, never
-                            // `click` - see `Switch`, same shape. Both
-                            // handlers select the same index, so the two
-                            // firing together is a no-op rather than a fight.
-                            oninput: {
-                                let disabled = segment.disabled;
-                                move |_: FormEvent| {
-                                    if !disabled {
-                                        onselect.call(index);
-                                    }
-                                }
-                            },
-                        }
                         {segment.content.clone()}
                     }
                 }
