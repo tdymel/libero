@@ -15,8 +15,44 @@ libero = { path = "../libero", default-features = false, features = [
     "code-lang-css",
     "code-lang-toml",
 ] }
+# `dioxus/native` would pull this in with its default features, and its
+# default renderer (`vello-hybrid`) can't be switched off from here - so
+# `native-cpu` depends on it directly, with the default set minus the
+# renderer. See that feature.
+dioxus-native = { path = "../.dioxus-active/packages/native", optional = true, default-features = false, features = [
+    "accessibility",
+    "hot-reload",
+    "net",
+    "html",
+    "svg",
+    "system-fonts",
+    "clipboard",
+    "file-dialog",
+    "woff",
+] }
 
 [features]
+# Render with Blitz (dioxus-native) in a winit window instead of the browser.
+# Selected by `just start-native`; `dx` needs the matching `--renderer native`.
+native = ["dioxus/native"]
+# Full Vello (compute-based) instead of the default `vello-hybrid`. Hybrid
+# keeps every decoded image in one fixed-size GPU atlas and never evicts, so
+# browsing enough docs pages panics it with `AtlasLimitReached`
+# (vello_hybrid-0.1.0 render/wgpu.rs:544, an `.unwrap()` on the allocation).
+# Full Vello has no such atlas. It layers onto `native` rather than replacing
+# it - `dioxus-native` prefers `vello` over `vello-hybrid`, and unlike
+# `vello-cpu-base` the two still compile together.
+native-vello = ["native", "dep:dioxus-native", "dioxus-native/vello"]
+# Same window, rasterised on the CPU (softbuffer) instead of through wgpu -
+# for machines with no usable Vulkan adapter, where `native` panics inside
+# `anyrender_vello_hybrid` before the first frame.
+#
+# Deliberately NOT built on `native`: with both renderers enabled at once
+# dioxus-native doesn't compile (`with_features_and_limits` is gated on
+# `vello-hybrid` but takes its types from whichever renderer the cfg_if picks,
+# and `vello-cpu-base` outranks it). So this skips `dioxus/native` and `main`
+# calls `dioxus_native::launch` instead of `dioxus::launch`.
+native-cpu = ["dep:dioxus-native", "dioxus-native/vello-cpu-softbuffer"]
 # Build against `.dioxus-fork`; must match whichever tree `.dioxus-active`
 # points at. Set by `just mode-fork`.
 dioxus-fork = ["libero/dioxus-fork"]

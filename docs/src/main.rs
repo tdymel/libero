@@ -32,6 +32,9 @@ pub(crate) static SAMPLE_IMAGE: Asset = asset!("/assets/sample.svg");
 pub(crate) static FALLBACK_IMAGE: Asset = asset!("/assets/fallback.svg");
 
 fn main() {
+    #[cfg(feature = "native-cpu")]
+    dioxus_native::launch(App);
+    #[cfg(not(feature = "native-cpu"))]
     dioxus::launch(App);
 }
 

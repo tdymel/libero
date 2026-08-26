@@ -3,6 +3,22 @@ members = ["libero", "libero-macros", "docs"]
 exclude = [".dioxus-fork", ".dioxus-main", ".dioxus-active"]
 resolver = "3"
 
+# Blitz's stack (stylo, taffy, vello, wgpu) is unusably slow when compiled
+# without optimisations, and a debug `just start-native` spends nearly all its
+# time in it. Optimising only non-workspace crates keeps `libero`/`docs`
+# themselves unoptimised, so a debug build still debugs and still rebuilds at
+# debug speed - the price is one full rebuild of the dependency graph.
+[profile.dev.package."*"]
+opt-level = 3
+
+# `release` is tuned for wasm bundle size ("z" + fat LTO), which is the wrong
+# trade for a native window. Native release builds use this instead.
+[profile.native]
+inherits = "release"
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+
 [profile.release]
 opt-level = "z"
 lto = true
