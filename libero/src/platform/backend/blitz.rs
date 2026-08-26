@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use blitz_dom::BaseDocument;
+use blitz_traits::events::UiEvent;
 use dioxus::prelude::MountedData;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
@@ -111,11 +112,16 @@ impl ElementApi for BlitzElement {
         Ok(())
     }
 
-    /// A synthetic Blitz click reaches the document's own handling, never the
-    /// dioxus `onclick` on that node - only `DioxusDocument` dispatches those,
-    /// and libero cannot drive it. A half-firing click is worse than none.
+    /// Queued rather than dispatched: everything that reaches a dioxus
+    /// `onclick` belongs to the `Document` wrapping this one, which only the
+    /// shell holds - and we are usually inside a handler with the document
+    /// mid-dispatch anyway. The shell runs it on its next turn, through the
+    /// whole pipeline. Like every command here, "queued" is the answer.
     fn click(&self) -> Result<(), PlatformError> {
-        Err(PlatformError::Unsupported)
+        self.anchor
+            .doc_mut()
+            .queue_ui_event(UiEvent::Activate(self.node_id));
+        Ok(())
     }
 
     fn is_focused(&self) -> bool {

@@ -3600,6 +3600,7 @@ name = "libero"
 version = "0.1.0"
 dependencies = [
  "blitz-dom",
+ "blitz-traits",
  "dioxus",
  "dioxus-native-dom",
  "dioxus-ssr",
