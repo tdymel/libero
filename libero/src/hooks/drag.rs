@@ -1,7 +1,8 @@
 use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use crate::{
-    components::dom_api,
+    hooks::ElementHandle,
+    platform::ElementApi,
     sx::{Sx, sx},
 };
 
@@ -39,9 +40,9 @@ impl DragMove {
 }
 
 pub struct DragOptions {
-    /// Id of the element that takes pointer capture and carries the
-    /// move/up/cancel handlers - the one owning the geometry, not the handle.
-    pub capture: Signal<String>,
+    /// The element that takes pointer capture and carries the move/up/cancel
+    /// handlers - the one owning the geometry, not the grab handle.
+    pub capture: ElementHandle,
     /// The geometry a drag needs may take a round-trip to measure, so this
     /// cannot veto by returning - call [`DragStart::cancel`] once it knows.
     pub on_start: Callback<DragStart>,
@@ -106,10 +107,9 @@ pub fn use_drag(options: DragOptions) -> Drag {
 
         on_start.call(DragStart { client, cancel });
 
-        // Best-effort: failing costs out-of-element tracking, not the drag.
-        if let Ok(element) = dom_api().query_selector(&format!("#{}", capture())) {
-            let _ = element.set_pointer_capture(event.pointer_id());
-        }
+        // Best-effort: where the platform has no capture this costs
+        // out-of-element tracking, not the drag.
+        let _ = capture.set_pointer_capture(event.pointer_id());
 
         active.set(Some(ActiveDrag {
             pointer_id: event.pointer_id(),

@@ -3,7 +3,7 @@
 
 mod common;
 
-use common::{attributes_of, body, classes_of, has_rule_for, ids_of, render};
+use common::{attributes_of, body, classes_of, has_rule_for, render};
 
 use dioxus::prelude::*;
 use libero::{
@@ -1324,12 +1324,13 @@ fn the_first_render_already_carries_the_component_css() {
     );
 }
 
-/// The four components that look their own root up through `dom_api()` also
-/// spread `attributes`, so a caller's `id` used to render *beside* theirs.
-/// Browsers keep the first, which broke every lookup - scroll positions,
-/// splitter drag, tree keyboard nav, focus trapping.
+/// These four reach their own root element, which they used to do by
+/// generating an id and querying the document for it - rendering a second
+/// `id` beside a caller's, which browsers resolve to the first, breaking every
+/// lookup. They go through a mounted handle now, so they emit no `id` at all
+/// and a caller's is simply passed through.
 #[test]
-fn a_root_id_component_renders_the_callers_id_once() {
+fn a_root_element_component_leaves_the_id_to_its_caller() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -1352,26 +1353,6 @@ fn a_root_id_component_renders_the_callers_id_once() {
     assert!(
         !body.contains("id=\"lsx-"),
         "a generated id shadowed the caller's:\n{body}"
-    );
-}
-
-#[test]
-fn a_root_id_component_falls_back_to_a_generated_id() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                ScrollArea { "scrollable content" }
-            }
-        }
-    }
-
-    let ids = ids_of(&body(&render(app)), "div");
-
-    assert_eq!(ids.len(), 1);
-    assert!(
-        ids[0].starts_with("lsx-"),
-        "unexpected generated id: {}",
-        ids[0]
     );
 }
 

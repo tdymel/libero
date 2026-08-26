@@ -3,9 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{Variables, dom_api, variables},
+        common::{Variables, variables},
         layout::use_box,
     },
+    hooks::use_element,
+    platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, Size, SizeCss, TABS_BORDER_COLOR, TABS_GAP, TABS_HOVER, TABS_LINE, TABS_PAD_X,
@@ -114,6 +116,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     } = view;
 
     let enabled: Vec<usize> = (0..tabs.len()).filter(|i| !tabs[*i].disabled).collect();
+    let root_element = use_element();
     let keydown_root = root.clone();
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
         if enabled.is_empty() {
@@ -134,7 +137,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         onselect.call(next);
         // Auto activation: focus follows the selection, so the strip behaves
         // like one control rather than a row of buttons.
-        if let Ok(tab) = dom_api().query_selector(&format!("#{keydown_root}-tab-{next}")) {
+        if let Ok(tab) = root_element.query_selector(&format!("#{keydown_root}-tab-{next}")) {
             let _ = tab.focus();
         }
     });
@@ -157,6 +160,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
+        .element(&root_element)
         .render(
             HtmlTag::Div,
             attributes,

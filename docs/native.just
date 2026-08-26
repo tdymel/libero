@@ -14,6 +14,13 @@
 # fractional scale - so pin it. Ignored outside X11.
 x11 := "WINIT_X11_SCALE_FACTOR=1"
 
+# `--renderer native` names the renderer but not the *target*, and dx only
+# autodetects one when exactly one feature key maps to a renderer. Adding the
+# Android `mobile` feature made that two (`native` and `mobile`), so dx has
+# answered "Could not automatically detect target triple" ever since - the
+# platform has to be named. `--platform linux` keeps `--renderer native`;
+# it only supplies the host triple and the bundle format.
+
 nfeat := "--features " + if fork == "1" { "native-vello,dioxus-fork" } else { "native-vello" }
 nhybrid := "--features " + if fork == "1" { "native,dioxus-fork" } else { "native" }
 
@@ -23,17 +30,17 @@ check-native:
 
 # Hot-reloading serve in a Blitz window.
 start-native: _dx
-    {{x11}} {{dx}} serve --renderer native --debug-symbols=false {{nfeat}}
+    {{x11}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nfeat}}
 
 # dioxus-native's default renderer: lighter on the GPU, but its image atlas
 # is fixed-size and never evicts, so it eventually panics. For comparison.
 start-native-hybrid: _dx
-    {{x11}} {{dx}} serve --renderer native --debug-symbols=false {{nhybrid}}
+    {{x11}} {{dx}} serve --platform linux --renderer native --debug-symbols=false {{nhybrid}}
 
 # Optimised end to end, via the workspace's `native` profile - `release`
 # without its wasm-size trade-offs. Slow to build, and no hot reload.
 start-native-release: _dx
-    {{x11}} {{dx}} serve --renderer native --debug-symbols=false --profile native {{nfeat}}
+    {{x11}} {{dx}} serve --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
 
 # The shortest path to a window (no `dx`, no hot reload, no devserver) - use
 # it when a failure might be `dx`'s rather than the app's.
@@ -41,10 +48,10 @@ run-native:
     cd {{root}} && {{x11}} cargo run -p docs {{nfeat}}
 
 build-native: _dx
-    {{dx}} build --renderer native --debug-symbols=false {{nfeat}}
+    {{dx}} build --platform linux --renderer native --debug-symbols=false {{nfeat}}
 
 build_release-native: _dx
-    {{dx}} build --renderer native --debug-symbols=false --profile native {{nfeat}}
+    {{dx}} build --platform linux --renderer native --debug-symbols=false --profile native {{nfeat}}
 
 # --- CPU renderer -----------------------------------------------------------
 # `native-cpu` replaces `native` rather than adding to it (see docs/Cargo.toml),

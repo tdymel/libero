@@ -1,31 +1,45 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
-use crate::components::{Dimensions, ElementApi, MountedElement, PlatformError, Read};
+use crate::platform::{Dimensions, ElementApi, PlatformError, Read, backend};
 
-
-/// A handle to one of this component's own elements, implementing
-/// [`ElementApi`] - so `element.dimensions()` reads the same here as it does
-/// through [`dom_api`](crate::components::dom_api), and works on every
-/// renderer rather than only where a `document` exists.
+/// A handle to one of this component's own elements, and the only way to reach
+/// an element at all.
 ///
-/// Attach it with [`mount`](Self::mount); every call answers
+/// It implements [`ElementApi`] itself, so `element.dimensions().await` reads
+/// the same everywhere; behind it the handle picks the richest backing the
+/// renderer offers - the real `web_sys::Element` on the web, a Blitz node
+/// natively, and dioxus's portable `MountedData` under a webview, where
+/// measuring and focus still work but subtree queries cannot.
+///
+/// Attach it with `.element(&handle)` on the `Box` builder, or with
+/// [`mount`](Self::mount) directly; every call answers
 /// [`PlatformError::Unsupported`] until the element is mounted.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ElementHandle {
-    mounted: Signal<Option<std::rc::Rc<MountedData>>>,
+    mounted: Signal<Option<Rc<MountedData>>>,
 }
 
 impl ElementHandle {
-    /// The `onmounted` handler that fills this handle in:
-    /// `onmounted: track.mount()`, or `.event("onmounted", track.mount())`.
-    pub fn mount(mut self) -> impl FnMut(dioxus::prelude::Event<MountedData>) + 'static {
+    /// The `onmounted` handler that fills this handle in. Prefer
+    /// `.element(&handle)` on the `Box` builder, which wires this up.
+    pub fn mount(mut self) -> impl FnMut(Event<MountedData>) + 'static {
         move |event| self.mounted.set(Some(event.data()))
     }
 
-    fn get(&self) -> Result<MountedElement, PlatformError> {
-        (self.mounted)()
-            .map(MountedElement)
-            .ok_or(PlatformError::Unsupported)
+    fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
+        match self.mounted.read().as_ref() {
+            Some(mounted) => Ok(backend::element(mounted)),
+            None => Err(PlatformError::Unsupported),
+        }
+    }
+
+    fn read<T: 'static>(&self, call: impl FnOnce(&dyn ElementApi) -> Read<T>) -> Read<T> {
+        match self.get() {
+            Ok(element) => call(element.as_ref()),
+            Err(error) => Box::pin(std::future::ready(Err(error))),
+        }
     }
 }
 
@@ -55,31 +69,19 @@ impl ElementApi for ElementHandle {
     }
 
     fn dimensions(&self) -> Read<Dimensions> {
-        match self.get() {
-            Ok(element) => element.dimensions(),
-            Err(error) => Box::pin(std::future::ready(Err(error))),
-        }
+        self.read(|element| element.dimensions())
     }
 
     fn client_offset(&self) -> Read<(f64, f64)> {
-        match self.get() {
-            Ok(element) => element.client_offset(),
-            Err(error) => Box::pin(std::future::ready(Err(error))),
-        }
+        self.read(|element| element.client_offset())
     }
 
     fn scroll_size(&self) -> Read<Dimensions> {
-        match self.get() {
-            Ok(element) => element.scroll_size(),
-            Err(error) => Box::pin(std::future::ready(Err(error))),
-        }
+        self.read(|element| element.scroll_size())
     }
 
     fn scroll_offset(&self) -> Read<(f64, f64)> {
-        match self.get() {
-            Ok(element) => element.scroll_offset(),
-            Err(error) => Box::pin(std::future::ready(Err(error))),
-        }
+        self.read(|element| element.scroll_offset())
     }
 
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
@@ -94,7 +96,10 @@ impl ElementApi for ElementHandle {
         self.get()?.query_selector(selector)
     }
 
-    fn query_selector_all(&self, selector: &str) -> Result<Vec<Box<dyn ElementApi>>, PlatformError> {
+    fn query_selector_all(
+        &self,
+        selector: &str,
+    ) -> Result<Vec<Box<dyn ElementApi>>, PlatformError> {
         self.get()?.query_selector_all(selector)
     }
 }

@@ -266,6 +266,12 @@ impl BoxStyle {
         self
     }
 
+    /// Wires an [`ElementHandle`](crate::hooks::ElementHandle) to this
+    /// element, so the component can measure, focus or query it.
+    pub fn element(self, handle: &crate::hooks::ElementHandle) -> Self {
+        self.event("onmounted", handle.mount())
+    }
+
     /// An event handler the component sets itself. Hand-building the
     /// `Attribute` is the one thing `rsx!` does that a plain call cannot.
     ///

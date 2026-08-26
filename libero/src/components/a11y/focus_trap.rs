@@ -1,12 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        HtmlTag, Input, States,
-        common::{base_props, dom_api},
-        layout::use_box,
-    },
-    hooks::{use_local_state, use_root_id},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    hooks::{ElementHandle, use_element, use_local_state},
+    platform::ElementApi,
     sx::{StaticSx, Sx, sx},
 };
 
@@ -27,10 +24,7 @@ const FOCUSABLE_SELECTOR: &str = concat!(
 
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
 
-fn focus_first(id: &str) {
-    let Ok(root) = dom_api().query_selector(&format!("#{id}")) else {
-        return;
-    };
+fn focus_first(root: &ElementHandle) {
     let target = root
         .query_selector("[data-autofocus]")
         .or_else(|_| root.query_selector(FOCUSABLE_SELECTOR));
@@ -41,10 +35,7 @@ fn focus_first(id: &str) {
 
 /// `false` when there was nothing to focus, so the caller can leave Tab to
 /// the browser rather than swallowing it and stranding focus.
-fn cycle_focus(id: &str, backwards: bool) -> bool {
-    let Ok(root) = dom_api().query_selector(&format!("#{id}")) else {
-        return false;
-    };
+fn cycle_focus(root: &ElementHandle, backwards: bool) -> bool {
     let Ok(items) = root.query_selector_all(FOCUSABLE_SELECTOR) else {
         return false;
     };
@@ -81,7 +72,7 @@ base_props! {
 
 #[component]
 pub fn FocusTrap(props: FocusTrapProps) -> Element {
-    let id = use_root_id(&props.attributes);
+    let root = use_element();
 
     use_box()
         .framework_sx(&FOCUS_TRAP_SX)
@@ -89,24 +80,18 @@ pub fn FocusTrap(props: FocusTrapProps) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
-        .attr("id", id())
+        // Not `.element(&root)`: the trap also has to focus its first target
+        // once mounted, and both have to happen in the one `onmounted`.
+        .event("onmounted", move |event: Event<MountedData>| {
+            (root.mount())(event);
+            focus_first(&root);
+        })
         .event("onkeydown", move |event: Event<KeyboardData>| {
-            if event.key() == Key::Tab && cycle_focus(&id(), event.modifiers().shift()) {
+            if event.key() == Key::Tab && cycle_focus(&root, event.modifiers().shift()) {
                 event.prevent_default();
             }
         })
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                span {
-                    "aria-hidden": "true",
-                    style: "display:none",
-                    onmounted: move |_| focus_first(&id()),
-                }
-                {props.children}
-            },
-        )
+        .render(HtmlTag::Div, props.attributes, props.children)
 }
 
 /// A hidden placeholder that soaks up initial focus, then leaves the tab

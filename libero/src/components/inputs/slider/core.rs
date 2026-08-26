@@ -5,15 +5,16 @@ use super::value::{fraction, snap};
 use crate::{
     CssLayer,
     components::{
-        ClassList, ElementApi, HtmlTag, Input, States, Variables,
+        ClassList, HtmlTag, Input, States, Variables,
         common::{base_color, variables},
         layout::use_box,
         overlay::Tooltip,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_element, use_id,
-        use_local_state, use_root_id, use_theme,
+        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_element,
+        use_local_state, use_theme,
     },
+    platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_TRACK, Size,
@@ -186,9 +187,7 @@ pub(super) struct SliderCoreProps {
 #[component]
 pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     let theme = use_theme();
-    let root_id = use_root_id(&props.attributes);
-    let track_id = use_id();
-    let thumb_id = use_id();
+    let root_element = use_element();
     let track_element = use_element();
     let thumb_element = use_element();
 
@@ -247,7 +246,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     };
 
     let drag = use_drag(DragOptions {
-        capture: root_id,
+        capture: root_element,
         on_start: Callback::new(move |event: DragStart| {
             if !interactive {
                 event.cancel.call(());
@@ -260,17 +259,17 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
 
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
-            // `use_element`, not a `dom_api()` lookup by id: the calls are
-            // the same `ElementApi`, but a mounted handle works off the web
-            // too, where there is no document to query. Off the web they are
-            // also a round-trip, so the drag starts before the geometry is
-            // known - moves landing first are dropped by `value_at`'s own
-            // zero-travel guard.
+            // Started here, awaited in the task: a read resolves where it is
+            // called, and under Blitz that has to be inside the handler - the
+            // document is locked for as long as tasks are draining.
+            let track_size = track_element.dimensions();
+            let track_offset = track_element.client_offset();
+            let thumb_size = thumb_element.dimensions();
+            // Off the web a measurement is a round-trip, so the drag starts
+            // before the geometry is known - moves landing first are dropped
+            // by `value_at`'s own zero-travel guard.
             spawn(async move {
-                let (Ok(dimensions), Ok((left, _))) = (
-                    track_element.dimensions().await,
-                    track_element.client_offset().await,
-                ) else {
+                let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
                     event.cancel.call(());
                     return;
                 };
@@ -281,12 +280,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
 
                 track_left.set(left);
                 track_width.set(dimensions.width);
-                thumb_width.set(
-                    thumb_element
-                        .dimensions()
-                        .await
-                        .map_or(0.0, |size| size.width),
-                );
+                thumb_width.set(thumb_size.await.map_or(0.0, |size| size.width));
 
                 match value_at.call(event.client.x) {
                     Some(value) => emit.call(SliderChangeEvent::Start(value)),
@@ -387,8 +381,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         .attr("aria-valuetext", text)
         .attr("aria-label", props.aria_label.clone())
         .attr("aria-disabled", !interactive)
-        .attr("id", thumb_id())
-        .event("onmounted", thumb_element.mount())
+        .element(&thumb_element)
         .event("onkeydown", move |event: Event<KeyboardData>| {
             onkeydown.call(event)
         })
@@ -416,7 +409,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         .states(&states)
         .variables(&root_variables)
         .prepare()
-        .attr("id", root_id())
+        .element(&root_element)
         .event("onpointerdown", drag.onpointerdown)
         .event("onpointermove", drag.onpointermove)
         .event("onpointerup", drag.onpointerup)
@@ -427,7 +420,6 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             rsx! {
                 div {
                     class: track_class,
-                    id: track_id(),
                     onmounted: track_element.mount(),
                     div { class: bar_class }
                     {marks}

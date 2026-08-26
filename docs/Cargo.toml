@@ -47,7 +47,7 @@ blitz-html = "0.3.0-beta.2"
 [features]
 # Render with Blitz (dioxus-native) in a winit window instead of the browser.
 # Selected by `just start-native`; `dx` needs the matching `--renderer native`.
-native = ["dioxus/native"]
+native = ["dioxus/native", "libero/native"]
 # Full Vello (compute-based) instead of the default `vello-hybrid`. Hybrid
 # keeps every decoded image in one fixed-size GPU atlas and never evicts, so
 # browsing enough docs pages panics it with `AtlasLimitReached`
@@ -65,7 +65,7 @@ native-vello = ["native", "dep:dioxus-native", "dioxus-native/vello"]
 # `vello-hybrid` but takes its types from whichever renderer the cfg_if picks,
 # and `vello-cpu-base` outranks it). So this skips `dioxus/native` and `main`
 # calls `dioxus_native::launch` instead of `dioxus::launch`.
-native-cpu = ["dep:dioxus-native", "dioxus-native/vello-cpu-softbuffer"]
+native-cpu = ["dep:dioxus-native", "dioxus-native/vello-cpu-softbuffer", "libero/native"]
 # WebView (wry) on Android, via `dx --platform android`. Unlike `native`
 # there's no renderer choice to make: the app runs in the system WebView, so
 # the same CSS engine styles it as on the web. `dioxus/mobile` is

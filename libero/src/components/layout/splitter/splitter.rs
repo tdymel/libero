@@ -5,10 +5,11 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, Orientation, States, Variables,
-        common::{base_props, dom_api, variables},
+        common::{base_props, variables},
         layout::use_box,
     },
-    hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_root_id, use_theme},
+    hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
 };
@@ -127,7 +128,7 @@ base_props! {
 #[component]
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
-    let root_id = use_root_id(&props.attributes);
+    let root = use_element();
     #[cfg(feature = "dioxus-fork")]
     let (panel_a, panel_b) = { resolve_panels(props.panel_a, props.panel_b, props.children) };
     #[cfg(not(feature = "dioxus-fork"))]
@@ -158,15 +159,13 @@ pub fn Splitter(props: SplitterProps) -> Element {
     };
 
     let drag = use_drag(DragOptions {
-        capture: root_id,
+        capture: root,
         on_start: Callback::new(move |start: DragStart| {
             let cancel = start.cancel;
-            let Ok(container) = dom_api().query_selector(&format!("#{}", root_id())) else {
-                cancel.call(());
-                return;
-            };
+            // Started here, awaited in the task: see `ElementApi::dimensions`.
+            let size = root.dimensions();
             spawn(async move {
-                let Ok(dimensions) = container.dimensions().await else {
+                let Ok(dimensions) = size.await else {
                     cancel.call(());
                     return;
                 };
@@ -246,7 +245,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
         .states(&states)
         .variables(&variables)
         .prepare()
-        .attr("id", root_id())
+        .element(&root)
         .event("onpointermove", drag.onpointermove)
         .event("onpointerup", drag.onpointerup)
         .event("onpointercancel", drag.onpointercancel)

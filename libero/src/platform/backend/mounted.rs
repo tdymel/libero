@@ -2,15 +2,15 @@ use std::rc::Rc;
 
 use dioxus::prelude::*;
 
-use crate::components::common::{Dimensions, ElementApi, PlatformError, Read};
+use crate::platform::{Dimensions, ElementApi, PlatformError, Read};
 
 /// An [`ElementApi`] over a mounted element, so the same calls work wherever
 /// dioxus renders - there is no `document` to query off the web, but every
 /// renderer can measure and focus an element it has mounted.
 ///
-/// Obtained from [`use_element`](crate::hooks::use_element), never built
-/// directly.
-pub(crate) struct MountedElement(pub(crate) Rc<MountedData>);
+/// The floor every renderer reaches: [`backend::element`](super::element)
+/// falls back to this when the renderer's own handle isn't one we know.
+pub(super) struct MountedElement(pub(super) Rc<MountedData>);
 
 impl ElementApi for MountedElement {
     fn focus(&self) -> Result<(), PlatformError> {
@@ -73,8 +73,8 @@ impl ElementApi for MountedElement {
         })
     }
 
-    /// No mounted-element equivalent: dioxus exposes capture nowhere, so a
-    /// drag that needs it has to reach for [`dom_api`](super::dom_api).
+    /// dioxus exposes pointer capture on no mounted handle, so a drag only
+    /// keeps tracking outside the element where a richer backend answered.
     fn set_pointer_capture(&self, _pointer_id: i32) -> Result<(), PlatformError> {
         Err(PlatformError::Unsupported)
     }
@@ -83,7 +83,7 @@ impl ElementApi for MountedElement {
         Err(PlatformError::Unsupported)
     }
 
-    /// A mounted handle addresses one element; it cannot answer for the
+    /// A bare mounted handle addresses one element; it cannot answer for the
     /// document's focus or search below itself.
     fn is_focused(&self) -> bool {
         false

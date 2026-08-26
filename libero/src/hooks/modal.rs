@@ -8,9 +8,10 @@ use std::{
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ElementApi, Modal, dom_api},
+    components::Modal,
     context::{ModalContext, ModalHost},
     hooks::use_portal,
+    platform::{ElementApi, document},
 };
 
 pub(crate) fn use_modal_z_index() -> i32 {
@@ -234,7 +235,9 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
             resolution.wakers.clear();
             // Synchronous inside the trigger's own handler, so this *is* the
             // element the user acted on.
-            resolution.trigger = dom_api().active_element().ok().map(Rc::from);
+            resolution.trigger = document()
+                .and_then(|document| document.active_element())
+                .map(Rc::from);
             resolution.generation
         };
 

@@ -1,6 +1,6 @@
 use std::{future::Future, pin::Pin};
 
-use crate::components::common::PlatformError;
+use super::PlatformError;
 
 /// An element's rendered pixel size.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -12,11 +12,21 @@ pub struct Dimensions {
 /// A read that has to reach the platform. Already resolved on the web and
 /// under Blitz; a round-trip through the webview off them, which is why it is
 /// a future rather than a plain `Result`.
+///
+/// **Start the read where the event handler is, and await it wherever.** Under
+/// Blitz a read answers when it is *called*, and the document is locked for as
+/// long as dioxus is draining tasks - so a read created inside a `spawn` fails
+/// where the same read created just before it succeeds.
 pub type Read<T> = Pin<Box<dyn Future<Output = Result<T, PlatformError>>>>;
 
-/// A resolved element, valid only for the call that produced it. Obtained via
-/// [`DomApi::query_selector`](crate::components::common::DomApi::query_selector)
-/// or another `ElementApi`'s scoped queries - never stored.
+/// One element, however this platform happens to address it. Reached through
+/// [`use_element`](crate::hooks::use_element), or a scoped query off another
+/// `ElementApi` - never stored.
+///
+/// Some renderers cannot answer all of it. A call the platform has no way to
+/// serve fails with [`PlatformError::Unsupported`] rather than being absent
+/// from the type: which parts work is a property of the running renderer, not
+/// of the build.
 pub trait ElementApi {
     // Commands stay synchronous: nothing reads a result back, so a renderer
     // that can only queue the work still honours them.

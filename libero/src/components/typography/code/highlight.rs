@@ -5,7 +5,7 @@
 //! siblings. The hand-ported grammars in `languages/` don't need it.
 
 use crate::components::Input;
-use crate::components::common::{PreparedText, RegexMatch, regex_api};
+use crate::platform::{PreparedText, RegexMatch, regex_api};
 
 use super::language_catalog::LANGUAGE_CATALOG;
 

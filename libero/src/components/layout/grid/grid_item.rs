@@ -59,7 +59,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
 
     // `ResizeObserver` delivers an initial observation for every element that
     // has a box, so this is also the mount-time measurement - no id, no
-    // `dom_api()` lookup. An element with no box (`display: none`) never
+    // element lookup. An element with no box (`display: none`) never
     // reports and simply stays unmeasured.
     let onresize = masonry.then_some(move |event: Event<ResizeData>| {
         let Some(zone) = zone else { return };

@@ -5,9 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Input, List, States,
-        common::{base_props, css_string, dom_api},
+        common::{base_props, css_string},
     },
-    hooks::{use_root_id, use_theme},
+    hooks::{ElementHandle, use_element, use_theme},
+    platform::ElementApi,
     sx::Sx,
     theme::Size,
 };
@@ -102,10 +103,7 @@ pub(super) fn toggle_expanded(
 // A leaf's real link/button is kept out of the tab order (see
 // `TreeNodeRenderArgs::tabindex`), so it is never focused and Enter never
 // reaches it natively. This triggers it the way a click would.
-fn click_tree_item(root_id: &str, target_id: &str) {
-    let Ok(root) = dom_api().query_selector(&format!("#{root_id}")) else {
-        return;
-    };
+fn click_tree_item(root: &ElementHandle, target_id: &str) {
     let id = css_string(target_id);
     let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
     let _ = root.query_selector(&selector).and_then(|el| el.click());
@@ -120,19 +118,17 @@ fn has_shortcut_modifier(event: &Event<KeyboardData>) -> bool {
 
 // Keyboard nav only applies while the active row itself holds focus. Anything
 // else (an input or editable inside a row) owns its own keystrokes.
-fn tree_item_focused(root_id: &str, target_id: &str) -> bool {
-    let selector = format!("#{root_id} [data-tree-id={}]", css_string(target_id));
-    dom_api()
-        .query_selector(&selector)
+fn tree_item_focused(root: &ElementHandle, target_id: &str) -> bool {
+    let selector = format!("[data-tree-id={}]", css_string(target_id));
+    root.query_selector(&selector)
         .is_ok_and(|el| el.is_focused())
 }
 
-// Scoped to `root_id`, so two `Tree`s can reuse node ids without colliding.
-fn focus_tree_item(root_id: &str, target_id: &str) {
-    let selector = format!("#{root_id} [data-tree-id={}]", css_string(target_id));
-    let _ = dom_api()
-        .query_selector(&selector)
-        .and_then(|el| el.focus());
+// Scoped to this tree's own root, so two `Tree`s can reuse node ids without
+// colliding.
+fn focus_tree_item(root: &ElementHandle, target_id: &str) {
+    let selector = format!("[data-tree-id={}]", css_string(target_id));
+    let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -244,7 +240,7 @@ base_props! {
 #[component]
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
-    let root_id = use_root_id(&props.attributes);
+    let root = use_element();
     let active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
 
@@ -266,7 +262,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let Some(current) = resolved_active_for_keydown.clone() else {
             return;
         };
-        if !tree_item_focused(&root_id(), &current) {
+        if !tree_item_focused(&root, &current) {
             return;
         }
         let order = visible_order(&data_for_keydown, &expanded.read());
@@ -279,7 +275,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
         let mut go_to = |target: Option<String>| {
             if let Some(target) = target {
                 active_id_for_keydown.set(Some(target.clone()));
-                focus_tree_item(&root_id(), &target);
+                focus_tree_item(&root, &target);
             }
         };
 
@@ -322,7 +318,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         toggle_expanded(&current, expanded, onexpandedchange);
                     } else {
-                        click_tree_item(&root_id(), &current);
+                        click_tree_item(&root, &current);
                     }
                 }
             }
@@ -333,7 +329,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                     if node.has_children {
                         toggle_expanded(&current, expanded, onexpandedchange);
                     } else {
-                        click_tree_item(&root_id(), &current);
+                        click_tree_item(&root, &current);
                     }
                 }
             }
@@ -355,8 +351,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 
     rsx! {
         List {
-            id: "{root_id}",
             class: props.class,
+            onmounted: root.mount(),
             sx: root_sx,
             states: props.states,
             size,
