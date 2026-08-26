@@ -53,6 +53,20 @@ _dx:
 start: _dx
     {{dx}} serve --platform web --debug-symbols=false --hotpatch {{feat}}
 
+ffeat := "--features " + if fork == "1" { "fullstack,dioxus-fork" } else { "fullstack" }
+
+# The same web app, server-rendered and hydrated. `dx` builds the client and
+# a server binary and serves both; no `--platform` guess is involved because
+# `--fullstack` pins it.
+start-fullstack: _dx
+    {{dx}} serve --platform web --fullstack --debug-symbols=false {{ffeat}}
+
+# Compile-only check of both halves - the server half is the one that can
+# break, since it builds libero for a non-wasm, non-Blitz target.
+check-fullstack:
+    cd {{root}} && cargo check -p docs {{ffeat}}
+    cd {{root}} && cargo check -p docs {{ffeat}},dioxus/server
+
 start_release: _dx
     {{dx}} serve --platform web --debug-symbols=false --release --hot-patch false {{split}}
 
