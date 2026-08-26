@@ -6,7 +6,8 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs
 Index: [index.md](index.md) - every other component's markdown page
 Description: A styled native `<select>` with its own label, strictly controlled by `value` plus `onchange`.
 
-A styled native select, wrapped in its own `label` element when `label` is set.
+A styled native select, always wrapped in its own `label` element - `label`
+fills in its text.
 Strictly controlled: `value` drives it, `onchange` reports what the user picked.
 
 `Option` is exported under the name `Option`, which collides with Rust's own, so
@@ -85,7 +86,7 @@ silently take the first option. It appears on the first update instead.
 | `value` | `String` | - | The selected option's value; strictly controlled. |
 | `onchange` | `EventHandler<String>` | - | Called with the newly picked option's value. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the select. |
-| `label` | `String` | - | Wraps the select in a `<label>` with this text; unset renders no label element at all. |
+| `label` | `String` | - | Label text. The wrapper is a `<label>` either way; unset just leaves it wordless. |
 | `label_sx` | `Sx` | - | Styles the label alone - the rest of `sx` lands on the wrapper. |
 | `children` | `Element` | required | The `Option` elements to list. |
 

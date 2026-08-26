@@ -41,7 +41,7 @@ pub fn HeaderPage() -> Element {
             ])],
             lead: rsx! {
                 Text {
-                    "The page's banner landmark - always renders header. This page's own "
+                    "The page's banner landmark - always renders header. This docs site's own "
                     "header uses one. A set "
                     Code { source: "color" }
                     " takes shade 6 and picks its own contrast text. Scroll the demo frame to "

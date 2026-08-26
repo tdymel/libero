@@ -100,7 +100,9 @@ pub fn FlexPage() -> Element {
                 prop("gap", "Size")
                     .default("md")
                     .doc("Space between children."),
-                prop("wrap", "FlexWrap").default("nowrap").doc("Whether children wrap onto new lines."),
+                prop("wrap", "FlexWrap")
+                    .default("nowrap")
+                    .doc("Whether children wrap onto new lines. Also accepts a `bool`."),
                 prop("divider", "Element")
                     .doc("Rendered between each child, not before the first or after the last. Needs the dioxus-fork feature - upstream main cannot split children apart."),
                 prop("children", "Element").doc("The flex's children."),

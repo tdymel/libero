@@ -32,7 +32,7 @@ pub fn SelectPage() -> Element {
                         .default("false")
                         .doc("Disables interaction and dims the select."),
                     prop("label", "String")
-                        .doc("Wraps the select in a `<label>` with this text; unset renders no label element at all."),
+                        .doc("Label text. The wrapper is a `<label>` either way; unset just leaves it wordless."),
                     prop("label_sx", "Sx").doc("Styles the label alone - the rest of `sx` lands on the wrapper."),
                     prop("children", "Element").doc("The `Option` elements to list."),
                 ]),
@@ -44,11 +44,11 @@ pub fn SelectPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "A styled native select, wrapped in its own "
+                    "A styled native select, always wrapped in its own "
                     Code { source: "label" }
-                    " element when "
+                    " element - "
                     Code { source: "label" }
-                    " is set. Strictly controlled: "
+                    " fills in its text. Strictly controlled: "
                     Code { source: "value" }
                     " drives it, "
                     Code { source: "onchange" }
