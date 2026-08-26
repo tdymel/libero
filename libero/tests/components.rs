@@ -12,9 +12,9 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Container,
         DataList, DataListItem, Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem,
         GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink,
-        Option, OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Select,
-        Sidebar, Slider, SliderMark, SliderValue, Splitter, Switch, Table, Tabs, Text, Title,
-        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Select, Sidebar,
+        Slider, SliderMark, SliderValue, Splitter, Switch, Table, Tabs, Text, Title, Tooltip, Tree,
+        TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -630,16 +630,18 @@ fn a_custom_render_replaces_the_cell_body() {
     assert!(body.contains("<mark"));
 }
 
+#[derive(Clone, PartialEq, Options)]
+enum Pick {
+    First,
+    Second,
+}
+
 #[test]
-fn select_renders_its_options_and_current_value() {
+fn select_renders_its_options_and_marks_the_current_one() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Select {
-                    value: "b",
-                    Option { value: "a", "First" }
-                    Option { value: "b", "Second" }
-                }
+                Select { value: Pick::Second, onchange: move |_| {} }
             }
         }
     }
@@ -649,6 +651,37 @@ fn select_renders_its_options_and_current_value() {
 
     assert!(body.contains("<select"));
     assert_eq!(body.matches("<option").count(), 2);
+    // The selection is on the `<option>`, not a `value` on the `<select>`:
+    // that is what SSR can express, and it needs no second render to appear.
+    assert!(body.contains("<option value=\"1\" selected"));
+    assert!(!body.contains("<select value="));
+}
+
+/// `value: None` is a real state - the field has not been filled in yet - so
+/// it selects an entry no one can pick rather than silently taking the first.
+#[test]
+fn a_select_without_a_value_shows_its_placeholder() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Select {
+                    value: None::<Pick>,
+                    placeholder: "Choose one",
+                    // Annotated: with `value: None` there is nothing else for
+                    // `T` to be inferred from.
+                    onchange: move |_: Pick| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("Choose one"));
+    assert_eq!(body.matches("<option").count(), 3);
+    // Disabled and hidden, so it cannot be picked back once a value is set.
+    assert!(body.contains("hidden"));
+    assert!(!body.contains("<option value=\"0\" selected"));
 }
 
 #[test]
@@ -657,9 +690,9 @@ fn a_disabled_select_renders_the_attribute() {
         rsx! {
             LiberoProvider {
                 Select {
-                    value: "a",
+                    value: Pick::First,
                     disabled: true,
-                    Option { value: "a", "First" }
+                    onchange: move |_| {},
                 }
             }
         }

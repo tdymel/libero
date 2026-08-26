@@ -10,14 +10,23 @@ use dioxus::prelude::*;
 
 /// A value one choice stands for.
 ///
+/// **`PartialEq` is identity, not content.** It is how a component finds the
+/// selected choice, so a type whose fields change under it (an `Order` whose
+/// total is edited) must compare its id alone - deriving over every field
+/// makes the selection silently vanish instead.
+///
 /// `#[derive(Options)]` writes this for an enum of unit variants: the
 /// variants in declaration order are the choices, each one's name its label.
 pub trait Options: Clone + PartialEq + 'static {
-    /// Every choice, in order. Empty means the set is not known statically -
-    /// the component's own override prop supplies it.
+    /// Every choice, in order. Defaults to none: a type whose set is runtime
+    /// data (a `String`, a fetched record) implements `label` alone and
+    /// passes the list through the component's own override prop.
     fn options() -> &'static [Self]
     where
-        Self: Sized;
+        Self: Sized,
+    {
+        &[]
+    }
 
     /// The choice's visible text and accessible name. Override it per
     /// instance with the component's `label` prop - that one runs during
@@ -27,10 +36,6 @@ pub trait Options: Clone + PartialEq + 'static {
 
 /// A runtime set, listed by the component rather than the type.
 impl Options for String {
-    fn options() -> &'static [Self] {
-        &[]
-    }
-
     fn label(&self) -> String {
         self.clone()
     }

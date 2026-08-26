@@ -14,6 +14,6 @@ pub(crate) use button::{
 pub use button::{Button, ButtonProps, ButtonVariant};
 pub use chip::{Chip, ChipProps};
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
-pub use select::{Option, OptionProps, Select, SelectProps};
+pub use select::{Select, SelectProps};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};
 pub use switch::{Switch, SwitchProps};

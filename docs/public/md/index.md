@@ -37,7 +37,7 @@ fetch only the file you need.
 - [Chip](chip.md): A compact token - a tag, a filter, or a small inline action.
 - [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
-- [Select](select.md): A styled native `<select>` with its own label, strictly controlled by `value` plus `onchange`.
+- [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
 
 ## Layout

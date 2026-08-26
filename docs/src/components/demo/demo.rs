@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Button, CodeBlock, Flex, Input, Option as SelectOption, OptionLabel, SegmentedControl,
-        Select, Slider, SliderChangeEvent, Switch, Text,
+        Box, Button, CodeBlock, Flex, Input, OptionLabel, SegmentedControl, Select, Slider,
+        SliderChangeEvent, Switch, Text,
     },
     sx::sx,
     theme::{CODE_BLOCK_BORDER, Size, TEXT_FONT_SIZE},
@@ -325,17 +325,19 @@ pub fn Demo(
                                             label_sx: sx()
                                                 .font_weight("600")
                                                 .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
-                                            value: values().str(control.name),
+                                            value: Some(values().str(control.name)),
+                                            // A control panel's options are
+                                            // data, so they arrive here rather
+                                            // than from a `T` that could list
+                                            // them statically.
+                                            options: control.options.clone(),
+                                            option_label: {
+                                                let control = control.clone();
+                                                move |option: String| control.label_of(&option)
+                                            },
                                             onchange: move |value: String| {
                                                 values.write().0[index].1 = value;
                                             },
-                                            for option in control.options.iter() {
-                                                SelectOption {
-                                                    key: "{option}",
-                                                    value: "{option}",
-                                                    {control.label_of(option)}
-                                                }
-                                            }
                                         }
                                     },
                                     ControlKind::Switch => rsx! {

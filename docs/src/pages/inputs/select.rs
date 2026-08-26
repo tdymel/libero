@@ -1,18 +1,45 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Option as SelectOption, Select, Text};
+use libero::components::{Code, Options, Select, Text};
 
-/// The options are the fixture - the props are on the select itself - so the
-/// code block prints them verbatim.
-const CHILDREN: &str = r#"SelectOption { value: "xs", "Extra small" }
-SelectOption { value: "sm", "Small" }
-SelectOption { value: "md", "Medium" }
-SelectOption { value: "lg", "Large" }
-SelectOption { value: "xl", "Extra large" }"#;
+/// The enum is the option list, so the snippet has to show it.
+const SIZE_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
+enum FontSize {
+    #[option(label = "Extra small")]
+    Xs,
+    Small,
+    Medium,
+    Large,
+    #[option(label = "Extra large")]
+    Xl,
+}
+
+"#;
+
+const EMPTY: &str = r#"let mut size = use_signal(|| None::<FontSize>);
+
+Select {
+    label: "Size",
+    placeholder: "Pick a size",
+    value: size(),
+    onchange: move |next| size.set(Some(next)),
+}"#;
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum FontSize {
+    #[option(label = "Extra small")]
+    Xs,
+    Small,
+    Medium,
+    Large,
+    #[option(label = "Extra large")]
+    Xl,
+}
 
 #[component]
 pub fn SelectPage() -> Element {
-    let mut value = use_signal(|| "sm".to_string());
+    let mut value = use_signal(|| Some(FontSize::Small));
+    let mut empty = use_signal(|| None::<FontSize>);
 
     rsx! {
         DocPage {
@@ -25,43 +52,51 @@ pub fn SelectPage() -> Element {
                     prop("radius", "Size")
                         .default("sm")
                         .doc("Corner radius, independent of size."),
-                    prop("value", "String").doc("The selected option's value; strictly controlled."),
-                    prop("onchange", "EventHandler<String>")
-                        .doc("Called with the newly picked option's value."),
+                    prop("value", "Option<T>")
+                        .doc("The selected option; strictly controlled. `None` shows `placeholder` and selects nothing."),
+                    prop("onchange", "EventHandler<T>")
+                        .doc("Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked."),
+                    prop("options", "Vec<T>")
+                        .default("T::options()")
+                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own."),
+                    prop("option_label", "Callback<T, String>")
+                        .default("T::label()")
+                        .doc("Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else."),
+                    prop("placeholder", "String")
+                        .doc("Shown while `value` is `None`, as an unpickable first entry."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables interaction and dims the select."),
                     prop("label", "String")
-                        .doc("Label text. The wrapper is a `<label>` either way; unset just leaves it wordless."),
-                    prop("label_sx", "Sx").doc("Styles the label alone - the rest of `sx` lands on the wrapper."),
-                    prop("children", "Element").doc("The `Option` elements to list."),
+                        .doc("The field's own caption, above the control. The wrapper is a `<label>` either way; unset just leaves it wordless."),
+                    prop("label_sx", "Sx").doc("Styles the caption alone - the rest of `sx` lands on the wrapper."),
                 ]),
-                props("Option", vec![
-                    prop("value", "String").doc("The option's value, reported to `onchange`."),
-                    prop("children", "Element").doc("The option's visible label."),
-                ])
-                .extends("option"),
             ],
             lead: rsx! {
                 Text {
-                    "A styled native select, always wrapped in its own "
+                    "A styled native select over an enum, always wrapped in its own "
                     Code { source: "label" }
-                    " element - "
-                    Code { source: "label" }
-                    " fills in its text. Strictly controlled: "
-                    Code { source: "value" }
-                    " drives it, "
+                    " element. The options are the enum's variants - "
+                    Code { source: "#[derive(Options)]" }
+                    " lists them in declaration order - so "
                     Code { source: "onchange" }
-                    " reports what the user picked."
+                    " hands back the value itself rather than a string to look up again. "
+                    "Strictly controlled: "
+                    Code { source: "value" }
+                    " drives it, and "
+                    Code { source: "None" }
+                    " is a real state - the field nobody has filled in yet."
                 }
             },
             Demo {
                 component: "Select",
                 children_text: "",
-                children_code: CHILDREN,
+                // Printed above the snippet: the list is the enum, so the
+                // code block is a lie without it.
+                wrap: Wrap(|_: &DemoValues, source: &str| format!("{SIZE_ENUM}{source}")),
                 fixed: vec![
                     "value: value()".to_string(),
-                    "onchange: move |v| value.set(v)".to_string(),
+                    "onchange: move |next| value.set(Some(next))".to_string(),
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
@@ -85,14 +120,32 @@ pub fn SelectPage() -> Element {
                         label: (values.str("label") == "true").then(|| "Size".to_string()),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),
-                        onchange: move |v| value.set(v),
-                        SelectOption { value: "xs", "Extra small" }
-                        SelectOption { value: "sm", "Small" }
-                        SelectOption { value: "md", "Medium" }
-                        SelectOption { value: "lg", "Large" }
-                        SelectOption { value: "xl", "Extra large" }
+                        onchange: move |next| value.set(Some(next)),
                     }
                 },
+            }
+            DocSection {
+                title: "Nothing picked yet",
+                Text {
+                    Code { source: "value" }
+                    " is an "
+                    Code { source: "Option" }
+                    ", so a field the user has not filled in is a state the type can hold "
+                    "rather than a sentinel option in the list. While it is "
+                    Code { source: "None" }
+                    " the "
+                    Code { source: "placeholder" }
+                    " shows as the selected entry, disabled and hidden - so the native control "
+                    "cannot silently take the first option, and once a real value is picked "
+                    "there is no way back to it."
+                }
+                Code { source: EMPTY }
+                Select {
+                    label: "Size",
+                    placeholder: "Pick a size",
+                    value: empty(),
+                    onchange: move |next| empty.set(Some(next)),
+                }
             }
         }
     }

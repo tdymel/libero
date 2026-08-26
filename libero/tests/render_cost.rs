@@ -24,7 +24,7 @@
 
 use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
-use libero::components::{Option, Title};
+use libero::components::Title;
 use libero::{LiberoProvider, components::*};
 
 #[derive(Clone, PartialEq, Options)]
@@ -126,7 +126,7 @@ fn render_cost_per_component() {
 
         "Button" { Button { "x" } }
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
-        "Select" { Select { value: "a", Option { value: "a", "x" } } }
+        "Select" { Select { value: CostPane::One, onchange: move |_| {} } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
