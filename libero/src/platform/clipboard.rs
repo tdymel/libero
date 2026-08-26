@@ -37,11 +37,52 @@ mod web {
     pub(super) static CLIPBOARD: WebClipboard = WebClipboard;
 }
 
+/// A desktop clipboard, under Blitz or anything else native. Not routed
+/// through the shell: `blitz-shell` drops its `arboard::Clipboard` after every
+/// write, and arboard's X11 backend destroys the window owning the selection
+/// on the last drop - the write reports success and the paste comes up empty.
+/// So the handle is kept for the process instead.
+#[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+mod native {
+    use std::cell::RefCell;
+
+    use super::{ClipboardApi, Write};
+    use crate::platform::PlatformError;
+
+    thread_local! {
+        /// Built on first use, then never dropped - dropping it is what loses
+        /// the copied text.
+        static HANDLE: RefCell<Option<arboard::Clipboard>> = const { RefCell::new(None) };
+    }
+
+    pub(super) struct NativeClipboard;
+
+    impl ClipboardApi for NativeClipboard {
+        fn write_text(&self, text: String) -> Write {
+            let written = HANDLE.with(|handle| {
+                let mut handle = handle.borrow_mut();
+                if handle.is_none() {
+                    *handle = arboard::Clipboard::new().ok();
+                }
+                let Some(clipboard) = handle.as_mut() else {
+                    return Err(PlatformError::Unsupported);
+                };
+                clipboard.set_text(text).map_err(|_| PlatformError::Denied)
+            });
+            Box::pin(std::future::ready(written))
+        }
+    }
+
+    pub(super) static CLIPBOARD: NativeClipboard = NativeClipboard;
+}
+
 /// `None` where the platform has no clipboard at all - an absent capability is
 /// a missing accessor, never a stub that answers `Unsupported`.
 pub(crate) fn clipboard() -> Option<&'static dyn ClipboardApi> {
     #[cfg(target_arch = "wasm32")]
     return Some(&web::CLIPBOARD);
-    #[cfg(not(target_arch = "wasm32"))]
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return Some(&native::CLIPBOARD);
+    #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
     return None;
 }

@@ -4157,6 +4157,7 @@ dependencies = [
 name = "libero"
 version = "0.1.0"
 dependencies = [
+ "arboard",
  "blitz-dom",
  "blitz-traits",
  "dioxus",
