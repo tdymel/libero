@@ -41,6 +41,10 @@ required-features = ["native-vello"]
 name = "has_selector_probe"
 required-features = ["native-vello"]
 
+[[example]]
+name = "report_repro"
+required-features = ["native-vello"]
+
 # Only for `examples/native_style_probe.rs`, which reads Blitz's computed
 # styles headlessly. Drop both when that example goes.
 [dev-dependencies]
