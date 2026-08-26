@@ -4,13 +4,12 @@ use libero::components::{Code, CodeBlock, DataList, DataListItem, Flex, Text};
 
 /// Re-render cost as a multiple of `Leaf` - one scope, one `span`, no
 /// styling. The full table is `tests/render_cost.rs`; this is its shape.
-const RATIOS: [(&str, &str); 8] = [
+const RATIOS: [(&str, &str); 7] = [
     ("Box", "1.5x"),
     ("Text", "1.6x"),
     ("Flex", "2.1x"),
     ("Button", "2.4x"),
     ("Select", "6.1x"),
-    ("Modal", "6.6x"),
     ("Splitter", "8.2x"),
     ("Drawer", "17.4x"),
 ];

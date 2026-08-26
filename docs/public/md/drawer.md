@@ -66,7 +66,7 @@ fn Demo() -> Element {
 }
 ```
 
-The drawer is a [Modal](modal.md) wrapping a [Float](float.md) wrapping a
+The drawer is a [modal](modal.md) layer wrapping a [Float](float.md) wrapping a
 [Dialog](dialog.md) surface: the modal supplies the portal, the backdrop and the
 focus trap, the float does the edge docking, and the dialog is the panel your
 `sx` and `children` land on. That is also why `Drawer` itself renders nothing in
@@ -90,7 +90,7 @@ user expects it by unmounting the drawer from the same state the trigger set.
 |---|---|---|---|
 | `anchor` | `DrawerAnchor` | `left` | The edge the drawer docks to. |
 | `size` | `Size` | `md` | Width along the docked edge (or height, for top/bottom). |
-| `z_index` | `ThemeAwareValue` | - | Stacking order for the drawer's `Modal` layer. |
+| `z_index` | `ThemeAwareValue` | - | Stacking order for the drawer's modal layer. |
 | `onclose` | `EventHandler<()>` | - | Requested by Escape or a backdrop click. `Drawer` tracks no open/closed state. |
 | `children` | `Element` | required | The panel's content, rendered inside a `Dialog` surface. |
 

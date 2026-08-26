@@ -192,6 +192,8 @@ pub fn Image(props: ImageProps) -> Element {
                 onclose: move |_| close_from_modal(),
                 Dialog {
                     aria_label: label.clone(),
+                    // The picture itself is the close button.
+                    close_button: false,
                     size: "none",
                     sx: &IMAGE_ZOOM_DIALOG_SX,
                     Box {

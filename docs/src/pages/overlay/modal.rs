@@ -1,89 +1,237 @@
-use crate::components::{Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{DocPage, DocSection};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Dialog, Modal, Text, Title};
+use libero::{
+    components::{Button, Code, CodeBlock, Dialog, Flex, Text},
+    hooks::{ModalScope, Opening, use_modal},
+};
 
-/// `Modal` has no opinion on content - the `Dialog` inside is what carries the
-/// role and the aria semantics, so it is the example's own subtree.
-const CONTENT: &str = r#"Dialog {
-    aria_label: "Example modal",
-    Title { size: "lg", "Example modal" }
-    Text { "Closes on Escape or by clicking the backdrop." }
-    Button { variant: "outlined", onclick: move |_| open.set(false), "Close" }
+const DIALOG_EXAMPLE: &str = r#"/// What the dialog can answer. A dismissal answers nothing, so the caller
+/// matches on `Option<SaveChoice>` and "went back" is a case like any other.
+#[derive(Clone, Copy, PartialEq)]
+enum SaveChoice {
+    Save,
+    Discard,
+}
+
+/// `discard_label` is shared by every opening - the closure just captures it.
+fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
+    use_modal(move |s: ModalScope<String, SaveChoice>| {
+        let document = s.args();
+
+        rsx! {
+            Dialog {
+                title: "Unsaved changes",
+                size: "sm",
+                Text { "{document} has changes you have not saved." }
+                Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                Button {
+                    variant: "filled",
+                    color: "error",
+                    onclick: move |_| s.resolve(SaveChoice::Discard),
+                    "{discard_label}"
+                }
+                Button {
+                    variant: "filled",
+                    color: "primary",
+                    onclick: move |_| s.resolve(SaveChoice::Save),
+                    "Save"
+                }
+            }
+        }
+    })
 }"#;
 
-/// A modal exists only while it is open, so the trigger and the state behind
-/// it are the example as much as the component is.
-fn wrap_trigger(_: &DemoValues, code: &str) -> String {
-    format!(
-        "Button {{ variant: \"outlined\", onclick: move |_| open.set(true), \"Open modal\" }}\nif open() {{\n{}}}",
-        indent(code)
-    )
+const OPEN_EXAMPLE: &str = r#"let prompt = use_save_prompt("Discard");
+
+Button {
+    onclick: move |_| {
+        prompt.open_with("notes.md").on_result(move |answer| match answer {
+            Some(SaveChoice::Save) => save(),
+            Some(SaveChoice::Discard) => discard(),
+            None => {}   // dismissed - keep editing
+        });
+    },
+    "Close editor"
+}"#;
+
+const AWAIT_EXAMPLE: &str = r#"onclick: move |_| async move {
+    match prompt.open_with("notes.md").await {
+        Some(SaveChoice::Save) => save().await,
+        Some(SaveChoice::Discard) => discard().await,
+        None => return,
+    }
+    close_editor().await;
+}"#;
+
+/// What the page's own dialog answers.
+#[derive(Clone, Copy, PartialEq)]
+enum SaveChoice {
+    Save,
+    Discard,
+}
+
+/// The page's own working dialog - the code beside it is what built this, so
+/// the demo cannot drift from the example.
+fn use_save_prompt(discard_label: &'static str) -> impl Fn(&str) -> Opening<SaveChoice> + Copy {
+    let modal = use_modal(move |s: ModalScope<String, SaveChoice>| {
+        let document = s.args();
+
+        rsx! {
+            Dialog {
+                title: "Unsaved changes",
+                size: "sm",
+                Flex {
+                    direction: "column",
+                    gap: "md",
+                    Text { "{document} has changes you have not saved." }
+                    Flex {
+                        direction: "row",
+                        gap: "sm",
+                        Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                        Button {
+                            variant: "filled",
+                            color: "error",
+                            onclick: move |_| s.resolve(SaveChoice::Discard),
+                            "{discard_label}"
+                        }
+                        Button {
+                            variant: "filled",
+                            color: "primary",
+                            onclick: move |_| s.resolve(SaveChoice::Save),
+                            "Save"
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    move |document: &str| modal.open_with(document.to_string())
 }
 
 #[component]
 pub fn ModalPage() -> Element {
-    let mut open = use_signal(|| false);
+    let prompt = use_save_prompt("Discard");
+    let mut answer = use_signal(|| "-".to_string());
 
     rsx! {
         DocPage {
             title: "Modal",
-            source: "libero/src/components/overlay/modal.rs",
+            source: "libero/src/hooks/modal.rs",
             markdown: "/md/modal.md",
-            properties: vec![
-                props("Modal", vec![
-                    prop("onclose", "EventHandler<()>")
-                        .doc("Called on Escape or a backdrop click - the caller's state, not Modal, decides whether it actually closes."),
-                    prop("children", "Element").doc("Content, mounted only while open. Pair with Dialog for the role and aria-modal semantics."),
-                ]),
-                props("Dialog", vec![
-                    prop("aria_label", "String").doc("Accessible name for the dialog."),
-                    prop("radius", "ThemeAwareValue").default("md").doc("Corner radius - the radius scale, or any CSS length."),
-                    prop("size", "ThemeAwareValue").default("md").doc("Caps the dialog's width."),
-                    prop("variables", "Variables")
-                        .doc("Layered onto Dialog's own - e.g. Drawer's anchor/size vars."),
-                    prop("children", "Element").doc("The dialog's content."),
-                ]),
-            ],
             lead: rsx! {
                 Text {
-                    "A focus-trapped, dimmed layer that locks scroll. It takes no props "
-                    "beyond "
-                    Code { source: "onclose" }
-                    " and its children - it is mounted only while open, so the caller's own "
-                    "state is the switch, and it has no opinion on content: pair it with "
-                    Code { source: "Dialog" }
-                    " for the role and aria-modal semantics."
+                    "A modal is a hook, not a component. "
+                    Code { source: "use_modal" }
+                    " registers a render closure and returns a handle that opens it "
+                    "wherever you need one - no open flag to thread, and the content is built "
+                    "only while it is showing."
                 }
             },
-            Demo {
-                component: "Modal",
-                children_text: "",
-                children_code: CONTENT.to_string(),
-                fixed: vec!["onclose: move |_| open.set(false)".to_string()],
-                controls: vec![],
-                render: move |_: DemoValues| rsx! {
+            DocSection {
+                title: "Try it",
+                Flex {
+                    direction: "row",
+                    align: "center",
+                    gap: "md",
+                    wrap: "wrap",
                     Button {
                         variant: "outlined",
-                        onclick: move |_| open.set(true),
-                        "Open modal"
+                        onclick: move |_| {
+                            prompt("notes.md").on_result(move |result| {
+                                answer.set(
+                                    match result {
+                                        Some(SaveChoice::Save) => "saved",
+                                        Some(SaveChoice::Discard) => "discarded",
+                                        None => "dismissed - kept editing",
+                                    }
+                                    .to_string(),
+                                );
+                            });
+                        },
+                        "Close editor"
                     }
-                    if open() {
-                        Modal {
-                            onclose: move |_| open.set(false),
-                            Dialog {
-                                aria_label: "Example modal",
-                                Title { size: "lg", "Example modal" }
-                                Text { "Closes on Escape or by clicking the backdrop." }
-                                Button {
-                                    variant: "outlined",
-                                    onclick: move |_| open.set(false),
-                                    "Close"
-                                }
-                            }
-                        }
-                    }
-                },
-                wrap: Wrap(wrap_trigger),
+                    Text { "Last answer: " Code { source: answer() } }
+                }
+            }
+
+            DocSection {
+                title: "Building a dialog",
+                Text {
+                    "Wrap "
+                    Code { source: "use_modal" }
+                    " in a hook of your own: its parameters are shared by every opening, the "
+                    Code { source: "ModalScope" }
+                    " carries the arguments of the one being shown, and "
+                    Code { source: "close()" }
+                    " / "
+                    Code { source: "resolve(value)" }
+                    " end it. Make the result the dialog's own enum, not a "
+                    Code { source: "bool" }
+                    " - the caller then matches over what it can say, with a dismissal as "
+                    Code { source: "None" }
+                    " beside it."
+                }
+                CodeBlock { source: DIALOG_EXAMPLE, language: "rust" }
+            }
+
+            DocSection {
+                title: "Opening it",
+                Text {
+                    Code { source: "open_with" }
+                    " takes anything that converts into the argument type and returns an "
+                    Code { source: "Opening" }
+                    " - that one showing. Attach the consequence to it and a later opening "
+                    "cannot fire it."
+                }
+                CodeBlock { source: OPEN_EXAMPLE, language: "rust" }
+                Text {
+                    "It is also a future. Await it when the answer gates work that is already "
+                    "async, or when several dialogs have to run in sequence."
+                }
+                CodeBlock { source: AWAIT_EXAMPLE, language: "rust" }
+                Text {
+                    Code { source: "open()" }
+                    " skips the arguments when they are "
+                    Code { source: "Default" }
+                    ", and "
+                    Code { source: "handle.close()" }
+                    " closes whatever is showing. The handle is "
+                    Code { source: "Copy" }
+                    ", so a trigger elsewhere in the tree takes it as a prop - or as context, "
+                    "if your hook provides it."
+                }
+            }
+
+            DocSection {
+                title: "Closing and accessibility",
+                Text {
+                    "Content in the render closure captures the "
+                    Code { source: "ModalScope" }
+                    "; a "
+                    Code { source: "Dialog" }
+                    " also closes itself from its own header button. Only a component factored "
+                    "out of the closure needs "
+                    Code { source: "use_modal_close()" }
+                    "."
+                }
+                Text {
+                    "The layer traps focus and locks the page behind it. Escape and a backdrop "
+                    "click dismiss it, settling the "
+                    Code { source: "Opening" }
+                    " with "
+                    Code { source: "None" }
+                    ", so a handler written for an answer never runs on a dismissal. "
+                    Code { source: "Dialog" }
+                    " supplies the role, "
+                    Code { source: "aria-modal" }
+                    " and its name from "
+                    Code { source: "title" }
+                    ". Focus returns to whatever the user acted on to open it - "
+                    Code { source: "open_with" }
+                    " runs inside that element's own event handler, so the modal records it "
+                    "without being told. Stacked modals each take their own z-index."
+                }
             }
         }
     }

@@ -30,7 +30,6 @@ spread across the library:
 | `Flex` | 2.1x |
 | `Button` | 2.4x |
 | `Select` | 6.1x |
-| `Modal` | 6.6x |
 | `Splitter` | 8.2x |
 | `Drawer` | 17.4x |
 

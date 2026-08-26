@@ -1,10 +1,14 @@
-use dioxus::{
-    core::{DynamicNode, Properties, VComponent},
-    prelude::*,
+use std::{
+    future::{Future, IntoFuture},
+    pin::Pin,
+    rc::Rc,
+    task::{Context, Poll, Waker},
 };
 
+use dioxus::prelude::*;
+
 use crate::{
-    components::Modal,
+    components::{ElementApi, Modal, dom_api},
     context::{ModalContext, ModalHost},
     hooks::use_portal,
 };
@@ -16,61 +20,305 @@ pub(crate) fn use_modal_z_index() -> i32 {
     z_index
 }
 
-pub fn use_modal_context() -> ModalContext {
-    use_context::<ModalContext>()
+/// Closes the modal this content is rendered in. For a component factored out
+/// of the render closure, which cannot capture its [`ModalScope`].
+pub fn use_modal_close() -> Callback<()> {
+    let modal = use_context::<ModalContext>();
+    use_callback(move |()| modal.close())
 }
 
-/// Opens/closes a modal registered via [`use_modal`] from anywhere.
-pub struct ModalHandle<P> {
-    state: Signal<Option<P>>,
+/// Everything about one opening that does not mention the argument type, so
+/// [`Opening`] can outlive it without carrying `S`.
+struct Resolution<R: 'static> {
+    /// Bumped per open. Anything holding an older one is stale and inert.
+    generation: u64,
+    outcome: Option<Option<R>>,
+    handlers: Vec<Box<dyn FnMut(Option<R>)>>,
+    wakers: Vec<Waker>,
+    /// What had focus when this opening started, to hand it back on close.
+    trigger: Option<Rc<dyn ElementApi>>,
 }
 
-impl<P> Clone for ModalHandle<P> {
+impl<R: 'static> Resolution<R> {
+    fn new() -> Self {
+        Self {
+            generation: 0,
+            outcome: None,
+            handlers: Vec::new(),
+            wakers: Vec::new(),
+            trigger: None,
+        }
+    }
+}
+
+/// Settles `generation` if it is still the live one, otherwise does nothing -
+/// which is what makes a stale [`Opening`] inert.
+///
+/// Handlers run after the write lock is released, so one of them may open this
+/// same modal again.
+fn finish<R: Clone + 'static>(
+    mut resolution: Signal<Resolution<R>>,
+    closer: Callback<()>,
+    generation: u64,
+    value: Option<R>,
+) {
+    let (handlers, wakers, trigger) = {
+        let mut resolution = resolution.write();
+        if resolution.generation != generation || resolution.outcome.is_some() {
+            return;
+        }
+        resolution.outcome = Some(value.clone());
+        (
+            std::mem::take(&mut resolution.handlers),
+            std::mem::take(&mut resolution.wakers),
+            resolution.trigger.take(),
+        )
+    };
+
+    closer.call(());
+
+    // Out of this event's dispatch, so focus lands after the modal is gone
+    // rather than being taken back by the trap it is leaving.
+    if let Some(trigger) = trigger {
+        spawn(async move {
+            let _ = trigger.focus();
+        });
+    }
+
+    for mut handler in handlers {
+        handler(value.clone());
+    }
+    for waker in wakers {
+        waker.wake();
+    }
+}
+
+/// The modal's own view of itself: its arguments, and the two ways to end it.
+pub struct ModalScope<S: 'static, R: 'static = ()> {
+    args: Signal<Option<S>>,
+    resolution: Signal<Resolution<R>>,
+    closer: Callback<()>,
+    generation: u64,
+}
+
+impl<S: 'static, R: 'static> Clone for ModalScope<S, R> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<P> Copy for ModalHandle<P> {}
+impl<S: 'static, R: 'static> Copy for ModalScope<S, R> {}
 
-impl<P: Clone + PartialEq + 'static> ModalHandle<P> {
-    pub fn open(&self, props: P) {
-        let mut state = self.state;
-        state.set(Some(props));
+impl<S: Clone + 'static, R: 'static> ModalScope<S, R> {
+    /// The arguments this opening was given.
+    pub fn args(&self) -> S {
+        self.args
+            .read()
+            .clone()
+            .expect("ModalScope outside an open modal")
+    }
+}
+
+impl<S: 'static, R: Clone + 'static> ModalScope<S, R> {
+    /// Closes with no result - the same outcome as Escape or the backdrop.
+    pub fn close(&self) {
+        finish(self.resolution, self.closer, self.generation, None);
     }
 
+    /// Closes, handing `value` to the caller's handler or awaited `Opening`.
+    pub fn resolve(&self, value: R) {
+        finish(self.resolution, self.closer, self.generation, Some(value));
+    }
+}
+
+/// One opening of a modal. Attach per-open consequences to it, `.await` it, or
+/// close it. Keeping it past its opening is safe: a stale handle is inert, it
+/// never reaches whichever modal is open later.
+pub struct Opening<R: 'static = ()> {
+    resolution: Signal<Resolution<R>>,
+    closer: Callback<()>,
+    generation: u64,
+}
+
+impl<R: 'static> Clone for Opening<R> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<R: 'static> Copy for Opening<R> {}
+
+impl<R: Clone + 'static> Opening<R> {
+    /// Runs `handler` when this opening settles - `None` if it was dismissed.
+    pub fn on_result(self, mut handler: impl FnMut(Option<R>) + 'static) -> Self {
+        let mut signal = self.resolution;
+        // A stale opening settled as a dismissal the moment it was superseded.
+        let settled = {
+            let resolution = signal.peek();
+            if resolution.generation == self.generation {
+                resolution.outcome.clone()
+            } else {
+                Some(None)
+            }
+        };
+
+        match settled {
+            Some(outcome) => handler(outcome),
+            None => signal.write().handlers.push(Box::new(handler)),
+        }
+        self
+    }
+
+    /// Closes this opening, if it is still the one showing.
     pub fn close(&self) {
-        let mut state = self.state;
-        state.set(None);
+        finish(self.resolution, self.closer, self.generation, None);
+    }
+}
+
+pub struct OpeningFuture<R: 'static> {
+    opening: Opening<R>,
+}
+
+impl<R: Clone + 'static> Future for OpeningFuture<R> {
+    type Output = Option<R>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let mut signal = self.opening.resolution;
+        let mut resolution = signal.write();
+        if resolution.generation != self.opening.generation {
+            return Poll::Ready(None);
+        }
+        if let Some(outcome) = resolution.outcome.clone() {
+            return Poll::Ready(outcome);
+        }
+        if !resolution.wakers.iter().any(|w| w.will_wake(cx.waker())) {
+            resolution.wakers.push(cx.waker().clone());
+        }
+        Poll::Pending
+    }
+}
+
+impl<R: Clone + 'static> IntoFuture for Opening<R> {
+    type Output = Option<R>;
+    type IntoFuture = OpeningFuture<R>;
+
+    fn into_future(self) -> Self::IntoFuture {
+        OpeningFuture { opening: self }
+    }
+}
+
+/// Opens the modal registered by [`use_modal`], from anywhere below the hook.
+pub struct ModalHandle<S: 'static, R: 'static = ()> {
+    args: Signal<Option<S>>,
+    resolution: Signal<Resolution<R>>,
+    closer: Callback<()>,
+}
+
+impl<S: 'static, R: 'static> Clone for ModalHandle<S, R> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S: 'static, R: 'static> Copy for ModalHandle<S, R> {}
+
+impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
+    /// Opens with `args`, superseding whatever this modal was showing.
+    pub fn open_with(&self, args: impl Into<S>) -> Opening<R> {
+        let mut signal = self.resolution;
+        let generation = {
+            let mut resolution = signal.write();
+            resolution.generation += 1;
+            resolution.outcome = None;
+            resolution.handlers.clear();
+            resolution.wakers.clear();
+            // Synchronous inside the trigger's own handler, so this *is* the
+            // element the user acted on.
+            resolution.trigger = dom_api().active_element().ok().map(Rc::from);
+            resolution.generation
+        };
+
+        let mut slot = self.args;
+        slot.set(Some(args.into()));
+
+        Opening {
+            resolution: self.resolution,
+            closer: self.closer,
+            generation,
+        }
+    }
+
+    /// Closes whatever this modal is currently showing.
+    pub fn close(&self) {
+        let generation = self.resolution.peek().generation;
+        finish(self.resolution, self.closer, generation, None);
     }
 
     pub fn is_open(&self) -> bool {
-        self.state.read().is_some()
+        self.args.read().is_some()
     }
 }
 
-impl<P: Default + Clone + PartialEq + 'static> ModalHandle<P> {
-    /// Opens with default props.
-    pub fn open_default(&self) {
-        self.open(P::default());
+impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
+    /// Opens with default arguments.
+    pub fn open(&self) -> Opening<R> {
+        self.open_with(S::default())
     }
 }
 
-/// Registers `component` as a modal, opened anywhere via `handle.open(props)`.
-/// Inside it, [`use_modal_context`] closes and
-/// [`crate::components::Dialog`] carries the a11y roles.
-pub fn use_modal<P>(component: fn(P) -> Element) -> ModalHandle<P>
+/// Registers `render` as a modal and returns the handle that opens it.
+///
+/// The modal is portaled from here, so this must be called in a component that
+/// outlives every trigger. Arguments shared by every opening are simply
+/// captured by `render`. The handle is `Copy`; a dialog wanting one shared
+/// instance can `use_context_provider` it in its own hook.
+///
+/// ```ignore
+/// let confirm = use_modal(|s: ModalScope<Confirm, bool>| rsx! {
+///     Dialog { title: "{s.args().message}",
+///         Button { onclick: move |_| s.resolve(true), "Delete" } }
+/// });
+/// confirm.open_with("Delete this file?").on_result(move |r| { .. });
+/// ```
+pub fn use_modal<S, R>(
+    render: impl FnMut(ModalScope<S, R>) -> Element + 'static,
+) -> ModalHandle<S, R>
 where
-    P: Properties + Clone + PartialEq + 'static,
+    S: Clone + 'static,
+    R: Clone + 'static,
 {
-    let state = use_signal(|| None::<P>);
-    let handle = ModalHandle { state };
+    let args = use_signal(|| None::<S>);
+    let resolution = use_signal(Resolution::<R>::new);
+    // `use_callback`, not the closure directly: rsx rebuilds `render` every
+    // render, and a context-provided handle is stored once - the swap keeps
+    // captured values live instead of frozen at mount.
+    let closer = use_callback(move |()| {
+        let mut args = args;
+        args.set(None);
+    });
+    let render = use_callback(render);
 
-    let content = state.read().clone().map(|props| {
+    let handle = ModalHandle {
+        args,
+        resolution,
+        closer,
+    };
+
+    // `peek`: the generation only ever changes together with `args`, which is
+    // already subscribed below, and reading it would re-render on every
+    // handler attached.
+    let generation = resolution.peek().generation;
+    let content = args.read().is_some().then(|| {
+        let scope = ModalScope {
+            args,
+            resolution,
+            closer,
+            generation,
+        };
         rsx! {
             Modal {
-                onclose: move |_| handle.close(),
-                {DynamicNode::Component(VComponent::new(component, props, "ModalContent"))}
+                onclose: move |_| finish(resolution, closer, generation, None),
+                {render.call(scope)}
             }
         }
     });

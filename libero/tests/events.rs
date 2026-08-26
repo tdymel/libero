@@ -8,7 +8,8 @@ use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Button, TabValue, Tabs, ToggleButton, ToggleButtonGroup},
+    components::{ActionIcon, Button, Dialog, TabValue, Tabs, ToggleButton, ToggleButtonGroup},
+    hooks::{ModalScope, use_modal},
 };
 use std::rc::Rc;
 
@@ -352,4 +353,57 @@ impl HasMouseData for FakeMouse {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+}
+
+#[test]
+fn resolving_from_inside_a_modal_settles_its_opening() {
+    #[component]
+    fn Opener(outcome: Signal<Option<Option<bool>>>) -> Element {
+        let modal = use_modal(|s: ModalScope<(), bool>| {
+            rsx! {
+                Dialog { title: "Delete?",
+                    Button { onclick: move |_| s.resolve(true), "Yes" }
+                }
+            }
+        });
+        use_hook(move || {
+            let mut outcome = outcome;
+            modal
+                .open()
+                .on_result(move |result| outcome.set(Some(result)));
+        });
+
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        let outcome = use_signal(|| None);
+
+        rsx! {
+            LiberoProvider { Opener { outcome } }
+            "{outcome:?}"
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    // `use_hook` opens after `use_modal` has already read the empty slot, so
+    // the dialog only exists from the second render on.
+    dom.render_immediate(&mut find);
+    // The last click listener in the dialog, i.e. the confirm button - the
+    // close button in the header registered before it.
+    let confirm = find.click.expect("registered no click listener");
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), confirm);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    let html = dioxus_ssr::render(&dom);
+    assert!(html.contains("Some(Some(true))"), "got {html}");
+    assert!(
+        !html.contains("Delete?"),
+        "the modal should be gone: {html}"
+    );
 }

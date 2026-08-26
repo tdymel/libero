@@ -122,6 +122,8 @@ pub fn Drawer(props: DrawerProps) -> Element {
                 z_index: z_index.clone(),
                 sx: float_sx,
                 Dialog {
+                    // A drawer's own content owns its dismissal.
+                    close_button: false,
                     class: class.clone(),
                     sx: sx.clone(),
                     states: states.clone(),

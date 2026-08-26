@@ -18,7 +18,7 @@ pub use focus_return::{FocusReturn, use_focus_return};
 pub use id::{use_id, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use modal::use_modal_z_index;
-pub use modal::{ModalHandle, use_modal, use_modal_context};
+pub use modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close};
 pub use portal::use_portal;
 pub use presence::{Presence, use_presence};
 pub(crate) use ripple::{ripple_sx, use_ripple};

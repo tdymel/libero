@@ -2,9 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+        ActionIcon, Box, HtmlTag, Input, States, Title, Variables, common::base_props,
+        layout::use_box, variables,
     },
     context::ModalContext,
+    hooks::use_id,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, Size, SizeCss},
 };
@@ -25,6 +27,34 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .box_shadow("0 12px 32px rgba(0, 0, 0, 0.25)")
 });
 
+static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .align_items("flex-start")
+        .justify_content("space-between")
+        .gap("sm")
+        .margin_bottom("md")
+});
+
+// Pushes a lone close button to the right, where a title would have left it.
+static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));
+
+fn close_icon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            width: "16px",
+            height: "16px",
+            path { d: "M18 6 6 18" }
+            path { d: "m6 6 12 12" }
+        }
+    }
+}
+
 fn dialog_variables(props: &DialogProps) -> Variables {
     variables()
         .with(
@@ -41,6 +71,16 @@ base_props! {
     pub struct DialogProps {
         #[props(default, into)]
         aria_label: Option<String>,
+        /// Heading, and the accessible name unless `aria_label` overrides it.
+        #[props(default, into)]
+        title: Option<String>,
+        /// Defaults to on inside a `Modal`, which is the only place it has
+        /// something to close.
+        #[props(default)]
+        close_button: Option<bool>,
+        /// Accessible name for the close button.
+        #[props(default, into)]
+        close_label: Option<String>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -53,11 +93,16 @@ base_props! {
 }
 
 /// Dialog surface: `role="dialog"`, plus `aria-modal="true"` when nested in a
-/// [`crate::components::Modal`] (auto-detected). No positioning of its own -
-/// anchor it with [`crate::components::Float`] or your own layout.
+/// modal (auto-detected). Inside one it also names itself from `title` and
+/// closes itself from its own button, so a modal opened with
+/// [`crate::hooks::use_modal`] needs no closing wiring. No positioning of its
+/// own - anchor it with [`crate::components::Float`] or your own layout.
 #[component]
 pub fn Dialog(props: DialogProps) -> Element {
-    let is_modal = try_use_context::<ModalContext>().is_some();
+    let modal = try_use_context::<ModalContext>();
+    let is_modal = modal.is_some();
+    let close_button = props.close_button.unwrap_or(is_modal);
+    let title_id = use_id();
     let variables: Input<Variables> = dialog_variables(&props)
         .merge(props.variables.unwrap_or_default())
         .into();
@@ -71,6 +116,37 @@ pub fn Dialog(props: DialogProps) -> Element {
         .prepare()
         .attr("role", "dialog")
         .attr("aria-modal", is_modal.then_some("true"))
+        .attr(
+            "aria-labelledby",
+            (props.aria_label.is_none() && props.title.is_some()).then(&*title_id),
+        )
         .attr("aria-label", props.aria_label.clone())
-        .render(HtmlTag::Div, props.attributes, props.children)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                if props.title.is_some() || close_button {
+                    Box { framework_sx: &DIALOG_HEADER_SX,
+                        if let Some(title) = props.title.clone() {
+                            Title { id: title_id(), size: "xl", sx: &DIALOG_HEADER_TITLE_SX, "{title}" }
+                        }
+                        if close_button {
+                            ActionIcon {
+                                variant: "transparent",
+                                color: "gray",
+                                size: "sm",
+                                aria_label: props.close_label.clone().unwrap_or_else(|| "Close".to_string()),
+                                onclick: move |_| {
+                                    if let Some(modal) = modal {
+                                        modal.close();
+                                    }
+                                },
+                                {close_icon()}
+                            }
+                        }
+                    }
+                }
+                {props.children}
+            },
+        )
 }

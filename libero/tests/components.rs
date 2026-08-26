@@ -12,11 +12,12 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Container,
         DataList, DataListItem, Dialog, Divider, Drawer, Flex, Float, FocusTrap, Grid, GridArea,
         GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
-        Modal, NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
+        NavLink, Option, Overlay, QrCode, ScrollArea, Select, Sidebar, Slider, SliderMark,
         SliderValue, Splitter, Switch, TabLabel, TabValue, Table, Tabs, Text, Title, ToggleButton,
         ToggleButtonGroup, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
         column, sp,
     },
+    hooks::{ModalScope, use_modal},
     theme::{Color, Size},
 };
 
@@ -889,15 +890,23 @@ fn float_renders_its_child_with_placement_state() {
 
 #[test]
 fn a_modal_renders_through_the_portal_outlet() {
+    #[component]
+    fn Opener() -> Element {
+        let modal = use_modal(|s: ModalScope<String>| {
+            rsx! {
+                Dialog { title: "{s.args()}", "modal content" }
+            }
+        });
+        use_hook(move || modal.open_with("Titled"));
+
+        rsx! {
+            div { id: "in-place" }
+        }
+    }
+
     fn app() -> Element {
         rsx! {
-            LiberoProvider {
-                div { id: "in-place",
-                    Modal { onclose: |_| {},
-                        Dialog { "modal content" }
-                    }
-                }
-            }
+            LiberoProvider { Opener {} }
         }
     }
 
@@ -910,6 +919,64 @@ fn a_modal_renders_through_the_portal_outlet() {
         content > in_place,
         "portalled content should render at the outlet, after where it was written"
     );
+    assert!(body.contains("Titled"), "the args reach the render closure");
+}
+
+#[test]
+fn a_superseded_opening_no_longer_closes_the_live_modal() {
+    #[component]
+    fn Opener() -> Element {
+        let modal = use_modal(|s: ModalScope<String>| rsx! { Dialog { "{s.args()}" } });
+        use_hook(move || {
+            let first = modal.open_with("first");
+            modal.open_with("second");
+            first.close();
+        });
+
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Opener {} }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("second"), "got {body}");
+    assert!(!body.contains("first"), "got {body}");
+}
+
+#[test]
+fn dismissing_a_modal_settles_its_opening_with_no_result() {
+    #[component]
+    fn Opener(outcome: Signal<::std::option::Option<::std::option::Option<bool>>>) -> Element {
+        let modal = use_modal(|_: ModalScope<(), bool>| rsx! { Dialog { "asking" } });
+        use_hook(move || {
+            let mut outcome = outcome;
+            modal
+                .open()
+                .on_result(move |result| outcome.set(Some(result)));
+            modal.close();
+        });
+
+        rsx! {}
+    }
+
+    fn app() -> Element {
+        let outcome = use_signal(|| ::std::option::Option::None);
+
+        rsx! {
+            LiberoProvider { Opener { outcome } }
+            "{outcome:?}"
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("Some(None)"), "got {body}");
+    assert!(!body.contains("asking"), "the modal should be gone: {body}");
 }
 
 #[test]

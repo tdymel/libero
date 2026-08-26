@@ -65,13 +65,13 @@ fetch only the file you need.
 ## Overlay
 
 - [Drawer](drawer.md): A portaled, dimmed, focus-trapped panel docked to one edge of the viewport.
-- [Modal](modal.md): A focus-trapped, dimmed, scroll-locking layer that is mounted only while open; pair it with `Dialog` for the dialog role and aria-modal semantics.
+- [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 - [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.
 - [Tooltip](tooltip.md): A CSS-only label that appears while its child is hovered or focused.
 
 ## Surface
 
-- [Dialog](dialog.md): The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - to pair with `Modal` for an overlay.
+- [Dialog](dialog.md): The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
 
 ## Typography
 

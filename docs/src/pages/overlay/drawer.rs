@@ -33,7 +33,7 @@ pub fn DrawerPage() -> Element {
                 props("Drawer", vec![
                     prop("anchor", "DrawerAnchor").default("left").doc("The edge the drawer docks to."),
                     prop("size", "Size").default("md").doc("Width along the docked edge (or height, for top/bottom)."),
-                    prop("z_index", "ThemeAwareValue").doc("Stacking order for the drawer's Modal layer."),
+                    prop("z_index", "ThemeAwareValue").doc("Stacking order for the drawer's modal layer."),
                     prop("onclose", "EventHandler<()>")
                         .doc("Requested by Escape or a backdrop click. Drawer tracks no open/closed state."),
                     prop("children", "Element").doc("The panel's content, rendered inside a Dialog surface."),

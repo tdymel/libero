@@ -3,6 +3,11 @@ use crate::components::common::{ElementApi, PlatformError};
 /// Resolves selectors into [`ElementApi`]s - the only way to get one.
 pub trait DomApi {
     fn query_selector(&self, selector: &str) -> Result<Box<dyn ElementApi>, PlatformError>;
+
+    /// Whatever currently has focus. Called synchronously from an event
+    /// handler this is the element the user acted on, which is how an overlay
+    /// learns where to put focus back.
+    fn active_element(&self) -> Result<Box<dyn ElementApi>, PlatformError>;
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -19,6 +24,17 @@ mod web {
             let element = web_sys::window()
                 .and_then(|window| window.document())
                 .and_then(|document| document.query_selector(selector).ok().flatten())
+                .ok_or(PlatformError::NotFound)?
+                .dyn_into::<web_sys::HtmlElement>()
+                .map_err(|_| PlatformError::NotFound)?;
+
+            Ok(Box::new(WebElementHandle { element }))
+        }
+
+        fn active_element(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
+            let element = web_sys::window()
+                .and_then(|window| window.document())
+                .and_then(|document| document.active_element())
                 .ok_or(PlatformError::NotFound)?
                 .dyn_into::<web_sys::HtmlElement>()
                 .map_err(|_| PlatformError::NotFound)?;
@@ -137,6 +153,12 @@ impl DomApi for UnsupportedDomApi {
         ));
         Err(PlatformError::Unsupported)
     }
+
+    // Silent, unlike `query_selector`: callers ask where focus was as a
+    // courtesy, and off the web the answer is simply "nowhere".
+    fn active_element(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -158,6 +180,10 @@ mod tests {
     fn queries_fail_instead_of_panicking_without_a_dom() {
         assert_eq!(
             dom_api().query_selector("body").err(),
+            Some(PlatformError::Unsupported)
+        );
+        assert_eq!(
+            dom_api().active_element().err(),
             Some(PlatformError::Unsupported)
         );
     }

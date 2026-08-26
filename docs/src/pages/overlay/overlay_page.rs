@@ -23,9 +23,8 @@ pub fn OverlayPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "Dims and blurs whatever is behind it - "
-                    Code { source: "Modal" }
-                    " renders one behind its content. Render it conditionally; there is no "
+                    "Dims and blurs whatever is behind it - a modal renders one behind its "
+                    "content. Render it conditionally; there is no "
                     Code { source: "open" }
                     ". It spans the viewport as "
                     Code { source: "position: fixed" }

@@ -7,7 +7,7 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: Confines Tab and Shift+Tab cycling to its children, for keeping keyboard focus inside an open overlay.
 
 Confines Tab/Shift+Tab cycling to its children - the same mechanism
-[Modal](modal.md) uses internally to keep keyboard focus inside an open dialog.
+the [modal](modal.md) layer uses internally to keep keyboard focus inside an open dialog.
 It focuses its first focusable child on mount, so mounting a trap moves focus
 into it; Tab from there cycles the children without ever reaching a control
 outside.

@@ -1,106 +1,226 @@
 # Modal
 
 Crate: `libero`
-Import: `use libero::components::{Modal, Dialog};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/modal.rs>
+Import: `use libero::hooks::{ModalHandle, ModalScope, use_modal};`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/modal.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A focus-trapped, dimmed, scroll-locking layer that is mounted only while open; pair it with `Dialog` for the dialog role and aria-modal semantics.
+Description: A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 
-A focus-trapped, dimmed layer that locks scroll. It takes no props beyond
-`onclose` and its children - it is mounted only while open, so the caller's own
-state is the switch, and it has no opinion on content: pair it with `Dialog` for
-the role and aria-modal semantics.
+A modal is a hook, not a component. `use_modal` registers a render closure and
+hands back a `ModalHandle` that opens it - no open flag to thread, no
+conditional branch at the call site, and the content is built only while it is
+showing.
 
-Escape and a backdrop click only *request* a close, through `onclose`. Nothing
-closes unless the caller's state says so, so a confirm-before-close flow needs no
-extra API.
+There is no public `Modal` component. Pair the hook with [`Dialog`](dialog.md),
+which supplies the role, the accessible name and its own close button.
 
 ## Usage
 
+Wrap `use_modal` in a hook of your own: its parameters are shared by every
+opening, the `ModalScope` carries the arguments of the one being shown, and
+`close()` / `resolve(value)` end it.
+
+Make the result the dialog's own enum, not a `bool` - the caller then matches
+over what it can say, with a dismissal as `None` beside it.
+
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Button, Dialog, Modal, Text, Title};
+use libero::{
+    components::{Button, Dialog, Text},
+    hooks::{ModalHandle, ModalScope, use_modal},
+};
+
+/// What the dialog can answer. A dismissal answers nothing, so the caller
+/// matches on `Option<SaveChoice>` and "went back" is a case like any other.
+#[derive(Clone, Copy, PartialEq)]
+enum SaveChoice {
+    Save,
+    Discard,
+}
+
+/// `discard_label` is shared by every opening - the closure just captures it.
+fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
+    use_modal(move |s: ModalScope<String, SaveChoice>| {
+        let document = s.args();
+
+        rsx! {
+            Dialog {
+                title: "Unsaved changes",
+                size: "sm",
+                Text { "{document} has changes you have not saved." }
+                Button { variant: "text", onclick: move |_| s.close(), "Keep editing" }
+                Button {
+                    variant: "filled",
+                    color: "error",
+                    onclick: move |_| s.resolve(SaveChoice::Discard),
+                    "{discard_label}"
+                }
+                Button {
+                    variant: "filled",
+                    color: "primary",
+                    onclick: move |_| s.resolve(SaveChoice::Save),
+                    "Save"
+                }
+            }
+        }
+    })
+}
 
 #[component]
 fn Demo() -> Element {
-    let mut open = use_signal(|| false);
+    let prompt = use_save_prompt("Discard");
 
     rsx! {
-        Button { variant: "outlined", onclick: move |_| open.set(true), "Open modal" }
-        if open() {
-            Modal {
-                onclose: move |_| open.set(false),
-                Dialog {
-                    aria_label: "Example modal",
-                    Title { size: "lg", "Example modal" }
-                    Text { "Closes on Escape or by clicking the backdrop." }
-                    Button { variant: "outlined", onclick: move |_| open.set(false), "Close" }
-                }
-            }
+        Button {
+            variant: "outlined",
+            onclick: move |_| {
+                prompt.open_with("notes.md").on_result(move |answer| match answer {
+                    Some(SaveChoice::Save) => { /* save it */ }
+                    Some(SaveChoice::Discard) => { /* throw it away */ }
+                    None => {}   // dismissed - keep editing
+                });
+            },
+            "Close editor"
         }
     }
 }
 ```
 
-A descendant that is not holding the state can still ask for a close through
-`use_modal_context()`, whose `close()` calls the same `onclose` the modal was
-given:
+## Openings
+
+`open_with` takes anything that converts into the argument type and returns an
+`Opening` - that one showing. A later opening supersedes it, and a superseded
+`Opening` is inert: it can neither fire its handler nor close what is on screen
+now, and it awaits to `None`.
+
+```rust
+// Attach the consequence to this one opening.
+prompt.open_with("notes.md").on_result(move |answer| { /* ... */ });
+
+// Awaited instead - for an answer that gates work which is already async, or
+// several dialogs in sequence.
+match prompt.open_with("notes.md").await {
+    Some(SaveChoice::Save) => save().await,
+    Some(SaveChoice::Discard) => discard().await,
+    None => return,
+}
+
+// Arguments skipped, when the argument type is `Default`.
+prompt.open();
+
+// Held and closed later.
+let opening = prompt.open_with("notes.md");
+opening.close();
+
+// Closes whatever this modal is currently showing.
+prompt.close();
+```
+
+## Where to call it
+
+`use_modal` must be called under `LiberoProvider`, in a component that outlives
+every trigger - the modal is portaled from there and unmounts with it. A
+component that needs a dialog simply calls the hook itself.
+
+The handle is `Copy`, so a trigger elsewhere in the tree can take it as a prop.
+For one shared instance behind several triggers, provide it from your own hook:
+
+```rust
+fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
+    let handle = use_modal(/* ... */);
+    use_context_provider(|| handle);
+    handle
+}
+```
+
+## Closing from inside
+
+Content written in the render closure captures the `ModalScope`. A `Dialog`
+inside a modal also closes itself from its own header button, with no wiring.
+Only a component factored out of the closure needs the escape hatch:
 
 ```rust
 use dioxus::prelude::*;
-use libero::{components::Button, hooks::use_modal_context};
+use libero::{components::Button, hooks::use_modal_close};
 
 #[component]
-fn CloseButton() -> Element {
-    let modal = use_modal_context();
+fn CancelButton() -> Element {
+    let close = use_modal_close();
 
     rsx! {
-        Button { variant: "text", onclick: move |_| modal.close(), "Cancel" }
+        Button { variant: "text", onclick: move |_| close.call(()), "Cancel" }
     }
 }
 ```
 
 ## Accessibility
 
-`Modal` itself carries no role - it is the dimmed, focus-trapped layer. `Dialog`
-supplies `role="dialog"`, and adds `aria-modal="true"` on its own once it detects
-a `Modal` ancestor, so nesting the two is all that is needed. Give the dialog an
-`aria_label` (or your own `aria-labelledby`) or it is announced unnamed.
-
-Focus is trapped inside the modal for as long as it is mounted, Escape fires
-`onclose`, and the page behind it is scroll-locked
-(`data-lsx-scroll-lock`). Stacked modals each take their own z-index -
+The layer traps focus for as long as it is mounted, locks the page behind it
+(`data-lsx-scroll-lock`), and Escape or a backdrop click dismisses it - settling
+the `Opening` with `None`, so a handler written for an answer never runs on a
+dismissal. `Dialog` supplies `role="dialog"`, `aria-modal="true"` and its
+accessible name from `title`. Focus returns to whatever the user acted on to
+open it - `open_with` runs inside that element's own event handler, so the modal
+records it without being told. Stacked modals each take their own z-index -
 `z_index.modal + n * z_index.modal_step` - so a modal opened from a modal sits
-above it. Because it is mounted conditionally, closing it removes the trap and
-returns focus to normal document order.
+above it.
 
-## Props
+## API
 
-### Modal
+### `use_modal`
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `onclose` | `EventHandler<()>` | - | Called on Escape or a backdrop click - the caller's state, not `Modal`, decides whether it actually closes. |
-| `children` | `Element` | required | Content, mounted only while open. Pair with `Dialog` for the role and aria-modal semantics. |
+```rust
+pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
+    render: impl FnMut(ModalScope<S, R>) -> Element + 'static,
+) -> ModalHandle<S, R>
+```
 
-### Dialog
+`R` defaults to `()`, so a modal that answers nothing is `ModalScope<S>`.
 
-| Prop | Type | Default | Description |
-|---|---|---|---|
-| `aria_label` | `String` | - | Accessible name for the dialog. |
-| `radius` | `ThemeAwareValue` | `md` | Corner radius - the radius scale, or any CSS length. |
-| `size` | `ThemeAwareValue` | `md` | Caps the dialog's width. |
-| `variables` | `Variables` | - | Layered onto `Dialog`'s own - e.g. `Drawer`'s anchor/size vars. |
-| `children` | `Element` | required | The dialog's content. |
+### `ModalHandle<S, R = ()>`
 
-Like every component, both also take the shared props `sx`, `class`, `states`,
-and any extra HTML attributes.
+| Method | Returns | Description |
+|---|---|---|
+| `open_with(args: impl Into<S>)` | `Opening<R>` | Opens, superseding whatever was showing. |
+| `open()` | `Opening<R>` | Opens with `S::default()`; needs `S: Default`. |
+| `close()` | `()` | Dismisses whatever is currently showing. |
+| `is_open()` | `bool` | Whether this modal is showing. |
+
+`Copy`, so it can be passed to a trigger elsewhere in the tree.
+
+### `ModalScope<S, R = ()>`
+
+| Method | Returns | Description |
+|---|---|---|
+| `args()` | `S` | The arguments this opening was given. |
+| `close()` | `()` | Ends it as a dismissal - the same outcome as Escape. |
+| `resolve(value: R)` | `()` | Ends it with an answer for the caller. |
+
+`Copy`, so several handlers in one render closure can each hold it.
+
+### `Opening<R = ()>`
+
+| Method | Returns | Description |
+|---|---|---|
+| `on_result(f: impl FnMut(Option<R>))` | `Self` | Runs `f` when this opening settles; `None` if it was dismissed. |
+| `close()` | `()` | Closes this opening, if it is still the one showing. |
+| `.await` | `Option<R>` | Same outcome, as a future. |
+
+`Copy`, and inert once superseded.
+
+### `use_modal_close`
+
+```rust
+pub fn use_modal_close() -> Callback<()>
+```
+
+Closes the modal the calling component is rendered in. For a component factored
+out of the render closure, which cannot capture the `ModalScope`.
 
 ## Theme defaults
 
 | Struct | Field | Type | Description |
 |---|---|---|---|
-| `DialogDefaults` | `size` | `Sizes<u16>` | Max width in px per size step - `240, 300, 510, 600, 750, 900`. |
 | `ZIndexDefaults` | `modal` | `i32` | The first modal's z-index (`1000`). |
 | `ZIndexDefaults` | `modal_step` | `i32` | Added per stacked modal (`10`). |
 | `ZIndexDefaults` | `overlay` | `i32` | The backdrop's layer (`300`) - always below a modal. |
@@ -112,12 +232,8 @@ and any extra HTML attributes.
 | `--lsx-modal-z-index` | This modal's computed stacking level, per instance. |
 | `--lsx-z-index-modal` | The first modal's z-index, from the theme. |
 | `--lsx-z-index-overlay` | The backdrop layer, from the theme. |
-| `--lsx-dialog-size-<size>` | Dialog max width for that size step. |
-| `--lsx-dialog-size-override` | Set by `Dialog`'s `size` prop. |
-| `--lsx-dialog-radius` | Set by `Dialog`'s `radius` prop; falls back to `--lsx-radius-md`. |
 
 ## Data attributes
 
-`Modal` writes no state tokens of its own. Its root carries
-`data-lsx-scroll-lock`, which is what locks the page behind it; `Dialog` renders
-`role="dialog"` plus `aria-modal="true"` inside a modal.
+The modal layer writes no state tokens of its own. Its root carries
+`data-lsx-scroll-lock`, which is what locks the page behind it.

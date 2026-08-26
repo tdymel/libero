@@ -4,17 +4,17 @@ Crate: `libero`
 Import: `use libero::components::Dialog;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/surface/dialog.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - to pair with `Modal` for an overlay.
+Description: The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
 
 The dialog surface itself - padding, radius, shadow, and the `role`/`aria-modal`
-wiring. Pair it with [`Modal`](modal.md) for the portaled, backdrop-dimmed,
-focus-trapped overlay behaviour. `size` caps its width from the dialog scale
-(`md` is 510px).
+wiring. Inside a modal it also names itself from `title` and closes itself from
+its own header button; open one with [`use_modal`](modal.md). `size` caps its
+width from the dialog scale (`md` is 510px).
 
 ## Usage
 
 `Dialog` does no positioning of its own. Rendered inline like this it still
-carries the centering `margin` it wants inside `Modal`, so the example zeroes it
+carries the centering `margin` it wants inside a modal, so the example zeroes it
 out.
 
 ```rust
@@ -31,7 +31,7 @@ fn Demo() -> Element {
             aria_label: "Dialog surface",
             sx: sx().margin("0"),
             Title { size: "lg", "Dialog surface" }
-            Text { "Dialog rendered inline, without Modal's portal and backdrop." }
+            Text { "Dialog rendered inline, without a modal's portal and backdrop." }
         }
     }
 }
@@ -39,17 +39,21 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The root is always `role="dialog"`. Nested inside a `Modal` it also gets
+The root is always `role="dialog"`. Inside a modal it also gets
 `aria-modal="true"` - detected from the modal's context, not from a prop. Give
-it a name: `aria_label`, or an `aria-labelledby` through the pass-through
-attributes pointing at your own `Title`. The focus trap and the escape/backdrop
-dismissal come from `Modal`; `Dialog` has none of that on its own.
+it a name: `title` (rendered as the heading and pointed at by
+`aria-labelledby`), or `aria_label`, which overrides it. The focus trap and the
+escape/backdrop dismissal come from the modal layer; `Dialog` has none of that
+on its own.
 
 ## Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `aria_label` | `String` | - | Accessible name for the dialog. |
+| `aria_label` | `String` | - | Accessible name for the dialog; overrides `title` as the name. |
+| `title` | `String` | - | Heading, and the accessible name unless `aria_label` overrides it. |
+| `close_button` | `bool` | in a modal | Header button that closes the surrounding modal. On by default inside one, where it has something to close. |
+| `close_label` | `String` | `Close` | Accessible name for the close button. |
 | `radius` | `ThemeAwareValue` | `md` | Corner radius - the radius scale, or any CSS length. |
 | `size` | `ThemeAwareValue` | `md` | Caps the dialog's width from the dialog scale (`md` is 510px). |
 | `variables` | `Variables` | - | Layered onto `Dialog`'s own - e.g. `Drawer`'s anchor/size vars. |

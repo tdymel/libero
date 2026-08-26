@@ -6,10 +6,10 @@ use libero::{
 };
 
 const CONTENT: &str = r#"Title { size: "lg", "Dialog surface" }
-Text { "Dialog rendered inline, without Modal's portal and backdrop." }"#;
+Text { "Dialog rendered inline, without a modal's portal and backdrop." }"#;
 
-/// Inline, the surface keeps `Modal`'s centering margin - and it names itself,
-/// since nothing else here does.
+/// Inline, the surface keeps the centering margin it wants in a modal - and it
+/// names itself, since nothing else here does.
 const FIXED: [&str; 2] = [r#"aria_label: "Dialog surface""#, r#"sx: sx().margin("0")"#];
 
 #[component]
@@ -21,7 +21,12 @@ pub fn DialogPage() -> Element {
             markdown: "/md/dialog.md",
             properties: vec![
                 props("Dialog", vec![
-                    prop("aria_label", "String").doc("Accessible name for the dialog."),
+                    prop("aria_label", "String").doc("Accessible name for the dialog; overrides title as the name."),
+                    prop("title", "String").doc("Heading, and the accessible name unless aria_label overrides it."),
+                    prop("close_button", "bool")
+                        .default("in a modal")
+                        .doc("Header button that closes the surrounding modal. On by default inside one, where it has something to close."),
+                    prop("close_label", "String").default("Close").doc("Accessible name for the close button."),
                     prop("radius", "ThemeAwareValue").default("md").doc("Corner radius - the radius scale, or any CSS length."),
                     prop("size", "ThemeAwareValue")
                         .default("md")
@@ -34,8 +39,11 @@ pub fn DialogPage() -> Element {
             lead: rsx! {
                 Text {
                     "The dialog surface itself - padding, radius, shadow, and the role/"
-                    "aria-modal wiring. Pair it with Modal for the portaled, backdrop-"
-                    "dimmed, focus-trapped overlay behavior. "
+                    "aria-modal wiring. Inside a modal it also names itself from "
+                    Code { source: "title" }
+                    " and closes itself from its own header button; open one with "
+                    Code { source: "use_modal" }
+                    ". "
                     Code { source: "size" }
                     " caps its width from the dialog scale (md is 510px)."
                 }
@@ -56,7 +64,7 @@ pub fn DialogPage() -> Element {
                         radius: values.str("radius"),
                         sx: sx().margin("0"),
                         Title { size: "lg", "Dialog surface" }
-                        Text { "Dialog rendered inline, without Modal's portal and backdrop." }
+                        Text { "Dialog rendered inline, without a modal's portal and backdrop." }
                     }
                 },
             }

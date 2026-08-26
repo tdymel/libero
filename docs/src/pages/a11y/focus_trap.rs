@@ -36,7 +36,7 @@ pub fn FocusTrapPage() -> Element {
             lead: rsx! {
                 Text {
                     "Confines Tab/Shift+Tab cycling to its children - the same mechanism "
-                    "Modal uses internally to keep keyboard focus inside an open dialog. It "
+                    "the modal layer uses internally to keep keyboard focus inside an open dialog. It "
                     "focuses its first focusable child on mount, so flipping the switch below "
                     "moves focus into the trap; Tab from there cycles First/Second/Third "
                     "without ever reaching Before or After."

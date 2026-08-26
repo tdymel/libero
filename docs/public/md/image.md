@@ -39,7 +39,7 @@ watches the `<img>`'s `onerror` and swaps the source then, so a working `src`
 never fetches the fallback.
 
 `zoomable` wraps the image in a click-to-zoom overlay. The inline image becomes a
-`<button>`, and clicking it opens the picture in a [Modal](modal.md) at up to
+`<button>`, and clicking it opens the picture in a [modal](modal.md) at up to
 90vw/90vh, `object-fit: contain`. `zoomed_src` supplies a larger source for the
 overlay when the inline one is a thumbnail.
 
@@ -75,7 +75,7 @@ zooms. Its accessible name is derived from `alt`: `Zoom in: <alt>` closed,
 empty. The inner `<img>` is then `alt=""`/`role="presentation"`, since the button
 already carries the name.
 
-The overlay is a `Modal` + `Dialog`, so Escape closes it and focus is trapped
+The overlay is a modal layer + `Dialog`, so Escape closes it and focus is trapped
 inside while it is open; the overlay itself is a button with `data-autofocus`, so
 focus lands there on open and returns to the inline image on close.
 

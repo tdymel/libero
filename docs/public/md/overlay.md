@@ -6,7 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overla
 Index: [index.md](index.md) - every other component's markdown page
 Description: A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.
 
-Dims and blurs whatever is behind it - `Modal` renders one behind its content.
+Dims and blurs whatever is behind it - a [modal](modal.md) renders one behind its content.
 Render it conditionally; there is no `open`. It spans the viewport as
 `position: fixed`, and children are centred in it, which is what makes it a
 loading layer as well as a backdrop.
@@ -55,7 +55,7 @@ fn Demo() -> Element {
 The root is a plain `div` with no role: it is decoration plus a click target, and
 the thing it covers is what carries the semantics. It does not trap focus or hide
 the content behind it from a screen reader, so an overlay used as a modal
-backdrop belongs with a `Dialog`/`Modal` (which owns the `aria-modal` and focus
+backdrop belongs with a `Dialog` in a modal (which owns the `aria-modal` and focus
 trap) rather than on its own. `onclick` is the backdrop-click case; a keyboard
 user needs an Escape handler on the dialog, since a `div` takes no focus.
 
