@@ -210,6 +210,18 @@ pub fn Switch(props: SwitchProps) -> Element {
                 onchange.call(!checked);
             }
         })
+        // `role="switch"` is a button-like control, and ARIA's pattern for it
+        // takes Enter as well as Space. A bare checkbox does not, on any
+        // platform, so the key has to be handled here rather than left to the
+        // UA. Space still arrives as a click and is not touched.
+        .event("onkeydown", move |event: Event<KeyboardData>| {
+            if event.key() == Key::Enter && !disabled {
+                event.prevent_default();
+                if let Some(onchange) = &onchange {
+                    onchange.call(!checked);
+                }
+            }
+        })
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, Vec::new(), ());
 

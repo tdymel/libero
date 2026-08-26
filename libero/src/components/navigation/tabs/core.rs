@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{Variables, variables},
+        common::{Variables, focus_ring_sx, variables},
         layout::use_box,
     },
     hooks::use_element,
@@ -48,6 +48,14 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
                 .color("inherit")
                 .white_space("nowrap")
                 .cursor("pointer"),
+        )
+        // `appearance: none` and `border: 0` above take the UA's own focus
+        // ring with them, so the tab has to draw one or keyboard users cannot
+        // see where they are. Inset, because the strip's line sits flush
+        // against the tab's bottom edge and an outset ring would be clipped.
+        .selector(
+            "& [role=\"tab\"]:focus-visible",
+            focus_ring_sx().outline_offset("-2px"),
         )
         .selector(
             "& [role=\"tab\"]:hover:not([aria-selected=\"true\"]):not([aria-disabled=\"true\"])",
