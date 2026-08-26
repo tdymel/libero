@@ -69,7 +69,18 @@ pub fn DocPage(
                             Chip {
                                 // `External`, or the router parses the path as
                                 // a route and fails - it is a static file.
-                                to: NavigationTarget::External(markdown),
+                                //
+                                // Root-relative only works where something
+                                // serves `public/`. A native window resolves
+                                // it against `dioxus://index.html` and drops
+                                // it for having the wrong scheme, so point at
+                                // the repo copy there instead - that opens a
+                                // browser.
+                                to: NavigationTarget::External(if cfg!(target_arch = "wasm32") {
+                                    markdown.clone()
+                                } else {
+                                    format!("{REPO}docs/public{markdown}")
+                                }),
                                 target: "_blank",
                                 size: "sm",
                                 variant: "outlined",

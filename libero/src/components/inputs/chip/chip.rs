@@ -265,6 +265,13 @@ pub fn Chip(props: ChipProps) -> Element {
                 onchange.call(!checked);
             }
         })
+        // Blitz forwards a `<label>` click to its input as a default action
+        // that emits `input`, never `click` - see `Switch`, same shape.
+        .event("oninput", move |_: FormEvent| {
+            if let Some(onchange) = &onchange {
+                onchange.call(!checked);
+            }
+        })
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, Vec::new(), ());
 

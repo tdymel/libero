@@ -6,10 +6,23 @@
 //!
 //! cargo run -p docs --example native_style_probe --features native-vello
 
+use blitz_traits::events::{
+    BlitzPointerEvent, BlitzPointerId, MouseEventButton, MouseEventButtons, Point, PointerCoords,
+    PointerDetails, UiEvent,
+};
 use blitz_traits::shell::{ColorScheme, Viewport};
 use dioxus::prelude::*;
 use dioxus_native::{DioxusDocument, DocumentConfig};
-use libero::{LiberoProvider, components::Switch};
+use libero::{
+    LiberoProvider,
+    components::{Chip, Options, SegmentedControl, Switch},
+};
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Pick {
+    One,
+    Two,
+}
 
 /// Raw transforms, no libero involved - which forms does Blitz keep?
 #[component]
@@ -145,9 +158,125 @@ fn thumb(doc: &DioxusDocument) -> String {
     last
 }
 
+static PICKED: GlobalSignal<Pick> = Global::new(|| Pick::One);
+static CHIPPED: GlobalSignal<bool> = Global::new(|| false);
+
+#[component]
+fn Controls() -> Element {
+    rsx! {
+        LiberoProvider {
+            SegmentedControl {
+                value: PICKED(),
+                onchange: move |v: Pick| *PICKED.write() = v,
+            }
+            Chip {
+                checked: CHIPPED(),
+                onchange: move |v| *CHIPPED.write() = v,
+                "pick me"
+            }
+        }
+    }
+}
+
+/// Click the centre of the first node matching `tag` whose text contains
+/// `text`, the way the shell would: a real pointer down/up pair.
+fn click(doc: &mut DioxusDocument, tag: &str, text: &str) {
+    let target = {
+        let inner = doc.inner.borrow();
+        let mut found = None;
+        inner.visit(|id, node| {
+            if found.is_some() {
+                return;
+            }
+            let Some(element) = node.element_data() else {
+                return;
+            };
+            if element.name.local.to_string() == tag && node.text_content().contains(text) {
+                found = inner.get_client_bounding_rect(id);
+            }
+        });
+        found
+    };
+    let Some(rect) = target else {
+        println!("  no <{tag}> containing {text:?}");
+        return;
+    };
+    let (x, y) = (
+        (rect.x + rect.width / 2.0) as f32,
+        (rect.y + rect.height / 2.0) as f32,
+    );
+    for down in [true, false] {
+        let event = BlitzPointerEvent {
+            id: BlitzPointerId::Mouse,
+            is_primary: true,
+            coords: PointerCoords {
+                page_x: x,
+                page_y: y,
+                screen_x: x,
+                screen_y: y,
+                client_x: x,
+                client_y: y,
+            },
+            button: MouseEventButton::Main,
+            buttons: if down {
+                MouseEventButtons::Primary
+            } else {
+                MouseEventButtons::empty()
+            },
+            mods: Default::default(),
+            details: PointerDetails::default(),
+            element: Point { x: 0.0, y: 0.0 },
+            active_pointers: Default::default(),
+        };
+        blitz_dom::Document::handle_ui_event(
+            doc,
+            if down {
+                UiEvent::PointerDown(event)
+            } else {
+                UiEvent::PointerUp(event)
+            },
+        );
+    }
+    blitz_dom::Document::poll(doc, None);
+    doc.inner.borrow_mut().resolve(0.0);
+}
+
+fn picked() -> &'static str {
+    match PICKED() {
+        Pick::One => "One",
+        Pick::Two => "Two",
+    }
+}
+
+/// Do the two label-wrapped controls actually receive a click?
+fn controls() {
+    let mut doc = DioxusDocument::new(
+        VirtualDom::new(Controls),
+        DocumentConfig {
+            viewport: Some(Viewport::new(800, 600, 1.0, ColorScheme::Light)),
+            html_parser_provider: Some(std::sync::Arc::new(blitz_html::HtmlProvider)),
+            ..Default::default()
+        },
+    );
+    doc.initial_build();
+    blitz_dom::Document::poll(&mut doc, None);
+    doc.inner.borrow_mut().resolve(0.0);
+
+    println!("\n=== label-wrapped controls ===");
+    let read = |doc: &DioxusDocument| doc.vdom.in_runtime(|| (picked(), CHIPPED()));
+
+    println!("segmented before: {:?}", read(&doc));
+    click(&mut doc, "label", "Two");
+    println!("segmented after:  {:?}", read(&doc));
+
+    click(&mut doc, "label", "pick me");
+    println!("chip after:       {:?}", read(&doc));
+}
+
 fn main() {
     dump("raw transforms", Raw);
     dump("checked", On);
     dump("unchecked", Off);
     live();
+    controls();
 }

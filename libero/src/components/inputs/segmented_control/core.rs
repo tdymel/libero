@@ -238,7 +238,11 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                             // label is an icon, so the radio carries it.
                             "aria-label": segment.name.clone(),
                             checked: selected == Some(index),
-                            disabled: segment.disabled,
+                            // `Some(true)` or nothing: dioxus-native writes a
+                            // `false` bool as the string "false", and Blitz
+                            // reads `disabled` by presence - so `false` would
+                            // disable every segment.
+                            disabled: segment.disabled.then_some(true),
                             // `onclick` and cancelled, not `onchange`: dioxus
                             // writes `checked` as a DOM property and skips
                             // unchanged attributes, so a controlled radio that
@@ -250,6 +254,19 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                                 let disabled = segment.disabled;
                                 move |event: Event<MouseData>| {
                                     event.prevent_default();
+                                    if !disabled {
+                                        onselect.call(index);
+                                    }
+                                }
+                            },
+                            // Blitz forwards a `<label>` click to its input as
+                            // a default action that emits `input`, never
+                            // `click` - see `Switch`, same shape. Both
+                            // handlers select the same index, so the two
+                            // firing together is a no-op rather than a fight.
+                            oninput: {
+                                let disabled = segment.disabled;
+                                move |_: FormEvent| {
                                     if !disabled {
                                         onselect.call(index);
                                     }
