@@ -101,9 +101,11 @@ with the default prevented so the caret does not jump. Both paths clamp to
 `aria-hidden`. Neither button is a tab stop - the field is, and the arrow keys
 do the same job from there.
 
-Each is capped at `1.5em`, the control's line box, so they scale with `size`
-and never outgrow the frame: an `ActionIcon`'s own size comes off the icon
-scale, which is taller than a field's text at every step.
+The steppers take their size from the field's, one icon step per two field
+steps. `ActionIcon`'s scale (16, 20, 24, 32, 40, 48px) climbs faster than a
+field's content box (18, 20, 22, 24, 26, 28px), so matching the steps directly
+would put a 24px button in a 22px box at `md` and let the steppers decide the
+field's height.
 
 ## Accessibility
 

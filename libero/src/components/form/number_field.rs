@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
 };
@@ -19,11 +19,18 @@ use crate::{
 static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
 
-/// What an `ActionIcon` needs to sit inside a field. Its own size comes off
-/// the icon scale, which is taller than a field's text at every step - so two
-/// of them would decide the field's height. `1.5em` is the control's line box,
-/// so they scale with `size` and never outgrow it.
-static STEPPER_SX: StaticSx = StaticSx::new(|| sx().width("1.5em").height("1.5em"));
+/// The icon step a stepper takes for a field step. `ActionIcon`'s own scale
+/// (16, 20, 24, 32, 40, 48px) climbs faster than a field's content box
+/// (18, 20, 22, 24, 26, 28px), so the two cannot be the same step: at `md` an
+/// `md` icon is 24px in a 22px box and the steppers would set the field's
+/// height. Two field steps per icon step fits every step with room to spare.
+const fn stepper_size(size: Size) -> Size {
+    match size {
+        Size::Xs | Size::Sm => Size::Xs,
+        Size::Md | Size::Lg => Size::Sm,
+        Size::Xl | Size::Xxl => Size::Md,
+    }
+}
 
 // Hand-written rather than `field_props!`, which is not generic - as
 // `SelectProps` is.
@@ -180,7 +187,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         rsx! {
             ActionIcon {
                 aria_label: decrement_label,
-                sx: STEPPER_SX.clone(),
+                size: ThemeAwareValue::Size(stepper_size(size)),
                 // Not a tab stop: the field is, and the arrow keys do the same
                 // job from there.
                 tabindex: "-1",
@@ -190,7 +197,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
             }
             ActionIcon {
                 aria_label: increment_label,
-                sx: STEPPER_SX.clone(),
+                size: ThemeAwareValue::Size(stepper_size(size)),
                 tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge(true),
