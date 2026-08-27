@@ -12,10 +12,10 @@ use crate::{
     utils::warn,
 };
 
-/// The steppers, stacked in the trailing slot. Two `ActionIcon`s rather than
-/// the native spinner: `type="number"` hands back an empty string for text a
-/// browser cannot parse, which is exactly the in-progress text the edit buffer
-/// exists to keep.
+/// The steppers, side by side in the trailing slot, behind `steppers`. Two
+/// `ActionIcon`s rather than the native spinner: `type="number"` hands back an
+/// empty string for text a browser cannot parse, which is exactly the
+/// in-progress text the edit buffer exists to keep.
 static STEPPERS_SX: StaticSx =
     StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
 
@@ -56,6 +56,11 @@ pub struct NumberFieldProps<T: NumberValue> {
     step: Option<T>,
     #[props(default, into)]
     placeholder: Option<String>,
+    /// Shows the minus/plus buttons in the trailing slot. Off by default: a
+    /// number is usually typed, the arrow keys step it either way, and two
+    /// buttons are the most expensive thing a field can carry.
+    #[props(default)]
+    steppers: bool,
     /// Announced on the stepper that raises the value.
     #[props(default, into)]
     increment_label: Option<String>,
@@ -94,8 +99,8 @@ pub struct NumberFieldProps<T: NumberValue> {
     states: Input<States>,
 }
 
-/// A numeric field over the caller's own number type, with steppers in its
-/// trailing slot.
+/// A numeric field over the caller's own number type, with optional steppers
+/// in its trailing slot.
 ///
 /// Every primitive number is a `NumberValue`, so `T` is normally inferred from
 /// `value` and there is nothing to implement. Controlled: it renders `value`
@@ -106,6 +111,9 @@ pub struct NumberFieldProps<T: NumberValue> {
 /// browser cannot parse, which would erase `"-"` and `"1."` as they are typed.
 /// The field keeps the raw text in an edit buffer instead and only publishes a
 /// value the caller's type could parse.
+///
+/// Arrow Up and Arrow Down step the value whether or not `steppers` renders
+/// the buttons - the keys are what `role="spinbutton"` promises.
 #[component]
 pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     let theme = use_theme();
@@ -178,8 +186,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .decrement_label
         .clone()
         .unwrap_or_else(|| "Decrease".to_string());
-    let steppers = use_box().framework_sx(&STEPPERS_SX).prepare();
-    let steppers = steppers.render(
+    // Prepared either way - it is a hook, and `steppers` is a prop.
+    let stepper_box = use_box().framework_sx(&STEPPERS_SX).prepare();
+    let steppers = stepper_box.render(
         HtmlTag::Div,
         Vec::new(),
         // Side by side, minus then plus: two stacked carets in a field's line
@@ -205,7 +214,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
             }
         },
     );
-    let trailing = Some(steppers);
+    let trailing = props.steppers.then_some(steppers);
     let frame = use_field_frame()
         .trailing(&trailing)
         .states(field.states())

@@ -403,6 +403,7 @@ fn a_number_field_is_a_spinbutton_carrying_its_range() {
                     label: "Quantity",
                     min: 1i32,
                     max: 99i32,
+                    steppers: true,
                     value: 4i32,
                     onchange: move |_| {},
                 }
@@ -509,4 +510,24 @@ fn a_custom_number_value_formats_itself() {
     let body = body(&render(app));
 
     assert_eq!(attributes_of(&body, "input")["value"], "12.34");
+}
+
+/// The steppers are opt-in: a number is usually typed, and two buttons are the
+/// most expensive thing a field can carry.
+#[test]
+fn a_number_field_has_no_steppers_until_asked() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NumberField { label: "Quantity", value: 1i32, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(!body.contains("<button"), "{body}");
+    assert!(!body.contains("data-slot"), "{body}");
+    // The keys still step it - that is what `role="spinbutton"` promises.
+    assert_eq!(attributes_of(&body, "input")["role"], "spinbutton");
 }

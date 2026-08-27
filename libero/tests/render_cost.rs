@@ -133,6 +133,7 @@ fn render_cost_per_component() {
         // Every slot filled - what the field chrome costs over a bare control.
         "TextField+slots" { TextField { oninput: move |_| {}, label: "l", description: "d", helper: "h", status: "e", required: true } }
         "NumberField" { NumberField { value: 1i32, onchange: move |_| {} } }
+        "NumberField+steppers" { NumberField { value: 1i32, onchange: move |_| {}, steppers: true } }
         "Textarea" { Textarea { oninput: move |_| {} } }
         "PasswordField" { PasswordField { oninput: move |_| {} } }
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }

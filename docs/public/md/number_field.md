@@ -92,8 +92,21 @@ Override one when the type needs it - a wrapping angle, a logarithmic step.
 
 ## Steppers and keys
 
-Two `ActionIcon`s in the trailing slot - minus then plus, side by side - lower
-and raise the value by `step`, defaulting to `T::default_step()`. Arrow Up and Arrow Down do the same from the keyboard,
+`steppers` puts two `ActionIcon`s in the trailing slot - minus then plus, side
+by side - which lower and raise the value by `step`, defaulting to
+`T::default_step()`. It is **off by default**: a number is usually typed, and
+two buttons are the most expensive thing a field can carry.
+
+```rust
+NumberField {
+    label: "Quantity",
+    steppers: true,
+    min: 1,
+    max: 99,
+    value: quantity(),
+    onchange: move |next| quantity.set(Some(next)),
+}
+``` Arrow Up and Arrow Down do the same from the keyboard,
 with the default prevented so the caret does not jump. Both paths clamp to
 `min`/`max`, and an empty field steps from `T::zero()`.
 
@@ -131,6 +144,7 @@ and the focus ring drawn by the frame around the control.
 | `min` | `Option<T>` | - | Floor, enforced on typing and on the steppers alike. |
 | `max` | `Option<T>` | - | Ceiling, same. |
 | `step` | `Option<T>` | `T::default_step()` | What one press of a stepper moves by. |
+| `steppers` | `bool` | `false` | Shows the minus/plus buttons in the trailing slot. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
 | `increment_label` | `String` | `Increase` | Announced on the stepper that raises the value. |
 | `decrement_label` | `String` | `Decrease` | Announced on the stepper that lowers it. |
@@ -170,4 +184,5 @@ The `--lsx-field-*` variables are [TextField](text_field.md)'s, shared unchanged
 ## Data attributes
 
 The same as [TextField](text_field.md): state tokens on the wrapper's and the
-frame's `data-state`, and `data-slot="trailing"` on the steppers' slot.
+frame's `data-state`, and `data-slot="trailing"` on the steppers' slot when
+`steppers` renders them.

@@ -92,6 +92,9 @@ pub fn NumberFieldPage() -> Element {
                         .doc("What one press of a stepper moves by; `1` for an integer, `1.0` for a float."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
+                    prop("steppers", "bool")
+                        .default("false")
+                        .doc("Shows the minus/plus buttons in the trailing slot. Off by default: a number is usually typed, and the arrow keys step it either way."),
                     prop("increment_label", "String")
                         .default("Increase")
                         .doc("Announced on the stepper that raises the value."),
@@ -117,7 +120,7 @@ pub fn NumberFieldPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "A numeric field over the caller's own number type, with steppers in its "
+                    "A numeric field over the caller's own number type, with optional steppers in its "
                     "trailing slot. Every primitive number implements "
                     Code { source: "NumberValue" }
                     ", so "
@@ -131,7 +134,9 @@ pub fn NumberFieldPage() -> Element {
                     Code { source: "1." }
                     " survive being typed and only a value your type could parse reaches "
                     Code { source: "onchange" }
-                    "."
+                    ". Arrow Up and Arrow Down always step it; "
+                    Code { source: "steppers" }
+                    " adds the buttons."
                 }
             },
             Demo {
@@ -181,6 +186,7 @@ pub fn NumberFieldPage() -> Element {
                         }),
                     // Bounds are typed as `T`, so what the switch prints
                     // follows the value type the same way the props do.
+                    Control::switch("steppers").default("true"),
                     Control::switch("range").code(|_, values| {
                         match (values.str("range").as_str(), values.str("type").as_str()) {
                             ("true", "f64") => {
@@ -231,12 +237,13 @@ pub fn NumberFieldPage() -> Element {
                     let required = (values.str("required") == "true").then_some(true);
                     let disabled = (values.str("disabled") == "true").then_some(true);
                     let ranged = values.str("range") == "true";
+                    let steppers = values.str("steppers") == "true";
 
                     match values.str("type").as_str() {
                         "f64" => rsx! {
                             NumberField {
                                 size, radius, label, description, helper, status, required,
-                                disabled,
+                                disabled, steppers,
                                 step: 0.5f64,
                                 min: ranged.then_some(0.0f64),
                                 max: ranged.then_some(10.0f64),
@@ -247,7 +254,7 @@ pub fn NumberFieldPage() -> Element {
                         "cents" => rsx! {
                             NumberField {
                                 size, radius, label, description, helper, status, required,
-                                disabled,
+                                disabled, steppers,
                                 min: ranged.then_some(Cents(0)),
                                 max: ranged.then_some(Cents(10_000)),
                                 value: price(),
@@ -257,7 +264,7 @@ pub fn NumberFieldPage() -> Element {
                         _ => rsx! {
                             NumberField {
                                 size, radius, label, description, helper, status, required,
-                                disabled,
+                                disabled, steppers,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
