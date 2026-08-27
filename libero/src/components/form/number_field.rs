@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Caption, ClassList, HtmlTag, Input, NumberValue, States,
+        Caption, ClassList, HtmlTag, Input, NumberValue, States,
         form::{FIELD_CONTROL_SX, FieldStatus, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, sx},
     theme::Size,
     utils::warn,
 };
@@ -20,6 +20,28 @@ static STEPPERS_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .justify_content("center")
+        // Plain `<button>`s, not `ActionIcon`s. An `ActionIcon` sizes itself
+        // from the icon scale, so two of them stacked are taller than a
+        // field's text at every step - the steppers would decide the field's
+        // height instead of the size scale. They are also ~2.2x a `Leaf`
+        // each, for chrome (ripple, variants) an in-field affordance does not
+        // want.
+        .selector(
+            "& > button",
+            sx().display("flex")
+                .align_items("center")
+                .justify_content("center")
+                .height("0.75em")
+                .width("1.5em")
+                .padding("0")
+                .border("none")
+                .background("transparent")
+                .color("inherit")
+                .cursor("pointer")
+                .selector(":disabled", sx().cursor("not-allowed")),
+        )
+        .selector("& > button > svg", sx().width("0.75em").height("0.75em"))
+        .selector("& > button:hover:not(:disabled)", sx().color("black"))
 });
 
 // Hand-written rather than `field_props!`, which is not generic - as
@@ -160,27 +182,33 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
+    let increment_label = props
+        .increment_label
+        .clone()
+        .unwrap_or_else(|| "Increase".to_string());
+    let decrement_label = props
+        .decrement_label
+        .clone()
+        .unwrap_or_else(|| "Decrease".to_string());
     let steppers = use_box().framework_sx(&STEPPERS_SX).prepare();
     let steppers = steppers.render(
         HtmlTag::Div,
         Vec::new(),
         rsx! {
-            ActionIcon {
-                aria_label: props
-                    .increment_label
-                    .clone()
-                    .unwrap_or_else(|| "Increase".to_string()),
-                size: ThemeAwareValue::Size(size),
+            button {
+                r#type: "button",
+                "aria-label": "{increment_label}",
+                // A stepper is not a tab stop: the field is, and the arrow
+                // keys do the same job from there.
+                tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge(true),
                 CaretIcon { up: true }
             }
-            ActionIcon {
-                aria_label: props
-                    .decrement_label
-                    .clone()
-                    .unwrap_or_else(|| "Decrease".to_string()),
-                size: ThemeAwareValue::Size(size),
+            button {
+                r#type: "button",
+                "aria-label": "{decrement_label}",
+                tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge(false),
                 CaretIcon { up: false }
@@ -236,7 +264,8 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
 }
 
 /// libero ships no icon set; a stepper with no glyph is a blank button. Kept
-/// private, the same call the reveal toggle's eye makes.
+/// private, the same call the reveal toggle's eye makes. Sized by the stepper
+/// column, not by the icon scale.
 #[component]
 fn CaretIcon(up: bool) -> Element {
     let d = match up {

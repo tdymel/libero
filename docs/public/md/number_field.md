@@ -98,7 +98,9 @@ with the default prevented so the caret does not jump. Both paths clamp to
 `min`/`max`, and an empty field steps from `T::zero()`.
 
 `increment_label` and `decrement_label` name the buttons; the glyphs are
-`aria-hidden`.
+`aria-hidden`. Neither button is a tab stop - the field is, and the arrow keys
+do the same job from there - and both are sized by the field's text rather than
+by the icon scale, so the steppers never decide the field's height.
 
 ## Accessibility
 

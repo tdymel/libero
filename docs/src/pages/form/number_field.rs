@@ -170,14 +170,6 @@ pub fn NumberFieldPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
-                    // Only the integer case has a range, so the props follow
-                    // the type the way `T` does.
-                    Control::switch("range")
-                        .hidden_when(|values| values.str("type") != "i32")
-                        .code(|_, values| match values.str("range").as_str() {
-                            "true" => vec!["min: 1".to_string(), "max: 99".to_string()],
-                            _ => vec![],
-                        }),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
@@ -187,9 +179,30 @@ pub fn NumberFieldPage() -> Element {
                             "error" => vec!["status: \"Not in stock.\"".to_string()],
                             _ => vec![],
                         }),
+                    // Bounds are typed as `T`, so what the switch prints
+                    // follows the value type the same way the props do.
+                    Control::switch("range").code(|_, values| {
+                        match (values.str("range").as_str(), values.str("type").as_str()) {
+                            ("true", "f64") => {
+                                vec!["min: 0.0".to_string(), "max: 10.0".to_string()]
+                            }
+                            ("true", "cents") => vec![
+                                "min: Cents(0)".to_string(),
+                                "max: Cents(10_000)".to_string(),
+                            ],
+                            ("true", _) => vec!["min: 1".to_string(), "max: 99".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Quantity\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec!["description: \"How many to add to the order.\"".to_string()],
                             _ => vec![],
                         }
                     }),
@@ -204,6 +217,8 @@ pub fn NumberFieldPage() -> Element {
                 ],
                 render: move |values: DemoValues| {
                     let label = (values.str("label") == "true").then(|| "Quantity".to_string());
+                    let description = (values.str("description") == "true")
+                        .then(|| "How many to add to the order.".to_string());
                     let helper =
                         (values.str("helper") == "true").then(|| "Up to 99 per order.".to_string());
                     let status = match values.str("status").as_str() {
@@ -220,22 +235,29 @@ pub fn NumberFieldPage() -> Element {
                     match values.str("type").as_str() {
                         "f64" => rsx! {
                             NumberField {
-                                size, radius, label, helper, status, required, disabled,
+                                size, radius, label, description, helper, status, required,
+                                disabled,
                                 step: 0.5f64,
+                                min: ranged.then_some(0.0f64),
+                                max: ranged.then_some(10.0f64),
                                 value: weight(),
                                 onchange: move |next| weight.set(Some(next)),
                             }
                         },
                         "cents" => rsx! {
                             NumberField {
-                                size, radius, label, helper, status, required, disabled,
+                                size, radius, label, description, helper, status, required,
+                                disabled,
+                                min: ranged.then_some(Cents(0)),
+                                max: ranged.then_some(Cents(10_000)),
                                 value: price(),
                                 onchange: move |next| price.set(Some(next)),
                             }
                         },
                         _ => rsx! {
                             NumberField {
-                                size, radius, label, helper, status, required, disabled,
+                                size, radius, label, description, helper, status, required,
+                                disabled,
                                 min: ranged.then_some(1i32),
                                 max: ranged.then_some(99i32),
                                 value: quantity(),
