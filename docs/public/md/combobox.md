@@ -280,7 +280,7 @@ it goes into event handlers by value.
 ## Theme defaults
 
 `ComboboxDefaults` on the theme; per-size values live in its `sizes` scale,
-seeded with the numbers `SelectDefaults` uses.
+seeded with the numbers `FieldDefaults` uses.
 
 | Field | Type | Description |
 |---|---|---|

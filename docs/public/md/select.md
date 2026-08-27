@@ -2,11 +2,12 @@
 
 Crate: `libero`
 Import: `use libero::components::{Options, Select};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/select>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 
-A styled native select over an enum, always wrapped in its own `label` element.
+A styled native select over an enum, with the five slots every field shares:
+label, description, the control, helper text, and a validation message.
 The options are the enum's variants - `#[derive(Options)]` lists them in
 declaration order and names each one - so `onchange` hands back the value itself
 rather than a string the caller has to look up again. Strictly controlled:
@@ -44,7 +45,37 @@ fn Demo() -> Element {
 }
 ```
 
-`size` and `radius` step independently, and `disabled` dims the whole control.
+`size` and `radius` step independently, and `disabled` dims the whole field.
+Both read the same `FieldDefaults` scale [TextField](text_field.md) does, so the
+two line up in one form by construction.
+
+## Captions
+
+`label`, `description` and `helper` are `Caption`s, so each takes either a string
+or an `Element`:
+
+```rust
+Select {
+    label: "Plan",
+    description: "Billed monthly.",
+    helper: rsx! { "Change it any time from " strong { "Settings" } },
+    value: plan(),
+    onchange: move |next| plan.set(Some(next)),
+}
+```
+
+A string caption is given an id and named by the select's `aria-describedby`.
+Markup is rendered and styled the same way but names nothing - a caller who
+passes markup owns its accessibility.
+
+`status` is separate because a validator produces it. `FieldStatus::Error` and
+`FieldStatus::Warning` each carry their message; `&str` and `String` convert into
+`Error`, so `status: "Pick a size."` works. An error also sets `aria-invalid`; a
+warning does not, since it would announce a working field as broken.
+
+Note that `description` and `placeholder` say different things: the description
+is a caption above the control, the placeholder is the unpickable first entry
+that stands for "nothing picked yet".
 
 ## Nothing picked yet
 
@@ -143,12 +174,30 @@ option needs a listbox rather than a native `<select>`.
 
 ## Accessibility
 
-The root is always a `<label>` wrapping the `<select>`, so a click anywhere on the
-control focuses it and the label text - the `<span>` `label` renders - names the
-select without an `id`/`for` pair. Leave `label` unset only when something else
-already names the select; a bare `<select>` with no accessible name is a defect.
-`disabled` sets the native `disabled` attribute, so the browser handles the
-focus and interaction semantics.
+Focus lands on the `<select>`, but the focus ring is drawn by the frame around
+it, keyed off `:has(:focus-visible)` - so a keyboard focus rings the whole field
+and a mouse click does not ring anything.
+
+The label is a real `<label for>` paired with the select's `id`. It was a
+wrapping `<label>` before the field port; the pair replaced it because a wrapping
+label swallows clicks on anything else inside the field. A caller-supplied `id`
+takes over the generated one, and every slot follows it.
+
+Whichever of the description, helper and status slots are filled are joined into
+the select's `aria-describedby`, in reading order. A caller who passes their own
+`aria-describedby` wins outright: theirs is used and the generated list is
+dropped.
+
+`required` sets the native attribute and `aria-required`, and adds an asterisk to
+the label. The asterisk is `aria-hidden` - `aria-required` already carries it to
+assistive technology.
+
+Leave `label` unset only when something else already names the select; a bare
+`<select>` with no accessible name is a defect. `disabled` sets the native
+`disabled` attribute, so the browser handles the focus and interaction semantics.
+
+The chevron is the browser's own: drawing ours would mean `appearance: none`, and
+with it the native picker affordance on every platform.
 
 The selection is written as `selected` on each `<option>`, not as `value` on the
 `<select>`. The property lands on the option itself, so it does not depend on
@@ -175,39 +224,58 @@ not apply here.
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else. |
 | `placeholder` | `String` | - | Shown while `value` is `None`, as an unpickable first entry. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the select. |
-| `label` | `String` | - | The field's own caption, above the control. The wrapper is a `<label>` either way; unset just leaves it wordless. |
-| `label_sx` | `Sx` | - | Styles the caption alone - the rest of `sx` lands on the wrapper. |
+| `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
+| `description` | `Caption` | - | Between the label and the control: what to pick. |
+| `helper` | `Caption` | - | Under the control: constraints, or what the choice affects. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
+| `disabled` | `bool` | `false` | Disables interaction and dims the field. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.
 
 ## Theme defaults
 
-`SelectDefaults` on the theme; per-size values live in its `sizes` scale.
+Almost everything is `FieldDefaults`, shared by every field. `SelectDefaults`
+keeps only what is genuinely this component's: which `size` and `radius` it
+starts at.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
-| `sizes` | `Sizes<SelectSizeLevel>` | `font_size`, `height`, `padding_x` per size. |
+| `field.gap` | `&'static str` | Vertical gap between the slots. |
+| `field.frame_gap` | `&'static str` | Horizontal gap inside the frame. |
+| `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_y`, `padding_x` per size. |
+| `select.size` | `Size` | Default `size` when the prop is omitted; `md`. |
+| `select.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
 
 ## CSS variables
 
 | Variable | Description |
 |---|---|
-| `--lsx-select-font-size-<size>` | `font-size` for that size step. |
-| `--lsx-select-height-<size>` | `height` for that size step. |
-| `--lsx-select-padding-x-<size>` | Horizontal padding for that size step. |
+| `--lsx-field-gap` | Vertical gap between the slots. |
+| `--lsx-field-label-font-size-<size>` | The label's `font-size` for that size step. |
+| `--lsx-field-caption-font-size-<size>` | `font-size` of the description, helper and status text. |
+| `--lsx-field-frame-gap` | Horizontal gap inside the frame. |
+| `--lsx-field-font-size-<size>` | `font-size` of the control for that size step. |
+| `--lsx-field-height-<size>` | The frame's `min-height` for that size step. |
+| `--lsx-field-padding-y-<size>` | The frame's vertical padding for that size step. |
+| `--lsx-field-padding-x-<size>` | The frame's horizontal padding for that size step. |
 
 `radius` reads the shared `--lsx-radius-<size>` scale rather than one of its own.
 
 ## Data attributes
 
-State tokens on the `<select>`'s `data-state`, space separated.
+State tokens on the wrapper's and the frame's `data-state`, space separated. The
+`<select>` itself carries none - the frame styles it.
 
 | Token | Condition |
 |---|---|
 | `size-<size>` | The `size` in effect. |
 | `radius-<size>` | The `radius` in effect. |
 | `disabled` | `disabled` is set. |
+| `required` | `required` is set. |
+| `warning` | `status` is a `Warning`. |
+| `error` | `status` is an `Error`. |
+
+The caption slots carry `data-slot="description"`, `"helper"`, `"status"` and
+`"required"`, which is how the wrapper styles them.

@@ -105,10 +105,10 @@ Focus lands on the `<input>`, but the focus ring is drawn by the frame around
 it, keyed off `:has(:focus-visible)` - so a keyboard focus rings the whole
 field and a mouse click does not ring anything.
 
-The label is a real `<label for>` paired with the input's `id`, not a wrapping
-`<label>` like [Select](select.md) uses - so a control placed inside the field
-later cannot have its clicks swallowed by the label. A caller-supplied `id`
-takes over the generated one, and every slot follows it.
+The label is a real `<label for>` paired with the input's `id`, never a wrapping
+`<label>` - a wrapping label swallows clicks on anything else inside the field,
+and every field ([Select](select.md) included) uses the pair for that reason.
+A caller-supplied `id` takes over the generated one, and every slot follows it.
 
 Whichever of the description, helper and status slots are filled are joined into
 the input's `aria-describedby`, in reading order. A caller who passes their own
@@ -162,7 +162,7 @@ starts at.
 |---|---|---|
 | `field.gap` | `&'static str` | Vertical gap between the slots. |
 | `field.frame_gap` | `&'static str` | Horizontal gap between leading, control and trailing. |
-| `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_x` per size. |
+| `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_y`, `padding_x` per size. |
 | `text_field.size` | `Size` | Default `size` when the prop is omitted; `md`. |
 | `text_field.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
 
@@ -175,7 +175,8 @@ starts at.
 | `--lsx-field-caption-font-size-<size>` | `font-size` of the description, helper and status text. |
 | `--lsx-field-frame-gap` | Horizontal gap inside the frame. |
 | `--lsx-field-font-size-<size>` | `font-size` of the control for that size step. |
-| `--lsx-field-height-<size>` | The frame's `height` for that size step. |
+| `--lsx-field-height-<size>` | The frame's `min-height` for that size step - the floor a single-line field sits at. |
+| `--lsx-field-padding-y-<size>` | The frame's vertical padding, which sets the height once the control wraps. |
 | `--lsx-field-padding-x-<size>` | The frame's horizontal padding for that size step. |
 
 `radius` reads the shared `--lsx-radius-<size>` scale rather than one of its own.

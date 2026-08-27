@@ -3,7 +3,6 @@ mod button;
 mod chip;
 mod combobox;
 mod segmented_control;
-mod select;
 mod slider;
 mod switch;
 
@@ -20,6 +19,5 @@ pub use combobox::{
     ComboboxState, use_combobox,
 };
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
-pub use select::{Select, SelectProps};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};
 pub use switch::{Switch, SwitchProps};

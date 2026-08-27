@@ -93,7 +93,6 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         chip,
         switch,
         field,
-        select,
         combobox,
         slider,
         list,
@@ -124,6 +123,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         white,
         // Plain values read from Rust - no CSS vars of their own.
         text_field: _,
+        select: _,
         scroll_area: _,
         tree: _,
         mark: _,
@@ -154,7 +154,6 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(chip.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(field.to_css_declarations());
-    declarations.extend(select.to_css_declarations());
     declarations.extend(combobox.to_css_declarations());
     declarations.extend(slider.to_css_declarations());
     declarations.extend(list.to_css_declarations());

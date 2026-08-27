@@ -69,7 +69,7 @@ pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefau
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use field::{
     FIELD_CAPTION_FONT_SIZE, FIELD_FONT_SIZE, FIELD_FRAME_GAP, FIELD_GAP, FIELD_HEIGHT,
-    FIELD_LABEL_FONT_SIZE, FIELD_PADDING_X, FieldDefaults, FieldSizeLevel,
+    FIELD_LABEL_FONT_SIZE, FIELD_PADDING_X, FIELD_PADDING_Y, FieldDefaults, FieldSizeLevel,
 };
 pub use flex::{
     FLEX_ALIGN_VAR, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP,
@@ -92,9 +92,7 @@ pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
-pub use select::{
-    SELECT_FONT_SIZE, SELECT_HEIGHT, SELECT_PADDING_X, SelectDefaults, SelectSizeLevel,
-};
+pub use select::SelectDefaults;
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
 pub use slider::{
     SLIDER_FONT_SIZE, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK,

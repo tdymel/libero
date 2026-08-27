@@ -6,6 +6,7 @@ pub const FIELD_LABEL_FONT_SIZE: SizeCss = SizeCss::new("--lsx-field-label-font-
 pub const FIELD_CAPTION_FONT_SIZE: SizeCss = SizeCss::new("--lsx-field-caption-font-size-");
 pub const FIELD_FONT_SIZE: SizeCss = SizeCss::new("--lsx-field-font-size-");
 pub const FIELD_HEIGHT: SizeCss = SizeCss::new("--lsx-field-height-");
+pub const FIELD_PADDING_Y: SizeCss = SizeCss::new("--lsx-field-padding-y-");
 pub const FIELD_PADDING_X: SizeCss = SizeCss::new("--lsx-field-padding-x-");
 pub const FIELD_GAP: CssVar = CssVar::new("--lsx-field-gap");
 pub const FIELD_FRAME_GAP: CssVar = CssVar::new("--lsx-field-frame-gap");
@@ -20,7 +21,11 @@ pub struct FieldSizeLevel {
     pub caption_font_size: &'static str,
     /// The control's own text.
     pub font_size: &'static str,
+    /// Floor for a single-line field, so every field in a form lines up.
     pub height: &'static str,
+    /// Drives the frame's real height once the control wraps - a `Textarea`,
+    /// or a field whose leading slot grows.
+    pub padding_y: &'static str,
     pub padding_x: &'static str,
 }
 
@@ -58,7 +63,9 @@ impl FieldDefaults {
 
     fn frame_size_sx(size: Size) -> Sx {
         sx().font_size(FIELD_FONT_SIZE.value(size))
-            .height(FIELD_HEIGHT.value(size))
+            .min_height(FIELD_HEIGHT.value(size))
+            .padding_top(FIELD_PADDING_Y.value(size))
+            .padding_bottom(FIELD_PADDING_Y.value(size))
             .padding_left(FIELD_PADDING_X.value(size))
             .padding_right(FIELD_PADDING_X.value(size))
     }
@@ -86,6 +93,7 @@ impl ToCssDeclarations for FieldDefaults {
             declarations.push(FIELD_CAPTION_FONT_SIZE.declare(size, level.caption_font_size));
             declarations.push(FIELD_FONT_SIZE.declare(size, level.font_size));
             declarations.push(FIELD_HEIGHT.declare(size, level.height));
+            declarations.push(FIELD_PADDING_Y.declare(size, level.padding_y));
             declarations.push(FIELD_PADDING_X.declare(size, level.padding_x));
         }
         declarations

@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, Options, Select, Text};
+use libero::components::{Code, FieldStatus, Options, Select, Text};
 
 /// The enum is the option list, so the snippet has to show it.
 const SIZE_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -44,7 +44,7 @@ pub fn SelectPage() -> Element {
     rsx! {
         DocPage {
             title: "Select",
-            source: "libero/src/components/inputs/select",
+            source: "libero/src/components/form/select.rs",
             markdown: "/md/select.md",
             properties: vec![
                 props("Select", vec![
@@ -64,19 +64,28 @@ pub fn SelectPage() -> Element {
                         .doc("Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else."),
                     prop("placeholder", "String")
                         .doc("Shown while `value` is `None`, as an unpickable first entry."),
+                    prop("label", "Caption")
+                        .doc("The field's caption, above the control. Names the field through a `for`/`id` pair. Takes a string or an `Element`."),
+                    prop("description", "Caption")
+                        .doc("Between the label and the control: what to pick."),
+                    prop("helper", "Caption")
+                        .doc("Under the control: constraints, or what the choice affects."),
+                    prop("status", "FieldStatus")
+                        .default("Valid")
+                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                    prop("required", "bool")
+                        .default("false")
+                        .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the select."),
-                    prop("label", "String")
-                        .doc("The field's own caption, above the control. The wrapper is a `<label>` either way; unset just leaves it wordless."),
-                    prop("label_sx", "Sx").doc("Styles the caption alone - the rest of `sx` lands on the wrapper."),
+                        .doc("Disables interaction and dims the field."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A styled native select over an enum, always wrapped in its own "
-                    Code { source: "label" }
-                    " element. The options are the enum's variants - "
+                    "A styled native select over an enum, with the five slots every field "
+                    "shares: label, description, the control, helper text, and a validation "
+                    "message. The options are the enum's variants - "
                     Code { source: "#[derive(Options)]" }
                     " lists them in declaration order - so "
                     Code { source: "onchange" }
@@ -103,14 +112,36 @@ pub fn SelectPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
-                    // The label is a whole element, not a style: with it
-                    // unset there is no `<span>` above the select at all.
+                    Control::toggle("status", ["valid", "warning", "error"])
+                        .default("valid")
+                        .code(|_, values| match values.str("status").as_str() {
+                            "warning" => vec![
+                                "status: FieldStatus::Warning(\"Large sizes reflow the page.\".into())".to_string(),
+                            ],
+                            "error" => vec!["status: \"Pick a size.\"".to_string()],
+                            _ => vec![],
+                        }),
+                    // Each caption is a whole element, not a style: unset,
+                    // the slot is not in the markup at all.
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Size\"".to_string()],
                             _ => vec![],
                         }
                     }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec!["description: \"Applies to body text.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("helper").code(|_, values| {
+                        match values.str("helper").as_str() {
+                            "true" => vec!["helper: \"You can change this later.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("required"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -118,6 +149,18 @@ pub fn SelectPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "Size".to_string()),
+                        description: (values.str("description") == "true")
+                            .then(|| "Applies to body text.".to_string()),
+                        helper: (values.str("helper") == "true")
+                            .then(|| "You can change this later.".to_string()),
+                        status: match values.str("status").as_str() {
+                            "warning" => {
+                                FieldStatus::Warning("Large sizes reflow the page.".to_string())
+                            }
+                            "error" => FieldStatus::Error("Pick a size.".to_string()),
+                            _ => FieldStatus::Valid,
+                        },
+                        required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),
                         onchange: move |next| value.set(Some(next)),

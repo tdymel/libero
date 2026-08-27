@@ -1,13 +1,16 @@
 //! The chrome `use_field` puts around a control: the five slots, and the a11y
-//! wiring that ties them to it. `TextField` is the field under test - it is the
-//! only one ported so far.
+//! wiring that ties them to it. `TextField` carries most of the cases;
+//! `Select` covers what changed when it was ported off its wrapping `<label>`.
 
 mod common;
 
 use common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::TextField};
+use libero::{
+    LiberoProvider,
+    components::{Options, Select, TextField},
+};
 
 #[test]
 fn every_slot_renders_and_the_control_names_all_three_descriptions() {
@@ -269,4 +272,67 @@ fn the_frame_draws_the_focus_ring_and_the_control_does_not() {
         shared.is_empty(),
         "the control still shares {shared:?} with an ancestor that rings"
     );
+}
+
+#[derive(Clone, PartialEq, Options)]
+enum Pick {
+    First,
+    Second,
+}
+
+/// `Select`'s root was a wrapping `<label>` before R5. A wrapping label
+/// swallows clicks on anything nested in the frame, which is why every field
+/// uses a `<label for>`/`id` pair instead.
+#[test]
+fn a_select_names_its_control_through_for_rather_than_wrapping_it() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Select {
+                    label: "Plan",
+                    description: "Billed monthly.",
+                    status: "Pick one.",
+                    required: true,
+                    value: Pick::Second,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let select = attributes_of(&body, "select");
+    let id = &select["id"];
+
+    assert_eq!(attributes_of(&body, "label")["for"], *id);
+    assert_eq!(
+        select["aria-describedby"],
+        format!("{id}-description {id}-status")
+    );
+    assert_eq!(select["aria-invalid"], "true");
+    assert_eq!(select["aria-required"], "true");
+    // The control sits in the frame, and the label is its sibling - not its
+    // parent.
+    let after_label = body.split("</label>").nth(1).expect("a label");
+    let frame = after_label.split("<select").next().expect("a select");
+    assert!(frame.contains("<div"), "{body}");
+}
+
+/// Both fields read one `FieldDefaults` scale now, so a `Select` beside a
+/// `TextField` lines up by construction.
+#[test]
+fn a_select_and_a_text_field_share_one_size_scale() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField { size: "lg" }
+                Select { size: "lg", value: Pick::First, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("--lsx-field-height-lg"), "{html}");
+    assert!(!html.contains("--lsx-select-height"), "{html}");
 }

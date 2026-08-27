@@ -6,11 +6,10 @@ use super::{
     FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults,
     HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
     NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults,
-    ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel,
-    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
-    SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
-    TreeDefaults, ZIndexDefaults,
+    ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
+    SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
+    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -277,8 +276,6 @@ impl Theme {
                 },
             ),
         },
-        // The same scale `select` still keeps its own copy of, so the two
-        // line up in one form until R5 ports `Select` onto this.
         field: FieldDefaults {
             gap: "4px",
             frame_gap: "8px",
@@ -288,6 +285,7 @@ impl Theme {
                     caption_font_size: "0.6875rem",
                     font_size: "0.75rem",
                     height: "28px",
+                    padding_y: "4px",
                     padding_x: "8px",
                 },
                 FieldSizeLevel {
@@ -295,6 +293,7 @@ impl Theme {
                     caption_font_size: "0.75rem",
                     font_size: "0.8125rem",
                     height: "32px",
+                    padding_y: "5px",
                     padding_x: "10px",
                 },
                 FieldSizeLevel {
@@ -302,6 +301,7 @@ impl Theme {
                     caption_font_size: "0.75rem",
                     font_size: "0.875rem",
                     height: "36px",
+                    padding_y: "6px",
                     padding_x: "12px",
                 },
                 FieldSizeLevel {
@@ -309,6 +309,7 @@ impl Theme {
                     caption_font_size: "0.8125rem",
                     font_size: "0.9375rem",
                     height: "40px",
+                    padding_y: "7px",
                     padding_x: "14px",
                 },
                 FieldSizeLevel {
@@ -316,6 +317,7 @@ impl Theme {
                     caption_font_size: "0.875rem",
                     font_size: "1rem",
                     height: "44px",
+                    padding_y: "8px",
                     padding_x: "16px",
                 },
                 FieldSizeLevel {
@@ -323,6 +325,7 @@ impl Theme {
                     caption_font_size: "0.9375rem",
                     font_size: "1.0625rem",
                     height: "48px",
+                    padding_y: "9px",
                     padding_x: "18px",
                 },
             ),
@@ -330,40 +333,7 @@ impl Theme {
         select: SelectDefaults {
             size: Size::Md,
             radius: Size::Sm,
-            sizes: Sizes::new(
-                SelectSizeLevel {
-                    font_size: "0.75rem",
-                    height: "28px",
-                    padding_x: "8px",
-                },
-                SelectSizeLevel {
-                    font_size: "0.8125rem",
-                    height: "32px",
-                    padding_x: "10px",
-                },
-                SelectSizeLevel {
-                    font_size: "0.875rem",
-                    height: "36px",
-                    padding_x: "12px",
-                },
-                SelectSizeLevel {
-                    font_size: "0.9375rem",
-                    height: "40px",
-                    padding_x: "14px",
-                },
-                SelectSizeLevel {
-                    font_size: "1rem",
-                    height: "44px",
-                    padding_x: "16px",
-                },
-                SelectSizeLevel {
-                    font_size: "1.0625rem",
-                    height: "48px",
-                    padding_x: "18px",
-                },
-            ),
         },
-        // The same scale as `select`, so the two line up in one form.
         text_field: TextFieldDefaults {
             size: Size::Md,
             radius: Size::Sm,

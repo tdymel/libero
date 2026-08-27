@@ -2,40 +2,22 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, Options, States, common::focus_ring_sx, layout::use_box,
+        Caption, ClassList, HtmlTag, Input, Options, States,
+        form::{FieldStatus, field_control_sx, use_field, use_field_frame},
+        layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
-    theme::{SelectDefaults, Size},
+    sx::{StaticSx, Sx},
+    theme::Size,
     utils::warn,
 };
 
-static SELECT_WRAPPER_SX: StaticSx =
-    StaticSx::new(|| sx().display("flex").flex_direction("column").gap("4px"));
+/// The control keeps the UA's own chevron - drawing our own would mean
+/// `appearance: none`, and with it the native picker's arrow on every
+/// platform.
+static SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().cursor("pointer"));
 
-static SELECT_LABEL_SX: StaticSx = StaticSx::new(|| sx().font_size("0.75rem"));
-
-static SELECT_BASE_SX: StaticSx = StaticSx::new(|| {
-    SelectDefaults::theme_vars()
-        .display("block")
-        .width("100%")
-        .border_style("solid")
-        .border_width("1px")
-        .border_color("grey.5")
-        .background("white")
-        .color("black")
-        .cursor("pointer")
-        .hover(sx().border_color("grey.7"))
-        .when(
-            "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .background("grey.1"),
-        )
-        .focus_visible(focus_ring_sx())
-});
-
-// Hand-written rather than `base_props!`, which is not generic - as
+// Hand-written rather than `field_props!`, which is not generic - as
 // `TabsProps` is.
 #[derive(Props, Clone, PartialEq)]
 pub struct SelectProps<T: Options> {
@@ -62,19 +44,28 @@ pub struct SelectProps<T: Options> {
     /// Shown while `value` is `None`, as an unpickable first entry.
     #[props(default)]
     placeholder: Option<String>,
+    /// The field's caption, above the control.
+    #[props(default, into)]
+    label: Caption,
+    /// Between the label and the control. What to pick.
+    #[props(default, into)]
+    description: Caption,
+    /// Under the control. Constraints, consequences of the choice.
+    #[props(default, into)]
+    helper: Caption,
+    /// Validation state, under the helper. A bare `&str` is an error.
+    #[props(default, into)]
+    status: Input<FieldStatus>,
     #[props(default, into)]
     size: Input<Size>,
     /// Corner radius, independent of `size`.
     #[props(default, into)]
     radius: Input<Size>,
+    /// `None` is "not stated" - what a `Fieldset` will cascade into later.
     #[props(default)]
     disabled: Option<bool>,
-    /// The field's own caption, above the control.
     #[props(default)]
-    label: Option<String>,
-    /// Styles the caption alone - the rest of `sx` lands on the wrapper.
-    #[props(default, into)]
-    label_sx: Input<Sx>,
+    required: Option<bool>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -85,8 +76,9 @@ pub struct SelectProps<T: Options> {
     states: Input<States>,
 }
 
-/// A styled native `<select>` over an enum, with its own caption. Controlled:
-/// it renders `value` and asks for a new one through `onchange`.
+/// A styled native `<select>` over an enum, with a label, a description,
+/// helper text and a validation message stacked around it. Controlled: it
+/// renders `value` and asks for a new one through `onchange`.
 ///
 /// The options are `T::options()` unless `options` narrows them - so a
 /// misspelled option is a compile error, and `onchange` hands back the value
@@ -97,6 +89,8 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
 
     let size = props.size.copied_or(theme.select.size);
     let radius = props.radius.copied_or(theme.select.radius);
+    let disabled = props.disabled.unwrap_or(false);
+    let required = props.required.unwrap_or(false);
 
     if props.onchange.is_none() {
         warn("Select: without `onchange` the selection can never change.");
@@ -125,35 +119,28 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         })
         .collect();
 
-    let disabled = props.disabled.unwrap_or(false);
-    let states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
-        .with("disabled", disabled)
-        .into();
-
-    // Both `prepare()`s run unconditionally: they are hooks, and the caption
-    // below is optional.
-    let wrapper = use_box()
-        .framework_sx(&SELECT_WRAPPER_SX)
+    let field = use_field()
+        .label(&props.label)
+        .description(&props.description)
+        .helper(&props.helper)
+        .status(&props.status)
+        .required(required)
+        .disabled(disabled)
+        .size(size)
+        .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
-        .prepare();
-    let select = use_box()
-        .framework_sx(&SELECT_BASE_SX)
-        .states(&states)
-        .prepare();
-    let label_box = use_box()
-        .framework_sx(&SELECT_LABEL_SX)
-        .sx(&props.label_sx)
+        .states(&props.states)
+        .attributes(&props.attributes)
         .prepare();
 
-    let caption = match &props.label {
-        Some(label) => label_box.render(HtmlTag::Span, Vec::new(), rsx! { {label.clone()} }),
-        None => rsx! {},
-    };
+    let frame = use_field_frame().states(field.states()).prepare();
+
+    // The frame draws the ring, so the control must not draw a second one.
+    let control = use_box()
+        .framework_sx(&SELECT_CONTROL_SX)
+        .focus_ring(false)
+        .prepare();
 
     let onchange = props.onchange;
     let pick = use_callback(move |index: usize| {
@@ -171,8 +158,10 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     // parent's children already existing - which is what made the old
     // `value` path miss on the creating render, and what left SSR with no
     // selection at all.
-    let select = select
+    let select = field
+        .aria(control)
         .attr("disabled", disabled)
+        .attr("required", required)
         .event("onchange", move |event: FormEvent| {
             if let Ok(index) = event.value().parse::<usize>() {
                 pick.call(index);
@@ -202,5 +191,5 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             },
         );
 
-    wrapper.render(HtmlTag::Label, Vec::new(), vec![caption, select])
+    field.render(frame.render(select))
 }

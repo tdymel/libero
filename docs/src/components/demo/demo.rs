@@ -348,10 +348,16 @@ pub fn Demo(
                                             size: "sm",
                                             label: label(control.name),
                                             // Matches the `Text { size: "sm" }`
-                                            // label every other control kind gets.
-                                            label_sx: sx()
-                                                .font_weight("600")
-                                                .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
+                                            // label every other control kind
+                                            // gets. The field owns its label
+                                            // node, so the caption is styled
+                                            // from the wrapper's `sx`.
+                                            sx: sx().selector(
+                                                "& > label",
+                                                sx()
+                                                    .font_weight("600")
+                                                    .font_size(TEXT_FONT_SIZE.value(Size::Sm)),
+                                            ),
                                             value: Some(values().str(control.name)),
                                             // A control panel's options are
                                             // data, so they arrive here rather

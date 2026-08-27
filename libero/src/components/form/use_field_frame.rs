@@ -6,7 +6,7 @@ use crate::{
         common::focus_ring_sx,
         layout::{BoxStyle, use_box},
     },
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::FieldDefaults,
 };
 
@@ -48,7 +48,12 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
 /// The native control inside the frame, stripped of the chrome that is now the
 /// frame's. Every framed field renders its element with this as its
 /// `framework_sx`.
-pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(field_control_sx);
+
+/// The same declarations, for a control that adds one of its own - `Select`'s
+/// pointer cursor. `StaticSx` takes a single builder, so a field extending the
+/// control's look calls this rather than a second `framework_sx`.
+pub(crate) fn field_control_sx() -> Sx {
     sx().flex("1 1 auto")
         // Without it a long value pushes the frame wider instead of scrolling.
         .min_width("0")
@@ -61,10 +66,11 @@ pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // UA's.
         .font_family("inherit")
         .font_size("inherit")
-        .line_height("normal")
-        .height("100%")
+        // The frame's padding sets the height now, so the control contributes
+        // exactly one line box and a `Textarea` can contribute several.
+        .line_height("1.5")
         .selector("::placeholder", sx().color("grey.6"))
-});
+}
 
 /// The frame around a field's control, with room either side of it.
 ///
