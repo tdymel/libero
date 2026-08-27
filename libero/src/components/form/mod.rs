@@ -1,5 +1,6 @@
 mod caption;
 mod field_status;
+mod password_field;
 mod select;
 mod text_field;
 mod use_field;
@@ -7,6 +8,7 @@ mod use_field_frame;
 
 pub use caption::Caption;
 pub use field_status::FieldStatus;
+pub use password_field::{PasswordField, PasswordFieldProps};
 pub use select::{Select, SelectProps};
 pub use text_field::{TextField, TextFieldProps};
 pub(crate) use use_field::use_field;

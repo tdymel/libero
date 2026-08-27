@@ -9,7 +9,7 @@ use common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Options, Select, TextField},
+    components::{Options, PasswordField, Select, TextField},
 };
 
 #[test]
@@ -335,4 +335,32 @@ fn a_select_and_a_text_field_share_one_size_scale() {
 
     assert!(html.contains("--lsx-field-height-lg"), "{html}");
     assert!(!html.contains("--lsx-select-height"), "{html}");
+}
+
+/// `PasswordField` is a `TextField` with a narrower contract - the first use of
+/// the specialization path the field foundation exists for.
+#[test]
+fn a_password_field_hides_its_value_and_offers_a_reveal_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PasswordField { label: "Password", helper: "At least 8 characters." }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = attributes_of(&body, "input");
+    let id = &input["id"];
+
+    assert_eq!(input["type"], "password");
+    assert_eq!(attributes_of(&body, "label")["for"], *id);
+    assert_eq!(input["aria-describedby"], format!("{id}-helper"));
+
+    // The toggle is a real button in the trailing slot, named for what the
+    // click does rather than for the current state.
+    let button = attributes_of(&body, "button");
+    assert_eq!(button["aria-label"], "Show password");
+    let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
+    assert!(order("<input") < order(r#"data-slot="trailing""#));
 }
