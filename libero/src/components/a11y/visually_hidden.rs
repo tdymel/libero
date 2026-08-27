@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
-    sx::{StaticSx, Sx, sx},
+    components::{HtmlTag, Input, common::base_props, layout::use_box},
+    sx::{StaticSx, sx},
 };
 
 pub(crate) static VISUALLY_HIDDEN_SX: StaticSx = StaticSx::new(|| {

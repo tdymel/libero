@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, FieldStatus, Text, TextField};
+use libero::components::{Code, FieldStatus, Icon, Text, TextField};
 
 #[component]
 pub fn TextFieldPage() -> Element {
@@ -23,6 +23,10 @@ pub fn TextFieldPage() -> Element {
                         .doc("Fires per keystroke with the text the field should hold next. Native name, native timing."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
+                    prop("leading", "Element")
+                        .doc("Inside the frame, before the control - a search icon, a currency prefix."),
+                    prop("trailing", "Element")
+                        .doc("Inside the frame, after the control - a clear button, a unit."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. Names the field through a `for`/`id` pair. Takes a string or an `Element`."),
                     prop("description", "Caption")
@@ -52,7 +56,11 @@ pub fn TextFieldPage() -> Element {
                     " and the input keeps its own text. Whichever caption slots are filled "
                     "are named by "
                     Code { source: "aria-describedby" }
-                    " automatically."
+                    " automatically. "
+                    Code { source: "leading" }
+                    " and "
+                    Code { source: "trailing" }
+                    " put content inside the border, beside the control."
                 }
             },
             Demo {
@@ -102,6 +110,18 @@ pub fn TextFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("leading").code(|_, values| {
+                        match values.str("leading").as_str() {
+                            "true" => vec!["leading: rsx! { Icon { \"@\" } }".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("trailing").code(|_, values| {
+                        match values.str("trailing").as_str() {
+                            "true" => vec!["trailing: rsx! { \".com\" }".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
@@ -121,6 +141,10 @@ pub fn TextFieldPage() -> Element {
                         },
                         placeholder: (values.str("placeholder") == "true")
                             .then(|| "ada@example.com".to_string()),
+                        leading: (values.str("leading") == "true")
+                            .then(|| rsx! { Icon { "@" } }),
+                        trailing: (values.str("trailing") == "true")
+                            .then(|| rsx! { ".com" }),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),

@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Dialog, Float, Input, Placement, States,
+        Dialog, Float, Input, Placement,
         common::{base_props, input_from_str},
     },
     hooks::use_css,
     str_enum::str_enum,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{DRAWER_SIZE, Size},
 };
 

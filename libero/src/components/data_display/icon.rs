@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
         variables,
     },
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, ICON_SIZE, Size, SizeCss},
 };
 

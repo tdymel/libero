@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Input, States,
+        Input,
         common::{base_props, input_from_str},
     },
     hooks::use_theme,

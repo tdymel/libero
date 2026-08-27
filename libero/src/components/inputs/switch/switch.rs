@@ -9,7 +9,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_id, use_theme},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W, Size, SizeCss,
         SwitchDefaults,

@@ -2,40 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
-        common::{field_props, focus_ring_sx},
-        form::use_field,
+        HtmlTag, Input,
+        common::field_props,
+        form::{FIELD_CONTROL_SX, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
-    theme::TextFieldDefaults,
 };
-
-static TEXT_FIELD_BASE_SX: StaticSx = StaticSx::new(|| {
-    TextFieldDefaults::theme_vars()
-        .display("block")
-        .width("100%")
-        // An `<input>` inherits neither, so both would fall back to the UA's.
-        .font_family("inherit")
-        .line_height("normal")
-        .border_style("solid")
-        .border_width("1px")
-        .border_color("grey.5")
-        .background("white")
-        .color("black")
-        .selector("::placeholder", sx().color("grey.6"))
-        .focus(sx().border_color("primary.6"))
-        .focus_visible(focus_ring_sx())
-        .when("error", sx().border_color("error.7"))
-        .when("warning", sx().border_color("warning.7"))
-        .when(
-            "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .background("grey.1"),
-        )
-});
 
 field_props! {
     extends(input);
@@ -50,11 +23,19 @@ field_props! {
         oninput: Option<EventHandler<String>>,
         #[props(default, into)]
         placeholder: Option<String>,
+        /// Inside the frame, before the control - a search icon, a currency
+        /// prefix.
+        #[props(default, into)]
+        leading: Option<Element>,
+        /// Inside the frame, after the control - a clear button, a unit.
+        #[props(default, into)]
+        trailing: Option<Element>,
     }
 }
 
 /// A single-line text field, with a label, a description, helper text and a
-/// validation message stacked around it.
+/// validation message stacked around it, and room either side of the control
+/// inside the frame.
 ///
 /// Controlled through `value` + `oninput`. Omit `value` and the `<input>` owns
 /// its own text.
@@ -82,9 +63,16 @@ pub fn TextField(props: TextFieldProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let control = use_box()
-        .framework_sx(&TEXT_FIELD_BASE_SX)
+    let frame = use_field_frame()
+        .leading(&props.leading)
+        .trailing(&props.trailing)
         .states(field.states())
+        .prepare();
+
+    // The frame draws the ring, so the control must not draw a second one.
+    let control = use_box()
+        .framework_sx(&FIELD_CONTROL_SX)
+        .focus_ring(false)
         .prepare();
 
     let oninput = props.oninput;
@@ -102,5 +90,5 @@ pub fn TextField(props: TextFieldProps) -> Element {
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
-    field.render(input)
+    field.render(frame.render(input))
 }

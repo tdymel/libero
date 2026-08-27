@@ -48,6 +48,19 @@ impl Sx {
         self.selector(":focus-visible", nested)
     }
 
+    /// The element, while focus is on it *or* on anything inside it. What a
+    /// wrapper uses once the focusable thing is a child of it.
+    pub fn focus_within(self, nested: Sx) -> Self {
+        self.selector(":focus-within", nested)
+    }
+
+    /// [`focus_within`](Self::focus_within), restricted to the focus the
+    /// browser would draw a ring for - so a mouse click does not get one.
+    /// There is no `:focus-visible-within`, hence the `:has`.
+    pub fn has_focus_visible(self, nested: Sx) -> Self {
+        self.selector(":has(:focus-visible)", nested)
+    }
+
     pub fn when(self, condition: impl Into<String>, nested: Sx) -> Self {
         self.modifier(
             SxModifierKey::Condition(canonical_condition(&condition.into())),

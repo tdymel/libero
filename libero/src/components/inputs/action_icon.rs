@@ -11,7 +11,7 @@ use crate::{
         variables,
     },
     hooks::{ripple_sx, use_ripple},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, SizeCss},
 };
 

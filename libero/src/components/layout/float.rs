@@ -8,7 +8,7 @@ use crate::{
         variables,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, FLOAT_OFFSET_X, FLOAT_OFFSET_Y, SizeCss, Z_INDEX_FLOAT},
 };
 

@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        FocusTrap, HtmlTag, Input, Overlay, States, Variables, common::base_props, layout::use_box,
+        FocusTrap, HtmlTag, Input, Overlay, Variables, common::base_props, layout::use_box,
         variables,
     },
     context::ModalContext,
     hooks::use_modal_z_index,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::CssVar,
 };
 

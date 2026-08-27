@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{Clipboard, use_clipboard, use_css},
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::{
         CODE_BLOCK_BACKGROUND, CODE_BLOCK_BORDER, CODE_BLOCK_COPY_HOVER_BACKGROUND,
         CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT,

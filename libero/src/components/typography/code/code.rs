@@ -3,8 +3,8 @@ use dioxus::prelude::*;
 use super::highlight::{Language, highlight};
 use super::token_theme::use_token_theme;
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
-    sx::{StaticSx, Sx, sx},
+    components::{HtmlTag, Input, common::base_props, layout::use_box},
+    sx::{StaticSx, sx},
     theme::CODE_FONT_FAMILY,
 };
 

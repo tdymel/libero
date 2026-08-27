@@ -4,12 +4,12 @@ use fast_qr::{ECL, QRBuilder};
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
+        HtmlTag, Input,
         common::{base_props, input_from_str},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrRobustness},
 };
 

@@ -3,14 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        HtmlTag, Input, Orientation, States, Variables,
+        HtmlTag, Input, Orientation, Variables,
         common::{base_props, input_from_str},
         layout::use_box,
         variables,
     },
     hooks::use_css,
     str_enum::str_enum,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
         ColorCss, ColorShade, ColorValue, CssVar, DIVIDER_LINE, DividerDefaults, Size, SizeCss,
     },

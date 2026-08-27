@@ -5,7 +5,7 @@ use crate::{
         HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
 };
 

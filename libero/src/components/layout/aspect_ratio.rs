@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, Variables,
         common::{base_props, variables},
         layout::use_box,
     },
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::ASPECT_RATIO,
 };
 

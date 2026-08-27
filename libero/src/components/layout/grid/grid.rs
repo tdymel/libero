@@ -6,7 +6,7 @@ use crate::{
         common::{base_props, variables},
         layout::use_box,
     },
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::{GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, Size, SizeCss},
 };
 

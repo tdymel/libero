@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    components::{HtmlTag, Input, common::base_props, layout::use_box},
     hooks::{ElementHandle, use_element, use_local_state},
     platform::ElementApi,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
 };
 
 use super::visually_hidden::VISUALLY_HIDDEN_SX;

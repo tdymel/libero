@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::{
         GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR,
         GRID_ZONE_GAP, Size, SizeCss,

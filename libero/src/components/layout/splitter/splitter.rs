@@ -10,7 +10,7 @@ use crate::{
     },
     hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
 };
 

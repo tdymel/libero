@@ -1,12 +1,9 @@
 use dioxus::prelude::*;
 
-use crate::{
-    components::{
-        HtmlTag, Input, States,
-        common::{IntoChildren, base_props},
-        layout::use_box,
-    },
-    sx::Sx,
+use crate::components::{
+    HtmlTag, Input,
+    common::{IntoChildren, base_props},
+    layout::use_box,
 };
 
 base_props! {

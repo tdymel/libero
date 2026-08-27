@@ -43,6 +43,23 @@ fn Demo() -> Element {
 `size` and `radius` step independently - the captions scale with `size` too -
 and `disabled` dims the whole control.
 
+## Inside the frame
+
+The border, background, radius and padding belong to a frame around the
+`<input>`, not to the input itself, so `leading` and `trailing` can put content
+inside it:
+
+```rust
+TextField {
+    label: "Domain",
+    leading: rsx! { Icon { "@" } },
+    trailing: rsx! { ".com" },
+}
+```
+
+Both take any `Element`. They sit either side of the control, vertically
+centred, and do not shrink - the control takes the space that is left.
+
 ## Controlled and uncontrolled
 
 `value: Some(text)` is controlled: the field renders exactly that text and can
@@ -79,6 +96,10 @@ announce a working field as broken.
 
 ## Accessibility
 
+Focus lands on the `<input>`, but the focus ring is drawn by the frame around
+it, keyed off `:has(:focus-visible)` - so a keyboard focus rings the whole
+field and a mouse click does not ring anything.
+
 The label is a real `<label for>` paired with the input's `id`, not a wrapping
 `<label>` like [Select](select.md) uses - so a control placed inside the field
 later cannot have its clicks swallowed by the label. A caller-supplied `id`
@@ -99,9 +120,8 @@ so the browser handles focus and interaction semantics.
 
 ## What it does not do yet
 
-There are no leading/trailing slots - the chrome still sits directly on the
-`<input>`, so nothing can live inside the border. Multi-line input, numbers and
-passwords are separate components rather than modes of this one.
+Multi-line input, numbers and passwords are separate components rather than
+modes of this one.
 
 ## Props
 
@@ -114,6 +134,8 @@ passwords are separate components rather than modes of this one.
 | `value` | `Option<String>` | - | The text in the field. `None` leaves the `<input>` uncontrolled. |
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
+| `leading` | `Element` | - | Inside the frame, before the control. |
+| `trailing` | `Element` | - | Inside the frame, after the control. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
 | `description` | `Caption` | - | Between the label and the control: what to enter. |
 | `helper` | `Caption` | - | Under the control: formatting rules, constraints, counters. |
@@ -127,17 +149,17 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-Two structs. `FieldDefaults` on the theme carries the slot typography every
-field shares; `TextFieldDefaults` carries the control's own scale, which is the
-same numbers `SelectDefaults` uses so the two line up in one form.
+Almost everything is `FieldDefaults`, shared by every field. `TextFieldDefaults`
+keeps only what is genuinely this component's: which `size` and `radius` it
+starts at.
 
 | Field | Type | Description |
 |---|---|---|
 | `field.gap` | `&'static str` | Vertical gap between the slots. |
-| `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size` and `caption_font_size` per size. |
+| `field.frame_gap` | `&'static str` | Horizontal gap between leading, control and trailing. |
+| `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_x` per size. |
 | `text_field.size` | `Size` | Default `size` when the prop is omitted; `md`. |
 | `text_field.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
-| `text_field.sizes` | `Sizes<TextFieldSizeLevel>` | `font_size`, `height`, `padding_x` per size. |
 
 ## CSS variables
 
@@ -146,15 +168,17 @@ same numbers `SelectDefaults` uses so the two line up in one form.
 | `--lsx-field-gap` | Vertical gap between the slots. |
 | `--lsx-field-label-font-size-<size>` | The label's `font-size` for that size step. |
 | `--lsx-field-caption-font-size-<size>` | `font-size` of the description, helper and status text. |
-| `--lsx-text-field-font-size-<size>` | `font-size` of the control for that size step. |
-| `--lsx-text-field-height-<size>` | `height` for that size step. |
-| `--lsx-text-field-padding-x-<size>` | Horizontal padding for that size step. |
+| `--lsx-field-frame-gap` | Horizontal gap inside the frame. |
+| `--lsx-field-font-size-<size>` | `font-size` of the control for that size step. |
+| `--lsx-field-height-<size>` | The frame's `height` for that size step. |
+| `--lsx-field-padding-x-<size>` | The frame's horizontal padding for that size step. |
 
 `radius` reads the shared `--lsx-radius-<size>` scale rather than one of its own.
 
 ## Data attributes
 
-State tokens on the wrapper's and the `<input>`'s `data-state`, space separated.
+State tokens on the wrapper's and the frame's `data-state`, space separated. The
+`<input>` itself carries none - the frame styles it.
 
 | Token | Condition |
 |---|---|
@@ -166,4 +190,5 @@ State tokens on the wrapper's and the `<input>`'s `data-state`, space separated.
 | `error` | `status` is an `Error`. |
 
 The caption slots carry `data-slot="description"`, `"helper"`, `"status"` and
-`"required"`, which is how the wrapper styles them.
+`"required"`, which is how the wrapper styles them; `leading` and `trailing`
+carry theirs inside the frame.

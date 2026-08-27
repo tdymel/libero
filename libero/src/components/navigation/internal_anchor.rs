@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, Variables,
         common::{base_props, styling_attributes, use_style_attributes},
         layout::box_style,
     },
-    sx::{StaticSx, Sx},
+    sx::StaticSx,
 };
 
 fn navigation_target_href(to: NavigationTarget) -> String {
@@ -47,6 +47,7 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
         &props.states,
         &props.variables,
         props.style,
+        true,
     );
 
     let is_blank = props.target.as_deref() == Some("_blank");

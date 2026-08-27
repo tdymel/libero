@@ -9,7 +9,7 @@ use crate::{
     },
     hooks::{use_element, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorCss, ColorShade, CssVar, ScrollAxis, ScrollbarSize, ScrollbarVisibility},
 };
 

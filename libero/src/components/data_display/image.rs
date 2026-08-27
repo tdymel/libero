@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{ModalHandle, ModalScope, use_modal, use_theme},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
 };
 

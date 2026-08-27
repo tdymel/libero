@@ -2,8 +2,10 @@
 /// `GlobalAttributes`, so it also captures DOM events), `class`, `sx` and
 /// `states`. The body lists only what's specific to the component.
 ///
-/// Expands at the call site, so `Props`/`Attribute`/`Input`/`States`/`Sx`
-/// must be in scope there - every component file imports them anyway.
+/// Expands at the call site, so `Props`, `Attribute` and `Input` must be in
+/// scope there - every component file imports them anyway. The shared fields'
+/// own types are named by path, so a component that does not otherwise mention
+/// `Sx` or `States` need not import them.
 ///
 /// ```ignore
 /// base_props! {
@@ -49,9 +51,9 @@ macro_rules! base_props {
             #[props(default, into)]
             class: Input<crate::components::ClassList>,
             #[props(default, into)]
-            sx: Input<Sx>,
+            sx: Input<crate::sx::Sx>,
             #[props(default, into)]
-            states: Input<States>,
+            states: Input<crate::components::States>,
         }
     };
 

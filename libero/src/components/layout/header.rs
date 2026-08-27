@@ -8,7 +8,7 @@ use crate::{
         variables,
     },
     str_enum::str_enum,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, Size, Z_INDEX_HEADER},
 };
 

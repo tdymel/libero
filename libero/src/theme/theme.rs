@@ -9,8 +9,8 @@ use super::{
     ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel,
     SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
     SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextFieldSizeLevel, TextSize, TitleDefaults, TitleSize, TooltipDefaults,
-    TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    TextFieldDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
+    TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -277,32 +277,53 @@ impl Theme {
                 },
             ),
         },
+        // The same scale `select` still keeps its own copy of, so the two
+        // line up in one form until R5 ports `Select` onto this.
         field: FieldDefaults {
             gap: "4px",
+            frame_gap: "8px",
             sizes: Sizes::new(
                 FieldSizeLevel {
                     label_font_size: "0.6875rem",
                     caption_font_size: "0.6875rem",
+                    font_size: "0.75rem",
+                    height: "28px",
+                    padding_x: "8px",
                 },
                 FieldSizeLevel {
                     label_font_size: "0.75rem",
                     caption_font_size: "0.75rem",
+                    font_size: "0.8125rem",
+                    height: "32px",
+                    padding_x: "10px",
                 },
                 FieldSizeLevel {
                     label_font_size: "0.8125rem",
                     caption_font_size: "0.75rem",
+                    font_size: "0.875rem",
+                    height: "36px",
+                    padding_x: "12px",
                 },
                 FieldSizeLevel {
                     label_font_size: "0.875rem",
                     caption_font_size: "0.8125rem",
+                    font_size: "0.9375rem",
+                    height: "40px",
+                    padding_x: "14px",
                 },
                 FieldSizeLevel {
                     label_font_size: "0.9375rem",
                     caption_font_size: "0.875rem",
+                    font_size: "1rem",
+                    height: "44px",
+                    padding_x: "16px",
                 },
                 FieldSizeLevel {
                     label_font_size: "1rem",
                     caption_font_size: "0.9375rem",
+                    font_size: "1.0625rem",
+                    height: "48px",
+                    padding_x: "18px",
                 },
             ),
         },
@@ -346,38 +367,6 @@ impl Theme {
         text_field: TextFieldDefaults {
             size: Size::Md,
             radius: Size::Sm,
-            sizes: Sizes::new(
-                TextFieldSizeLevel {
-                    font_size: "0.75rem",
-                    height: "28px",
-                    padding_x: "8px",
-                },
-                TextFieldSizeLevel {
-                    font_size: "0.8125rem",
-                    height: "32px",
-                    padding_x: "10px",
-                },
-                TextFieldSizeLevel {
-                    font_size: "0.875rem",
-                    height: "36px",
-                    padding_x: "12px",
-                },
-                TextFieldSizeLevel {
-                    font_size: "0.9375rem",
-                    height: "40px",
-                    padding_x: "14px",
-                },
-                TextFieldSizeLevel {
-                    font_size: "1rem",
-                    height: "44px",
-                    padding_x: "16px",
-                },
-                TextFieldSizeLevel {
-                    font_size: "1.0625rem",
-                    height: "48px",
-                    padding_x: "18px",
-                },
-            ),
         },
         combobox: ComboboxDefaults {
             size: Size::Md,

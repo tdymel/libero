@@ -21,6 +21,7 @@ pub(crate) fn use_style_attributes(
     states: &Input<States>,
     variables: &Input<Variables>,
     style: Option<String>,
+    focus_ring: bool,
 ) -> StyleAttributes {
     // Not `sx.as_ref()`: that collapses the lifetime, so a caller's `static`
     // is rehashed and rebuilt as if it were freshly built this render.
@@ -29,7 +30,12 @@ pub(crate) fn use_style_attributes(
         Input::Value(sx) => Some(SxSource::Owned(sx)),
         Input::Static(sx) => Some(SxSource::Static(sx)),
     };
-    let class = use_box_css(class, &BOX_FOCUS_SX, framework_sx, sx_source);
+    let class = use_box_css(
+        class,
+        focus_ring.then_some(&BOX_FOCUS_SX),
+        framework_sx,
+        sx_source,
+    );
 
     let variables_style = variables
         .as_ref()

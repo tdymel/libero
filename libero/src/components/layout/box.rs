@@ -81,6 +81,7 @@ pub(crate) struct BoxBuilder<'a> {
     states: Option<&'a Input<States>>,
     variables: Option<&'a Input<Variables>>,
     style: Option<String>,
+    focus_ring: bool,
 }
 
 impl Default for BoxBuilder<'_> {
@@ -93,6 +94,7 @@ impl Default for BoxBuilder<'_> {
             states: None,
             variables: None,
             style: None,
+            focus_ring: true,
         }
     }
 }
@@ -128,6 +130,15 @@ impl<'a> BoxBuilder<'a> {
         self
     }
 
+    /// Drops the shared `:focus-visible` ring from this element, for one that
+    /// delegates its ring to an ancestor - a field's control, whose frame draws
+    /// the ring for it. Two elements both carrying it draw two rings.
+    #[inline]
+    pub fn focus_ring(mut self, focus_ring: bool) -> Self {
+        self.focus_ring = focus_ring;
+        self
+    }
+
     /// Raw `style` declarations, appended after `variables`. For a component
     /// that caches its own custom properties as a rendered string.
     #[inline]
@@ -157,6 +168,7 @@ impl<'a> BoxBuilder<'a> {
                 self.states.unwrap_or(&NONE_STATES),
                 self.variables.unwrap_or(&NONE_VARIABLES),
                 self.style,
+                self.focus_ring,
             ),
         }
     }
@@ -344,6 +356,7 @@ pub fn Box(props: BoxProps) -> Element {
         states: Some(&props.states),
         variables: Some(&props.variables),
         style: props.style,
+        focus_ring: true,
     }
     .prepare();
 

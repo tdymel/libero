@@ -187,3 +187,86 @@ fn a_controlled_value_renders() {
 
     assert_eq!(attributes_of(&body, "input")["value"], "Ada");
 }
+
+#[test]
+fn the_frame_wraps_the_control_with_its_leading_and_trailing_slots() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField {
+                    label: "Amount",
+                    leading: rsx! { span { "before" } },
+                    trailing: rsx! { span { "after" } },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
+
+    assert!(order(r#"data-slot="leading""#) < order("<input"));
+    assert!(order("<input") < order(r#"data-slot="trailing""#));
+    assert!(body.contains("before") && body.contains("after"));
+
+    // The label still names the control, not the frame around it.
+    assert_eq!(
+        attributes_of(&body, "label")["for"],
+        attributes_of(&body, "input")["id"]
+    );
+}
+
+#[test]
+fn a_field_with_no_slots_renders_an_empty_frame() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField { label: "Name" }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    // The frame is always there - it carries the border every field shares -
+    // but it costs no node for a slot nothing filled.
+    assert!(!body.contains("data-slot"), "{body}");
+    // The control is inside the frame, not a sibling of the label.
+    assert!(body.contains("</label><div"), "{body}");
+}
+
+#[test]
+fn the_frame_draws_the_focus_ring_and_the_control_does_not() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField { label: "Name" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let frame_class = attributes_of(&body(&html), "div")["class"].clone();
+    let control_class = attributes_of(&body(&html), "input")["class"].clone();
+
+    // The ring lives on the frame, keyed off a descendant's `:focus-visible` -
+    // there is no `:focus-visible-within`.
+    assert!(
+        html.contains(":has(:focus-visible)"),
+        "the frame must draw the ring"
+    );
+    // Both would draw one, at two different offsets, if the control kept the
+    // shared ring class.
+    let shared: Vec<&str> = frame_class
+        .split_whitespace()
+        .filter(|class| {
+            control_class
+                .split_whitespace()
+                .any(|other| other == *class)
+        })
+        .collect();
+    assert!(
+        shared.is_empty(),
+        "the control still shares {shared:?} with an ancestor that rings"
+    );
+}

@@ -1,11 +1,9 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{
-        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
-    },
+    components::{HtmlTag, Input, Variables, common::base_props, layout::use_box, variables},
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar},
 };
 

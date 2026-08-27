@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Box, HtmlTag, Input, States, Title, Variables, common::base_props,
-        layout::use_box, variables,
+        ActionIcon, Box, HtmlTag, Input, Title, Variables, common::base_props, layout::use_box,
+        variables,
     },
     context::ModalContext,
     hooks::use_id,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, Size, SizeCss},
 };
 

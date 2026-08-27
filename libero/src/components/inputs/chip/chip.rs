@@ -13,7 +13,7 @@ use crate::{
         navigation::InternalAnchor,
     },
     hooks::{use_cache, use_id, use_theme},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
 };

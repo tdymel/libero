@@ -6,7 +6,7 @@ use crate::{
         common::{base_props, input_from_str},
         layout::use_box,
     },
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
 };
 

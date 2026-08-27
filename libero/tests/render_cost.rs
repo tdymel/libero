@@ -132,6 +132,7 @@ fn render_cost_per_component() {
         "TextField+label" { TextField { oninput: move |_| {}, label: "l" } }
         // Every slot filled - what the field chrome costs over a bare control.
         "TextField+slots" { TextField { oninput: move |_| {}, label: "l", description: "d", helper: "h", status: "e", required: true } }
+        "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
