@@ -121,6 +121,13 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::TablePage {}, "Table"),
             ],
         ),
+        // Fields built on `use_field`. A component moves here when it is
+        // ported onto that pattern, not before.
+        group(
+            "form",
+            "Form",
+            vec![page(Route::TextFieldPage {}, "TextField")],
+        ),
         group(
             "inputs",
             "Inputs",
@@ -133,7 +140,6 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::SegmentedControlPage {}, "SegmentedControl"),
                 page(Route::SelectPage {}, "Select"),
                 page(Route::SliderPage {}, "Slider"),
-                page(Route::TextFieldPage {}, "TextField"),
             ],
         ),
         group(

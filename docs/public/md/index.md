@@ -30,6 +30,10 @@ fetch only the file you need.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
 
+## Form
+
+- [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
+
 ## Inputs
 
 - [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
@@ -40,7 +44,6 @@ fetch only the file you need.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
-- [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
 
 ## Layout
 

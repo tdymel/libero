@@ -69,6 +69,9 @@ pub(crate) enum Route {
     #[route("/data-display/qr-code")]
     QrCodePage {},
 
+    #[route("/form/text-field")]
+    TextFieldPage {},
+
     #[route("/inputs/action-icon")]
     ActionIconPage {},
     #[route("/inputs/button")]
@@ -85,9 +88,6 @@ pub(crate) enum Route {
     SelectPage {},
     #[route("/inputs/slider")]
     SliderPage {},
-    #[route("/inputs/text-field")]
-    TextFieldPage {},
-
     #[route("/layout/aspect-ratio")]
     AspectRatioPage {},
     #[route("/layout/box")]
