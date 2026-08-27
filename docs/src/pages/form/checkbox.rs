@@ -70,6 +70,15 @@ pub fn CheckboxPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
+                    Control::toggle("status", ["valid", "warning", "error"])
+                        .default("valid")
+                        .code(|_, values| match values.str("status").as_str() {
+                            "warning" => vec![
+                                "status: FieldStatus::Warning(\"You can change this later.\".into())".to_string(),
+                            ],
+                            "error" => vec!["status: \"Accept the terms to continue.\"".to_string()],
+                            _ => vec![],
+                        }),
                     // Controlled state is `checked` + `onchange`; the
                     // library warns about one without the other.
                     Control::switch("checked").default("true").code(|_, values| {
@@ -82,15 +91,6 @@ pub fn CheckboxPage() -> Element {
                         }
                     }),
                     Control::switch("indeterminate"),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"You can change this later.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"Accept the terms to continue.\"".to_string()],
-                            _ => vec![],
-                        }),
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Accept the terms\"".to_string()],

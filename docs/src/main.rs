@@ -78,6 +78,8 @@ pub(crate) enum Route {
     PasswordFieldPage {},
     #[route("/form/select")]
     SelectPage {},
+    #[route("/form/switch")]
+    SwitchPage {},
     #[route("/form/text-field")]
     TextFieldPage {},
     #[route("/form/textarea")]
@@ -91,8 +93,6 @@ pub(crate) enum Route {
     ChipPage {},
     #[route("/inputs/combobox")]
     ComboboxPage {},
-    #[route("/inputs/switch")]
-    SwitchPage {},
     #[route("/inputs/segmented-control")]
     SegmentedControlPage {},
     #[route("/inputs/slider")]

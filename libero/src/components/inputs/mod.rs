@@ -4,7 +4,6 @@ mod chip;
 mod combobox;
 mod segmented_control;
 mod slider;
-mod switch;
 
 pub use action_icon::ActionIcon;
 pub(crate) use button::{
@@ -20,4 +19,3 @@ pub use combobox::{
 };
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};
-pub use switch::{Switch, SwitchProps};

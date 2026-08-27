@@ -36,6 +36,7 @@ fetch only the file you need.
 - [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
 - [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
+- [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
 - [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
 - [Textarea](textarea.md): A multi-line text field with the five field slots, sized by `rows` and resizable by the user.
 
@@ -45,7 +46,6 @@ fetch only the file you need.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [Chip](chip.md): A compact token - a tag, a filter, or a small inline action.
 - [Combobox](combobox.md): A virtualized listbox that hangs off a caller-supplied trigger, holding no state of its own.
-- [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
 - [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
 

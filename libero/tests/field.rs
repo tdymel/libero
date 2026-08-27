@@ -10,7 +10,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, NumberField, NumberValue, Options, PasswordField, Select, TextField, Textarea,
+        Checkbox, NumberField, NumberValue, Options, PasswordField, Select, Switch, TextField,
+        Textarea,
     },
 };
 
@@ -632,4 +633,48 @@ fn the_checkbox_box_is_hidden_from_assistive_tech() {
     assert!(!body.contains("<label"), "{body}");
     assert_eq!(attributes_of(&body, "input")["aria-label"], "Accept");
     assert!(body.contains(r#"<span aria-hidden="true""#) || body.contains(r#"aria-hidden="true""#));
+}
+
+/// The switch is a checkbox with `role="switch"`, and since the port it wears
+/// the same chrome every field does - the label beside the track, the captions
+/// under both.
+#[test]
+fn a_switch_is_a_checkbox_its_label_points_at() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Switch { label: "wifi", checked: true, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let input = attributes_of(&body, "input");
+
+    assert_eq!(input["type"], "checkbox");
+    assert_eq!(input["role"], "switch");
+    assert!(body.contains("checked=true"), "{body}");
+    assert_eq!(attributes_of(&body, "label")["for"], input["id"]);
+    assert!(body.contains(">wifi<"), "{body}");
+
+    // The control comes first, so the grid can put the track beside the label.
+    let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
+    assert!(order("<input") < order("<label"));
+}
+
+#[test]
+fn a_switch_without_a_label_is_named_by_its_aria_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Switch { aria_label: "Airplane mode", checked: false, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert_eq!(attributes_of(&body, "input")["aria-label"], "Airplane mode");
+    assert!(!body.contains("<label"), "{body}");
 }

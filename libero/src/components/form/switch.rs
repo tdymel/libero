@@ -5,23 +5,18 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
-        common::{base_color, base_props, contrast_color, focus_ring_sx, variables},
+        common::{base_color, contrast_color, field_props, focus_ring_sx, variables},
+        form::use_field,
         layout::use_box,
     },
-    hooks::{use_cache, use_css, use_id, use_theme},
+    hooks::{use_cache, use_css, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{
-        CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W, Size, SizeCss,
-        SwitchDefaults,
-    },
+    theme::{CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W, SwitchDefaults},
     utils::warn,
 };
 
 const SWITCH_COLOR_VAR: CssVar = CssVar::new("--lsx-switch-color");
 const SWITCH_THUMB_COLOR: CssVar = CssVar::new("--lsx-switch-thumb-color");
-/// Set on the root under `:has(> input:focus-visible)` and read by the track,
-/// so the ring hugs the track instead of the whole row including the label.
-const SWITCH_RING: CssVar = CssVar::new("--lsx-switch-ring");
 /// 0 or 1, multiplied by the travel distance - so the thumb offset is one
 /// `calc`, and only this var changes between the two states.
 const SWITCH_ON: CssVar = CssVar::new("--lsx-switch-on");
@@ -29,34 +24,18 @@ const SWITCH_ON: CssVar = CssVar::new("--lsx-switch-on");
 /// Gap between the thumb and the track's edge.
 const INSET: &str = "2px";
 
-static SWITCH_ROOT_SX: StaticSx = StaticSx::new(|| {
+static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
     SwitchDefaults::theme_vars()
         .display("inline-flex")
         .align_items("center")
-        .gap(SizeCss::SPACING.value(Size::Xs))
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
-        // Pins its own size - a flex parent's `stretch` would otherwise
-        // decide how wide the row is.
-        .width("max-content")
-        .when(
-            "disabled",
-            sx().opacity("0.5")
-                .cursor("not-allowed")
-                .pointer_events("none"),
-        )
-        .selector(
-            "&:has(> input:focus-visible)",
-            focus_ring_sx().and(sx().var(SWITCH_RING, "currentcolor")),
-        )
-});
-
-static SWITCH_LABEL_SX: StaticSx = StaticSx::new(|| {
-    sx().display("inline-flex")
-        .align_items("center")
-        .gap(SizeCss::SPACING.value(Size::Xs))
-        .cursor("pointer")
+        // The control wraps the track and nothing else, so the ring hugs the
+        // track rather than the row - `:has`, because there is no
+        // `:focus-visible-within`.
+        .selector("&:has(> input:focus-visible)", focus_ring_sx())
+        .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
 static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
@@ -66,6 +45,7 @@ static SWITCH_TRACK_SX: StaticSx = StaticSx::new(|| {
         .height(SWITCH_TRACK_H.value())
         .border_radius(SWITCH_RADIUS.value())
         .background(SWITCH_COLOR_VAR.value())
+        .cursor("pointer")
         .transition("background 150ms ease")
 });
 
@@ -111,44 +91,40 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
         .render()
 }
 
-base_props! {
+field_props! {
+    extends(input);
     pub struct SwitchProps {
         /// The track colour when checked.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        #[props(default, into)]
-        size: Input<Size>,
-        /// Track corner radius; the thumb is always a circle.
-        #[props(default, into)]
-        radius: Input<Size>,
         /// Strictly controlled - pair it with `onchange`.
         #[props(default)]
         checked: Option<bool>,
-        #[props(default)]
-        disabled: Option<bool>,
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
-        /// Names the switch when it has no `children`; `attributes` cannot,
-        /// they land on the root rather than the input.
+        /// Names the switch when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
-        /// Text and `Icon` only: a `<label>` hijacks clicks on nested controls.
-        #[props(default)]
-        children: Element,
     }
 }
 
-/// A checkbox styled as a track and thumb.
+/// A checkbox styled as a track and thumb, with its label beside it and the
+/// description, helper text and validation message under both.
+///
+/// Strictly controlled: pass `checked` and handle `onchange`. The click is
+/// cancelled and the DOM re-rendered from Rust, so the track, the DOM
+/// property, assistive tech and form submission never drift apart.
 #[component]
 pub fn Switch(props: SwitchProps) -> Element {
     let theme = use_theme();
     let color = base_color(props.color.as_ref());
-    let checked = props.checked.unwrap_or(false);
-    let disabled = props.disabled.unwrap_or(false);
 
     let size = props.size.copied_or(theme.switch.size);
     let radius = props.radius.copied_or(theme.switch.radius);
+    let disabled = props.disabled.unwrap_or(false);
+    let required = props.required.unwrap_or(false);
+    let checked = props.checked.unwrap_or(false);
 
     if props.checked.is_some() && props.onchange.is_none() {
         warn("Switch: `checked` without `onchange` can never change.");
@@ -157,59 +133,73 @@ pub fn Switch(props: SwitchProps) -> Element {
         warn("Switch: `onchange` without `checked` can never appear on.");
     }
 
+    let field = use_field()
+        .inline()
+        .label(&props.label)
+        .description(&props.description)
+        .helper(&props.helper)
+        .status(&props.status)
+        .required(required)
+        .disabled(disabled)
+        .size(size)
+        .radius(radius)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .attributes(&props.attributes)
+        .prepare();
+
+    let states: Input<States> = field
+        .states()
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("checked", checked)
+        .into();
+
     let style = use_cache((checked, color), |(checked, color)| {
         switch_variables(*checked, color)
     });
 
-    let states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
-        .with("checked", checked)
-        .with("disabled", disabled)
-        .into();
-
-    let id = use_id();
-
-    let root = use_box()
-        .framework_sx(&SWITCH_ROOT_SX)
-        .class(&props.class)
-        .sx(&props.sx)
+    let control = use_box()
+        .framework_sx(&SWITCH_CONTROL_SX)
         .states(&states)
         .style(Some(style).filter(|style| !style.is_empty()))
         .prepare();
-    let input = use_box().framework_sx(&VISUALLY_HIDDEN_SX).prepare();
-    let label = use_box().framework_sx(&SWITCH_LABEL_SX).prepare();
+    let input = use_box()
+        .framework_sx(&VISUALLY_HIDDEN_SX)
+        .focus_ring(false)
+        .prepare();
     let track_class = use_css(Some(&SWITCH_TRACK_SX), CssLayer::Framework);
     let thumb_class = use_css(Some(&SWITCH_THUMB_SX), CssLayer::Framework);
 
     let onchange = props.onchange;
-    let input = input
+    let toggle = move || {
+        if let Some(onchange) = &onchange {
+            onchange.call(!checked);
+        }
+    };
+
+    let input = field
+        .aria(input)
         .attr("type", "checkbox")
         .attr("role", "switch")
-        .attr("id", id())
         .attr("checked", checked)
         .attr("disabled", disabled)
+        .attr("required", required)
         .attr("aria-label", props.aria_label)
         // `onclick`, not `onchange`: cancelling the click reverts the
         // browser's own flip, so Rust state stays the only source of truth.
         .event("onclick", move |event: Event<MouseData>| {
             event.prevent_default();
-            if let Some(onchange) = &onchange {
-                onchange.call(!checked);
-            }
+            toggle();
         })
         // Blitz forwards a `<label>` click to its input as a default action
         // that emits `input`, never `click`, so `onclick` alone leaves the
         // switch dead there. On the web a cancelled click suppresses `input`,
         // and both handlers compute the same `!checked` anyway, so firing
         // twice is a no-op rather than a double toggle.
-        .event("oninput", move |_: FormEvent| {
-            if let Some(onchange) = &onchange {
-                onchange.call(!checked);
-            }
-        })
+        .event("oninput", move |_: FormEvent| toggle())
         // `role="switch"` is a button-like control, and ARIA's pattern for it
         // takes Enter as well as Space. A bare checkbox does not, on any
         // platform, so the key has to be handled here rather than left to the
@@ -217,26 +207,28 @@ pub fn Switch(props: SwitchProps) -> Element {
         .event("onkeydown", move |event: Event<KeyboardData>| {
             if event.key() == Key::Enter && !disabled {
                 event.prevent_default();
-                if let Some(onchange) = &onchange {
-                    onchange.call(!checked);
-                }
+                toggle();
             }
         })
         // Void element - `()` costs no dynamic node.
-        .render(HtmlTag::Input, Vec::new(), ());
+        .render(HtmlTag::Input, props.attributes, ());
 
+    // The track is decoration: the input owns the name, the state and the
+    // keyboard. It carries the click because a visually hidden input has no
+    // hit area, and a `<label>` around it would compete with the field's own
+    // label for the accessible name.
     let track = rsx! {
-        span { class: track_class, span { class: thumb_class } }
+        span {
+            class: track_class,
+            "aria-hidden": "true",
+            onclick: move |_| {
+                if !disabled {
+                    toggle();
+                }
+            },
+            span { class: thumb_class }
+        }
     };
 
-    // The track lives inside the `<label>`; as a sibling it would be dead to
-    // the mouse.
-    let label = label.attr("for", id()).render(
-        HtmlTag::Label,
-        Vec::new(),
-        rsx! { {track} {props.children} },
-    );
-
-    root.attr("aria-disabled", disabled)
-        .render(HtmlTag::Span, props.attributes, vec![input, label])
+    field.render(control.render(HtmlTag::Span, Vec::new(), vec![input, track]))
 }

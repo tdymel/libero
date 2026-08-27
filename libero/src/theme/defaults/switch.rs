@@ -5,7 +5,6 @@ use crate::theme::{CssVar, Size, SizeCss, Sizes};
 pub const SWITCH_TRACK_WIDTH: SizeCss = SizeCss::new("--lsx-switch-track-width-");
 pub const SWITCH_TRACK_HEIGHT: SizeCss = SizeCss::new("--lsx-switch-track-height-");
 pub const SWITCH_THUMB_SIZE: SizeCss = SizeCss::new("--lsx-switch-thumb-size-");
-pub const SWITCH_FONT_SIZE: SizeCss = SizeCss::new("--lsx-switch-font-size-");
 
 // The picked level, resolved on the root so the track/thumb children - which
 // carry no `data-state` of their own - can inherit it.
@@ -19,8 +18,6 @@ pub struct SwitchSizeLevel {
     pub track_width: &'static str,
     pub track_height: &'static str,
     pub thumb_size: &'static str,
-    /// The label next to the track.
-    pub font_size: &'static str,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -36,7 +33,6 @@ impl SwitchDefaults {
         sx().var(SWITCH_TRACK_W, SWITCH_TRACK_WIDTH.value(size))
             .var(SWITCH_TRACK_H, SWITCH_TRACK_HEIGHT.value(size))
             .var(SWITCH_THUMB, SWITCH_THUMB_SIZE.value(size))
-            .font_size(SWITCH_FONT_SIZE.value(size))
     }
 
     pub fn radius_sx(radius: Size) -> Sx {
@@ -56,7 +52,6 @@ impl ToCssDeclarations for SwitchDefaults {
             declarations.push(SWITCH_TRACK_WIDTH.declare(size, level.track_width));
             declarations.push(SWITCH_TRACK_HEIGHT.declare(size, level.track_height));
             declarations.push(SWITCH_THUMB_SIZE.declare(size, level.thumb_size));
-            declarations.push(SWITCH_FONT_SIZE.declare(size, level.font_size));
         }
         declarations
     }

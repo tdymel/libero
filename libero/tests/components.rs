@@ -14,7 +14,7 @@ use libero::{
         Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem, GridSpan, GridTemplate,
         GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink, OptionLabel, Options,
         Overlay, QrCode, ScrollArea, SegmentedControl, Select, Sidebar, Slider, SliderMark,
-        SliderValue, Splitter, Switch, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode,
+        SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode,
         TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
@@ -175,46 +175,6 @@ fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
         ".{root_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"
     )));
 }
-#[test]
-fn a_switch_renders_a_checkbox_its_label_points_at() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                Switch { checked: true, onchange: move |_| {}, "wifi" }
-            }
-        }
-    }
-
-    let html = render(app);
-    let input = attributes_of(&html, "input");
-
-    assert_eq!(input["type"], "checkbox");
-    assert_eq!(input["role"], "switch");
-    assert!(html.contains("checked=true"));
-    // The label points at the input, and wraps the track - so clicking the
-    // visible switch toggles it, not just the text.
-    assert_eq!(attributes_of(&html, "label")["for"], input["id"]);
-
-    let span = attributes_of(&html, "span");
-    assert_eq!(span["data-state"], "size-md radius-xl checked");
-    assert!(body(&html).contains(">wifi<"));
-}
-
-#[test]
-fn a_switch_without_children_is_named_by_its_aria_label() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                Switch { aria_label: "Airplane mode", checked: false, onchange: move |_| {} }
-            }
-        }
-    }
-
-    let html = render(app);
-
-    assert_eq!(attributes_of(&html, "input")["aria-label"], "Airplane mode");
-}
-
 #[test]
 fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     fn app() -> Element {

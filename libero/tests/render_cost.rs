@@ -141,7 +141,8 @@ fn render_cost_per_component() {
         "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
         "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
-        "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
+        "Switch" { Switch { checked: true, onchange: move |_| {} } }
+        "Switch+label" { Switch { checked: true, onchange: move |_| {}, label: "l" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }
         "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
         "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
