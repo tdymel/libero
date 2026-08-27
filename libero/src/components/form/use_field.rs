@@ -8,7 +8,7 @@ use crate::{
     },
     hooks::use_root_id,
     sx::{StaticSx, Sx, sx},
-    theme::{FieldDefaults, Size},
+    theme::{FIELD_FRAME_GAP, FieldDefaults, Size},
 };
 
 /// The wrapper owns the look of all four text slots, addressed by tag and by
@@ -22,6 +22,18 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& label > [data-slot='required']",
             sx().color("error.7").margin_left("2px"),
+        )
+        // A control with no frame - a checkbox, a radio - sits beside its
+        // label instead of under it. The control takes column one of the
+        // first row; the label and every caption take column two, so the
+        // captions line up under the label rather than under the box.
+        .when(
+            "inline",
+            sx().display("grid")
+                .grid_template_columns("auto 1fr")
+                .align_items("center")
+                .column_gap(FIELD_FRAME_GAP.value())
+                .selector("& > label, & > [data-slot]", sx().grid_column("2")),
         )
         // Not `opacity`: the control dims itself, and two stacked opacities
         // multiply.
@@ -62,6 +74,7 @@ pub(crate) struct FieldBuilder<'a> {
     status: Option<&'a Input<FieldStatus>>,
     required: bool,
     disabled: bool,
+    inline: bool,
     size: Size,
     radius: Size,
     class: Option<&'a Input<ClassList>>,
@@ -80,6 +93,7 @@ impl Default for FieldBuilder<'_> {
             status: None,
             required: false,
             disabled: false,
+            inline: false,
             size: Size::Md,
             radius: Size::Sm,
             class: None,
@@ -124,6 +138,14 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn disabled(mut self, disabled: bool) -> Self {
         self.disabled = disabled;
+        self
+    }
+
+    /// Puts the control beside the label instead of under it, for a field
+    /// with no frame.
+    #[inline]
+    pub fn inline(mut self) -> Self {
+        self.inline = true;
         self
     }
 
@@ -181,7 +203,8 @@ impl<'a> FieldBuilder<'a> {
             .with(self.size.state_name(), true)
             .with(self.radius.radius_state_name(), true)
             .with("disabled", self.disabled)
-            .with("required", self.required);
+            .with("required", self.required)
+            .with("inline", self.inline);
         if let Some(state) = status_state {
             states = states.active(state);
         }
@@ -221,6 +244,7 @@ impl<'a> FieldBuilder<'a> {
             describedby,
             invalid: matches!(status, Some(FieldStatus::Error(_))),
             required: self.required,
+            inline: self.inline,
             states,
             wrapper,
         }
@@ -235,6 +259,7 @@ pub(crate) struct PreparedField {
     describedby: Option<String>,
     invalid: bool,
     required: bool,
+    inline: bool,
     wrapper: BoxStyle,
     /// `None` rather than an empty `rsx! {}`: a slot nothing filled costs no
     /// node at all, which is most slots on most fields.
@@ -261,12 +286,19 @@ impl PreparedField {
     }
 
     /// Label, description, control, helper, status - in that order, inside the
-    /// wrapper. A field wanting another layout takes the parts instead.
+    /// wrapper. Under [`FieldBuilder::inline`] the control comes first
+    /// instead, and the grid puts it beside the label.
     pub fn render(self, control: Element) -> Element {
         let mut children = Vec::with_capacity(5);
-        children.extend(self.label);
-        children.extend(self.description);
-        children.push(control);
+        if self.inline {
+            children.push(control);
+            children.extend(self.label);
+            children.extend(self.description);
+        } else {
+            children.extend(self.label);
+            children.extend(self.description);
+            children.push(control);
+        }
         children.extend(self.helper);
         children.extend(self.status);
 
