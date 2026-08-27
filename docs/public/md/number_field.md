@@ -92,15 +92,18 @@ Override one when the type needs it - a wrapping angle, a logarithmic step.
 
 ## Steppers and keys
 
-Two buttons in the trailing slot raise and lower the value by `step`, defaulting
-to `T::default_step()`. Arrow Up and Arrow Down do the same from the keyboard,
+Two `ActionIcon`s in the trailing slot - minus then plus, side by side - lower
+and raise the value by `step`, defaulting to `T::default_step()`. Arrow Up and Arrow Down do the same from the keyboard,
 with the default prevented so the caret does not jump. Both paths clamp to
 `min`/`max`, and an empty field steps from `T::zero()`.
 
 `increment_label` and `decrement_label` name the buttons; the glyphs are
 `aria-hidden`. Neither button is a tab stop - the field is, and the arrow keys
-do the same job from there - and both are sized by the field's text rather than
-by the icon scale, so the steppers never decide the field's height.
+do the same job from there.
+
+Each is capped at `1.5em`, the control's line box, so they scale with `size`
+and never outgrow the frame: an `ActionIcon`'s own size comes off the icon
+scale, which is taller than a field's text at every step.
 
 ## Accessibility
 

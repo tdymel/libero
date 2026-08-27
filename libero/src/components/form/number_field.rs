@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Caption, ClassList, HtmlTag, Input, NumberValue, States,
+        ActionIcon, Caption, ClassList, HtmlTag, Input, NumberValue, States,
         form::{FIELD_CONTROL_SX, FieldStatus, use_field, use_field_frame},
         layout::use_box,
     },
@@ -16,33 +16,14 @@ use crate::{
 /// the native spinner: `type="number"` hands back an empty string for text a
 /// browser cannot parse, which is exactly the in-progress text the edit buffer
 /// exists to keep.
-static STEPPERS_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        .flex_direction("column")
-        .justify_content("center")
-        // Plain `<button>`s, not `ActionIcon`s. An `ActionIcon` sizes itself
-        // from the icon scale, so two of them stacked are taller than a
-        // field's text at every step - the steppers would decide the field's
-        // height instead of the size scale. They are also ~2.2x a `Leaf`
-        // each, for chrome (ripple, variants) an in-field affordance does not
-        // want.
-        .selector(
-            "& > button",
-            sx().display("flex")
-                .align_items("center")
-                .justify_content("center")
-                .height("0.75em")
-                .width("1.5em")
-                .padding("0")
-                .border("none")
-                .background("transparent")
-                .color("inherit")
-                .cursor("pointer")
-                .selector(":disabled", sx().cursor("not-allowed")),
-        )
-        .selector("& > button > svg", sx().width("0.75em").height("0.75em"))
-        .selector("& > button:hover:not(:disabled)", sx().color("black"))
-});
+static STEPPERS_SX: StaticSx =
+    StaticSx::new(|| sx().display("flex").align_items("center").gap("2px"));
+
+/// What an `ActionIcon` needs to sit inside a field. Its own size comes off
+/// the icon scale, which is taller than a field's text at every step - so two
+/// of them would decide the field's height. `1.5em` is the control's line box,
+/// so they scale with `size` and never outgrow it.
+static STEPPER_SX: StaticSx = StaticSx::new(|| sx().width("1.5em").height("1.5em"));
 
 // Hand-written rather than `field_props!`, which is not generic - as
 // `SelectProps` is.
@@ -194,24 +175,26 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     let steppers = steppers.render(
         HtmlTag::Div,
         Vec::new(),
+        // Side by side, minus then plus: two stacked carets in a field's line
+        // box are a few pixels each, which is not a target anyone can hit.
         rsx! {
-            button {
-                r#type: "button",
-                "aria-label": "{increment_label}",
-                // A stepper is not a tab stop: the field is, and the arrow
-                // keys do the same job from there.
-                tabindex: "-1",
-                disabled,
-                onclick: move |_| nudge(true),
-                CaretIcon { up: true }
-            }
-            button {
-                r#type: "button",
-                "aria-label": "{decrement_label}",
+            ActionIcon {
+                aria_label: decrement_label,
+                sx: STEPPER_SX.clone(),
+                // Not a tab stop: the field is, and the arrow keys do the same
+                // job from there.
                 tabindex: "-1",
                 disabled,
                 onclick: move |_| nudge(false),
-                CaretIcon { up: false }
+                MinusIcon {}
+            }
+            ActionIcon {
+                aria_label: increment_label,
+                sx: STEPPER_SX.clone(),
+                tabindex: "-1",
+                disabled,
+                onclick: move |_| nudge(true),
+                PlusIcon {}
             }
         },
     );
@@ -264,14 +247,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
 }
 
 /// libero ships no icon set; a stepper with no glyph is a blank button. Kept
-/// private, the same call the reveal toggle's eye makes. Sized by the stepper
-/// column, not by the icon scale.
+/// private, the same call the reveal toggle's eye makes.
 #[component]
-fn CaretIcon(up: bool) -> Element {
-    let d = match up {
-        true => "M6 15l6-6 6 6",
-        false => "M6 9l6 6 6-6",
-    };
+fn MinusIcon() -> Element {
     rsx! {
         svg {
             view_box: "0 0 24 24",
@@ -279,9 +257,24 @@ fn CaretIcon(up: bool) -> Element {
             stroke: "currentColor",
             stroke_width: "2",
             stroke_linecap: "round",
-            stroke_linejoin: "round",
             "aria-hidden": "true",
-            path { d }
+            path { d: "M6 12h12" }
+        }
+    }
+}
+
+#[component]
+fn PlusIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            "aria-hidden": "true",
+            path { d: "M12 6v12" }
+            path { d: "M6 12h12" }
         }
     }
 }
