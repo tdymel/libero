@@ -3,6 +3,7 @@ mod anchor;
 mod aspect_ratio;
 mod button;
 mod center;
+mod checkbox;
 mod chip;
 mod code;
 mod code_block;
@@ -50,6 +51,7 @@ pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
 };
 pub use center::{CENTER_DISPLAY, CenterDefaults};
+pub use checkbox::{CHECKBOX_BOX, CHECKBOX_BOX_SIZE, CHECKBOX_RADIUS, CheckboxDefaults};
 pub use chip::{CHIP_FONT_SIZE, CHIP_HEIGHT, CHIP_PADDING_X, ChipDefaults, ChipSizeLevel};
 pub use code::{
     CODE_FONT_FAMILY, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION,

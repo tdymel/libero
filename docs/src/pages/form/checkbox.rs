@@ -1,0 +1,151 @@
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use dioxus::prelude::*;
+use libero::components::{Checkbox, Code, FieldStatus, Text};
+
+#[component]
+pub fn CheckboxPage() -> Element {
+    rsx! {
+        DocPage {
+            title: "Checkbox",
+            source: "libero/src/components/form/checkbox.rs",
+            markdown: "/md/checkbox.md",
+            properties: vec![
+                props("Checkbox", vec![
+                    prop("color", "ThemeAwareValue")
+                        .default("primary")
+                        .doc("The box's color when checked; a theme color name or a literal CSS color."),
+                    prop("size", "Size").default("md").doc("The size of the box, and of the label and captions beside it."),
+                    prop("radius", "Size")
+                        .default("sm")
+                        .doc("Corner radius of the box, independent of size."),
+                    prop("checked", "bool")
+                        .doc("Strictly controlled - pair it with `onchange`."),
+                    prop("indeterminate", "bool")
+                        .default("false")
+                        .doc("Draws the mixed state and reads as `aria-checked=\"mixed\"`. Outranks `checked` visually; toggling from it gives `true`."),
+                    prop("onchange", "EventHandler<bool>")
+                        .doc("Called with the value `checked` should take next."),
+                    prop("label", "Caption")
+                        .doc("The caption beside the box. Names the checkbox through a `for`/`id` pair."),
+                    prop("description", "Caption")
+                        .doc("Under the label: what checking it means."),
+                    prop("helper", "Caption")
+                        .doc("Under the description, in the same column as the label."),
+                    prop("status", "FieldStatus")
+                        .default("Valid")
+                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                    prop("required", "bool")
+                        .default("false")
+                        .doc("Marks the checkbox required, adds `aria-required` and shows an asterisk in the label."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Disables interaction and dims the checkbox."),
+                    prop("aria_label", "String")
+                        .doc("Names the checkbox when it has no `label`."),
+                ]),
+            ],
+            lead: rsx! {
+                Text {
+                    "A checkbox, with its label beside the box and the description, helper text "
+                    "and validation message under both. It takes the same slots every field has; "
+                    "what it does not take is a frame - the box "
+                    Code { source: "is" }
+                    " the control. Strictly controlled: "
+                    Code { source: "checked" }
+                    " drives the look and "
+                    Code { source: "onchange" }
+                    " reports the value it should take next, so the box, the DOM property and "
+                    "the form submission can never disagree with Rust."
+                }
+            },
+            Demo {
+                component: "Checkbox",
+                children_text: "",
+                controls: vec![
+                    Control::color(
+                        "color",
+                        ["primary", "secondary", "success", "error", "warning", "info"],
+                    ),
+                    Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("md"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm"),
+                    // Controlled state is `checked` + `onchange`; the
+                    // library warns about one without the other.
+                    Control::switch("checked").default("true").code(|_, values| {
+                        match values.str("checked").as_str() {
+                            "true" => vec![
+                                "checked: true".to_string(),
+                                "onchange: move |_| {}".to_string(),
+                            ],
+                            _ => vec!["onchange: move |_| {}".to_string()],
+                        }
+                    }),
+                    Control::switch("indeterminate"),
+                    Control::toggle("status", ["valid", "warning", "error"])
+                        .default("valid")
+                        .code(|_, values| match values.str("status").as_str() {
+                            "warning" => vec![
+                                "status: FieldStatus::Warning(\"You can change this later.\".into())".to_string(),
+                            ],
+                            "error" => vec!["status: \"Accept the terms to continue.\"".to_string()],
+                            _ => vec![],
+                        }),
+                    Control::switch("label").default("true").code(|_, values| {
+                        match values.str("label").as_str() {
+                            "true" => vec!["label: \"Accept the terms\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec![
+                                "description: \"The licence and the privacy policy.\"".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("helper").code(|_, values| {
+                        match values.str("helper").as_str() {
+                            "true" => vec!["helper: \"You can withdraw consent at any time.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("required"),
+                    Control::switch("disabled"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    Checkbox {
+                        color: values.str("color"),
+                        size: values.str("size"),
+                        radius: values.str("radius"),
+                        // Both or neither: `checked` alone can never change.
+                        checked: match values.str("checked").as_str() {
+                            "true" => Some(true),
+                            _ => Some(false),
+                        },
+                        onchange: EventHandler::new(move |_: bool| {}),
+                        indeterminate: (values.str("indeterminate") == "true").then_some(true),
+                        label: (values.str("label") == "true")
+                            .then(|| "Accept the terms".to_string()),
+                        description: (values.str("description") == "true")
+                            .then(|| "The licence and the privacy policy.".to_string()),
+                        helper: (values.str("helper") == "true")
+                            .then(|| "You can withdraw consent at any time.".to_string()),
+                        status: match values.str("status").as_str() {
+                            "warning" => {
+                                FieldStatus::Warning("You can change this later.".to_string())
+                            }
+                            "error" => {
+                                FieldStatus::Error("Accept the terms to continue.".to_string())
+                            }
+                            _ => FieldStatus::Valid,
+                        },
+                        required: (values.str("required") == "true").then_some(true),
+                        disabled: (values.str("disabled") == "true").then_some(true),
+                    }
+                },
+            }
+        }
+    }
+}

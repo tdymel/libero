@@ -138,6 +138,8 @@ fn render_cost_per_component() {
         "PasswordField" { PasswordField { oninput: move |_| {} } }
         "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
+        "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
+        "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
         "Slider" { Slider { value: 50.0, on_change: move |_| {} } }

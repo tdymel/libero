@@ -1,4 +1,5 @@
 mod caption;
+mod checkbox;
 mod field_status;
 mod number_field;
 mod password_field;
@@ -9,6 +10,7 @@ mod use_field;
 mod use_field_frame;
 
 pub use caption::Caption;
+pub use checkbox::{Checkbox, CheckboxProps};
 pub use field_status::FieldStatus;
 pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};

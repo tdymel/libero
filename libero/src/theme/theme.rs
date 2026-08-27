@@ -1,16 +1,16 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
-    ButtonSizeLevel, CenterDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
-    Color, ColorShade, ColorValue, ComboboxDefaults, ComboboxSizeLevel, ContainerDefaults,
-    DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults, FieldDefaults,
-    FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults,
-    HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
-    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
-    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
-    SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextSize, TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults,
-    TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    ButtonSizeLevel, CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel,
+    CodeBlockDefaults, CodeDefaults, Color, ColorShade, ColorValue, ComboboxDefaults,
+    ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
+    DrawerDefaults, FieldDefaults, FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults,
+    GridDefaults, HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults,
+    ListDefaults, MarkDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, Placement,
+    QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
+    ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults,
+    SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults,
+    TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
+    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -43,6 +43,7 @@ pub struct Theme {
     pub button: ButtonDefaults,
     pub chip: ChipDefaults,
     pub switch: SwitchDefaults,
+    pub checkbox: CheckboxDefaults,
     /// Shared by every field: the typography of the slots stacked around a
     /// control. The frame numbers stay per component until R5.
     pub field: FieldDefaults,
@@ -278,6 +279,11 @@ impl Theme {
                     font_size: "1.0625rem",
                 },
             ),
+        },
+        checkbox: CheckboxDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
         },
         field: FieldDefaults {
             gap: "4px",

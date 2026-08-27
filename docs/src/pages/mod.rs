@@ -12,7 +12,9 @@ mod typography;
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
-pub use form::{NumberFieldPage, PasswordFieldPage, SelectPage, TextFieldPage, TextareaPage};
+pub use form::{
+    CheckboxPage, NumberFieldPage, PasswordFieldPage, SelectPage, TextFieldPage, TextareaPage,
+};
 pub use inputs::{
     ActionIconPage, ButtonPage, ChipPage, ComboboxPage, SegmentedControlPage, SliderPage,
     SwitchPage,

@@ -32,6 +32,7 @@ fetch only the file you need.
 
 ## Form
 
+- [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
 - [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
 - [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.

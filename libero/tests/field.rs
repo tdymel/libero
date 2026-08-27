@@ -9,7 +9,9 @@ use common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{NumberField, NumberValue, Options, PasswordField, Select, TextField, Textarea},
+    components::{
+        Checkbox, NumberField, NumberValue, Options, PasswordField, Select, TextField, Textarea,
+    },
 };
 
 #[test]
@@ -550,4 +552,84 @@ fn a_password_field_can_drop_its_reveal_button() {
     assert!(!body.contains("<button"), "{body}");
     assert!(!body.contains("data-slot"), "{body}");
     assert_eq!(attributes_of(&body, "input")["type"], "password");
+}
+
+/// A checkbox has no frame: the box sits beside the label, and the captions
+/// stay under both. The order in the DOM is what the grid places.
+#[test]
+fn a_checkbox_puts_its_control_before_the_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox {
+                    label: "Email me",
+                    description: "About once a month.",
+                    helper: "You can unsubscribe later.",
+                    checked: true,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let input = attributes_of(&body, "input");
+    let id = &input["id"];
+
+    assert_eq!(input["type"], "checkbox");
+    assert!(body.contains("checked=true"), "{body}");
+    assert_eq!(attributes_of(&body, "label")["for"], *id);
+    assert_eq!(
+        input["aria-describedby"],
+        format!("{id}-description {id}-helper")
+    );
+
+    let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
+    assert!(order("<input") < order("<label"));
+    assert!(order("<label") < order(r#"data-slot="description""#));
+    assert!(order(r#"data-slot="description""#) < order(r#"data-slot="helper""#));
+}
+
+/// `indeterminate` is a DOM property with no attribute, so the native input
+/// can never carry it. The state is Rust's, and AT reads it from ARIA.
+#[test]
+fn an_indeterminate_checkbox_reads_as_mixed_and_is_not_checked() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox {
+                    label: "Select all",
+                    checked: true,
+                    indeterminate: true,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = attributes_of(&body, "input");
+
+    assert_eq!(input["aria-checked"], "mixed");
+    assert!(!body.contains("checked=true"), "{body}");
+}
+
+/// The box is decoration - the input owns the name, the state and the
+/// keyboard - so it must not reach assistive tech.
+#[test]
+fn the_checkbox_box_is_hidden_from_assistive_tech() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox { aria_label: "Accept", onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(!body.contains("<label"), "{body}");
+    assert_eq!(attributes_of(&body, "input")["aria-label"], "Accept");
+    assert!(body.contains(r#"<span aria-hidden="true""#) || body.contains(r#"aria-hidden="true""#));
 }
