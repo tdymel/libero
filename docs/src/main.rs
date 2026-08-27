@@ -1,3 +1,7 @@
+// Matches libero: a `demo/demo.rs` beside its siblings reads better than a
+// flattened `mod.rs`.
+#![allow(clippy::module_inception)]
+
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,

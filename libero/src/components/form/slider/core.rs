@@ -18,7 +18,7 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         Color, ColorShade, ColorValue, CssVar, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_TRACK, Size,
-        SizeCss, SliderDefaults,
+        SliderDefaults,
     },
     utils::warn,
 };
