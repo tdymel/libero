@@ -5,6 +5,7 @@ mod segmented_control;
 mod select;
 mod slider;
 mod switch;
+mod text_field;
 
 pub use action_icon::ActionIcon;
 pub(crate) use button::{
@@ -18,3 +19,4 @@ pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use select::{Select, SelectProps};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};
 pub use switch::{Switch, SwitchProps};
+pub use text_field::{TextField, TextFieldProps};

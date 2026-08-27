@@ -33,6 +33,7 @@ mod switch;
 mod table;
 mod tabs;
 mod text;
+mod text_field;
 mod title;
 mod tooltip;
 mod tree;
@@ -105,6 +106,10 @@ pub use tabs::{
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
     TextDefaults, TextSize,
+};
+pub use text_field::{
+    TEXT_FIELD_FONT_SIZE, TEXT_FIELD_HEIGHT, TEXT_FIELD_LABEL_FONT_SIZE, TEXT_FIELD_PADDING_X,
+    TextFieldDefaults, TextFieldSizeLevel,
 };
 pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,

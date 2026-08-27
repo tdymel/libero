@@ -8,8 +8,8 @@ use super::{
     ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
     SelectSizeLevel, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
     SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel,
-    TextDefaults, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
-    TreeDefaults, ZIndexDefaults,
+    TextDefaults, TextFieldDefaults, TextFieldSizeLevel, TextSize, TitleDefaults, TitleSize,
+    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -43,6 +43,7 @@ pub struct Theme {
     pub chip: ChipDefaults,
     pub switch: SwitchDefaults,
     pub select: SelectDefaults,
+    pub text_field: TextFieldDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
@@ -304,6 +305,49 @@ impl Theme {
                     font_size: "1.0625rem",
                     height: "48px",
                     padding_x: "18px",
+                },
+            ),
+        },
+        // The same scale as `select`, so the two line up in one form.
+        text_field: TextFieldDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            sizes: Sizes::new(
+                TextFieldSizeLevel {
+                    font_size: "0.75rem",
+                    height: "28px",
+                    padding_x: "8px",
+                    label_font_size: "0.6875rem",
+                },
+                TextFieldSizeLevel {
+                    font_size: "0.8125rem",
+                    height: "32px",
+                    padding_x: "10px",
+                    label_font_size: "0.75rem",
+                },
+                TextFieldSizeLevel {
+                    font_size: "0.875rem",
+                    height: "36px",
+                    padding_x: "12px",
+                    label_font_size: "0.8125rem",
+                },
+                TextFieldSizeLevel {
+                    font_size: "0.9375rem",
+                    height: "40px",
+                    padding_x: "14px",
+                    label_font_size: "0.875rem",
+                },
+                TextFieldSizeLevel {
+                    font_size: "1rem",
+                    height: "44px",
+                    padding_x: "16px",
+                    label_font_size: "0.9375rem",
+                },
+                TextFieldSizeLevel {
+                    font_size: "1.0625rem",
+                    height: "48px",
+                    padding_x: "18px",
+                    label_font_size: "1rem",
                 },
             ),
         },

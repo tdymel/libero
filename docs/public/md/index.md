@@ -39,6 +39,7 @@ fetch only the file you need.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
+- [TextField](text_field.md): A single-line text field with its own caption, strictly controlled by `value` plus `onchange`.
 
 ## Layout
 
