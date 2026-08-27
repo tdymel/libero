@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Options, Select, Text};
 
@@ -16,15 +16,6 @@ enum FontSize {
 
 "#;
 
-const EMPTY: &str = r#"let mut size = use_signal(|| None::<FontSize>);
-
-Select {
-    label: "Size",
-    placeholder: "Pick a size",
-    value: size(),
-    onchange: move |next| size.set(Some(next)),
-}"#;
-
 #[derive(Clone, Copy, PartialEq, Options)]
 enum FontSize {
     #[option(label = "Extra small")]
@@ -39,7 +30,6 @@ enum FontSize {
 #[component]
 pub fn SelectPage() -> Element {
     let mut value = use_signal(|| Some(FontSize::Small));
-    let mut empty = use_signal(|| None::<FontSize>);
 
     rsx! {
         DocPage {
@@ -166,29 +156,6 @@ pub fn SelectPage() -> Element {
                         onchange: move |next| value.set(Some(next)),
                     }
                 },
-            }
-            DocSection {
-                title: "Nothing picked yet",
-                Text {
-                    Code { source: "value" }
-                    " is an "
-                    Code { source: "Option" }
-                    ", so a field the user has not filled in is a state the type can hold "
-                    "rather than a sentinel option in the list. While it is "
-                    Code { source: "None" }
-                    " the "
-                    Code { source: "placeholder" }
-                    " shows as the selected entry, disabled and hidden - so the native control "
-                    "cannot silently take the first option, and once a real value is picked "
-                    "there is no way back to it."
-                }
-                Code { source: EMPTY }
-                Select {
-                    label: "Size",
-                    placeholder: "Pick a size",
-                    value: empty(),
-                    onchange: move |next| empty.set(Some(next)),
-                }
             }
         }
     }
