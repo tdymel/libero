@@ -1,6 +1,7 @@
 mod checkbox;
 mod number_field;
 mod password_field;
+mod radio_group;
 mod select;
 mod slider;
 mod switch;
@@ -10,6 +11,7 @@ mod textarea;
 pub use checkbox::CheckboxPage;
 pub use number_field::NumberFieldPage;
 pub use password_field::PasswordFieldPage;
+pub use radio_group::RadioGroupPage;
 pub use select::SelectPage;
 pub use slider::SliderPage;
 pub use switch::SwitchPage;

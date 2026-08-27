@@ -130,6 +130,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::CheckboxPage {}, "Checkbox"),
                 page(Route::NumberFieldPage {}, "NumberField"),
                 page(Route::PasswordFieldPage {}, "PasswordField"),
+                page(Route::RadioGroupPage {}, "RadioGroup"),
                 page(Route::SelectPage {}, "Select"),
                 page(Route::SliderPage {}, "Slider"),
                 page(Route::SwitchPage {}, "Switch"),

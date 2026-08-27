@@ -140,6 +140,8 @@ fn render_cost_per_component() {
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
         "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
         "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
+        "Radio" { Radio { checked: true, onselect: move |_| {} } }
+        "RadioGroup" { RadioGroup { value: CostPane::One, onchange: move |_| {} } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {} } }
         "Switch+label" { Switch { checked: true, onchange: move |_| {}, label: "l" } }

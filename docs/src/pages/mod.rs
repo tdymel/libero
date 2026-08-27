@@ -13,8 +13,8 @@ pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
 pub use form::{
-    CheckboxPage, NumberFieldPage, PasswordFieldPage, SelectPage, SliderPage, SwitchPage,
-    TextFieldPage, TextareaPage,
+    CheckboxPage, NumberFieldPage, PasswordFieldPage, RadioGroupPage, SelectPage, SliderPage,
+    SwitchPage, TextFieldPage, TextareaPage,
 };
 pub use inputs::{ActionIconPage, ButtonPage, ChipPage, ComboboxPage, SegmentedControlPage};
 pub use layout::{

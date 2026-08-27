@@ -1,0 +1,215 @@
+use dioxus::prelude::*;
+
+use crate::{
+    components::{
+        HtmlTag, Input, Options, States,
+        common::{Orientation, field_props},
+        form::{Radio, use_field},
+        layout::use_box,
+    },
+    hooks::{ElementHandle, use_element, use_theme},
+    platform::ElementApi,
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::FIELD_GAP,
+    utils::warn,
+};
+
+static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_direction("column")
+        .gap(FIELD_GAP.value())
+        .when(
+            "horizontal",
+            sx().flex_direction("row")
+                .flex_wrap("wrap")
+                .column_gap("16px"),
+        )
+});
+
+/// Scoped to this group's own root, so two groups can hold the same options
+/// without colliding.
+fn focus_option(root: &ElementHandle, index: usize) {
+    let selector = format!("input[data-radio-index=\"{index}\"]");
+    let _ = root.query_selector(&selector).and_then(|el| el.focus());
+}
+
+/// The next selectable option in `step`'s direction, wrapping. `None` when the
+/// group holds nothing to move to.
+fn neighbour(count: usize, current: usize, step: isize) -> Option<usize> {
+    if count == 0 {
+        return None;
+    }
+    let count = count as isize;
+    Some((((current as isize + step) % count + count) % count) as usize)
+}
+
+field_props! {
+    pub struct RadioGroupProps<T: Options> {
+        /// Strictly controlled - pair it with `onchange`. `None` selects
+        /// nothing, which is what an unanswered question looks like.
+        #[props(default)]
+        value: Option<T>,
+        /// Called with the option the caller should select next.
+        #[props(default)]
+        onchange: Option<EventHandler<T>>,
+        /// The options to show. Defaults to every `Options::options()` - which
+        /// `String` and any other runtime type leave empty, so those pass them
+        /// here.
+        #[props(default)]
+        options: Option<Vec<T>>,
+        /// Overrides `Options::label`. Runs during render, so it can read a
+        /// locale from context.
+        #[props(default)]
+        option_label: Option<Callback<T, String>>,
+        /// Lays the options out in a row instead of a column. A form stacks;
+        /// a row is for two or three short options.
+        #[props(default, into)]
+        orientation: Input<Orientation>,
+        /// The ring and dot colour of the selected option.
+        #[props(default, into)]
+        color: Input<ThemeAwareValue>,
+    }
+}
+
+/// A group of radios over an enum, exactly one of them selected.
+///
+/// The group is the field: it owns the question's label, description, helper
+/// text and status, the `name` that makes the set exclusive, and the single
+/// tab stop the ARIA pattern asks for. Arrow keys move through the options and
+/// select as they go, wrapping at the ends.
+#[component]
+pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
+    let theme = use_theme();
+    let root = use_element();
+
+    let size = props.size.copied_or(theme.radio.size);
+    let disabled = props.disabled.unwrap_or(false);
+    let required = props.required.unwrap_or(false);
+    let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
+
+    if props.onchange.is_none() && !disabled {
+        warn("RadioGroup: without `onchange` the selection can never change.");
+    }
+
+    let values = props
+        .options
+        .clone()
+        .unwrap_or_else(|| T::options().to_vec());
+    let selected = props
+        .value
+        .as_ref()
+        .and_then(|value| values.iter().position(|option| option == value));
+
+    let field = use_field()
+        .labelled_by()
+        .label(&props.label)
+        .description(&props.description)
+        .helper(&props.helper)
+        .status(&props.status)
+        .required(required)
+        .disabled(disabled)
+        .size(size)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .attributes(&props.attributes)
+        .prepare();
+
+    let states: Input<States> = field
+        .states()
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("horizontal", horizontal)
+        .into();
+
+    let group = use_box()
+        .framework_sx(&RADIO_GROUP_SX)
+        .states(&states)
+        .prepare();
+
+    let onchange = props.onchange;
+    let pick = {
+        let values = values.clone();
+        move |index: usize| {
+            if let (Some(onchange), Some(option)) = (&onchange, values.get(index)) {
+                onchange.call(option.clone());
+            }
+        }
+    };
+
+    // One tab stop for the whole group: the selected option, or the first one
+    // when nothing is selected yet. Arrow keys move between them from there.
+    let tab_stop = selected.unwrap_or(0);
+    let count = values.len();
+
+    let arrows = {
+        let pick = pick.clone();
+        move |event: Event<KeyboardData>| {
+            if disabled {
+                return;
+            }
+            let step = match event.key() {
+                Key::ArrowDown | Key::ArrowRight => 1,
+                Key::ArrowUp | Key::ArrowLeft => -1,
+                _ => return,
+            };
+            let Some(next) = neighbour(count, tab_stop, step) else {
+                return;
+            };
+            // The web moves and selects on its own for a native radio group;
+            // cancelling it keeps one code path, and gives Blitz - which does
+            // neither - the same behaviour.
+            event.prevent_default();
+            pick(next);
+            focus_option(&root, next);
+        }
+    };
+
+    let label_id = field.label_id();
+    let describedby = field.describedby();
+    let invalid = field.invalid();
+    let option_label = props.option_label;
+    let name = format!("{}-radio", field.id());
+    let color = props.color.clone();
+
+    let options = values.iter().enumerate().map(|(index, option)| {
+        let label = match &option_label {
+            Some(format) => format.call(option.clone()),
+            None => option.label(),
+        };
+        let pick = pick.clone();
+        rsx! {
+            Radio {
+                key: "{index}",
+                label,
+                name: name.clone(),
+                size,
+                color: color.clone(),
+                checked: selected == Some(index),
+                disabled,
+                tabindex: if index == tab_stop { "0" } else { "-1" },
+                onselect: move |_| pick(index),
+                "data-radio-index": "{index}",
+            }
+        }
+    });
+
+    let group = group
+        .attr("role", "radiogroup")
+        .attr("aria-labelledby", label_id)
+        .attr("aria-describedby", describedby)
+        .attr("aria-invalid", invalid.then_some("true"))
+        .attr("aria-required", required.then_some("true"))
+        .element(&root)
+        .event("onkeydown", arrows)
+        .render(
+            HtmlTag::Div,
+            props.attributes,
+            rsx! {
+                {options}
+            },
+        );
+
+    field.render(group)
+}

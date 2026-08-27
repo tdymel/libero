@@ -10,8 +10,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, NumberField, NumberValue, Options, PasswordField, Select, Slider, Switch,
-        TextField, Textarea,
+        Checkbox, NumberField, NumberValue, Options, PasswordField, Radio, RadioGroup, Select,
+        Slider, Switch, TextField, Textarea,
     },
 };
 
@@ -710,4 +710,110 @@ fn a_slider_is_named_by_labelledby_rather_than_for() {
         body.contains(&format!(r#"aria-describedby="{id}-helper""#)),
         "{body}"
     );
+}
+
+#[derive(Clone, Copy, PartialEq, Options)]
+enum Plan {
+    Free,
+    Pro,
+    Team,
+}
+
+/// The three things a lone `Radio` cannot own: the shared `name`, the single
+/// tab stop, and the grouping the question is announced through.
+#[test]
+fn a_radio_group_shares_one_name_and_one_tab_stop() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RadioGroup {
+                    label: "Plan",
+                    helper: "Change it later.",
+                    value: Plan::Pro,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let group = attributes_of(&body, "div");
+    let label = attributes_of(&body, "label");
+    let id = label["id"].trim_end_matches("-label").to_string();
+
+    // The wrapper is the first div; the group itself is the second.
+    let group_attributes = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
+    assert_eq!(group_attributes["role"], "radiogroup");
+    assert_eq!(group_attributes["aria-labelledby"], format!("{id}-label"));
+    assert_eq!(group_attributes["aria-describedby"], format!("{id}-helper"));
+    assert!(!group.contains_key("role"), "{group:?}");
+
+    let names: Vec<&str> = body
+        .match_indices("name=\"")
+        .map(|(at, _)| {
+            let rest = &body[at + 6..];
+            &rest[..rest.find('"').unwrap()]
+        })
+        .collect();
+    assert_eq!(names.len(), 3, "{body}");
+    assert!(names.iter().all(|name| *name == names[0]), "{names:?}");
+
+    // One tab stop: the selected option. The other two are out of the order.
+    assert_eq!(body.matches(r#"tabindex="0""#).count(), 1, "{body}");
+    assert_eq!(body.matches(r#"tabindex="-1""#).count(), 2, "{body}");
+    assert!(body.contains(r#"data-radio-index="1""#), "{body}");
+}
+
+/// Nothing selected is what an unanswered question looks like - but the group
+/// still needs a way in, so the first option holds the tab stop.
+#[test]
+fn an_unanswered_radio_group_still_has_a_way_in() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RadioGroup { label: "Plan", options: vec![Plan::Free, Plan::Pro], onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(!body.contains("checked=true"), "{body}");
+    assert_eq!(body.matches(r#"tabindex="0""#).count(), 1, "{body}");
+    assert!(
+        body.find(r#"tabindex="0""#) < body.find(r#"tabindex="-1""#),
+        "{body}"
+    );
+}
+
+/// A radio is turned off by another being turned on, so `onselect` reports a
+/// pick and never an unpick - and a standalone one carries the field chrome.
+#[test]
+fn a_standalone_radio_is_a_field_of_its_own() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Radio {
+                    label: "Free",
+                    description: "One seat.",
+                    checked: true,
+                    onselect: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let input = attributes_of(&body, "input");
+    let id = &input["id"];
+
+    assert_eq!(input["type"], "radio");
+    assert!(body.contains("checked=true"), "{body}");
+    assert_eq!(attributes_of(&body, "label")["for"], *id);
+    assert_eq!(input["aria-describedby"], format!("{id}-description"));
+
+    let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
+    assert!(order("<input") < order("<label"));
 }

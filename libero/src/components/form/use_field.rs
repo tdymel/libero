@@ -290,6 +290,12 @@ impl PreparedField {
         &self.states
     }
 
+    /// The field's id - the control's when the field applies it, and the stem
+    /// every caption id is derived from either way.
+    pub fn id(&self) -> &str {
+        &self.id
+    }
+
     /// The label's own id, for a control named by `aria-labelledby`. `None`
     /// when there is no label, or when the label names the control by `for`.
     pub fn label_id(&self) -> Option<String> {

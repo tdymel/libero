@@ -23,10 +23,10 @@ use pages::{
     ChipPage, CodeBlockPage, CodePage, ComboboxPage, ContainerPage, DataListPage, DialogPage,
     DividerPage, DrawerPage, FlexPage, FloatPage, FocusTrapPage, GettingStarted, GridPage,
     HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage,
-    NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, QrCodePage, ScrollAreaPage,
-    SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage,
-    SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TitlePage,
-    TooltipPage, TreePage, VisuallyHiddenPage,
+    NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, QrCodePage, RadioGroupPage,
+    ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage,
+    StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage, TextareaPage,
+    ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -80,6 +80,8 @@ pub(crate) enum Route {
     NumberFieldPage {},
     #[route("/form/password-field")]
     PasswordFieldPage {},
+    #[route("/form/radio-group")]
+    RadioGroupPage {},
     #[route("/form/select")]
     SelectPage {},
     #[route("/form/slider")]

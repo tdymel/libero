@@ -6,7 +6,7 @@ use super::{
     DrawerDefaults, FieldDefaults, FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults,
     GridDefaults, HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults,
     ListDefaults, MarkDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, Placement,
-    QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
+    QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
     ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults,
     SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults,
     TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
@@ -44,6 +44,7 @@ pub struct Theme {
     pub chip: ChipDefaults,
     pub switch: SwitchDefaults,
     pub checkbox: CheckboxDefaults,
+    pub radio: RadioDefaults,
     /// Shared by every field: the typography of the slots stacked around a
     /// control. The frame numbers stay per component until R5.
     pub field: FieldDefaults,
@@ -277,6 +278,10 @@ impl Theme {
         checkbox: CheckboxDefaults {
             size: Size::Md,
             radius: Size::Sm,
+            sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
+        },
+        radio: RadioDefaults {
+            size: Size::Md,
             sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
         },
         field: FieldDefaults {
