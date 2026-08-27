@@ -9,12 +9,13 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Container,
-        DataList, DataListItem, Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem,
-        GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink,
-        OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Select, Sidebar,
-        Slider, SliderMark, SliderValue, Splitter, Switch, Table, Tabs, Text, Title, Tooltip, Tree,
-        TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Combobox,
+        ComboboxOption, ComboboxOptionArgs, ComboboxState, Container, DataList, DataListItem,
+        Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem, GridSpan, GridTemplate,
+        GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink, OptionLabel, Options,
+        Overlay, QrCode, ScrollArea, SegmentedControl, Select, Sidebar, Slider, SliderMark,
+        SliderValue, Splitter, Switch, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode,
+        TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -1888,4 +1889,130 @@ fn a_sliders_label_prop_renames_its_mark_captions_too() {
     assert!(body.contains("Hoch"));
     assert!(!body.contains("Low"));
     assert!(!body.contains("High"));
+}
+
+/// The regression that made the arrow keys look dead: the rows were behind a
+/// memoized subtree, so moving the highlight - or filtering the options -
+/// changed state nothing redrew.
+mod combobox_highlight {
+    use super::*;
+    use libero::components::use_combobox;
+    use std::cell::RefCell;
+
+    thread_local! {
+        /// The rendered app's state, so the test can move the highlight.
+        static STATE: RefCell<Option<ComboboxState>> = const { RefCell::new(None) };
+        /// Its `options`, so the test can filter them the way typing does.
+        static OPTIONS: RefCell<Option<Signal<Vec<&'static str>>>> = const { RefCell::new(None) };
+    }
+
+    #[component]
+    fn App() -> Element {
+        let fruit = use_combobox();
+        let options = use_signal(|| vec!["apple", "banana", "grape"]);
+        use_hook(|| fruit.open());
+        STATE.with(|handle| *handle.borrow_mut() = Some(fruit));
+        OPTIONS.with(|handle| *handle.borrow_mut() = Some(options));
+
+        rsx! {
+            LiberoProvider {
+                Combobox {
+                    state: fruit,
+                    options: options(),
+                    option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
+                        ComboboxOption { onpick: move |_| {}, "{o.value}" }
+                    },
+                    Button { attributes: fruit.a11y_attributes(), "pick" }
+                }
+            }
+        }
+    }
+
+    fn state() -> ComboboxState {
+        STATE
+            .with(|handle| *handle.borrow())
+            .expect("the app rendered")
+    }
+
+    /// One row, opening tag through closing tag, found by the `id`
+    /// `ComboboxOption` takes from the `Combobox` - which is also what
+    /// `aria-activedescendant` points at.
+    fn row_of(html: &str, index: usize) -> String {
+        let id = format!(r#"-option-{index}""#);
+        let at = html
+            .find(&id)
+            .unwrap_or_else(|| panic!("no row {index} in:\n{html}"));
+        let open = html[..at].rfind('<').expect("an unterminated tag");
+        let close = at + html[at..].find("</div>").expect("an unclosed row");
+        html[open..close].to_string()
+    }
+
+    fn render_pass(dom: &mut VirtualDom) -> String {
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        body(&dioxus_ssr::render(dom))
+    }
+
+    #[test]
+    fn moving_the_active_row_redraws_the_rows_it_touches() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+
+        let html = render_pass(&mut dom);
+        assert!(row_of(&html, 0).contains("active"));
+        assert!(!row_of(&html, 2).contains("active"));
+
+        dom.in_runtime(|| state().set_active(2));
+
+        let html = render_pass(&mut dom);
+        assert!(!row_of(&html, 0).contains("active"), "row 0 stayed active");
+        assert!(row_of(&html, 2).contains("active"), "row 2 never lit up");
+    }
+
+    /// The same trap one level up: a stable row `Callback` compared equal, so
+    /// filtering the options left the old ones on screen.
+    #[test]
+    fn filtering_the_options_redraws_the_rows() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        assert!(render_pass(&mut dom).contains("banana"));
+
+        let options = OPTIONS
+            .with(|handle| *handle.borrow())
+            .expect("the app rendered");
+        // What typing "ap" leaves: a shorter list whose second row is a
+        // different option at the same index.
+        dom.in_runtime(|| options.clone().set(vec!["apple", "grape"]));
+        assert!(
+            row_of(&render_pass(&mut dom), 1).contains("grape"),
+            "row 1 stayed stale"
+        );
+
+        // The harder case: same length, different options, same highlight - so
+        // every prop a memoizing subtree could compare is unchanged.
+        dom.in_runtime(|| options.clone().set(vec!["apricot", "plum"]));
+
+        let html = render_pass(&mut dom);
+        assert!(row_of(&html, 0).contains("apricot"), "row 0 stayed stale");
+        assert!(row_of(&html, 1).contains("plum"), "row 1 stayed stale");
+    }
+
+    /// The whole reason the state is a handle: the trigger has to be able to
+    /// name the row the arrows are on.
+    #[test]
+    fn the_trigger_points_at_the_active_row() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        dom.in_runtime(|| state().set_active(1));
+
+        let html = render_pass(&mut dom);
+        let button = attributes_of(&html, "button");
+
+        assert_eq!(button["role"], "combobox");
+        assert_eq!(button["aria-expanded"], "true");
+        assert!(html.contains(&format!(r#"id="{}""#, button["aria-activedescendant"])));
+        assert!(
+            row_of(&html, 1).contains(&button["aria-activedescendant"]),
+            "the trigger names a row other than the active one"
+        );
+    }
 }

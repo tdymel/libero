@@ -1,11 +1,14 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Combobox, ComboboxTarget, Flex, OptionLabel, Options, Text},
+    components::{
+        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Options, Text, TextField,
+        use_combobox,
+    },
     sx::sx,
 };
 
-/// The enum is the option list, so the snippet has to show it.
+/// The enum is the option list, so every snippet has to show it.
 const FRUIT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
@@ -20,40 +23,120 @@ enum Fruit {
 
 "#;
 
-const TARGET: &str = r#"target: move |t: ComboboxTarget| rsx! {
-    Button {
-        variant: "outlined",
-        sx: sx().width("280px"),
-        onclick: t.onclick,
-        onkeydown: t.onkeydown,
-        attributes: t.aria,
-        match t.labels.first() {
-            Some(label) => label.render(),
-            None => rsx! { "Pick a fruit" },
-        }
+const SELECT_STATE: &str = r#"let fruit = use_combobox();
+let mut picked = use_signal(|| None::<Fruit>);
+
+"#;
+
+const SUGGESTIONS_STATE: &str = r#"let suggestions = use_combobox();
+let mut text = use_signal(String::new);
+
+let matches: Vec<Fruit> = Fruit::options()
+    .iter()
+    .copied()
+    .filter(|fruit| fruit.label().to_lowercase().contains(&text().to_lowercase()))
+    .collect();
+
+"#;
+
+const SELECT_TRIGGER: &str = r#"Button {
+    variant: "outlined",
+    sx: sx().width("280px"),
+    attributes: fruit.a11y_attributes(),
+    onclick: move |_| fruit.toggle(),
+    match picked() {
+        Some(fruit) => rsx! { "{fruit.label()}" },
+        None => rsx! { "Pick a fruit" },
     }
 }"#;
 
-const OPTION_LABEL: &str = r#"option_label: move |fruit: Fruit| OptionLabel::rich(
-    fruit.label(),
-    rsx! {
-        Text { component: "span", size: "xl", "{fruit.emoji()}" }
+const SUGGESTIONS_TRIGGER: &str = r#"TextField {
+    sx: sx().width("280px"),
+    placeholder: "Type a fruit",
+    value: text(),
+    attributes: suggestions.a11y_attributes(),
+    onchange: move |next| {
+        text.set(next);
+        suggestions.open();
+    },
+}
+input { r#type: "hidden", name: "fruit", value: "{text()}" }"#;
+
+/// A row is four combinations of two choices, so the snippet is composed
+/// rather than written out four times.
+const SELECT_WIRING: &str = r#"        selected: picked() == Some(o.value),
+        onpick: move |_| {
+            picked.set(Some(o.value));
+            fruit.close();
+        },"#;
+
+/// No `selected`: a suggestion is not a selection.
+const SUGGESTION_WIRING: &str = r#"        onpick: move |_| {
+            text.set(o.value.label());
+            suggestions.close();
+        },"#;
+
+const PLAIN_ROW: &str = r#"        "{o.value.label()}""#;
+
+const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "{o.value.emoji()}" }
         Flex {
             direction: "column",
             justify: "center",
             align: "flex-start",
-            // Gives the row its height, so the pitch below is not a guess.
-            sx: sx().gap("0").height("56px"),
-            Text { component: "span", size: "sm", "{fruit.label()}" }
+            sx: sx().gap("0"),
+            Text { component: "span", size: "sm", "{o.value.label()}" }
             Text {
                 component: "span",
                 size: "xs",
                 sx: sx().color("grey.6"),
-                "{fruit.note()}"
+                "{o.value.note()}"
             }
-        }
-    },
-)"#;
+        }"#;
+
+fn suggesting(values: &DemoValues) -> bool {
+    values.str("mode") == "suggestions"
+}
+
+/// The mode drives the state the two examples keep, so it prints their props
+/// too - `options` is a whole filtered `Vec` in one and the enum's own list in
+/// the other.
+fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    let (state, options) = match suggesting(values) {
+        true => ("state: suggestions", "options: matches"),
+        false => ("state: fruit", "options: Fruit::options().to_vec()"),
+    };
+    vec![state.to_string(), options.to_string()]
+}
+
+fn option_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    let wiring = match suggesting(values) {
+        true => SUGGESTION_WIRING,
+        false => SELECT_WIRING,
+    };
+    let row = match values.str("option").as_str() {
+        "true" => RICH_ROW,
+        _ => PLAIN_ROW,
+    };
+    vec![format!(
+        "option: move |o: ComboboxOptionArgs<Fruit>| rsx! {{\n    \
+         ComboboxOption {{\n{wiring}\n{row}\n    }}\n}}"
+    )]
+}
+
+fn trigger_code(values: &DemoValues) -> String {
+    match suggesting(values) {
+        true => SUGGESTIONS_TRIGGER.to_string(),
+        false => SELECT_TRIGGER.to_string(),
+    }
+}
+
+fn preamble(values: &DemoValues, source: &str) -> String {
+    let state = match suggesting(values) {
+        true => SUGGESTIONS_STATE,
+        false => SELECT_STATE,
+    };
+    format!("{FRUIT_ENUM}{state}{source}")
+}
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
@@ -94,15 +177,137 @@ impl Fruit {
     }
 }
 
-/// The rich row's height: set on the row's content so it is a fact rather than
-/// whatever the two lines happen to measure, and handed to `option_height` so
-/// virtualization works to the same number.
-const RICH_OPTION_HEIGHT: f64 = 56.0;
+/// What a row draws, plain or rich - the same either side of the mode toggle.
+#[component]
+fn RowContent(fruit: Fruit, rich: bool) -> Element {
+    rsx! {
+        if rich {
+            Text { component: "span", size: "xl", "{fruit.emoji()}" }
+            Flex {
+                direction: "column",
+                justify: "center",
+                align: "flex-start",
+                sx: sx().gap("0"),
+                Text { component: "span", size: "sm", "{fruit.label()}" }
+                Text {
+                    component: "span",
+                    size: "xs",
+                    sx: sx().color("grey.6"),
+                    "{fruit.note()}"
+                }
+            }
+        } else {
+            "{fruit.label()}"
+        }
+    }
+}
+
+/// A button opens the list, a pick closes it, and the pick is shown below.
+#[component]
+fn SelectDemo(values: DemoValues) -> Element {
+    let fruit = use_combobox();
+    let mut picked = use_signal(|| None::<Fruit>);
+    let rich = values.str("option") == "true";
+    let disabled = values.str("disabled") == "true";
+
+    rsx! {
+        Flex {
+            direction: "column",
+            gap: "sm",
+            align: "flex-start",
+            Combobox {
+                size: values.str("size"),
+                radius: values.str("radius"),
+                disabled: disabled.then_some(true),
+                state: fruit,
+                options: Fruit::options().to_vec(),
+                option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                    ComboboxOption {
+                        selected: picked() == Some(o.value),
+                        onpick: move |_| {
+                            picked.set(Some(o.value));
+                            fruit.close();
+                        },
+                        RowContent { fruit: o.value, rich }
+                    }
+                },
+                Button {
+                    variant: "outlined",
+                    sx: sx().width("280px"),
+                    disabled,
+                    attributes: fruit.a11y_attributes(),
+                    onclick: move |_| fruit.toggle(),
+                    match picked() {
+                        Some(fruit) => rsx! { "{fruit.label()}" },
+                        None => rsx! { "Pick a fruit" },
+                    }
+                }
+            }
+            Text {
+                size: "sm",
+                sx: sx().color("grey.6"),
+                match picked() {
+                    Some(fruit) => rsx! { "Picked: {fruit.label()}" },
+                    None => rsx! { "Nothing picked yet" },
+                }
+            }
+        }
+    }
+}
+
+/// Typing filters the list; picking a suggestion fills the field.
+#[component]
+fn SuggestionsDemo(values: DemoValues) -> Element {
+    let suggestions = use_combobox();
+    let mut text = use_signal(String::new);
+    let rich = values.str("option") == "true";
+    let disabled = values.str("disabled") == "true";
+
+    let matches: Vec<Fruit> = Fruit::options()
+        .iter()
+        .copied()
+        .filter(|fruit| {
+            fruit
+                .label()
+                .to_lowercase()
+                .contains(&text().to_lowercase())
+        })
+        .collect();
+
+    rsx! {
+        Combobox {
+            size: values.str("size"),
+            radius: values.str("radius"),
+            disabled: disabled.then_some(true),
+            state: suggestions,
+            options: matches,
+            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                ComboboxOption {
+                    onpick: move |_| {
+                        text.set(o.value.label());
+                        suggestions.close();
+                    },
+                    RowContent { fruit: o.value, rich }
+                }
+            },
+            TextField {
+                sx: sx().width("280px"),
+                placeholder: "Type a fruit",
+                value: text(),
+                disabled,
+                attributes: suggestions.a11y_attributes(),
+                onchange: move |next| {
+                    text.set(next);
+                    suggestions.open();
+                },
+            }
+            input { r#type: "hidden", name: "fruit", value: "{text()}" }
+        }
+    }
+}
 
 #[component]
 pub fn ComboboxPage() -> Element {
-    let mut value = use_signal(|| None::<Fruit>);
-
     rsx! {
         DocPage {
             title: "Combobox",
@@ -110,140 +315,72 @@ pub fn ComboboxPage() -> Element {
             markdown: "/md/combobox.md",
             properties: vec![
                 props("Combobox", vec![
-                    prop("value", "Option<T>")
-                        .doc("The selected option; strictly controlled."),
-                    prop("onchange", "EventHandler<Option<T>>")
-                        .doc("Called with what should be selected next. `None` clears the selection."),
-                    prop("target", "Callback<ComboboxTarget, Element>")
-                        .doc("The whole control. Required - `Combobox` renders no field of its own."),
+                    prop("state", "ComboboxState")
+                        .doc("From `use_combobox()`: the open state, the arrow-key highlight, and the id the aria wiring is built from. Required."),
                     prop("options", "Vec<T>")
-                        .default("T::options()")
-                        .doc("The options to show."),
-                    prop("option_label", "Callback<T, OptionLabel>")
-                        .default("T::label()")
-                        .doc("Overrides `Options::label`. Returns an `OptionLabel`, so a row can hold an icon or a badge."),
-                    prop("searchable", "bool")
-                        .default("true")
-                        .doc("A search field above the options. `false` leaves a plain listbox."),
-                    prop("search_placeholder", "String")
-                        .doc("Placeholder for the search field inside the dropdown."),
-                    prop("filter", "Callback<ComboboxFilterArgs<T>, bool>")
-                        .doc("Whether an option survives the query. Defaults to a case-insensitive contains on the resolved label."),
+                        .doc("The options to list, already filtered. Required."),
+                    prop("option", "Callback<ComboboxOptionArgs<T>, Element>")
+                        .doc("Draws one row - typically a `ComboboxOption`. Required."),
+                    prop("children", "Element")
+                        .doc("The trigger, and anything else that belongs with it - a hidden input, say."),
                     prop("empty", "Element")
-                        .doc("Shown in place of the list when nothing matches."),
+                        .doc("Shown in place of the list when `options` is empty."),
                     prop("size", "Size")
                         .default("md")
-                        .doc("Rows, the search field, and the row height virtualization assumes."),
+                        .doc("A row's height and font size."),
                     prop("radius", "Size")
                         .default("sm")
                         .doc("The dropdown's corner radius."),
-                    prop("option_height", "f64")
-                        .doc("A custom row's real height in px. Rows are virtualized against the themed row height, which a taller `option_label` outgrows."),
-                    prop("max_dropdown_height", "ThemeAwareValue")
-                        .default("260px")
-                        .doc("Height past which the option list scrolls."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Blocks opening. Pass it to the target too, which draws its own dimmed state."),
+                        .doc("Blocks the arrow keys. Disable the trigger too, which draws its own dimmed state."),
+                ]),
+                props("ComboboxOption", vec![
+                    prop("selected", "bool")
+                        .doc("The current selection - `aria-selected` and a tint. Leave it unset for a suggestion list."),
+                    prop("active", "bool")
+                        .default("from the Combobox")
+                        .doc("Overrides the keyboard highlight, which otherwise comes from the `Combobox` drawing the row."),
+                    prop("onpick", "EventHandler<()>")
+                        .doc("Called on a click, and by Enter while the row is active."),
+                    prop("size", "Size")
+                        .doc("Row height and font size. Defaults to the `Combobox`'s own `size`."),
+                    prop("radius", "Size")
+                        .doc("Corner radius, tightened by the dropdown's padding so the row nests inside it. Defaults to the `Combobox`'s own."),
                 ]),
             ],
             lead: rsx! {
                 Text {
-                    "A listbox over an enum, with its own search field "
-                    "inside the dropdown. The control is the caller's, through "
-                    Code { source: "target" }
-                    " - so the selected option is displayed exactly as the caller draws "
-                    "it, and "
-                    Code { source: "Combobox" }
-                    " never owns a field's styling. Rows are virtualized, so a list of "
-                    "thousands costs the same as a list of ten."
+                    "A listbox that hangs off whatever control you put in it. It holds "
+                    "no state of its own: "
+                    Code { source: "use_combobox()" }
+                    " keeps it in your scope, the selection is yours entirely, the rows "
+                    "are drawn by "
+                    Code { source: "option" }
+                    ", and the trigger is just "
+                    Code { source: "children" }
+                    ". All it adds is the placement, the arrow keys, and the row theming."
                 }
             },
             Demo {
                 component: "Combobox",
                 children_text: "",
-                wrap: Wrap(|_: &DemoValues, source: &str| format!("{FRUIT_ENUM}{source}")),
-                fixed: vec![
-                    "value: value()".to_string(),
-                    "onchange: move |next| value.set(next)".to_string(),
-                    TARGET.to_string(),
-                ],
+                code_child: Child(trigger_code),
+                wrap: Wrap(preamble),
                 controls: vec![
+                    Control::toggle("mode", ["select", "suggestions"])
+                        .labels(["Select", "Suggestions"])
+                        .code(mode_code),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
-                    Control::switch("searchable").default("true"),
-                    Control::switch("option_label").code(|_, values| {
-                        match values.str("option_label").as_str() {
-                            "true" => vec![
-                                OPTION_LABEL.to_string(),
-                                format!("option_height: {RICH_OPTION_HEIGHT}"),
-                            ],
-                            _ => vec![],
-                        }
-                    }),
+                    Control::switch("option").code(option_code),
                     Control::switch("disabled"),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Combobox {
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        searchable: values.str("searchable") == "true",
-                        option_label: (values.str("option_label") == "true").then(|| {
-                            Callback::new(|fruit: Fruit| {
-                                OptionLabel::rich(
-                                    fruit.label(),
-                                    rsx! {
-                                        Text {
-                                            component: "span",
-                                            size: "xl",
-                                            "{fruit.emoji()}"
-                                        }
-                                        Flex {
-                                            direction: "column",
-                                            justify: "center",
-                                            align: "flex-start",
-                                            sx: sx()
-                                                .gap("0")
-                                                .height(format!("{RICH_OPTION_HEIGHT}px")),
-                                            Text {
-                                                component: "span",
-                                                size: "sm",
-                                                "{fruit.label()}"
-                                            }
-                                            Text {
-                                                component: "span",
-                                                size: "xs",
-                                                sx: sx().color("grey.6"),
-                                                "{fruit.note()}"
-                                            }
-                                        }
-                                    },
-                                )
-                            })
-                        }),
-                        option_height: (values.str("option_label") == "true")
-                            .then_some(RICH_OPTION_HEIGHT),
-                        search_placeholder: "Search fruit",
-                        disabled: (values.str("disabled") == "true").then_some(true),
-                        value: value(),
-                        onchange: move |next| value.set(next),
-                        target: move |t: ComboboxTarget| rsx! {
-                            Button {
-                                variant: "outlined",
-                                sx: sx().width("280px"),
-                                disabled: t.disabled,
-                                onclick: move |event| t.onclick.call(event),
-                                onkeydown: move |event| t.onkeydown.call(event),
-                                attributes: t.aria.clone(),
-                                match t.labels.first() {
-                                    Some(label) => label.render(),
-                                    None => rsx! { "Pick a fruit" },
-                                }
-                            }
-                        },
-                    }
+                render: move |values: DemoValues| match values.str("mode").as_str() {
+                    "suggestions" => rsx! { SuggestionsDemo { values } },
+                    _ => rsx! { SelectDemo { values } },
                 },
             }
         }

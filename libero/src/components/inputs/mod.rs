@@ -16,7 +16,10 @@ pub(crate) use button::{
 };
 pub use button::{Button, ButtonProps, ButtonVariant};
 pub use chip::{Chip, ChipProps};
-pub use combobox::{Combobox, ComboboxFilterArgs, ComboboxProps, ComboboxTarget};
+pub use combobox::{
+    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
+    ComboboxState, use_combobox,
+};
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use select::{Select, SelectProps};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};

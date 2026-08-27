@@ -1,104 +1,35 @@
-use std::collections::HashSet;
-
 use dioxus::prelude::*;
 
-use crate::{
-    components::{
-        HtmlTag, Input, OptionLabel, States,
-        layout::{ScrollArea, Virtualize, use_box},
-    },
-    sx::{StaticSx, sx},
-    theme::{ComboboxDefaults, Size},
-};
+use crate::{components::layout::ScrollArea, sx::sx};
 
-static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
-    ComboboxDefaults::row_theme_vars()
-        .display("flex")
-        .align_items("center")
-        .gap("8px")
-        .width("100%")
-        .cursor("pointer")
-        .user_select("none")
-        .white_space("nowrap")
-        .overflow("hidden")
-        .text_overflow("ellipsis")
-        .border_radius("4px")
-        .hover(sx().background("grey.1"))
-        .when("active", sx().background("grey.2"))
-        .when("selected", sx().background("primary.1").color("primary.7"))
-});
+use super::option::ComboboxRowContext;
 
-/// One row. A component, not a closure, because it needs `use_box`.
+/// Publishes where this row sits, so `ComboboxOption` needs no props for its
+/// `id` or its highlight. A `Signal`, written during render: a provider runs
+/// once, but `active` moves with the arrow keys.
 #[component]
-fn ComboboxOption(
-    id: String,
-    label: OptionLabel,
-    active: bool,
-    selected: bool,
-    size: Size,
-    onpick: EventHandler<()>,
-) -> Element {
-    let states: Input<States> = States::new()
-        .with(size.state_name(), true)
-        .with("active", active)
-        .with("selected", selected)
-        .into();
+fn ComboboxRow(index: usize, active: bool, children: Element) -> Element {
+    let mut context = use_context_provider(|| Signal::new(ComboboxRowContext { index, active }));
+    let next = ComboboxRowContext { index, active };
+    if *context.peek() != next {
+        context.set(next);
+    }
 
-    use_box()
-        .framework_sx(&COMBOBOX_ROW_SX)
-        .states(&states)
-        .prepare()
-        .attr("id", id)
-        .attr("role", "option")
-        .attr("aria-selected", selected)
-        // Or the click blurs the search field first, closing the dropdown
-        // before the row ever hears about it.
-        .event("onmousedown", move |event: MouseEvent| {
-            event.prevent_default();
-        })
-        .event("onclick", move |_: MouseEvent| onpick.call(()))
-        .render(HtmlTag::Div, Vec::new(), label.render())
+    children
 }
 
-/// The scrolling option list. `visible` holds the indices that passed the
-/// filter, so a row's position and its option's index are different numbers.
+/// The scrolling option list. The rows arrive drawn, which is what erases the
+/// `Combobox`'s `T` - and what keeps them from being memoized.
 #[component]
 pub(super) fn ComboboxDropdown(
-    labels: Vec<OptionLabel>,
-    visible: Vec<usize>,
-    selected: HashSet<usize>,
+    rows: Vec<Element>,
     active: usize,
     id: String,
-    size: Size,
-    item_size: f64,
     max_height: String,
     scroll_y: Option<f64>,
-    onpick: EventHandler<usize>,
     empty: Option<Element>,
 ) -> Element {
-    let count = visible.len();
-    let row_id = use_callback(move |index: usize| format!("{id}-option-{index}"));
-    let item = use_callback(move |row: usize| {
-        let Some(&index) = visible.get(row) else {
-            return rsx! {};
-        };
-        let Some(label) = labels.get(index).cloned() else {
-            return rsx! {};
-        };
-        rsx! {
-            ComboboxOption {
-                id: row_id.call(index),
-                label,
-                active: row == active,
-                selected: selected.contains(&index),
-                size,
-                onpick: move |()| onpick.call(index),
-            }
-        }
-    });
-
-    // After the hooks, never before them.
-    if count == 0 {
+    if rows.is_empty() {
         return empty.unwrap_or_else(|| rsx! {});
     }
 
@@ -106,8 +37,11 @@ pub(super) fn ComboboxDropdown(
         ScrollArea {
             sx: sx().max_height(max_height),
             scroll_position_y: scroll_y,
+            id: super::aria::listbox_id(&id),
             "role": "listbox",
-            Virtualize { count, item, item_size: Some(item_size) }
+            for (index, row) in rows.into_iter().enumerate() {
+                ComboboxRow { key: "{index}", index, active: index == active, {row} }
+            }
         }
     }
 }

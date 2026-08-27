@@ -1,9 +1,10 @@
+mod aria;
 mod combobox;
 mod core;
 mod dropdown;
-mod filter;
-mod target;
+mod option;
+mod state;
 
 pub use combobox::{Combobox, ComboboxProps};
-pub use filter::ComboboxFilterArgs;
-pub use target::ComboboxTarget;
+pub use option::{ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps};
+pub use state::{ComboboxState, use_combobox};

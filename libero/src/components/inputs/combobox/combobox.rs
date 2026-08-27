@@ -1,68 +1,35 @@
-use std::collections::HashSet;
-
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ClassList, Input, OptionLabel, Options, States},
-    sx::{Sx, ThemeAwareValue},
+    components::{ClassList, Input, States},
+    sx::Sx,
     theme::Size,
-    utils::warn,
 };
 
-use super::{
-    core::ComboboxCore,
-    filter::{ComboboxFilterArgs, contains_ignoring_case},
-    target::ComboboxTarget,
-};
+use super::{core::ComboboxCore, option::ComboboxOptionArgs, state::ComboboxState};
 
 // Hand-written rather than `base_props!`, which is not generic.
 #[derive(Props, Clone, PartialEq)]
-pub struct ComboboxProps<T: Options> {
-    /// Strictly controlled - pair it with `onchange`.
-    #[props(default)]
-    value: Option<T>,
-    /// Called with what should be selected next. `None` is "nothing" - which
-    /// a clear button in the target sends through `onclear`.
-    #[props(default)]
-    onchange: Option<EventHandler<Option<T>>>,
-    /// The options to show. Defaults to every `Options::options()`.
-    #[props(default)]
-    options: Option<Vec<T>>,
-    /// Overrides `Options::label`. Runs during render, so it can read a
-    /// locale from context.
-    ///
-    /// Returns an `OptionLabel`, not a `String`: a row is a div, so it can
-    /// hold an icon or a badge - and so can the target.
-    #[props(default)]
-    option_label: Option<Callback<T, OptionLabel>>,
-    /// The whole control. `Combobox` renders no field of its own, so the
-    /// target owns its look entirely - see [`ComboboxTarget`].
-    target: Callback<ComboboxTarget, Element>,
-    /// A search field above the options. `false` leaves a plain listbox.
-    #[props(default = true)]
-    searchable: bool,
-    #[props(default)]
-    search_placeholder: Option<String>,
-    /// Whether an option survives the query. Defaults to a case-insensitive
-    /// contains on the *resolved* label, so a translated option is searched
-    /// by what it reads as.
-    #[props(default)]
-    filter: Option<Callback<ComboboxFilterArgs<T>, bool>>,
-    /// Shown in place of the list when nothing matches.
+pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
+    /// Whether the list is open and which row the arrows are on, from
+    /// [`use_combobox`](crate::hooks::use_combobox). It lives in the caller's
+    /// scope, and `state.a11y_attributes()` is what wires the control up.
+    state: ComboboxState,
+    /// The options to list, already filtered. There is no query prop: a
+    /// suggestion list narrows by handing a shorter `options` in.
+    options: Vec<T>,
+    /// Draws one row - typically a [`ComboboxOption`](super::ComboboxOption),
+    /// which is themed and wires the click for you.
+    option: Callback<ComboboxOptionArgs<T>, Element>,
+    /// Shown in place of the list when `options` is empty.
     #[props(default)]
     empty: Option<Element>,
-    /// Rows, the search field, and the row height virtualization assumes.
+    /// A row's height and font size.
     #[props(default, into)]
     size: Input<Size>,
     /// The dropdown's corner radius.
     #[props(default, into)]
     radius: Input<Size>,
-    /// A custom row's real height in px. Rows are virtualized against the
-    /// themed row height, which a taller `option_label` outgrows.
-    #[props(default)]
-    option_height: Option<f64>,
-    #[props(default, into)]
-    max_dropdown_height: Input<ThemeAwareValue>,
     #[props(default)]
     disabled: Option<bool>,
     #[props(extends = GlobalAttributes)]
@@ -75,105 +42,70 @@ pub struct ComboboxProps<T: Options> {
     sx: Input<Sx>,
     #[props(default, into)]
     states: Input<States>,
+    /// The trigger, and anything else that belongs with it - a hidden input,
+    /// say. `Combobox` renders no control of its own.
+    children: Element,
 }
 
-/// A listbox over an enum, with its own search field inside the dropdown.
-/// Controlled: it renders `value` and asks for a new one through `onchange`.
+/// A listbox that hangs off whatever control you put in it.
 ///
-/// The control itself is the caller's, through `target` - so the selection is
-/// displayed exactly as the caller draws it, and `Combobox` never has to own a
-/// field's styling.
+/// It holds no state: `opened` and the selection are the caller's, the rows
+/// are drawn by `option`, and the trigger is just `children`. All it adds is
+/// the placement, the arrow keys, and the row theming.
 ///
 /// Generic only at this boundary: the options are erased to indices here, and
 /// everything below compiles once.
 #[component]
-pub fn Combobox<T: Options>(props: ComboboxProps<T>) -> Element {
-    if props.onchange.is_none() {
-        warn("Combobox: without `onchange` the selection can never change.");
-    }
-    if !props.searchable && props.filter.is_some() {
-        warn("Combobox: `filter` does nothing while `searchable` is false.");
-    }
+pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Element {
+    let count = props.options.len();
+    let state = props.state;
 
-    let values = props
+    // Opening always starts at the top; nothing carries over from last time.
+    // Reading `opened` is what makes the effect re-run on it.
+    use_effect(move || {
+        let _ = state.opened();
+        state.set_active(0);
+    });
+
+    let active_row = state.active().min(count.saturating_sub(1));
+
+    // Drawn here, eagerly, and handed down as values. A `Callback` would be
+    // the obvious way to keep this lazy, but two `Callback`s built in the same
+    // scope on different renders compare *equal* - `GenerationalBox::ptr_eq`
+    // sees the recycled slot - so the whole subtree below would memoize and a
+    // filtered `options` would leave stale rows on screen. A `Vec<Element>`
+    // never compares equal, which is exactly the guarantee this needs.
+    let option = props.option;
+    let rows: Vec<Element> = props
         .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
-    if values.is_empty() {
-        warn("Combobox: no options - a `T` without static `options()` needs `options`.");
-    }
-
-    let labels: Vec<OptionLabel> = values
         .iter()
-        .map(|value| match &props.option_label {
-            Some(label) => label.call(value.clone()),
-            None => OptionLabel::from(value.label()),
+        .enumerate()
+        .map(|(index, value)| {
+            option.call(ComboboxOptionArgs {
+                value: value.clone(),
+                index,
+                active: index == active_row,
+            })
         })
         .collect();
 
-    let selected: HashSet<usize> = props
-        .value
-        .as_ref()
-        .and_then(|value| values.iter().position(|option| option == value))
-        .into_iter()
-        .collect();
-    if props.value.is_some() && selected.is_empty() && !values.is_empty() {
-        warn("Combobox: `value` is not one of the options, so none is selected.");
-    }
-
-    let filter = props.filter;
-    let filter_values = values.clone();
-    let filter_labels = labels.clone();
-    let matches = use_callback(move |(query, index): (String, usize)| {
-        let Some(name) = filter_labels.get(index).map(OptionLabel::name) else {
-            return false;
-        };
-        match &filter {
-            Some(filter) => match filter_values.get(index) {
-                Some(value) => filter.call(ComboboxFilterArgs {
-                    query,
-                    value: value.clone(),
-                    name: name.to_string(),
-                }),
-                None => false,
-            },
-            None => contains_ignoring_case(&query, name),
-        }
-    });
-
-    let onchange = props.onchange;
-    let pick_values = values;
-    let onpick = use_callback(move |index: usize| {
-        if let (Some(onchange), Some(value)) = (&onchange, pick_values.get(index)) {
-            onchange.call(Some(value.clone()));
-        }
-    });
-    let onclear = use_callback(move |()| {
-        if let Some(onchange) = &onchange {
-            onchange.call(None);
-        }
-    });
-
     rsx! {
         ComboboxCore {
-            labels,
-            selected,
-            onpick: move |index| onpick.call(index),
-            onclear: move |()| onclear.call(()),
-            matches,
-            target: props.target,
-            searchable: props.searchable,
-            search_placeholder: props.search_placeholder,
+            rows,
+            active: active_row,
+            onactive: move |row| state.set_active(row),
+            opened: state.opened(),
+            onopened: move |opened| state.set_opened(opened),
+            id: state.id(),
             empty: props.empty,
             size: props.size,
             radius: props.radius,
-            option_height: props.option_height,
-            max_dropdown_height: props.max_dropdown_height,
             disabled: props.disabled.unwrap_or(false),
             attributes: props.attributes,
             class: props.class,
             sx: props.sx,
             states: props.states,
+            {props.children}
         }
     }
 }

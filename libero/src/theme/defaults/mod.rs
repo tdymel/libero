@@ -58,8 +58,8 @@ pub use code_block::{
     CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CodeBlockDefaults,
 };
 pub use combobox::{
-    COMBOBOX_FONT_SIZE, COMBOBOX_PADDING_X, COMBOBOX_ROW_HEIGHT, ComboboxDefaults,
-    ComboboxSizeLevel,
+    COMBOBOX_FONT_SIZE, COMBOBOX_PADDING, COMBOBOX_PADDING_X, COMBOBOX_ROW_HEIGHT,
+    ComboboxDefaults, ComboboxSizeLevel,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use data_list::{DATA_LIST_GAP, DataListDefaults};

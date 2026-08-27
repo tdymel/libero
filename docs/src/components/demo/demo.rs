@@ -114,6 +114,9 @@ pub fn Demo(
     /// Literal rsx for the children, printed verbatim - for children that are
     /// a subtree rather than one string. Wins over `children_text`.
     children_code: Option<String>,
+    /// Overrides `children_code` per control state, for a subtree a control
+    /// swaps out wholesale. Wins over both `children_code` and `children_text`.
+    code_child: Option<Child>,
     /// Props the demo holds constant but the code block must still print - a
     /// required one like `aria_label`, which no control varies.
     #[props(default)]
@@ -139,6 +142,10 @@ pub fn Demo(
     let children_text = match child {
         Some(Child(child)) => child(&values()),
         None => children_text.clone(),
+    };
+    let children_code = match code_child {
+        Some(Child(child)) => Some(child(&values())),
+        None => children_code.clone(),
     };
     let source = super::generate_code(
         &component,

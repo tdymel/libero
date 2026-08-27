@@ -6,12 +6,14 @@ pub const COMBOBOX_FONT_SIZE: SizeCss = SizeCss::new("--lsx-combobox-font-size-"
 pub const COMBOBOX_ROW_HEIGHT: SizeCss = SizeCss::new("--lsx-combobox-row-height-");
 pub const COMBOBOX_PADDING_X: SizeCss = SizeCss::new("--lsx-combobox-padding-x-");
 
+/// The dropdown's own padding, and so the inset a row nests at - which is what
+/// its corner radius has to be smaller by.
+pub const COMBOBOX_PADDING: &str = "4px";
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComboboxSizeLevel {
     pub font_size: &'static str,
-    /// A row's minimum height, and the `item_size` handed to `Virtualize` -
-    /// which is why it is a number: rows never probe their own height. A
-    /// taller custom row passes its own through `option_height`.
+    /// A row's minimum height - a taller row grows past it.
     pub row_height: f64,
     pub padding_x: &'static str,
 }
@@ -27,8 +29,8 @@ pub struct ComboboxDefaults {
 impl ComboboxDefaults {
     pub fn row_sx(size: Size) -> Sx {
         sx().font_size(COMBOBOX_FONT_SIZE.value(size))
-            // `min-height`, not `height`: a rich `OptionLabel` is taller than
-            // the themed row and must not be clipped.
+            // `min-height`, not `height`: a rich row is taller than the
+            // themed one and must not be clipped.
             .min_height(COMBOBOX_ROW_HEIGHT.value(size))
             .padding_left(COMBOBOX_PADDING_X.value(size))
             .padding_right(COMBOBOX_PADDING_X.value(size))
@@ -38,16 +40,23 @@ impl ComboboxDefaults {
         sx().border_radius(SizeCss::RADIUS.value(radius))
     }
 
+    /// A row nests `COMBOBOX_PADDING` inside the dropdown, so its corner has
+    /// to be that much tighter or it crosses the dropdown's own - visibly, at
+    /// `xxl`, where the radius is 64px. `max` keeps the small steps at 0
+    /// rather than negative, which is not a radius at all.
+    pub fn row_radius_sx(radius: Size) -> Sx {
+        sx().border_radius(format!(
+            "max(0px, calc({} - {COMBOBOX_PADDING}))",
+            SizeCss::RADIUS.value(radius)
+        ))
+    }
+
     pub fn row_theme_vars() -> Sx {
-        sx().per_size(Self::row_sx)
+        sx().per_size(Self::row_sx).per_radius(Self::row_radius_sx)
     }
 
     pub fn dropdown_theme_vars() -> Sx {
         sx().per_radius(Self::radius_sx)
-    }
-
-    pub fn row_height(&self, size: Size) -> f64 {
-        self.sizes.get(size).row_height
     }
 }
 
