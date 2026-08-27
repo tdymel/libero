@@ -23,6 +23,7 @@ mod kbd;
 mod list;
 mod mark;
 mod nav_link;
+mod number_field;
 mod overlay;
 mod qr_code;
 mod ripple;
@@ -89,6 +90,7 @@ pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_S
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use mark::MarkDefaults;
 pub use nav_link::NavLinkDefaults;
+pub use number_field::NumberFieldDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};

@@ -1,5 +1,6 @@
 mod caption;
 mod field_status;
+mod number_field;
 mod password_field;
 mod select;
 mod text_field;
@@ -9,6 +10,7 @@ mod use_field_frame;
 
 pub use caption::Caption;
 pub use field_status::FieldStatus;
+pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};
 pub use select::{Select, SelectProps};
 pub use text_field::{TextField, TextFieldProps};

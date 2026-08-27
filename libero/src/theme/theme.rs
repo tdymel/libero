@@ -5,12 +5,12 @@ use super::{
     DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults, FieldDefaults,
     FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults,
     HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults,
-    ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
-    SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
-    TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
-    TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
-    ZIndexDefaults,
+    NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
+    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
+    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
+    SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
+    TextFieldDefaults, TextSize, TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults,
+    TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -49,6 +49,7 @@ pub struct Theme {
     pub select: SelectDefaults,
     pub text_field: TextFieldDefaults,
     pub textarea: TextareaDefaults,
+    pub number_field: NumberFieldDefaults,
     pub combobox: ComboboxDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
@@ -341,6 +342,10 @@ impl Theme {
             radius: Size::Sm,
         },
         textarea: TextareaDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+        },
+        number_field: NumberFieldDefaults {
             size: Size::Md,
             radius: Size::Sm,
         },

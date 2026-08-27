@@ -3,6 +3,7 @@ mod class_list;
 mod color_variant;
 mod field_props;
 mod input;
+mod number_value;
 mod options;
 mod orientation;
 mod polymorphic;
@@ -19,6 +20,7 @@ pub(crate) use color_variant::{
 pub(crate) use field_props::field_props;
 pub use input::Input;
 pub(crate) use input::input_from_str;
+pub use number_value::NumberValue;
 pub use options::{OptionLabel, Options};
 // The derive and the trait share a name and one import, the way serde's do.
 pub use libero_macros::Options;

@@ -124,6 +124,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         // Plain values read from Rust - no CSS vars of their own.
         text_field: _,
         textarea: _,
+        number_field: _,
         select: _,
         scroll_area: _,
         tree: _,

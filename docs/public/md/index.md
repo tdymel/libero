@@ -32,6 +32,7 @@ fetch only the file you need.
 
 ## Form
 
+- [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
 - [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.

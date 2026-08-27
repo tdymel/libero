@@ -9,7 +9,7 @@ use common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Options, PasswordField, Select, TextField, Textarea},
+    components::{NumberField, NumberValue, Options, PasswordField, Select, TextField, Textarea},
 };
 
 #[test]
@@ -390,4 +390,123 @@ fn a_textarea_renders_its_rows_inside_the_frame() {
     let after_label = body.split("</label>").nth(1).expect("a label");
     let frame = after_label.split("<textarea").next().expect("a textarea");
     assert!(frame.contains("<div"), "{body}");
+}
+
+/// `NumberField` is generic over the caller's number type, and every primitive
+/// already implements `NumberValue` - `i32` here needs no code at all.
+#[test]
+fn a_number_field_is_a_spinbutton_carrying_its_range() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NumberField {
+                    label: "Quantity",
+                    min: 1i32,
+                    max: 99i32,
+                    value: 4i32,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = attributes_of(&body, "input");
+
+    assert_eq!(input["value"], "4");
+    // `min`/`max` mean nothing on a text input, so the range is ARIA's.
+    assert_eq!(input["role"], "spinbutton");
+    assert_eq!(input["aria-valuenow"], "4");
+    assert_eq!(input["aria-valuemin"], "1");
+    assert_eq!(input["aria-valuemax"], "99");
+    assert_eq!(input["inputmode"], "decimal");
+    assert_eq!(attributes_of(&body, "label")["for"], input["id"]);
+
+    // Both steppers are real buttons in the trailing slot.
+    assert!(body.contains(r#"aria-label="Increase""#), "{body}");
+    assert!(body.contains(r#"aria-label="Decrease""#), "{body}");
+    let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
+    assert!(order("<input") < order(r#"data-slot="trailing""#));
+}
+
+/// The empty field is a state the type can hold, not an empty string the
+/// caller has to special-case.
+#[test]
+fn a_number_field_without_a_value_renders_empty() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NumberField {
+                    label: "Weight",
+                    placeholder: "kg",
+                    value: None::<f64>,
+                    onchange: move |_: f64| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let input = attributes_of(&body, "input");
+
+    assert_eq!(input["value"], "");
+    assert_eq!(input["placeholder"], "kg");
+    assert!(!body.contains("aria-valuenow"), "{body}");
+}
+
+/// A custom `NumberValue` is `default_step` plus whatever genuinely differs -
+/// here the display, because cents are stored whole and shown with a point.
+#[derive(Clone, Copy, PartialEq, PartialOrd)]
+struct Cents(i64);
+
+impl std::ops::Add for Cents {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Cents(self.0 + other.0)
+    }
+}
+
+impl std::ops::Sub for Cents {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        Cents(self.0 - other.0)
+    }
+}
+
+impl std::str::FromStr for Cents {
+    type Err = std::num::ParseFloatError;
+    fn from_str(text: &str) -> Result<Self, Self::Err> {
+        Ok(Cents((text.parse::<f64>()? * 100.0).round() as i64))
+    }
+}
+
+impl std::fmt::Display for Cents {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(formatter, "{}.{:02}", self.0 / 100, self.0 % 100)
+    }
+}
+
+impl NumberValue for Cents {
+    fn default_step() -> Self {
+        Cents(50)
+    }
+}
+
+#[test]
+fn a_custom_number_value_formats_itself() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NumberField {
+                    label: "Price",
+                    value: Cents(1234),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert_eq!(attributes_of(&body, "input")["value"], "12.34");
 }
