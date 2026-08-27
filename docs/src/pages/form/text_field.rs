@@ -75,6 +75,15 @@ pub fn TextFieldPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
+                    Control::toggle("status", ["valid", "warning", "error"])
+                        .default("valid")
+                        .code(|_, values| match values.str("status").as_str() {
+                            "warning" => vec![
+                                "status: FieldStatus::Warning(\"That name is close to another one.\".into())".to_string(),
+                            ],
+                            "error" => vec!["status: \"That name is taken.\"".to_string()],
+                            _ => vec![],
+                        }),
                     // Each caption is a whole element, not a style: unset,
                     // the slot is not in the markup at all.
                     Control::switch("label").default("true").code(|_, values| {
@@ -95,15 +104,6 @@ pub fn TextFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::toggle("status", ["valid", "warning", "error"])
-                        .default("valid")
-                        .code(|_, values| match values.str("status").as_str() {
-                            "warning" => vec![
-                                "status: FieldStatus::Warning(\"That name is close to another one.\".into())".to_string(),
-                            ],
-                            "error" => vec!["status: \"That name is taken.\"".to_string()],
-                            _ => vec![],
-                        }),
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
                             "true" => vec!["placeholder: \"ada\"".to_string()],
