@@ -262,6 +262,7 @@ html_tags! {
         Select => select,
         Span => span,
         Table => table,
+        Textarea => textarea,
         Ul => ul,
     }
     full {
@@ -333,7 +334,6 @@ html_tags! {
         Tbody => tbody,
         Td => td,
         Template => template,
-        Textarea => textarea,
         Tfoot => tfoot,
         Th => th,
         Thead => thead,

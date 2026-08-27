@@ -36,6 +36,7 @@ mod table;
 mod tabs;
 mod text;
 mod text_field;
+mod textarea;
 mod title;
 mod tooltip;
 mod tree;
@@ -116,6 +117,7 @@ pub use text::{
     TextDefaults, TextSize,
 };
 pub use text_field::TextFieldDefaults;
+pub use textarea::TextareaDefaults;
 pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,
     TitleDefaults, TitleSize,

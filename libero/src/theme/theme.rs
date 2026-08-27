@@ -9,7 +9,8 @@ use super::{
     ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
     SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
     TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
-    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
+    ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -47,6 +48,7 @@ pub struct Theme {
     pub field: FieldDefaults,
     pub select: SelectDefaults,
     pub text_field: TextFieldDefaults,
+    pub textarea: TextareaDefaults,
     pub combobox: ComboboxDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
@@ -335,6 +337,10 @@ impl Theme {
             radius: Size::Sm,
         },
         text_field: TextFieldDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+        },
+        textarea: TextareaDefaults {
             size: Size::Md,
             radius: Size::Sm,
         },

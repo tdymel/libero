@@ -9,7 +9,7 @@ use common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Options, PasswordField, Select, TextField},
+    components::{Options, PasswordField, Select, TextField, Textarea},
 };
 
 #[test]
@@ -363,4 +363,31 @@ fn a_password_field_hides_its_value_and_offers_a_reveal_button() {
     assert_eq!(button["aria-label"], "Show password");
     let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
     assert!(order("<input") < order(r#"data-slot="trailing""#));
+}
+
+/// The frame was built around an `<input>`; a `<textarea>` is what proves it
+/// holds a control that is not one line tall.
+#[test]
+fn a_textarea_renders_its_rows_inside_the_frame() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Textarea { label: "Notes", rows: 5, status: "Say something." }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let textarea = attributes_of(&body, "textarea");
+    let id = &textarea["id"];
+
+    assert_eq!(textarea["rows"], "5");
+    assert_eq!(attributes_of(&body, "label")["for"], *id);
+    assert_eq!(textarea["aria-describedby"], format!("{id}-status"));
+    assert_eq!(textarea["aria-invalid"], "true");
+
+    // Inside the frame, not a sibling of the label.
+    let after_label = body.split("</label>").nth(1).expect("a label");
+    let frame = after_label.split("<textarea").next().expect("a textarea");
+    assert!(frame.contains("<div"), "{body}");
 }

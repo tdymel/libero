@@ -21,7 +21,7 @@ use pages::{
     ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage, OverlayPage, PasswordFieldPage,
     PerformancePage, QrCodePage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage,
     SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage,
-    TextPage, ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    TextPage, TextareaPage, ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -75,6 +75,8 @@ pub(crate) enum Route {
     SelectPage {},
     #[route("/form/text-field")]
     TextFieldPage {},
+    #[route("/form/textarea")]
+    TextareaPage {},
 
     #[route("/inputs/action-icon")]
     ActionIconPage {},

@@ -134,6 +134,7 @@ properties! {
     ListStyle => "list-style", list_style;
     MinWidth => "min-width", min_width, SizeCss::BREAKPOINT;
     MinHeight => "min-height", min_height;
+    Resize => "resize", resize;
     AspectRatio => "aspect-ratio", aspect_ratio;
     Outline => "outline", outline;
     OutlineOffset => "outline-offset", outline_offset;

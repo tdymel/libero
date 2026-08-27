@@ -35,6 +35,7 @@ fetch only the file you need.
 - [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
+- [Textarea](textarea.md): A multi-line text field with the five field slots, sized by `rows` and resizable by the user.
 
 ## Inputs
 
