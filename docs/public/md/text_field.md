@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::TextField;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/text_field>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/text_field.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A single-line text field with the five field slots - label, description, control, helper text and validation message.
 

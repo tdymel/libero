@@ -9,7 +9,7 @@ pub fn TextFieldPage() -> Element {
     rsx! {
         DocPage {
             title: "TextField",
-            source: "libero/src/components/form/text_field",
+            source: "libero/src/components/form/text_field.rs",
             markdown: "/md/text_field.md",
             properties: vec![
                 props("TextField", vec![
