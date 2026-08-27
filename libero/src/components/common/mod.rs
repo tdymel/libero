@@ -1,6 +1,7 @@
 mod base_props;
 mod class_list;
 mod color_variant;
+mod field_props;
 mod input;
 mod options;
 mod orientation;
@@ -15,6 +16,7 @@ pub use class_list::{ClassList, class_list};
 pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, hover_color, selected_color, shade_color,
 };
+pub(crate) use field_props::field_props;
 pub use input::Input;
 pub(crate) use input::input_from_str;
 pub use options::{OptionLabel, Options};

@@ -92,6 +92,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         button,
         chip,
         switch,
+        field,
         select,
         text_field,
         combobox,
@@ -152,6 +153,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(button.to_css_declarations());
     declarations.extend(chip.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
+    declarations.extend(field.to_css_declarations());
     declarations.extend(select.to_css_declarations());
     declarations.extend(text_field.to_css_declarations());
     declarations.extend(combobox.to_css_declarations());

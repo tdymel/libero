@@ -12,6 +12,7 @@ mod data_list;
 mod dialog;
 mod divider;
 mod drawer;
+mod field;
 mod flex;
 mod float;
 mod grid;
@@ -66,6 +67,9 @@ pub use data_list::{DATA_LIST_GAP, DataListDefaults};
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
+pub use field::{
+    FIELD_CAPTION_FONT_SIZE, FIELD_GAP, FIELD_LABEL_FONT_SIZE, FieldDefaults, FieldSizeLevel,
+};
 pub use flex::{
     FLEX_ALIGN_VAR, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP,
     FLEX_JUSTIFY_VAR, FLEX_ROW_ALIGN, FLEX_ROW_JUSTIFY, FLEX_ROW_SPACING, FLEX_ROW_WRAP,
@@ -113,8 +117,8 @@ pub use text::{
     TextDefaults, TextSize,
 };
 pub use text_field::{
-    TEXT_FIELD_FONT_SIZE, TEXT_FIELD_HEIGHT, TEXT_FIELD_LABEL_FONT_SIZE, TEXT_FIELD_PADDING_X,
-    TextFieldDefaults, TextFieldSizeLevel,
+    TEXT_FIELD_FONT_SIZE, TEXT_FIELD_HEIGHT, TEXT_FIELD_PADDING_X, TextFieldDefaults,
+    TextFieldSizeLevel,
 };
 pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,

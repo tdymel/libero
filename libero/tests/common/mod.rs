@@ -1,5 +1,9 @@
 //! Renders a component to HTML and picks it apart, so a test can assert on
 //! one element's attributes instead of matching against the whole document.
+//!
+//! Compiled into each test binary separately, so a helper only some of them
+//! reach for is not dead - it is unused *here*.
+#![allow(dead_code)]
 
 use std::collections::BTreeMap;
 

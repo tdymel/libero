@@ -296,7 +296,7 @@ fn SuggestionsDemo(values: DemoValues) -> Element {
                 value: text(),
                 disabled,
                 attributes: suggestions.a11y_attributes(),
-                onchange: move |next| {
+                oninput: move |next| {
                     text.set(next);
                     suggestions.open();
                 },

@@ -3,19 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{base_props, focus_ring_sx},
+        common::{field_props, focus_ring_sx},
+        form::use_field,
         layout::use_box,
     },
-    hooks::{use_root_id, use_theme},
+    hooks::use_theme,
     sx::{StaticSx, Sx, sx},
-    theme::{Size, TextFieldDefaults},
-    utils::warn,
+    theme::TextFieldDefaults,
 };
-
-static TEXT_FIELD_WRAPPER_SX: StaticSx =
-    StaticSx::new(|| sx().display("flex").flex_direction("column").gap("4px"));
-
-static TEXT_FIELD_LABEL_SX: StaticSx = StaticSx::new(TextFieldDefaults::label_theme_vars);
 
 static TEXT_FIELD_BASE_SX: StaticSx = StaticSx::new(|| {
     TextFieldDefaults::theme_vars()
@@ -32,6 +27,8 @@ static TEXT_FIELD_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector("::placeholder", sx().color("grey.6"))
         .focus(sx().border_color("primary.6"))
         .focus_visible(focus_ring_sx())
+        .when("error", sx().border_color("error.7"))
+        .when("warning", sx().border_color("warning.7"))
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -40,33 +37,27 @@ static TEXT_FIELD_BASE_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-base_props! {
+field_props! {
     extends(input);
     pub struct TextFieldProps {
-        /// Strictly controlled - pair it with `onchange`. `None` is the empty
-        /// field.
-        #[props(default)]
+        /// The text to render. `None` leaves the `<input>` uncontrolled - it
+        /// keeps its own text and needs no handler.
+        #[props(default, into)]
         value: Option<String>,
-        /// Called per keystroke with the text the field should hold next.
+        /// Fires per keystroke with the text the field should hold next.
+        /// Native name, native timing.
         #[props(default)]
-        onchange: Option<EventHandler<String>>,
-        #[props(default)]
+        oninput: Option<EventHandler<String>>,
+        #[props(default, into)]
         placeholder: Option<String>,
-        #[props(default, into)]
-        size: Input<Size>,
-        /// Corner radius, independent of `size`.
-        #[props(default, into)]
-        radius: Input<Size>,
-        #[props(default)]
-        disabled: Option<bool>,
-        /// The field's own caption, above the control.
-        #[props(default)]
-        label: Option<String>,
     }
 }
 
-/// A single-line text field with its own caption. Controlled: it renders
-/// `value` and asks for a new one through `onchange`.
+/// A single-line text field, with a label, a description, helper text and a
+/// validation message stacked around it.
+///
+/// Controlled through `value` + `oninput`. Omit `value` and the `<input>` owns
+/// its own text.
 #[component]
 pub fn TextField(props: TextFieldProps) -> Element {
     let theme = use_theme();
@@ -74,60 +65,42 @@ pub fn TextField(props: TextFieldProps) -> Element {
     let size = props.size.copied_or(theme.text_field.size);
     let radius = props.radius.copied_or(theme.text_field.radius);
     let disabled = props.disabled.unwrap_or(false);
+    let required = props.required.unwrap_or(false);
 
-    if props.onchange.is_none() {
-        warn("TextField: without `onchange` the text can never change.");
-    }
-
-    let states: Input<States> = props
-        .states
-        .unwrap_or_default()
-        .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
-        .with("disabled", disabled)
-        .into();
-
-    let id = use_root_id(&props.attributes);
-
-    let wrapper = use_box()
-        .framework_sx(&TEXT_FIELD_WRAPPER_SX)
+    let field = use_field()
+        .label(&props.label)
+        .description(&props.description)
+        .helper(&props.helper)
+        .status(&props.status)
+        .required(required)
+        .disabled(disabled)
+        .size(size)
+        .radius(radius)
         .class(&props.class)
         .sx(&props.sx)
+        .states(&props.states)
+        .attributes(&props.attributes)
         .prepare();
-    let field = use_box()
+
+    let control = use_box()
         .framework_sx(&TEXT_FIELD_BASE_SX)
-        .states(&states)
-        .prepare();
-    let label_box = use_box()
-        .framework_sx(&TEXT_FIELD_LABEL_SX)
-        .states(&states)
+        .states(field.states())
         .prepare();
 
-    // Not a wrapping `<label>` like `Select`'s: it would hijack clicks on any
-    // control the field grows later.
-    let caption = match &props.label {
-        Some(label) => {
-            label_box
-                .attr("for", id())
-                .render(HtmlTag::Label, Vec::new(), rsx! { {label.clone()} })
-        }
-        None => rsx! {},
-    };
-
-    let onchange = props.onchange;
-    let field = field
-        .attr("id", id())
-        .attr("type", "text")
-        .attr("value", props.value.clone().unwrap_or_default())
+    let oninput = props.oninput;
+    let input = field
+        .aria(control)
+        .attr_default("type", "text")
+        .attr("value", props.value.clone())
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
-        .event("oninput", move |event: FormEvent| {
-            if let Some(onchange) = &onchange {
-                onchange.call(event.value());
-            }
-        })
+        .attr("required", required)
+        .event(
+            "oninput",
+            oninput.map(|handler| move |event: FormEvent| handler.call(event.value())),
+        )
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
-    wrapper.render(HtmlTag::Div, Vec::new(), vec![caption, field])
+    field.render(input)
 }
