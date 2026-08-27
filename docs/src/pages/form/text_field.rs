@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, FieldStatus, Icon, Text, TextField};
+use libero::components::{Code, FieldStatus, Text, TextField};
 
 #[component]
 pub fn TextFieldPage() -> Element {
@@ -79,46 +79,48 @@ pub fn TextFieldPage() -> Element {
                     // the slot is not in the markup at all.
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
-                            "true" => vec!["label: \"Email\"".to_string()],
+                            "true" => vec!["label: \"Username\"".to_string()],
                             _ => vec![],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
                         match values.str("description").as_str() {
-                            "true" => vec!["description: \"The address we send the invoice to.\"".to_string()],
+                            "true" => vec!["description: \"How other people see you.\"".to_string()],
                             _ => vec![],
                         }
                     }),
                     Control::switch("helper").code(|_, values| {
                         match values.str("helper").as_str() {
-                            "true" => vec!["helper: \"Work addresses only.\"".to_string()],
+                            "true" => vec!["helper: \"Letters, numbers and underscores.\"".to_string()],
                             _ => vec![],
                         }
                     }),
-                    Control::select("status", ["valid", "warning", "error"])
+                    Control::toggle("status", ["valid", "warning", "error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {
                             "warning" => vec![
-                                "status: FieldStatus::Warning(\"That domain is unusual.\".into())".to_string(),
+                                "status: FieldStatus::Warning(\"That name is close to another one.\".into())".to_string(),
                             ],
-                            "error" => vec!["status: \"Not a valid address.\"".to_string()],
+                            "error" => vec!["status: \"That name is taken.\"".to_string()],
                             _ => vec![],
                         }),
                     Control::switch("placeholder").default("true").code(|_, values| {
                         match values.str("placeholder").as_str() {
-                            "true" => vec!["placeholder: \"ada@example.com\"".to_string()],
+                            "true" => vec!["placeholder: \"ada\"".to_string()],
                             _ => vec![],
                         }
                     }),
                     Control::switch("leading").code(|_, values| {
                         match values.str("leading").as_str() {
-                            "true" => vec!["leading: rsx! { Icon { \"@\" } }".to_string()],
+                            "true" => vec!["leading: rsx! { \"@\" }".to_string()],
                             _ => vec![],
                         }
                     }),
                     Control::switch("trailing").code(|_, values| {
                         match values.str("trailing").as_str() {
-                            "true" => vec!["trailing: rsx! { \".com\" }".to_string()],
+                            "true" => {
+                                vec!["trailing: rsx! { \"{value().len()}/20\" }".to_string()]
+                            }
                             _ => vec![],
                         }
                     }),
@@ -129,22 +131,25 @@ pub fn TextFieldPage() -> Element {
                     TextField {
                         size: values.str("size"),
                         radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Email".to_string()),
+                        label: (values.str("label") == "true").then(|| "Username".to_string()),
                         description: (values.str("description") == "true")
-                            .then(|| "The address we send the invoice to.".to_string()),
+                            .then(|| "How other people see you.".to_string()),
                         helper: (values.str("helper") == "true")
-                            .then(|| "Work addresses only.".to_string()),
+                            .then(|| "Letters, numbers and underscores.".to_string()),
                         status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("That domain is unusual.".to_string()),
-                            "error" => FieldStatus::Error("Not a valid address.".to_string()),
+                            "warning" => {
+                                FieldStatus::Warning("That name is close to another one.".to_string())
+                            }
+                            "error" => FieldStatus::Error("That name is taken.".to_string()),
                             _ => FieldStatus::Valid,
                         },
                         placeholder: (values.str("placeholder") == "true")
-                            .then(|| "ada@example.com".to_string()),
-                        leading: (values.str("leading") == "true")
-                            .then(|| rsx! { Icon { "@" } }),
+                            .then(|| "ada".to_string()),
+                        // Plain text, not an `Icon` - `Icon` colours and sizes an
+                        // svg, which is not what a prefix is.
+                        leading: (values.str("leading") == "true").then(|| rsx! { "@" }),
                         trailing: (values.str("trailing") == "true")
-                            .then(|| rsx! { ".com" }),
+                            .then(|| rsx! { "{value().len()}/20" }),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),

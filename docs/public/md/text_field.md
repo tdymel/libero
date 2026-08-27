@@ -51,14 +51,19 @@ inside it:
 
 ```rust
 TextField {
-    label: "Domain",
-    leading: rsx! { Icon { "@" } },
-    trailing: rsx! { ".com" },
+    label: "Username",
+    placeholder: "ada",
+    leading: rsx! { "@" },
+    trailing: rsx! { "{handle().len()}/20" },
 }
 ```
 
-Both take any `Element`. They sit either side of the control, vertically
-centred, and do not shrink - the control takes the space that is left.
+Both take any `Element` - text, an `Icon`, an `ActionIcon` for something
+clickable. They sit either side of the control, vertically centred, and do not
+shrink, so the control takes the space that is left.
+
+Keep the two out of the placeholder's way: a `trailing` of `".com"` above a
+placeholder of `ada@example.com` says the same thing twice.
 
 ## Controlled and uncontrolled
 
