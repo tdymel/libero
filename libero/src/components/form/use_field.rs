@@ -75,6 +75,7 @@ pub(crate) struct FieldBuilder<'a> {
     required: bool,
     disabled: bool,
     inline: bool,
+    labelled_by: bool,
     size: Size,
     radius: Size,
     class: Option<&'a Input<ClassList>>,
@@ -94,6 +95,7 @@ impl Default for FieldBuilder<'_> {
             required: false,
             disabled: false,
             inline: false,
+            labelled_by: false,
             size: Size::Md,
             radius: Size::Sm,
             class: None,
@@ -146,6 +148,16 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn inline(mut self) -> Self {
         self.inline = true;
+        self
+    }
+
+    /// Names the control by `aria-labelledby` rather than `<label for>`, for a
+    /// control `for` cannot name: an element with a `role`, or one another
+    /// component owns. The field then hands the ids out instead of applying
+    /// them - see [`PreparedField::label_id`].
+    #[inline]
+    pub fn labelled_by(mut self) -> Self {
+        self.labelled_by = true;
         self
     }
 
@@ -236,7 +248,8 @@ impl<'a> FieldBuilder<'a> {
         let wrapper = wrapper.prepare();
 
         PreparedField {
-            label: label_node(&id_value, label, self.required),
+            label: label_node(&id_value, label, self.required, self.labelled_by),
+            labelled_by: self.labelled_by && !label.is_none(),
             description: slot_node("description", &id_value, description),
             helper: slot_node("helper", &id_value, helper),
             status: status_node(&id_value, status),
@@ -260,6 +273,7 @@ pub(crate) struct PreparedField {
     invalid: bool,
     required: bool,
     inline: bool,
+    labelled_by: bool,
     wrapper: BoxStyle,
     /// `None` rather than an empty `rsx! {}`: a slot nothing filled costs no
     /// node at all, which is most slots on most fields.
@@ -274,6 +288,23 @@ impl PreparedField {
     /// [`use_box`].
     pub fn states(&self) -> &Input<States> {
         &self.states
+    }
+
+    /// The label's own id, for a control named by `aria-labelledby`. `None`
+    /// when there is no label, or when the label names the control by `for`.
+    pub fn label_id(&self) -> Option<String> {
+        self.labelled_by.then(|| format!("{}-label", self.id))
+    }
+
+    /// The filled caption slots, joined. What `aria-describedby` should hold.
+    pub fn describedby(&self) -> Option<String> {
+        self.describedby.clone()
+    }
+
+    /// Whether the status is an error, for a control that applies its own
+    /// `aria-invalid`.
+    pub fn invalid(&self) -> bool {
+        self.invalid
     }
 
     /// The a11y wiring, onto the control's already-prepared styling.
@@ -343,14 +374,21 @@ fn caption_content(caption: &Caption) -> Element {
     }
 }
 
-fn label_node(id: &str, label: &Caption, required: bool) -> Option<Element> {
+fn label_node(id: &str, label: &Caption, required: bool, labelled_by: bool) -> Option<Element> {
     if label.is_none() {
         return None;
     }
 
+    // `for` names a labelable element. A control that is not one - a `role` on
+    // a span, or an element another component owns - is named the other way
+    // round, by an id the control points at.
+    let (named, points_at) = match labelled_by {
+        true => (Some(format!("{id}-label")), None),
+        false => (None, Some(id.to_string())),
+    };
     let content = caption_content(label);
     Some(rsx! {
-        label { r#for: "{id}",
+        label { id: named, r#for: points_at,
             {content}
             // `aria-required` already tells AT; the asterisk is decoration.
             if required {

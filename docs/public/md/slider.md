@@ -2,12 +2,12 @@
 
 Crate: `libero`
 Import: `use libero::components::{Slider, SliderChangeEvent, SliderMark, SliderValue};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/slider>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/slider>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
 
 A value dragged along a track. Controlled: it renders `value` and asks for a new
-one through `on_change`. Pointer, touch and keyboard all drive it - the thumb is
+one through `oninput`. Pointer, touch and keyboard all drive it - the thumb is
 a `role="slider"` with arrows, Page keys, Home and End.
 
 What it slides over is a `SliderValue`: libero implements it for `f64` - a
@@ -17,7 +17,7 @@ captions all come from that list.
 
 ## Usage
 
-A controlled continuous slider. `on_change` carries a `SliderChangeEvent`:
+A controlled continuous slider. `oninput` carries a `SliderChangeEvent`:
 `Start` and `End` bracket one drag, `Change` carries every value in between.
 
 ```rust
@@ -35,7 +35,7 @@ fn Demo() -> Element {
             Slider {
                 aria_label: "Volume",
                 value: volume(),
-                on_change: move |event: SliderChangeEvent| {
+                oninput: move |event: SliderChangeEvent| {
                     volume.set(event.value());
                     last.set(event)
                 },
@@ -79,7 +79,7 @@ fn Demo() -> Element {
                 value: quality(),
                 min: Quality::Low,
                 max: Quality::Ultra,
-                on_change: move |event: SliderChangeEvent<Quality>| {
+                oninput: move |event: SliderChangeEvent<Quality>| {
                     quality.set(event.value());
                     last.set(event)
                 },
@@ -94,7 +94,7 @@ fn Demo() -> Element {
 
 `marks` puts ticks on the track; a labeled one gets a caption below it. On a
 discrete slider it *replaces* the one-per-option set the type derives; on a
-continuous one there is nothing to derive, so it adds them. `label` formats the
+continuous one there is nothing to derive, so it adds them. `format` formats the
 bubble shown on hover, drag and keyboard focus, and becomes the thumb's
 `aria-valuetext`.
 
@@ -115,20 +115,42 @@ fn Demo() -> Element {
                 SliderMark::new(50.0),
                 SliderMark::labeled(100.0, "100"),
             ],
-            label: Callback::new(|value: f64| format!("{value}%")),
-            on_change: move |event: SliderChangeEvent| volume.set(event.value()),
+            format: Callback::new(|value: f64| format!("{value}%")),
+            oninput: move |event: SliderChangeEvent| volume.set(event.value()),
         }
     }
 }
 ```
 
+## Migrating from the pre-field Slider
+
+Three renames, all mechanical:
+
+```rust
+// before
+Slider { value: v(), label: Callback::new(..), on_change: move |e| .. }
+// after
+Slider { value: v(), format: Callback::new(..), oninput: move |e| .. }
+```
+
+`label` is now the field's caption, the `Caption` every field takes, so the
+value formatter had to move aside - it is `format`. `on_change` is `oninput`,
+because a drag is the DOM's `input` event and the library's commit-timing
+handler is already called `onchange` on `Select` and `Combobox`. The page moved
+to `/form/slider` with the component.
+
 ## Accessibility
 
 The thumb, not the root, is the `role="slider"` element: it carries
 `aria-orientation`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow` and, when
-`label` is set, `aria-valuetext` (a bare value is already in `aria-valuenow`).
-Name it with the `aria_label` prop - an `aria_label` passed through
-`attributes` would land on the root instead.
+`format` is set, `aria-valuetext` (a bare value is already in `aria-valuenow`).
+
+A `label` names it through `aria-labelledby`: `for` names only a labelable
+element, and the thumb is a span with a role. The filled caption slots join the
+thumb's `aria-describedby`, an error `status` sets `aria-invalid` and `required`
+sets `aria-required` - all on the thumb, for the same reason. Without a `label`,
+name it with `aria_label`; an `aria_label` passed through `attributes` would
+land on the field wrapper instead.
 
 Keyboard: arrow keys move one `step` (the theme's `step` when no `step` prop is
 set), Shift+arrow, PageUp and PageDown move `big_step` of them, Home and End
@@ -144,7 +166,7 @@ pointer and keyboard handlers.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `V` | required | Strictly controlled - pair it with `on_change`. |
+| `value` | `V` | required | Strictly controlled - pair it with `oninput`. |
 | `min` | `V` | first option, or `0.0` | Lower bound, written in the value's own type. |
 | `max` | `V` | last option, or `100.0` | Upper bound, written in the value's own type. |
 | `step` | `V::Step` | - | Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps. |
@@ -152,11 +174,16 @@ pointer and keyboard handlers.
 | `radius` | `Size` | `xl` | Track corner radius; the thumb is always a circle. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the slider. |
-| `label` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`. |
+| `format` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`. |
 | `marks` | `Vec<SliderMark<V>>` | one per option, discretely | Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives. |
-| `aria_label` | `String` | - | Names the thumb, which is the `role="slider"` element - an `aria_label` in `attributes` would land on the root instead. |
+| `aria_label` | `String` | - | Names the thumb when the field has no `label` - an `aria_label` in `attributes` would land on the wrapper instead. |
+| `label` | `Caption` | - | The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name the thumb. |
+| `description` | `Caption` | - | Between the label and the track: what the value means. |
+| `helper` | `Caption` | - | Under the track, below the mark captions. |
+| `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
+| `required` | `bool` | `false` | Adds `aria-required` to the thumb and marks the label. |
 | `name` | `String` | - | Emits a hidden input of that name, so the value posts with a form. |
-| `on_change` | `EventHandler<SliderChangeEvent<V>>` | - | `Start`/`End` bracket a drag, `Change` carries every new value. |
+| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value. |
 
 Like every component, `Slider` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.
@@ -201,7 +228,9 @@ children - which carry no `data-state` of their own - inherit it.
 
 ## Data attributes
 
-State tokens on the root's `data-state`, space separated.
+The field wrapper carries `size-*`, `radius-*`, and `disabled`, `required` and
+the status token when they apply. The slider's own root carries the tokens
+below, space separated.
 
 | Token | Condition |
 |---|---|

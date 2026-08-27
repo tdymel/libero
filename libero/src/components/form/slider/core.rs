@@ -56,13 +56,7 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         // Captions sit below the root, so they need reserved space or they
         // overlap whatever follows. Padding, not margin: a margin collapses
         // with the next sibling's and the reserve goes away.
-        .when(
-            "marks-labeled",
-            sx().padding_bottom(format!(
-                "calc({} + 1.5em)",
-                SizeCss::SPACING.value(Size::Xs)
-            )),
-        )
+        .when("marks-labeled", sx().padding_bottom("1.5em"))
         .when(
             "disabled",
             sx().opacity("0.5")
@@ -135,11 +129,17 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         // Off the track's centre line, not its bottom: the track is thinner
         // than the thumb, so `100%` would put the caption under the thumb.
-        .top(format!(
-            "calc(50% + {} / 2 + {})",
-            SLIDER_THUMB.value(),
-            SizeCss::SPACING.value(Size::Xs)
-        ))
+        //
+        // Measured from the top in thumbs, never as a percentage: `50%`
+        // resolves against the *padding* box, and the `marks-labeled` reserve
+        // below is padding - so a percentage drifts the caption down by half
+        // the reserve and eats the gap to whatever follows. The content box is
+        // one thumb tall, so its centre line is at `thumb / 2`, and one whole
+        // thumb sits the caption directly under the thumb's lower edge.
+        //
+        // The reserve below must stay this offset plus the caption's own line
+        // box, or the captions overflow the root and land on whatever follows.
+        .top(SLIDER_THUMB.value())
         .left(along_track(SLIDER_MARK_AT))
         // Centred in the middle, edge-aligned at the ends: a `-50%` caption
         // on the first or last mark hangs outside the slider's own box.
@@ -168,8 +168,13 @@ pub(super) struct SliderCoreProps {
     max: f64,
     step: f64,
     attributes: Vec<Attribute>,
+    /// The field owns the wrapper's styling, so the core's own is empty
+    /// unless something inside the library styles the track directly.
+    #[props(default)]
     class: Input<ClassList>,
+    #[props(default)]
     sx: Input<Sx>,
+    #[props(default)]
     states: Input<States>,
     size: Input<Size>,
     radius: Input<Size>,
@@ -180,8 +185,15 @@ pub(super) struct SliderCoreProps {
     label: Option<Callback<f64, String>>,
     marks: Vec<SliderMark>,
     aria_label: Option<String>,
+    /// The field's label id, when a `<label for>` cannot name the thumb.
+    labelledby: Option<String>,
+    /// The field's filled caption slots, joined.
+    describedby: Option<String>,
+    /// The field's status is an error.
+    invalid: bool,
+    required: bool,
     name: Option<String>,
-    on_change: Option<EventHandler<SliderChangeEvent>>,
+    oninput: Option<EventHandler<SliderChangeEvent>>,
 }
 
 #[component]
@@ -198,10 +210,10 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
 
     let value = snap(props.value, min, max, step);
-    let interactive = props.on_change.is_some() && !disabled;
+    let interactive = props.oninput.is_some() && !disabled;
 
-    if props.on_change.is_none() && !disabled {
-        warn("Slider: `value` without `on_change` can never change.");
+    if props.oninput.is_none() && !disabled {
+        warn("Slider: `value` without `oninput` can never change.");
     }
 
     // Measured off the track at pointerdown, when layout is known settled.
@@ -212,13 +224,13 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     // parent may not have echoed back yet.
     let latest = use_local_state(|| value);
 
-    let on_change = props.on_change;
+    let oninput = props.oninput;
     let emit = {
         let latest = latest.clone();
         use_callback(move |event: SliderChangeEvent| {
             latest.set(event.value());
-            if let Some(on_change) = &on_change {
-                on_change.call(event);
+            if let Some(oninput) = &oninput {
+                oninput.call(event);
             }
         })
     };
@@ -380,6 +392,10 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         .attr("aria-valuenow", value)
         .attr("aria-valuetext", text)
         .attr("aria-label", props.aria_label.clone())
+        .attr("aria-labelledby", props.labelledby.clone())
+        .attr("aria-describedby", props.describedby.clone())
+        .attr("aria-invalid", props.invalid.then_some("true"))
+        .attr("aria-required", props.required.then_some("true"))
         .attr("aria-disabled", !interactive)
         .element(&thumb_element)
         .event("onkeydown", move |event: Event<KeyboardData>| {

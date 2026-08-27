@@ -17,6 +17,20 @@
 /// }
 /// ```
 ///
+/// A generic struct declares its parameters inline, one bound each - a `where`
+/// clause and a `A + B` bound are both unsupported, and nothing has wanted
+/// either. Capturing the parameter list as `tt` instead is the
+/// `local ambiguity when calling macro` trap, since a `tt` repetition cannot
+/// be followed by `>`.
+///
+/// ```ignore
+/// base_props! {
+///     pub struct SliderProps<V: SliderValue> {
+///         value: V,
+///     }
+/// }
+/// ```
+///
 /// A leading `extends(...)` adds a specific tag's own attributes (e.g.
 /// `option`'s `selected`). Several tags work, but an attribute two of them
 /// share is ambiguous at the call site - declare it as a field instead.
@@ -34,13 +48,13 @@
 macro_rules! base_props {
     (@build [$($extra_extends:tt)*]
         $(#[$struct_meta:meta])*
-        $vis:vis struct $name:ident {
+        $vis:vis struct $name:ident $(< $($generic:ident : $bound:path),+ $(,)? >)? {
             $($fields:tt)*
         }
     ) => {
         $(#[$struct_meta])*
         #[derive(Props, Clone, PartialEq)]
-        $vis struct $name {
+        $vis struct $name $(< $($generic: $bound),+ >)? {
             // The component's own fields come first, and `children` with them,
             // so the derived `PartialEq` that `memoize` runs bails on the
             // never-equal `children` before it compares the four expensive

@@ -184,15 +184,16 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
                     value: 25.0,
                     aria_label: "Volume",
                     marks: vec![SliderMark::labeled(50.0, "half")],
-                    label: Callback::new(|value: f64| format!("{value}%")),
-                    on_change: move |_| {},
+                    format: Callback::new(|value: f64| format!("{value}%")),
+                    oninput: move |_| {},
                 }
             }
         }
     }
 
     let html = render(app);
-    let root = attributes_of(&html, "div");
+    // The first div is the field wrapper; the slider's own root is the second.
+    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
 
     assert_eq!(root["data-state"], "size-md radius-xl marks-labeled");
     assert!(root["style"].contains("--lsx-slider-filled:0.25;"));
@@ -240,14 +241,14 @@ fn a_discrete_slider_derives_its_scale_from_the_value_type() {
                 Slider {
                     value: Tier::Pro,
                     aria_label: "Tier",
-                    on_change: move |_| {},
+                    oninput: move |_| {},
                 }
             }
         }
     }
 
     let html = render(app);
-    let root = attributes_of(&html, "div");
+    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
 
     // `Pro` is the second of four options, so the scale is 0..=3.
     assert!(root["style"].contains("--lsx-slider-filled:0.3333333333333333;"));
@@ -273,7 +274,7 @@ fn a_discrete_sliders_bounds_are_typed_and_its_step_counts_options() {
                     max: Tier::Enterprise,
                     step: 2,
                     aria_label: "Tier",
-                    on_change: move |_| {},
+                    oninput: move |_| {},
                 }
             }
         }
@@ -308,7 +309,7 @@ fn a_derived_slider_value_names_and_orders_its_own_options() {
                 Slider {
                     value: Quality::Medium,
                     aria_label: "Quality",
-                    on_change: move |_| {},
+                    oninput: move |_| {},
                 }
             }
         }
@@ -1826,14 +1827,14 @@ enum Grade {
 }
 
 #[test]
-fn a_sliders_label_prop_renames_its_mark_captions_too() {
+fn a_sliders_format_prop_renames_its_mark_captions_too() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
                 Slider {
                     value: Grade::Low,
-                    on_change: move |_| {},
-                    label: |grade: Grade| match grade {
+                    oninput: move |_| {},
+                    format: |grade: Grade| match grade {
                         Grade::Low => "Niedrig".to_string(),
                         Grade::High => "Hoch".to_string(),
                     },

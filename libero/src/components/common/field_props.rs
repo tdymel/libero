@@ -25,14 +25,14 @@
 macro_rules! field_props {
     (@build [$($extra_extends:tt)*]
         $(#[$struct_meta:meta])*
-        $vis:vis struct $name:ident {
+        $vis:vis struct $name:ident $(< $($generic:ident : $bound:path),+ $(,)? >)? {
             $($fields:tt)*
         }
     ) => {
         crate::components::common::base_props! {
             @build [$($extra_extends)*]
             $(#[$struct_meta])*
-            $vis struct $name {
+            $vis struct $name $(< $($generic: $bound),+ >)? {
                 $($fields)*
                 /// The field's caption, above the control.
                 #[props(default, into)]

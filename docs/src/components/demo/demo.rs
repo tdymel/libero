@@ -329,12 +329,12 @@ pub fn Demo(
                                             // The step index means nothing to a
                                             // reader - the bubble shows the value
                                             // it stands for.
-                                            label: {
+                                            format: {
                                                 let options = control.options.clone();
                                                 move |at: f64| options[at as usize].clone()
                                             },
                                             marks: control.marks(),
-                                            on_change: {
+                                            oninput: {
                                                 let options = control.options.clone();
                                                 move |event: SliderChangeEvent| {
                                                     let at = event.value() as usize;

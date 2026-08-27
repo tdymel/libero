@@ -1,7 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, Flex, Slider, SliderChangeEvent, SliderMark, SliderValue, Text},
+    components::{
+        Code, FieldStatus, Flex, Slider, SliderChangeEvent, SliderMark, SliderValue, Text,
+    },
     sx::sx,
     use_theme,
 };
@@ -57,20 +59,20 @@ fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
 
-/// The value type decides `value`, `on_change` and the name the thumb reports,
+/// The value type decides `value`, `oninput` and the name the thumb reports,
 /// so the mode control prints all three.
 fn mode_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     match discrete(values) {
         true => vec![
             r#"aria_label: "Quality""#.to_string(),
             "value: quality()".to_string(),
-            "on_change: move |event: SliderChangeEvent<Quality>| { quality.set(event.value()); last_quality.set(event) }"
+            "oninput: move |event: SliderChangeEvent<Quality>| { quality.set(event.value()); last_quality.set(event) }"
                 .to_string(),
         ],
         false => vec![
             r#"aria_label: "Volume""#.to_string(),
             "value: volume()".to_string(),
-            "on_change: move |event: SliderChangeEvent| { volume.set(event.value()); last.set(event) }"
+            "oninput: move |event: SliderChangeEvent| { volume.set(event.value()); last.set(event) }"
                 .to_string(),
         ],
     }
@@ -149,17 +151,17 @@ fn marks_code(_control: &Control, values: &DemoValues) -> Vec<String> {
     }
 }
 
-fn label_code(_control: &Control, values: &DemoValues) -> Vec<String> {
-    match (is_on(values, "label"), discrete(values)) {
+fn format_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    match (is_on(values, "format"), discrete(values)) {
         (false, _) => vec![],
         (true, true) => {
             vec![
-                r#"label: Callback::new(|quality: Quality| format!("{quality:?} quality"))"#
+                r#"format: Callback::new(|quality: Quality| format!("{quality:?} quality"))"#
                     .to_string(),
             ]
         }
         (true, false) => {
-            vec![r#"label: Callback::new(|value: f64| format!("{value}%"))"#.to_string()]
+            vec![r#"format: Callback::new(|value: f64| format!("{value}%"))"#.to_string()]
         }
     }
 }
@@ -217,11 +219,11 @@ pub fn SliderPage() -> Element {
     rsx! {
         DocPage {
             title: "Slider",
-            source: "libero/src/components/inputs/slider",
+            source: "libero/src/components/form/slider",
             markdown: "/md/slider.md",
             properties: vec![
                 props("Slider", vec![
-                    prop("value", "V").doc("Strictly controlled - pair it with `on_change`."),
+                    prop("value", "V").doc("Strictly controlled - pair it with `oninput`."),
                     prop("min", "V")
                         .default("first option, or 0.0")
                         .doc("Lower bound, written in the value's own type."),
@@ -240,18 +242,30 @@ pub fn SliderPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables interaction and dims the slider."),
-                    prop("label", "Callback<V, String>")
+                    prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
                         .doc("Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`."),
                     prop("marks", "Vec<SliderMark<V>>")
                         .default("one per option, discretely")
                         .doc("Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives."),
                     prop("aria_label", "String")
-                        .doc("Names the thumb, which is the `role=\"slider\"` element - an `aria_label` in `attributes` would land on the root instead."),
+                        .doc("Names the thumb when the field has no `label` - an `aria_label` in `attributes` would land on the wrapper instead."),
                     prop("name", "String")
                         .doc("Emits a hidden input of that name, so the value posts with a form."),
-                    prop("on_change", "EventHandler<SliderChangeEvent<V>>")
-                        .doc("`Start`/`End` bracket a drag, `Change` carries every new value."),
+                    prop("oninput", "EventHandler<SliderChangeEvent<V>>")
+                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value."),
+                    prop("label", "Caption")
+                        .doc("The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name the thumb."),
+                    prop("description", "Caption")
+                        .doc("Between the label and the track: what the value means."),
+                    prop("helper", "Caption")
+                        .doc("Under the track, below the mark captions."),
+                    prop("status", "FieldStatus")
+                        .default("Valid")
+                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                    prop("required", "bool")
+                        .default("false")
+                        .doc("Adds `aria-required` to the thumb and marks the label."),
                 ]),
                 props("SliderMark", vec![
                     prop("value", "V").doc("Where the tick sits on the track."),
@@ -264,7 +278,7 @@ pub fn SliderPage() -> Element {
                     "A value dragged along a track. Controlled: it renders "
                     Code { source: "value" }
                     " and asks for a new one through "
-                    Code { source: "on_change" }
+                    Code { source: "oninput" }
                     ". Pointer, touch and keyboard all drive it - the thumb is a "
                     Code { source: "role=\"slider\"" }
                     " with arrows, Page keys, Home and End."
@@ -314,8 +328,37 @@ pub fn SliderPage() -> Element {
                     Control::slider("step_value", ["auto", "0.1", "5.0", "10.0", "25.0"])
                         .code(number_code)
                         .hidden_when(discrete),
+                    Control::toggle("status", ["valid", "warning", "error"])
+                        .default("valid")
+                        .code(|_, values| match values.str("status").as_str() {
+                            "warning" => vec![
+                                r#"status: FieldStatus::Warning("Above the free tier.".into())"#
+                                    .to_string(),
+                            ],
+                            "error" => vec![r#"status: "Pick a lower setting.""#.to_string()],
+                            _ => vec![],
+                        }),
                     Control::switch("marks").code(marks_code),
-                    Control::switch("label").code(label_code),
+                    Control::switch("format").code(format_code),
+                    Control::switch("label").default("true").code(|_, values| {
+                        match values.str("label").as_str() {
+                            "true" => vec![r#"label: "Quality""#.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec![r#"description: "What the encoder aims for.""#.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("helper").code(|_, values| {
+                        match values.str("helper").as_str() {
+                            "true" => vec![r#"helper: "Higher costs more.""#.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("required"),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| {
@@ -335,14 +378,30 @@ pub fn SliderPage() -> Element {
                                     max: quality_of(&values, "max"),
                                     step: values.str("step").parse::<usize>().unwrap_or(1),
                                     marks: discrete_marks(&values),
-                                    label: is_on(&values, "label")
+                                    format: is_on(&values, "format")
                                         .then(|| {
                                             Callback::new(|quality: Quality| {
                                                 format!("{quality:?} quality")
                                             })
                                         }),
+                                    label: is_on(&values, "label")
+                                        .then(|| "Quality".to_string()),
+                                    description: is_on(&values, "description")
+                                        .then(|| "What the encoder aims for.".to_string()),
+                                    helper: is_on(&values, "helper")
+                                        .then(|| "Higher costs more.".to_string()),
+                                    status: match values.str("status").as_str() {
+                                        "warning" => {
+                                            FieldStatus::Warning("Above the free tier.".to_string())
+                                        }
+                                        "error" => {
+                                            FieldStatus::Error("Pick a lower setting.".to_string())
+                                        }
+                                        _ => FieldStatus::Valid,
+                                    },
+                                    required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
-                                    on_change: move |event: SliderChangeEvent<Quality>| {
+                                    oninput: move |event: SliderChangeEvent<Quality>| {
                                         quality.set(event.value());
                                         last_quality.set(event)
                                     },
@@ -362,10 +421,26 @@ pub fn SliderPage() -> Element {
                                     max: number(&values, "max_value"),
                                     step: number(&values, "step_value"),
                                     marks: continuous_marks(&values),
-                                    label: is_on(&values, "label")
+                                    format: is_on(&values, "format")
                                         .then(|| Callback::new(|value: f64| format!("{value}%"))),
+                                    label: is_on(&values, "label")
+                                        .then(|| "Volume".to_string()),
+                                    description: is_on(&values, "description")
+                                        .then(|| "What the encoder aims for.".to_string()),
+                                    helper: is_on(&values, "helper")
+                                        .then(|| "Higher costs more.".to_string()),
+                                    status: match values.str("status").as_str() {
+                                        "warning" => {
+                                            FieldStatus::Warning("Above the free tier.".to_string())
+                                        }
+                                        "error" => {
+                                            FieldStatus::Error("Pick a lower setting.".to_string())
+                                        }
+                                        _ => FieldStatus::Valid,
+                                    },
+                                    required: is_on(&values, "required").then_some(true),
                                     disabled: is_on(&values, "disabled").then_some(true),
-                                    on_change: move |event: SliderChangeEvent| {
+                                    oninput: move |event: SliderChangeEvent| {
                                         volume.set(event.value());
                                         last.set(event)
                                     },

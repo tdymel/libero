@@ -131,6 +131,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::NumberFieldPage {}, "NumberField"),
                 page(Route::PasswordFieldPage {}, "PasswordField"),
                 page(Route::SelectPage {}, "Select"),
+                page(Route::SliderPage {}, "Slider"),
                 page(Route::SwitchPage {}, "Switch"),
                 page(Route::TextFieldPage {}, "TextField"),
                 page(Route::TextareaPage {}, "Textarea"),
@@ -145,7 +146,6 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ChipPage {}, "Chip"),
                 page(Route::ComboboxPage {}, "Combobox"),
                 page(Route::SegmentedControlPage {}, "SegmentedControl"),
-                page(Route::SliderPage {}, "Slider"),
             ],
         ),
         group(

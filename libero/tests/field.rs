@@ -10,8 +10,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, NumberField, NumberValue, Options, PasswordField, Select, Switch, TextField,
-        Textarea,
+        Checkbox, NumberField, NumberValue, Options, PasswordField, Select, Slider, Switch,
+        TextField, Textarea,
     },
 };
 
@@ -677,4 +677,37 @@ fn a_switch_without_a_label_is_named_by_its_aria_label() {
 
     assert_eq!(attributes_of(&body, "input")["aria-label"], "Airplane mode");
     assert!(!body.contains("<label"), "{body}");
+}
+
+/// `for` names a labelable element, and the slider's control is a span with
+/// `role="slider"`. So the label is named instead, and the thumb points at it.
+#[test]
+fn a_slider_is_named_by_labelledby_rather_than_for() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    label: "Volume",
+                    helper: "Loud enough for a room.",
+                    value: 25.0,
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let label = attributes_of(&body, "label");
+    let id = label["id"].trim_end_matches("-label").to_string();
+
+    assert!(!label.contains_key("for"), "{label:?}");
+    assert!(
+        body.contains(&format!(r#"aria-labelledby="{id}-label""#)),
+        "{body}"
+    );
+    assert!(
+        body.contains(&format!(r#"aria-describedby="{id}-helper""#)),
+        "{body}"
+    );
 }
