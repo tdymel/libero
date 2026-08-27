@@ -14,6 +14,15 @@ pub trait TreeLabel {
     fn tree_label(&self) -> String;
 }
 
+/// What a `Tree` node's payload has to be, as one name: labelable, cloneable,
+/// comparable and owned. It exists because `base_props!` takes one bound per
+/// type parameter - a `T: A + B + C` cannot be captured by a macro, since a
+/// bound fragment may not be followed by `+`. Blanket-implemented, so no
+/// caller ever writes it.
+pub trait TreeValue: TreeLabel + Clone + PartialEq + 'static {}
+
+impl<T: TreeLabel + Clone + PartialEq + 'static> TreeValue for T {}
+
 impl TreeLabel for String {
     fn tree_label(&self) -> String {
         self.clone()

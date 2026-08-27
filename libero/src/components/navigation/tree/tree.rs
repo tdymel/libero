@@ -4,18 +4,17 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Input, List, States,
+        Input, List,
         common::{base_props, css_string},
     },
     hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
-    sx::Sx,
     theme::Size,
 };
 
 use super::{
     tree_node::{
-        ErasedRenderNode, TreeLabel, TreeNode, TreeNodeErased, TreeNodeRenderArgs, erase_nodes,
+        ErasedRenderNode, TreeNode, TreeNodeErased, TreeNodeRenderArgs, TreeValue, erase_nodes,
     },
     tree_row::TreeRow,
 };
@@ -131,36 +130,29 @@ fn focus_tree_item(root: &ElementHandle, target_id: &str) {
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
-#[derive(Props, Clone, PartialEq)]
-pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default)]
-    class: Option<String>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
-    /// Row gap and per-level indent together - `List`'s scale, since `Tree`
-    /// renders through it. Off-scale, or the two apart, goes through `sx`:
-    /// `sx().gap("4px").selector("& ul", sx().padding_left("24px"))`.
-    #[props(default, into)]
-    size: Input<Size>,
-    /// Required by WAI-ARIA's tree pattern.
-    #[props(into)]
-    aria_label: String,
-    data: Vec<TreeNode<T>>,
-    /// Each visible row's content. Defaults to [`default_tree_render`], which
-    /// a custom `render_node` can also call to fall back selectively - say,
-    /// default branches and `NavLink` leaves.
-    #[props(default = Callback::new(super::tree_node::default_tree_render))]
-    render_node: Callback<TreeNodeRenderArgs<T>, Element>,
-    /// Seeds `Tree`'s internal state once. Not a controlled prop.
-    #[props(default)]
-    default_expanded: HashSet<String>,
-    /// Notification only - it doesn't drive rendering.
-    #[props(default)]
-    onexpandedchange: Option<EventHandler<HashSet<String>>>,
+base_props! {
+    pub struct TreeProps<T: TreeValue> {
+        /// Row gap and per-level indent together - `List`'s scale, since `Tree`
+        /// renders through it. Off-scale, or the two apart, goes through `sx`:
+        /// `sx().gap("4px").selector("& ul", sx().padding_left("24px"))`.
+        #[props(default, into)]
+        size: Input<Size>,
+        /// Required by WAI-ARIA's tree pattern.
+        #[props(into)]
+        aria_label: String,
+        data: Vec<TreeNode<T>>,
+        /// Each visible row's content. Defaults to [`default_tree_render`], which
+        /// a custom `render_node` can also call to fall back selectively - say,
+        /// default branches and `NavLink` leaves.
+        #[props(default = Callback::new(super::tree_node::default_tree_render))]
+        render_node: Callback<TreeNodeRenderArgs<T>, Element>,
+        /// Seeds `Tree`'s internal state once. Not a controlled prop.
+        #[props(default)]
+        default_expanded: HashSet<String>,
+        /// Notification only - it doesn't drive rendering.
+        #[props(default)]
+        onexpandedchange: Option<EventHandler<HashSet<String>>>,
+    }
 }
 
 /// Generic shim: erases `props.data`/`render_node` once, then hands off to the
@@ -170,7 +162,7 @@ pub struct TreeProps<T: TreeLabel + Clone + PartialEq + 'static> {
 /// Panics if a `TreeRow` hands back data that isn't a `T` - the erasure trades
 /// that compile-time guarantee for a runtime check.
 #[component]
-pub fn Tree<T: TreeLabel + Clone + PartialEq + 'static>(props: TreeProps<T>) -> Element {
+pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
     // Cached so the `Rc<dyn Any>` pointers stay stable across renders that
     // don't change `props.data`, which is what lets `TreeNodeErased`'s
     // pointer equality skip an untouched subtree. Not a signal: it derives

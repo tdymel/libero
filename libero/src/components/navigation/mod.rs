@@ -9,6 +9,6 @@ pub(crate) use internal_anchor::InternalAnchor;
 pub use nav_link::NavLink;
 pub use tabs::{Tabs, TabsProps};
 pub use tree::{
-    Tree, TreeItem, TreeItemProps, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps,
+    Tree, TreeItem, TreeItemProps, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps, TreeValue,
     default_tree_render,
 };

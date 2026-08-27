@@ -2,13 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Caption, ClassList, HtmlTag, Input, Options, States,
-        form::{FieldStatus, field_control_sx, use_field, use_field_frame},
+        HtmlTag, Input, Options,
+        common::field_props,
+        form::{field_control_sx, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx},
-    theme::Size,
+    sx::StaticSx,
     utils::warn,
 };
 
@@ -17,63 +17,32 @@ use crate::{
 /// platform.
 static SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().cursor("pointer"));
 
-// Hand-written rather than `field_props!`, which is not generic - as
-// `TabsProps` is.
-#[derive(Props, Clone, PartialEq)]
-pub struct SelectProps<T: Options> {
-    /// Strictly controlled - pair it with `onchange`. `None` shows
-    /// `placeholder` and selects nothing.
-    #[props(default)]
-    value: Option<T>,
-    /// Called with the option the caller should select next. Never fires for
-    /// the placeholder, which cannot be picked.
-    #[props(default)]
-    onchange: Option<EventHandler<T>>,
-    /// The options to show. Defaults to every `Options::options()` - which
-    /// `String` and any other runtime type leave empty, so those pass them
-    /// here.
-    #[props(default)]
-    options: Option<Vec<T>>,
-    /// Overrides `Options::label`. Runs during render, so it can read a
-    /// locale from context.
-    ///
-    /// Returns a `String`, not an `OptionLabel`: `<option>` holds text and
-    /// nothing else, so there is no rich form to offer.
-    #[props(default)]
-    option_label: Option<Callback<T, String>>,
-    /// Shown while `value` is `None`, as an unpickable first entry.
-    #[props(default)]
-    placeholder: Option<String>,
-    /// The field's caption, above the control.
-    #[props(default, into)]
-    label: Caption,
-    /// Between the label and the control. What to pick.
-    #[props(default, into)]
-    description: Caption,
-    /// Under the control. Constraints, consequences of the choice.
-    #[props(default, into)]
-    helper: Caption,
-    /// Validation state, under the helper. A bare `&str` is an error.
-    #[props(default, into)]
-    status: Input<FieldStatus>,
-    #[props(default, into)]
-    size: Input<Size>,
-    /// Corner radius, independent of `size`.
-    #[props(default, into)]
-    radius: Input<Size>,
-    /// `None` is "not stated" - what a `Fieldset` will cascade into later.
-    #[props(default)]
-    disabled: Option<bool>,
-    #[props(default)]
-    required: Option<bool>,
-    #[props(extends = GlobalAttributes)]
-    attributes: Vec<Attribute>,
-    #[props(default, into)]
-    class: Input<ClassList>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
+field_props! {
+    pub struct SelectProps<T: Options> {
+        /// Strictly controlled - pair it with `onchange`. `None` shows
+        /// `placeholder` and selects nothing.
+        #[props(default)]
+        value: Option<T>,
+        /// Called with the option the caller should select next. Never fires
+        /// for the placeholder, which cannot be picked.
+        #[props(default)]
+        onchange: Option<EventHandler<T>>,
+        /// The options to show. Defaults to every `Options::options()` - which
+        /// `String` and any other runtime type leave empty, so those pass them
+        /// here.
+        #[props(default)]
+        options: Option<Vec<T>>,
+        /// Overrides `Options::label`. Runs during render, so it can read a
+        /// locale from context.
+        ///
+        /// Returns a `String`, not an `OptionLabel`: `<option>` holds text and
+        /// nothing else, so there is no rich form to offer.
+        #[props(default)]
+        option_label: Option<Callback<T, String>>,
+        /// Shown while `value` is `None`, as an unpickable first entry.
+        #[props(default)]
+        placeholder: Option<String>,
+    }
 }
 
 /// A styled native `<select>` over an enum, with a label, a description,

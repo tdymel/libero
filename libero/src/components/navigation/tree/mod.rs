@@ -5,4 +5,4 @@ mod tree_row;
 
 pub use tree::{Tree, TreeProps};
 pub use tree_item::{TreeItem, TreeItemProps};
-pub use tree_node::{TreeLabel, TreeNode, TreeNodeRenderArgs, default_tree_render};
+pub use tree_node::{TreeLabel, TreeNode, TreeNodeRenderArgs, TreeValue, default_tree_render};
