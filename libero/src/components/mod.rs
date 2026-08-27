@@ -1,6 +1,7 @@
 mod a11y;
 mod common;
 mod data_display;
+mod form;
 mod inputs;
 mod layout;
 mod navigation;
@@ -14,6 +15,7 @@ pub use common::{
     states, variables,
 };
 pub use data_display::*;
+pub use form::*;
 pub use inputs::*;
 pub use layout::*;
 pub use navigation::*;
