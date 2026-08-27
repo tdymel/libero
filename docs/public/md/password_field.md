@@ -50,6 +50,19 @@ The reveal state belongs to the component. There is no `revealed` prop and no
 `onreveal`: a password field that starts visible is not a state a caller should
 be able to ask for, and a caller that wants plain text wants a `TextField`.
 
+`reveal_button` decides whether the button renders at all. It is on by default -
+a password nobody can read back is this field's worst papercut - and worth
+turning off for a confirmation field, which adds nothing beside a revealed twin:
+
+```rust
+PasswordField {
+    label: "Repeat password",
+    reveal_button: false,
+    value: repeat(),
+    oninput: move |next| repeat.set(next),
+}
+```
+
 The button carries the two icons the library ships - libero has no icon set
 otherwise, and a reveal button with no glyph is a blank button. It is named for
 what the click does, not for the current state: `reveal_label` (default
@@ -81,6 +94,7 @@ icons are `aria-hidden`; the button's `aria-label` carries the meaning.
 | `value` | `Option<String>` | - | The secret. `None` leaves the `<input>` uncontrolled. |
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
+| `reveal_button` | `bool` | `true` | Offers the reveal button at all. |
 | `reveal_label` | `String` | `Show password` | Announced on the reveal button while the secret is hidden. |
 | `hide_label` | `String` | `Hide password` | Announced on the reveal button while the secret is shown. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
@@ -103,4 +117,5 @@ None of its own. It renders a `TextField`, so it reads `FieldDefaults` and
 ## Data attributes
 
 The same as [TextField](text_field.md): state tokens on the wrapper's and the
-frame's `data-state`, and `data-slot="trailing"` on the reveal button's slot.
+frame's `data-state`, and `data-slot="trailing"` on the reveal button's slot
+when `reveal_button` renders it.

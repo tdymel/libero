@@ -23,6 +23,9 @@ pub fn PasswordFieldPage() -> Element {
                         .doc("Fires per keystroke with the text the field should hold next."),
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
+                    prop("reveal_button", "bool")
+                        .default("true")
+                        .doc("Offers the reveal button at all. A confirmation field, or one beside a revealed twin, has nothing to add."),
                     prop("reveal_label", "String")
                         .default("Show password")
                         .doc("Announced on the reveal button while the secret is hidden."),
@@ -106,6 +109,7 @@ pub fn PasswordFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("reveal_button").default("true"),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
@@ -127,6 +131,7 @@ pub fn PasswordFieldPage() -> Element {
                         },
                         placeholder: (values.str("placeholder") == "true")
                             .then(|| "Your password".to_string()),
+                        reveal_button: values.str("reveal_button") == "true",
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
                         value: value(),

@@ -531,3 +531,23 @@ fn a_number_field_has_no_steppers_until_asked() {
     // The keys still step it - that is what `role="spinbutton"` promises.
     assert_eq!(attributes_of(&body, "input")["role"], "spinbutton");
 }
+
+/// The reveal button is the one affordance this component exists for, so it is
+/// on by default - but a confirmation field beside a revealed twin has nothing
+/// to add.
+#[test]
+fn a_password_field_can_drop_its_reveal_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PasswordField { label: "Repeat password", reveal_button: false }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(!body.contains("<button"), "{body}");
+    assert!(!body.contains("data-slot"), "{body}");
+    assert_eq!(attributes_of(&body, "input")["type"], "password");
+}

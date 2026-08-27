@@ -17,6 +17,11 @@ field_props! {
         oninput: Option<EventHandler<String>>,
         #[props(default, into)]
         placeholder: Option<String>,
+        /// Offers the reveal button at all. On by default - a password nobody
+        /// can read back is the field's worst papercut - but a confirmation
+        /// field, or one next to a revealed twin, has nothing to add.
+        #[props(default = true)]
+        reveal_button: bool,
         /// Announced on the reveal button while the secret is hidden.
         #[props(default, into)]
         reveal_label: Option<String>,
@@ -79,7 +84,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             sx: props.sx,
             states: props.states,
             attributes: props.attributes,
-            trailing: rsx! {
+            trailing: props.reveal_button.then(|| rsx! {
                 ActionIcon {
                     aria_label,
                     size,
@@ -91,7 +96,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                         EyeIcon {}
                     }
                 }
-            },
+            }),
         }
     }
 }

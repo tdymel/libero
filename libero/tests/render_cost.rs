@@ -136,6 +136,7 @@ fn render_cost_per_component() {
         "NumberField+steppers" { NumberField { value: 1i32, onchange: move |_| {}, steppers: true } }
         "Textarea" { Textarea { oninput: move |_| {} } }
         "PasswordField" { PasswordField { oninput: move |_| {} } }
+        "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
         "Chip" { Chip { checked: true, onchange: move |_| {}, "x" } }
         "Switch" { Switch { checked: true, onchange: move |_| {}, "x" } }
