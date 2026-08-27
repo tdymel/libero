@@ -1,6 +1,7 @@
 mod action_icon;
 mod button;
 mod chip;
+mod combobox;
 mod segmented_control;
 mod select;
 mod slider;
@@ -15,6 +16,7 @@ pub(crate) use button::{
 };
 pub use button::{Button, ButtonProps, ButtonVariant};
 pub use chip::{Chip, ChipProps};
+pub use combobox::{Combobox, ComboboxFilterArgs, ComboboxProps, ComboboxTarget};
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use select::{Select, SelectProps};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};

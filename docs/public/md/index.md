@@ -35,6 +35,7 @@ fetch only the file you need.
 - [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [Chip](chip.md): A compact token - a tag, a filter, or a small inline action.
+- [Combobox](combobox.md): A listbox over an enum with its own search field inside the dropdown, and a caller-supplied control.
 - [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
 - [Select](select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.

@@ -46,7 +46,7 @@ impl Options for String {
 /// A bare string is both (`"Konto".into()`); [`OptionLabel::rich`] takes the
 /// two apart for an icon or a badge - and asks for the name anyway, because
 /// the rsx is what a screen reader cannot use.
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct OptionLabel {
     pub(crate) name: String,
     pub(crate) content: Option<Element>,
@@ -57,6 +57,22 @@ impl OptionLabel {
         Self {
             name: name.into(),
             content: Some(content),
+        }
+    }
+
+    /// The accessible name - always plain text, even when the label is rich.
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// What to draw: the rich content, or the name as text.
+    pub fn render(&self) -> Element {
+        match &self.content {
+            Some(content) => content.clone(),
+            None => {
+                let name = &self.name;
+                rsx! { "{name}" }
+            }
         }
     }
 }

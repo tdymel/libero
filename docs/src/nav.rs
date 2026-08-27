@@ -128,6 +128,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ActionIconPage {}, "ActionIcon"),
                 page(Route::ButtonPage {}, "Button"),
                 page(Route::ChipPage {}, "Chip"),
+                page(Route::ComboboxPage {}, "Combobox"),
                 page(Route::SwitchPage {}, "Switch"),
                 page(Route::SegmentedControlPage {}, "SegmentedControl"),
                 page(Route::SelectPage {}, "Select"),

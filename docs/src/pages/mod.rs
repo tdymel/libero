@@ -12,8 +12,8 @@ pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
 pub use inputs::{
-    ActionIconPage, ButtonPage, ChipPage, SegmentedControlPage, SelectPage, SliderPage, SwitchPage,
-    TextFieldPage,
+    ActionIconPage, ButtonPage, ChipPage, ComboboxPage, SegmentedControlPage, SelectPage,
+    SliderPage, SwitchPage, TextFieldPage,
 };
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,

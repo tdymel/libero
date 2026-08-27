@@ -94,6 +94,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         switch,
         select,
         text_field,
+        combobox,
         slider,
         list,
         data_list,
@@ -153,6 +154,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(switch.to_css_declarations());
     declarations.extend(select.to_css_declarations());
     declarations.extend(text_field.to_css_declarations());
+    declarations.extend(combobox.to_css_declarations());
     declarations.extend(slider.to_css_declarations());
     declarations.extend(list.to_css_declarations());
     declarations.extend(data_list.to_css_declarations());

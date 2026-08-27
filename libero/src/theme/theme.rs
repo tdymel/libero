@@ -1,15 +1,16 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
     ButtonSizeLevel, CenterDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
-    Color, ColorShade, ColorValue, ContainerDefaults, DataListDefaults, DialogDefaults,
-    DividerDefaults, DrawerDefaults, FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults,
-    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
-    MarkDefaults, NavLinkDefaults, OverlayDefaults, Placement, QrCodeDefaults, QrRobustness,
-    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
-    SelectSizeLevel, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
-    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel,
-    TextDefaults, TextFieldDefaults, TextFieldSizeLevel, TextSize, TitleDefaults, TitleSize,
-    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    Color, ColorShade, ColorValue, ComboboxDefaults, ComboboxSizeLevel, ContainerDefaults,
+    DataListDefaults, DialogDefaults, DividerDefaults, DrawerDefaults, FlexAxisDefaults,
+    FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults, HexColor, IconDefaults,
+    ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults, NavLinkDefaults,
+    OverlayDefaults, Placement, QrCodeDefaults, QrRobustness, ScrollAreaDefaults, ScrollAxis,
+    ScrollbarSize, ScrollbarVisibility, SelectDefaults, SelectSizeLevel, SidebarDefaults, Size,
+    Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults,
+    TextFieldSizeLevel, TextSize, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
+    TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -44,6 +45,7 @@ pub struct Theme {
     pub switch: SwitchDefaults,
     pub select: SelectDefaults,
     pub text_field: TextFieldDefaults,
+    pub combobox: ComboboxDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
@@ -348,6 +350,43 @@ impl Theme {
                     height: "48px",
                     padding_x: "18px",
                     label_font_size: "1rem",
+                },
+            ),
+        },
+        combobox: ComboboxDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            max_dropdown_height: "260px",
+            sizes: Sizes::new(
+                ComboboxSizeLevel {
+                    font_size: "0.75rem",
+                    row_height: 28.0,
+                    padding_x: "8px",
+                },
+                ComboboxSizeLevel {
+                    font_size: "0.8125rem",
+                    row_height: 32.0,
+                    padding_x: "10px",
+                },
+                ComboboxSizeLevel {
+                    font_size: "0.875rem",
+                    row_height: 36.0,
+                    padding_x: "12px",
+                },
+                ComboboxSizeLevel {
+                    font_size: "0.9375rem",
+                    row_height: 40.0,
+                    padding_x: "14px",
+                },
+                ComboboxSizeLevel {
+                    font_size: "1rem",
+                    row_height: 44.0,
+                    padding_x: "16px",
+                },
+                ComboboxSizeLevel {
+                    font_size: "1.0625rem",
+                    row_height: 48.0,
+                    padding_x: "18px",
                 },
             ),
         },
