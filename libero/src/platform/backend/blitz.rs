@@ -50,6 +50,23 @@ struct BlitzDocument {
 }
 
 impl DocumentApi for BlitzDocument {
+    fn viewport(&self) -> Read<Dimensions> {
+        let answer = match self.anchor.try_doc() {
+            Some(doc) => {
+                // `window_size` is physical pixels; layout, and so every
+                // rect `client_offset` answers, is in CSS pixels.
+                let scale = doc.viewport().scale_f64();
+                let (width, height) = doc.viewport().window_size;
+                Ok(Dimensions {
+                    width: width as f64 / scale,
+                    height: height as f64 / scale,
+                })
+            }
+            None => Err(PlatformError::Unsupported),
+        };
+        Box::pin(std::future::ready(answer))
+    }
+
     fn active_element(&self) -> Option<Box<dyn ElementApi>> {
         let node_id = self.anchor.try_doc()?.get_focussed_node_id()?;
         Some(Box::new(BlitzElement {

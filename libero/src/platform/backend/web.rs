@@ -23,6 +23,19 @@ impl DocumentApi for WebDocument {
         let element = web_sys::window()?.document()?.active_element()?;
         Some(Box::new(WebElement { element }))
     }
+
+    /// `inner_width`/`inner_height`, so the answer includes whatever the
+    /// scrollbars leave - which is the box a fixed element is laid out in.
+    fn viewport(&self) -> Read<Dimensions> {
+        let size = web_sys::window()
+            .and_then(|window| {
+                let width = window.inner_width().ok()?.as_f64()?;
+                let height = window.inner_height().ok()?.as_f64()?;
+                Some(Dimensions { width, height })
+            })
+            .ok_or(PlatformError::Unsupported);
+        Box::pin(std::future::ready(size))
+    }
 }
 
 pub(super) struct WebElement {

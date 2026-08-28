@@ -1,4 +1,4 @@
-use super::{ElementApi, backend};
+use super::{Dimensions, ElementApi, Read, backend};
 
 /// The parts of a platform that no element owns. Deliberately tiny: after an
 /// element handle can answer everything about its own subtree, "where is focus
@@ -8,6 +8,10 @@ pub trait DocumentApi {
     /// this is the element the user acted on, which is how an overlay learns
     /// where to put focus back.
     fn active_element(&self) -> Option<Box<dyn ElementApi>>;
+
+    /// The visible viewport, in CSS pixels. No element owns it, and anything
+    /// that has to stay on screen - a flipping popover - needs it.
+    fn viewport(&self) -> Read<Dimensions>;
 }
 
 /// `None` where the renderer exposes no document - a webview, where Rust holds
