@@ -12,10 +12,10 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Combobox,
         ComboboxOption, ComboboxOptionArgs, ComboboxState, Container, DataList, DataListItem,
         Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem, GridSpan, GridTemplate,
-        GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NativeSelect, NavLink,
-        OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Sidebar, Slider,
-        SliderMark, SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem,
-        TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, MultiSelect, NativeSelect,
+        NavLink, OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Select,
+        Sidebar, Slider, SliderMark, SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip,
+        Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -2039,6 +2039,138 @@ mod combobox_highlight {
         assert!(
             row_of(&html, 1).contains(&button["aria-activedescendant"]),
             "the trigger names a row other than the active one"
+        );
+    }
+}
+
+/// `Select` and `MultiSelect` as SSR sees them: closed, since the open state
+/// lives in the component and no test can click. The open list is the
+/// Combobox's, and `combobox_highlight` covers it.
+mod select_listbox {
+    use super::*;
+
+    #[derive(Clone, Copy, PartialEq, Debug, Options)]
+    enum Fruit {
+        Apple,
+        Banana,
+        Cherry,
+    }
+
+    #[test]
+    fn the_trigger_is_a_combobox_named_by_the_label_and_shows_the_selection() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select { label: "Fruit", value: Fruit::Banana, onchange: move |_| {} }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(html.contains(r#"role="combobox""#), "{html}");
+        assert!(html.contains(r#"aria-haspopup="listbox""#), "{html}");
+        assert!(html.contains(r#"aria-expanded="false""#), "{html}");
+        assert!(html.contains(r#"tabindex="0""#), "{html}");
+        assert!(
+            html.contains("Banana"),
+            "the selection is not drawn:\n{html}"
+        );
+        assert!(
+            !html.contains("Apple"),
+            "a closed list rendered its rows:\n{html}"
+        );
+
+        let label_id = html
+            .split(r#"<label id=""#)
+            .nth(1)
+            .and_then(|rest| rest.split('"').next())
+            .expect("the label carries an id");
+        assert!(
+            html.contains(&format!(r#"aria-labelledby="{label_id}""#)),
+            "the trigger is not named by its label:\n{html}"
+        );
+    }
+
+    #[test]
+    fn nothing_selected_shows_the_placeholder() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select {
+                        value: None::<Fruit>,
+                        placeholder: "Pick a fruit",
+                        onchange: move |_: Option<Fruit>| {},
+                    }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(html.contains("data-placeholder"), "{html}");
+        assert!(html.contains("Pick a fruit"), "{html}");
+    }
+
+    #[test]
+    fn clearable_offers_the_x_only_while_something_is_selected() {
+        fn picked() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select { value: Fruit::Apple, clearable: true, onchange: move |_| {} }
+                }
+            }
+        }
+        fn empty() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select {
+                        value: None::<Fruit>,
+                        clearable: true,
+                        onchange: move |_: Option<Fruit>| {},
+                    }
+                }
+            }
+        }
+
+        assert!(body(&render(picked)).contains(r#"aria-label="Clear""#));
+        assert!(!body(&render(empty)).contains(r#"aria-label="Clear""#));
+    }
+
+    #[test]
+    fn a_disabled_select_leaves_the_tab_order() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select { value: Fruit::Apple, disabled: true, onchange: move |_| {} }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(html.contains(r#"aria-disabled="true""#), "{html}");
+        assert!(!html.contains(r#"tabindex="0""#), "{html}");
+    }
+
+    #[test]
+    fn a_multi_select_draws_each_value_in_the_order_it_was_picked() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect { value: vec![Fruit::Cherry, Fruit::Apple], onchange: move |_| {} }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        let cherry = html.find("Cherry").expect("Cherry is drawn");
+        let apple = html.find("Apple").expect("Apple is drawn");
+        assert!(cherry < apple, "the chips lost the pick order:\n{html}");
+        assert!(
+            !html.contains("Banana"),
+            "an unpicked value is drawn:\n{html}"
+        );
+        assert!(
+            html.contains("multiple"),
+            "the trigger lost its `multiple` state:\n{html}"
         );
     }
 }

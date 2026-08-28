@@ -32,6 +32,7 @@ mod qr_code;
 mod radio;
 mod ripple;
 mod scroll_area;
+mod select;
 mod sidebar;
 mod slider;
 mod splitter;
@@ -102,6 +103,7 @@ pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobu
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
+pub use select::SelectDefaults;
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
 pub use slider::{
     SLIDER_FONT_SIZE, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK,

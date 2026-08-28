@@ -12,6 +12,7 @@ pub(crate) use button::{
 };
 pub use button::{Button, ButtonProps, ButtonVariant};
 pub use chip::{Chip, ChipProps};
+pub(crate) use combobox::ComboboxCore;
 pub use combobox::{
     Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
     ComboboxState, use_combobox,
