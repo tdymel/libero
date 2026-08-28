@@ -28,6 +28,9 @@ pub(super) fn ComboboxDropdown(
     max_height: String,
     scroll_y: Option<f64>,
     empty: Option<Element>,
+    /// Above the rows and outside the scroll, so it stays put while the list
+    /// under it changes - or empties.
+    header: Option<Element>,
     multiselectable: bool,
     /// Re-provided here, not inherited: the dropdown is portaled, so it mounts
     /// under `PortalOutlet` rather than under `ComboboxCore`, and a context
@@ -38,20 +41,27 @@ pub(super) fn ComboboxDropdown(
 ) -> Element {
     use_context_provider(|| context);
 
-    if rows.is_empty() {
-        return empty.unwrap_or_else(|| rsx! {});
-    }
+    // No rows and no `empty` draws nothing at all - an empty bordered box is
+    // not a state worth showing. A `header` is the exception: it is drawn
+    // either way, because a search that matched nothing still needs its box.
+    let list = match rows.is_empty() {
+        true => empty.unwrap_or_else(|| rsx! {}),
+        false => rsx! {
+            ScrollArea {
+                sx: sx().max_height(max_height),
+                scroll_position_y: scroll_y,
+                id: super::aria::listbox_id(&id),
+                "role": "listbox",
+                "aria-multiselectable": multiselectable.then_some("true"),
+                for (index, row) in rows.into_iter().enumerate() {
+                    ComboboxRow { key: "{index}", index, active: active == Some(index), {row} }
+                }
+            }
+        },
+    };
 
     rsx! {
-        ScrollArea {
-            sx: sx().max_height(max_height),
-            scroll_position_y: scroll_y,
-            id: super::aria::listbox_id(&id),
-            "role": "listbox",
-            "aria-multiselectable": multiselectable.then_some("true"),
-            for (index, row) in rows.into_iter().enumerate() {
-                ComboboxRow { key: "{index}", index, active: active == Some(index), {row} }
-            }
-        }
+        {header}
+        {list}
     }
 }

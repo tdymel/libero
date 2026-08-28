@@ -2,7 +2,8 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, States, common::base_props, layout::use_box},
-    hooks::{PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
+    hooks::{ElementHandle, PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
+    platform::ElementApi,
     sx::StaticSx,
     theme::{COMBOBOX_PADDING, ComboboxDefaults, Size, Z_INDEX_POPOVER},
 };
@@ -44,6 +45,21 @@ base_props! {
         id: String,
         #[props(default)]
         empty: Option<Element>,
+        /// Above the rows, inside the dropdown and outside its scroll - a
+        /// search box. It survives an empty list, which is the whole point:
+        /// a query that matches nothing is exactly when the box has to still
+        /// be there to edit.
+        #[props(default)]
+        header: Option<Element>,
+        /// Focused once the list is actually on screen.
+        ///
+        /// The box is `visibility: hidden` until `use_popover` has measured it,
+        /// and focusing a hidden element does nothing while still reporting
+        /// success - so a caller that focuses its own header the moment it
+        /// mounts silently loses the focus every time. Only this component
+        /// knows when the box became visible.
+        #[props(default)]
+        autofocus: Option<ElementHandle>,
         #[props(default, into)]
         size: Input<Size>,
         #[props(default, into)]
@@ -207,6 +223,21 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .style(popover.style())
         .prepare();
 
+    // Placed means measured, which means visible - the first moment at which
+    // focusing anything inside the box can take.
+    let autofocus = props.autofocus;
+    let placed = popover.placed();
+    use_effect(use_reactive!(|(opened, placed)| {
+        if let (true, true, Some(target)) = (opened, placed, autofocus) {
+            // Out of this dispatch: the click that opened the list ends by
+            // focusing the trigger, so focusing inline is undone a moment
+            // later.
+            spawn(async move {
+                let _ = target.focus();
+            });
+        }
+    }));
+
     // A linear map of the active row across the scroll range. It costs no
     // measurement and still always lands the row inside the viewport - the
     // row's offset from the top works out to `row * (viewport - row height) /
@@ -218,7 +249,9 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // An open list with nothing to show and no `empty` renders nothing at all -
     // an empty bordered box is not a state worth drawing, and it is what would
     // otherwise force callers to derive `opened` from the option count.
-    let showing = opened && (count > 0 || props.empty.is_some());
+    // A `header` keeps the box open through a list of nothing: a search that
+    // matches no row must not close the thing holding the search.
+    let showing = opened && (count > 0 || props.empty.is_some() || props.header.is_some());
     // Portaled rather than nested, so no `overflow: hidden` ancestor can clip
     // it and it can flip above the trigger when the page runs out of room.
     popover.show(showing.then(|| {
@@ -230,6 +263,13 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
+            // The same handler as the wrapper's, because the dropdown is
+            // portaled: it is no descendant of that wrapper, so a key pressed
+            // inside it bubbles to `PortalOutlet` instead. Nothing in a plain
+            // dropdown can hold focus, so this is dead weight there - it is
+            // what lets a search box inside the list answer the arrows. The
+            // closure captures only `Copy` values, so it is `Copy` too.
+            .event("onkeydown", onkeydown)
             .render(
                 HtmlTag::Div,
                 props.attributes,
@@ -241,6 +281,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                         max_height: theme.combobox.max_dropdown_height,
                         scroll_y,
                         empty: props.empty,
+                        header: props.header,
                         multiselectable: props.multiselectable,
                         context,
                     }
@@ -251,7 +292,9 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     wrapper
         .element(&anchor)
         // The trigger is the caller's, so the keys are caught where they
-        // bubble to rather than on a field this component owns.
+        // bubble to rather than on a field this component owns. The portaled
+        // dropdown carries the very same handler, for focus that moved inside
+        // it.
         .event("onkeydown", onkeydown)
         .render(HtmlTag::Div, Vec::new(), props.children)
 }
