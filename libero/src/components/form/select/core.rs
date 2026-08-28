@@ -99,7 +99,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .unwrap_or(0);
     let open = move |next: bool| {
         if next && !state.opened() {
-            state.set_active(first_selected);
+            state.set_active(Some(first_selected));
         }
         state.set_opened(next);
     };
@@ -229,7 +229,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         ComboboxCore {
             rows,
             active: state.active(),
-            onactive: move |row| state.set_active(row),
+            onactive: move |row| state.set_active(Some(row)),
             opened,
             onopened: open,
             id: state.id(),

@@ -23,7 +23,7 @@ fn ComboboxRow(index: usize, active: bool, children: Element) -> Element {
 #[component]
 pub(super) fn ComboboxDropdown(
     rows: Vec<Element>,
-    active: usize,
+    active: Option<usize>,
     id: String,
     max_height: String,
     scroll_y: Option<f64>,
@@ -50,7 +50,7 @@ pub(super) fn ComboboxDropdown(
             "role": "listbox",
             "aria-multiselectable": multiselectable.then_some("true"),
             for (index, row) in rows.into_iter().enumerate() {
-                ComboboxRow { key: "{index}", index, active: index == active, {row} }
+                ComboboxRow { key: "{index}", index, active: active == Some(index), {row} }
             }
         }
     }

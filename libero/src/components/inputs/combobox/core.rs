@@ -33,7 +33,10 @@ base_props! {
         /// The rows, already drawn - which is what erases the caller's `T`,
         /// and what stops anything below here from memoizing.
         rows: Vec<Element>,
-        active: usize,
+        /// The highlighted row, or `None` for no highlight - which is what an
+        /// autocomplete opens with, so Enter commits the typed text instead of
+        /// the top suggestion.
+        active: Option<usize>,
         onactive: EventHandler<usize>,
         opened: bool,
         onopened: EventHandler<bool>,
@@ -106,7 +109,10 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     let opened = props.opened;
     let count = props.rows.len();
-    let active_row = props.active.min(count.saturating_sub(1));
+    let active_row = props
+        .active
+        .filter(|_| count > 0)
+        .map(|row| row.min(count - 1));
     let set_active = props.onactive;
 
     let disabled = props.disabled;
@@ -127,16 +133,18 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         };
 
         match event.key() {
+            // From no highlight, both arrows land on row 0 - the first press
+            // arms the list rather than moving inside it.
             Key::ArrowDown => {
                 event.prevent_default();
-                match opened {
-                    true => go_to((active_row + 1).min(last)),
-                    false => go_to(active_row),
+                match (opened, active_row) {
+                    (true, Some(row)) => go_to((row + 1).min(last)),
+                    _ => go_to(active_row.unwrap_or(0)),
                 }
             }
             Key::ArrowUp if opened => {
                 event.prevent_default();
-                go_to(active_row.saturating_sub(1));
+                go_to(active_row.map_or(0, |row| row.saturating_sub(1)));
             }
             Key::Home if opened => {
                 event.prevent_default();
@@ -146,7 +154,9 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 event.prevent_default();
                 go_to(last);
             }
-            Key::Enter if opened && count > 0 => {
+            // Nothing highlighted means Enter is not ours: it bubbles, so a
+            // form still submits.
+            Key::Enter if opened && active_row.is_some() => {
                 event.prevent_default();
                 if let Some(pick) = active_pick() {
                     pick.call(());
@@ -201,7 +211,9 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // measurement and still always lands the row inside the viewport - the
     // row's offset from the top works out to `row * (viewport - row height) /
     // (rows - 1)`, which never exceeds the viewport.
-    let scroll_y = (count > 1).then(|| active_row as f64 / (count - 1) as f64 * 100.0);
+    let scroll_y = active_row
+        .filter(|_| count > 1)
+        .map(|row| row as f64 / (count - 1) as f64 * 100.0);
 
     // An open list with nothing to show and no `empty` renders nothing at all -
     // an empty bordered box is not a state worth drawing, and it is what would

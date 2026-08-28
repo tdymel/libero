@@ -16,7 +16,7 @@ use super::aria::trigger_aria;
 pub struct ComboboxState {
     id: Signal<String>,
     opened: Signal<bool>,
-    active: Signal<usize>,
+    active: Signal<Option<usize>>,
 }
 
 /// One `Combobox`'s state. Positional, like every hook.
@@ -24,7 +24,7 @@ pub fn use_combobox() -> ComboboxState {
     ComboboxState {
         id: use_id(),
         opened: use_signal(|| false),
-        active: use_signal(|| 0),
+        active: use_signal(|| None),
     }
 }
 
@@ -56,12 +56,13 @@ impl ComboboxState {
     }
 
     /// The row the arrow keys are on - an index into the `options` last handed
-    /// to the `Combobox`.
-    pub fn active(&self) -> usize {
+    /// to the `Combobox`. `None` is no highlight at all, which is what lets a
+    /// control whose value is free text keep Enter for itself.
+    pub fn active(&self) -> Option<usize> {
         (self.active)()
     }
 
-    pub fn set_active(&self, row: usize) {
+    pub fn set_active(&self, row: Option<usize>) {
         let mut active = self.active;
         active.set(row);
     }
@@ -75,6 +76,6 @@ impl ComboboxState {
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
         let opened = self.opened();
-        trigger_aria(&self.id(), opened, opened.then(|| self.active()))
+        trigger_aria(&self.id(), opened, opened.then(|| self.active()).flatten())
     }
 }

@@ -1925,7 +1925,7 @@ mod combobox_highlight {
         assert!(row_of(&html, 0).contains("active"));
         assert!(!row_of(&html, 2).contains("active"));
 
-        dom.in_runtime(|| state().set_active(2));
+        dom.in_runtime(|| state().set_active(Some(2)));
 
         let html = render_pass(&mut dom);
         assert!(!row_of(&html, 0).contains("active"), "row 0 stayed active");
@@ -1992,7 +1992,7 @@ mod combobox_highlight {
     fn the_rows_keep_their_context_across_the_portal() {
         let mut dom = VirtualDom::new(App);
         dom.rebuild_in_place();
-        dom.in_runtime(|| state().set_active(2));
+        dom.in_runtime(|| state().set_active(Some(2)));
 
         let html = render_pass(&mut dom);
         let row = row_of(&html, 2);
@@ -2028,7 +2028,7 @@ mod combobox_highlight {
     fn the_trigger_points_at_the_active_row() {
         let mut dom = VirtualDom::new(App);
         dom.rebuild_in_place();
-        dom.in_runtime(|| state().set_active(1));
+        dom.in_runtime(|| state().set_active(Some(1)));
 
         let html = render_pass(&mut dom);
         let button = attributes_of(&html, "button");

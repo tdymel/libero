@@ -64,10 +64,13 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     // Reading `opened` is what makes the effect re-run on it.
     use_effect(move || {
         let _ = state.opened();
-        state.set_active(0);
+        state.set_active(Some(0));
     });
 
-    let active_row = state.active().min(count.saturating_sub(1));
+    let active_row = state
+        .active()
+        .filter(|_| count > 0)
+        .map(|row| row.min(count - 1));
 
     // Drawn here, eagerly, and handed down as values. A `Callback` would be
     // the obvious way to keep this lazy, but two `Callback`s built in the same
@@ -84,7 +87,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             option.call(ComboboxOptionArgs {
                 value: value.clone(),
                 index,
-                active: index == active_row,
+                active: active_row == Some(index),
             })
         })
         .collect();
@@ -93,7 +96,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
         ComboboxCore {
             rows,
             active: active_row,
-            onactive: move |row| state.set_active(row),
+            onactive: move |row| state.set_active(Some(row)),
             opened: state.opened(),
             onopened: move |opened| state.set_opened(opened),
             id: state.id(),
