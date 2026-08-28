@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     core::SelectCore,
-    select::{SelectOptionArgs, draw_rows},
+    select::{SelectFilterArgs, SelectOptionArgs, draw_rows},
 };
 
 field_props! {
@@ -39,6 +39,17 @@ field_props! {
         /// Shows an x that empties the selection.
         #[props(default)]
         clearable: Option<bool>,
+        /// Puts a search box at the top of the list. The query survives a pick,
+        /// so several matches of one search can be ticked without retyping it.
+        #[props(default)]
+        searchable: Option<bool>,
+        /// Narrows the options while searching. Defaults to a case-insensitive
+        /// `contains` over `Options::label`.
+        #[props(default)]
+        filter: Option<Callback<SelectFilterArgs<T>, bool>>,
+        /// What the search box says while empty.
+        #[props(default)]
+        search_placeholder: Option<String>,
     }
 }
 
@@ -82,6 +93,28 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         }
     });
 
+    // The same mask `Select` builds, and the same memoization reasoning - see
+    // the comment there.
+    let searchable = props.searchable.unwrap_or(false);
+    let filter = props.filter;
+    let filtered = values.clone();
+    let matches = searchable.then(|| {
+        Callback::new(move |query: String| {
+            let needle = query.to_lowercase();
+            filtered
+                .iter()
+                .map(|value| match &filter {
+                    Some(filter) => filter.call(SelectFilterArgs {
+                        value: value.clone(),
+                        query: query.clone(),
+                    }),
+                    None => value.label().to_lowercase().contains(&needle),
+                })
+                // Annotated for the same reason as in `select.rs`.
+                .collect::<Vec<bool>>()
+        })
+    });
+
     let onchange = props.onchange;
     let current = props.value.clone();
     rsx! {
@@ -105,6 +138,9 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             selection,
             placeholder: props.placeholder,
             clearable: props.clearable.unwrap_or(false),
+            searchable,
+            search_placeholder: props.search_placeholder,
+            matches,
             onclear: move |_| {
                 if let Some(onchange) = &onchange {
                     onchange.call(Vec::new());

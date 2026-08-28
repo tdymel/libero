@@ -27,7 +27,9 @@ pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};
 pub use radio::{Radio, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupProps};
-pub use select::{MultiSelect, MultiSelectProps, Select, SelectOptionArgs, SelectProps};
+pub use select::{
+    MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectProps,
+};
 pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};
 pub use switch::{Switch, SwitchProps};
 pub use text_field::{TextField, TextFieldProps};

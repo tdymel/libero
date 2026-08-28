@@ -19,6 +19,18 @@ pub struct SelectOptionArgs<T> {
     pub selected: bool,
 }
 
+/// One option under test, handed to `Select`'s and `MultiSelect`'s `filter`
+/// callback while searching.
+///
+/// Deliberately the same pair `AutocompleteFilterArgs<T>` carries: two filter
+/// args structs differing by nothing would be the wart.
+#[derive(Clone, PartialEq)]
+pub struct SelectFilterArgs<T> {
+    pub value: T,
+    /// What is currently typed in the search box.
+    pub query: String,
+}
+
 field_props! {
     pub struct SelectProps<T: Options> {
         /// Strictly controlled - pair it with `onchange`. `None` shows
@@ -48,6 +60,16 @@ field_props! {
         /// `onchange` fire `None`.
         #[props(default)]
         clearable: Option<bool>,
+        /// Puts a search box at the top of the list.
+        #[props(default)]
+        searchable: Option<bool>,
+        /// Narrows the options while searching. Defaults to a case-insensitive
+        /// `contains` over `Options::label`.
+        #[props(default)]
+        filter: Option<Callback<SelectFilterArgs<T>, bool>>,
+        /// What the search box says while empty.
+        #[props(default)]
+        search_placeholder: Option<String>,
     }
 }
 
@@ -93,6 +115,36 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         }
     });
 
+    // Closes over this skin's own `values` and the caller's filter, so `T`
+    // never reaches the core - it takes a `Vec<bool>` mask and nothing else.
+    //
+    // Built per render, which `Callback`'s `PartialEq` normally makes a trap:
+    // two callbacks from one scope compare equal, so a stale one can survive.
+    // It cannot here, because `SelectCore` also takes `rows: Vec<Element>`,
+    // which never compares equal - its props therefore never do either, and the
+    // fresh callback is always the one called. Anything that later drops `rows`
+    // from those props has to revisit this.
+    let searchable = props.searchable.unwrap_or(false);
+    let filter = props.filter;
+    let filtered = values.clone();
+    let matches = searchable.then(|| {
+        Callback::new(move |query: String| {
+            let needle = query.to_lowercase();
+            filtered
+                .iter()
+                .map(|value| match &filter {
+                    Some(filter) => filter.call(SelectFilterArgs {
+                        value: value.clone(),
+                        query: query.clone(),
+                    }),
+                    None => value.label().to_lowercase().contains(&needle),
+                })
+                // Annotated: a `Callback`'s return type is inferred through
+                // `SpawnIfAsync`, which leaves a bare `collect` ambiguous.
+                .collect::<Vec<bool>>()
+        })
+    });
+
     let onchange = props.onchange;
     rsx! {
         SelectCore {
@@ -106,6 +158,9 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             selection,
             placeholder: props.placeholder,
             clearable: props.clearable.unwrap_or(false),
+            searchable,
+            search_placeholder: props.search_placeholder,
+            matches,
             onclear: move |_| {
                 if let Some(onchange) = &onchange {
                     onchange.call(None);

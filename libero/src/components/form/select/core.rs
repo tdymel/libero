@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, States,
-        common::field_props,
+        common::{attr, field_props},
         form::{
             field_control_sx,
             glyphs::{ChevronIcon, CloseIcon},
@@ -12,7 +12,8 @@ use crate::{
         layout::use_box,
         use_combobox,
     },
-    hooks::{PopoverWidth, use_theme},
+    hooks::{PopoverWidth, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
 };
 
@@ -52,6 +53,24 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
         .when("disabled", sx().cursor("not-allowed"))
 });
 
+/// The search box at the top of the list. It is not a field control - it sits
+/// inside the dropdown, above the rows and outside their scroll - so it carries
+/// its own chrome rather than the field frame's.
+static SEARCH_SX: StaticSx = StaticSx::new(|| {
+    sx().width("100%")
+        .border("none")
+        .outline("none")
+        .background("transparent")
+        .color("inherit")
+        .font_family("inherit")
+        .font_size("inherit")
+        .line_height("1.5")
+        .padding("4px 8px")
+        .border_bottom("1px solid")
+        .border_color("grey.3")
+        .selector("::placeholder", sx().color("grey.6"))
+});
+
 field_props! {
     pub(crate) struct SelectCoreProps {
         /// Each row's content, already drawn by the skin. The core wraps every
@@ -74,6 +93,16 @@ field_props! {
         /// let the selection wrap.
         #[props(default)]
         multiple: bool,
+        /// Puts a search box at the top of the list.
+        #[props(default)]
+        searchable: bool,
+        #[props(default)]
+        search_placeholder: Option<String>,
+        /// Which rows survive the query, one `bool` per row. The skin closes
+        /// over its own `Vec<T>` and the caller's filter, so `T` never reaches
+        /// here - the mask is the same erasure `rows: Vec<Element>` performs.
+        #[props(default)]
+        matches: Option<Callback<String, Vec<bool>>>,
     }
 }
 
@@ -94,12 +123,34 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let state = use_combobox();
     let opened = state.opened() && !disabled;
+    let searchable = props.searchable && !disabled;
+
+    // The query lives here, beside the open and highlight state. The skins
+    // stay stateless: they hand down `matches` and nothing else.
+    let mut query = use_signal(String::new);
+    let search = use_element();
+    let trigger_element = use_element();
+    let mut was_open = use_signal(|| false);
+
+    // Which rows survive the query, and what each one's index was in the full
+    // list. `onpick` reports the original index, so the skins never remap.
+    let visible: Vec<usize> = match (searchable, props.matches.as_ref(), query().is_empty()) {
+        (true, Some(matches), false) => matches
+            .call(query())
+            .into_iter()
+            .enumerate()
+            .filter(|(_, keep)| *keep)
+            .map(|(index, _)| index)
+            .collect(),
+        _ => (0..props.rows.len()).collect(),
+    };
+
     let has_selection = props.selected.iter().any(|selected| *selected);
-    // A list opens on what is already selected, like a native `<select>`.
-    let first_selected = props
-        .selected
+    // A list opens on what is already selected, like a native `<select>` -
+    // counted among the rows actually on screen.
+    let first_selected = visible
         .iter()
-        .position(|selected| *selected)
+        .position(|index| props.selected.get(*index).copied().unwrap_or(false))
         .unwrap_or(0);
     let open = move |next: bool| {
         if next && !state.opened() {
@@ -107,6 +158,30 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         }
         state.set_opened(next);
     };
+
+    // Closing clears the query and hands focus back to the trigger, which would
+    // otherwise be lost to the body - the box the user was typing in has just
+    // unmounted.
+    //
+    // Opening is deliberately *not* handled here. The list is
+    // `visibility: hidden` until `use_popover` has measured it, and focusing a
+    // hidden element does nothing while still reporting success, so focusing
+    // the box on mount never took. `ComboboxCore` does it instead, once the box
+    // is on screen - that is what `autofocus` is.
+    use_effect(use_reactive!(|(opened, searchable)| {
+        if !searchable {
+            return;
+        }
+        // `peek`, so writing it below cannot re-trigger this effect forever.
+        let previously = *was_open.peek();
+        if previously && !opened {
+            query.set(String::new());
+            let _ = trigger_element.focus();
+        }
+        if previously != opened {
+            was_open.set(opened);
+        }
+    }));
 
     let field = use_field()
         .labelled_by()
@@ -158,15 +233,17 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let onpick = props.onpick;
     let close_on_pick = !props.multiple;
-    let rows: Vec<Element> = props
-        .rows
-        .into_iter()
-        .zip(props.selected.iter().copied())
-        .enumerate()
-        .map(|(index, (row, selected))| {
-            rsx! {
+    let rows: Vec<Element> = visible
+        .iter()
+        .copied()
+        .filter_map(|index| {
+            let row = props.rows.get(index)?.clone();
+            let selected = props.selected.get(index).copied().unwrap_or(false);
+            Some(rsx! {
                 ComboboxOption {
                     selected,
+                    // `index` is the row's place in the *full* list, so a
+                    // filtered list still reports what the skin expects.
                     onpick: move |_| {
                         onpick.call(index);
                         if close_on_pick {
@@ -175,9 +252,33 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                     },
                     {row}
                 }
-            }
+            })
         })
         .collect();
+
+    // A hook, so it is prepared unconditionally and only used when searching.
+    let search_box = use_box().framework_sx(&SEARCH_SX).prepare();
+    let search_placeholder = props.search_placeholder.clone().unwrap_or_default();
+    let header = searchable.then(|| {
+        search_box
+            .element(&search)
+            .attr_default("type", "text")
+            .attr("value", query())
+            .attr("placeholder", search_placeholder)
+            // Ours is the list underneath; the browser's would cover it.
+            .attr("autocomplete", "off")
+            .attr("aria-autocomplete", "list")
+            .event("oninput", move |event: FormEvent| {
+                query.set(event.value());
+                // The list under the highlight just changed; arm its top row.
+                state.set_active(Some(0));
+            })
+            // The trigger's blur no longer closes while searchable - this does,
+            // and the rows and the list cancel `mousedown`, so a click inside
+            // never reaches it.
+            .event("onblur", move |_: FocusEvent| state.close())
+            .render(HtmlTag::Input, state.a11y_attributes(), ())
+    });
 
     let placeholder = props.placeholder.clone().unwrap_or_default();
     let content = match props.selection {
@@ -189,10 +290,21 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         },
     };
 
-    let mut attributes = state.a11y_attributes();
+    // Two elements cannot both be the combobox. While the search box is open it
+    // owns the role, `aria-controls` and `aria-activedescendant`; the trigger
+    // keeps only what says a list hangs off it.
+    let searching = searchable && opened;
+    let mut attributes = match searching {
+        true => vec![
+            attr("aria-haspopup", "listbox"),
+            attr("aria-expanded", "true"),
+        ],
+        false => state.a11y_attributes(),
+    };
     attributes.extend(props.attributes);
     let trigger = field
         .aria(control)
+        .element(&trigger_element)
         .attr("aria-labelledby", field.label_id())
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("tabindex", (!disabled).then_some("0"))
@@ -217,7 +329,13 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                 open(true);
             }
         })
-        .event("onblur", move |_: FocusEvent| state.close())
+        // While searchable the focus moves into the search box, so closing on
+        // the trigger's blur would shut the list before a key could land.
+        .event("onblur", move |_: FocusEvent| {
+            if !searchable {
+                state.close();
+            }
+        })
         .render(
             HtmlTag::Div,
             attributes,
@@ -242,6 +360,10 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             disabled,
             close_on_pick,
             multiselectable: props.multiple,
+            header,
+            // Focused once the list has been measured and is visible. Doing it
+            // any earlier is a no-op that reports success.
+            autofocus: searchable.then_some(search),
             width: PopoverWidth::Min,
             // A pick on a multi-select adds or drops a chip, which resizes the
             // trigger under an open list.

@@ -2173,6 +2173,35 @@ mod select_listbox {
             "the trigger lost its `multiple` state:\n{html}"
         );
     }
+
+    /// `searchable` must not leak a dropdown into a closed select. The core
+    /// keeps an *open* list alive through a query that matches nothing - that
+    /// is what the header slot is for - and a closed one draws neither.
+    #[test]
+    fn a_closed_searchable_select_draws_no_search_box() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    Select {
+                        value: Fruit::Apple,
+                        searchable: true,
+                        search_placeholder: "Find a fruit",
+                        onchange: move |_| {},
+                    }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(
+            !html.contains("Find a fruit"),
+            "a closed select drew its search box:\n{html}"
+        );
+        assert!(!html.contains(r#"role="listbox""#), "{html}");
+        // Closed, the trigger is still the combobox - the role only moves to
+        // the search box while one exists.
+        assert!(html.contains(r#"role="combobox""#), "{html}");
+    }
 }
 
 /// `Autocomplete` as SSR sees it: closed. The open state lives in the
