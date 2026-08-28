@@ -2,25 +2,18 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, States, common::base_props, layout::use_box},
-    hooks::use_theme,
-    sx::{StaticSx, sx},
-    theme::{COMBOBOX_PADDING, ComboboxDefaults, Size, Z_INDEX_FLOAT},
+    hooks::{PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
+    sx::StaticSx,
+    theme::{COMBOBOX_PADDING, ComboboxDefaults, Size, Z_INDEX_POPOVER},
 };
 
 use super::{dropdown::ComboboxDropdown, option::ComboboxContext};
 
-/// Not user-facing - it exists so the dropdown has something to be absolute
-/// against, which is why `sx` lands on the dropdown instead.
-static COMBOBOX_WRAPPER_SX: StaticSx = StaticSx::new(|| sx().position("relative"));
-
 static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
     ComboboxDefaults::dropdown_theme_vars()
-        .position("absolute")
-        .top("100%")
-        .left("0")
-        .width("100%")
-        .margin_top("4px")
-        .z_index(Z_INDEX_FLOAT.value())
+        // Everything positional - `position`, `left`, `top`, `width` - comes
+        // from `use_popover` as an inline style, measured per open.
+        .z_index(Z_INDEX_POPOVER.value())
         .display("flex")
         .flex_direction("column")
         .gap("4px")
@@ -63,24 +56,36 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let size = props.size.copied_or(theme.combobox.size);
     let radius = props.radius.copied_or(theme.combobox.radius);
 
-    // Written during render rather than in an effect: a row rendered this pass
-    // must already read these this pass, and a provider only runs once.
-    let id = use_signal(|| props.id.clone());
-    let mut shared_size = use_signal(|| size);
+    // Owned by the root scope, not by this one, and dropped by hand on unmount.
+    // The rows that read them are portaled, so they mount under `PortalOutlet`
+    // and are *not* descendants of this component - a signal created here would
+    // be read from outside the scope that owns it, which dioxus warns about and
+    // which really can drop the value while a row still holds it.
+    let id = use_hook(|| Signal::new_in_scope(props.id.clone(), ScopeId::ROOT));
+    let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
     if *shared_size.peek() != size {
         shared_size.set(size);
     }
-    let mut shared_radius = use_signal(|| radius);
+    let mut shared_radius = use_hook(|| Signal::new_in_scope(radius, ScopeId::ROOT));
     if *shared_radius.peek() != radius {
         shared_radius.set(radius);
     }
-    let active_pick = use_signal(|| None);
-    use_context_provider(|| ComboboxContext {
+    let active_pick = use_hook(|| Signal::new_in_scope(None, ScopeId::ROOT));
+    use_drop(move || {
+        id.manually_drop();
+        shared_size.manually_drop();
+        shared_radius.manually_drop();
+        active_pick.manually_drop();
+    });
+    let context = ComboboxContext {
         id,
         size: shared_size,
         radius: shared_radius,
         active_pick,
-    });
+    };
+    // Provided here for a row drawn inside the trigger, and handed to the
+    // portaled dropdown as a prop, which mounts outside this scope entirely.
+    use_context_provider(|| context);
 
     let opened = props.opened;
     let count = props.rows.len();
@@ -147,13 +152,28 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .with("disabled", disabled)
         .into();
 
-    // Both are hooks, so both run before anything branches on `opened`.
-    let wrapper = use_box().framework_sx(&COMBOBOX_WRAPPER_SX).prepare();
+    // Every one of these is a hook, so all of them run before anything branches
+    // on `opened`.
+    let anchor = use_element();
+    let popover = use_popover(
+        anchor,
+        opened,
+        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
+            // Portaling takes away the positioned wrapper a `width: 100%` used
+            // to resolve against, so the width is measured instead.
+            .width(PopoverWidth::Match),
+    );
+    // Unstyled, and not user-facing: it is only what the keys are caught on and
+    // what the dropdown is measured against, which is why `sx` lands on the
+    // dropdown instead. Its width is the trigger's, so `PopoverWidth::Match`
+    // reproduces the `width: 100%` the dropdown had while it was nested.
+    let wrapper = use_box().prepare();
     let dropdown = use_box()
         .framework_sx(&COMBOBOX_DROPDOWN_SX)
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)
+        .style(popover.style())
         .prepare();
 
     // A linear map of the active row across the scroll range. It costs no
@@ -166,8 +186,10 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // an empty bordered box is not a state worth drawing, and it is what would
     // otherwise force callers to derive `opened` from the option count.
     let showing = opened && (count > 0 || props.empty.is_some());
-    let dropdown = showing.then(|| {
-        dropdown.render(
+    // Portaled rather than nested, so no `overflow: hidden` ancestor can clip
+    // it and it can flip above the trigger when the page runs out of room.
+    popover.show(showing.then(|| {
+        dropdown.element(popover.floating()).render(
             HtmlTag::Div,
             props.attributes,
             rsx! {
@@ -178,18 +200,16 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                     max_height: theme.combobox.max_dropdown_height,
                     scroll_y,
                     empty: props.empty,
+                    context,
                 }
             },
         )
-    });
+    }));
 
     wrapper
+        .element(&anchor)
         // The trigger is the caller's, so the keys are caught where they
         // bubble to rather than on a field this component owns.
         .event("onkeydown", onkeydown)
-        .render(
-            HtmlTag::Div,
-            Vec::new(),
-            vec![props.children, dropdown.unwrap_or_else(|| rsx! {})],
-        )
+        .render(HtmlTag::Div, Vec::new(), props.children)
 }

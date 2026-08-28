@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{components::layout::ScrollArea, sx::sx};
 
-use super::option::ComboboxRowContext;
+use super::option::{ComboboxContext, ComboboxRowContext};
 
 /// Publishes where this row sits, so `ComboboxOption` needs no props for its
 /// `id` or its highlight. A `Signal`, written during render: a provider runs
@@ -28,7 +28,15 @@ pub(super) fn ComboboxDropdown(
     max_height: String,
     scroll_y: Option<f64>,
     empty: Option<Element>,
+    /// Re-provided here, not inherited: the dropdown is portaled, so it mounts
+    /// under `PortalOutlet` rather than under `ComboboxCore`, and a context
+    /// resolves along the mounted chain. Without this every row loses its `id`,
+    /// its highlight and its Enter target - silently, because `ComboboxOption`
+    /// looks it up with `try_consume_context`.
+    context: ComboboxContext,
 ) -> Element {
+    use_context_provider(|| context);
+
     if rows.is_empty() {
         return empty.unwrap_or_else(|| rsx! {});
     }

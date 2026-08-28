@@ -9,7 +9,7 @@ use crate::{
 
 /// What the rows share with the `Combobox` around them. Signals, not values: a
 /// provider runs once, so a plain field would freeze on the first render.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub(super) struct ComboboxContext {
     pub id: Signal<String>,
     pub size: Signal<Size>,

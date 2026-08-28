@@ -1896,10 +1896,13 @@ mod combobox_highlight {
     }
 
     /// One row, opening tag through closing tag, found by the `id`
-    /// `ComboboxOption` takes from the `Combobox` - which is also what
-    /// `aria-activedescendant` points at.
+    /// `ComboboxOption` takes from the `Combobox`.
+    ///
+    /// Matched together with `role="option"`, the attribute that follows it:
+    /// the trigger's own `aria-activedescendant` holds the very same id, and
+    /// it comes first in the document.
     fn row_of(html: &str, index: usize) -> String {
-        let id = format!(r#"-option-{index}""#);
+        let id = format!(r#"-option-{index}" role="option""#);
         let at = html
             .find(&id)
             .unwrap_or_else(|| panic!("no row {index} in:\n{html}"));
@@ -1955,6 +1958,68 @@ mod combobox_highlight {
         let html = render_pass(&mut dom);
         assert!(row_of(&html, 0).contains("apricot"), "row 0 stayed stale");
         assert!(row_of(&html, 1).contains("plum"), "row 1 stayed stale");
+    }
+
+    /// The port to `use_popover`: the dropdown leaves the wrapper entirely, so
+    /// no `overflow: hidden` ancestor can clip it.
+    #[test]
+    fn the_dropdown_is_portaled_out_of_the_wrapper() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        let html = render_pass(&mut dom);
+
+        let trigger = html.find("<button").expect("the trigger rendered");
+        let wrapper_closes = trigger + html[trigger..].find("</div>").expect("an open wrapper");
+        let listbox = html
+            .find(r#"role="listbox""#)
+            .expect("the dropdown rendered");
+
+        assert!(
+            listbox > wrapper_closes,
+            "the dropdown is still nested inside the trigger's wrapper"
+        );
+        assert!(
+            row_of(&html, 0).contains("apple"),
+            "the portaled rows lost their content"
+        );
+    }
+
+    /// `ComboboxOption` reads its id and its highlight from a context, and a
+    /// portaled subtree mounts under `PortalOutlet` rather than under
+    /// `ComboboxCore` - so the context has to be handed across as a prop. The
+    /// lookup is a `try_consume_context`, so getting this wrong fails silently.
+    #[test]
+    fn the_rows_keep_their_context_across_the_portal() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        dom.in_runtime(|| state().set_active(2));
+
+        let html = render_pass(&mut dom);
+        let row = row_of(&html, 2);
+
+        assert!(row.contains("active"), "the row lost the highlight context");
+        assert!(
+            row.contains(&format!(r#"id="{}-option-2""#, state().id())),
+            "the row lost the id context"
+        );
+    }
+
+    /// Fixed to the viewport, not absolute to a wrapper that is no longer
+    /// positioned - and hidden until the first measurement lands, which under
+    /// SSR never does.
+    #[test]
+    fn the_dropdown_is_hidden_until_it_has_been_measured() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        let html = render_pass(&mut dom);
+
+        assert!(
+            html.contains(
+                r#"style="position:fixed;left:0px;top:0px;width:auto;min-width:auto;visibility:hidden;""#
+            ),
+            "the dropdown is not laid out fixed and hidden before its first \
+             measurement, which under SSR never lands:\n{html}"
+        );
     }
 
     /// The whole reason the state is a handle: the trigger has to be able to
