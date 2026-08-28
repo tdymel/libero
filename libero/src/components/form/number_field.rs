@@ -33,7 +33,7 @@ const fn stepper_size(size: Size) -> Size {
 }
 
 // Hand-written rather than `field_props!`, which is not generic - as
-// `SelectProps` is.
+// `NativeSelectProps` is.
 #[derive(Props, Clone, PartialEq)]
 pub struct NumberFieldProps<T: NumberValue> {
     /// The number in the field; strictly controlled. `None` is the empty

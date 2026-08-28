@@ -23,6 +23,7 @@ mod image;
 mod kbd;
 mod list;
 mod mark;
+mod native_select;
 mod nav_link;
 mod number_field;
 mod overlay;
@@ -31,7 +32,6 @@ mod qr_code;
 mod radio;
 mod ripple;
 mod scroll_area;
-mod select;
 mod sidebar;
 mod slider;
 mod splitter;
@@ -93,6 +93,7 @@ pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use mark::MarkDefaults;
+pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use number_field::NumberFieldDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
@@ -101,7 +102,6 @@ pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobu
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
-pub use select::SelectDefaults;
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
 pub use slider::{
     SLIDER_FONT_SIZE, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK,

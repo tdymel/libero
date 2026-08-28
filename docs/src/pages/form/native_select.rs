@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, FieldStatus, Options, Select, Text};
+use libero::components::{Code, FieldStatus, NativeSelect, Options, Text};
 
 /// The enum is the option list, so the snippet has to show it.
 const SIZE_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -28,16 +28,16 @@ enum FontSize {
 }
 
 #[component]
-pub fn SelectPage() -> Element {
+pub fn NativeSelectPage() -> Element {
     let mut value = use_signal(|| Some(FontSize::Small));
 
     rsx! {
         DocPage {
-            title: "Select",
-            source: "libero/src/components/form/select.rs",
-            markdown: "/md/select.md",
+            title: "NativeSelect",
+            source: "libero/src/components/form/native_select.rs",
+            markdown: "/md/native_select.md",
             properties: vec![
-                props("Select", vec![
+                props("NativeSelect", vec![
                     prop("size", "Size").default("md").doc("Controls height, padding, and font size."),
                     prop("radius", "Size")
                         .default("sm")
@@ -88,7 +88,7 @@ pub fn SelectPage() -> Element {
                 }
             },
             Demo {
-                component: "Select",
+                component: "NativeSelect",
                 children_text: "",
                 // Printed above the snippet: the list is the enum, so the
                 // code block is a lie without it.
@@ -135,7 +135,7 @@ pub fn SelectPage() -> Element {
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Select {
+                    NativeSelect {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "Size".to_string()),

@@ -1,6 +1,6 @@
 //! The chrome `use_field` puts around a control: the five slots, and the a11y
 //! wiring that ties them to it. `TextField` carries most of the cases;
-//! `Select` covers what changed when it was ported off its wrapping `<label>`.
+//! `NativeSelect` covers what changed when it was ported off its wrapping `<label>`.
 
 mod common;
 
@@ -10,8 +10,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, NumberField, NumberValue, Options, PasswordField, Radio, RadioGroup, Select,
-        Slider, Switch, TextField, Textarea,
+        Checkbox, NativeSelect, NumberField, NumberValue, Options, PasswordField, Radio,
+        RadioGroup, Slider, Switch, TextField, Textarea,
     },
 };
 
@@ -283,7 +283,7 @@ enum Pick {
     Second,
 }
 
-/// `Select`'s root was a wrapping `<label>` before R5. A wrapping label
+/// `NativeSelect`'s root was a wrapping `<label>` before R5. A wrapping label
 /// swallows clicks on anything nested in the frame, which is why every field
 /// uses a `<label for>`/`id` pair instead.
 #[test]
@@ -291,7 +291,7 @@ fn a_select_names_its_control_through_for_rather_than_wrapping_it() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Select {
+                NativeSelect {
                     label: "Plan",
                     description: "Billed monthly.",
                     status: "Pick one.",
@@ -321,7 +321,7 @@ fn a_select_names_its_control_through_for_rather_than_wrapping_it() {
     assert!(frame.contains("<div"), "{body}");
 }
 
-/// Both fields read one `FieldDefaults` scale now, so a `Select` beside a
+/// Both fields read one `FieldDefaults` scale now, so a `NativeSelect` beside a
 /// `TextField` lines up by construction.
 #[test]
 fn a_select_and_a_text_field_share_one_size_scale() {
@@ -329,7 +329,7 @@ fn a_select_and_a_text_field_share_one_size_scale() {
         rsx! {
             LiberoProvider {
                 TextField { size: "lg" }
-                Select { size: "lg", value: Pick::First, onchange: move |_| {} }
+                NativeSelect { size: "lg", value: Pick::First, onchange: move |_| {} }
             }
         }
     }

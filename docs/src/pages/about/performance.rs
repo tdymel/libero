@@ -9,7 +9,7 @@ const RATIOS: [(&str, &str); 7] = [
     ("Text", "1.6x"),
     ("Flex", "2.1x"),
     ("Button", "2.4x"),
-    ("Select", "6.1x"),
+    ("NativeSelect", "6.1x"),
     ("Splitter", "8.2x"),
     ("Sidebar", "4.7x"),
 ];
@@ -95,7 +95,7 @@ pub fn PerformancePage() -> Element {
                     Code { source: "Center" }
                     " - land around 1.5x, and that cluster is the floor. Anything above it "
                     "is paying for markup of its own: "
-                    Code { source: "Select" }
+                    Code { source: "NativeSelect" }
                     " renders a label, a trigger and a list; "
                     Code { source: "Sidebar" }
                     " renders a bordered panel around a scroll area. The spread across the "

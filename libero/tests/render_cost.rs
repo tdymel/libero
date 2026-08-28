@@ -127,7 +127,7 @@ fn render_cost_per_component() {
 
         "Button" { Button { "x" } }
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
-        "Select" { Select { value: CostPane::One, onchange: move |_| {} } }
+        "NativeSelect" { NativeSelect { value: CostPane::One, onchange: move |_| {} } }
         "TextField" { TextField { oninput: move |_| {} } }
         "TextField+label" { TextField { oninput: move |_| {}, label: "l" } }
         // Every slot filled - what the field chrome costs over a bare control.

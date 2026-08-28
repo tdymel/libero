@@ -128,7 +128,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         text_field: _,
         textarea: _,
         number_field: _,
-        select: _,
+        native_select: _,
         scroll_area: _,
         tree: _,
         mark: _,

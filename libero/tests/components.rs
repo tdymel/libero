@@ -12,10 +12,10 @@ use libero::{
         ActionIcon, Anchor, AspectRatio, Box, Button, Center, Chip, Code, CodeBlock, Combobox,
         ComboboxOption, ComboboxOptionArgs, ComboboxState, Container, DataList, DataListItem,
         Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem, GridSpan, GridTemplate,
-        GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NavLink, OptionLabel, Options,
-        Overlay, QrCode, ScrollArea, SegmentedControl, Select, Sidebar, Slider, SliderMark,
-        SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode,
-        TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, NativeSelect, NavLink,
+        OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl, Sidebar, Slider,
+        SliderMark, SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem,
+        TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -651,7 +651,7 @@ fn select_renders_its_options_and_marks_the_current_one() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Select { value: Pick::Second, onchange: move |_| {} }
+                NativeSelect { value: Pick::Second, onchange: move |_| {} }
             }
         }
     }
@@ -674,7 +674,7 @@ fn a_select_without_a_value_shows_its_placeholder() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Select {
+                NativeSelect {
                     value: None::<Pick>,
                     placeholder: "Choose one",
                     // Annotated: with `value: None` there is nothing else for
@@ -699,7 +699,7 @@ fn a_disabled_select_renders_the_attribute() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Select {
+                NativeSelect {
                     value: Pick::First,
                     disabled: true,
                     onchange: move |_| {},
@@ -1244,7 +1244,7 @@ fn nav_link_renders_a_link_with_its_active_background() {
 
 /// Registering CSS used to re-render `LiberoProvider` itself - the component
 /// owning `{children}` - which discarded the post-effect state of everything
-/// under it. `Select` lost the `mounted` flag its `value` depends on that
+/// under it. `NativeSelect` lost the `mounted` flag its `value` depends on that
 /// way. The registered sheets now live in a `StyleOutlet` leaf instead, so a
 /// registration dirties only that.
 #[test]

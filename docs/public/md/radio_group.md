@@ -55,7 +55,7 @@ fn Demo() -> Element {
 
 The options are `T::options()` unless `options` narrows them, so a misspelled
 option is a compile error and `onchange` hands back the value itself - the same
-contract [Select](select.md) has.
+contract [NativeSelect](native_select.md) has.
 
 `value: None` selects nothing, which is what an unanswered question looks like.
 The group still needs a way in, so the first option holds the tab stop until

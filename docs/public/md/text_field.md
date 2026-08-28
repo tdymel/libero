@@ -107,7 +107,7 @@ field and a mouse click does not ring anything.
 
 The label is a real `<label for>` paired with the input's `id`, never a wrapping
 `<label>` - a wrapping label swallows clicks on anything else inside the field,
-and every field ([Select](select.md) included) uses the pair for that reason.
+and every field ([NativeSelect](native_select.md) included) uses the pair for that reason.
 A caller-supplied `id` takes over the generated one, and every slot follows it.
 
 Whichever of the description, helper and status slots are filled are joined into

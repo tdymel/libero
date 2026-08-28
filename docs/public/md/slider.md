@@ -136,7 +136,7 @@ Slider { value: v(), format: Callback::new(..), oninput: move |e| .. }
 `label` is now the field's caption, the `Caption` every field takes, so the
 value formatter had to move aside - it is `format`. `on_change` is `oninput`,
 because a drag is the DOM's `input` event and the library's commit-timing
-handler is already called `onchange` on `Select` and `Combobox`. The page moved
+handler is already called `onchange` on `NativeSelect` and `Combobox`. The page moved
 to `/form/slider` with the component.
 
 ## Accessibility

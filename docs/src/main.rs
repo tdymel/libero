@@ -22,9 +22,9 @@ use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, BoxPage, ButtonPage, CenterPage, CheckboxPage,
     ChipPage, CodeBlockPage, CodePage, ComboboxPage, ContainerPage, DataListPage, DialogPage,
     DividerPage, DrawerPage, FlexPage, FloatPage, FocusTrapPage, GettingStarted, GridPage,
-    HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NavLinkPage,
-    NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, QrCodePage, RadioGroupPage,
-    ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage,
+    HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, NativeSelectPage,
+    NavLinkPage, NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, QrCodePage,
+    RadioGroupPage, ScrollAreaPage, SegmentedControlPage, SidebarPage, SliderPage, SplitterPage,
     StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage, TextareaPage,
     ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
@@ -76,14 +76,14 @@ pub(crate) enum Route {
 
     #[route("/form/checkbox")]
     CheckboxPage {},
+    #[route("/form/native-select")]
+    NativeSelectPage {},
     #[route("/form/number-field")]
     NumberFieldPage {},
     #[route("/form/password-field")]
     PasswordFieldPage {},
     #[route("/form/radio-group")]
     RadioGroupPage {},
-    #[route("/form/select")]
-    SelectPage {},
     #[route("/form/slider")]
     SliderPage {},
     #[route("/form/switch")]

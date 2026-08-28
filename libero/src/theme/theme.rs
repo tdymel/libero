@@ -5,10 +5,10 @@ use super::{
     ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
     DrawerDefaults, FieldDefaults, FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults,
     GridDefaults, HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults,
-    ListDefaults, MarkDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, Placement,
-    PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis,
-    ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
-    SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    ListDefaults, MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults,
+    OverlayDefaults, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults,
+    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SidebarDefaults, Size,
+    Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
     TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
     TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
     ZIndexDefaults,
@@ -50,7 +50,7 @@ pub struct Theme {
     /// Shared by every field: the typography of the slots stacked around a
     /// control. The frame numbers stay per component until R5.
     pub field: FieldDefaults,
-    pub select: SelectDefaults,
+    pub native_select: NativeSelectDefaults,
     pub text_field: TextFieldDefaults,
     pub textarea: TextareaDefaults,
     pub number_field: NumberFieldDefaults,
@@ -345,7 +345,7 @@ impl Theme {
                 },
             ),
         },
-        select: SelectDefaults {
+        native_select: NativeSelectDefaults {
             size: Size::Md,
             radius: Size::Sm,
         },

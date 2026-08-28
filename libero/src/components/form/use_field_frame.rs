@@ -50,7 +50,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
 /// `framework_sx`.
 pub(crate) static FIELD_CONTROL_SX: StaticSx = StaticSx::new(field_control_sx);
 
-/// The same declarations, for a control that adds one of its own - `Select`'s
+/// The same declarations, for a control that adds one of its own - `NativeSelect`'s
 /// pointer cursor. `StaticSx` takes a single builder, so a field extending the
 /// control's look calls this rather than a second `framework_sx`.
 pub(crate) fn field_control_sx() -> Sx {

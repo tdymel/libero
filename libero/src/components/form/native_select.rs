@@ -15,10 +15,10 @@ use crate::{
 /// The control keeps the UA's own chevron - drawing our own would mean
 /// `appearance: none`, and with it the native picker's arrow on every
 /// platform.
-static SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().cursor("pointer"));
+static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().cursor("pointer"));
 
 field_props! {
-    pub struct SelectProps<T: Options> {
+    pub struct NativeSelectProps<T: Options> {
         /// Strictly controlled - pair it with `onchange`. `None` shows
         /// `placeholder` and selects nothing.
         #[props(default)]
@@ -52,17 +52,21 @@ field_props! {
 /// The options are `T::options()` unless `options` narrows them - so a
 /// misspelled option is a compile error, and `onchange` hands back the value
 /// itself rather than a string the caller has to look up again.
+///
+/// The real `<select>`, not a listbox: it keeps the OS picker on phones, works
+/// without wasm, and renders its selection correctly under SSR. Reach for it
+/// when those matter; reach for `Select` when the rows have to be styled.
 #[component]
-pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
+pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     let theme = use_theme();
 
-    let size = props.size.copied_or(theme.select.size);
-    let radius = props.radius.copied_or(theme.select.radius);
+    let size = props.size.copied_or(theme.native_select.size);
+    let radius = props.radius.copied_or(theme.native_select.radius);
     let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
     if props.onchange.is_none() {
-        warn("Select: without `onchange` the selection can never change.");
+        warn("NativeSelect: without `onchange` the selection can never change.");
     }
 
     let values = props
@@ -70,14 +74,14 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         .clone()
         .unwrap_or_else(|| T::options().to_vec());
     if values.is_empty() {
-        warn("Select: no options - a `T` without static `options()` needs `options`.");
+        warn("NativeSelect: no options - a `T` without static `options()` needs `options`.");
     }
     let selected = props
         .value
         .as_ref()
         .and_then(|value| values.iter().position(|option| option == value));
     if props.value.is_some() && selected.is_none() && !values.is_empty() {
-        warn("Select: `value` is not one of the options, so none is selected.");
+        warn("NativeSelect: `value` is not one of the options, so none is selected.");
     }
 
     let labels: Vec<String> = values
@@ -107,7 +111,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
 
     // The frame draws the ring, so the control must not draw a second one.
     let control = use_box()
-        .framework_sx(&SELECT_CONTROL_SX)
+        .framework_sx(&NATIVE_SELECT_CONTROL_SX)
         .focus_ring(false)
         .prepare();
 

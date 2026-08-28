@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Button, CodeBlock, Flex, Input, OptionLabel, SegmentedControl, Select, Slider,
+        Box, Button, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
         SliderChangeEvent, Switch, Text,
     },
     sx::sx,
@@ -252,7 +252,7 @@ pub fn Demo(
                                 // The slider's bubble sits above its track, so it
                                 // needs more room under the label than the rest.
                                 gap: if control.kind == ControlKind::Slider { "sm" } else { "xs" },
-                                // `Select` renders its own `<label>`, which is
+                                // `NativeSelect` renders its own `<label>`, which is
                                 // what names it - a second one would duplicate it.
                                 if control.kind != ControlKind::Select {
                                     Text {
@@ -344,7 +344,7 @@ pub fn Demo(
                                         }
                                     },
                                     ControlKind::Select => rsx! {
-                                        Select {
+                                        NativeSelect {
                                             size: "sm",
                                             label: label(control.name),
                                             // Matches the `Text { size: "sm" }`

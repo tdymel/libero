@@ -19,7 +19,7 @@ dynamic nodes there are, and how much of it re-renders when something changes.
 A Libero component is one Dioxus component scope plus one styling pass. Measured
 against a component that renders a bare `span` and nothing else, the cheap ones -
 `Box`, `Text`, `Center` - land around 1.5x, and that cluster is the floor.
-Anything above it is paying for markup of its own: `Select` renders a label, a
+Anything above it is paying for markup of its own: `NativeSelect` renders a label, a
 trigger and a list; `Sidebar` renders a bordered panel around a scroll area. The
 spread across the library:
 
@@ -29,7 +29,7 @@ spread across the library:
 | `Text` | 1.6x |
 | `Flex` | 2.1x |
 | `Button` | 2.4x |
-| `Select` | 6.1x |
+| `NativeSelect` | 6.1x |
 | `Splitter` | 8.2x |
 | `Sidebar` | 4.7x |
 

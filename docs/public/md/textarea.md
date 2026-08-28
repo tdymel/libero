@@ -52,7 +52,7 @@ for - see [TextField](text_field.md) for the shared scale.
 A server-rendered `<textarea>` carries its text as a `value` attribute, which
 browsers ignore on this element - so the box is empty until the app hydrates and
 writes the property. It is the same shape as the gap
-[Select](select.md) documents for an ignored `onchange`, and it affects
+[NativeSelect](native_select.md) documents for an ignored `onchange`, and it affects
 server-side rendering only.
 
 ## Accessibility

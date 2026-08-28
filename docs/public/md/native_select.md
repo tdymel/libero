@@ -1,8 +1,8 @@
-# Select
+# NativeSelect
 
 Crate: `libero`
-Import: `use libero::components::{Options, Select};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/select.rs>
+Import: `use libero::components::{Options, NativeSelect};`
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/native_select.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 
@@ -18,7 +18,7 @@ yet.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Options, Select};
+use libero::components::{Options, NativeSelect};
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum FontSize {
@@ -36,7 +36,7 @@ fn Demo() -> Element {
     let mut value = use_signal(|| Some(FontSize::Small));
 
     rsx! {
-        Select {
+        NativeSelect {
             label: "Size",
             value: value(),
             onchange: move |next| value.set(Some(next)),
@@ -55,7 +55,7 @@ two line up in one form by construction.
 or an `Element`:
 
 ```rust
-Select {
+NativeSelect {
     label: "Plan",
     description: "Billed monthly.",
     helper: rsx! { "Change it any time from " strong { "Settings" } },
@@ -87,7 +87,7 @@ there is no way back to it.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Options, Select};
+use libero::components::{Options, NativeSelect};
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum FontSize {
@@ -101,7 +101,7 @@ fn Demo() -> Element {
     let mut size = use_signal(|| None::<FontSize>);
 
     rsx! {
-        Select {
+        NativeSelect {
             label: "Size",
             placeholder: "Pick a size",
             value: size(),
@@ -120,7 +120,7 @@ required method.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Options, Select};
+use libero::components::{Options, NativeSelect};
 
 #[derive(Clone, PartialEq)]
 struct Order {
@@ -139,7 +139,7 @@ fn Demo(orders: Vec<Order>) -> Element {
     let mut selected = use_signal(|| None::<Order>);
 
     rsx! {
-        Select {
+        NativeSelect {
             label: "Order",
             placeholder: "Pick an order",
             value: selected(),
@@ -159,7 +159,7 @@ Labels that need data the value does not carry go through `option_label`, which
 runs during render - so it can read a lookup table or a locale from context:
 
 ```rust
-Select {
+NativeSelect {
     value: selected(),
     options: order_ids(),
     option_label: move |id: OrderId| orders.read().title_of(id),
@@ -213,7 +213,7 @@ not apply here.
 
 ## Props
 
-### `Select`
+### `NativeSelect`
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
