@@ -1,7 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, FieldStatus, Flex, Options, Select, SelectOptionArgs, Text},
+    components::{
+        Code, FieldStatus, Flex, Options, Select, SelectFilterArgs, SelectOptionArgs, Text,
+    },
     sx::sx,
 };
 
@@ -40,6 +42,15 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
 const CUSTOM_SELECTION: &str =
     r#"selection: move |fruit: Fruit| rsx! { "{fruit.emoji()} {fruit.label()}" }"#;
 
+/// The point of the switch: a filter can test anything the caller knows, so
+/// this one searches the note as well - "thumb" finds Mango, "counter" finds
+/// Banana, and neither word is on the row.
+const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Fruit>| {
+    let query = f.query.to_lowercase();
+    f.value.label().to_lowercase().contains(&query)
+        || f.value.note().to_lowercase().contains(&query)
+}"#;
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
@@ -74,6 +85,22 @@ impl Fruit {
 
 fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
+}
+
+/// `searchable` as well, so the switch, the snippet and the rendered prop can
+/// never disagree: `filter` does nothing without a search box, and its value
+/// outlives the control being hidden.
+fn filtering(values: &DemoValues) -> bool {
+    values.str("filter") == "true" && values.str("searchable") == "true"
+}
+
+/// Matches the note as well as the label, which is what makes the switch worth
+/// flipping: "thumb" finds Mango and "counter" finds Banana, though neither
+/// word appears on the row.
+fn fruit_filter(f: SelectFilterArgs<Fruit>) -> bool {
+    let query = f.query.to_lowercase();
+    f.value.label().to_lowercase().contains(&query)
+        || f.value.note().to_lowercase().contains(&query)
 }
 
 fn fruit_row(o: SelectOptionArgs<Fruit>) -> Element {
@@ -169,7 +196,11 @@ pub fn SelectPage() -> Element {
                 children_text: "",
                 // The helpers the custom rows call only exist in the snippet
                 // while those rows are on.
-                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values) {
+                // `filter` calls the same helpers the custom rows do, so the
+                // impl has to be printed for either switch.
+                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
+                    || filtering(values)
+                {
                     true => format!("{FRUIT_ENUM}{FRUIT_IMPL}{source}"),
                     false => format!("{FRUIT_ENUM}{source}"),
                 }),
@@ -226,6 +257,14 @@ pub fn SelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    // Off the table entirely without a search box: `filter`
+                    // narrows what the box finds, so alone it does nothing.
+                    Control::switch("filter")
+                        .hidden_when(|values| values.str("searchable") != "true")
+                        .code(|_, values| match filtering(values) {
+                            true => vec![CUSTOM_FILTER.to_string()],
+                            false => vec![],
+                        }),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -249,6 +288,7 @@ pub fn SelectPage() -> Element {
                         selection: custom(&values).then(|| Callback::new(fruit_selection)),
                         searchable: (values.str("searchable") == "true").then_some(true),
                         search_placeholder: "Search fruit",
+                        filter: filtering(&values).then(|| Callback::new(fruit_filter)),
                         clearable: (values.str("clearable") == "true").then_some(true),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),

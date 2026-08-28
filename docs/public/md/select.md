@@ -110,10 +110,15 @@ Select {
     value: value(),
     onchange: move |next| value.set(next),
     filter: move |f: SelectFilterArgs<Fruit>| {
-        f.value.label().to_lowercase().starts_with(&f.query.to_lowercase())
+        let query = f.query.to_lowercase();
+        f.value.label().to_lowercase().contains(&query)
+            || f.value.note().to_lowercase().contains(&query)
     },
 }
 ```
+
+That is the `filter` switch in the demo above: with it on, "thumb" finds Mango
+and "counter" finds Banana, through notes that are never drawn on the row.
 
 The box takes focus while the list is open, and the query is cleared when it
 closes, so a reopened list always starts unfiltered. A query that matches

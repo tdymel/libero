@@ -109,8 +109,8 @@ MultiSelect {
 ```
 
 `filter` is called once per option with the query and answers one `bool`, so a
-match can test anything the caller knows rather than only the label - here the
-emoji counts too, which makes "🍄" and "mush" find the same row:
+match can test anything the caller knows rather than only the label - here a
+note that is never drawn, which is what the demo's `filter` switch turns on:
 
 ```rust
 MultiSelect {
@@ -119,10 +119,14 @@ MultiSelect {
     onchange: move |next| value.set(next),
     filter: move |f: SelectFilterArgs<Topping>| {
         let query = f.query.to_lowercase();
-        f.value.label().to_lowercase().contains(&query) || f.value.emoji().contains(&query)
+        f.value.label().to_lowercase().contains(&query)
+            || f.value.note().to_lowercase().contains(&query)
     },
 }
 ```
+
+With it on, "earthy" finds Mushrooms and "divides" finds Pineapple - neither
+word is on the row.
 
 The one difference from `Select`: **the query survives a pick.** A multi-select
 stays open when a row is toggled, so one search can have several of its matches

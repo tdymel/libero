@@ -1,7 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Code, FieldStatus, MultiSelect, Options, SelectOptionArgs, Text},
+    components::{
+        Chip, Code, FieldStatus, MultiSelect, Options, SelectFilterArgs, SelectOptionArgs, Text,
+    },
     sx::sx,
 };
 
@@ -21,6 +23,7 @@ enum Topping {
 /// Only printed while the custom rows are on - the plain snippet never calls it.
 const TOPPING_IMPL: &str = r#"impl Topping {
     fn emoji(self) -> &'static str { /* "🧀", "🍄", ... */ }
+    fn note(self) -> &'static str { /* "Earthy, browns well", ... */ }
 }
 
 "#;
@@ -35,6 +38,15 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
 
 const CUSTOM_SELECTION: &str = r#"selection: move |topping: Topping| rsx! {
     Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+}"#;
+
+/// The point of the switch: a filter can test anything the caller knows, so
+/// this one searches the note as well - "earthy" finds Mushrooms and "divides"
+/// finds Pineapple, though neither word is on the row.
+const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Topping>| {
+    let query = f.query.to_lowercase();
+    f.value.label().to_lowercase().contains(&query)
+        || f.value.note().to_lowercase().contains(&query)
 }"#;
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -58,10 +70,39 @@ impl Topping {
             Self::Pineapple => "🍍",
         }
     }
+
+    /// Not drawn on the row - it exists so the `filter` switch has something to
+    /// match that the row itself never shows.
+    fn note(self) -> &'static str {
+        match self {
+            Self::Cheese => "Melts over everything",
+            Self::Mushrooms => "Earthy, browns well",
+            Self::Olives => "Salty, cures the dough",
+            Self::Onions => "Sharp raw, sweet cooked",
+            Self::Peppers => "Crisp, mild heat",
+            Self::Pineapple => "Divides the table",
+        }
+    }
 }
 
 fn custom(values: &DemoValues) -> bool {
     values.str("custom") == "true"
+}
+
+/// `searchable` as well, so the switch, the snippet and the rendered prop can
+/// never disagree: `filter` does nothing without a search box, and its value
+/// outlives the control being hidden.
+fn filtering(values: &DemoValues) -> bool {
+    values.str("filter") == "true" && values.str("searchable") == "true"
+}
+
+/// Matches the note as well as the label, which is what makes the switch worth
+/// flipping: "earthy" finds Mushrooms and "divides" finds Pineapple, though
+/// neither word appears on the row.
+fn topping_filter(f: SelectFilterArgs<Topping>) -> bool {
+    let query = f.query.to_lowercase();
+    f.value.label().to_lowercase().contains(&query)
+        || f.value.note().to_lowercase().contains(&query)
 }
 
 /// A checkmark as well as the tint: `selected` is on the args for exactly this.
@@ -146,7 +187,11 @@ pub fn MultiSelectPage() -> Element {
                 children_text: "",
                 // The helper the custom rows call only exists in the snippet
                 // while those rows are on.
-                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values) {
+                // `filter` calls the same helper the custom rows do, so the impl
+                // has to be printed for either switch.
+                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values)
+                    || filtering(values)
+                {
                     true => format!("{TOPPING_ENUM}{TOPPING_IMPL}{source}"),
                     false => format!("{TOPPING_ENUM}{source}"),
                 }),
@@ -203,6 +248,14 @@ pub fn MultiSelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    // Off the table entirely without a search box: `filter`
+                    // narrows what the box finds, so alone it does nothing.
+                    Control::switch("filter")
+                        .hidden_when(|values| values.str("searchable") != "true")
+                        .code(|_, values| match filtering(values) {
+                            true => vec![CUSTOM_FILTER.to_string()],
+                            false => vec![],
+                        }),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -226,6 +279,7 @@ pub fn MultiSelectPage() -> Element {
                         selection: custom(&values).then(|| Callback::new(topping_selection)),
                         searchable: (values.str("searchable") == "true").then_some(true),
                         search_placeholder: "Search toppings",
+                        filter: filtering(&values).then(|| Callback::new(topping_filter)),
                         clearable: (values.str("clearable") == "true").then_some(true),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
