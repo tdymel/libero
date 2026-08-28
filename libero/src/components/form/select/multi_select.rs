@@ -1,15 +1,16 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Chip, Input, Options, common::field_props},
+    components::{ActionIcon, Chip, Input, Options, common::field_props, form::glyphs::CloseIcon},
     hooks::use_theme,
+    sx::ThemeAwareValue,
     theme::Size,
     utils::warn,
 };
 
 use super::{
-    core::SelectCore,
-    select::{SelectFilterArgs, SelectOptionArgs, draw_rows},
+    core::{SelectCore, SelectionRenderArgs},
+    select::{SelectFilterArgs, SelectOptionArgs, SelectSelectionArgs, draw_rows},
 };
 
 field_props! {
@@ -30,9 +31,11 @@ field_props! {
         #[props(default)]
         option: Option<Callback<SelectOptionArgs<T>, Element>>,
         /// Draws one selected value inside the trigger. Defaults to the label
-        /// in a `Chip`.
+        /// in a `Chip` with an x. A caller who overrides it draws the whole
+        /// chip, remove control included - `args.remove` is the wiring, and the
+        /// keyboard stays the control's either way.
         #[props(default)]
-        selection: Option<Callback<T, Element>>,
+        selection: Option<Callback<SelectSelectionArgs<T>, Element>>,
         /// Shown while `value` is empty.
         #[props(default)]
         placeholder: Option<String>,
@@ -79,18 +82,34 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         .map(|option| props.value.contains(option))
         .collect();
     let rows = draw_rows(&values, &selected, props.option.as_ref());
-    let selection = (!props.value.is_empty()).then(|| {
-        let chips = props.value.iter().map(|value| match &props.selection {
-            Some(selection) => selection.call(value.clone()),
-            None => rsx! {
-                Chip { size: Size::Xs, "{value.label()}" }
-            },
-        });
-        rsx! {
-            for (index, chip) in chips.enumerate() {
-                Fragment { key: "{index}", {chip} }
+    // The chips, redrawn from the cursor the core owns. Each wrapper carries the
+    // id `aria-activedescendant` points at; what is inside it is the skin's, or
+    // the caller's.
+    let onchange = props.onchange;
+    let picked = props.value.clone();
+    let draw_selection = props.selection;
+    let selection = (!picked.is_empty()).then(|| {
+        Callback::new(move |args: SelectionRenderArgs| {
+            let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
+                let removing = picked.clone();
+                let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
+                match &draw_selection {
+                    Some(selection) => selection.call(SelectSelectionArgs { value, remove }),
+                    None => default_chip(&value, remove),
+                }
+            });
+            rsx! {
+                for (index, chip) in chips.enumerate() {
+                    span {
+                        key: "{index}",
+                        "data-slot": "chip",
+                        id: "{args.id_prefix}-{index}",
+                        "data-cursor": (args.cursor == Some(index)).then_some("true"),
+                        {chip}
+                    }
+                }
             }
-        }
+        })
     });
 
     // The same mask `Select` builds, and the same memoization reasoning - see
@@ -115,8 +134,8 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         })
     });
 
-    let onchange = props.onchange;
     let current = props.value.clone();
+    let removable = props.value.clone();
     rsx! {
         SelectCore {
             rows,
@@ -136,6 +155,8 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 onchange.call(next);
             },
             selection,
+            chip_count: removable.len(),
+            onremove: move |index: usize| drop_at(&removable, index, &onchange),
             placeholder: props.placeholder,
             clearable: props.clearable.unwrap_or(false),
             searchable,
@@ -160,4 +181,45 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             attributes: props.attributes,
         }
     }
+}
+
+/// The default chip: the label, and an x that drops it.
+fn default_chip<T: Options>(value: &T, remove: Callback<()>) -> Element {
+    let label = value.label();
+    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(Size::Xs).into();
+    rsx! {
+        Chip { size: Size::Xs,
+            "{label}"
+            span {
+                // The trigger holds the focus that keeps the list open, so the
+                // press must not move it onto the button.
+                onmousedown: move |event: MouseEvent| event.prevent_default(),
+                // A remove is not a click on the trigger, which would open the
+                // list under the chip that just went away.
+                onclick: move |event: MouseEvent| event.stop_propagation(),
+                ActionIcon {
+                    aria_label: "Remove {label}",
+                    size: icon_size,
+                    // The control is one tab stop: the keys, not the buttons,
+                    // are how a keyboard removes a chip.
+                    tabindex: "-1",
+                    onclick: move |_| remove.call(()),
+                    CloseIcon {}
+                }
+            }
+        }
+    }
+}
+
+/// Drops one value from the selection - the same edit as picking its row again.
+fn drop_at<T: Options>(values: &[T], index: usize, onchange: &Option<EventHandler<Vec<T>>>) {
+    let Some(onchange) = onchange else {
+        return;
+    };
+    if index >= values.len() {
+        return;
+    }
+    let mut next = values.to_vec();
+    next.remove(index);
+    onchange.call(next);
 }

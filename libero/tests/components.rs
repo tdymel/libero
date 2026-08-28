@@ -14,8 +14,9 @@ use libero::{
         DataListItem, Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem, GridSpan,
         GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, MultiSelect,
         NativeSelect, NavLink, OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl,
-        Select, Sidebar, Slider, SliderMark, SliderValue, Splitter, Table, Tabs, Text, Title,
-        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        Select, SelectSelectionArgs, Sidebar, Slider, SliderMark, SliderValue, Splitter, Table,
+        Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
+        column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -2171,6 +2172,63 @@ mod select_listbox {
         assert!(
             html.contains("multiple"),
             "the trigger lost its `multiple` state:\n{html}"
+        );
+    }
+
+    #[test]
+    fn every_chip_carries_a_labelled_remove_button_and_an_id_to_point_at() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect { value: vec![Fruit::Cherry, Fruit::Apple], onchange: move |_| {} }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(
+            html.contains(r#"aria-label="Remove Cherry""#)
+                && html.contains(r#"aria-label="Remove Apple""#),
+            "a chip lost its remove button:\n{html}"
+        );
+        assert!(
+            html.matches(r#"tabindex="-1""#).count() == 2,
+            "the remove buttons are tab stops, or are missing:\n{html}"
+        );
+        // The ids `aria-activedescendant` points at once the cursor moves.
+        assert!(
+            html.matches(r#"data-slot="chip""#).count() == 2,
+            "a chip lost its wrapper:\n{html}"
+        );
+        assert!(
+            !html.contains("aria-activedescendant"),
+            "a closed select with no cursor still names a descendant:\n{html}"
+        );
+    }
+
+    /// The chip's inner design is the caller's, remove control included - the
+    /// component adds nothing of its own around what `selection` returns.
+    #[test]
+    fn a_custom_selection_draws_only_what_the_caller_drew() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect {
+                        value: vec![Fruit::Cherry],
+                        onchange: move |_| {},
+                        selection: move |args: SelectSelectionArgs<Fruit>| rsx! {
+                            span { onclick: move |_| args.remove.call(()), "{args.value.label()}!" }
+                        },
+                    }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(html.contains("Cherry!"), "{html}");
+        assert!(
+            !html.contains("aria-label=\"Remove Cherry\""),
+            "the default x survived a custom selection:\n{html}"
         );
     }
 

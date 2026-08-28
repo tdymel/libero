@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, States,
-        common::{attr, field_props},
+        common::{attr, field_props, focus_ring_sx},
         form::{
             field_control_sx,
             glyphs::{ChevronIcon, CloseIcon},
@@ -50,6 +50,19 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
                 sx().display("flex").flex_wrap("wrap").gap("4px"),
             ),
         )
+        // One wrapper per selected item: it carries the id
+        // `aria-activedescendant` points at, and nothing visual.
+        .selector(
+            "& [data-slot='chip']",
+            sx().display("inline-flex").max_width("100%"),
+        )
+        // The chip the keyboard is on. The ring goes on what the skin drew, not
+        // on the wrapper, so it follows that element's own radius. The trigger
+        // keeps the DOM focus the whole time, so nothing else marks it.
+        .selector(
+            "& [data-slot='chip'][data-cursor='true'] > *",
+            focus_ring_sx(),
+        )
         .when("disabled", sx().cursor("not-allowed"))
 });
 
@@ -71,6 +84,15 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .selector("::placeholder", sx().color("grey.6"))
 });
 
+/// What the skin needs to draw the selection: which chip the keyboard is on,
+/// and the prefix its ids are built from, so `aria-activedescendant` on the
+/// trigger has something to point at.
+#[derive(Clone, PartialEq)]
+pub(crate) struct SelectionRenderArgs {
+    pub cursor: Option<usize>,
+    pub id_prefix: String,
+}
+
 field_props! {
     pub(crate) struct SelectCoreProps {
         /// Each row's content, already drawn by the skin. The core wraps every
@@ -80,9 +102,19 @@ field_props! {
         /// Parallel to `rows`.
         selected: Vec<bool>,
         onpick: EventHandler<usize>,
-        /// Drawn inside the trigger. `None` shows `placeholder`.
+        /// Drawn inside the trigger, as a function of the chip cursor - the
+        /// skin owns no state, so the cursor lives here and the selection is
+        /// redrawn from it. `None` shows `placeholder`.
         #[props(default)]
-        selection: Option<Element>,
+        selection: Option<Callback<SelectionRenderArgs, Element>>,
+        /// How many removable chips `selection` draws. The core moves a cursor
+        /// over items it cannot see, so it has to be told how many there are.
+        #[props(default)]
+        chip_count: usize,
+        /// Called with an index into the selection order, never into `rows`.
+        /// Without it the chip keys do nothing.
+        #[props(default)]
+        onremove: Option<EventHandler<usize>>,
         #[props(default)]
         placeholder: Option<String>,
         /// Shows an x in place of the chevron while something is selected.
@@ -128,6 +160,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     // The query lives here, beside the open and highlight state. The skins
     // stay stateless: they hand down `matches` and nothing else.
     let mut query = use_signal(String::new);
+    // Which chip the keyboard is on. An index into the *selection* order, which
+    // is the skin's `value`, not into `rows`.
+    let mut cursor = use_signal(|| None::<usize>);
     let search = use_element();
     let trigger_element = use_element();
     let mut was_open = use_signal(|| false);
@@ -145,6 +180,15 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         _ => (0..props.rows.len()).collect(),
     };
 
+    // Removing the chip under the cursor leaves the index pointing at the one
+    // that took its place; past the end it clamps to the new last, and with no
+    // chips left there is nothing to point at.
+    let chip_count = props.chip_count;
+    let chip_cursor = match chip_count {
+        0 => None,
+        count => cursor().map(|index| index.min(count - 1)),
+    };
+
     let has_selection = props.selected.iter().any(|selected| *selected);
     // A list opens on what is already selected, like a native `<select>` -
     // counted among the rows actually on screen.
@@ -155,6 +199,10 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let open = move |next: bool| {
         if next && !state.opened() {
             state.set_active(Some(first_selected));
+            // One `aria-activedescendant`, one owner: the open list takes it.
+            // A local copy, so `open` stays `Fn` for the callers that share it.
+            let mut cursor = cursor;
+            cursor.set(None);
         }
         state.set_opened(next);
     };
@@ -200,6 +248,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .prepare();
 
     let onclear = props.onclear;
+    let onremove = props.onremove;
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
     let clear = (props.clearable && has_selection && !disabled).then(|| {
         rsx! {
@@ -281,10 +330,17 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     });
 
     let placeholder = props.placeholder.clone().unwrap_or_default();
+    let id_prefix = format!("{}-chip", state.id());
     let content = match props.selection {
-        Some(selection) => rsx! {
-            span { "data-slot": "value", {selection} }
-        },
+        Some(selection) => {
+            let drawn = selection.call(SelectionRenderArgs {
+                cursor: chip_cursor,
+                id_prefix: id_prefix.clone(),
+            });
+            rsx! {
+                span { "data-slot": "value", {drawn} }
+            }
+        }
         None => rsx! {
             span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
         },
@@ -301,6 +357,13 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         ],
         false => state.a11y_attributes(),
     };
+    // Only while closed: the open list is the other owner of this attribute.
+    if let Some(index) = chip_cursor.filter(|_| !opened) {
+        attributes.push(attr(
+            "aria-activedescendant",
+            format!("{id_prefix}-{index}"),
+        ));
+    }
     attributes.extend(props.attributes);
     let trigger = field
         .aria(control)
@@ -313,20 +376,52 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                 open(!state.opened());
             }
         })
-        // `ComboboxCore` opens on ArrowDown; a select-only combobox opens on
-        // Enter and Space as well. Enter on an *open* list is the core's pick.
+        // Two keyboards on one element. The chips answer Left, Right and
+        // Backspace, which `ComboboxCore` leaves alone; the list answers the
+        // rest. While `searchable` and open the focus is in the search box, so
+        // none of this fires and Backspace only ever edits the query.
         .event("onkeydown", move |event: KeyboardEvent| {
-            if disabled || state.opened() {
+            if disabled {
                 return;
             }
-            let opens = match event.key() {
-                Key::Enter => true,
-                Key::Character(key) => key == " ",
-                _ => false,
-            };
-            if opens {
-                event.prevent_default();
-                open(true);
+            match event.key() {
+                Key::ArrowLeft if chip_count > 0 => {
+                    event.prevent_default();
+                    let index = match chip_cursor {
+                        Some(index) => index.saturating_sub(1),
+                        // From no cursor, the last chip - the one Backspace
+                        // would have taken.
+                        None => chip_count - 1,
+                    };
+                    cursor.set(Some(index));
+                }
+                Key::ArrowRight if chip_count > 0 => {
+                    event.prevent_default();
+                    cursor.set(match chip_cursor {
+                        Some(index) if index + 1 < chip_count => Some(index + 1),
+                        // Past the last chip is back to no cursor, not a wrap.
+                        _ => None,
+                    });
+                }
+                Key::Backspace | Key::Delete if chip_count > 0 => {
+                    let Some(onremove) = onremove else {
+                        return;
+                    };
+                    event.prevent_default();
+                    onremove.call(chip_cursor.unwrap_or(chip_count - 1));
+                }
+                // `ComboboxCore` opens on ArrowDown; a select-only combobox
+                // opens on Enter and Space as well. Enter on an *open* list is
+                // the core's pick.
+                Key::Enter if !state.opened() => {
+                    event.prevent_default();
+                    open(true);
+                }
+                Key::Character(ref key) if key == " " && !state.opened() => {
+                    event.prevent_default();
+                    open(true);
+                }
+                _ => {}
             }
         })
         // While searchable the focus moves into the search box, so closing on

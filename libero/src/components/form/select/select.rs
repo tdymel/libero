@@ -6,7 +6,7 @@ use crate::{
     utils::warn,
 };
 
-use super::core::SelectCore;
+use super::core::{SelectCore, SelectionRenderArgs};
 
 /// One row, handed to `Select`'s and `MultiSelect`'s `option` callback. It
 /// draws the row's *content*: the row itself - its highlight, its
@@ -17,6 +17,18 @@ pub struct SelectOptionArgs<T> {
     pub index: usize,
     /// Whether this row is part of the selection, for a checkmark.
     pub selected: bool,
+}
+
+/// One selected value, handed to `MultiSelect`'s `selection` callback. The
+/// chip's inner design is the caller's, `remove` included - the control keeps
+/// only the keyboard, which is why there is no `Select` counterpart: a single
+/// selection is emptied by `clearable`.
+#[derive(Clone, PartialEq)]
+pub struct SelectSelectionArgs<T> {
+    pub value: T,
+    /// Drops this value from the selection, which is the same edit as picking
+    /// its row again.
+    pub remove: Callback<()>,
 }
 
 /// One option under test, handed to `Select`'s and `MultiSelect`'s `filter`
@@ -107,12 +119,15 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         .map(|index| selected_index == Some(index))
         .collect();
     let rows = draw_rows(&values, &selected, props.option.as_ref());
+    // A single selection has no chips, so the cursor the core hands down is
+    // always `None` here.
+    let draw_selection = props.selection;
     let selection = selected_index.map(|index| {
         let value = values[index].clone();
-        match &props.selection {
-            Some(selection) => selection.call(value),
+        Callback::new(move |_: SelectionRenderArgs| match &draw_selection {
+            Some(selection) => selection.call(value.clone()),
             None => rsx! { "{value.label()}" },
-        }
+        })
     });
 
     // Closes over this skin's own `values` and the caller's filter, so `T`
