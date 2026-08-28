@@ -1,0 +1,124 @@
+/// Which side of the anchor the floating box sits on.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Side {
+    Top,
+    #[default]
+    Bottom,
+    Left,
+    Right,
+}
+
+impl Side {
+    pub(super) fn opposite(self) -> Self {
+        match self {
+            Side::Top => Side::Bottom,
+            Side::Bottom => Side::Top,
+            Side::Left => Side::Right,
+            Side::Right => Side::Left,
+        }
+    }
+
+    /// Top and bottom stack along `y`, so their cross axis is `x`.
+    pub(super) fn is_vertical(self) -> bool {
+        matches!(self, Side::Top | Side::Bottom)
+    }
+}
+
+/// Where the floating box lines up along the side's cross axis.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Align {
+    #[default]
+    Start,
+    Center,
+    End,
+}
+
+/// What the floating box's width follows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum PopoverWidth {
+    /// Its own content.
+    #[default]
+    Auto,
+    /// Exactly the anchor's width. A dropdown wants this: portaling removes
+    /// the positioned parent a `width: 100%` used to resolve against.
+    Match,
+    /// At least the anchor's width, growing with its content.
+    Min,
+}
+
+/// The side and align a box actually landed on - the preferred pair unless
+/// flipping moved it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub struct Placement {
+    pub side: Side,
+    pub align: Align,
+}
+
+/// How a popover is placed. `Default` is a dropdown: below its anchor, left
+/// edges aligned, flipping and shifting to stay on screen, with the theme's
+/// gap and collision padding.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct PopoverOptions {
+    /// The preferred side. Flipping may override it.
+    pub side: Side,
+    pub align: Align,
+    /// Pixels between the anchor's edge and the box.
+    pub gap: f64,
+    /// How close to a viewport edge the box may come before flipping or
+    /// shifting.
+    pub padding: f64,
+    pub flip: bool,
+    pub shift: bool,
+    pub width: PopoverWidth,
+}
+
+impl PopoverOptions {
+    /// The theme's `gap` and `padding`, which is why this is not `Default`:
+    /// reading a theme needs the running provider.
+    pub fn new(gap: f64, padding: f64) -> Self {
+        Self {
+            side: Side::default(),
+            align: Align::default(),
+            gap,
+            padding,
+            flip: true,
+            shift: true,
+            width: PopoverWidth::default(),
+        }
+    }
+
+    pub fn side(mut self, side: Side) -> Self {
+        self.side = side;
+        self
+    }
+
+    pub fn align(mut self, align: Align) -> Self {
+        self.align = align;
+        self
+    }
+
+    pub fn gap(mut self, gap: f64) -> Self {
+        self.gap = gap;
+        self
+    }
+
+    pub fn padding(mut self, padding: f64) -> Self {
+        self.padding = padding;
+        self
+    }
+
+    pub fn flip(mut self, flip: bool) -> Self {
+        self.flip = flip;
+        self
+    }
+
+    pub fn shift(mut self, shift: bool) -> Self {
+        self.shift = shift;
+        self
+    }
+
+    pub fn width(mut self, width: PopoverWidth) -> Self {
+        self.width = width;
+        self
+    }
+}

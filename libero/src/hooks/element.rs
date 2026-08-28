@@ -33,6 +33,20 @@ impl ElementHandle {
         self.mounted.read().is_some()
     }
 
+    /// Identifies *which* mount this is, not merely that one happened.
+    ///
+    /// An element that unmounts and comes back - a portaled dropdown closing
+    /// and reopening - hands over a different `MountedData` at the same handle,
+    /// so [`is_mounted`](Self::is_mounted) never changes and an effect watching
+    /// it would keep measuring the dead node. Reading this subscribes to the
+    /// mount instead.
+    pub(crate) fn mount_token(&self) -> Option<usize> {
+        self.mounted
+            .read()
+            .as_ref()
+            .map(|mounted| Rc::as_ptr(mounted) as *const () as usize)
+    }
+
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
         match self.mounted.read().as_ref() {
             Some(mounted) => Ok(backend::element(mounted)),

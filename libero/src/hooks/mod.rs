@@ -7,6 +7,7 @@ mod focus_return;
 mod id;
 mod local_state;
 mod modal;
+mod popover;
 mod portal;
 mod presence;
 mod ripple;
@@ -23,6 +24,9 @@ pub use id::{use_id, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use modal::use_modal_z_index;
 pub use modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close};
+pub use popover::{
+    Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
+};
 pub use portal::use_portal;
 pub use presence::{Presence, use_presence};
 pub(crate) use ripple::{ripple_sx, use_ripple};
