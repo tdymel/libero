@@ -49,7 +49,12 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         .text_overflow("ellipsis")
         .hover(sx().background("grey.1"))
         .when("active", sx().background("grey.2"))
-        .when("selected", sx().background("primary.1").color("primary.7"))
+        // The shade's own contrast twin, not `primary.7`: blue text on a light
+        // blue tint was hard to read.
+        .when(
+            "selected",
+            sx().background("primary.1").color("primary-contrast.1"),
+        )
 });
 
 base_props! {
