@@ -70,6 +70,10 @@ pub struct PopoverOptions {
     pub flip: bool,
     pub shift: bool,
     pub width: PopoverWidth,
+    /// Not a placement input: the box is measured again whenever it changes.
+    /// For an anchor that resizes while the box is open - a multi-select
+    /// whose trigger grows a chip on every pick. Nothing else re-measures.
+    pub remeasure: u64,
 }
 
 impl PopoverOptions {
@@ -84,6 +88,7 @@ impl PopoverOptions {
             flip: true,
             shift: true,
             width: PopoverWidth::default(),
+            remeasure: 0,
         }
     }
 
@@ -119,6 +124,11 @@ impl PopoverOptions {
 
     pub fn width(mut self, width: PopoverWidth) -> Self {
         self.width = width;
+        self
+    }
+
+    pub fn remeasure(mut self, key: u64) -> Self {
+        self.remeasure = key;
         self
     }
 }

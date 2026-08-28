@@ -104,9 +104,10 @@ impl PopoverHandle {
 /// Anchors a portaled box to `anchor`, flipping and shifting it to stay in the
 /// viewport.
 ///
-/// Measured once per open. A page scrolled while the popover is open drags it
-/// off its anchor: tracking that needs a window-level event, which no backend
-/// here exposes yet.
+/// Measured once per open, and again whenever `options` changes -
+/// [`PopoverOptions::remeasure`] is the knob for an anchor that resizes. A page
+/// scrolled while the popover is open drags it off its anchor: tracking that
+/// needs a window-level event, which no backend here exposes yet.
 pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle {
     let floating = use_element();
     let mut placed = use_signal(|| None::<Placed>);
