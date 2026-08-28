@@ -43,6 +43,22 @@ fn Demo() -> Element {
 `onchange` hands over `Option<T>`: `Some` for a pick, `None` for the clear
 button. Without `clearable` nothing produces `None`.
 
+## Captions
+
+`label`, `description` and `helper` are `Caption`s, so each takes a string or an
+`Element`. They sit where they do on every other field: the label and the
+description above the trigger, the helper and the status below it.
+
+```rust
+Select {
+    label: "Fruit",
+    description: "Delivered with your next box.",
+    helper: "You can swap it until Friday.",
+    value: value(),
+    onchange: move |next| value.set(next),
+}
+```
+
 ## Drawing the rows and the selection
 
 `option` draws a row's *content*. The row around it - its highlight, its

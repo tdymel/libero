@@ -47,6 +47,23 @@ fn Demo() -> Element {
 comma-joined text, a count, or a chip of your own. `option` works as on
 `Select`; its `selected` flag is there for a checkmark.
 
+```rust
+MultiSelect {
+    value: value(),
+    onchange: move |next| value.set(next),
+    option: move |o: SelectOptionArgs<Topping>| rsx! {
+        Text { component: "span", size: "lg", "{o.value.emoji()}" }
+        Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
+        if o.selected {
+            Text { component: "span", "✓" }
+        }
+    },
+    selection: move |topping: Topping| rsx! {
+        Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+    },
+}
+```
+
 The default chips cannot be removed from the trigger: `Chip` has no close
 affordance yet, so deselecting means reopening the list. `clearable` empties the
 whole selection at once.

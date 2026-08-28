@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, FieldStatus, MultiSelect, Options, Text},
+    components::{Chip, Code, FieldStatus, MultiSelect, Options, SelectOptionArgs, Text},
     sx::sx,
 };
 
@@ -18,6 +18,25 @@ enum Topping {
 
 "#;
 
+/// Only printed while the custom rows are on - the plain snippet never calls it.
+const TOPPING_IMPL: &str = r#"impl Topping {
+    fn emoji(self) -> &'static str { /* "🧀", "🍄", ... */ }
+}
+
+"#;
+
+const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! {
+    Text { component: "span", size: "lg", "{o.value.emoji()}" }
+    Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
+    if o.selected {
+        Text { component: "span", "✓" }
+    }
+}"#;
+
+const CUSTOM_SELECTION: &str = r#"selection: move |topping: Topping| rsx! {
+    Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+}"#;
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Topping {
     Cheese,
@@ -26,6 +45,40 @@ enum Topping {
     Onions,
     Peppers,
     Pineapple,
+}
+
+impl Topping {
+    fn emoji(self) -> &'static str {
+        match self {
+            Self::Cheese => "🧀",
+            Self::Mushrooms => "🍄",
+            Self::Olives => "🫒",
+            Self::Onions => "🧅",
+            Self::Peppers => "🫑",
+            Self::Pineapple => "🍍",
+        }
+    }
+}
+
+fn custom(values: &DemoValues) -> bool {
+    values.str("custom") == "true"
+}
+
+/// A checkmark as well as the tint: `selected` is on the args for exactly this.
+fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
+    rsx! {
+        Text { component: "span", size: "lg", "{o.value.emoji()}" }
+        Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
+        if o.selected {
+            Text { component: "span", "✓" }
+        }
+    }
+}
+
+fn topping_selection(topping: Topping) -> Element {
+    rsx! {
+        Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+    }
 }
 
 #[component]
@@ -83,7 +136,12 @@ pub fn MultiSelectPage() -> Element {
             Demo {
                 component: "MultiSelect",
                 children_text: "",
-                wrap: Wrap(|_: &DemoValues, source: &str| format!("{TOPPING_ENUM}{source}")),
+                // The helper the custom rows call only exists in the snippet
+                // while those rows are on.
+                wrap: Wrap(|values: &DemoValues, source: &str| match custom(values) {
+                    true => format!("{TOPPING_ENUM}{TOPPING_IMPL}{source}"),
+                    false => format!("{TOPPING_ENUM}{source}"),
+                }),
                 fixed: vec![
                     "sx: sx().width(\"280px\")".to_string(),
                     "value: value()".to_string(),
@@ -108,6 +166,24 @@ pub fn MultiSelectPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec!["description: \"Up to five, at no extra cost.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("helper").code(|_, values| {
+                        match values.str("helper").as_str() {
+                            "true" => vec!["helper: \"Picked in the order they go on.\"".to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    // Draws the rows and the chips through `option` and
+                    // `selection`.
+                    Control::switch("custom").code(|_, values| match custom(values) {
+                        true => vec![CUSTOM_OPTION.to_string(), CUSTOM_SELECTION.to_string()],
+                        false => vec![],
+                    }),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -118,11 +194,17 @@ pub fn MultiSelectPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         label: (values.str("label") == "true").then(|| "Toppings".to_string()),
+                        description: (values.str("description") == "true")
+                            .then(|| "Up to five, at no extra cost.".to_string()),
+                        helper: (values.str("helper") == "true")
+                            .then(|| "Picked in the order they go on.".to_string()),
                         status: match values.str("status").as_str() {
                             "warning" => FieldStatus::Warning("Pineapple divides the table.".to_string()),
                             "error" => FieldStatus::Error("Pick at least one.".to_string()),
                             _ => FieldStatus::Valid,
                         },
+                        option: custom(&values).then(|| Callback::new(topping_row)),
+                        selection: custom(&values).then(|| Callback::new(topping_selection)),
                         clearable: (values.str("clearable") == "true").then_some(true),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),
