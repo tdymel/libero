@@ -28,6 +28,7 @@ pub(super) fn ComboboxDropdown(
     max_height: String,
     scroll_y: Option<f64>,
     empty: Option<Element>,
+    multiselectable: bool,
     /// Re-provided here, not inherited: the dropdown is portaled, so it mounts
     /// under `PortalOutlet` rather than under `ComboboxCore`, and a context
     /// resolves along the mounted chain. Without this every row loses its `id`,
@@ -47,6 +48,7 @@ pub(super) fn ComboboxDropdown(
             scroll_position_y: scroll_y,
             id: super::aria::listbox_id(&id),
             "role": "listbox",
+            "aria-multiselectable": multiselectable.then_some("true"),
             for (index, row) in rows.into_iter().enumerate() {
                 ComboboxRow { key: "{index}", index, active: index == active, {row} }
             }

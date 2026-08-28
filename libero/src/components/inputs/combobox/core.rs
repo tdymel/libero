@@ -29,7 +29,7 @@ static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
 });
 
 base_props! {
-    pub(super) struct ComboboxCoreProps {
+    pub(crate) struct ComboboxCoreProps {
         /// The rows, already drawn - which is what erases the caller's `T`,
         /// and what stops anything below here from memoizing.
         rows: Vec<Element>,
@@ -46,12 +46,29 @@ base_props! {
         #[props(default, into)]
         radius: Input<Size>,
         disabled: bool,
+        /// Whether Enter closes the list after picking. A multi-select keeps
+        /// it open, so each pick toggles a row and the next one is one key
+        /// away.
+        #[props(default = true)]
+        close_on_pick: bool,
+        /// Sets `aria-multiselectable` on the listbox.
+        #[props(default)]
+        multiselectable: bool,
+        /// What the list's width follows. `Match` reproduces the `width: 100%`
+        /// it had while it was nested; a select, whose rows are the content,
+        /// takes `Min` so a long row is never clipped.
+        #[props(default = PopoverWidth::Match)]
+        width: PopoverWidth,
+        /// Measures the list again whenever it changes, for a trigger that
+        /// resizes while the list is open.
+        #[props(default)]
+        remeasure: u64,
         children: Element,
     }
 }
 
 #[component]
-pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
+pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.combobox.size);
     let radius = props.radius.copied_or(theme.combobox.radius);
@@ -93,6 +110,7 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let set_active = props.onactive;
 
     let disabled = props.disabled;
+    let close_on_pick = props.close_on_pick;
     let onopened = props.onopened;
     let request = move |next: bool| onopened.call(next);
 
@@ -133,7 +151,9 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 if let Some(pick) = active_pick() {
                     pick.call(());
                 }
-                request(false);
+                if close_on_pick {
+                    request(false);
+                }
             }
             Key::Escape if opened => {
                 event.prevent_default();
@@ -161,7 +181,8 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             // Portaling takes away the positioned wrapper a `width: 100%` used
             // to resolve against, so the width is measured instead.
-            .width(PopoverWidth::Match),
+            .width(props.width)
+            .remeasure(props.remeasure),
     );
     // Unstyled, and not user-facing: it is only what the keys are caught on and
     // what the dropdown is measured against, which is why `sx` lands on the
@@ -189,21 +210,30 @@ pub(super) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // Portaled rather than nested, so no `overflow: hidden` ancestor can clip
     // it and it can flip above the trigger when the page runs out of room.
     popover.show(showing.then(|| {
-        dropdown.element(popover.floating()).render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                ComboboxDropdown {
-                    rows: props.rows,
-                    active: active_row,
-                    id: id(),
-                    max_height: theme.combobox.max_dropdown_height,
-                    scroll_y,
-                    empty: props.empty,
-                    context,
-                }
-            },
-        )
+        dropdown
+            .element(popover.floating())
+            // Clicking the list's padding or its scrollbar must not move focus
+            // off the trigger: a trigger that closes on blur would close under
+            // the click. The rows cancel it for themselves already.
+            .event("onmousedown", move |event: MouseEvent| {
+                event.prevent_default()
+            })
+            .render(
+                HtmlTag::Div,
+                props.attributes,
+                rsx! {
+                    ComboboxDropdown {
+                        rows: props.rows,
+                        active: active_row,
+                        id: id(),
+                        max_height: theme.combobox.max_dropdown_height,
+                        scroll_y,
+                        empty: props.empty,
+                        multiselectable: props.multiselectable,
+                        context,
+                    }
+                },
+            )
     }));
 
     wrapper
