@@ -5,6 +5,7 @@ pub const Z_INDEX_HEADER: CssVar = CssVar::new("--lsx-z-index-header");
 pub const Z_INDEX_FLOAT: CssVar = CssVar::new("--lsx-z-index-float");
 pub const Z_INDEX_OVERLAY: CssVar = CssVar::new("--lsx-z-index-overlay");
 pub const Z_INDEX_MODAL: CssVar = CssVar::new("--lsx-z-index-modal");
+pub const Z_INDEX_POPOVER: CssVar = CssVar::new("--lsx-z-index-popover");
 
 /// The library's stacking order in one place, so two components can't tie.
 /// Gaps of 100 leave room to slot a layer in without renumbering.
@@ -19,6 +20,10 @@ pub struct ZIndexDefaults {
     /// The first modal's z-index; each one above adds `modal_step`.
     pub modal: i32,
     pub modal_step: i32,
+    /// Above every modal, not below: an anchored popover is portaled to the
+    /// document root, so a dropdown opened *inside* a modal no longer inherits
+    /// its stacking context and would otherwise fall behind it.
+    pub popover: i32,
 }
 
 impl ToCssDeclarations for ZIndexDefaults {
@@ -28,6 +33,7 @@ impl ToCssDeclarations for ZIndexDefaults {
             Z_INDEX_FLOAT.declare(self.float.to_string()),
             Z_INDEX_OVERLAY.declare(self.overlay.to_string()),
             Z_INDEX_MODAL.declare(self.modal.to_string()),
+            Z_INDEX_POPOVER.declare(self.popover.to_string()),
         ]
     }
 }
@@ -45,5 +51,9 @@ mod tests {
             "a dimming overlay must cover dropdowns"
         );
         assert!(z.overlay < z.modal, "a modal must sit above a bare overlay");
+        assert!(
+            z.modal < z.popover,
+            "a dropdown opened inside a modal must clear it"
+        );
     }
 }

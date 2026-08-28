@@ -26,6 +26,7 @@ mod mark;
 mod nav_link;
 mod number_field;
 mod overlay;
+mod popover;
 mod qr_code;
 mod radio;
 mod ripple;
@@ -95,6 +96,7 @@ pub use mark::MarkDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use number_field::NumberFieldDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
+pub use popover::{POPOVER_GAP, POPOVER_PADDING, PopoverDefaults};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
@@ -133,4 +135,6 @@ pub use tooltip::{
     TooltipPlacement,
 };
 pub use tree::TreeDefaults;
-pub use z_index::{Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, ZIndexDefaults};
+pub use z_index::{
+    Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, Z_INDEX_POPOVER, ZIndexDefaults,
+};
