@@ -16,6 +16,7 @@ mod document;
 mod element;
 mod error;
 mod regex;
+mod scroll;
 
 pub use clipboard::ClipboardApi;
 pub(crate) use clipboard::clipboard;
@@ -23,3 +24,4 @@ pub use document::{DocumentApi, document};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
+pub use scroll::{ScrollApi, ScrollSubscription, scroll};

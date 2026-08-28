@@ -14,7 +14,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::MountedData;
 
-use super::{DocumentApi, ElementApi};
+use super::{DocumentApi, ElementApi, ScrollApi};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 mod blitz;
@@ -43,5 +43,14 @@ pub(crate) fn document() -> Option<Box<dyn DocumentApi>> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::document();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return None;
+}
+
+/// Only the web can report a scroll today. Off it this is `None`, which is the
+/// house rule for an absent capability - never an `Unsupported` stub.
+pub(crate) fn scroll() -> Option<Box<dyn ScrollApi>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::scroll();
+    #[cfg(not(target_arch = "wasm32"))]
     return None;
 }

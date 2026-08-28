@@ -9,13 +9,15 @@ use dioxus::prelude::*;
 pub use options::{Align, Placement, PopoverOptions, PopoverWidth, Side};
 pub use place::{Placed, Rect};
 
+use std::{cell::RefCell, rc::Rc};
+
 use crate::{
     hooks::{
         ElementHandle,
         element::use_element,
         portal::{PortalSlot, use_portal_slot},
     },
-    platform::{ElementApi, document},
+    platform::{ElementApi, ScrollSubscription, document, scroll},
 };
 
 use place::place;
@@ -104,22 +106,51 @@ impl PopoverHandle {
 /// Anchors a portaled box to `anchor`, flipping and shifting it to stay in the
 /// viewport.
 ///
-/// Measured once per open, and again whenever `options` changes -
-/// [`PopoverOptions::remeasure`] is the knob for an anchor that resizes. A page
-/// scrolled while the popover is open drags it off its anchor: tracking that
-/// needs a window-level event, which no backend here exposes yet.
+/// Measured once per open, again whenever `options` changes -
+/// [`PopoverOptions::remeasure`] is the knob for an anchor that resizes - and
+/// again on every scroll, so the box follows its anchor instead of being
+/// dragged off it. Scroll tracking needs [`platform::scroll`](crate::platform::scroll),
+/// which only the web answers; elsewhere an open popover still drifts.
+///
+/// It keeps following even when the anchor leaves the viewport: `place()` flips
+/// and shifts as usual, so the box ends up clamped at the edge rather than
+/// hidden or closed. Closing is the caller's business - this hook owns no open
+/// state.
 pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle {
     let floating = use_element();
     let mut placed = use_signal(|| None::<Placed>);
     let mut anchor_width = use_signal(|| None::<f64>);
     let slot = use_portal_slot();
 
+    // Bumped from the scroll callback, which runs outside every dioxus scope -
+    // so the signal is owned by the root and dropped by hand, the same
+    // obligation anything portaled has ([[codebase/use-popover]]). The callback
+    // deliberately does *not* measure: it only invalidates, and the effect
+    // below does the work, in the runtime, where a `Read` may be created.
+    let scroll_tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
+    // Alive exactly while the popover is open. Dropping it removes the
+    // listener, so a page full of closed dropdowns listens to nothing.
+    let subscription: Rc<RefCell<Option<Box<dyn ScrollSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+
+    use_drop({
+        let subscription = subscription.clone();
+        move || {
+            subscription.borrow_mut().take();
+            scroll_tick.manually_drop();
+        }
+    });
+
+    let listening = subscription.clone();
     use_effect(use_reactive!(|(open, options)| {
+        // Reading it is what re-runs this on a scroll.
+        let _ = scroll_tick();
         // Read first, branch second: this is what subscribes the effect to the
         // box mounting, and an early return would skip it. It also re-runs on a
         // *re*-mount, which is every reopen.
         let mounted = floating.mount_token().is_some();
         if !open || !mounted {
+            listening.borrow_mut().take();
             placed.set(None);
             return;
         }
@@ -127,6 +158,22 @@ pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -
         let Some(document) = document() else {
             return;
         };
+
+        // Read the borrow out in its own statement, so it is released before
+        // the `borrow_mut` below.
+        let unsubscribed = listening.borrow().is_none();
+        if let Some(api) = unsubscribed.then(scroll).flatten() {
+            *listening.borrow_mut() = Some(api.on_scroll(Box::new(move || {
+                // A `Fn` callback cannot hand out `&mut` to what it captured,
+                // and `set` needs one. `Signal` is `Copy`, so a copy per call
+                // addresses the very same value.
+                let mut tick = scroll_tick;
+                // `peek`, not a read: a callback must subscribe nothing.
+                let next = tick.peek().wrapping_add(1);
+                tick.set(next);
+            })));
+        }
+
         // Started here, awaited in the task: a read resolves where it is
         // called, and under Blitz the document is locked for as long as dioxus
         // drains tasks (see `ElementApi::dimensions`).

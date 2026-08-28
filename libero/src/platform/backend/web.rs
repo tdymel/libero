@@ -3,7 +3,11 @@ use std::rc::Rc;
 use dioxus::prelude::MountedData;
 use wasm_bindgen::{JsCast, JsValue};
 
-use crate::platform::{Dimensions, DocumentApi, ElementApi, PlatformError, Read};
+use wasm_bindgen::prelude::Closure;
+
+use crate::platform::{
+    Dimensions, DocumentApi, ElementApi, PlatformError, Read, ScrollApi, ScrollSubscription,
+};
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
 /// the whole trait is answerable - no id, no document lookup.
@@ -35,6 +39,61 @@ impl DocumentApi for WebDocument {
             })
             .ok_or(PlatformError::Unsupported);
         Box::pin(std::future::ready(size))
+    }
+}
+
+pub(super) fn scroll() -> Option<Box<dyn ScrollApi>> {
+    Some(Box::new(WebScroll))
+}
+
+struct WebScroll;
+
+impl ScrollApi for WebScroll {
+    /// **In the capture phase, on the window.** A `scroll` event does not
+    /// bubble, so a plain listener here would see the page scrolling and miss
+    /// every element that scrolls - including a `ScrollArea`, which is what the
+    /// docs shell scrolls and where this was first noticed. Capture sees every
+    /// scroll in the document on its way down.
+    fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription> {
+        let closure = Closure::<dyn FnMut()>::new(move || callback());
+        let target = web_sys::window().and_then(|window| {
+            let target: web_sys::EventTarget = window.into();
+            target
+                .add_event_listener_with_callback_and_bool(
+                    "scroll",
+                    closure.as_ref().unchecked_ref(),
+                    true,
+                )
+                .ok()?;
+            Some(target)
+        });
+
+        Box::new(WebScrollSubscription { target, closure })
+    }
+}
+
+struct WebScrollSubscription {
+    /// `None` when there was no window to listen on, so `Drop` has nothing to
+    /// undo - the subscription still exists, it just never fires.
+    target: Option<web_sys::EventTarget>,
+    /// Kept alive for exactly as long as the listener is registered: dropping a
+    /// `Closure` frees the JS function the listener still points at.
+    closure: Closure<dyn FnMut()>,
+}
+
+impl ScrollSubscription for WebScrollSubscription {}
+
+impl Drop for WebScrollSubscription {
+    fn drop(&mut self) {
+        if let Some(target) = &self.target {
+            // The same three arguments it was added with, capture included, or
+            // the browser removes nothing.
+            let _ = target.remove_event_listener_with_callback_and_bool(
+                "scroll",
+                self.closure.as_ref().unchecked_ref(),
+                true,
+            );
+        }
     }
 }
 
