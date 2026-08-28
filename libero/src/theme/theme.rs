@@ -1,6 +1,6 @@
 use super::{
-    ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, ButtonDefaults,
-    ButtonSizeLevel, CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel,
+    ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, AutocompleteDefaults,
+    ButtonDefaults, ButtonSizeLevel, CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel,
     CodeBlockDefaults, CodeDefaults, Color, ColorShade, ColorValue, ComboboxDefaults,
     ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
     DrawerDefaults, FieldDefaults, FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults,
@@ -57,6 +57,7 @@ pub struct Theme {
     pub textarea: TextareaDefaults,
     pub number_field: NumberFieldDefaults,
     pub combobox: ComboboxDefaults,
+    pub autocomplete: AutocompleteDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
@@ -368,6 +369,10 @@ impl Theme {
             radius: Size::Sm,
         },
         number_field: NumberFieldDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+        },
+        autocomplete: AutocompleteDefaults {
             size: Size::Md,
             radius: Size::Sm,
         },

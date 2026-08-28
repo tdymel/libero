@@ -4,7 +4,11 @@ use crate::{
     components::{
         ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, States,
         common::field_props,
-        form::{field_control_sx, use_field, use_field_frame},
+        form::{
+            field_control_sx,
+            glyphs::{ChevronIcon, CloseIcon},
+            use_field, use_field_frame,
+        },
         layout::use_box,
         use_combobox,
     },
@@ -247,39 +251,4 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     };
 
     field.render(listbox)
-}
-
-/// libero ships no icon set, so the two glyphs a select cannot do without live
-/// here.
-#[component]
-fn ChevronIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M6 9l6 6 6-6" }
-        }
-    }
-}
-
-#[component]
-fn CloseIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M18 6L6 18" }
-            path { d: "M6 6l12 12" }
-        }
-    }
 }

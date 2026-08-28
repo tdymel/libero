@@ -1,6 +1,7 @@
 mod action_icon;
 mod anchor;
 mod aspect_ratio;
+mod autocomplete;
 mod button;
 mod center;
 mod checkbox;
@@ -50,6 +51,7 @@ mod z_index;
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
+pub use autocomplete::AutocompleteDefaults;
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
 };

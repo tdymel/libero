@@ -1,6 +1,8 @@
+mod autocomplete;
 mod caption;
 mod checkbox;
 mod field_status;
+mod glyphs;
 mod native_select;
 mod number_field;
 mod password_field;
@@ -14,6 +16,9 @@ mod textarea;
 mod use_field;
 mod use_field_frame;
 
+pub use autocomplete::{
+    Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, AutocompleteProps,
+};
 pub use caption::Caption;
 pub use checkbox::{Checkbox, CheckboxProps};
 pub use field_status::FieldStatus;

@@ -127,6 +127,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "form",
             "Form",
             vec![
+                page(Route::AutocompletePage {}, "Autocomplete"),
                 page(Route::CheckboxPage {}, "Checkbox"),
                 page(Route::MultiSelectPage {}, "MultiSelect"),
                 page(Route::NativeSelectPage {}, "NativeSelect"),

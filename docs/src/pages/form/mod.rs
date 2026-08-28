@@ -1,3 +1,4 @@
+mod autocomplete;
 mod checkbox;
 mod multi_select;
 mod native_select;
@@ -10,6 +11,7 @@ mod switch;
 mod text_field;
 mod textarea;
 
+pub use autocomplete::AutocompletePage;
 pub use checkbox::CheckboxPage;
 pub use multi_select::MultiSelectPage;
 pub use native_select::NativeSelectPage;
