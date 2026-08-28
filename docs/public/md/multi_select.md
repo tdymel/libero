@@ -91,6 +91,43 @@ bottom of the viewport.
 The listbox carries `aria-multiselectable="true"`, and Enter toggles the
 highlighted row without closing the list.
 
+## Searching
+
+`searchable` puts a search box at the top of the list, exactly as on
+[Select](select.md), and `filter` replaces its default case-insensitive
+`contains` over `Options::label`. `SelectFilterArgs<T>` carries `value` and
+`query`.
+
+```rust
+MultiSelect {
+    label: "Toppings",
+    searchable: true,
+    search_placeholder: "Search toppings",
+    value: value(),
+    onchange: move |next| value.set(next),
+}
+```
+
+`filter` is called once per option with the query and answers one `bool`, so a
+match can test anything the caller knows rather than only the label - here the
+emoji counts too, which makes "🍄" and "mush" find the same row:
+
+```rust
+MultiSelect {
+    searchable: true,
+    value: value(),
+    onchange: move |next| value.set(next),
+    filter: move |f: SelectFilterArgs<Topping>| {
+        let query = f.query.to_lowercase();
+        f.value.label().to_lowercase().contains(&query) || f.value.emoji().contains(&query)
+    },
+}
+```
+
+The one difference from `Select`: **the query survives a pick.** A multi-select
+stays open when a row is toggled, so one search can have several of its matches
+ticked without retyping it. It is cleared when the list closes.
+
 ## Props
 
 ### `MultiSelect`
@@ -106,6 +143,9 @@ highlighted row without closing the list.
 | `selection` | `Callback<T, Element>` | `Chip` | Draws one selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `clearable` | `bool` | `false` | An x in place of the chevron that empties the selection. |
+| `searchable` | `bool` | `false` | A search box at the top of the list. |
+| `filter` | `Callback<SelectFilterArgs<T>, bool>` | case-insensitive `contains` | Narrows the options while searching. |
+| `search_placeholder` | `String` | - | What the search box says while empty. |
 | `label` | `Caption` | - | The field's caption. Names the trigger through `aria-labelledby`. |
 | `description` | `Caption` | - | Between the label and the control. |
 | `helper` | `Caption` | - | Under the control. |

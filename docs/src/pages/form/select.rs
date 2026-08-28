@@ -130,6 +130,14 @@ pub fn SelectPage() -> Element {
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron while something is selected. The only way `onchange` fires `None`."),
+                    prop("searchable", "bool")
+                        .default("false")
+                        .doc("Puts a search box at the top of the list. It takes focus while the list is open, and the query is cleared when it closes."),
+                    prop("filter", "Callback<SelectFilterArgs<T>, bool>")
+                        .default("contains")
+                        .doc("Narrows the options while searching. Defaults to a case-insensitive `contains` over `Options::label`."),
+                    prop("search_placeholder", "String")
+                        .doc("What the search box says while empty."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the control. Names the trigger through `aria-labelledby`."),
                     prop("description", "Caption").doc("Between the label and the control: what to pick."),
@@ -207,6 +215,17 @@ pub fn SelectPage() -> Element {
                         true => vec![CUSTOM_OPTION.to_string(), CUSTOM_SELECTION.to_string()],
                         false => vec![],
                     }),
+                    // The search box lives at the top of the list, so the
+                    // trigger is unchanged and only an open list shows it.
+                    Control::switch("searchable").code(|_, values| {
+                        match values.str("searchable").as_str() {
+                            "true" => vec![
+                                "searchable: true".to_string(),
+                                "search_placeholder: \"Search fruit\"".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -228,6 +247,8 @@ pub fn SelectPage() -> Element {
                         },
                         option: custom(&values).then(|| Callback::new(fruit_row)),
                         selection: custom(&values).then(|| Callback::new(fruit_selection)),
+                        searchable: (values.str("searchable") == "true").then_some(true),
+                        search_placeholder: "Search fruit",
                         clearable: (values.str("clearable") == "true").then_some(true),
                         required: (values.str("required") == "true").then_some(true),
                         disabled: (values.str("disabled") == "true").then_some(true),

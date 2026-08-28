@@ -85,6 +85,46 @@ closures.
 `value: None` leaves `T` with nothing to be inferred from, so write
 `None::<Fruit>` and annotate the handler. The same holds for `NativeSelect`.
 
+## Searching
+
+`searchable` puts a search box at the top of the list. The trigger is unchanged -
+it still shows the selection - so a closed select looks exactly as it did.
+
+```rust
+Select {
+    label: "Fruit",
+    searchable: true,
+    search_placeholder: "Search fruit",
+    value: value(),
+    onchange: move |next| value.set(next),
+}
+```
+
+By default it narrows case-insensitively on `Options::label`. `filter` replaces
+that test, so a search can match anything the caller knows - a synonym, a code,
+a record's id:
+
+```rust
+Select {
+    searchable: true,
+    value: value(),
+    onchange: move |next| value.set(next),
+    filter: move |f: SelectFilterArgs<Fruit>| {
+        f.value.label().to_lowercase().starts_with(&f.query.to_lowercase())
+    },
+}
+```
+
+The box takes focus while the list is open, and the query is cleared when it
+closes, so a reopened list always starts unfiltered. A query that matches
+nothing leaves the box on screen with an empty list under it - closing it there
+would take away the thing you need to edit. On `MultiSelect` the query instead
+survives a pick, so several matches of one search can be ticked without
+retyping it.
+
+To complete free text rather than choose from a set, reach for
+[Autocomplete](autocomplete.md).
+
 ## Accessibility
 
 The trigger is a focusable element with `role="combobox"`, `aria-haspopup="listbox"`,
@@ -121,6 +161,9 @@ bottom of the viewport.
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while `value` is `None`. |
 | `clearable` | `bool` | `false` | An x in place of the chevron while something is selected. |
+| `searchable` | `bool` | `false` | A search box at the top of the list. |
+| `filter` | `Callback<SelectFilterArgs<T>, bool>` | case-insensitive `contains` | Narrows the options while searching. |
+| `search_placeholder` | `String` | - | What the search box says while empty. |
 | `label` | `Caption` | - | The field's caption. Names the trigger through `aria-labelledby`. |
 | `description` | `Caption` | - | Between the label and the control. |
 | `helper` | `Caption` | - | Under the control. |
@@ -129,6 +172,7 @@ bottom of the viewport.
 | `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
 
 `SelectOptionArgs<T>` carries `value`, `index` and `selected`.
+`SelectFilterArgs<T>` carries `value` and `query`.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes; the attributes land on the trigger.
