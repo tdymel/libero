@@ -181,7 +181,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             selection,
             placeholder: props.placeholder,
             name: props.name,
-            form_value: props.value.as_ref().map(Options::value),
+            form_values: vec![props.value.as_ref().map(Options::value).unwrap_or_default()],
             clearable: props.clearable.unwrap_or(false),
             searchable,
             search_placeholder: props.search_placeholder,

@@ -897,9 +897,10 @@ fn a_select_posts_its_value_through_a_hidden_input() {
     // must not change what it sends when a label is translated.
     assert!(body.contains(r#"<input type="hidden" name="fruit" value="Apple"/>"#));
     assert!(!body.contains(r#"value="Sweet apple"/>"#));
-    // One comma-joined field for a multi-select, not one input per value.
-    assert!(body.contains(r#"<input type="hidden" name="fruits" value="Apple,Pear"/>"#));
-    assert_eq!(body.matches(r#"type="hidden""#).count(), 3);
+    // One input per value, the way a native `<select multiple>` posts.
+    assert!(body.contains(r#"<input type="hidden" name="fruits" value="Apple"/>"#));
+    assert!(body.contains(r#"<input type="hidden" name="fruits" value="Pear"/>"#));
+    assert_eq!(body.matches(r#"type="hidden""#).count(), 4);
     // A disabled select posts nothing.
     assert!(body.contains(r#"name="off" value="Pear" disabled=true/>"#));
 }

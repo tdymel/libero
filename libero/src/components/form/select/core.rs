@@ -141,16 +141,15 @@ field_props! {
         searchable: bool,
         #[props(default)]
         search_placeholder: Option<String>,
-        /// Emits a hidden input of that name carrying `form_value`, so the
+        /// Emits one hidden input of that name per `form_values` entry, so the
         /// selection posts with a native form. The trigger is a `div` and
         /// cannot carry a `name` itself.
         #[props(default)]
         name: Option<String>,
-        /// What that hidden input posts. The skin builds it - one
-        /// `Options::value()` for a single select, several joined for a
-        /// multi-select.
+        /// What those hidden inputs post, one `Options::value()` each - the
+        /// shape a native `<select multiple>` sends.
         #[props(default)]
-        form_value: Option<String>,
+        form_values: Vec<String>,
         /// Which rows survive the query, one `bool` per row. The skin closes
         /// over its own `Vec<T>` and the caller's filter, so `T` never reaches
         /// here - the mask is the same erasure `rows: Vec<Element>` performs.
@@ -492,13 +491,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     // post - the shape `Slider` and `PinField` use. `disabled` goes on it too,
     // so a disabled select sends nothing.
     let hidden = props.name.map(|name| {
-        let value = props.form_value.clone().unwrap_or_default();
         rsx! {
-            input {
-                r#type: "hidden",
-                name,
-                value,
-                disabled: disabled.then_some(true),
+            for value in props.form_values.iter().cloned() {
+                input {
+                    r#type: "hidden",
+                    name: name.clone(),
+                    value,
+                    disabled: disabled.then_some(true),
+                }
             }
         }
     });

@@ -97,11 +97,11 @@ at once.
 
 ## Posting with a form
 
-`name` emits one hidden input carrying every selected option's
-`Options::value()`, comma-joined - `"Apple,Pear"` - which is the shape Mantine
-sends too. A backend that expects `fruits[]` repeated once per value has to
-split it; which of the two libero should send is still open, and is settled with
-the rest of form support.
+`name` emits one hidden input per selected option, each carrying its
+`Options::value()` - `fruits=Apple&fruits=Pear`. That is what a native
+`<select multiple>` sends, so `FormData.getAll("fruits")` reads it back, and a
+PHP or Rails backend reads it if the name ends in `[]`. An empty selection posts
+nothing.
 
 An empty selection posts an empty value, and a disabled field posts nothing.
 
@@ -192,7 +192,7 @@ ticked without retyping it. It is cleared when the list closes.
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
 | `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value inside the trigger, the remove control included. `remove` on the args drops that value. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
-| `name` | `String` | - | Emits a hidden input of that name carrying every selected option's `Options::value()`, comma-joined. |
+| `name` | `String` | - | Emits one hidden input of that name per selected option, carrying its `Options::value()`. |
 | `clearable` | `bool` | `false` | An x in place of the chevron that empties the selection. |
 | `searchable` | `bool` | `false` | A search box at the top of the list. |
 | `filter` | `Callback<SelectFilterArgs<T>, bool>` | case-insensitive `contains` | Narrows the options while searching. |
