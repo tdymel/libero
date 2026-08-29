@@ -52,6 +52,18 @@ pub trait ElementApi {
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 
+    /// Replaces this `<input type="file">`'s own file list.
+    ///
+    /// A `FileList` is the only thing a form posts, and it cannot be edited:
+    /// removing one file of three, or clearing a field, happens in Rust and
+    /// would otherwise leave the input still holding what the picker produced.
+    /// This writes the list back, so what posts is what the caller holds.
+    ///
+    /// Only the web can serve it (through a `DataTransfer`); elsewhere it is
+    /// [`PlatformError::Unsupported`], and a native form post is not a thing
+    /// there either.
+    fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError>;
+
     /// Routes further events from `pointer_id` here, so a drag keeps tracking
     /// once the pointer leaves and still gets its `pointerup`. Released
     /// automatically, hence no counterpart.

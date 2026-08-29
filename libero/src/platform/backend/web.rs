@@ -129,6 +129,29 @@ impl ElementApi for WebElement {
         Ok(())
     }
 
+    /// The list is rebuilt through a `DataTransfer`, which is the only
+    /// constructor a `FileList` has. Every file came from a picker or a drop,
+    /// so its `FileData` still carries the `web_sys::File` it was made from.
+    fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
+        let input = self
+            .element
+            .dyn_ref::<web_sys::HtmlInputElement>()
+            .ok_or(PlatformError::NotFound)?;
+        let transfer = web_sys::DataTransfer::new().map_err(|_| PlatformError::Unsupported)?;
+        for file in files {
+            let file = file
+                .inner()
+                .downcast_ref::<web_sys::File>()
+                .ok_or(PlatformError::Unsupported)?;
+            transfer
+                .items()
+                .add_with_file(file)
+                .map_err(|_| PlatformError::Unsupported)?;
+        }
+        input.set_files(Some(&transfer.files().ok_or(PlatformError::Unsupported)?));
+        Ok(())
+    }
+
     fn is_focused(&self) -> bool {
         web_sys::window()
             .and_then(|window| window.document())

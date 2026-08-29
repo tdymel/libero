@@ -192,6 +192,11 @@ impl ElementApi for BlitzElement {
         Ok(())
     }
 
+    /// Blitz has no `FileList`, and nothing native posts a form anyway.
+    fn set_files(&self, _files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
     /// Blitz has no pointer capture. A native drag keeps tracking anyway while
     /// the handlers sit on a container the pointer stays inside.
     fn set_pointer_capture(&self, _pointer_id: i32) -> Result<(), PlatformError> {

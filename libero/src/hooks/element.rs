@@ -83,6 +83,10 @@ impl ElementApi for ElementHandle {
         self.get()?.click()
     }
 
+    fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
+        self.get()?.set_files(files)
+    }
+
     fn is_focused(&self) -> bool {
         self.get().is_ok_and(|element| element.is_focused())
     }

@@ -83,6 +83,11 @@ impl ElementApi for MountedElement {
         Err(PlatformError::Unsupported)
     }
 
+    /// A `FileList` is a browser object; no mounted handle reaches one.
+    fn set_files(&self, _files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
     /// A bare mounted handle addresses one element; it cannot answer for the
     /// document's focus or search below itself.
     fn is_focused(&self) -> bool {
