@@ -14,9 +14,9 @@ pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
 pub use form::{
     AutocompletePage, CheckboxPage, ColorFieldPage, ColorPickerPage, FieldsetPage, FileFieldPage,
-    FormPage, MultiSelectPage, NativeSelectPage, NumberFieldPage, PasswordFieldPage, PinFieldPage,
-    RadioGroupPage, RangeSliderPage, SelectPage, SliderPage, SwitchPage, TextFieldPage,
-    TextareaPage,
+    FormGettingStartedPage, FormPage, MultiSelectPage, NativeSelectPage, NumberFieldPage,
+    PasswordFieldPage, PinFieldPage, RadioGroupPage, RangeSliderPage, SelectPage, SliderPage,
+    SwitchPage, TextFieldPage, TextareaPage,
 };
 pub use inputs::{ActionIconPage, ButtonPage, ChipPage, ComboboxPage, SegmentedControlPage};
 pub use layout::{

@@ -22,13 +22,13 @@ use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BoxPage, ButtonPage, CenterPage,
     CheckboxPage, ChipPage, CodeBlockPage, CodePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
     ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage,
-    FlexPage, FloatPage, FocusTrapPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage,
-    ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage, NativeSelectPage,
-    NavLinkPage, NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, PinFieldPage,
-    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage,
-    SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage,
-    TextFieldPage, TextPage, TextareaPage, ThemingPage, TitlePage, TooltipPage, TreePage,
-    VisuallyHiddenPage,
+    FlexPage, FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
+    HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
+    NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PasswordFieldPage,
+    PerformancePage, PinFieldPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage,
+    SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage,
+    SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TitlePage,
+    TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -76,6 +76,8 @@ pub(crate) enum Route {
     #[route("/data-display/qr-code")]
     QrCodePage {},
 
+    #[route("/form/getting-started")]
+    FormGettingStartedPage {},
     #[route("/form/autocomplete")]
     AutocompletePage {},
     #[route("/form/checkbox")]

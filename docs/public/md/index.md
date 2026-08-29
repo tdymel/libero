@@ -32,25 +32,26 @@ fetch only the file you need.
 
 ## Form
 
+- [Getting Started](form_getting_started.md): How libero forms are meant to be built - specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
+- [Form](form.md): A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
+- [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with composite rules over that value that land on the fields they name.
+- [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
+- [Textarea](textarea.md): A multi-line text field with the five field slots, sized by `rows` and resizable by the user.
+- [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
+- [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
+- [PinField](pin_field.md): A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
 - [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
+- [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
+- [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
+- [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
+- [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
+- [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected - one tab stop, arrow-key selection, and the question announced as the group's name.
+- [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
+- [RangeSlider](range_slider.md): Two thumbs on one track for a span rather than a point - the `Slider` engine, over a pair of values.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 - [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, holding one `ColorCode` that converts to any CSS form. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
-- [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with composite rules over that value that land on the fields they name.
-- [Form](form.md): A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
-- [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
-- [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
-- [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
-- [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
-- [PinField](pin_field.md): A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
-- [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected - one tab stop, arrow-key selection, and the question announced as the group's name.
-- [RangeSlider](range_slider.md): Two thumbs on one track for a span rather than a point - the `Slider` engine, over a pair of values.
-- [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
-- [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
-- [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
-- [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
-- [Textarea](textarea.md): A multi-line text field with the five field slots, sized by `rows` and resizable by the user.
 
 ## Inputs
 
