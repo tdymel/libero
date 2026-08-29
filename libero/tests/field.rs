@@ -855,7 +855,9 @@ fn a_pin_field_is_one_group_of_cells_that_share_the_frame() {
     assert!(body.contains(r#"dir="ltr""#));
     let label_id = format!(
         "{}-label",
-        attributes_of(&body, "input")["id"].trim_end_matches("-1")
+        attributes_of(&body, "input")["id"]
+            .strip_suffix("-1")
+            .expect("the first cell's id ends in -1")
     );
     assert!(body.contains(&format!(r#"aria-labelledby="{label_id}""#)));
 
