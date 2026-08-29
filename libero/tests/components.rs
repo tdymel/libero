@@ -13,10 +13,10 @@ use libero::{
         Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, Container, DataList,
         DataListItem, Dialog, Divider, Flex, Float, FocusTrap, Grid, GridArea, GridItem, GridSpan,
         GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark, MultiSelect,
-        NativeSelect, NavLink, OptionLabel, Options, Overlay, QrCode, ScrollArea, SegmentedControl,
-        Select, SelectSelectionArgs, Sidebar, Slider, SliderMark, SliderValue, Splitter, Table,
-        Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden,
-        column, sp,
+        NativeSelect, NavLink, OptionLabel, Options, Overlay, QrCode, RangeSlider, ScrollArea,
+        SegmentedControl, Select, SelectSelectionArgs, Sidebar, Slider, SliderMark, SliderValue,
+        Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
+        VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -196,7 +196,7 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     // The first div is the field wrapper; the slider's own root is the second.
     let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
 
-    assert_eq!(root["data-state"], "size-md radius-xl marks-labeled");
+    assert_eq!(root["data-state"], "size-md marks-labeled");
     assert!(root["style"].contains("--lsx-slider-filled:0.25;"));
 
     // The thumb carries the a11y contract; the mark carries its position.
@@ -208,6 +208,56 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     // The value bubble is a `Tooltip`.
     assert!(html.contains(r#"role="tooltip""#));
     assert!(body(&html).contains(">25%<"));
+}
+
+#[test]
+fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RangeSlider {
+                    label: "Price",
+                    value: (20.0, 80.0),
+                    min_range: 10.0,
+                    name: "price",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+
+    // The bar spans between the thumbs rather than from the track's start.
+    assert!(
+        root["style"].contains("--lsx-slider-filled-from:0.2;"),
+        "{root:?}"
+    );
+    assert!(
+        root["style"].contains("--lsx-slider-filled-span:0.6"),
+        "{root:?}"
+    );
+
+    assert_eq!(html.matches(r#"role="slider""#).count(), 2);
+    assert!(html.contains("--lsx-slider-thumb-at:0.2"));
+    assert!(html.contains("--lsx-slider-thumb-at:0.8"));
+    assert!(html.contains(r#"aria-label="Minimum""#));
+    assert!(html.contains(r#"aria-label="Maximum""#));
+
+    // Each thumb is bounded by its neighbour, `min_range` short of it.
+    assert!(html.contains("aria-valuenow=20"));
+    assert!(html.contains("aria-valuemax=70"));
+    assert!(html.contains("aria-valuenow=80"));
+    assert!(html.contains("aria-valuemin=30"));
+
+    // Both ends post under one name, in track order.
+    let inputs: Vec<_> = html.match_indices(r#"type="hidden""#).collect();
+    assert_eq!(inputs.len(), 2, "{html}");
+    assert_eq!(html.matches(r#"name="price""#).count(), 2, "{html}");
+    let first = html.find(r#"value="20""#).expect("the lower value");
+    let second = html.find(r#"value="80""#).expect("the upper value");
+    assert!(first < second, "{html}");
 }
 
 /// A hand-written `SliderValue`, which is what a caller with a foreign enum

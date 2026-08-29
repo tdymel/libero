@@ -154,6 +154,8 @@ fn render_cost_per_component() {
         "Switch+label" { Switch { checked: true, onchange: move |_| {}, label: "l" } }
         "Slider" { Slider { value: 50.0, oninput: move |_| {} } }
         "Slider+label" { Slider { value: 50.0, oninput: move |_| {}, label: "l" } }
+        // The second thumb, and what a `Tooltip` costs twice.
+        "RangeSlider" { RangeSlider { value: (20.0, 80.0), oninput: move |_| {} } }
         "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
         "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
 

@@ -33,7 +33,10 @@ pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectProps,
     SelectSelectionArgs,
 };
-pub use slider::{Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep, SliderValue};
+pub use slider::{
+    RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep,
+    SliderValue,
+};
 pub use switch::{Switch, SwitchProps};
 pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaProps};
