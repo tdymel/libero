@@ -43,7 +43,7 @@ pub(super) fn fraction(value: f64, min: f64, max: f64) -> f64 {
 /// One thumb, or two: what `SliderCore` renders and emits. The skins differ
 /// only in which of the two they build.
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub(super) enum SliderCoreValue {
+pub(in crate::components::form) enum SliderCoreValue {
     Single(f64),
     Range { from: f64, to: f64 },
 }
@@ -67,7 +67,7 @@ impl SliderCoreValue {
         std::iter::once(first).chain(second)
     }
 
-    pub(super) fn thumb(self, index: usize) -> f64 {
+    pub(in crate::components::form) fn thumb(self, index: usize) -> f64 {
         match (self, index) {
             (Self::Single(value), _) | (Self::Range { from: value, .. }, 0) => value,
             (Self::Range { to, .. }, _) => to,

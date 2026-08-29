@@ -128,7 +128,10 @@ impl<V> SliderChangeEvent<V> {
 
     /// Same phase, mapped value - how the `f64` core's events become the
     /// caller's own type.
-    pub(super) fn map<W>(self, map: impl FnOnce(V) -> W) -> SliderChangeEvent<W> {
+    pub(in crate::components::form) fn map<W>(
+        self,
+        map: impl FnOnce(V) -> W,
+    ) -> SliderChangeEvent<W> {
         match self {
             Self::Start(value) => SliderChangeEvent::Start(map(value)),
             Self::Change(value) => SliderChangeEvent::Change(map(value)),

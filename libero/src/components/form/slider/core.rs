@@ -36,6 +36,8 @@ const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
 /// Set only on marks the bar has already reached, so one class covers both.
 const SLIDER_MARK_FILL: CssVar = CssVar::new("--lsx-slider-mark-fill");
+/// A plain slider's thumb face - the color the track is pointing at.
+const SLIDER_THUMB_FILL: CssVar = CssVar::new("--lsx-slider-thumb-fill");
 
 /// Where a 0-1 `fraction` sits along the track. The track is the full width,
 /// so the thumb travels inset by half its own width and never overhangs -
@@ -68,6 +70,16 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
             sx().opacity("0.5")
                 .cursor("not-allowed")
                 .pointer_events("none"),
+        )
+        // The track is the scale, so the thumb must read against any color on
+        // it: white ring, dark halo, the picked color as its face.
+        .when(
+            "plain",
+            sx().selector(
+                "& [role='slider']",
+                sx().border_color("white")
+                    .box_shadow("0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)"),
+            ),
         )
 });
 
@@ -127,7 +139,7 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         .width(SLIDER_THUMB.value())
         .height(SLIDER_THUMB.value())
         .border_radius("50%")
-        .background("white")
+        .background(SLIDER_THUMB_FILL.value_or("white"))
         .border_style("solid")
         .border_width("2px")
         .border_color(SLIDER_COLOR.value())
@@ -176,20 +188,28 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
 });
 
-fn slider_variables(bar: (f64, f64), base: &ThemeAwareValue) -> Variables {
+fn slider_variables(
+    bar: (f64, f64),
+    base: &ThemeAwareValue,
+    thumb_fill: Option<String>,
+) -> Variables {
     let (from, to) = bar;
     variables()
         .with(SLIDER_FILLED, Some(to.to_string()))
         .with(SLIDER_FILLED_FROM, Some(from.to_string()))
         .with(SLIDER_FILLED_SPAN, Some((to - from).to_string()))
         .with(SLIDER_COLOR, base.resolve(None))
+        .with(SLIDER_THUMB_FILL, thumb_fill)
 }
 
 /// The `f64` engine every `Slider<V>` renders. Non-generic on purpose: this
 /// is the whole component, and it is compiled once no matter how many value
 /// types a caller slides over.
+///
+/// `HueSlider` and `AlphaSlider` render it too, as a `plain` slider over a
+/// `track` gradient.
 #[derive(Props, Clone, PartialEq)]
-pub(super) struct SliderCoreProps {
+pub(in crate::components::form) struct SliderCoreProps {
     /// Already resolved by the skin - the scale, not the caller's type. One
     /// thumb or two; a range's own clamping lives in `SliderCoreValue`.
     value: SliderCoreValue,
@@ -227,10 +247,24 @@ pub(super) struct SliderCoreProps {
     required: bool,
     name: Option<String>,
     oninput: Option<EventHandler<SliderChangeEvent<SliderCoreValue>>>,
+    /// A CSS `background` for the track in place of its grey - a hue or an
+    /// alpha gradient.
+    #[props(default)]
+    track: Option<String>,
+    /// No filled bar and no value bubble: the track itself shows the value.
+    #[props(default)]
+    plain: bool,
+    /// The thumb's face, for a `plain` slider. White otherwise.
+    #[props(default)]
+    thumb_fill: Option<String>,
+    /// `false` keeps the thumbs out of the tab order and a drag from focusing
+    /// them - for a slider inside a dropdown whose trigger must keep focus.
+    #[props(default = true)]
+    focusable: bool,
 }
 
 #[component]
-pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
+pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element {
     let theme = use_theme();
     let root_element = use_element();
     let track_element = use_element();
@@ -246,6 +280,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
 
     let value = props.value.snapped(min, max, step);
     let interactive = props.oninput.is_some() && !disabled;
+    let focusable = props.focusable;
 
     if props.oninput.is_none() && !disabled {
         warn("Slider: `value` without `oninput` can never change.");
@@ -358,7 +393,9 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
                         // unreachable after a mouse drag. Which thumb to
                         // focus is only known once the pointer is mapped.
                         let index = grab.call(raw);
-                        let _ = thumb_elements[index].focus();
+                        if focusable {
+                            let _ = thumb_elements[index].focus();
+                        }
                     }
                     None => event.cancel.call(()),
                 }
@@ -414,10 +451,12 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         .with("dragging", (drag.dragging)())
         .with("disabled", disabled)
         .with("marks-labeled", marks_labeled)
+        .with("plain", props.plain)
         .into();
 
     let bar = value.bar(min, max);
-    let root_variables: Input<Variables> = slider_variables(bar, &color).into();
+    let root_variables: Input<Variables> =
+        slider_variables(bar, &color, props.thumb_fill.clone()).into();
 
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
     let bar_class = use_css(
@@ -465,7 +504,10 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         let thumb = thumb_style
             .clone()
             .attr("role", "slider")
-            .attr("tabindex", if interactive { "0" } else { "-1" })
+            .attr(
+                "tabindex",
+                if interactive && focusable { "0" } else { "-1" },
+            )
             .attr("aria-orientation", "horizontal")
             .attr("aria-valuemin", thumb_min)
             .attr("aria-valuemax", thumb_max)
@@ -489,6 +531,12 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
                 Some(fraction(thumb_value, min, max).to_string()),
             )
             .render();
+
+        if props.plain {
+            return rsx! {
+                span { class: anchor_class.clone(), style: "{at}", {thumb} }
+            };
+        }
 
         // The drag keeps it open once the pointer has left the thumb; hover
         // and keyboard focus are the tooltip's own doing.
@@ -523,6 +571,11 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         rsx! { {inputs} }
     });
 
+    let track_style = props
+        .track
+        .as_ref()
+        .map(|background| format!("background: {background}"));
+
     use_box()
         .framework_sx(&SLIDER_ROOT_SX)
         .class(&props.class)
@@ -541,8 +594,11 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             rsx! {
                 div {
                     class: track_class,
+                    style: track_style,
                     onmounted: track_element.mount(),
-                    div { class: bar_class }
+                    if !props.plain {
+                        div { class: bar_class }
+                    }
                     {marks}
                     {thumbs}
                 }
