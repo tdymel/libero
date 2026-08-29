@@ -1,5 +1,6 @@
 mod autocomplete;
 mod checkbox;
+mod file_field;
 mod multi_select;
 mod native_select;
 mod number_field;
@@ -15,6 +16,7 @@ mod textarea;
 
 pub use autocomplete::AutocompletePage;
 pub use checkbox::CheckboxPage;
+pub use file_field::FileFieldPage;
 pub use multi_select::MultiSelectPage;
 pub use native_select::NativeSelectPage;
 pub use number_field::NumberFieldPage;

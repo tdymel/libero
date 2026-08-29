@@ -34,6 +34,7 @@ fetch only the file you need.
 
 - [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
+- [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
 - [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.

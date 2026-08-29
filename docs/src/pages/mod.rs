@@ -13,9 +13,9 @@ pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
 pub use form::{
-    AutocompletePage, CheckboxPage, MultiSelectPage, NativeSelectPage, NumberFieldPage,
-    PasswordFieldPage, PinFieldPage, RadioGroupPage, RangeSliderPage, SelectPage, SliderPage,
-    SwitchPage, TextFieldPage, TextareaPage,
+    AutocompletePage, CheckboxPage, FileFieldPage, MultiSelectPage, NativeSelectPage,
+    NumberFieldPage, PasswordFieldPage, PinFieldPage, RadioGroupPage, RangeSliderPage, SelectPage,
+    SliderPage, SwitchPage, TextFieldPage, TextareaPage,
 };
 pub use inputs::{ActionIconPage, ButtonPage, ChipPage, ComboboxPage, SegmentedControlPage};
 pub use layout::{
