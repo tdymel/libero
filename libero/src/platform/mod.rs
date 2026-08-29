@@ -15,6 +15,7 @@ mod clipboard;
 mod document;
 mod element;
 mod error;
+mod eye_dropper;
 mod regex;
 mod scroll;
 
@@ -23,5 +24,7 @@ pub(crate) use clipboard::clipboard;
 pub use document::{DocumentApi, document};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
+pub use eye_dropper::EyeDropperApi;
+pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
