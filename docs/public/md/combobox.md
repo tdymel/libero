@@ -315,3 +315,8 @@ the dropdown's own corner. The dropdown also clips, so nothing can escape it at
 | `disabled` | `disabled` is set. | Dropdown |
 | `active` | The row the arrows are on. | Rows |
 | `selected` | `selected` is `true`. | Rows |
+
+A row draws three states without them cancelling out: hover tints it, `selected`
+tints it more strongly, and `active` adds a focus ring *on top of* whichever
+tint is underneath. A tint alone cannot mark the keyboard's row when that row is
+already tinted by the selection, which is why the highlight is a ring.

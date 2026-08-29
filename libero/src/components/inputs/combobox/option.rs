@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    components::{
+        HtmlTag, Input, States,
+        common::{base_props, focus_ring_sx},
+        layout::use_box,
+    },
     hooks::use_theme,
     sx::{StaticSx, sx},
     theme::{ComboboxDefaults, Size},
@@ -55,6 +59,14 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
             "selected",
             sx().background("primary.1").color("primary-contrast.1"),
         )
+        // Folded *after* the selected tint, or it never lands: equal
+        // specificity, so source order decides, and a selected row would
+        // answer neither the mouse nor the keyboard.
+        .when("selected", sx().hover(sx().background("primary.2")))
+        // The keyboard's own mark, on top of any background - a tint alone
+        // cannot say "highlighted" on a row that is already tinted. Inset, so
+        // it neither overlaps the row above nor is clipped by the dropdown.
+        .when("active", focus_ring_sx().outline_offset("-2px"))
 });
 
 base_props! {
