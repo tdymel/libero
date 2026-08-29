@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{ActionIcon, Chip, Input, Options, common::field_props, form::glyphs::CloseIcon},
     hooks::use_theme,
-    sx::ThemeAwareValue,
+    sx::{ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
 };
@@ -200,6 +200,11 @@ fn default_chip<T: Options>(value: &T, remove: Callback<()>) -> Element {
                 ActionIcon {
                     aria_label: "Remove {label}",
                     size: icon_size,
+                    // A native `<button>` inherits no `color` - it takes the
+                    // UA's `buttontext`, which is a black cross on a chip of
+                    // any colour. The same fix `Chip`'s removed `ondelete`
+                    // needed.
+                    sx: sx().color("inherit"),
                     // The control is one tab stop: the keys, not the buttons,
                     // are how a keyboard removes a chip.
                     tabindex: "-1",

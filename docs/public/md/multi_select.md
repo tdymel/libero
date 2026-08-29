@@ -66,6 +66,9 @@ MultiSelect {
                 ActionIcon {
                     aria_label: "Remove {s.value.label()}",
                     size: "xs",
+                    // A `<button>` takes the UA's `buttontext`, not the chip's
+                    // colour, so the cross needs this or it stays black.
+                    sx: sx().color("inherit"),
                     tabindex: "-1",
                     onclick: move |_| s.remove.call(()),
                     "x"
