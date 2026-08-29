@@ -19,12 +19,15 @@ pub struct SelectOptionArgs<T> {
     pub selected: bool,
 }
 
-/// One selected value, handed to `MultiSelect`'s `selection` callback. The
-/// chip's inner design is the caller's, `remove` included - the control keeps
-/// only the keyboard, which is why there is no `Select` counterpart: a single
-/// selection is emptied by `clearable`.
+/// One selected value, handed to the `selection` callback of `MultiSelect`
+/// and `FileField` alike. The chip's inner design is the caller's, `remove`
+/// included - the control keeps only the keyboard.
+///
+/// Shared rather than duplicated: a second struct of `{ value, remove }`
+/// differing by nothing would be the wart. There is no single-`Select`
+/// counterpart because one selection is emptied by `clearable`.
 #[derive(Clone, PartialEq)]
-pub struct SelectSelectionArgs<T> {
+pub struct SelectionArgs<T> {
     pub value: T,
     /// Drops this value from the selection, which is the same edit as picking
     /// its row again.

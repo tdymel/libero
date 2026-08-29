@@ -58,7 +58,7 @@ MultiSelect {
             Text { component: "span", "✓" }
         }
     },
-    selection: move |s: SelectSelectionArgs<Topping>| rsx! {
+    selection: move |s: SelectionArgs<Topping>| rsx! {
         Chip { size: "xs", variant: "outlined",
             "{s.value.emoji()} {s.value.label()}"
             span { onmousedown: move |event| event.prevent_default(),
@@ -190,7 +190,7 @@ ticked without retyping it. It is cleared when the list closes.
 | `onchange` | `EventHandler<Vec<T>>` | - | The whole selection the caller should hold next. |
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
-| `selection` | `Callback<SelectSelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value inside the trigger, the remove control included. `remove` on the args drops that value. |
+| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value inside the trigger, the remove control included. `remove` on the args drops that value. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `name` | `String` | - | Emits a hidden input of that name carrying every selected option's `Options::value()`, comma-joined. |
 | `clearable` | `bool` | `false` | An x in place of the chevron that empties the selection. |

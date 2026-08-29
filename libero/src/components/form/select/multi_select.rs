@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     core::{SelectCore, SelectionRenderArgs},
-    select::{SelectFilterArgs, SelectOptionArgs, SelectSelectionArgs, draw_rows},
+    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows},
 };
 
 field_props! {
@@ -35,7 +35,7 @@ field_props! {
         /// chip, remove control included - `args.remove` is the wiring, and the
         /// keyboard stays the control's either way.
         #[props(default)]
-        selection: Option<Callback<SelectSelectionArgs<T>, Element>>,
+        selection: Option<Callback<SelectionArgs<T>, Element>>,
         /// Shown while `value` is empty.
         #[props(default)]
         placeholder: Option<String>,
@@ -103,7 +103,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 let removing = picked.clone();
                 let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
                 match &draw_selection {
-                    Some(selection) => selection.call(SelectSelectionArgs { value, remove }),
+                    Some(selection) => selection.call(SelectionArgs { value, remove }),
                     None => default_chip(&value, remove, chip_size),
                 }
             });

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         ActionIcon, Chip, Code, FieldStatus, MultiSelect, Options, SelectFilterArgs,
-        SelectOptionArgs, SelectSelectionArgs, Text,
+        SelectOptionArgs, SelectionArgs, Text,
     },
     sx::sx,
 };
@@ -37,7 +37,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
     }
 }"#;
 
-const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectSelectionArgs<Topping>| rsx! {
+const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
     Chip { size: "xs", variant: "outlined",
         "{s.value.emoji()} {s.value.label()}"
         // The chip is the caller's, remove control included. The keys stay
@@ -135,7 +135,7 @@ fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
 
 /// The chip's inside is the caller's, the remove control with it - `remove` on
 /// the args is the wiring. The keyboard stays `MultiSelect`'s either way.
-fn topping_selection(s: SelectSelectionArgs<Topping>) -> Element {
+fn topping_selection(s: SelectionArgs<Topping>) -> Element {
     let label = s.value.label();
     rsx! {
         Chip { size: "xs", variant: "outlined",
@@ -181,7 +181,7 @@ pub fn MultiSelectPage() -> Element {
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. `selected` on the args is there for a checkmark."),
-                    prop("selection", "Callback<SelectSelectionArgs<T>, Element>")
+                    prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
                         .doc("Draws one selected value inside the trigger, replacing the chip entirely - the remove control with it. `remove` on the args drops that value; the keyboard stays the control's."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
