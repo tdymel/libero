@@ -30,10 +30,16 @@ static FORM_SX: StaticSx = StaticSx::new(|| {
                 .border_color("error.6")
                 .border_radius("sm")
                 .background("error.1")
-                .color("error.8")
+                .color("error-contrast.1")
                 .padding("12px 16px")
                 .selector("& ul", sx().margin("0").padding_left("20px"))
-                .selector("& a", sx().color("error.8"))
+                // The line itself is the link: readable on the tint, no underline.
+                .selector(
+                    "& a",
+                    sx().color("error-contrast.1")
+                        .text_decoration("none")
+                        .cursor("pointer"),
+                )
                 .selector("& > p", sx().margin("0 0 4px 0").font_weight("600")),
         )
 });
@@ -86,6 +92,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let mut summary = use_signal(Vec::<SummaryItem>::new);
     let mut focus_requests = use_signal(|| 0_u32);
     let summary_element = use_element();
+    let form_element = use_element();
     use_effect(move || {
         if focus_requests() > 0 {
             let _ = summary_element.focus();
@@ -130,7 +137,24 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                     for item in items.iter() {
                         li {
                             match &item.target {
-                                Some(id) => rsx! { a { href: "#{id}", "{item.message}" } },
+                                Some(id) => {
+                                    let target = format!("#{id}");
+                                    rsx! {
+                                        a {
+                                            href: "#{id}",
+                                            // Focus, not the browser's jump: a `#fragment` would
+                                            // go through the router, and focus scrolls the
+                                            // field into view anyway.
+                                            onclick: move |event: MouseEvent| {
+                                                event.prevent_default();
+                                                let _ = form_element
+                                                    .query_selector(&target)
+                                                    .and_then(|field| field.focus());
+                                            },
+                                            "{item.message}"
+                                        }
+                                    }
+                                }
                                 None => rsx! { "{item.message}" },
                             }
                         }
@@ -140,9 +164,9 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     });
 
-    let mut children = Vec::with_capacity(2);
-    children.extend(summary_node);
-    children.push(props.children);
+    // Always two children: a summary slot that appears would otherwise shift
+    // the fields, and dioxus would remount them - new ids, touched state lost.
+    let children = vec![summary_node.unwrap_or_else(VNode::empty), props.children];
 
     use_box()
         .framework_sx(&FORM_SX)
@@ -150,6 +174,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .sx(&props.sx)
         .states(&props.states)
         .prepare()
+        .element(&form_element)
         .attr("novalidate", true)
         .event("onsubmit", handler)
         .render(HtmlTag::Form, props.attributes, children)
