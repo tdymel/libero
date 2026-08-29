@@ -3,15 +3,16 @@ use super::{
     ButtonDefaults, ButtonSizeLevel, CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel,
     CodeBlockDefaults, CodeDefaults, Color, ColorShade, ColorValue, ComboboxDefaults,
     ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
-    DrawerDefaults, FieldDefaults, FieldSizeLevel, FlexAxisDefaults, FlexDefaults, FloatDefaults,
-    GridDefaults, HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults,
-    ListDefaults, MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults,
-    OverlayDefaults, PinFieldDefaults, PinKind, Placement, PopoverDefaults, QrCodeDefaults,
-    QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
-    ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults,
-    SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults,
-    TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
-    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    DrawerDefaults, FieldDefaults, FieldSizeLevel, FileFieldDefaults, FileFieldVariant,
+    FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults, HexColor,
+    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
+    NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, PinFieldDefaults,
+    PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults,
+    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
+    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
+    SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
+    TextFieldDefaults, TextSize, TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults,
+    TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -53,6 +54,7 @@ pub struct Theme {
     pub native_select: NativeSelectDefaults,
     pub select: SelectDefaults,
     pub multi_select: SelectDefaults,
+    pub file_field: FileFieldDefaults,
     pub pin_field: PinFieldDefaults,
     pub text_field: TextFieldDefaults,
     pub textarea: TextareaDefaults,
@@ -360,6 +362,15 @@ impl Theme {
         multi_select: SelectDefaults {
             size: Size::Md,
             radius: Size::Sm,
+        },
+        file_field: FileFieldDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            variant: FileFieldVariant::Input,
+            clearable: true,
+            // Three or four lines of prompt at each step, and always taller
+            // than the one-line control it replaces.
+            dropzone_heights: Sizes::new("72px", "88px", "104px", "124px", "148px", "176px"),
         },
         pin_field: PinFieldDefaults {
             length: 4,

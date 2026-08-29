@@ -35,3 +35,23 @@ pub(super) fn CloseIcon() -> Element {
         }
     }
 }
+
+/// The dropzone's prompt. A tray with an arrow going into it, which is the
+/// shape every upload control has settled on.
+#[component]
+pub(super) fn UploadIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M12 16V4" }
+            path { d: "M8 8l4-4 4 4" }
+            path { d: "M4 16v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" }
+        }
+    }
+}

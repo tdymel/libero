@@ -144,6 +144,10 @@ fn render_cost_per_component() {
         // The only component whose cost scales with a prop - two elements per
         // cell, so the pair below is the per-cell price.
         "PinField" { PinField { oninput: move |_| {} } }
+        // Two entries: the dropzone is the bigger surface, and both drive the
+        // same hidden input.
+        "FileField" { FileField { onchange: move |_| {} } }
+        "FileField-dropzone" { FileField { onchange: move |_| {}, variant: "dropzone" } }
         "PinField+6" { PinField { oninput: move |_| {}, length: 6usize } }
         "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
         "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }

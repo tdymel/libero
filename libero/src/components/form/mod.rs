@@ -2,6 +2,7 @@ mod autocomplete;
 mod caption;
 mod checkbox;
 mod field_status;
+mod file_field;
 mod glyphs;
 mod native_select;
 mod number_field;
@@ -23,6 +24,7 @@ pub use autocomplete::{
 pub use caption::Caption;
 pub use checkbox::{Checkbox, CheckboxProps};
 pub use field_status::FieldStatus;
+pub use file_field::{FileField, FileFieldProps, Files};
 pub use native_select::{NativeSelect, NativeSelectProps};
 pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};
@@ -31,7 +33,7 @@ pub use radio::{Radio, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupProps};
 pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectProps,
-    SelectSelectionArgs,
+    SelectionArgs,
 };
 pub use slider::{
     RangeSlider, RangeSliderProps, Slider, SliderChangeEvent, SliderMark, SliderProps, SliderStep,

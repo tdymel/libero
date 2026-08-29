@@ -15,6 +15,7 @@ mod dialog;
 mod divider;
 mod drawer;
 mod field;
+mod file_field;
 mod flex;
 mod float;
 mod grid;
@@ -80,6 +81,10 @@ pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use field::{
     FIELD_CAPTION_FONT_SIZE, FIELD_FONT_SIZE, FIELD_FRAME_GAP, FIELD_GAP, FIELD_HEIGHT,
     FIELD_LABEL_FONT_SIZE, FIELD_PADDING_X, FIELD_PADDING_Y, FieldDefaults, FieldSizeLevel,
+};
+pub use file_field::{
+    FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_DROPZONE_HEIGHT_SIZE, FILE_FIELD_PADDING,
+    FILE_FIELD_RADIUS, FileFieldDefaults, FileFieldVariant,
 };
 pub use flex::{
     FLEX_ALIGN_VAR, FLEX_COLUMN_ALIGN, FLEX_COLUMN_JUSTIFY, FLEX_COLUMN_SPACING, FLEX_COLUMN_WRAP,
