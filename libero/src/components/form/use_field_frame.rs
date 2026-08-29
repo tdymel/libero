@@ -131,7 +131,9 @@ impl<'a> FieldFrameBuilder<'a> {
     }
 }
 
-/// The resolved frame. Pure - no hooks.
+/// The resolved frame. Pure - no hooks, so one prepared frame can be cloned
+/// and rendered once per cell - see `PinField`.
+#[derive(Clone)]
 pub(crate) struct PreparedFrame {
     frame: BoxStyle,
     leading: Option<Element>,

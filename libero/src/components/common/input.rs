@@ -129,7 +129,7 @@ macro_rules! input_from {
     };
 }
 
-input_from!(Sx, ClassList, Size, f32, f64, States, Variables);
+input_from!(Sx, ClassList, Size, f32, f64, usize, States, Variables);
 
 impl From<&'static StaticSx> for Input<Sx> {
     fn from(value: &'static StaticSx) -> Self {

@@ -5,6 +5,7 @@ use crate::{
 };
 
 /// The class / `data-state` / `style` triple the styling props resolve to.
+#[derive(Clone)]
 pub(crate) struct StyleAttributes {
     pub class: String,
     pub data_state: Option<String>,
