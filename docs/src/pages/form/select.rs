@@ -154,6 +154,8 @@ pub fn SelectPage() -> Element {
                         .default("T::label()")
                         .doc("Draws the selected value inside the trigger."),
                     prop("placeholder", "String").doc("Shown while `value` is `None`."),
+                    prop("name", "String")
+                        .doc("Emits a hidden input of that name carrying the selected option's `Options::value()`, so the select posts with a native form. The trigger is a `div` and cannot carry the name itself."),
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron while something is selected. The only way `onchange` fires `None`."),

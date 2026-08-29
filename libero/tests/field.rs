@@ -10,8 +10,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, NativeSelect, NumberField, NumberValue, Options, PasswordField, PinField, Radio,
-        RadioGroup, Slider, Switch, TextField, Textarea,
+        Checkbox, MultiSelect, NativeSelect, NumberField, NumberValue, Options, PasswordField,
+        PinField, Radio, RadioGroup, Select, Slider, Switch, TextField, Textarea,
     },
 };
 
@@ -863,4 +863,54 @@ fn a_pin_field_is_one_group_of_cells_that_share_the_frame() {
     assert_eq!(body.matches(r#"autocomplete="one-time-code""#).count(), 1);
     // `tel`, not `number`: a numeric keypad with no spinner.
     assert_eq!(body.matches(r#"type="tel""#).count(), 6);
+}
+
+#[derive(Clone, PartialEq, Options)]
+enum Fruit {
+    #[option(label = "Sweet apple")]
+    Apple,
+    Pear,
+}
+
+#[test]
+fn a_select_posts_its_value_through_a_hidden_input() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Select { value: Fruit::Apple, onchange: move |_| {}, name: "fruit" }
+                MultiSelect {
+                    value: vec![Fruit::Apple, Fruit::Pear],
+                    onchange: move |_| {},
+                    name: "fruits",
+                }
+                Select { value: Fruit::Pear, onchange: move |_| {}, name: "off", disabled: true }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    // The wire value is the variant's name, not the customised label - a form
+    // must not change what it sends when a label is translated.
+    assert!(body.contains(r#"<input type="hidden" name="fruit" value="Apple"/>"#));
+    assert!(!body.contains(r#"value="Sweet apple"/>"#));
+    // One comma-joined field for a multi-select, not one input per value.
+    assert!(body.contains(r#"<input type="hidden" name="fruits" value="Apple,Pear"/>"#));
+    assert_eq!(body.matches(r#"type="hidden""#).count(), 3);
+    // A disabled select posts nothing.
+    assert!(body.contains(r#"name="off" value="Pear" disabled=true/>"#));
+}
+
+#[test]
+fn a_select_without_a_name_emits_no_hidden_input() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Select { value: Fruit::Apple, onchange: move |_| {} }
+            }
+        }
+    }
+
+    assert!(!body(&render(app)).contains(r#"type="hidden""#));
 }

@@ -68,6 +68,11 @@ field_props! {
         /// Shown while `value` is `None`.
         #[props(default)]
         placeholder: Option<String>,
+        /// Emits a hidden input of that name carrying the selected option's
+        /// `Options::value()`, so the select posts with a native form. The
+        /// trigger is a `div`, so it cannot carry the name itself.
+        #[props(default, into)]
+        name: Option<String>,
         /// Shows an x that clears the selection, which is what makes
         /// `onchange` fire `None`.
         #[props(default)]
@@ -172,6 +177,8 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             },
             selection,
             placeholder: props.placeholder,
+            name: props.name,
+            form_value: props.value.as_ref().map(Options::value),
             clearable: props.clearable.unwrap_or(false),
             searchable,
             search_placeholder: props.search_placeholder,

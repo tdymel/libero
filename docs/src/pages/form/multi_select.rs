@@ -185,6 +185,8 @@ pub fn MultiSelectPage() -> Element {
                         .default("Chip with an x")
                         .doc("Draws one selected value inside the trigger, replacing the chip entirely - the remove control with it. `remove` on the args drops that value; the keyboard stays the control's."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
+                    prop("name", "String")
+                        .doc("Emits a hidden input of that name carrying every selected option's `Options::value()`, comma-joined, so the selection posts with a native form."),
                     prop("clearable", "bool")
                         .default("false")
                         .doc("Shows an x in place of the chevron that empties the selection."),

@@ -130,6 +130,23 @@ retyping it.
 To complete free text rather than choose from a set, reach for
 [Autocomplete](autocomplete.md).
 
+## Posting with a form
+
+`name` emits a hidden input carrying the selected option's `Options::value()`,
+so the select takes part in a plain `<form>` submit. The trigger is a
+`<div role="combobox">` and cannot carry a `name` itself, which is why this is a
+prop and not an attribute you can spread.
+
+```rust
+Select { label: "Fruit", name: "fruit", value: fruit(), onchange: move |next| fruit.set(next) }
+```
+
+`Options::value()` is the **variant's name** for a derived enum, never the
+label - so a `#[option(label = "..")]` or a translated label never changes what
+a form sends. For a runtime set like `String` it is the string itself.
+
+A disabled select posts nothing: the hidden input is disabled with the field.
+
 ## Accessibility
 
 The trigger is a focusable element with `role="combobox"`, `aria-haspopup="listbox"`,
@@ -165,6 +182,7 @@ bottom of the viewport.
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while `value` is `None`. |
+| `name` | `String` | - | Emits a hidden input of that name carrying the selected option's `Options::value()`, so the select posts with a native form. |
 | `clearable` | `bool` | `false` | An x in place of the chevron while something is selected. |
 | `searchable` | `bool` | `false` | A search box at the top of the list. |
 | `filter` | `Callback<SelectFilterArgs<T>, bool>` | case-insensitive `contains` | Narrows the options while searching. |

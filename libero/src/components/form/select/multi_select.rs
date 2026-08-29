@@ -39,6 +39,11 @@ field_props! {
         /// Shown while `value` is empty.
         #[props(default)]
         placeholder: Option<String>,
+        /// Emits a hidden input of that name carrying every selected option's
+        /// `Options::value()`, comma-joined. The trigger is a `div`, so it
+        /// cannot carry the name itself.
+        #[props(default, into)]
+        name: Option<String>,
         /// Shows an x that empties the selection.
         #[props(default)]
         clearable: Option<bool>,
@@ -139,6 +144,8 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     });
 
     let current = props.value.clone();
+    // Built before the pick closure takes `current`.
+    let posted = form_value(&current);
     let removable = props.value.clone();
     rsx! {
         SelectCore {
@@ -162,6 +169,8 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             chip_count: removable.len(),
             onremove: move |index: usize| drop_at(&removable, index, &onchange),
             placeholder: props.placeholder,
+            name: props.name,
+            form_value: posted,
             clearable: props.clearable.unwrap_or(false),
             searchable,
             search_placeholder: props.search_placeholder,
@@ -234,6 +243,25 @@ fn default_chip<T: Options>(value: &T, remove: Callback<()>, size: Size) -> Elem
                 }
             }
         }
+    }
+}
+
+/// Every selected option's wire value, joined for the hidden input.
+///
+/// One comma-joined field rather than one input per value, which is what
+/// Mantine sends too. A backend that wants `fruits[]` repeated has to split it;
+/// which of the two libero should send is W5's to settle
+/// ([[todos]] item 20 in the brain).
+fn form_value<T: Options>(values: &[T]) -> Option<String> {
+    match values.is_empty() {
+        true => None,
+        false => Some(
+            values
+                .iter()
+                .map(Options::value)
+                .collect::<Vec<_>>()
+                .join(","),
+        ),
     }
 }
 
