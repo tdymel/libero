@@ -47,7 +47,13 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
             "multiple",
             sx().selector(
                 "& > [data-slot='value']",
-                sx().display("flex").flex_wrap("wrap").gap("4px"),
+                sx().display("flex")
+                    .flex_wrap("wrap")
+                    .gap("4px")
+                    // The single-line slot clips its overflow for the
+                    // ellipsis. Chips wrap instead, and that clip cut the
+                    // bottom row and the cursor's ring off at the slot's edge.
+                    .overflow("visible"),
             ),
         )
         // One wrapper per selected item: it carries the id

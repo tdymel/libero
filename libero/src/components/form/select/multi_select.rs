@@ -4,7 +4,7 @@ use crate::{
     components::{ActionIcon, Chip, Input, Options, common::field_props, form::glyphs::CloseIcon},
     hooks::use_theme,
     sx::{ThemeAwareValue, sx},
-    theme::Size,
+    theme::{CHIP_HEIGHT, Size},
     utils::warn,
 };
 
@@ -190,9 +190,11 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
 /// The default chip: the label, and an x that drops it.
 fn default_chip<T: Options>(value: &T, remove: Callback<()>, size: Size) -> Element {
     let label = value.label();
-    // In `em`, so the x tracks the chip's font size instead of needing its own
-    // arm of the size scale.
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::String("1em".to_string()).into();
+    // A fraction of the chip's own height, not of its font: the two do not
+    // scale at the same rate (20 -> 36px against 11 -> 15px), so an `em` x
+    // shrinks against its chip as the field grows.
+    let icon_size: Input<ThemeAwareValue> =
+        ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
     rsx! {
         Chip { size,
             "{label}"
@@ -210,12 +212,20 @@ fn default_chip<T: Options>(value: &T, remove: Callback<()>, size: Size) -> Elem
                     aria_label: "Remove {label}",
                     size: icon_size,
                     // A native `<button>` inherits neither `color` nor
-                    // `font-size` - it takes the UA's `buttontext` and 13.3px,
-                    // which is a black cross that ignores the chip's scale.
-                    // `color` is the fix `Chip`'s removed `ondelete` needed;
-                    // `font-size` is what makes the `1em` above mean the
-                    // chip's em.
-                    sx: sx().color("inherit").font_size("inherit"),
+                    // `font-size` - it takes the UA's `buttontext` and 13.3px.
+                    // `color` is the fix `Chip`'s removed `ondelete` needed.
+                    //
+                    // The hover tint is `currentColor` at 20%, so it reads on a
+                    // filled chip and a tonal one alike without either knowing
+                    // the other's colour.
+                    sx: sx()
+                        .color("inherit")
+                        .font_size("inherit")
+                        .border_radius("50%")
+                        .selector(
+                            "&:hover",
+                            sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
+                        ),
                     // The control is one tab stop: the keys, not the buttons,
                     // are how a keyboard removes a chip.
                     tabindex: "-1",
