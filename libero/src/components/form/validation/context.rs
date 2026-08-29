@@ -1,6 +1,9 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use dioxus::prelude::*;
+use dioxus::{
+    core::{Runtime, ScopeId, current_scope_id},
+    prelude::*,
+};
 
 use crate::components::form::{FieldStatus, Validators, worst};
 
@@ -18,6 +21,11 @@ pub(crate) struct FormScope {
     touched: Signal<BTreeSet<String>>,
     submitted: Signal<bool>,
     next_key: Signal<usize>,
+    /// The scope that created the signals above. Cleanup runs inside it: a
+    /// field or fieldset drops while dioxus diffs whatever unmounts the page,
+    /// and touching these signals from that outside scope is what dioxus warns
+    /// about as a copy value used outside its owner.
+    owner: ScopeId,
 }
 
 /// One failing composite rule.
@@ -55,6 +63,7 @@ impl FormScope {
             touched: Signal::new(BTreeSet::new()),
             submitted: Signal::new(false),
             next_key: Signal::new(0),
+            owner: current_scope_id(),
         }
     }
 
@@ -93,10 +102,17 @@ impl FormScope {
         }
     }
 
+    /// Called on drop - see `owner`.
     pub fn withdraw(&mut self, key: usize) {
-        if self.issues.peek().contains_key(&key) {
-            self.issues.write().remove(&key);
-        }
+        let mut issues = self.issues;
+        in_owner(self.owner, || {
+            if issues
+                .try_peek()
+                .is_ok_and(|issues| issues.contains_key(&key))
+            {
+                issues.write().remove(&key);
+            }
+        });
     }
 
     /// The worst composite issue naming `name` that may show: after a submit,
@@ -148,13 +164,15 @@ impl FormScope {
     /// Tolerates a form that is already gone: a field inside it can drop after
     /// the form's own signals did.
     pub fn unregister(&mut self, key: usize) {
-        let present = self
-            .fields
-            .try_peek()
-            .is_ok_and(|fields| fields.contains_key(&key));
-        if present {
-            self.fields.write_unchecked().remove(&key);
-        }
+        let fields = self.fields;
+        in_owner(self.owner, || {
+            let present = fields
+                .try_peek()
+                .is_ok_and(|fields| fields.contains_key(&key));
+            if present {
+                fields.write_unchecked().remove(&key);
+            }
+        });
     }
 
     /// Whether anything blocks a submit: an error on a field, or an error
@@ -228,6 +246,16 @@ impl FormScope {
                 }
             }
         }
+    }
+}
+
+/// Runs drop-time cleanup as the scope that owns the signals. A whole
+/// `VirtualDom` dropping tears hooks down with no runtime left, where the
+/// signals' own `try_peek` already tolerates what is gone.
+fn in_owner(owner: ScopeId, cleanup: impl FnOnce()) {
+    match Runtime::try_current() {
+        Some(runtime) => runtime.in_scope(owner, cleanup),
+        None => cleanup(),
     }
 }
 
