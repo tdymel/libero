@@ -21,6 +21,7 @@ mod field;
 mod file_field;
 mod flex;
 mod float;
+mod form;
 mod grid;
 mod header;
 mod icon;
@@ -106,6 +107,7 @@ pub use flex::{
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
+pub use form::{FIELDSET_GAP, FORM_GAP, FieldsetDefaults, FormDefaults};
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROWS_VAR, GRID_ROW_UNIT,
     GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,

@@ -1,9 +1,14 @@
-use dioxus::prelude::*;
+use std::{cell::Cell, rc::Rc};
+
+use dioxus::{
+    core::{AttributeValue, Runtime, ScopeId, current_scope_id},
+    prelude::*,
+};
 
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        form::{Caption, FieldStatus},
+        form::{Caption, FieldEntry, FieldStatus, FormScope, worst},
         layout::{BoxStyle, use_box},
     },
     hooks::use_root_id,
@@ -72,6 +77,8 @@ pub(crate) struct FieldBuilder<'a> {
     description: Option<&'a Caption>,
     helper: Option<&'a Caption>,
     status: Option<&'a Input<FieldStatus>>,
+    rules: Option<FieldStatus>,
+    name: Option<&'a str>,
     required: bool,
     disabled: bool,
     inline: bool,
@@ -92,6 +99,8 @@ impl Default for FieldBuilder<'_> {
             description: None,
             helper: None,
             status: None,
+            rules: None,
+            name: None,
             required: false,
             disabled: false,
             inline: false,
@@ -128,6 +137,22 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn status(mut self, status: &'a Input<FieldStatus>) -> Self {
         self.status = Some(status);
+        self
+    }
+
+    /// What the field's own `validate` rules say, or `None` when it has none.
+    /// Shown once the field has lost focus or its form was submitted.
+    #[inline]
+    pub fn rules(mut self, rules: Option<FieldStatus>) -> Self {
+        self.rules = rules;
+        self
+    }
+
+    /// The name composite rules address the field by, for a field whose
+    /// `name` is a prop rather than an attribute.
+    #[inline]
+    pub fn name(mut self, name: Option<&'a str>) -> Self {
+        self.name = name;
         self
     }
 
@@ -204,7 +229,56 @@ impl<'a> FieldBuilder<'a> {
         let id = use_root_id(self.attributes);
         let id_value = id();
 
-        let status = self.status.and_then(Input::as_ref);
+        // One hook for the touched flag, the form registration and its cleanup:
+        // every field pays for it, validated or not.
+        let hook = use_hook(|| {
+            Rc::new(FieldHook {
+                touched: Cell::new(false),
+                owner: current_scope_id(),
+                form: try_consume_context::<FormScope>().map(|mut scope| (scope, scope.key())),
+            })
+        });
+        let scope = hook.form.map(|(scope, _)| scope);
+
+        let name = scope.and(
+            self.name
+                .map(str::to_string)
+                .or_else(|| attribute_text(self.attributes, "name")),
+        );
+        let label = self.label.unwrap_or(&Caption::None);
+        let explicit = self
+            .status
+            .and_then(Input::as_ref)
+            .cloned()
+            .unwrap_or_default();
+        let validated = self.rules.is_some();
+        let rules = self.rules.unwrap_or_default();
+
+        if let Some((mut scope, key)) = hook.form {
+            scope.register(
+                key,
+                FieldEntry {
+                    id: id_value.clone(),
+                    label: label.text().map(|text| text.to_string()),
+                    name: name.clone(),
+                    status: worst(explicit.clone(), rules.clone()),
+                },
+            );
+        }
+
+        // Rules wait for the first blur or submit; an explicit status - a
+        // server's answer - never waits.
+        let revealed = hook.touched.get() || scope.is_some_and(|scope| scope.submitted());
+        let composite = match (scope, &name) {
+            (Some(scope), Some(name)) => scope.visible_issue(name),
+            _ => FieldStatus::Valid,
+        };
+        let shown = worst(
+            worst(explicit, if revealed { rules } else { FieldStatus::Valid }),
+            composite,
+        );
+
+        let status = Some(&shown);
         let status_state = status.and_then(FieldStatus::state);
 
         let mut states = self
@@ -222,7 +296,6 @@ impl<'a> FieldBuilder<'a> {
         }
         let states: Input<States> = states.into();
 
-        let label = self.label.unwrap_or(&Caption::None);
         let description = self.description.unwrap_or(&Caption::None);
         let helper = self.helper.unwrap_or(&Caption::None);
 
@@ -245,7 +318,20 @@ impl<'a> FieldBuilder<'a> {
         if let Some(sx) = self.sx {
             wrapper = wrapper.sx(sx);
         }
-        let wrapper = wrapper.prepare();
+        let mut wrapper = wrapper.prepare();
+        // `focusout` bubbles, so one listener on the wrapper sees the control
+        // lose focus whatever it is - and leaves a caller's own `onblur` alone.
+        if validated || scope.is_some() {
+            let hook = hook.clone();
+            wrapper = wrapper.event("onfocusout", move |_: FocusEvent| {
+                if !hook.touched.replace(true) {
+                    Runtime::current().needs_update(hook.owner);
+                }
+                if let (Some(mut scope), Some(name)) = (scope, &name) {
+                    scope.touch(name);
+                }
+            });
+        }
 
         PreparedField {
             label: label_node(&id_value, label, self.required, self.labelled_by),
@@ -260,6 +346,23 @@ impl<'a> FieldBuilder<'a> {
             inline: self.inline,
             states,
             wrapper,
+        }
+    }
+}
+
+/// What a field keeps across renders for validation. Nothing outside the field
+/// reads `touched`, so it re-renders its owner by hand rather than through a
+/// signal.
+struct FieldHook {
+    touched: Cell<bool>,
+    owner: ScopeId,
+    form: Option<(FormScope, usize)>,
+}
+
+impl Drop for FieldHook {
+    fn drop(&mut self) {
+        if let Some((mut scope, key)) = self.form {
+            scope.unregister(key);
         }
     }
 }
@@ -345,6 +448,16 @@ impl PreparedField {
 
 /// A caller's own `aria-describedby` wins outright - ours is dropped rather
 /// than merged, so the caption props become purely visual.
+fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
+    attributes
+        .iter()
+        .rev()
+        .find_map(|attribute| match (attribute.name, &attribute.value) {
+            (found, AttributeValue::Text(value)) if found == name => Some(value.clone()),
+            _ => None,
+        })
+}
+
 fn caller_names_the_description(attributes: &[Attribute]) -> bool {
     attributes
         .iter()

@@ -238,6 +238,10 @@ field_props! {
         /// a removal or a clear.
         #[props(default)]
         onchange: Option<EventHandler<Files>>,
+        /// Rules over the files, shown once the field loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<Files>,
         /// The `Dropzone` variant's prompt, inside the surface. Ignored by
         /// the `Input` variant, which shows `placeholder` instead.
         #[props(default)]
@@ -357,6 +361,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&props.value))
+        .name(props.name.as_deref())
         .required(required)
         .disabled(disabled)
         .size(size)

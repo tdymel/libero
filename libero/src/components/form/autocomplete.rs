@@ -44,6 +44,10 @@ field_props! {
         /// picked or the field is cleared.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
+        /// Rules over the text, shown once the field loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<String>,
         /// The suggestions to offer. `T` infers from it, so no call site ever
         /// annotates one.
         #[props(default)]
@@ -130,6 +134,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&props.value))
         .required(required)
         .disabled(disabled)
         .size(size)

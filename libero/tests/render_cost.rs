@@ -141,6 +141,12 @@ fn render_cost_per_component() {
         "PasswordField" { PasswordField { oninput: move |_| {} } }
         "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
+        // Rules never compare equal, so this one always re-renders with its parent.
+        "TextField+validate" { TextField { value: "", oninput: move |_| {}, validate: [not_empty.error("r")] } }
+        "Form" { Form { value: (), "x" } }
+        "Fieldset" { Fieldset { value: (), "x" } }
+        // Inside a form: registration and the composite lookup.
+        "Form+TextField" { Form { value: (), TextField { name: "n", oninput: move |_| {} } } }
         // The only component whose cost scales with a prop - two elements per
         // cell, so the pair below is the per-cell price.
         "PinField" { PinField { oninput: move |_| {} } }

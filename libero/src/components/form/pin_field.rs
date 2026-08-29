@@ -48,6 +48,10 @@ field_props! {
         /// next. Native name, native timing.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
+        /// Rules over the pin, shown once the field loses focus or its form is
+        /// submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<String>,
         /// Fires once when the last empty cell fills. Clearing a cell arms it
         /// again.
         #[props(default)]
@@ -125,6 +129,8 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&value))
+        .name(props.name.as_deref())
         .required(required)
         .disabled(disabled)
         .size(size)

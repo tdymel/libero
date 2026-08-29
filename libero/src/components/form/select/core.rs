@@ -150,6 +150,9 @@ field_props! {
         /// shape a native `<select multiple>` sends.
         #[props(default)]
         form_values: Vec<String>,
+        /// What the skin's `validate` rules say; `T` never reaches here.
+        #[props(default)]
+        rules: Option<crate::components::FieldStatus>,
         /// Which rows survive the query, one `bool` per row. The skin closes
         /// over its own `Vec<T>` and the caller's filter, so `T` never reaches
         /// here - the mask is the same erasure `rows: Vec<Element>` performs.
@@ -257,6 +260,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.rules.clone())
+        .name(props.name.as_deref())
         .required(required)
         .disabled(disabled)
         .size(size)

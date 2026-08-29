@@ -3,7 +3,9 @@ mod caption;
 mod checkbox;
 mod color;
 mod field_status;
+mod fieldset;
 mod file_field;
+mod form;
 mod glyphs;
 mod native_select;
 mod number_field;
@@ -18,6 +20,7 @@ mod text_field;
 mod textarea;
 mod use_field;
 mod use_field_frame;
+mod validation;
 
 pub use autocomplete::{
     Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, AutocompleteProps,
@@ -30,7 +33,9 @@ pub use color::{
     ParseColorError, Swatches,
 };
 pub use field_status::FieldStatus;
+pub use fieldset::{Fieldset, FieldsetProps};
 pub use file_field::{FileField, FileFieldProps, Files};
+pub use form::{Form, FormProps, FormValue};
 pub use native_select::{NativeSelect, NativeSelectProps};
 pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};
@@ -50,3 +55,8 @@ pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaProps};
 pub(crate) use use_field::use_field;
 pub(crate) use use_field_frame::{FIELD_CONTROL_SX, field_control_sx, use_field_frame};
+pub(crate) use validation::{FieldEntry, FormScope, SummaryItem, issues_of, worst};
+pub use validation::{
+    FieldPath, Fields, IsEmpty, Rule, Validator, Validators, is_email, max, max_length, min,
+    min_length, not_empty,
+};

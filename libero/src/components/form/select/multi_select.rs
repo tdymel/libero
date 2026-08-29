@@ -44,6 +44,10 @@ field_props! {
         /// the name itself.
         #[props(default, into)]
         name: Option<String>,
+        /// Rules over the selection, shown once the select loses focus or its
+        /// form is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<Vec<T>>,
         /// Shows an x that empties the selection.
         #[props(default)]
         clearable: Option<bool>,
@@ -146,6 +150,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let current = props.value.clone();
     // Built before the pick closure takes `current`.
     let posted = current.iter().map(Options::value).collect::<Vec<_>>();
+    let rules = props.validate.check(&current);
     let removable = props.value.clone();
     rsx! {
         SelectCore {
@@ -171,6 +176,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             placeholder: props.placeholder,
             name: props.name,
             form_values: posted,
+            rules,
             clearable: props.clearable.unwrap_or(false),
             searchable,
             search_placeholder: props.search_placeholder,

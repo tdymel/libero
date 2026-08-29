@@ -42,6 +42,10 @@ field_props! {
         /// lone `Change`.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
+        /// Rules over the color, shown once the field loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<ColorCode>,
         /// How the text shows the color, and so what `name` posts. Hex by
         /// default, hexa `with_alpha`. Typing accepts every form either way.
         #[props(default, into)]
@@ -136,6 +140,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&value))
         .required(required)
         .disabled(disabled)
         .size(size)

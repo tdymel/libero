@@ -76,6 +76,10 @@ field_props! {
         /// trigger is a `div`, so it cannot carry the name itself.
         #[props(default, into)]
         name: Option<String>,
+        /// Rules over the selection, shown once the select loses focus or its
+        /// form is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<Option<T>>,
         /// Shows an x that clears the selection, which is what makes
         /// `onchange` fire `None`.
         #[props(default)]
@@ -182,6 +186,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             placeholder: props.placeholder,
             name: props.name,
             form_values: vec![props.value.as_ref().map(Options::value).unwrap_or_default()],
+            rules: props.validate.check(&props.value),
             clearable: props.clearable.unwrap_or(false),
             searchable,
             search_placeholder: props.search_placeholder,

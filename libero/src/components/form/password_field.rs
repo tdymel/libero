@@ -15,6 +15,10 @@ field_props! {
         /// Fires per keystroke with the text the field should hold next.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
+        /// Rules over the secret, shown once the field loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Offers the reveal button at all. On by default - a password nobody
@@ -73,6 +77,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             description: props.description,
             helper: props.helper,
             status: props.status,
+            validate: props.validate,
             size: props.size,
             radius: props.radius,
             disabled: props.disabled,

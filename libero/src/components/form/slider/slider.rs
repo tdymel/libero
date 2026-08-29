@@ -49,6 +49,10 @@ field_props! {
         /// value.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<V>>>,
+        /// Rules over the value, shown once the slider loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<V>,
     }
 }
 
@@ -107,6 +111,8 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&props.value))
+        .name(props.name.as_deref())
         .required(required)
         .disabled(disabled)
         .size(props.size.copied_or(Size::Md))

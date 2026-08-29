@@ -96,6 +96,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         checkbox,
         radio,
         field,
+        form,
+        fieldset,
         combobox,
         slider,
         list,
@@ -170,6 +172,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(checkbox.to_css_declarations());
     declarations.extend(radio.to_css_declarations());
     declarations.extend(field.to_css_declarations());
+    declarations.extend(form.to_css_declarations());
+    declarations.extend(fieldset.to_css_declarations());
     declarations.extend(file_field.to_css_declarations());
     declarations.extend(pin_field.to_css_declarations());
     declarations.extend(color_picker.to_css_declarations());

@@ -56,6 +56,10 @@ field_props! {
         /// pair.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<(V, V)>>>,
+        /// Rules over the pair, shown once the slider loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<(V, V)>,
     }
 }
 
@@ -116,6 +120,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&props.value))
+        .name(props.name.as_deref())
         .required(required)
         .disabled(disabled)
         .size(props.size.copied_or(Size::Md))

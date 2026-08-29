@@ -52,6 +52,10 @@ field_props! {
         /// Called with the option the caller should select next.
         #[props(default)]
         onchange: Option<EventHandler<T>>,
+        /// Rules over the selection, shown once the group loses focus or its
+        /// form is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<Option<T>>,
         /// The options to show. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
         /// here.
@@ -106,6 +110,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&props.value))
         .required(required)
         .disabled(disabled)
         .size(size)

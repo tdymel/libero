@@ -4,16 +4,16 @@ use super::{
     CodeBlockDefaults, CodeDefaults, Color, ColorFieldDefaults, ColorPickerDefaults,
     ColorPickerSizeLevel, ColorShade, ColorSwatchDefaults, ColorValue, ComboboxDefaults,
     ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DialogDefaults, DividerDefaults,
-    DrawerDefaults, FieldDefaults, FieldSizeLevel, FileFieldDefaults, FileFieldVariant,
-    FlexAxisDefaults, FlexDefaults, FloatDefaults, GridDefaults, HeaderDefaults, HexColor,
-    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, PinFieldDefaults,
-    PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults,
-    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
-    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
-    SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextSize, TextareaDefaults, TitleDefaults, TitleSize, TooltipDefaults,
-    TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    DrawerDefaults, FieldDefaults, FieldSizeLevel, FieldsetDefaults, FileFieldDefaults,
+    FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults, FormDefaults, GridDefaults,
+    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
+    MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults,
+    PinFieldDefaults, PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness,
+    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel,
+    TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults, TitleDefaults, TitleSize,
+    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -52,6 +52,8 @@ pub struct Theme {
     /// Shared by every field: the typography of the slots stacked around a
     /// control. The frame numbers stay per component until R5.
     pub field: FieldDefaults,
+    pub form: FormDefaults,
+    pub fieldset: FieldsetDefaults,
     pub native_select: NativeSelectDefaults,
     pub select: SelectDefaults,
     pub multi_select: SelectDefaults,
@@ -376,6 +378,8 @@ impl Theme {
             // than the one-line control it replaces.
             dropzone_heights: Sizes::new("72px", "88px", "104px", "124px", "148px", "176px"),
         },
+        form: FormDefaults { gap: "16px" },
+        fieldset: FieldsetDefaults { gap: "12px" },
         pin_field: PinFieldDefaults {
             length: 4,
             size: Size::Md,

@@ -44,6 +44,10 @@ pub struct NumberFieldProps<T: NumberValue> {
     /// buffer is not yet a number, so `"-"` and `"1."` never reach it.
     #[props(default)]
     onchange: Option<EventHandler<T>>,
+    /// Rules over the number, shown once the field loses focus or its form is
+    /// submitted.
+    #[props(default, into)]
+    validate: crate::components::Validators<Option<T>>,
     /// Floor, enforced on typing and on the steppers alike.
     #[props(default)]
     min: Option<T>,
@@ -168,6 +172,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&props.value))
         .required(required)
         .disabled(disabled)
         .size(size)

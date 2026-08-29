@@ -94,6 +94,10 @@ field_props! {
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
+        /// Rules over `checked`, shown once the checkbox loses focus or its
+        /// form is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<bool>,
         /// Names the checkbox when it has no `label`; `attributes` cannot,
         /// they land on the input but a caller may not want a visible label.
         #[props(default, into)]
@@ -132,6 +136,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&checked))
         .required(required)
         .disabled(disabled)
         .size(size)

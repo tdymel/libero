@@ -33,6 +33,10 @@ field_props! {
         /// Native name, native timing.
         #[props(default)]
         oninput: Option<EventHandler<String>>,
+        /// Rules over the text, shown once the field loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Visible lines, which is what sets the starting height. The user can
@@ -62,6 +66,11 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(
+            props
+                .validate
+                .check(&props.value.clone().unwrap_or_default()),
+        )
         .required(required)
         .disabled(disabled)
         .size(size)

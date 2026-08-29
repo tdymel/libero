@@ -103,6 +103,10 @@ field_props! {
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
+        /// Rules over `checked`, shown once the switch loses focus or its form
+        /// is submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<bool>,
         /// Names the switch when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
@@ -139,6 +143,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
+        .rules(props.validate.check(&checked))
         .required(required)
         .disabled(disabled)
         .size(size)
