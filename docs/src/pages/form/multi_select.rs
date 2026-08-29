@@ -2,7 +2,8 @@ use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Chip, Code, FieldStatus, MultiSelect, Options, SelectFilterArgs, SelectOptionArgs, Text,
+        ActionIcon, Chip, Code, FieldStatus, MultiSelect, Options, SelectFilterArgs,
+        SelectOptionArgs, SelectSelectionArgs, Text,
     },
     sx::sx,
 };
@@ -36,8 +37,22 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
     }
 }"#;
 
-const CUSTOM_SELECTION: &str = r#"selection: move |topping: Topping| rsx! {
-    Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectSelectionArgs<Topping>| rsx! {
+    Chip { size: "xs", variant: "outlined",
+        "{s.value.emoji()} {s.value.label()}"
+        // The chip is the caller's, remove control included. The keys stay
+        // the control's either way.
+        span { onmousedown: move |event| event.prevent_default(),
+            onclick: move |event| event.stop_propagation(),
+            ActionIcon {
+                aria_label: "Remove {s.value.label()}",
+                size: "xs",
+                tabindex: "-1",
+                onclick: move |_| s.remove.call(()),
+                "x"
+            }
+        }
+    }
 }"#;
 
 /// The point of the switch: a filter can test anything the caller knows, so
@@ -116,9 +131,25 @@ fn topping_row(o: SelectOptionArgs<Topping>) -> Element {
     }
 }
 
-fn topping_selection(topping: Topping) -> Element {
+/// The chip's inside is the caller's, the remove control with it - `remove` on
+/// the args is the wiring. The keyboard stays `MultiSelect`'s either way.
+fn topping_selection(s: SelectSelectionArgs<Topping>) -> Element {
+    let label = s.value.label();
     rsx! {
-        Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+        Chip { size: "xs", variant: "outlined",
+            "{s.value.emoji()} {label}"
+            span {
+                onmousedown: move |event: MouseEvent| event.prevent_default(),
+                onclick: move |event: MouseEvent| event.stop_propagation(),
+                ActionIcon {
+                    aria_label: "Remove {label}",
+                    size: "xs",
+                    tabindex: "-1",
+                    onclick: move |_| s.remove.call(()),
+                    "x"
+                }
+            }
+        }
     }
 }
 
@@ -147,9 +178,9 @@ pub fn MultiSelectPage() -> Element {
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. `selected` on the args is there for a checkmark."),
-                    prop("selection", "Callback<T, Element>")
-                        .default("Chip")
-                        .doc("Draws one selected value inside the trigger. Replaces the chip entirely."),
+                    prop("selection", "Callback<SelectSelectionArgs<T>, Element>")
+                        .default("Chip with an x")
+                        .doc("Draws one selected value inside the trigger, replacing the chip entirely - the remove control with it. `remove` on the args drops that value; the keyboard stays the control's."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
                     prop("clearable", "bool")
                         .default("false")
@@ -179,7 +210,13 @@ pub fn MultiSelectPage() -> Element {
                     "open on a pick and a pick toggles the row; Escape, clicking elsewhere and the "
                     "trigger close it. The selection is drawn in the trigger as chips, unless "
                     Code { source: "selection" }
-                    " draws it some other way."
+                    " draws it some other way. Each chip carries an x, and the trigger answers "
+                    Code { source: "ArrowLeft" }
+                    " / "
+                    Code { source: "ArrowRight" }
+                    " to move over the chips and "
+                    Code { source: "Backspace" }
+                    " to remove one - the last, with no chip picked out."
                 }
             },
             Demo {

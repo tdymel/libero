@@ -58,15 +58,33 @@ MultiSelect {
             Text { component: "span", "✓" }
         }
     },
-    selection: move |topping: Topping| rsx! {
-        Chip { size: "xs", variant: "outlined", "{topping.emoji()} {topping.label()}" }
+    selection: move |s: SelectSelectionArgs<Topping>| rsx! {
+        Chip { size: "xs", variant: "outlined",
+            "{s.value.emoji()} {s.value.label()}"
+            span { onmousedown: move |event| event.prevent_default(),
+                onclick: move |event| event.stop_propagation(),
+                ActionIcon {
+                    aria_label: "Remove {s.value.label()}",
+                    size: "xs",
+                    tabindex: "-1",
+                    onclick: move |_| s.remove.call(()),
+                    "x"
+                }
+            }
+        }
     },
 }
 ```
 
-The default chips cannot be removed from the trigger: `Chip` has no close
-affordance yet, so deselecting means reopening the list. `clearable` empties the
-whole selection at once.
+The split: **the control owns the keyboard, the slot owns the drawing.** A
+default chip carries an x of its own; a custom one draws whatever it likes and
+wires `s.remove` into it, and nothing of the component's is added around it. The
+two handlers in the snippet are what keep the trigger's focus and stop the click
+from opening the list - a custom chip needs both.
+
+`Chip` itself gains no close affordance: the x belongs to whoever owns the
+collection, which is `MultiSelect`. `clearable` still empties the whole selection
+at once.
 
 ## Accessibility
 
@@ -84,6 +102,15 @@ elsewhere closes it too - the trigger closes on blur, and the list cancels
 
 Rows carry `aria-selected`. Typeahead - jumping to a row by its first letter - is
 not implemented yet.
+
+The chips answer the keyboard too, and the trigger keeps the focus for that as
+well. ArrowLeft and ArrowRight move a cursor over the chips - from no cursor,
+ArrowLeft lands on the last one - and Backspace or Delete removes the chip under
+it, or the last chip when there is none. While the cursor is on a chip and the
+list is closed, `aria-activedescendant` names that chip; an open list takes the
+attribute back, so the two never claim it at once. The remove buttons are
+`tabindex="-1"`: the control is one tab stop, and the keys are how a keyboard
+removes a chip. Inside the search box Backspace only ever edits the query.
 
 The list is portaled to the document root through `use_popover`, so no
 `overflow: hidden` ancestor clips it and it flips above the trigger near the
@@ -144,7 +171,7 @@ ticked without retyping it. It is cleared when the list closes.
 | `onchange` | `EventHandler<Vec<T>>` | - | The whole selection the caller should hold next. |
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
-| `selection` | `Callback<T, Element>` | `Chip` | Draws one selected value inside the trigger. |
+| `selection` | `Callback<SelectSelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value inside the trigger, the remove control included. `remove` on the args drops that value. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `clearable` | `bool` | `false` | An x in place of the chevron that empties the selection. |
 | `searchable` | `bool` | `false` | A search box at the top of the list. |
@@ -179,4 +206,5 @@ component starts at.
 The wrapper, the frame and the trigger carry the field's `data-state` tokens:
 `size-<size>`, `radius-<size>`, `disabled`, `required`, `warning`, `error`.
 The trigger adds `multiple` on a `MultiSelect`. The rows are `ComboboxOption`s,
-with `active` and `selected`.
+with `active` and `selected`. Each chip sits in a `data-slot="chip"` wrapper that
+carries its id, and the one under the keyboard cursor adds `data-cursor="true"`.
