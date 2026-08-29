@@ -6,7 +6,7 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{base_color, contrast_color, field_props, focus_ring_sx, variables},
-        form::use_field,
+        form::{use_bound, use_field},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_theme},
@@ -108,6 +108,11 @@ field_props! {
         #[props(default, into)]
         validate: crate::components::Validators<bool>,
         /// Names the switch when it has no `label`.
+        /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
+        /// binds it to the surrounding `Form`'s value when the field has no
+        /// `onchange`.
+        #[props(default, into)]
+        name: crate::components::FieldName<bool>,
         #[props(default, into)]
         aria_label: Option<String>,
     }
@@ -126,11 +131,12 @@ pub fn Switch(props: SwitchProps) -> Element {
 
     let size = props.size.copied_or(theme.switch.size);
     let radius = props.radius.copied_or(theme.switch.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
-    let checked = props.checked.unwrap_or(false);
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let checked = bound.value().or(props.checked).unwrap_or(false);
 
-    if props.checked.is_some() && props.onchange.is_none() {
+    if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Switch: `checked` without `onchange` can never change.");
     }
     if props.onchange.is_some() && props.checked.is_none() {
@@ -144,6 +150,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&checked))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -178,10 +185,10 @@ pub fn Switch(props: SwitchProps) -> Element {
     let track_class = use_css(Some(&SWITCH_TRACK_SX), CssLayer::Framework);
     let thumb_class = use_css(Some(&SWITCH_THUMB_SX), CssLayer::Framework);
 
-    let onchange = props.onchange;
+    let onchange = bound.emit(props.onchange);
     let toggle = move || {
         if let Some(onchange) = &onchange {
-            onchange.call(!checked);
+            onchange(!checked);
         }
     };
 
@@ -190,29 +197,39 @@ pub fn Switch(props: SwitchProps) -> Element {
         .attr("type", "checkbox")
         .attr("role", "switch")
         .attr("checked", checked)
+        .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("aria-label", props.aria_label)
         // `onclick`, not `onchange`: cancelling the click reverts the
         // browser's own flip, so Rust state stays the only source of truth.
-        .event("onclick", move |event: Event<MouseData>| {
-            event.prevent_default();
-            toggle();
+        .event("onclick", {
+            let toggle = toggle.clone();
+            move |event: Event<MouseData>| {
+                event.prevent_default();
+                toggle();
+            }
         })
         // Blitz forwards a `<label>` click to its input as a default action
         // that emits `input`, never `click`, so `onclick` alone leaves the
         // switch dead there. On the web a cancelled click suppresses `input`,
         // and both handlers compute the same `!checked` anyway, so firing
         // twice is a no-op rather than a double toggle.
-        .event("oninput", move |_: FormEvent| toggle())
+        .event("oninput", {
+            let toggle = toggle.clone();
+            move |_: FormEvent| toggle()
+        })
         // `role="switch"` is a button-like control, and ARIA's pattern for it
         // takes Enter as well as Space. A bare checkbox does not, on any
         // platform, so the key has to be handled here rather than left to the
         // UA. Space still arrives as a click and is not touched.
-        .event("onkeydown", move |event: Event<KeyboardData>| {
-            if event.key() == Key::Enter && !disabled {
-                event.prevent_default();
-                toggle();
+        .event("onkeydown", {
+            let toggle = toggle.clone();
+            move |event: Event<KeyboardData>| {
+                if event.key() == Key::Enter && !disabled {
+                    event.prevent_default();
+                    toggle();
+                }
             }
         })
         // Void element - `()` costs no dynamic node.

@@ -19,6 +19,11 @@ field_props! {
         /// is submitted.
         #[props(default, into)]
         validate: crate::components::Validators<String>,
+        /// What the field posts as. A path - `Signup::FIELDS.password()` - also
+        /// binds it to the surrounding `Form`'s value when the field has no
+        /// `oninput`.
+        #[props(default, into)]
+        name: crate::components::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Offers the reveal button at all. On by default - a password nobody
@@ -82,6 +87,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             radius: props.radius,
             disabled: props.disabled,
             required: props.required,
+            name: props.name,
             value: props.value,
             oninput: props.oninput,
             placeholder: props.placeholder,

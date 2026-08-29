@@ -5,7 +5,7 @@ use super::scale::{Scale, control_spacing};
 use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};
 use super::value::SliderCoreValue;
 use crate::{
-    components::{FieldStatus, Input, common::field_props, form::use_field},
+    components::{FieldStatus, Input, common::field_props, form::use_bound, use_field},
     sx::ThemeAwareValue,
     theme::Size,
 };
@@ -13,8 +13,9 @@ use crate::{
 field_props! {
     pub struct RangeSliderProps<V: SliderValue> {
         /// The two ends, in track order. Strictly controlled - pair it with
-        /// `oninput`.
-        value: (V, V),
+        /// `oninput`. Inside a `Form`, a path `name` can supply it instead.
+        #[props(default)]
+        value: Option<(V, V)>,
         /// Defaults to the first option, or `0.0` on a continuous scale.
         #[props(default, into)]
         min: Option<V>,
@@ -49,8 +50,10 @@ field_props! {
         aria_label_to: Option<String>,
         /// Emits two hidden inputs of that name, in track order, so the pair
         /// posts with a form - `FormData::get_all` reads it back.
-        #[props(default)]
-        name: Option<String>,
+        /// A path - `Settings::FIELDS.volume()` - also binds the value to the
+        /// surrounding `Form`'s value when there is no `oninput`.
+        #[props(default, into)]
+        name: crate::components::FieldName<(V, V)>,
         /// Fires per value: a drag is the DOM's `input` event, not its
         /// `change`. `Start`/`End` bracket a drag, `Change` carries every new
         /// pair.
@@ -76,6 +79,12 @@ field_props! {
 pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
     let scale = Scale::of::<V>(props.min.as_ref(), props.max.as_ref(), props.step);
     let (min, max, step) = scale.bounds();
+    let bound = use_bound(&props.name, props.oninput.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let value = bound
+        .value()
+        .or_else(|| props.value.clone())
+        .unwrap_or_else(|| (V::at(min), V::at(max)));
 
     // A discrete value names itself unless the caller says how - which is the
     // hook an i18n'd slider hangs on, so every caption has to go through it.
@@ -103,13 +112,22 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
     let label = use_callback(move |position: f64| name(&V::at(position)));
 
     let oninput = props.oninput;
+    let setter = bound.setter();
     let emit = use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
-        if let Some(oninput) = &oninput {
-            oninput.call(event.map(|value| (V::at(value.thumb(0)), V::at(value.thumb(1)))));
+        let event = event.map(|value| (V::at(value.thumb(0)), V::at(value.thumb(1))));
+        match (&oninput, &setter) {
+            (Some(oninput), _) => oninput.call(event),
+            // A bound slider keeps only the values - `Start`/`End` carry
+            // nothing a form's value holds.
+            (None, Some(setter)) => {
+                if let SliderChangeEvent::Change(value) = event {
+                    setter.set(value);
+                }
+            }
+            (None, None) => {}
         }
     });
 
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
     // The thumbs carry `role="slider"`, and `for` names only a labelable
@@ -120,8 +138,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&props.value))
-        .name(props.name.as_deref())
+        .rules(props.validate.check(&value))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(props.size.copied_or(Size::Md))
@@ -140,7 +158,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             .is_some();
     let control_sx = control_spacing(above, below);
 
-    let (from, to) = &props.value;
+    let (from, to) = &value;
     let control = rsx! {
         SliderCore {
             value: SliderCoreValue::Range { from: from.position(), to: to.position() },
@@ -153,7 +171,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             attributes: props.attributes,
             size: props.size,
             color: props.color,
-            disabled: props.disabled,
+            disabled: Some(bound.disabled(props.disabled)),
             label: labelled.then_some(label),
             aria_label: props.aria_label_from,
             aria_label_to: props.aria_label_to,
@@ -161,8 +179,8 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             describedby: field.describedby(),
             invalid: field.invalid(),
             required,
-            name: props.name,
-            oninput: props.oninput.is_some().then(|| EventHandler::new(move |event| emit.call(event))),
+            name: bound.name().map(str::to_string),
+            oninput: (props.oninput.is_some() || bound.is_bound()).then(|| EventHandler::new(move |event| emit.call(event))),
         }
     };
 

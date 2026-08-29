@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, Caption, ClassList, HtmlTag, Input, NumberValue, States,
-        form::{FIELD_CONTROL_SX, FieldStatus, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, FieldStatus, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
@@ -58,6 +58,11 @@ pub struct NumberFieldProps<T: NumberValue> {
     /// `T::default_step()` - `1` for an integer, `1.0` for a float.
     #[props(default)]
     step: Option<T>,
+    /// What the field posts as. A path - `Signup::FIELDS.age()` - also
+    /// binds it to the surrounding `Form`'s value when the field has no
+    /// `onchange`.
+    #[props(default, into)]
+    name: crate::components::FieldName<Option<T>>,
     #[props(default, into)]
     placeholder: Option<String>,
     /// Shows the minus/plus buttons in the trailing slot. Off by default: a
@@ -124,10 +129,13 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
 
     let size = props.size.copied_or(theme.number_field.size);
     let radius = props.radius.copied_or(theme.number_field.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
-    if props.onchange.is_none() {
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let current = bound.value().unwrap_or(props.value);
+
+    if props.onchange.is_none() && !bound.is_bound() {
         warn("NumberField: without `onchange` the value can never change.");
     }
 
@@ -137,24 +145,29 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     // field controlled.
     let mut buffer = use_signal(String::new);
     let display = match T::parse(&buffer()) {
-        Some(parsed) if Some(parsed) == props.value => buffer(),
-        _ => props.value.map(|value| value.format()).unwrap_or_default(),
+        Some(parsed) if Some(parsed) == current => buffer(),
+        _ => current.map(|value| value.format()).unwrap_or_default(),
     };
 
     let min = props.min;
     let max = props.max;
     let step = props.step.unwrap_or_else(T::default_step);
-    let value = props.value;
+    let value = current;
     let onchange = props.onchange;
+    let setter = bound.setter();
 
     // Not `use_callback`: a stepper is a click handler, and a click handler
     // that writes a signal the field also reads is re-entrant.
     let publish = move |next: T| {
-        if let Some(onchange) = &onchange {
-            onchange.call(next.clamp_to(min, max));
+        let next = next.clamp_to(min, max);
+        match (&onchange, &setter) {
+            (Some(onchange), _) => onchange.call(next),
+            (None, Some(setter)) => setter.set(Some(next)),
+            (None, None) => {}
         }
     };
-    let mut nudge = move |up: bool| {
+    let typed_publish = publish.clone();
+    let nudge = move |up: bool| {
         // An empty field steps from zero, unless the type has none.
         let Some(from) = value.or_else(T::zero) else {
             return;
@@ -166,13 +179,16 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         buffer.set(String::new());
         publish(next);
     };
+    let (mut decrement, mut increment, mut arrow) = (nudge.clone(), nudge.clone(), nudge);
+    let publish = typed_publish;
 
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&props.value))
+        .rules(props.validate.check(&current))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -206,7 +222,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
                 // job from there.
                 tabindex: "-1",
                 disabled,
-                onclick: move |_| nudge(false),
+                onclick: move |_| decrement(false),
                 MinusIcon {}
             }
             ActionIcon {
@@ -214,7 +230,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
                 size: ThemeAwareValue::Size(stepper_size(size)),
                 tabindex: "-1",
                 disabled,
-                onclick: move |_| nudge(true),
+                onclick: move |_| increment(true),
                 PlusIcon {}
             }
         },
@@ -241,12 +257,14 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .attr("aria-valuenow", value.map(|value| value.to_string()))
         .attr("aria-valuemin", min.map(|min| min.to_string()))
         .attr("aria-valuemax", max.map(|max| max.to_string()))
+        .attr("name", bound.name().map(str::to_string))
         .attr("value", display)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("required", required)
         .event("oninput", move |event: FormEvent| {
             let text = event.value();
+            let publish = publish.clone();
             if let Some(parsed) = T::parse(&text) {
                 publish(parsed);
             }
@@ -260,7 +278,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
             };
             // Otherwise the caret jumps to the end of the text as well.
             event.prevent_default();
-            nudge(up);
+            arrow(up);
         })
         .render(HtmlTag::Input, props.attributes, ());
 

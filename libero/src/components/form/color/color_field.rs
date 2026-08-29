@@ -6,7 +6,8 @@ use crate::{
         ActionIcon, HtmlTag, Input,
         common::field_props,
         form::{
-            FIELD_CONTROL_SX, SliderChangeEvent, glyphs::EyeDropperIcon, use_field, use_field_frame,
+            FIELD_CONTROL_SX, SliderChangeEvent, glyphs::EyeDropperIcon, use_bound, use_field,
+            use_field_frame,
         },
         layout::use_box,
     },
@@ -35,7 +36,9 @@ static COLOR_FIELD_PREVIEW_SX: StaticSx =
 field_props! {
     extends(input);
     pub struct ColorFieldProps {
-        /// Strictly controlled - pair it with `oninput`.
+        /// Strictly controlled - pair it with `oninput`. Inside a `Form`, a
+        /// path `name` can supply it instead.
+        #[props(default)]
         value: ColorCode,
         /// A drag in the dropdown brackets its moves with `Start`/`End`; typed
         /// text that parses, a key press, a swatch and the eyedropper emit a
@@ -79,6 +82,10 @@ field_props! {
         /// Picking a swatch closes the dropdown.
         #[props(default)]
         close_on_swatch_click: Option<bool>,
+        /// What the field posts as. A path - `Theme::FIELDS.accent()` - also
+        /// binds it to the surrounding `Form`'s value when it has no `oninput`.
+        #[props(default, into)]
+        name: crate::components::FieldName<ColorCode>,
         #[props(default, into)]
         placeholder: Option<String>,
     }
@@ -96,7 +103,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let defaults = &theme.color_field;
     let size = props.size.copied_or(defaults.size);
     let radius = props.radius.copied_or(defaults.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let with_alpha = props.with_alpha.unwrap_or(false);
     let with_preview = props.with_preview.unwrap_or(defaults.with_preview);
@@ -111,6 +117,8 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         false => ColorFormat::Hex,
     });
     let with_picker = props.with_picker.unwrap_or(true);
+    let bound = use_bound(&props.name, props.oninput.is_some());
+    let disabled = bound.disabled(props.disabled);
     let has_dropdown = (with_picker || !props.swatches.is_empty()) && !disabled;
 
     let mut opened = use_signal(|| false);
@@ -122,18 +130,23 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let mut has_eye_dropper = use_signal(|| false);
     use_effect(move || has_eye_dropper.set(eye_dropper().is_some()));
 
-    let value = props.value;
+    let value = bound.value().unwrap_or(props.value);
     let oninput = props.oninput;
+    let setter = bound.setter();
     // Without alpha the field has no way to show or change it, so a typed or
     // dropped translucent color arrives opaque.
     let emit = move |color: ColorCode| {
-        if let Some(oninput) = &oninput {
-            oninput.call(SliderChangeEvent::Change(match with_alpha {
-                true => color,
-                false => color.opaque(),
-            }));
+        let color = match with_alpha {
+            true => color,
+            false => color.opaque(),
+        };
+        match (&oninput, &setter) {
+            (Some(oninput), _) => oninput.call(SliderChangeEvent::Change(color)),
+            (None, Some(setter)) => setter.set(color),
+            (None, None) => {}
         }
     };
+    let dropper_emit = emit.clone();
 
     let field = use_field()
         .label(&props.label)
@@ -141,6 +154,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&value))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -172,6 +186,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         return;
                     };
                     let pick = api.pick();
+                    let emit = dropper_emit.clone();
                     spawn(async move {
                         // A dismissed pick is no answer, not an error to show.
                         let Ok(hex) = pick.await else {
@@ -218,6 +233,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let input = field
         .aria(control)
         .attr_default("type", "text")
+        .attr("name", bound.name().map(str::to_string))
         .attr("value", text)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
@@ -259,6 +275,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Portaled, so no `overflow: hidden` ancestor clips it. The picker inside
     // is not focusable, and a mousedown anywhere in the box is cancelled: the
     // text input keeps focus throughout, and its blur is what closes the box.
+    let picker_setter = bound.setter();
     popover.show(showing.then(|| {
         dropdown
             .element(popover.floating())
@@ -280,8 +297,14 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         focusable: false,
                         oninput: move |event: SliderChangeEvent<ColorCode>| {
                             draft.set(None);
-                            if let Some(oninput) = &oninput {
-                                oninput.call(event);
+                            match (&oninput, &picker_setter) {
+                                (Some(oninput), _) => oninput.call(event),
+                                (None, Some(setter)) => {
+                                    if let SliderChangeEvent::Change(color) = event {
+                                        setter.set(color);
+                                    }
+                                }
+                                (None, None) => {}
                             }
                         },
                         onswatchclick: move |_| {

@@ -61,6 +61,35 @@ macro_rules! shapes {
     };
 }
 
+#[derive(Clone, PartialEq, Default, Fields)]
+struct CostForm {
+    text: String,
+}
+
+/// A field with rules never compares equal, so it re-renders with the form -
+/// the pair below prices reading the form's value against a `value` prop.
+#[component]
+fn UnboundForm(children: Element) -> Element {
+    rsx! {
+        Form::<()> {
+            TextField { name: "text", value: "", oninput: move |_| {}, validate: not_empty.error("r") }
+            {children}
+        }
+    }
+}
+
+#[component]
+fn BoundForm(children: Element) -> Element {
+    let value = use_signal(CostForm::default);
+    rsx! {
+        Form {
+            value,
+            TextField { name: CostForm::FIELDS.text(), validate: not_empty.error("r") }
+            {children}
+        }
+    }
+}
+
 /// The cheapest component that can exist: one scope, one element, no styling.
 #[component]
 fn Leaf(children: Element) -> Element {
@@ -143,10 +172,13 @@ fn render_cost_per_component() {
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
         // Rules never compare equal, so this one always re-renders with its parent.
         "TextField+validate" { TextField { value: "", oninput: move |_| {}, validate: [not_empty.error("r")] } }
-        "Form" { Form { value: (), "x" } }
-        "Fieldset" { Fieldset { value: (), "x" } }
+        "Form" { Form::<()> { "x" } }
+        "Fieldset" { Fieldset::<()> { "x" } }
         // Inside a form: registration and the composite lookup.
-        "Form+TextField" { Form { value: (), TextField { name: "n", oninput: move |_| {} } } }
+        "Form+TextField" { Form::<()> { TextField { name: "n", oninput: move |_| {} } } }
+        "Form+TextField+validate" { UnboundForm { "x" } }
+        // The same field bound by `name`: it reads the form's signal instead.
+        "Form+bound TextField" { BoundForm { "x" } }
         // The only component whose cost scales with a prop - two elements per
         // cell, so the pair below is the per-cell price.
         "PinField" { PinField { oninput: move |_| {} } }

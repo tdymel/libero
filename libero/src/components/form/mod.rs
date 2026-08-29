@@ -53,10 +53,13 @@ pub use slider::{
 pub use switch::{Switch, SwitchProps};
 pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaProps};
-pub(crate) use use_field::use_field;
+pub(crate) use use_field::{use_bound, use_field};
 pub(crate) use use_field_frame::{FIELD_CONTROL_SX, field_control_sx, use_field_frame};
-pub(crate) use validation::{FieldEntry, FormScope, SummaryItem, issues_of, worst};
+pub(crate) use validation::{
+    Binding, Disabled, FieldEntry, FormScope, Source, SummaryItem, issues_of,
+    join as validation_join, worst,
+};
 pub use validation::{
-    FieldPath, Fields, IsEmpty, Rule, Validator, Validators, is_email, max, max_length, min,
-    min_length, not_empty,
+    FieldName, FieldPath, Fields, IsEmpty, Rule, Step, Validator, Validators, is_email, max,
+    max_length, min, min_length, not_empty,
 };

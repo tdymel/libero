@@ -4,7 +4,7 @@ use crate::{
     components::{
         HtmlTag, Input, Options, States,
         common::{Orientation, field_props},
-        form::{Radio, use_field},
+        form::{Radio, use_bound, use_field},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -52,6 +52,11 @@ field_props! {
         /// Called with the option the caller should select next.
         #[props(default)]
         onchange: Option<EventHandler<T>>,
+        /// What the group posts as. A path - `Survey::FIELDS.plan()` - also
+        /// binds it to the surrounding `Form`'s value when it has no
+        /// `onchange`.
+        #[props(default, into)]
+        name: crate::components::FieldName<Option<T>>,
         /// Rules over the selection, shown once the group loses focus or its
         /// form is submitted.
         #[props(default, into)]
@@ -87,11 +92,14 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let root = use_element();
 
     let size = props.size.copied_or(theme.radio.size);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let horizontal = props.orientation.copied_or_default() == Orientation::Horizontal;
 
-    if props.onchange.is_none() && !disabled {
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let current = bound.value().unwrap_or_else(|| props.value.clone());
+
+    if props.onchange.is_none() && !bound.is_bound() && !disabled {
         warn("RadioGroup: without `onchange` the selection can never change.");
     }
 
@@ -99,8 +107,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .options
         .clone()
         .unwrap_or_else(|| T::options().to_vec());
-    let selected = props
-        .value
+    let selected = current
         .as_ref()
         .and_then(|value| values.iter().position(|option| option == value));
 
@@ -110,7 +117,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&props.value))
+        .rules(props.validate.check(&current))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -134,11 +142,17 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .prepare();
 
     let onchange = props.onchange;
+    let setter = bound.setter();
     let pick = {
         let values = values.clone();
         move |index: usize| {
-            if let (Some(onchange), Some(option)) = (&onchange, values.get(index)) {
-                onchange.call(option.clone());
+            let Some(option) = values.get(index) else {
+                return;
+            };
+            match (&onchange, &setter) {
+                (Some(onchange), _) => onchange.call(option.clone()),
+                (None, Some(setter)) => setter.set(Some(option.clone())),
+                (None, None) => {}
             }
         }
     };
@@ -175,7 +189,10 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let describedby = field.describedby();
     let invalid = field.invalid();
     let option_label = props.option_label;
-    let name = format!("{}-radio", field.id());
+    let name = bound
+        .name()
+        .map(str::to_string)
+        .unwrap_or_else(|| format!("{}-radio", field.id()));
     let color = props.color.clone();
 
     let options = values.iter().enumerate().map(|(index, option)| {

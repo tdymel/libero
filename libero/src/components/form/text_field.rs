@@ -4,7 +4,7 @@ use crate::{
     components::{
         HtmlTag, Input,
         common::field_props,
-        form::{FIELD_CONTROL_SX, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
@@ -25,6 +25,11 @@ field_props! {
         /// is submitted.
         #[props(default, into)]
         validate: crate::components::Validators<String>,
+        /// What the field posts as. A path - `Signup::FIELDS.email()` - also
+        /// binds the text to the surrounding `Form`'s value when the field has
+        /// no `oninput`.
+        #[props(default, into)]
+        name: crate::components::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Inside the frame, before the control - a search icon, a currency
@@ -49,19 +54,19 @@ pub fn TextField(props: TextFieldProps) -> Element {
 
     let size = props.size.copied_or(theme.text_field.size);
     let radius = props.radius.copied_or(theme.text_field.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
+
+    let bound = use_bound(&props.name, props.oninput.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let value = bound.value().or_else(|| props.value.clone());
 
     let field = use_field()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(
-            props
-                .validate
-                .check(&props.value.clone().unwrap_or_default()),
-        )
+        .rules(props.validate.check(&value.clone().unwrap_or_default()))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -84,17 +89,18 @@ pub fn TextField(props: TextFieldProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    let oninput = props.oninput;
+    let oninput = bound.emit(props.oninput);
     let input = field
         .aria(control)
         .attr_default("type", "text")
-        .attr("value", props.value.clone())
+        .attr("name", bound.name().map(str::to_string))
+        .attr("value", value)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("required", required)
         .event(
             "oninput",
-            oninput.map(|handler| move |event: FormEvent| handler.call(event.value())),
+            oninput.map(|emit| move |event: FormEvent| emit(event.value())),
         )
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());

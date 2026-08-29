@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::components::form::use_bound;
+
 use crate::{
     components::{ActionIcon, Chip, Input, Options, common::field_props, form::glyphs::CloseIcon},
     hooks::use_theme,
@@ -42,8 +44,10 @@ field_props! {
         /// Emits one hidden input of that name per selected option, carrying
         /// its `Options::value()`. The trigger is a `div`, so it cannot carry
         /// the name itself.
+        /// A path - `Order::FIELDS.toppings()` - also binds the selection to
+        /// the surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: Option<String>,
+        name: crate::components::FieldName<Vec<T>>,
         /// Rules over the selection, shown once the select loses focus or its
         /// form is submitted.
         #[props(default, into)]
@@ -74,7 +78,10 @@ field_props! {
 pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let theme = use_theme();
 
-    if props.onchange.is_none() {
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let held = bound.value().unwrap_or_else(|| props.value.clone());
+
+    if props.onchange.is_none() && !bound.is_bound() {
         warn("MultiSelect: without `onchange` the selection can never change.");
     }
 
@@ -86,25 +93,24 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         warn("MultiSelect: no options - a `T` without static `options()` needs `options`.");
     }
 
-    let selected: Vec<bool> = values
-        .iter()
-        .map(|option| props.value.contains(option))
-        .collect();
+    let selected: Vec<bool> = values.iter().map(|option| held.contains(option)).collect();
     let rows = draw_rows(&values, &selected, props.option.as_ref());
     // The chips, redrawn from the cursor the core owns. Each wrapper carries the
     // id `aria-activedescendant` points at; what is inside it is the skin's, or
     // the caller's.
-    let onchange = props.onchange;
+    let onchange = bound.emit(props.onchange);
     let size = props.size.copied_or(theme.multi_select.size);
     // Chips ride inside the control, so they sit one step down the same scale
     // the field is on - `xs` has nowhere lower to go.
     let chip_size = Size::ALL[size.index().saturating_sub(1)];
-    let picked = props.value.clone();
+    let picked = held.clone();
     let draw_selection = props.selection;
+    let chip_change = onchange.clone();
     let selection = (!picked.is_empty()).then(|| {
         Callback::new(move |args: SelectionRenderArgs| {
             let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
                 let removing = picked.clone();
+                let onchange = chip_change.clone();
                 let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
                 match &draw_selection {
                     Some(selection) => selection.call(SelectionArgs { value, remove }),
@@ -147,18 +153,19 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         })
     });
 
-    let current = props.value.clone();
+    let current = held.clone();
     // Built before the pick closure takes `current`.
     let posted = current.iter().map(Options::value).collect::<Vec<_>>();
     let rules = props.validate.check(&current);
-    let removable = props.value.clone();
+    let removable = held.clone();
+    let (pick_change, remove_change, clear_change) = (onchange.clone(), onchange.clone(), onchange);
     rsx! {
         SelectCore {
             rows,
             selected,
             multiple: true,
             onpick: move |index: usize| {
-                let (Some(onchange), Some(value)) = (&onchange, values.get(index)) else {
+                let (Some(onchange), Some(value)) = (&pick_change, values.get(index)) else {
                     return;
                 };
                 let mut next = current.clone();
@@ -168,13 +175,13 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                     }
                     None => next.push(value.clone()),
                 }
-                onchange.call(next);
+                onchange(next);
             },
             selection,
             chip_count: removable.len(),
-            onremove: move |index: usize| drop_at(&removable, index, &onchange),
+            onremove: move |index: usize| drop_at(&removable, index, &remove_change),
             placeholder: props.placeholder,
-            name: props.name,
+            name: bound.name().map(str::to_string),
             form_values: posted,
             rules,
             clearable: props.clearable.unwrap_or(false),
@@ -182,8 +189,8 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             search_placeholder: props.search_placeholder,
             matches,
             onclear: move |_| {
-                if let Some(onchange) = &onchange {
-                    onchange.call(Vec::new());
+                if let Some(onchange) = &clear_change {
+                    onchange(Vec::new());
                 }
             },
             label: props.label,
@@ -192,7 +199,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             status: props.status,
             size,
             radius: props.radius.copied_or(theme.multi_select.radius),
-            disabled: props.disabled,
+            disabled: Some(bound.disabled(props.disabled)),
             required: props.required,
             class: props.class,
             sx: props.sx,
@@ -253,7 +260,7 @@ fn default_chip<T: Options>(value: &T, remove: Callback<()>, size: Size) -> Elem
 }
 
 /// Drops one value from the selection - the same edit as picking its row again.
-fn drop_at<T: Options>(values: &[T], index: usize, onchange: &Option<EventHandler<Vec<T>>>) {
+fn drop_at<T: Options>(values: &[T], index: usize, onchange: &Option<impl Fn(Vec<T>)>) {
     let Some(onchange) = onchange else {
         return;
     };
@@ -262,5 +269,5 @@ fn drop_at<T: Options>(values: &[T], index: usize, onchange: &Option<EventHandle
     }
     let mut next = values.to_vec();
     next.remove(index);
-    onchange.call(next);
+    onchange(next);
 }

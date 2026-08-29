@@ -9,7 +9,7 @@ use crate::{
         form::{
             SelectionArgs, field_control_sx,
             glyphs::{CloseIcon, UploadIcon},
-            use_field, use_field_frame,
+            use_bound, use_field, use_field_frame,
         },
         layout::use_box,
     },
@@ -232,8 +232,10 @@ field_props! {
         selection: Option<Callback<SelectionArgs<FileData>, Element>>,
         /// The hidden `input[type="file"]`'s name, so the files post with a
         /// form. The list is kept equal to `value`, removals included.
+        /// A path - `Claim::FIELDS.receipts()` - also binds the files to the
+        /// surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: Option<String>,
+        name: crate::components::FieldName<Files>,
         /// Fires with the files the field should hold next - a pick, a drop,
         /// a removal or a clear.
         #[props(default)]
@@ -274,24 +276,26 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let radius = props.radius.copied_or(theme.file_field.radius);
     let variant = props.variant.copied_or(theme.file_field.variant);
     let clearable = props.clearable.unwrap_or(theme.file_field.clearable);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let multiple = props.multiple;
-    let interactive = props.onchange.is_some() && !disabled;
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let interactive = (props.onchange.is_some() || bound.is_bound()) && !disabled;
 
-    if props.onchange.is_none() && !disabled {
+    if props.onchange.is_none() && !bound.is_bound() && !disabled {
         warn("FileField: `value` without `onchange` can never change.");
     }
 
-    let value = props.value.clone();
+    let value = bound.value().unwrap_or_else(|| props.value.clone());
     let accept = props.accept.clone().unwrap_or_default();
     let dragging = use_local_state(|| false);
 
     let onchange = props.onchange;
-    let emit = use_callback(move |files: Files| {
-        if let Some(onchange) = &onchange {
-            onchange.call(files);
-        }
+    let setter = bound.setter();
+    let emit = use_callback(move |files: Files| match (&onchange, &setter) {
+        (Some(onchange), _) => onchange.call(files),
+        (None, Some(setter)) => setter.set(files),
+        (None, None) => {}
     });
 
     // A drop bypasses the picker, which is the only place `accept` applies by
@@ -361,8 +365,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&props.value))
-        .name(props.name.as_deref())
+        .rules(props.validate.check(&value))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -566,7 +570,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         }
     });
 
-    let name = props.name.clone();
+    let name = bound.name().map(str::to_string);
     let input = use_box()
         .framework_sx(&FILE_INPUT_SX)
         .prepare()

@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         HtmlTag, Input,
         common::base_props,
-        form::{FormScope, SummaryItem, Validators, issues_of},
+        form::{Binding, FormScope, Source, SummaryItem, Validators, issues_of},
         layout::use_box,
     },
     hooks::use_element,
@@ -39,9 +41,11 @@ static FORM_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     extends(form);
     pub struct FormProps<V: FormValue> {
-        /// The whole form's value, which `validate` checks.
+        /// The whole form's value, which `validate` checks. A field inside
+        /// whose `name` is a path into it - `Signup::FIELDS.email()` - reads
+        /// and writes its place in it, unless it has a handler of its own.
         #[props(default)]
-        value: V,
+        value: Option<Signal<V>>,
         /// Composite rules over `value`. Name the fields a rule concerns with
         /// `.on(..)` and its status shows on each of them.
         #[props(default, into)]
@@ -67,7 +71,17 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     use_context_provider(|| scope);
     let key = use_hook(|| scope.key());
     use_drop(move || scope.withdraw(key));
-    scope.raise(key, issues_of(&props.validate, &props.value, ""));
+    // Taken once: the fields resolve their binding when they mount.
+    let binding =
+        use_hook(|| Binding::root(props.value.map(|value| Rc::new(value) as Rc<dyn Source>)));
+    use_context_provider(|| binding);
+    // Read only with rules to run, so a form without any does not re-render on
+    // every keystroke.
+    let issues = match (props.validate.is_empty(), props.value) {
+        (false, Some(value)) => issues_of(&props.validate, &value.read(), ""),
+        _ => Vec::new(),
+    };
+    scope.raise(key, issues);
 
     let mut summary = use_signal(Vec::<SummaryItem>::new);
     let mut focus_requests = use_signal(|| 0_u32);

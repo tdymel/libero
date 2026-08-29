@@ -1,6 +1,30 @@
-use std::{borrow::Cow, fmt, marker::PhantomData};
+use std::{any::Any, borrow::Cow, fmt, marker::PhantomData};
 
 use dioxus::dioxus_core::{AttributeValue, IntoAttributeValue};
+
+/// One field access with its type erased: from a struct to one of its fields.
+/// Emitted by `#[derive(Fields)]` and [`path!`](crate::path), so a path can
+/// read and write the value it names inside a form's value.
+#[doc(hidden)]
+#[derive(Clone, Copy)]
+pub struct Step {
+    pub get: fn(&dyn Any) -> Option<&dyn Any>,
+    pub get_mut: fn(&mut dyn Any) -> Option<&mut dyn Any>,
+}
+
+/// Follows `steps` from `root`. `None` when a step meets a type it was not
+/// built for - a path rooted at another type than the form's value.
+pub(crate) fn resolve<'a>(root: &'a dyn Any, steps: &[Step]) -> Option<&'a dyn Any> {
+    steps.iter().try_fold(root, |value, step| (step.get)(value))
+}
+
+pub(crate) fn resolve_mut<'a>(root: &'a mut dyn Any, steps: &[Step]) -> Option<&'a mut dyn Any> {
+    let mut value = root;
+    for step in steps {
+        value = (step.get_mut)(value)?;
+    }
+    Some(value)
+}
 
 /// A field's place inside a value of type `Root`, holding a `T`. Doubles as
 /// the field's `name`, so what posts and what a composite rule names are one
@@ -10,28 +34,38 @@ use dioxus::dioxus_core::{AttributeValue, IntoAttributeValue};
 /// [`path!`](crate::path) for a type that cannot derive.
 pub struct FieldPath<Root, T> {
     path: Cow<'static, str>,
+    steps: Cow<'static, [Step]>,
     _types: PhantomData<fn(&Root) -> &T>,
 }
 
 impl<Root, T> FieldPath<Root, T> {
+    /// A path by its spelling alone. It posts and names fields, but carries no
+    /// field access, so it cannot bind a field to a form's value.
     pub const fn new(path: &'static str) -> Self {
+        Self::from_parts(path, &[])
+    }
+
+    /// What [`path!`](crate::path) emits.
+    #[doc(hidden)]
+    pub const fn from_parts(path: &'static str, steps: &'static [Step]) -> Self {
         Self {
             path: Cow::Borrowed(path),
+            steps: Cow::Borrowed(steps),
             _types: PhantomData,
         }
     }
 
-    pub fn owned(path: String) -> Self {
-        Self {
-            path: Cow::Owned(path),
-            _types: PhantomData,
-        }
-    }
-
-    /// `name` under `prefix`. What `#[derive(Fields)]` emits for each field.
+    /// `key` under this path, one step further in. What `#[derive(Fields)]`
+    /// emits for each field.
     #[doc(hidden)]
-    pub fn at(prefix: &str, name: &str) -> Self {
-        Self::owned(join(prefix, name))
+    pub fn child<U>(&self, key: &str, step: Step) -> FieldPath<Root, U> {
+        let mut steps = self.steps.to_vec();
+        steps.push(step);
+        FieldPath {
+            path: Cow::Owned(join(&self.path, key)),
+            steps: Cow::Owned(steps),
+            _types: PhantomData,
+        }
     }
 
     pub fn as_str(&self) -> &str {
@@ -40,7 +74,11 @@ impl<Root, T> FieldPath<Root, T> {
 
     /// A path relative to `T`, re-rooted under this one: `address` + `zip`.
     pub fn join<U>(&self, inner: FieldPath<T, U>) -> FieldPath<Root, U> {
-        FieldPath::owned(join(&self.path, &inner.path))
+        FieldPath {
+            path: Cow::Owned(join(&self.path, &inner.path)),
+            steps: Cow::Owned([&*self.steps, &*inner.steps].concat()),
+            _types: PhantomData,
+        }
     }
 }
 
@@ -56,6 +94,7 @@ impl<Root, T> Clone for FieldPath<Root, T> {
     fn clone(&self) -> Self {
         Self {
             path: self.path.clone(),
+            steps: self.steps.clone(),
             _types: PhantomData,
         }
     }
@@ -85,11 +124,103 @@ impl<Root, T> From<FieldPath<Root, T>> for String {
     }
 }
 
-/// So `name: Signup::FIELDS.email()` works on a field whose props extend
-/// `input`, where `name` is a plain attribute.
 impl<Root, T> IntoAttributeValue for FieldPath<Root, T> {
     fn into_value(self) -> AttributeValue {
         AttributeValue::Text(self.path.into_owned())
+    }
+}
+
+/// A field's `name`, typed by the value the field holds. Built from a
+/// [`FieldPath`] - `Signup::FIELDS.email()` - which inside a `Form` also binds
+/// the field to that place in the form's value, or from a plain string, which
+/// only posts.
+///
+/// Only `T` is checked when compiling: `name: Signup::FIELDS.terms()` on a
+/// `TextField` is an error. The path's root is checked against the form's
+/// value when the field renders.
+pub struct FieldName<T> {
+    path: Cow<'static, str>,
+    steps: Option<Cow<'static, [Step]>>,
+    _type: PhantomData<fn() -> T>,
+}
+
+impl<T> FieldName<T> {
+    pub fn as_str(&self) -> &str {
+        &self.path
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.path.is_empty()
+    }
+
+    /// The field access, when the name came from a path.
+    pub(crate) fn steps(&self) -> Option<&[Step]> {
+        self.steps.as_deref()
+    }
+}
+
+impl<T> Default for FieldName<T> {
+    fn default() -> Self {
+        Self {
+            path: Cow::Borrowed(""),
+            steps: None,
+            _type: PhantomData,
+        }
+    }
+}
+
+impl<T> Clone for FieldName<T> {
+    fn clone(&self) -> Self {
+        Self {
+            path: self.path.clone(),
+            steps: self.steps.clone(),
+            _type: PhantomData,
+        }
+    }
+}
+
+/// By spelling: two names that post the same are the same name.
+impl<T> PartialEq for FieldName<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.path == other.path && self.steps.is_some() == other.steps.is_some()
+    }
+}
+
+impl<T> fmt::Debug for FieldName<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(formatter, "FieldName({})", self.path)
+    }
+}
+
+impl<T> fmt::Display for FieldName<T> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str(&self.path)
+    }
+}
+
+impl<Root, T> From<FieldPath<Root, T>> for FieldName<T> {
+    fn from(path: FieldPath<Root, T>) -> Self {
+        Self {
+            path: path.path,
+            steps: Some(path.steps),
+            _type: PhantomData,
+        }
+    }
+}
+
+impl<T> From<&str> for FieldName<T> {
+    fn from(path: &str) -> Self {
+        Self::from(path.to_string())
+    }
+}
+
+impl<T> From<String> for FieldName<T> {
+    fn from(path: String) -> Self {
+        Self {
+            path: Cow::Owned(path),
+            steps: None,
+            _type: PhantomData,
+        }
     }
 }
 
@@ -98,11 +229,12 @@ impl<Root, T> IntoAttributeValue for FieldPath<Root, T> {
 pub trait Fields: Sized {
     type Paths<R>;
 
-    fn paths<R>(prefix: String) -> Self::Paths<R>;
+    /// The paths of `Self`'s fields, under `base`.
+    fn paths<R>(base: FieldPath<R, Self>) -> Self::Paths<R>;
 }
 
 /// A typed path for a type that cannot `#[derive(Fields)]`. The field access
-/// is compiled, so a typo is an error:
+/// is compiled, so a typo is an error, and the path binds like a derived one:
 ///
 /// ```ignore
 /// let zip = path!(Signup => address.zip); // FieldPath<Signup, String>
@@ -110,12 +242,30 @@ pub trait Fields: Sized {
 #[macro_export]
 macro_rules! path {
     ($root:ty => $first:ident $(. $rest:ident)*) => {{
-        fn typed<R, T>(_: fn(&R) -> &T, path: &'static str) -> $crate::components::FieldPath<R, T> {
-            $crate::components::FieldPath::new(path)
+        fn typed<R, T>(
+            _: fn(&R) -> &T,
+            path: &'static str,
+            steps: &'static [$crate::components::Step],
+        ) -> $crate::components::FieldPath<R, T> {
+            $crate::components::FieldPath::from_parts(path, steps)
         }
+        fn get(value: &dyn ::std::any::Any) -> ::std::option::Option<&dyn ::std::any::Any> {
+            value
+                .downcast_ref::<$root>()
+                .map(|root| &root.$first $(.$rest)* as &dyn ::std::any::Any)
+        }
+        fn get_mut(
+            value: &mut dyn ::std::any::Any,
+        ) -> ::std::option::Option<&mut dyn ::std::any::Any> {
+            value
+                .downcast_mut::<$root>()
+                .map(|root| &mut root.$first $(.$rest)* as &mut dyn ::std::any::Any)
+        }
+        const STEPS: &[$crate::components::Step] = &[$crate::components::Step { get, get_mut }];
         typed(
             |root: &$root| &root.$first $(.$rest)*,
             concat!(stringify!($first) $(, ".", stringify!($rest))*),
+            STEPS,
         )
     }};
 }
@@ -124,9 +274,11 @@ macro_rules! path {
 mod tests {
     use super::*;
 
+    #[derive(Default)]
     struct Address {
         zip: String,
     }
+    #[derive(Default)]
     struct Signup {
         address: Address,
         email: String,
@@ -138,19 +290,34 @@ mod tests {
         let email = crate::path!(Signup => email);
         assert_eq!(zip.as_str(), "address.zip");
         assert_eq!(email.as_str(), "email");
+    }
 
-        // Only there to read the fields, which the macro's closure also does.
-        let signup = Signup {
-            address: Address { zip: "1".into() },
-            email: "e".into(),
-        };
-        assert_eq!(signup.address.zip.len() + signup.email.len(), 2);
+    #[test]
+    fn a_path_reads_and_writes_what_it_names() {
+        let mut signup = Signup::default();
+        let zip = crate::path!(Signup => address.zip);
+
+        let slot = resolve_mut(&mut signup, &zip.steps).expect("resolves");
+        *slot.downcast_mut::<String>().expect("a String") = "10115".into();
+        assert_eq!(signup.address.zip, "10115");
+
+        let read = resolve(&signup, &zip.steps).and_then(|v| v.downcast_ref::<String>());
+        assert_eq!(read.map(String::as_str), Some("10115"));
+        assert!(signup.email.is_empty());
+    }
+
+    #[test]
+    fn a_path_on_another_root_resolves_to_nothing() {
+        let zip = crate::path!(Signup => address.zip);
+        assert!(resolve(&Address::default(), &zip.steps).is_none());
     }
 
     #[test]
     fn join_reroots_a_relative_path() {
         let address = crate::path!(Signup => address);
         let zip = crate::path!(Address => zip);
-        assert_eq!(address.join(zip).as_str(), "address.zip");
+        let joined = address.join(zip);
+        assert_eq!(joined.as_str(), "address.zip");
+        assert_eq!(joined.steps.len(), 2);
     }
 }

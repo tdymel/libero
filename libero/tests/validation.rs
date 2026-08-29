@@ -2,7 +2,7 @@
 
 use libero::components::{FieldPath, FieldStatus, Fields, Rule, Validators, not_empty};
 
-#[derive(Fields)]
+#[derive(Clone, PartialEq, Default, Fields)]
 pub struct Address {
     pub street: String,
     pub zip: String,
@@ -74,4 +74,58 @@ fn rules_of_different_field_types_share_one_set() {
     .into();
 
     assert_eq!(rules.iter().count(), 2);
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+pub struct Order {
+    pub name: String,
+    #[fields(nested)]
+    pub address: Address,
+}
+
+#[test]
+fn derived_paths_bind_fields_to_the_form_value_and_nest_under_a_fieldset() {
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Fieldset, Form, TextField},
+    };
+
+    fn app() -> Element {
+        let order = use_signal(|| Order {
+            name: "Tom".into(),
+            address: Address {
+                street: "Hauptstr. 1".into(),
+                zip: "10115".into(),
+            },
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: order,
+                    TextField { name: Order::FIELDS.name() }
+                    // The full path works outside a fieldset too.
+                    TextField { name: Order::FIELDS.address().street() }
+                    Fieldset {
+                        path: Order::FIELDS.address(),
+                        TextField { name: Address::FIELDS.zip() }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+    for expected in [
+        r#"name="name""#,
+        r#"value="Tom""#,
+        r#"name="address.street""#,
+        r#"value="Hauptstr. 1""#,
+        r#"name="address.zip""#,
+        r#"value="10115""#,
+    ] {
+        assert!(html.contains(expected), "missing {expected} in {html}");
+    }
 }

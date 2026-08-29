@@ -53,7 +53,7 @@ fn a_rule_waits_for_a_blur_or_a_submit() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Form { value: (),
+                Form::<()> {
                     Spy {}
                     TextField { name: "email", value: "", validate: [not_empty.error("Required")] }
                 }
@@ -80,7 +80,7 @@ fn an_explicit_status_never_waits_and_the_worst_one_shows() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Form { value: (),
+                Form::<()> {
                     Spy {}
                     TextField {
                         value: "",
@@ -106,10 +106,10 @@ fn an_explicit_status_never_waits_and_the_worst_one_shows() {
 #[test]
 fn a_composite_rule_lands_on_every_field_it_names() {
     fn app() -> Element {
-        let signup = Signup {
+        let signup = use_signal(|| Signup {
             password: "a".into(),
             confirm: "b".into(),
-        };
+        });
         rsx! {
             LiberoProvider {
                 Form {
@@ -148,13 +148,13 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
                 Fieldset {
                     legend: "Address",
                     path: "address",
-                    value: Address::default(),
+                    value: use_signal(Address::default),
                     validate: [
                         (|a: &Address| !a.zip.is_empty()).error("Zip needed").on([crate::path!(Address => zip)]),
                         (|_: &Address| false).warn("Check the whole address"),
                     ],
                     Spy {}
-                    TextField { name: "address.zip", value: "" }
+                    TextField { name: "zip", value: "" }
                 }
             }
         }
@@ -172,10 +172,10 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
 #[test]
 fn the_summary_lists_field_errors_and_composite_errors() {
     fn app() -> Element {
-        let signup = Signup {
+        let signup = use_signal(|| Signup {
             password: "a".into(),
             confirm: "b".into(),
-        };
+        });
         rsx! {
             LiberoProvider {
                 Form {
@@ -198,4 +198,130 @@ fn the_summary_lists_field_errors_and_composite_errors() {
     assert_eq!(messages, ["Email: Required", "Passwords differ"]);
     assert!(summary[0].target.is_some());
     assert!(summary[1].target.is_none());
+}
+
+#[derive(Clone, PartialEq, Default)]
+struct Order {
+    email: String,
+    address: Shipping,
+}
+
+#[derive(Clone, PartialEq, Default)]
+struct Shipping {
+    zip: String,
+}
+
+#[test]
+fn a_path_name_binds_the_field_to_the_form_value_and_posts_in_full() {
+    fn app() -> Element {
+        let order = use_signal(|| Order {
+            email: "tom@libero.dev".into(),
+            address: Shipping {
+                zip: "10115".into(),
+            },
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: order,
+                    TextField { name: crate::path!(Order => email) }
+                    Fieldset {
+                        path: crate::path!(Order => address),
+                        TextField { name: crate::path!(Shipping => zip) }
+                    }
+                }
+            }
+        }
+    }
+
+    let (_, html) = mount(app);
+    assert!(html.contains(r#"name="email""#), "{html}");
+    assert!(html.contains(r#"value="tom@libero.dev""#), "{html}");
+    assert!(html.contains(r#"name="address.zip""#), "{html}");
+    assert!(html.contains(r#"value="10115""#), "{html}");
+}
+
+#[test]
+fn a_handler_or_a_string_name_leaves_the_field_unbound() {
+    fn app() -> Element {
+        let order = use_signal(|| Order {
+            email: "tom@libero.dev".into(),
+            address: Shipping::default(),
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: order,
+                    TextField { name: crate::path!(Order => email), oninput: move |_| {} }
+                    TextField { name: "email" }
+                    // Rooted at the wrong type: warns and stays unbound.
+                    TextField { name: crate::path!(Shipping => zip) }
+                }
+            }
+        }
+    }
+
+    let (_, html) = mount(app);
+    assert!(!html.contains("tom@libero.dev"), "{html}");
+}
+
+#[test]
+fn a_bound_write_lands_in_the_form_value() {
+    use crate::components::{Binding, Source};
+    use std::rc::Rc;
+
+    let mut dom = VirtualDom::new(|| rsx! {});
+    dom.rebuild_in_place();
+    dom.in_scope(dioxus::core::ScopeId::ROOT, || {
+        let order = Signal::new(Order::default());
+        let form = Binding::root(Some(Rc::new(order) as Rc<dyn Source>));
+        let address = crate::components::FieldName::from(crate::path!(Order => address));
+        let fieldset = form.narrow(address.as_str(), address.steps());
+        let zip = crate::components::FieldName::from(crate::path!(Shipping => zip));
+
+        assert!(fieldset.set(zip.steps().expect("a path"), String::from("10115")));
+        assert_eq!(order.peek().address.zip, "10115");
+        assert_eq!(fieldset.prefix(), "address");
+    });
+}
+
+thread_local! {
+    static DISABLED: Cell<Option<Signal<bool>>> = const { Cell::new(None) };
+}
+
+#[test]
+fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggle() {
+    fn app() -> Element {
+        let disabled = use_signal(|| false);
+        DISABLED.with(|cell| cell.set(Some(disabled)));
+        rsx! {
+            LiberoProvider {
+                Fieldset::<()> {
+                    disabled: disabled(),
+                    TextField { label: "Outer", oninput: move |_| {} }
+                    Fieldset::<()> {
+                        TextField { label: "Inner", oninput: move |_| {} }
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut dom, before) = mount(app);
+    let markup = |html: &str| {
+        let body = &html[html.find("<fieldset").unwrap_or(0)..];
+        body[..body.find("<style").unwrap_or(body.len())].to_string()
+    };
+    assert!(!markup(&before).contains("disabled"), "{}", markup(&before));
+
+    dom.in_runtime(|| DISABLED.with(Cell::get).expect("mounted").set(true));
+    dom.process_events();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let after = dioxus_ssr::render(&dom);
+    let body = markup(&after);
+    // Wrapper and frame of both fields draw the state, the inner one through
+    // the nested group; both fieldsets and both inputs carry the attribute.
+    assert_eq!(body.matches("radius-sm disabled").count(), 4, "{body}");
+    assert_eq!(body.matches("disabled=true").count(), 4, "{body}");
 }

@@ -1,10 +1,15 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         Caption, HtmlTag, Input,
         common::base_props,
-        form::{FieldStatus, FormScope, FormValue, Validators, issues_of, worst},
+        form::{
+            Binding, Disabled, FieldName, FieldStatus, FormScope, FormValue, Source, Validators,
+            issues_of, worst,
+        },
         layout::use_box,
     },
     sx::{StaticSx, sx},
@@ -44,17 +49,19 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
 base_props! {
     extends(fieldset);
     pub struct FieldsetProps<V: FormValue> {
-        /// The group's value, which `validate` checks.
+        /// The group's own value, for a fieldset outside a `Form`. Inside one
+        /// the value is the form's, at `path`.
         #[props(default)]
-        value: V,
+        value: Option<Signal<V>>,
         /// Composite rules over `value`. A rule naming fields with `.on(..)`
         /// shows on each of them; one naming none shows under the legend.
         #[props(default, into)]
         validate: Validators<V>,
-        /// Where `value` sits in the form - `Signup::FIELDS.address()`. The
-        /// paths of `validate` are relative to it.
+        /// Where the group sits in the form's value - `Order::FIELDS.address()`.
+        /// The names of the fields inside and the paths of `validate` are
+        /// relative to it.
         #[props(default, into)]
-        path: String,
+        path: FieldName<V>,
         /// The group's caption, a `<legend>`.
         #[props(default, into)]
         legend: Caption,
@@ -65,8 +72,8 @@ base_props! {
         /// The group's own status, under the fields. A bare `&str` is an error.
         #[props(default, into)]
         status: Input<FieldStatus>,
-        /// Disables every native control inside, the way `<fieldset disabled>`
-        /// does.
+        /// Disables every field inside, nested fieldsets included. The fields
+        /// draw it themselves, so non-native controls follow too.
         #[props(default)]
         disabled: Option<bool>,
         children: Element,
@@ -85,10 +92,36 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     let key = use_hook(|| scope.key());
     use_drop(move || scope.withdraw(key));
 
-    let prefix = props.path.clone();
-    scope.raise(key, issues_of(&props.validate, &props.value, &prefix));
+    let binding = use_hook(|| {
+        let parent = try_consume_context::<Binding>().unwrap_or_default();
+        match props.value {
+            Some(value) => parent.rebased(props.path.as_str(), Rc::new(value) as Rc<dyn Source>),
+            None => parent.narrow(props.path.as_str(), props.path.steps()),
+        }
+    });
+    use_context_provider(|| binding.clone());
 
-    let revealed = scope.submitted() || scope.touched_under(&prefix);
+    // `<fieldset disabled>` only reaches native controls, so the group also
+    // tells its fields - which draw their own disabled look - and nested groups.
+    let parent_disabled = use_hook(try_consume_context::<Disabled>);
+    let mut own_disabled = use_hook(|| Disabled(Signal::new(false)));
+    use_context_provider(|| own_disabled);
+    let disabled =
+        props.disabled.unwrap_or(false) || parent_disabled.is_some_and(|Disabled(parent)| parent());
+    if *own_disabled.0.peek() != disabled {
+        own_disabled.0.set(disabled);
+    }
+
+    let prefix = binding.prefix();
+    let issues = match props.validate.is_empty() {
+        true => Vec::new(),
+        false => binding
+            .with::<V, _>(&[], |value| issues_of(&props.validate, value, prefix))
+            .unwrap_or_else(|| issues_of(&props.validate, &V::default(), prefix)),
+    };
+    scope.raise(key, issues);
+
+    let revealed = scope.submitted() || scope.touched_under(prefix);
     let unnamed = match revealed {
         true => scope.unnamed_issue(key),
         false => FieldStatus::Valid,
@@ -150,7 +183,7 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .states(&states)
         .prepare()
         .attr("id", id.clone())
-        .attr("disabled", props.disabled.unwrap_or(false))
+        .attr("disabled", disabled)
         .attr(
             "aria-describedby",
             (!describedby.is_empty()).then_some(describedby),

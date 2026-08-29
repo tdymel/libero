@@ -4,7 +4,7 @@ use crate::{
     components::{
         ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
         common::field_props,
-        form::{FIELD_CONTROL_SX, glyphs::CloseIcon, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, glyphs::CloseIcon, use_bound, use_field, use_field_frame},
         layout::use_box,
         use_combobox,
     },
@@ -67,6 +67,11 @@ field_props! {
         /// Skips filtering entirely, so `filter` is dead alongside it.
         #[props(default)]
         prefiltered: Option<bool>,
+        /// What the field posts as. A path - `Signup::FIELDS.city()` - also
+        /// binds it to the surrounding `Form`'s value when the field has no
+        /// `oninput`.
+        #[props(default, into)]
+        name: crate::components::FieldName<String>,
         #[props(default, into)]
         placeholder: Option<String>,
         /// Shows an x that empties the field while it holds text.
@@ -101,11 +106,14 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     let theme = use_theme();
     let size = props.size.copied_or(theme.autocomplete.size);
     let radius = props.radius.copied_or(theme.autocomplete.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let prefiltered = props.prefiltered.unwrap_or(false);
 
-    if props.oninput.is_none() {
+    let bound = use_bound(&props.name, props.oninput.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let text = bound.value().unwrap_or_else(|| props.value.clone());
+
+    if props.oninput.is_none() && !bound.is_bound() {
         warn("Autocomplete: without `oninput` the text can never change.");
     }
     if prefiltered && props.filter.is_some() {
@@ -114,7 +122,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
 
     let state = use_combobox();
 
-    let query = props.value.to_lowercase();
+    let query = text.to_lowercase();
     let matches: Vec<T> = props
         .options
         .iter()
@@ -122,7 +130,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             (true, _) => true,
             (false, Some(filter)) => filter.call(AutocompleteFilterArgs {
                 value: (*value).clone(),
-                query: props.value.clone(),
+                query: text.clone(),
             }),
             (false, None) => value.label().to_lowercase().contains(&query),
         })
@@ -134,7 +142,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&props.value))
+        .rules(props.validate.check(&text))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -145,7 +154,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let oninput = props.oninput;
+    let oninput = bound.emit(props.oninput);
     let onpick = props.onpick;
 
     // Drawn eagerly and handed down as values: a `Callback` would let the rows
@@ -156,6 +165,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .cloned()
         .enumerate()
         .map(|(index, value)| {
+            let oninput = oninput.clone();
             let content = match &option {
                 Some(option) => option.call(AutocompleteOptionArgs {
                     value: value.clone(),
@@ -167,7 +177,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
                 ComboboxOption {
                     onpick: move |_| {
                         if let Some(oninput) = &oninput {
-                            oninput.call(value.label());
+                            oninput(value.label());
                         }
                         if let Some(onpick) = &onpick {
                             onpick.call(value.clone());
@@ -181,22 +191,22 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .collect();
 
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
-    let clear =
-        (props.clearable.unwrap_or(false) && !props.value.is_empty() && !disabled).then(|| {
-            rsx! {
-                ActionIcon {
-                    aria_label: "Clear",
-                    size: icon_size,
-                    onclick: move |_| {
-                        if let Some(oninput) = &oninput {
-                            oninput.call(String::new());
-                        }
-                        state.set_active(None);
-                    },
-                    CloseIcon {}
-                }
+    let clear_input = oninput.clone();
+    let clear = (props.clearable.unwrap_or(false) && !text.is_empty() && !disabled).then(|| {
+        rsx! {
+            ActionIcon {
+                aria_label: "Clear",
+                size: icon_size,
+                onclick: move |_| {
+                    if let Some(oninput) = &clear_input {
+                        oninput(String::new());
+                    }
+                    state.set_active(None);
+                },
+                CloseIcon {}
             }
-        });
+        }
+    });
     // The caller's own trailing content keeps its place; the x sits at the end,
     // nearest the frame's edge.
     let trailing = (props.trailing.is_some() || clear.is_some()).then(|| {
@@ -227,14 +237,15 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         // `list`, not `both`: the field never completes the text inline, it
         // only offers rows underneath.
         .attr("aria-autocomplete", "list")
-        .attr("value", props.value.clone())
+        .attr("name", bound.name().map(str::to_string))
+        .attr("value", text)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("autocomplete", "off")
         .event("oninput", move |event: FormEvent| {
             if let Some(oninput) = &oninput {
-                oninput.call(event.value());
+                oninput(event.value());
             }
             // The list changes under the highlight, so typing disarms it: the
             // next Enter belongs to whatever was typed, not to a row that

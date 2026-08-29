@@ -36,19 +36,38 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
             let ty = &field.ty;
             let key = ident.to_string();
             let doc = format!("The path of `{key}`.");
+            // Plain `fn` items, not closures: a closure's elided lifetimes do
+            // not tie its `&dyn Any` result to its argument.
+            let step = quote! {
+                {
+                    fn get(value: &dyn ::std::any::Any) -> ::std::option::Option<&dyn ::std::any::Any> {
+                        value
+                            .downcast_ref::<#name>()
+                            .map(|parent| &parent.#ident as &dyn ::std::any::Any)
+                    }
+                    fn get_mut(
+                        value: &mut dyn ::std::any::Any,
+                    ) -> ::std::option::Option<&mut dyn ::std::any::Any> {
+                        value
+                            .downcast_mut::<#name>()
+                            .map(|parent| &mut parent.#ident as &mut dyn ::std::any::Any)
+                    }
+                    ::libero::components::Step { get, get_mut }
+                }
+            };
             Ok(match is_nested(field)? {
                 true => quote! {
                     #[doc = #doc]
                     #field_vis fn #ident(&self) -> <#ty as ::libero::components::Fields>::Paths<R> {
                         <#ty as ::libero::components::Fields>::paths(
-                            ::libero::components::FieldPath::<R, #ty>::at(&self.prefix, #key).into(),
+                            self.base.child::<#ty>(#key, #step),
                         )
                     }
                 },
                 false => quote! {
                     #[doc = #doc]
                     #field_vis fn #ident(&self) -> ::libero::components::FieldPath<R, #ty> {
-                        ::libero::components::FieldPath::at(&self.prefix, #key)
+                        self.base.child(#key, #step)
                     }
                 },
             })
@@ -59,15 +78,14 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
     Ok(quote! {
         #[doc = #struct_doc]
         #vis struct #paths<R> {
-            prefix: ::std::borrow::Cow<'static, str>,
-            _root: ::std::marker::PhantomData<fn() -> R>,
+            base: ::libero::components::FieldPath<R, #name>,
         }
 
         impl<R> #paths<R> {
             /// The path of this struct itself - the prefix every field here
             /// sits under. What a `Fieldset` takes as its `path`.
             pub fn path(&self) -> ::libero::components::FieldPath<R, #name> {
-                ::libero::components::FieldPath::at(&self.prefix, "")
+                self.base.clone()
             }
 
             #(#methods)*
@@ -75,33 +93,35 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
 
         impl<R> ::std::convert::From<#paths<R>> for ::std::string::String {
             fn from(paths: #paths<R>) -> Self {
-                paths.prefix.into_owned()
+                paths.base.into()
             }
         }
 
-        /// What a `String` prop converts through - `path: Order::FIELDS.address()`.
+        /// `path: Order::FIELDS.address()` on a `Fieldset`.
+        impl<R> ::std::convert::From<#paths<R>> for ::libero::components::FieldName<#name> {
+            fn from(paths: #paths<R>) -> Self {
+                paths.base.into()
+            }
+        }
+
         impl<R> ::std::fmt::Display for #paths<R> {
             fn fmt(&self, formatter: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
-                formatter.write_str(&self.prefix)
+                ::std::fmt::Display::fmt(&self.base, formatter)
             }
         }
 
         impl ::libero::components::Fields for #name {
             type Paths<R> = #paths<R>;
 
-            fn paths<R>(prefix: ::std::string::String) -> #paths<R> {
-                #paths {
-                    prefix: ::std::borrow::Cow::Owned(prefix),
-                    _root: ::std::marker::PhantomData,
-                }
+            fn paths<R>(base: ::libero::components::FieldPath<R, #name>) -> #paths<R> {
+                #paths { base }
             }
         }
 
         impl #name {
             /// Typed paths of this struct's fields, for `name` and `.on(..)`.
             pub const FIELDS: #paths<#name> = #paths {
-                prefix: ::std::borrow::Cow::Borrowed(""),
-                _root: ::std::marker::PhantomData,
+                base: ::libero::components::FieldPath::new(""),
             };
         }
     })

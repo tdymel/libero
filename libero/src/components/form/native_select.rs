@@ -4,7 +4,7 @@ use crate::{
     components::{
         HtmlTag, Input, Options,
         common::field_props,
-        form::{field_control_sx, use_field, use_field_frame},
+        form::{field_control_sx, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
@@ -27,6 +27,11 @@ field_props! {
         /// for the placeholder, which cannot be picked.
         #[props(default)]
         onchange: Option<EventHandler<T>>,
+        /// What the select posts as. A path - `Order::FIELDS.size()` - also
+        /// binds it to the surrounding `Form`'s value when it has no
+        /// `onchange`.
+        #[props(default, into)]
+        name: crate::components::FieldName<Option<T>>,
         /// Rules over the selection, shown once the select loses focus or its
         /// form is submitted.
         #[props(default, into)]
@@ -66,10 +71,13 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
 
     let size = props.size.copied_or(theme.native_select.size);
     let radius = props.radius.copied_or(theme.native_select.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
-    if props.onchange.is_none() {
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let current = bound.value().unwrap_or_else(|| props.value.clone());
+
+    if props.onchange.is_none() && !bound.is_bound() {
         warn("NativeSelect: without `onchange` the selection can never change.");
     }
 
@@ -80,11 +88,10 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     if values.is_empty() {
         warn("NativeSelect: no options - a `T` without static `options()` needs `options`.");
     }
-    let selected = props
-        .value
+    let selected = current
         .as_ref()
         .and_then(|value| values.iter().position(|option| option == value));
-    if props.value.is_some() && selected.is_none() && !values.is_empty() {
+    if current.is_some() && selected.is_none() && !values.is_empty() {
         warn("NativeSelect: `value` is not one of the options, so none is selected.");
     }
 
@@ -101,7 +108,8 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&props.value))
+        .rules(props.validate.check(&current))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -121,11 +129,15 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         .prepare();
 
     let onchange = props.onchange;
+    let setter = bound.setter();
     let pick = use_callback(move |index: usize| {
-        if let Some(onchange) = &onchange
-            && let Some(value) = values.get(index)
-        {
-            onchange.call(value.clone());
+        let Some(value) = values.get(index) else {
+            return;
+        };
+        match (&onchange, &setter) {
+            (Some(onchange), _) => onchange.call(value.clone()),
+            (None, Some(setter)) => setter.set(Some(value.clone())),
+            (None, None) => {}
         }
     });
 
@@ -138,6 +150,7 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     // selection at all.
     let select = field
         .aria(control)
+        .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
         .attr("required", required)
         .event("onchange", move |event: FormEvent| {

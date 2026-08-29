@@ -8,7 +8,7 @@ use dioxus::{
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        form::{Caption, FieldEntry, FieldStatus, FormScope, worst},
+        form::{Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, worst},
         layout::{BoxStyle, use_box},
     },
     hooks::use_root_id,
@@ -79,6 +79,7 @@ pub(crate) struct FieldBuilder<'a> {
     status: Option<&'a Input<FieldStatus>>,
     rules: Option<FieldStatus>,
     name: Option<&'a str>,
+    hook: Option<Rc<FieldHook>>,
     required: bool,
     disabled: bool,
     inline: bool,
@@ -101,6 +102,7 @@ impl Default for FieldBuilder<'_> {
             status: None,
             rules: None,
             name: None,
+            hook: None,
             required: false,
             disabled: false,
             inline: false,
@@ -153,6 +155,15 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn name(mut self, name: Option<&'a str>) -> Self {
         self.name = name;
+        self
+    }
+
+    /// The field's `name`, resolved by [`use_bound`] - its full name and the
+    /// hook `use_bound` already took, so the field pays for one.
+    #[inline]
+    pub fn bound<T>(mut self, bound: &'a Bound<T>) -> Self {
+        self.name = bound.name();
+        self.hook = Some(bound.hook.clone());
         self
     }
 
@@ -229,15 +240,12 @@ impl<'a> FieldBuilder<'a> {
         let id = use_root_id(self.attributes);
         let id_value = id();
 
-        // One hook for the touched flag, the form registration and its cleanup:
-        // every field pays for it, validated or not.
-        let hook = use_hook(|| {
-            Rc::new(FieldHook {
-                touched: Cell::new(false),
-                owner: current_scope_id(),
-                form: try_consume_context::<FormScope>().map(|mut scope| (scope, scope.key())),
-            })
-        });
+        // One hook for the touched flag, the form registration, the binding and
+        // their cleanup: every field pays for it, validated or not.
+        let hook = match self.hook {
+            Some(hook) => hook,
+            None => use_hook(FieldHook::new),
+        };
         let scope = hook.form.map(|(scope, _)| scope);
 
         let name = scope.and(
@@ -350,13 +358,135 @@ impl<'a> FieldBuilder<'a> {
     }
 }
 
-/// What a field keeps across renders for validation. Nothing outside the field
-/// reads `touched`, so it re-renders its owner by hand rather than through a
-/// signal.
-struct FieldHook {
+/// What a field keeps across renders for validation and binding. Nothing
+/// outside the field reads `touched`, so it re-renders its owner by hand rather
+/// than through a signal.
+pub(crate) struct FieldHook {
     touched: Cell<bool>,
+    /// Whether a `name` that does not fit the form's value was warned about.
+    warned: Cell<bool>,
     owner: ScopeId,
     form: Option<(FormScope, usize)>,
+    binding: Binding,
+    disabled: Option<Disabled>,
+}
+
+impl FieldHook {
+    fn new() -> Rc<Self> {
+        Rc::new(Self {
+            touched: Cell::new(false),
+            warned: Cell::new(false),
+            owner: current_scope_id(),
+            form: try_consume_context::<FormScope>().map(|mut scope| (scope, scope.key())),
+            binding: try_consume_context::<Binding>().unwrap_or_default(),
+            disabled: try_consume_context::<Disabled>(),
+        })
+    }
+}
+
+/// Resolves a field's `name` against the `Form` or `Fieldset` around it: the
+/// full name it posts as, and - for a name built from a path, on a field with
+/// no handler of its own - its value inside the form's value.
+///
+/// **This is a hook**, and it is the one [`FieldBuilder::prepare`] would take:
+/// hand the result to [`FieldBuilder::bound`].
+pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: bool) -> Bound<T> {
+    let hook = use_hook(FieldHook::new);
+    let full = (!name.is_empty())
+        .then(|| crate::components::form::validation_join(hook.binding.prefix(), name.as_str()));
+    let active = !controlled && name.steps().is_some() && hook.binding.is_bound();
+    Bound {
+        name: active.then(|| name.clone()),
+        hook,
+        full,
+    }
+}
+
+pub(crate) struct Bound<T> {
+    hook: Rc<FieldHook>,
+    /// The name, kept only while it binds.
+    name: Option<FieldName<T>>,
+    full: Option<String>,
+}
+
+impl<T> Bound<T> {
+    /// The full name the field posts as - under every enclosing fieldset.
+    pub fn name(&self) -> Option<&str> {
+        self.full.as_deref()
+    }
+
+    /// The field's own `disabled`, or'd with every disabled `Fieldset` around
+    /// it - a native `<fieldset disabled>` wins over a `false` too. Subscribes
+    /// the field to the group's state.
+    pub fn disabled(&self, own: Option<bool>) -> bool {
+        own.unwrap_or(false) || self.hook.disabled.is_some_and(|Disabled(group)| group())
+    }
+
+    /// Whether the form's value drives the field.
+    pub fn is_bound(&self) -> bool {
+        self.name.is_some()
+    }
+}
+
+impl<T: Clone + 'static> Bound<T> {
+    /// The field's value inside the form's value, when bound. Subscribes the
+    /// field to the form's value.
+    pub fn value(&self) -> Option<T> {
+        let name = self.name.as_ref()?;
+        let value = self.hook.binding.with(name.steps()?, T::clone);
+        if value.is_none() && !self.hook.warned.replace(true) {
+            warn!(
+                "the field named `{name}` holds a `{}`, which is not what that path names inside its form's value - the field is left unbound",
+                std::any::type_name::<T>()
+            );
+        }
+        value
+    }
+
+    /// Writes into the form's value, when bound.
+    pub fn setter(&self) -> Option<Setter<T>> {
+        self.name.clone().map(|name| Setter {
+            hook: self.hook.clone(),
+            name,
+        })
+    }
+
+    /// What the field calls with its next value: the caller's `handler`, or,
+    /// bound and without one, a write into the form's value.
+    pub fn emit(&self, handler: Option<EventHandler<T>>) -> Option<impl Fn(T) + Clone + 'static> {
+        let setter = self.setter();
+        if handler.is_none() && setter.is_none() {
+            return None;
+        }
+        Some(move |next: T| match (&handler, &setter) {
+            (Some(handler), _) => handler.call(next),
+            (None, Some(setter)) => setter.set(next),
+            (None, None) => {}
+        })
+    }
+}
+
+/// A bound field's write into its form's value.
+pub(crate) struct Setter<T> {
+    hook: Rc<FieldHook>,
+    name: FieldName<T>,
+}
+
+impl<T> Clone for Setter<T> {
+    fn clone(&self) -> Self {
+        Self {
+            hook: self.hook.clone(),
+            name: self.name.clone(),
+        }
+    }
+}
+
+impl<T: 'static> Setter<T> {
+    pub fn set(&self, next: T) {
+        self.hook
+            .binding
+            .set(self.name.steps().unwrap_or_default(), next);
+    }
 }
 
 impl Drop for FieldHook {

@@ -4,7 +4,7 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         common::{field_props, input_from_str},
-        form::{FIELD_CONTROL_SX, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -78,8 +78,10 @@ field_props! {
         /// Emits a hidden input of that name, so the pin posts with a form.
         /// The cells cannot carry it themselves - there are several of them,
         /// and each holds one character.
+        /// A path - `Login::FIELDS.code()` - also binds the pin to the
+        /// surrounding `Form`'s value when there is no `oninput`.
         #[props(default, into)]
-        name: Option<String>,
+        name: crate::components::FieldName<String>,
         /// Focuses the first cell on mount.
         #[props(default)]
         autofocus: Option<bool>,
@@ -115,12 +117,16 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .length
         .copied_or(theme.pin_field.length)
         .clamp(1, MAX_LENGTH);
-    let disabled = props.disabled.unwrap_or(false);
     let readonly = props.readonly.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let mask = props.mask.unwrap_or(false);
 
-    let value = props.value.clone().unwrap_or_else(&*buffer);
+    let bound = use_bound(&props.name, props.oninput.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let value = bound
+        .value()
+        .or_else(|| props.value.clone())
+        .unwrap_or_else(&*buffer);
     let cells = to_cells(&value, length);
 
     let field = use_field()
@@ -130,7 +136,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&value))
-        .name(props.name.as_deref())
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -163,17 +169,17 @@ pub fn PinField(props: PinFieldProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    let oninput = props.oninput;
+    let oninput = bound.emit(props.oninput);
     let oncomplete = props.oncomplete;
-    let controlled = props.value.is_some();
-    let mut report = move |cells: Vec<Option<char>>| {
+    let controlled = props.value.is_some() || bound.is_bound();
+    let report = move |cells: Vec<Option<char>>| {
         let next: String = cells.iter().flatten().collect();
         let full = next.chars().count() == length;
         if !controlled {
             buffer.set(next.clone());
         }
         if let Some(oninput) = &oninput {
-            oninput.call(next.clone());
+            oninput(next.clone());
         }
         // Latched: without it every keystroke on a full pin reports a
         // completion, and a submit handler would run again on each.
@@ -191,6 +197,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
 
     let edit = {
         let cells = cells.clone();
+        let mut report = report.clone();
         move |index: usize, character: Option<char>| {
             let mut next = cells.clone();
             next[index] = character;
@@ -200,6 +207,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
 
     let spread = {
         let cells = cells.clone();
+        let mut report = report.clone();
         move |index: usize, characters: Vec<char>| {
             let mut next = cells.clone();
             let mut cursor = index;
@@ -361,7 +369,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
         children.push(frame.clone().render(input));
     }
 
-    if let Some(name) = props.name {
+    if let Some(name) = bound.name().map(str::to_string) {
         // `Some(true)` or nothing - a `false` bool reaches a native renderer
         // as the string "false", which reads as disabled.
         children.push(rsx! {

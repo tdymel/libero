@@ -6,7 +6,7 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{base_color, contrast_color, field_props, focus_ring_sx, variables},
-        form::use_field,
+        form::{use_bound, use_field},
         layout::use_box,
     },
     hooks::{use_cache, use_css, use_theme},
@@ -100,6 +100,11 @@ field_props! {
         validate: crate::components::Validators<bool>,
         /// Names the checkbox when it has no `label`; `attributes` cannot,
         /// they land on the input but a caller may not want a visible label.
+        /// What the field posts as. A path - `Signup::FIELDS.terms()` - also
+        /// binds it to the surrounding `Form`'s value when the field has no
+        /// `onchange`.
+        #[props(default, into)]
+        name: crate::components::FieldName<bool>,
         #[props(default, into)]
         aria_label: Option<String>,
     }
@@ -118,12 +123,13 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
 
     let size = props.size.copied_or(theme.checkbox.size);
     let radius = props.radius.copied_or(theme.checkbox.radius);
-    let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
-    let checked = props.checked.unwrap_or(false);
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let disabled = bound.disabled(props.disabled);
+    let checked = bound.value().or(props.checked).unwrap_or(false);
     let indeterminate = props.indeterminate.unwrap_or(false);
 
-    if props.checked.is_some() && props.onchange.is_none() {
+    if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Checkbox: `checked` without `onchange` can never change.");
     }
     if props.onchange.is_some() && props.checked.is_none() {
@@ -137,6 +143,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .helper(&props.helper)
         .status(&props.status)
         .rules(props.validate.check(&checked))
+        .bound(&bound)
         .required(required)
         .disabled(disabled)
         .size(size)
@@ -173,11 +180,11 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .prepare();
     let box_class = use_css(Some(&CHECKBOX_BOX_SX), CssLayer::Framework);
 
-    let onchange = props.onchange;
+    let onchange = bound.emit(props.onchange);
     let next = !(checked || indeterminate);
     let toggle = move || {
         if let Some(onchange) = &onchange {
-            onchange.call(next);
+            onchange(next);
         }
     };
 
@@ -186,20 +193,27 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .attr("type", "checkbox")
         .attr("checked", checked && !indeterminate)
         .attr("aria-checked", indeterminate.then_some("mixed"))
+        .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("aria-label", props.aria_label)
         // `onclick`, not `onchange`: cancelling the click reverts the
         // browser's own flip, so Rust state stays the only source of truth.
-        .event("onclick", move |event: Event<MouseData>| {
-            event.prevent_default();
-            toggle();
+        .event("onclick", {
+            let toggle = toggle.clone();
+            move |event: Event<MouseData>| {
+                event.prevent_default();
+                toggle();
+            }
         })
         // Blitz forwards a `<label>` click to its input as a default action
         // that emits `input`, never `click`, so `onclick` alone leaves the
         // checkbox dead there. On the web a cancelled click suppresses
         // `input`, and both handlers compute the same value anyway.
-        .event("oninput", move |_: FormEvent| toggle())
+        .event("oninput", {
+            let toggle = toggle.clone();
+            move |_: FormEvent| toggle()
+        })
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 

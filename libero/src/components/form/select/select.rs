@@ -1,5 +1,7 @@
 use dioxus::prelude::*;
 
+use crate::components::form::use_bound;
+
 use crate::{
     components::{Input, Options, common::field_props},
     hooks::use_theme,
@@ -74,8 +76,10 @@ field_props! {
         /// Emits a hidden input of that name carrying the selected option's
         /// `Options::value()`, so the select posts with a native form. The
         /// trigger is a `div`, so it cannot carry the name itself.
+        /// A path - `Order::FIELDS.plan()` - also binds the selection to the
+        /// surrounding `Form`'s value when there is no `onchange`.
         #[props(default, into)]
-        name: Option<String>,
+        name: crate::components::FieldName<Option<T>>,
         /// Rules over the selection, shown once the select loses focus or its
         /// form is submitted.
         #[props(default, into)]
@@ -108,7 +112,10 @@ field_props! {
 pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let theme = use_theme();
 
-    if props.onchange.is_none() {
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let current = bound.value().unwrap_or_else(|| props.value.clone());
+
+    if props.onchange.is_none() && !bound.is_bound() {
         warn("Select: without `onchange` the selection can never change.");
     }
 
@@ -119,11 +126,10 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     if values.is_empty() {
         warn("Select: no options - a `T` without static `options()` needs `options`.");
     }
-    let selected_index = props
-        .value
+    let selected_index = current
         .as_ref()
         .and_then(|value| values.iter().position(|option| option == value));
-    if props.value.is_some() && selected_index.is_none() && !values.is_empty() {
+    if current.is_some() && selected_index.is_none() && !values.is_empty() {
         warn("Select: `value` is not one of the options, so none is selected.");
     }
 
@@ -172,28 +178,29 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         })
     });
 
-    let onchange = props.onchange;
+    let onchange = bound.emit(props.onchange);
+    let clear = onchange.clone();
     rsx! {
         SelectCore {
             rows,
             selected,
             onpick: move |index: usize| {
                 if let (Some(onchange), Some(value)) = (&onchange, values.get(index)) {
-                    onchange.call(Some(value.clone()));
+                    onchange(Some(value.clone()));
                 }
             },
             selection,
             placeholder: props.placeholder,
-            name: props.name,
-            form_values: vec![props.value.as_ref().map(Options::value).unwrap_or_default()],
-            rules: props.validate.check(&props.value),
+            name: bound.name().map(str::to_string),
+            form_values: vec![current.as_ref().map(Options::value).unwrap_or_default()],
+            rules: props.validate.check(&current),
             clearable: props.clearable.unwrap_or(false),
             searchable,
             search_placeholder: props.search_placeholder,
             matches,
             onclear: move |_| {
-                if let Some(onchange) = &onchange {
-                    onchange.call(None);
+                if let Some(clear) = &clear {
+                    clear(None);
                 }
             },
             label: props.label,
@@ -202,7 +209,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             status: props.status,
             size: props.size.copied_or(theme.select.size),
             radius: props.radius.copied_or(theme.select.radius),
-            disabled: props.disabled,
+            disabled: Some(bound.disabled(props.disabled)),
             required: props.required,
             class: props.class,
             sx: props.sx,
