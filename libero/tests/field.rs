@@ -10,7 +10,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, NativeSelect, NumberField, NumberValue, Options, PasswordField, Radio,
+        Checkbox, NativeSelect, NumberField, NumberValue, Options, PasswordField, PinField, Radio,
         RadioGroup, Slider, Switch, TextField, Textarea,
     },
 };
@@ -816,4 +816,51 @@ fn a_standalone_radio_is_a_field_of_its_own() {
 
     let order = |needle: &str| body.find(needle).unwrap_or_else(|| panic!("no {needle}"));
     assert!(order("<input") < order("<label"));
+}
+
+#[test]
+fn a_pin_field_is_one_group_of_cells_that_share_the_frame() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PinField { label: "Code", length: 6usize, name: "otp", value: "12" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    // Six cells, each in its own frame, plus the hidden input the pin posts
+    // with.
+    assert_eq!(body.matches(r#"data-pin-index="#).count(), 6);
+    assert_eq!(body.matches(r#"type="hidden""#).count(), 1);
+    assert!(body.contains(r#"name="otp""#));
+
+    // One prepared frame rendered six times: the same class, six times over,
+    // and no id on any of them.
+    let frame_class = body
+        .split(r#"<div class=""#)
+        .nth(2)
+        .and_then(|rest| rest.split('"').next())
+        .expect("a cell frame");
+    assert_eq!(body.matches(frame_class).count(), 6);
+
+    // The value fills the cells left to right and leaves the rest empty.
+    assert_eq!(body.matches(r#"value="1""#).count(), 1);
+    assert_eq!(body.matches(r#"value="2""#).count(), 1);
+
+    // The group is named by the label, not by `for` - a `div` is not labelable.
+    assert!(body.contains(r#"role="group""#));
+    assert!(body.contains(r#"dir="ltr""#));
+    let label_id = format!(
+        "{}-label",
+        attributes_of(&body, "input")["id"].trim_end_matches("-1")
+    );
+    assert!(body.contains(&format!(r#"aria-labelledby="{label_id}""#)));
+
+    // Only the first cell offers the code a phone just received.
+    assert_eq!(body.matches(r#"autocomplete="one-time-code""#).count(), 1);
+    // `tel`, not `number`: a numeric keypad with no spinner.
+    assert_eq!(body.matches(r#"type="tel""#).count(), 6);
 }

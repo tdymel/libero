@@ -137,7 +137,7 @@ mod tests {
 
     use crate::components::{
         AnchorUnderline, ButtonVariant, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition,
-        ImageFit, LabelPosition, Orientation, SidebarSide,
+        ImageFit, LabelPosition, Orientation, PinKind, SidebarSide,
     };
     use crate::theme::{Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 
@@ -153,6 +153,7 @@ mod tests {
             $check!(ImageFit);
             $check!(LabelPosition);
             $check!(Orientation);
+            $check!(PinKind);
             $check!(Placement);
             $check!(QrRobustness);
             $check!(ScrollAxis);

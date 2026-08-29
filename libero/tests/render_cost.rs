@@ -141,6 +141,10 @@ fn render_cost_per_component() {
         "PasswordField" { PasswordField { oninput: move |_| {} } }
         "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
+        // The only component whose cost scales with a prop - two elements per
+        // cell, so the pair below is the per-cell price.
+        "PinField" { PinField { oninput: move |_| {} } }
+        "PinField+6" { PinField { oninput: move |_| {}, length: 6usize } }
         "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
         "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
         "Radio" { Radio { checked: true, onselect: move |_| {} } }

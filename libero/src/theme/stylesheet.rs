@@ -114,6 +114,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         image,
         kbd,
         anchor,
+        pin_field,
         primary,
         secondary,
         error,
@@ -165,6 +166,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(checkbox.to_css_declarations());
     declarations.extend(radio.to_css_declarations());
     declarations.extend(field.to_css_declarations());
+    declarations.extend(pin_field.to_css_declarations());
     declarations.extend(combobox.to_css_declarations());
     declarations.extend(slider.to_css_declarations());
     declarations.extend(list.to_css_declarations());

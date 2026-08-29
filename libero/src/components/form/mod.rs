@@ -6,6 +6,7 @@ mod glyphs;
 mod native_select;
 mod number_field;
 mod password_field;
+mod pin_field;
 mod radio;
 mod radio_group;
 mod select;
@@ -25,6 +26,7 @@ pub use field_status::FieldStatus;
 pub use native_select::{NativeSelect, NativeSelectProps};
 pub use number_field::{NumberField, NumberFieldProps};
 pub use password_field::{PasswordField, PasswordFieldProps};
+pub use pin_field::{PinField, PinFieldProps, PinKind};
 pub use radio::{Radio, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupProps};
 pub use select::{
