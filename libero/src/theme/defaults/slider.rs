@@ -10,7 +10,6 @@ pub const SLIDER_FONT_SIZE: SizeCss = SizeCss::new("--lsx-slider-font-size-");
 // which carry no `data-state` of their own - can inherit it.
 pub const SLIDER_TRACK: CssVar = CssVar::new("--lsx-slider-track");
 pub const SLIDER_THUMB: CssVar = CssVar::new("--lsx-slider-thumb");
-pub const SLIDER_RADIUS: CssVar = CssVar::new("--lsx-slider-radius");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SliderSizeLevel {
@@ -24,8 +23,6 @@ pub struct SliderSizeLevel {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SliderDefaults {
     pub size: Size,
-    /// Track corner radius; the thumb is always a circle.
-    pub radius: Size,
     pub sizes: Sizes<SliderSizeLevel>,
     /// Steps moved per arrow key press.
     pub step: f64,
@@ -40,12 +37,8 @@ impl SliderDefaults {
             .font_size(SLIDER_FONT_SIZE.value(size))
     }
 
-    pub fn radius_sx(radius: Size) -> Sx {
-        sx().var(SLIDER_RADIUS, SizeCss::RADIUS.value(radius))
-    }
-
     pub fn theme_vars() -> Sx {
-        sx().per_size(Self::size_sx).per_radius(Self::radius_sx)
+        sx().per_size(Self::size_sx)
     }
 }
 

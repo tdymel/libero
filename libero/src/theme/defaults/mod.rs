@@ -110,8 +110,8 @@ pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVi
 pub use select::SelectDefaults;
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
 pub use slider::{
-    SLIDER_FONT_SIZE, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK,
-    SLIDER_TRACK_SIZE, SliderDefaults, SliderSizeLevel,
+    SLIDER_FONT_SIZE, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK, SLIDER_TRACK_SIZE,
+    SliderDefaults, SliderSizeLevel,
 };
 pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
 pub use switch::{

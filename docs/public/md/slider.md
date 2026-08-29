@@ -171,7 +171,6 @@ pointer and keyboard handlers.
 | `max` | `V` | last option, or `100.0` | Upper bound, written in the value's own type. |
 | `step` | `V::Step` | - | Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps. |
 | `size` | `Size` | `md` | Controls track, thumb, and font size. |
-| `radius` | `Size` | `xl` | Track corner radius; the thumb is always a circle. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the slider. |
 | `format` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`. |
@@ -202,7 +201,6 @@ Like every component, `Slider` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size` when the prop is omitted. |
-| `radius` | `Size` | Default `radius` when the prop is omitted. |
 | `sizes` | `Sizes<SliderSizeLevel>` | `track_size`, `thumb_size`, `font_size` per size. |
 | `step` | `f64` | Steps moved per arrow key press. |
 | `big_step` | `f64` | Steps moved per Shift+arrow, PageUp or PageDown. |
@@ -210,8 +208,12 @@ Like every component, `Slider` also takes the shared props `sx`, `class`,
 ## CSS variables
 
 The per-size scales are declared once; the picked level is resolved on the root
-as `--lsx-slider-track`/`-thumb`/`-radius`, so the track, thumb and mark
-children - which carry no `data-state` of their own - inherit it.
+as `--lsx-slider-track`/`-thumb`, so the track, thumb and mark children -
+which carry no `data-state` of their own - inherit it.
+
+The track is always a pill. The shared `radius` prop is not wired: the radius
+scale starts at 2px and a track is 2-10px tall, so every step above the
+smallest clamped to the same half-height curve.
 
 | Variable | Description |
 |---|---|
@@ -220,7 +222,6 @@ children - which carry no `data-state` of their own - inherit it.
 | `--lsx-slider-font-size-<size>` | Label bubble and mark caption size for that size step. |
 | `--lsx-slider-track` | The track thickness in effect, resolved on the root. |
 | `--lsx-slider-thumb` | The thumb diameter in effect, resolved on the root. |
-| `--lsx-slider-radius` | The track corner radius in effect, resolved on the root. |
 | `--lsx-slider-color` | Accent color of the track fill and thumb. |
 | `--lsx-slider-filled` | Filled fraction of the track, `0` to `1`. |
 | `--lsx-slider-mark-at` | A mark's position along the track, `0` to `1`. |
@@ -235,7 +236,6 @@ below, space separated.
 | Token | Condition |
 |---|---|
 | `size-<size>` | The `size` in effect. |
-| `radius-<size>` | The `radius` in effect. |
 | `dragging` | A pointer drag is in progress. |
 | `disabled` | `disabled` is set. |
 | `marks-labeled` | At least one mark carries a label, so the captions need room. |

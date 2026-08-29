@@ -423,7 +423,6 @@ impl Theme {
         },
         slider: SliderDefaults {
             size: Size::Md,
-            radius: Size::Xl,
             sizes: Sizes::new(
                 SliderSizeLevel {
                     track_size: "2px",

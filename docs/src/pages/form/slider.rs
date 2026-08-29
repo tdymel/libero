@@ -233,9 +233,6 @@ pub fn SliderPage() -> Element {
                     prop("step", "V::Step")
                         .doc("Distance one step covers, measured from `min`: a count of options discretely, a value continuously. Also sets how many decimals an emitted value keeps."),
                     prop("size", "Size").default("md").doc("Controls track, thumb, and font size."),
-                    prop("radius", "Size")
-                        .default("xl")
-                        .doc("Track corner radius; the thumb is always a circle."),
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Accent color; a theme color name or a literal CSS color."),
@@ -304,7 +301,6 @@ pub fn SliderPage() -> Element {
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),
                     Control::slider("size", SIZES).default(theme.slider.size.as_str()),
-                    Control::slider("radius", SIZES).default(theme.slider.radius.as_str()),
                     Control::color(
                         "color",
                         ["primary", "secondary", "success", "error", "warning", "info"],
@@ -372,7 +368,6 @@ pub fn SliderPage() -> Element {
                                     aria_label: "Quality",
                                     value: quality(),
                                     size: values.str("size"),
-                                    radius: values.str("radius"),
                                     color: values.str("color"),
                                     min: quality_of(&values, "min"),
                                     max: quality_of(&values, "max"),
@@ -415,7 +410,6 @@ pub fn SliderPage() -> Element {
                                     aria_label: "Volume",
                                     value: volume(),
                                     size: values.str("size"),
-                                    radius: values.str("radius"),
                                     color: values.str("color"),
                                     min: number(&values, "min_value"),
                                     max: number(&values, "max_value"),
