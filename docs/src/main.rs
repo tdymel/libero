@@ -24,7 +24,7 @@ use pages::{
     DialogPage, DividerPage, DrawerPage, FlexPage, FloatPage, FocusTrapPage, GettingStarted,
     GridPage, HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage,
     MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage,
-    PasswordFieldPage, PerformancePage, QrCodePage, RadioGroupPage, ScrollAreaPage,
+    PasswordFieldPage, PerformancePage, PinFieldPage, QrCodePage, RadioGroupPage, ScrollAreaPage,
     SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage,
     SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TitlePage,
     TooltipPage, TreePage, VisuallyHiddenPage,
@@ -87,6 +87,8 @@ pub(crate) enum Route {
     NumberFieldPage {},
     #[route("/form/password-field")]
     PasswordFieldPage {},
+    #[route("/form/pin-field")]
+    PinFieldPage {},
     #[route("/form/radio-group")]
     RadioGroupPage {},
     #[route("/form/select")]

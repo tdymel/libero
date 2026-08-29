@@ -133,6 +133,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::NativeSelectPage {}, "NativeSelect"),
                 page(Route::NumberFieldPage {}, "NumberField"),
                 page(Route::PasswordFieldPage {}, "PasswordField"),
+                page(Route::PinFieldPage {}, "PinField"),
                 page(Route::RadioGroupPage {}, "RadioGroup"),
                 page(Route::SelectPage {}, "Select"),
                 page(Route::SliderPage {}, "Slider"),
