@@ -31,6 +31,9 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
         })
         .collect::<Result<_>>()?;
     let labels: Vec<String> = data.variants.iter().map(label_of).collect::<Result<_>>()?;
+    // The variant's own name, never the label: a form's wire value must not
+    // move when a label is customised or translated.
+    let values: Vec<String> = variants.iter().map(|variant| variant.to_string()).collect();
 
     if !input.generics.params.is_empty() {
         return Err(Error::new_spanned(
@@ -48,6 +51,13 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
             fn label(&self) -> ::std::string::String {
                 match self {
                     #(Self::#variants => #labels,)*
+                }
+                .to_string()
+            }
+
+            fn value(&self) -> ::std::string::String {
+                match self {
+                    #(Self::#variants => #values,)*
                 }
                 .to_string()
             }

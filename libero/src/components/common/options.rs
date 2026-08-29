@@ -32,6 +32,17 @@ pub trait Options: Clone + PartialEq + 'static {
     /// instance with the component's `label` prop - that one runs during
     /// render, so it can read a locale from context.
     fn label(&self) -> String;
+
+    /// What a hidden input posts for this choice, so a select can take part in
+    /// a native form submit.
+    ///
+    /// Defaults to [`Options::label`], which is right for a runtime set like
+    /// `String`. The derive overrides it with the **variant's name**, so a
+    /// `#[option(label = "..")]` - or a translated label - never changes what
+    /// a form sends.
+    fn value(&self) -> String {
+        self.label()
+    }
 }
 
 /// A runtime set, listed by the component rather than the type.
