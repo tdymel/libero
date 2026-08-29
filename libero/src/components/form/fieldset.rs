@@ -54,7 +54,7 @@ base_props! {
         #[props(default)]
         value: Option<Signal<V>>,
         /// Composite rules over `value`. A rule naming fields with `.on(..)`
-        /// shows on each of them; one naming none shows under the legend.
+        /// shows on each of them; one naming none shows under the fields.
         #[props(default, into)]
         validate: Validators<V>,
         /// Where the group sits in the form's value - `Order::FIELDS.address()`.
@@ -62,9 +62,10 @@ base_props! {
         /// relative to it.
         #[props(default, into)]
         path: FieldName<V>,
-        /// The group's caption, a `<legend>`.
+        /// The group's caption, rendered as its `<legend>`. Named `label` like
+        /// every field's caption.
         #[props(default, into)]
-        legend: Caption,
+        label: Caption,
         #[props(default, into)]
         description: Caption,
         #[props(default, into)]
@@ -151,8 +152,8 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     .collect::<Vec<_>>()
     .join(" ");
 
-    let legend = (!props.legend.is_none()).then(|| {
-        let content = match &props.legend {
+    let legend = (!props.label.is_none()).then(|| {
+        let content = match &props.label {
             Caption::Text(text) => rsx! { "{text}" },
             Caption::Node(node) => node.clone(),
             Caption::None => rsx! {},

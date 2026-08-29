@@ -146,7 +146,7 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
         rsx! {
             LiberoProvider {
                 Fieldset {
-                    legend: "Address",
+                    label: "Address",
                     path: "address",
                     value: use_signal(Address::default),
                     validate: [
