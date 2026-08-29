@@ -86,6 +86,10 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     // id `aria-activedescendant` points at; what is inside it is the skin's, or
     // the caller's.
     let onchange = props.onchange;
+    let size = props.size.copied_or(theme.multi_select.size);
+    // Chips ride inside the control, so they sit one step down the same scale
+    // the field is on - `xs` has nowhere lower to go.
+    let chip_size = Size::ALL[size.index().saturating_sub(1)];
     let picked = props.value.clone();
     let draw_selection = props.selection;
     let selection = (!picked.is_empty()).then(|| {
@@ -95,7 +99,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
                 match &draw_selection {
                     Some(selection) => selection.call(SelectSelectionArgs { value, remove }),
-                    None => default_chip(&value, remove),
+                    None => default_chip(&value, remove, chip_size),
                 }
             });
             rsx! {
@@ -171,7 +175,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             description: props.description,
             helper: props.helper,
             status: props.status,
-            size: props.size.copied_or(theme.multi_select.size),
+            size,
             radius: props.radius.copied_or(theme.multi_select.radius),
             disabled: props.disabled,
             required: props.required,
@@ -184,13 +188,18 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
 }
 
 /// The default chip: the label, and an x that drops it.
-fn default_chip<T: Options>(value: &T, remove: Callback<()>) -> Element {
+fn default_chip<T: Options>(value: &T, remove: Callback<()>, size: Size) -> Element {
     let label = value.label();
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(Size::Xs).into();
+    // In `em`, so the x tracks the chip's font size instead of needing its own
+    // arm of the size scale.
+    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::String("1em".to_string()).into();
     rsx! {
-        Chip { size: Size::Xs,
+        Chip { size,
             "{label}"
             span {
+                // Centred by the trigger's own sx - a bare inline span would
+                // hang the button off the label's baseline.
+                "data-slot": "remove",
                 // The trigger holds the focus that keeps the list open, so the
                 // press must not move it onto the button.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
@@ -200,11 +209,13 @@ fn default_chip<T: Options>(value: &T, remove: Callback<()>) -> Element {
                 ActionIcon {
                     aria_label: "Remove {label}",
                     size: icon_size,
-                    // A native `<button>` inherits no `color` - it takes the
-                    // UA's `buttontext`, which is a black cross on a chip of
-                    // any colour. The same fix `Chip`'s removed `ondelete`
-                    // needed.
-                    sx: sx().color("inherit"),
+                    // A native `<button>` inherits neither `color` nor
+                    // `font-size` - it takes the UA's `buttontext` and 13.3px,
+                    // which is a black cross that ignores the chip's scale.
+                    // `color` is the fix `Chip`'s removed `ondelete` needed;
+                    // `font-size` is what makes the `1em` above mean the
+                    // chip's em.
+                    sx: sx().color("inherit").font_size("inherit"),
                     // The control is one tab stop: the keys, not the buttons,
                     // are how a keyboard removes a chip.
                     tabindex: "-1",

@@ -56,6 +56,11 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='chip']",
             sx().display("inline-flex").max_width("100%"),
         )
+        // A flex line of its own, or the button hangs off the label's baseline.
+        .selector(
+            "& [data-slot='remove']",
+            sx().display("inline-flex").align_items("center"),
+        )
         // The chip the keyboard is on. The ring goes on what the skin drew, not
         // on the wrapper, so it follows that element's own radius. The trigger
         // keeps the DOM focus the whole time, so nothing else marks it.

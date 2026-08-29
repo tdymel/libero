@@ -2206,6 +2206,23 @@ mod select_listbox {
         );
     }
 
+    #[test]
+    fn the_chips_follow_the_field_one_step_down_the_size_scale() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect { size: "lg", value: vec![Fruit::Cherry], onchange: move |_| {} }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        assert!(
+            html.contains("size-md"),
+            "an `lg` field did not draw an `md` chip:\n{html}"
+        );
+    }
+
     /// The chip's inner design is the caller's, remove control included - the
     /// component adds nothing of its own around what `selection` returns.
     #[test]

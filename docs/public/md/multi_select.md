@@ -79,6 +79,12 @@ MultiSelect {
 }
 ```
 
+The default chips sit one step down the field's own size scale - an `lg`
+`MultiSelect` draws `md` chips - and their x is sized in `em`, so it tracks the
+chip's font rather than needing a scale of its own. A trigger full of chips is
+taller than the field's `min-height`: at `md` the frame measures 38px against
+the empty control's 36.
+
 The split: **the control owns the keyboard, the slot owns the drawing.** A
 default chip carries an x of its own; a custom one draws whatever it likes and
 wires `s.remove` into it, and nothing of the component's is added around it. The
