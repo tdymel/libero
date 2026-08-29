@@ -23,6 +23,15 @@ fn nav_link_color(value: Option<&ThemeAwareValue>) -> Option<Color> {
     }
 }
 
+/// An in-page anchor adds a `#fragment` to the route without leaving the page,
+/// so it's ignored - unless `to` names a fragment itself, then it must match.
+fn route_matches(route: &str, to: &str) -> bool {
+    if to.contains('#') {
+        return route == to;
+    }
+    route.split('#').next() == Some(to)
+}
+
 const NAV_LINK_ACTIVE_BACKGROUND_VAR: CssVar = CssVar::new("--lsx-nav-link-active-background");
 
 fn nav_link_variables(color: Option<&ThemeAwareValue>, default_color: Color) -> Variables {
@@ -94,7 +103,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let is_active = props.active.unwrap_or_else(|| match &props.to {
         NavigationTarget::Internal(path) => try_router()
-            .map(|router| router.full_route_string() == *path)
+            .map(|router| route_matches(&router.full_route_string(), path))
             .unwrap_or(false),
         NavigationTarget::External(_) => false,
     });
@@ -168,6 +177,20 @@ pub fn NavLink(props: NavLinkProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_fragment_on_the_route_still_matches_the_page() {
+        assert!(route_matches("/form", "/form"));
+        assert!(route_matches("/form#summary", "/form"));
+        assert!(!route_matches("/forms#summary", "/form"));
+    }
+
+    #[test]
+    fn a_fragment_in_to_must_match_exactly() {
+        assert!(route_matches("/form#summary", "/form#summary"));
+        assert!(!route_matches("/form#other", "/form#summary"));
+        assert!(!route_matches("/form", "/form#summary"));
+    }
 
     #[test]
     fn the_active_background_is_the_lightest_shade_of_the_color() {
