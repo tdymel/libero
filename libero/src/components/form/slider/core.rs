@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::slider_value::{SliderChangeEvent, SliderMark};
-use super::value::{fraction, snap};
+use super::value::{SliderCoreValue, fraction};
 use crate::{
     CssLayer,
     components::{
@@ -17,8 +17,7 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        Color, ColorShade, ColorValue, CssVar, SLIDER_RADIUS, SLIDER_THUMB, SLIDER_TRACK, Size,
-        SliderDefaults,
+        Color, ColorShade, ColorValue, CssVar, SLIDER_THUMB, SLIDER_TRACK, Size, SliderDefaults,
     },
     utils::warn,
 };
@@ -26,6 +25,13 @@ use crate::{
 /// A unitless 0-1 fraction, not a percentage: everything positioned along the
 /// track multiplies it by the travel, which is a `calc` of two lengths.
 const SLIDER_FILLED: CssVar = CssVar::new("--lsx-slider-filled");
+/// Where the bar starts, and how wide it is: `0` and the fill for one thumb,
+/// the two thumbs' own fractions for a range.
+const SLIDER_FILLED_FROM: CssVar = CssVar::new("--lsx-slider-filled-from");
+const SLIDER_FILLED_SPAN: CssVar = CssVar::new("--lsx-slider-filled-span");
+/// One thumb's own position, set on its anchor - the thumbs of a range sit at
+/// two different fractions, so the fill's cannot serve them both.
+const SLIDER_THUMB_AT: CssVar = CssVar::new("--lsx-slider-thumb-at");
 const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
 /// Set only on marks the bar has already reached, so one class covers both.
@@ -70,7 +76,10 @@ static SLIDER_TRACK_SX: StaticSx = StaticSx::new(|| {
         .flex("1 1 auto")
         .height(SLIDER_TRACK.value())
         .background("grey.2")
-        .border_radius(SLIDER_RADIUS.value())
+        // A pill, always: the radius scale starts at 2px and a track is 2-10px
+        // tall, so every step above the smallest clamped to the same half-height
+        // curve. The shared `radius` prop is not wired here for that reason.
+        .border_radius("999px")
         .cursor("pointer")
 });
 
@@ -84,12 +93,28 @@ static SLIDER_BAR_SX: StaticSx = StaticSx::new(|| {
         .border_radius("inherit")
 });
 
+/// A range fills *between* its thumbs, so the bar starts at the lower one's
+/// centre rather than at the track's edge, and spans the difference.
+static SLIDER_RANGE_BAR_SX: StaticSx = StaticSx::new(|| {
+    let thumb = SLIDER_THUMB.value();
+    sx().position("absolute")
+        .top("0")
+        .bottom("0")
+        .left(along_track(SLIDER_FILLED_FROM))
+        .width(format!(
+            "calc({} * (100% - {thumb}))",
+            SLIDER_FILLED_SPAN.value_or("0")
+        ))
+        .background(SLIDER_COLOR.value())
+        .border_radius("inherit")
+});
+
 /// Carries the thumb's position, because the `Tooltip` between them styles
 /// only its own bubble - its wrapper cannot be positioned from outside.
 static SLIDER_THUMB_ANCHOR_SX: StaticSx = StaticSx::new(|| {
     sx().position("absolute")
         .top("50%")
-        .left(along_track(SLIDER_FILLED))
+        .left(along_track(SLIDER_THUMB_AT))
         .transform("translate(-50%, -50%)")
         // Not inline: the tooltip's inline-block wrapper would sit on a
         // baseline and pull the thumb off the track's centre.
@@ -151,9 +176,12 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
 });
 
-fn slider_variables(filled: f64, base: &ThemeAwareValue) -> Variables {
+fn slider_variables(bar: (f64, f64), base: &ThemeAwareValue) -> Variables {
+    let (from, to) = bar;
     variables()
-        .with(SLIDER_FILLED, Some(filled.to_string()))
+        .with(SLIDER_FILLED, Some(to.to_string()))
+        .with(SLIDER_FILLED_FROM, Some(from.to_string()))
+        .with(SLIDER_FILLED_SPAN, Some((to - from).to_string()))
         .with(SLIDER_COLOR, base.resolve(None))
 }
 
@@ -162,11 +190,15 @@ fn slider_variables(filled: f64, base: &ThemeAwareValue) -> Variables {
 /// types a caller slides over.
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct SliderCoreProps {
-    /// Already resolved by the skin - the scale, not the caller's type.
-    value: f64,
+    /// Already resolved by the skin - the scale, not the caller's type. One
+    /// thumb or two; a range's own clamping lives in `SliderCoreValue`.
+    value: SliderCoreValue,
     min: f64,
     max: f64,
     step: f64,
+    /// The smallest gap a range's two thumbs keep. Ignored by a single thumb.
+    #[props(default)]
+    min_range: f64,
     attributes: Vec<Attribute>,
     /// The field owns the wrapper's styling, so the core's own is empty
     /// unless something inside the library styles the track directly.
@@ -177,7 +209,6 @@ pub(super) struct SliderCoreProps {
     #[props(default)]
     states: Input<States>,
     size: Input<Size>,
-    radius: Input<Size>,
     color: Input<ThemeAwareValue>,
     disabled: Option<bool>,
     /// `None` leaves the bubble showing the bare value and sets no
@@ -185,6 +216,8 @@ pub(super) struct SliderCoreProps {
     label: Option<Callback<f64, String>>,
     marks: Vec<SliderMark>,
     aria_label: Option<String>,
+    /// Names the second thumb of a range; `aria_label` names the first.
+    aria_label_to: Option<String>,
     /// The field's label id, when a `<label for>` cannot name the thumb.
     labelledby: Option<String>,
     /// The field's filled caption slots, joined.
@@ -193,7 +226,7 @@ pub(super) struct SliderCoreProps {
     invalid: bool,
     required: bool,
     name: Option<String>,
-    oninput: Option<EventHandler<SliderChangeEvent>>,
+    oninput: Option<EventHandler<SliderChangeEvent<SliderCoreValue>>>,
 }
 
 #[component]
@@ -201,15 +234,17 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     let theme = use_theme();
     let root_element = use_element();
     let track_element = use_element();
-    let thumb_element = use_element();
+    // Two handles, always: a hook cannot be conditional, and a single-thumb
+    // slider simply never mounts the second.
+    let thumb_elements = [use_element(), use_element()];
 
     let (min, max, step) = (props.min, props.max, props.step.max(0.0));
+    let min_range = props.min_range.max(0.0);
     let size = props.size.copied_or(theme.slider.size);
-    let radius = props.radius.copied_or(theme.slider.radius);
     let color = base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
 
-    let value = snap(props.value, min, max, step);
+    let value = props.value.snapped(min, max, step);
     let interactive = props.oninput.is_some() && !disabled;
 
     if props.oninput.is_none() && !disabled {
@@ -220,14 +255,17 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     let track_left = use_local_state(|| 0.0_f64);
     let track_width = use_local_state(|| 0.0_f64);
     let thumb_width = use_local_state(|| 0.0_f64);
-    // What `End` reports: the drag's own last value, which a controlled
-    // parent may not have echoed back yet.
+    // What `End` reports, and what a range's moves are measured against: the
+    // drag's own last value, which a controlled parent may not have echoed
+    // back yet.
     let latest = use_local_state(|| value);
+    // Which thumb the pointer grabbed. Always 0 for a single thumb.
+    let active = use_local_state(|| 0_usize);
 
     let oninput = props.oninput;
     let emit = {
         let latest = latest.clone();
-        use_callback(move |event: SliderChangeEvent| {
+        use_callback(move |event: SliderChangeEvent<SliderCoreValue>| {
             latest.set(event.value());
             if let Some(oninput) = &oninput {
                 oninput.call(event);
@@ -236,8 +274,9 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
     };
 
     // A `Callback`, not a closure: `LocalState` is not `Copy`, and two drag
-    // handlers need this.
-    let value_at = {
+    // handlers need this. Unsnapped - the grid is applied where the thumb is
+    // also clamped against its neighbour.
+    let position_at = {
         let (track_left, track_width, thumb_width) =
             (track_left.clone(), track_width.clone(), thumb_width.clone());
         use_callback(move |client_x: f64| {
@@ -248,12 +287,34 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             if travel <= 0.0 {
                 return None;
             }
-            Some(snap(
-                min + (client_x - track_left.get() - thumb / 2.0) / travel * (max - min),
+            Some(min + (client_x - track_left.get() - thumb / 2.0) / travel * (max - min))
+        })
+    };
+
+    // The drag's two steps, both through `use_callback` so they see this
+    // render's `value` - the handlers `use_drag` holds do not.
+    let grab = {
+        let active = active.clone();
+        use_callback(move |raw: f64| {
+            let index = value.nearest(raw);
+            active.set(index);
+            emit.call(SliderChangeEvent::Start(
+                value.moved(index, raw, min, max, step, min_range),
+            ));
+            index
+        })
+    };
+    let slide = {
+        let (active, latest) = (active.clone(), latest.clone());
+        use_callback(move |raw: f64| {
+            emit.call(SliderChangeEvent::Change(latest.get().moved(
+                active.get(),
+                raw,
                 min,
                 max,
                 step,
-            ))
+                min_range,
+            )));
         })
     };
 
@@ -264,10 +325,6 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
                 event.cancel.call(());
                 return;
             }
-            // `use_drag` cancels the pointerdown, which cancels the browser's
-            // own focus - so the keyboard would be unreachable after a mouse
-            // drag. A command, so it needs no round-trip.
-            let _ = thumb_element.focus();
 
             let (track_left, track_width, thumb_width) =
                 (track_left.clone(), track_width.clone(), thumb_width.clone());
@@ -276,10 +333,10 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             // document is locked for as long as tasks are draining.
             let track_size = track_element.dimensions();
             let track_offset = track_element.client_offset();
-            let thumb_size = thumb_element.dimensions();
+            let thumb_size = thumb_elements[0].dimensions();
             // Off the web a measurement is a round-trip, so the drag starts
             // before the geometry is known - moves landing first are dropped
-            // by `value_at`'s own zero-travel guard.
+            // by `position_at`'s own zero-travel guard.
             spawn(async move {
                 let (Ok(dimensions), Ok((left, _))) = (track_size.await, track_offset.await) else {
                     event.cancel.call(());
@@ -294,15 +351,22 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
                 track_width.set(dimensions.width);
                 thumb_width.set(thumb_size.await.map_or(0.0, |size| size.width));
 
-                match value_at.call(event.client.x) {
-                    Some(value) => emit.call(SliderChangeEvent::Start(value)),
+                match position_at.call(event.client.x) {
+                    Some(raw) => {
+                        // `use_drag` cancels the pointerdown, which cancels
+                        // the browser's own focus - so the keyboard would be
+                        // unreachable after a mouse drag. Which thumb to
+                        // focus is only known once the pointer is mapped.
+                        let index = grab.call(raw);
+                        let _ = thumb_elements[index].focus();
+                    }
                     None => event.cancel.call(()),
                 }
             });
         }),
         on_move: Callback::new(move |event: DragMove| {
-            if let Some(value) = value_at.call(event.client.x) {
-                emit.call(SliderChangeEvent::Change(value));
+            if let Some(raw) = position_at.call(event.client.x) {
+                slide.call(raw);
             }
         }),
         on_end: Callback::new(move |_| {
@@ -310,7 +374,9 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         }),
     });
 
-    let onkeydown = use_callback(move |event: Event<KeyboardData>| {
+    // One handler for both thumbs: the focused thumb is the one the keys
+    // move, so the index comes from whichever element fired.
+    let onkeydown = use_callback(move |(index, event): (usize, Event<KeyboardData>)| {
         if !interactive {
             return;
         }
@@ -322,14 +388,17 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
 
         let go_to = |raw: f64| {
             event.prevent_default();
-            emit.call(SliderChangeEvent::Change(snap(raw, min, max, step)));
+            emit.call(SliderChangeEvent::Change(
+                value.moved(index, raw, min, max, step, min_range),
+            ));
         };
 
+        let thumb = value.thumb(index);
         match event.key() {
-            Key::ArrowRight | Key::ArrowUp => go_to(value + distance),
-            Key::ArrowLeft | Key::ArrowDown => go_to(value - distance),
-            Key::PageUp => go_to(value + theme.slider.big_step * step),
-            Key::PageDown => go_to(value - theme.slider.big_step * step),
+            Key::ArrowRight | Key::ArrowUp => go_to(thumb + distance),
+            Key::ArrowLeft | Key::ArrowDown => go_to(thumb - distance),
+            Key::PageUp => go_to(thumb + theme.slider.big_step * step),
+            Key::PageDown => go_to(thumb - theme.slider.big_step * step),
             Key::Home => go_to(min),
             Key::End => go_to(max),
             _ => {}
@@ -342,26 +411,28 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         .states
         .unwrap_or_default()
         .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
         .with("dragging", (drag.dragging)())
         .with("disabled", disabled)
         .with("marks-labeled", marks_labeled)
         .into();
 
-    let filled = fraction(value, min, max);
-    let root_variables: Input<Variables> = slider_variables(filled, &color).into();
+    let bar = value.bar(min, max);
+    let root_variables: Input<Variables> = slider_variables(bar, &color).into();
 
     let track_class = use_css(Some(&SLIDER_TRACK_SX), CssLayer::Framework);
-    let bar_class = use_css(Some(&SLIDER_BAR_SX), CssLayer::Framework);
+    let bar_class = use_css(
+        Some(match props.value {
+            SliderCoreValue::Single(_) => &SLIDER_BAR_SX,
+            SliderCoreValue::Range { .. } => &SLIDER_RANGE_BAR_SX,
+        }),
+        CssLayer::Framework,
+    );
     let mark_class = use_css(Some(&SLIDER_MARK_SX), CssLayer::Framework);
     let mark_label_class = use_css(Some(&SLIDER_MARK_LABEL_SX), CssLayer::Framework);
     let anchor_class = use_css(Some(&SLIDER_THUMB_ANCHOR_SX), CssLayer::Framework);
-    let thumb = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
-
-    // Only a custom label is worth an `aria-valuetext` - the bare value is
-    // already in `aria-valuenow`.
-    let text = props.label.map(|label| label.call(value));
-    let bubble_text = text.clone().unwrap_or_else(|| value.to_string());
+    // One prepared style, cloned per thumb: the two are identical, and a
+    // second `use_box` would be a second hook for nothing.
+    let thumb_style = use_box().framework_sx(&SLIDER_THUMB_SX).prepare();
 
     let marks = props.marks.iter().map(|mark| {
         let mark_at = fraction(mark.value, min, max);
@@ -371,7 +442,7 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
             // would disappear into it.
             .with(
                 SLIDER_MARK_FILL,
-                (mark_at <= filled).then(|| "white".to_string()),
+                (bar.0 <= mark_at && mark_at <= bar.1).then(|| "white".to_string()),
             )
             .render();
         let caption = mark.label.clone().map(|label| {
@@ -383,40 +454,74 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
         }
     });
 
-    let thumb = thumb
-        .attr("role", "slider")
-        .attr("tabindex", if interactive { "0" } else { "-1" })
-        .attr("aria-orientation", "horizontal")
-        .attr("aria-valuemin", min)
-        .attr("aria-valuemax", max)
-        .attr("aria-valuenow", value)
-        .attr("aria-valuetext", text)
-        .attr("aria-label", props.aria_label.clone())
-        .attr("aria-labelledby", props.labelledby.clone())
-        .attr("aria-describedby", props.describedby.clone())
-        .attr("aria-invalid", props.invalid.then_some("true"))
-        .attr("aria-required", props.required.then_some("true"))
-        .attr("aria-disabled", !interactive)
-        .element(&thumb_element)
-        .event("onkeydown", move |event: Event<KeyboardData>| {
-            onkeydown.call(event)
-        })
-        .render(HtmlTag::Span, Vec::new(), rsx! {});
+    let aria_labels = [props.aria_label.clone(), props.aria_label_to.clone()];
+    let thumbs = value.thumbs().enumerate().map(|(index, thumb_value)| {
+        let (thumb_min, thumb_max) = value.bounds(index, min, max, min_range);
+        // Only a custom label is worth an `aria-valuetext` - the bare value
+        // is already in `aria-valuenow`.
+        let text = props.label.map(|label| label.call(thumb_value));
+        let bubble_text = text.clone().unwrap_or_else(|| thumb_value.to_string());
 
-    // The drag keeps it open once the pointer has left the thumb; hover and
-    // keyboard focus are the tooltip's own doing.
-    let thumb = rsx! {
-        span { class: anchor_class,
-            Tooltip {
-                label: rsx! { {bubble_text} },
-                size,
-                opened: (drag.dragging)().then_some(true),
-                {thumb}
+        let thumb = thumb_style
+            .clone()
+            .attr("role", "slider")
+            .attr("tabindex", if interactive { "0" } else { "-1" })
+            .attr("aria-orientation", "horizontal")
+            .attr("aria-valuemin", thumb_min)
+            .attr("aria-valuemax", thumb_max)
+            .attr("aria-valuenow", thumb_value)
+            .attr("aria-valuetext", text)
+            .attr("aria-label", aria_labels[index].clone())
+            .attr("aria-labelledby", props.labelledby.clone())
+            .attr("aria-describedby", props.describedby.clone())
+            .attr("aria-invalid", props.invalid.then_some("true"))
+            .attr("aria-required", props.required.then_some("true"))
+            .attr("aria-disabled", !interactive)
+            .element(&thumb_elements[index])
+            .event("onkeydown", move |event: Event<KeyboardData>| {
+                onkeydown.call((index, event))
+            })
+            .render(HtmlTag::Span, Vec::new(), rsx! {});
+
+        let at = variables()
+            .with(
+                SLIDER_THUMB_AT,
+                Some(fraction(thumb_value, min, max).to_string()),
+            )
+            .render();
+
+        // The drag keeps it open once the pointer has left the thumb; hover
+        // and keyboard focus are the tooltip's own doing.
+        rsx! {
+            span { class: anchor_class.clone(), style: "{at}",
+                Tooltip {
+                    label: rsx! { {bubble_text} },
+                    size,
+                    opened: ((drag.dragging)() && active.get() == index).then_some(true),
+                    {thumb}
+                }
             }
         }
-    };
+    });
 
-    let name = props.name.clone();
+    let hidden = props.name.clone().map(|name| {
+        let inputs = value.thumbs().map(move |thumb_value| {
+            // `Some(true)` or nothing - see `SegmentedControl`: a `false`
+            // bool reaches a native renderer as the string "false", which
+            // reads as disabled.
+            rsx! {
+                input {
+                    r#type: "hidden",
+                    name: name.clone(),
+                    value: "{thumb_value}",
+                    disabled: disabled.then_some(true),
+                }
+            }
+        });
+        // A range posts its two values under one name, in track order:
+        // `FormData::get_all` reads them back as a pair.
+        rsx! { {inputs} }
+    });
 
     use_box()
         .framework_sx(&SLIDER_ROOT_SX)
@@ -439,19 +544,9 @@ pub(super) fn SliderCore(props: SliderCoreProps) -> Element {
                     onmounted: track_element.mount(),
                     div { class: bar_class }
                     {marks}
-                    {thumb}
+                    {thumbs}
                 }
-                if let Some(name) = name {
-                    // `Some(true)` or nothing - see `SegmentedControl`: a
-                    // `false` bool reaches a native renderer as the string
-                    // "false", which reads as disabled.
-                    input {
-                        r#type: "hidden",
-                        name,
-                        value: "{value}",
-                        disabled: disabled.then_some(true),
-                    }
-                }
+                {hidden}
             },
         )
 }
