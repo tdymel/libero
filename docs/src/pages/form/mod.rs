@@ -1,5 +1,7 @@
 mod autocomplete;
 mod checkbox;
+mod color_field;
+mod color_picker;
 mod file_field;
 mod multi_select;
 mod native_select;
@@ -16,6 +18,8 @@ mod textarea;
 
 pub use autocomplete::AutocompletePage;
 pub use checkbox::CheckboxPage;
+pub use color_field::ColorFieldPage;
+pub use color_picker::ColorPickerPage;
 pub use file_field::FileFieldPage;
 pub use multi_select::MultiSelectPage;
 pub use native_select::NativeSelectPage;

@@ -20,14 +20,14 @@ use icons::BurgerIcon;
 use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BoxPage, ButtonPage, CenterPage,
-    CheckboxPage, ChipPage, CodeBlockPage, CodePage, ComboboxPage, ContainerPage, DataListPage,
-    DialogPage, DividerPage, DrawerPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
-    GettingStarted, GridPage, HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage,
-    ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage,
-    PasswordFieldPage, PerformancePage, PinFieldPage, QrCodePage, RadioGroupPage, RangeSliderPage,
-    ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage,
-    StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage, TextareaPage,
-    ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    CheckboxPage, ChipPage, CodeBlockPage, CodePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
+    ContainerPage, DataListPage, DialogPage, DividerPage, DrawerPage, FileFieldPage, FlexPage,
+    FloatPage, FocusTrapPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage, KbdPage,
+    ListPage, MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage,
+    OverlayPage, PasswordFieldPage, PerformancePage, PinFieldPage, QrCodePage, RadioGroupPage,
+    RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SliderPage,
+    SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage,
+    TextareaPage, ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -79,6 +79,10 @@ pub(crate) enum Route {
     AutocompletePage {},
     #[route("/form/checkbox")]
     CheckboxPage {},
+    #[route("/form/color-field")]
+    ColorFieldPage {},
+    #[route("/form/color-picker")]
+    ColorPickerPage {},
     #[route("/form/file-field")]
     FileFieldPage {},
     #[route("/form/multi-select")]
