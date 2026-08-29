@@ -132,7 +132,12 @@ static CODE_BLOCK_LINE_NUMBER_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .text_align("right")
         .padding("0 12px")
-        .min_width(CODE_GUTTER_WIDTH_VAR.value_or("1ch"))
+        // Global `border-box` counts the padding in `min-width`, so add it back
+        // or every gutter sizes to its own digits and `9` sits left of `10`.
+        .min_width(format!(
+            "calc({} + 24px)",
+            CODE_GUTTER_WIDTH_VAR.value_or("1ch")
+        ))
         .color(CODE_BLOCK_LINE_NUMBER.value())
 });
 
