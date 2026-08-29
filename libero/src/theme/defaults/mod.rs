@@ -8,6 +8,9 @@ mod checkbox;
 mod chip;
 mod code;
 mod code_block;
+mod color_field;
+mod color_picker;
+mod color_swatch;
 mod combobox;
 mod container;
 mod data_list;
@@ -68,6 +71,17 @@ pub use code::{
 pub use code_block::{
     CODE_BLOCK_BACKGROUND, CODE_BLOCK_BORDER, CODE_BLOCK_COPY_HOVER_BACKGROUND,
     CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CodeBlockDefaults,
+};
+pub use color_field::ColorFieldDefaults;
+pub use color_picker::{
+    COLOR_PICKER_PREVIEW, COLOR_PICKER_PREVIEW_SIZE, COLOR_PICKER_SATURATION_HEIGHT,
+    COLOR_PICKER_SATURATION_HEIGHT_SIZE, COLOR_PICKER_SPACING, COLOR_PICKER_SPACING_SIZE,
+    COLOR_PICKER_SWATCH, COLOR_PICKER_SWATCH_SIZE, COLOR_PICKER_THUMB, COLOR_PICKER_THUMB_SIZE,
+    COLOR_PICKER_WIDTH, COLOR_PICKER_WIDTH_SIZE, ColorFormat, ColorPickerDefaults,
+    ColorPickerSizeLevel,
+};
+pub use color_swatch::{
+    COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE_SIZE, ColorSwatchDefaults,
 };
 pub use combobox::{
     COMBOBOX_FONT_SIZE, COMBOBOX_PADDING, COMBOBOX_PADDING_X, COMBOBOX_ROW_HEIGHT,

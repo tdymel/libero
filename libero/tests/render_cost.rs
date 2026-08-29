@@ -160,6 +160,13 @@ fn render_cost_per_component() {
         "Slider+label" { Slider { value: 50.0, oninput: move |_| {}, label: "l" } }
         // The second thumb, and what a `Tooltip` costs twice.
         "RangeSlider" { RangeSlider { value: (20.0, 80.0), oninput: move |_| {} } }
+        // A plain `SliderCore` over a gradient: no bar, no `Tooltip`.
+        "HueSlider" { HueSlider { value: 200.0, oninput: move |_| {} } }
+        "ColorSwatch" { ColorSwatch { color: ColorCode::hex(0x228be6) } }
+        // The panel, a hue slider and nothing else - no alpha, no swatches.
+        "ColorPicker" { ColorPicker { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
+        // Closed: the dropdown's picker is not rendered until it opens.
+        "ColorField" { ColorField { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
         "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
         "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
 

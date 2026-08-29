@@ -116,6 +116,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         anchor,
         file_field,
         pin_field,
+        color_picker,
+        color_swatch,
         primary,
         secondary,
         error,
@@ -134,6 +136,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         select: _,
         multi_select: _,
         autocomplete: _,
+        color_field: _,
         scroll_area: _,
         tree: _,
         mark: _,
@@ -169,6 +172,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(field.to_css_declarations());
     declarations.extend(file_field.to_css_declarations());
     declarations.extend(pin_field.to_css_declarations());
+    declarations.extend(color_picker.to_css_declarations());
+    declarations.extend(color_swatch.to_css_declarations());
     declarations.extend(combobox.to_css_declarations());
     declarations.extend(slider.to_css_declarations());
     declarations.extend(list.to_css_declarations());

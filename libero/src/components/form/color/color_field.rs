@@ -1,0 +1,296 @@
+use dioxus::prelude::*;
+
+use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
+use crate::{
+    components::{
+        ActionIcon, HtmlTag, Input,
+        common::field_props,
+        form::{
+            FIELD_CONTROL_SX, SliderChangeEvent, glyphs::EyeDropperIcon, use_field, use_field_frame,
+        },
+        layout::use_box,
+    },
+    hooks::{PopoverOptions, use_element, use_popover, use_theme},
+    platform::eye_dropper,
+    sx::{StaticSx, ThemeAwareValue, sx},
+    theme::{Size, SizeCss, Z_INDEX_POPOVER},
+};
+
+static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
+    // Everything positional comes from `use_popover` as an inline style.
+    sx().z_index(Z_INDEX_POPOVER.value())
+        .padding(SizeCss::SPACING.value(Size::Sm))
+        .background("white")
+        .border_style("solid")
+        .border_width("1px")
+        .border_color("grey.3")
+        .border_radius(SizeCss::RADIUS.value(Size::Sm))
+        .box_shadow("0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)")
+});
+
+/// The leading preview, sized to the text rather than to a size step.
+static COLOR_FIELD_PREVIEW_SX: StaticSx =
+    StaticSx::new(|| sx().width("1.25em").height("1.25em").min_width("1.25em"));
+
+field_props! {
+    extends(input);
+    pub struct ColorFieldProps {
+        /// Strictly controlled - pair it with `oninput`.
+        value: ColorCode,
+        /// A drag in the dropdown brackets its moves with `Start`/`End`; typed
+        /// text that parses, a key press, a swatch and the eyedropper emit a
+        /// lone `Change`.
+        #[props(default)]
+        oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
+        /// How the text shows the color, and so what `name` posts. Hex by
+        /// default, hexa `with_alpha`. Typing accepts every form either way.
+        #[props(default, into)]
+        format: Input<ColorFormat>,
+        /// Shows the alpha slider in the dropdown, and keeps typed alpha.
+        #[props(default)]
+        with_alpha: Option<bool>,
+        /// Preset colors in the dropdown. Takes `ColorCode`s or CSS strings.
+        #[props(default, into)]
+        swatches: Swatches,
+        /// Caps how many swatches share a row in the dropdown.
+        #[props(default)]
+        swatches_per_row: Option<usize>,
+        /// `false` leaves only the swatches in the dropdown, and no dropdown
+        /// at all without them.
+        #[props(default)]
+        with_picker: Option<bool>,
+        /// The swatch in the leading slot.
+        #[props(default)]
+        with_preview: Option<bool>,
+        /// The eyedropper button in the trailing slot, where the platform has
+        /// one - Chromium today.
+        #[props(default)]
+        with_eye_dropper: Option<bool>,
+        /// The text is read-only: a color comes from the dropdown alone.
+        #[props(default)]
+        disallow_input: Option<bool>,
+        /// Text that does not parse goes back to the last valid color on blur.
+        #[props(default)]
+        fix_on_blur: Option<bool>,
+        /// Picking a swatch closes the dropdown.
+        #[props(default)]
+        close_on_swatch_click: Option<bool>,
+        #[props(default, into)]
+        placeholder: Option<String>,
+    }
+}
+
+/// A text field holding a color, with a preview swatch, an eyedropper and a
+/// `ColorPicker` in a dropdown - Mantine's `ColorInput`.
+///
+/// Controlled: it renders `value` and asks for a new one through `oninput`.
+/// Typed text is kept as typed until it blurs; each time it parses, the color
+/// is emitted.
+#[component]
+pub fn ColorField(props: ColorFieldProps) -> Element {
+    let theme = use_theme();
+    let defaults = &theme.color_field;
+    let size = props.size.copied_or(defaults.size);
+    let radius = props.radius.copied_or(defaults.radius);
+    let disabled = props.disabled.unwrap_or(false);
+    let required = props.required.unwrap_or(false);
+    let with_alpha = props.with_alpha.unwrap_or(false);
+    let with_preview = props.with_preview.unwrap_or(defaults.with_preview);
+    let with_eye_dropper = props.with_eye_dropper.unwrap_or(defaults.with_eye_dropper);
+    let disallow_input = props.disallow_input.unwrap_or(false);
+    let fix_on_blur = props.fix_on_blur.unwrap_or(defaults.fix_on_blur);
+    let close_on_swatch_click = props
+        .close_on_swatch_click
+        .unwrap_or(defaults.close_on_swatch_click);
+    let format = props.format.copied_or(match with_alpha {
+        true => ColorFormat::Hexa,
+        false => ColorFormat::Hex,
+    });
+    let with_picker = props.with_picker.unwrap_or(true);
+    let has_dropdown = (with_picker || !props.swatches.is_empty()) && !disabled;
+
+    let mut opened = use_signal(|| false);
+    // The text as typed, while it differs from `value`'s own spelling. `None`
+    // shows `value` in `format`.
+    let mut draft = use_signal(|| Option::<String>::None);
+    // Asked after mount: a server render has no eyedropper, and a client that
+    // answered otherwise while hydrating would not match it.
+    let mut has_eye_dropper = use_signal(|| false);
+    use_effect(move || has_eye_dropper.set(eye_dropper().is_some()));
+
+    let value = props.value;
+    let oninput = props.oninput;
+    // Without alpha the field has no way to show or change it, so a typed or
+    // dropped translucent color arrives opaque.
+    let emit = move |color: ColorCode| {
+        if let Some(oninput) = &oninput {
+            oninput.call(SliderChangeEvent::Change(match with_alpha {
+                true => color,
+                false => color.opaque(),
+            }));
+        }
+    };
+
+    let field = use_field()
+        .label(&props.label)
+        .description(&props.description)
+        .helper(&props.helper)
+        .status(&props.status)
+        .required(required)
+        .disabled(disabled)
+        .size(size)
+        .radius(radius)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .attributes(&props.attributes)
+        .prepare();
+
+    let preview = match with_alpha {
+        true => value,
+        false => value.opaque(),
+    };
+    let leading = with_preview.then(|| {
+        rsx! {
+            ColorSwatch { color: preview, sx: Input::Static(&*COLOR_FIELD_PREVIEW_SX) }
+        }
+    });
+
+    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
+    let trailing = (with_eye_dropper && has_eye_dropper() && !disabled).then(|| {
+        rsx! {
+            ActionIcon {
+                aria_label: "Pick a color from the screen",
+                size: icon_size,
+                onclick: move |_| {
+                    let Some(api) = eye_dropper() else {
+                        return;
+                    };
+                    let pick = api.pick();
+                    spawn(async move {
+                        // A dismissed pick is no answer, not an error to show.
+                        let Ok(hex) = pick.await else {
+                            return;
+                        };
+                        if let Ok(color) = hex.parse::<ColorCode>() {
+                            draft.set(None);
+                            emit(color.with_alpha(preview.alpha()));
+                        }
+                    });
+                },
+                EyeDropperIcon {}
+            }
+        }
+    });
+
+    let frame = use_field_frame()
+        .leading(&leading)
+        .trailing(&trailing)
+        .states(field.states())
+        .prepare();
+
+    // The frame draws the ring, so the control must not draw a second one.
+    let control = use_box()
+        .framework_sx(&FIELD_CONTROL_SX)
+        .focus_ring(false)
+        .prepare();
+
+    // Every one of these is a hook, so all of them run before anything
+    // branches on `opened`.
+    let anchor = use_element();
+    let showing = opened() && has_dropdown;
+    let popover = use_popover(
+        anchor,
+        showing,
+        PopoverOptions::new(theme.popover.gap, theme.popover.padding),
+    );
+    let dropdown = use_box()
+        .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
+        .style(popover.style())
+        .prepare();
+
+    let text = draft().unwrap_or_else(|| value.to_format(format));
+    let input = field
+        .aria(control)
+        .attr_default("type", "text")
+        .attr("value", text)
+        .attr("placeholder", props.placeholder)
+        .attr("disabled", disabled)
+        .attr("required", required)
+        .attr("readonly", disallow_input)
+        .attr("autocomplete", "off")
+        .attr("spellcheck", "false")
+        .attr("aria-haspopup", has_dropdown.then_some("dialog"))
+        .attr("aria-expanded", has_dropdown.then(|| showing.to_string()))
+        .event("oninput", move |event: FormEvent| {
+            let text = event.value();
+            if let Ok(color) = text.parse::<ColorCode>() {
+                emit(color);
+            }
+            draft.set(Some(text));
+        })
+        .event("onfocus", move |_: FocusEvent| opened.set(true))
+        .event("onclick", move |_: MouseEvent| opened.set(true))
+        .event("onblur", move |_: FocusEvent| {
+            opened.set(false);
+            // Text that parsed was already emitted, so it goes back to the
+            // value's own spelling; text that did not stays only if asked.
+            let parses = draft
+                .peek()
+                .as_ref()
+                .is_some_and(|text| text.parse::<ColorCode>().is_ok());
+            if fix_on_blur || parses {
+                draft.set(None);
+            }
+        })
+        .event("onkeydown", move |event: KeyboardEvent| {
+            if event.key() == Key::Escape && opened() {
+                event.prevent_default();
+                opened.set(false);
+            }
+        })
+        .render(HtmlTag::Input, props.attributes, ());
+
+    // Portaled, so no `overflow: hidden` ancestor clips it. The picker inside
+    // is not focusable, and a mousedown anywhere in the box is cancelled: the
+    // text input keeps focus throughout, and its blur is what closes the box.
+    popover.show(showing.then(|| {
+        dropdown
+            .element(popover.floating())
+            .event("onmousedown", move |event: MouseEvent| {
+                event.prevent_default()
+            })
+            .render(
+                HtmlTag::Div,
+                Vec::new(),
+                rsx! {
+                    ColorPicker {
+                        value,
+                        format: Input::Value(format),
+                        with_alpha,
+                        with_picker,
+                        swatches: props.swatches.clone(),
+                        swatches_per_row: props.swatches_per_row,
+                        size,
+                        focusable: false,
+                        oninput: move |event: SliderChangeEvent<ColorCode>| {
+                            draft.set(None);
+                            if let Some(oninput) = &oninput {
+                                oninput.call(event);
+                            }
+                        },
+                        onswatchclick: move |_| {
+                            if close_on_swatch_click {
+                                opened.set(false);
+                            }
+                        },
+                    }
+                },
+            )
+    }));
+
+    let control = rsx! {
+        div { onmounted: anchor.mount(), {frame.render(input)} }
+    };
+    field.render(control)
+}

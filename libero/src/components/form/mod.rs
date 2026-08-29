@@ -1,6 +1,7 @@
 mod autocomplete;
 mod caption;
 mod checkbox;
+mod color;
 mod field_status;
 mod file_field;
 mod glyphs;
@@ -23,6 +24,11 @@ pub use autocomplete::{
 };
 pub use caption::Caption;
 pub use checkbox::{Checkbox, CheckboxProps};
+pub use color::{
+    AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,
+    ColorPicker, ColorPickerProps, ColorSwatch, ColorSwatchProps, HueSlider, HueSliderProps,
+    ParseColorError, Swatches,
+};
 pub use field_status::FieldStatus;
 pub use file_field::{FileField, FileFieldProps, Files};
 pub use native_select::{NativeSelect, NativeSelectProps};
