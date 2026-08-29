@@ -37,6 +37,8 @@ fetch only the file you need.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 - [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, holding one `ColorCode` that converts to any CSS form. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
+- [Fieldset](fieldset.md): Several fields that form one value under a `<legend>`, with composite rules over that value that land on the fields they name.
+- [Form](form.md): A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
 - [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
