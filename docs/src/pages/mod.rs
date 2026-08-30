@@ -13,12 +13,13 @@ pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
 pub use form::{
-    AutocompletePage, CheckboxPage, ColorFieldPage, ColorPickerPage, DateFieldPage, DatePickerPage,
-    FieldsetPage, FileFieldPage, FormGettingStartedPage, FormPage, MultiSelectPage,
-    NativeSelectPage, NumberFieldPage, PasswordFieldPage, PinFieldPage, RadioGroupPage,
-    RangeSliderPage, SelectPage, SliderPage, SwitchPage, TextFieldPage, TextareaPage,
+    AutocompletePage, CheckboxPage, ColorFieldPage, ColorPickerPage, ComboboxPage, DateFieldPage,
+    DatePickerPage, FieldsetPage, FileFieldPage, FormGettingStartedPage, FormPage,
+    MultiSelectPage, NativeSelectPage, NumberFieldPage, PasswordFieldPage, PinFieldPage,
+    RadioGroupPage, RangeSliderPage, SelectPage, SliderPage, SwitchPage, TextFieldPage,
+    TextareaPage,
 };
-pub use inputs::{ActionIconPage, ButtonPage, ChipPage, ComboboxPage, SegmentedControlPage};
+pub use inputs::{ActionIconPage, ButtonPage, ChipPage, SegmentedControlPage};
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,
     GridPage, HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,

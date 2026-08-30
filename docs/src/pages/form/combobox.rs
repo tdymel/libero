@@ -311,7 +311,7 @@ pub fn ComboboxPage() -> Element {
     rsx! {
         DocPage {
             title: "Combobox",
-            source: "libero/src/components/inputs/combobox",
+            source: "libero/src/components/form/combobox",
             markdown: "/md/combobox.md",
             properties: vec![
                 props("Combobox", vec![

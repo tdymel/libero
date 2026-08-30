@@ -44,6 +44,7 @@ fetch only the file you need.
 - [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
 - [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
+- [Combobox](combobox.md): A virtualized listbox that hangs off a caller-supplied trigger, holding no state of its own.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
 - [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
 - [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected - one tab stop, arrow-key selection, and the question announced as the group's name.
@@ -60,7 +61,6 @@ fetch only the file you need.
 - [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [Chip](chip.md): A compact token - a tag, a filter, or a small inline action.
-- [Combobox](combobox.md): A virtualized listbox that hangs off a caller-supplied trigger, holding no state of its own.
 - [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
 
 ## Layout

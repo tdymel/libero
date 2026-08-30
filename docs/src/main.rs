@@ -86,6 +86,8 @@ pub(crate) enum Route {
     ColorFieldPage {},
     #[route("/form/color-picker")]
     ColorPickerPage {},
+    #[route("/form/combobox")]
+    ComboboxPage {},
     #[route("/form/date-field")]
     DateFieldPage {},
     #[route("/form/date-picker")]
@@ -127,8 +129,6 @@ pub(crate) enum Route {
     ButtonPage {},
     #[route("/inputs/chip")]
     ChipPage {},
-    #[route("/inputs/combobox")]
-    ComboboxPage {},
     #[route("/inputs/segmented-control")]
     SegmentedControlPage {},
     #[route("/layout/aspect-ratio")]
