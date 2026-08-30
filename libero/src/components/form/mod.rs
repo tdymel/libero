@@ -2,6 +2,7 @@ mod autocomplete;
 mod caption;
 mod checkbox;
 mod color;
+mod combobox;
 mod date;
 mod field_status;
 mod fieldset;
@@ -33,6 +34,11 @@ pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,
     ColorPicker, ColorPickerProps, ColorSwatch, ColorSwatchProps, HueSlider, HueSliderProps,
     ParseColorError, Swatches,
+};
+pub(crate) use combobox::ComboboxCore;
+pub use combobox::{
+    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
+    ComboboxState, use_combobox,
 };
 pub use date::*;
 pub use field_status::FieldStatus;

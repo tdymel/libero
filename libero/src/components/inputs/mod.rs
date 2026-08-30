@@ -1,7 +1,6 @@
 mod action_icon;
 mod button;
 mod chip;
-mod combobox;
 mod segmented_control;
 
 pub use action_icon::ActionIcon;
@@ -12,9 +11,4 @@ pub(crate) use button::{
 };
 pub use button::{Button, ButtonProps, ButtonVariant};
 pub use chip::{Chip, ChipProps};
-pub(crate) use combobox::ComboboxCore;
-pub use combobox::{
-    Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxOptionProps, ComboboxProps,
-    ComboboxState, use_combobox,
-};
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};

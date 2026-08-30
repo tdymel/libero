@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{Combobox, ComboboxOption, ComboboxOptionArgs, use_combobox};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/combobox>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/combobox>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A listbox that hangs off a caller-supplied trigger, holding no state of its own.
 
