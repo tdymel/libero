@@ -27,6 +27,15 @@ fn derived_paths_spell_the_field_names_and_nest() {
     assert_eq!(Address::FIELDS.zip().as_str(), "zip");
 }
 
+/// The generated struct is `<Name>FieldPaths`, so `AddressFields` stays free
+/// for a component that renders an address's fields.
+#[test]
+fn the_generated_paths_leave_the_fields_name_free() {
+    let _: AddressFieldPaths<Signup> = Signup::FIELDS.address();
+    #[allow(dead_code, non_snake_case)]
+    fn AddressFields() {}
+}
+
 #[test]
 fn a_struct_path_is_the_prefix_of_its_fields() {
     let address: FieldPath<Signup, Address> = Signup::FIELDS.address().path();

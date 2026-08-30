@@ -6,7 +6,7 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
     let input: DeriveInput = parse2(input)?;
     let name = &input.ident;
     let vis = &input.vis;
-    let paths = format_ident!("{name}Fields");
+    let paths = format_ident!("{name}FieldPaths");
 
     let Data::Struct(data) = &input.data else {
         return Err(Error::new_spanned(
