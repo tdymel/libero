@@ -1,19 +1,22 @@
+//! The pickers for one value type each - what `DatePicker` draws, under a
+//! name and with only the props that type uses.
+
 use dioxus::prelude::*;
 
-use chrono::{Datelike, NaiveDate};
+use chrono::NaiveDate;
 
 use super::{
     DateRange,
-    calendar::{Calendar, Level, Selection, first_of_month},
+    calendar::DateLevel,
+    date_value::{DateValue, PickerArgs, PickerOptions},
 };
 use crate::{
     components::{Input, common::base_props},
-    hooks::use_theme,
     theme::Size,
 };
 
 base_props! {
-    pub struct DatePickerProps {
+    pub struct DayPickerProps {
         /// The picked day; strictly controlled. `None` picks nothing.
         #[props(default)]
         value: Option<NaiveDate>,
@@ -54,7 +57,8 @@ base_props! {
     }
 }
 
-/// A month of days to pick one from - Mantine's `DatePicker`.
+/// A month of days to pick one from - Mantine's `DatePicker`, and what
+/// `DatePicker` draws for a `NaiveDate`.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
 /// The month shown is its own state: it opens on `value`'s month, else
@@ -64,38 +68,27 @@ base_props! {
 /// week, Home and End to the week's ends, Page Up and Page Down a month, with
 /// Shift a year. Enter and Space pick.
 #[component]
-pub fn DatePicker(props: DatePickerProps) -> Element {
-    let theme = use_theme();
-    let value = props.value;
-    let onchange = props.onchange;
-    let allow_deselect = props.allow_deselect.unwrap_or(false);
-    rsx! {
-        Calendar {
-            selection: Selection::Single(value),
-            onpick: move |day: NaiveDate| {
-                let next = match allow_deselect && value == Some(day) {
-                    true => None,
-                    false => Some(day),
-                };
-                if let Some(onchange) = &onchange {
-                    onchange.call(next);
-                }
-            },
-            columns: props.columns.unwrap_or(1),
-            lowest: Level::Day,
+pub fn DayPicker(props: DayPickerProps) -> Element {
+    NaiveDate::picker(PickerArgs {
+        value: props.value,
+        onchange: props.onchange,
+        options: PickerOptions {
             min: props.min,
             max: props.max,
             exclude_date: props.exclude_date,
-            today: props.today,
-            size: props.size.copied_or(theme.date_picker.size),
-            focusable: props.focusable.unwrap_or(true),
-            hidden: props.name.map(|name| (name, value.map(|day| day.to_string()).unwrap_or_default())),
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            attributes: props.attributes,
-        }
-    }
+            allow_deselect: props.allow_deselect.unwrap_or(false),
+            columns: props.columns,
+            ..PickerOptions::default()
+        },
+        today: props.today,
+        size: props.size,
+        focusable: props.focusable.unwrap_or(true),
+        name: props.name,
+        class: props.class,
+        sx: props.sx,
+        states: props.states,
+        attributes: props.attributes,
+    })
 }
 
 base_props! {
@@ -137,32 +130,25 @@ base_props! {
 /// under the mouse preview the range.
 #[component]
 pub fn DateRangePicker(props: DateRangePickerProps) -> Element {
-    let theme = use_theme();
-    let value = props.value;
-    let onchange = props.onchange;
-    rsx! {
-        Calendar {
-            selection: Selection::Range(value),
-            onpick: move |day: NaiveDate| {
-                if let Some(onchange) = &onchange {
-                    onchange.call(Some(DateRange::pick(value, day)));
-                }
-            },
-            columns: props.columns.unwrap_or(2),
-            lowest: Level::Day,
+    DateRange::<NaiveDate>::picker(PickerArgs {
+        value: props.value,
+        onchange: props.onchange,
+        options: PickerOptions {
             min: props.min,
             max: props.max,
             exclude_date: props.exclude_date,
-            today: props.today,
-            size: props.size.copied_or(theme.date_picker.size),
-            focusable: props.focusable.unwrap_or(true),
-            hidden: props.name.map(|name| (name, value.map(|range| range.to_string()).unwrap_or_default())),
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            attributes: props.attributes,
-        }
-    }
+            columns: props.columns,
+            ..PickerOptions::default()
+        },
+        today: props.today,
+        size: props.size,
+        focusable: props.focusable.unwrap_or(true),
+        name: props.name,
+        class: props.class,
+        sx: props.sx,
+        states: props.states,
+        attributes: props.attributes,
+    })
 }
 
 base_props! {
@@ -189,34 +175,28 @@ base_props! {
     }
 }
 
-/// The months of a year to pick one from - Mantine's `MonthPicker`. The
-/// heading climbs to a decade of years.
+/// The months of a year to pick one from - Mantine's `MonthPicker`, and
+/// `DatePicker` at `DateLevel::Month`. The heading climbs to a decade of years.
 #[component]
 pub fn MonthPicker(props: MonthPickerProps) -> Element {
-    let theme = use_theme();
-    let value = props.value.map(first_of_month);
-    let onchange = props.onchange;
-    rsx! {
-        Calendar {
-            selection: Selection::Single(value),
-            onpick: move |month: NaiveDate| {
-                if let Some(onchange) = &onchange {
-                    onchange.call(Some(month));
-                }
-            },
-            lowest: Level::Month,
+    NaiveDate::picker(PickerArgs {
+        value: props.value,
+        onchange: props.onchange,
+        options: PickerOptions {
             min: props.min,
             max: props.max,
-            today: props.today,
-            size: props.size.copied_or(theme.date_picker.size),
-            focusable: props.focusable.unwrap_or(true),
-            hidden: props.name.map(|name| (name, value.map(|day| day.to_string()).unwrap_or_default())),
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            attributes: props.attributes,
-        }
-    }
+            level: DateLevel::Month,
+            ..PickerOptions::default()
+        },
+        today: props.today,
+        size: props.size,
+        focusable: props.focusable.unwrap_or(true),
+        name: props.name,
+        class: props.class,
+        sx: props.sx,
+        states: props.states,
+        attributes: props.attributes,
+    })
 }
 
 base_props! {
@@ -243,33 +223,26 @@ base_props! {
     }
 }
 
-/// A decade of years to pick one from - Mantine's `YearPicker`.
+/// A decade of years to pick one from - Mantine's `YearPicker`, and
+/// `DatePicker` at `DateLevel::Year`.
 #[component]
 pub fn YearPicker(props: YearPickerProps) -> Element {
-    let theme = use_theme();
-    let value = props
-        .value
-        .and_then(|day| NaiveDate::from_ymd_opt(day.year(), 1, 1));
-    let onchange = props.onchange;
-    rsx! {
-        Calendar {
-            selection: Selection::Single(value),
-            onpick: move |year: NaiveDate| {
-                if let Some(onchange) = &onchange {
-                    onchange.call(Some(year));
-                }
-            },
-            lowest: Level::Year,
+    NaiveDate::picker(PickerArgs {
+        value: props.value,
+        onchange: props.onchange,
+        options: PickerOptions {
             min: props.min,
             max: props.max,
-            today: props.today,
-            size: props.size.copied_or(theme.date_picker.size),
-            focusable: props.focusable.unwrap_or(true),
-            hidden: props.name.map(|name| (name, value.map(|day| day.to_string()).unwrap_or_default())),
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            attributes: props.attributes,
-        }
-    }
+            level: DateLevel::Year,
+            ..PickerOptions::default()
+        },
+        today: props.today,
+        size: props.size,
+        focusable: props.focusable.unwrap_or(true),
+        name: props.name,
+        class: props.class,
+        sx: props.sx,
+        states: props.states,
+        attributes: props.attributes,
+    })
 }

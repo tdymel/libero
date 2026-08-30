@@ -2,16 +2,20 @@ use dioxus::prelude::*;
 
 use chrono::{NaiveTime, Timelike};
 
-use super::{format::uses_twelve_hours, parse_time::MIDNIGHT};
+use super::{
+    date_value::{DateValue, PickerArgs, PickerOptions},
+    format::uses_twelve_hours,
+    parse_time::MIDNIGHT,
+};
 use crate::{
     components::{
-        HtmlTag, Input, States,
+        ClassList, HtmlTag, Input, States,
         common::{base_props, focus_ring_sx, input_from_str},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, sx},
+    sx::{StaticSx, Sx, sx},
     theme::{
         DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
         TimePickerVariant,
@@ -108,6 +112,7 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .hover(sx().background("transparent")),
         )
         .selector("& button:focus-visible", focus_ring_sx())
+        .selector("& [data-slot='face']:focus-visible", focus_ring_sx())
 });
 
 base_props! {
@@ -119,7 +124,7 @@ base_props! {
         /// with no value yet starts from `min`, else midnight.
         #[props(default)]
         onchange: Option<EventHandler<Option<NaiveTime>>>,
-        /// Columns of numbers, or a clock face. Digital by default.
+        /// Columns of numbers, or a clock face. Analog by default.
         #[props(default, into)]
         variant: Input<TimePickerVariant>,
         /// A seconds column. Digital only.
@@ -163,15 +168,80 @@ enum Hand {
 #[component]
 pub fn TimePicker(props: TimePickerProps) -> Element {
     let theme = use_theme();
+    NaiveTime::picker(PickerArgs {
+        value: props.value,
+        onchange: props.onchange,
+        options: PickerOptions {
+            min: props.min,
+            max: props.max,
+            variant: props.variant.copied_or(theme.time_picker.variant),
+            with_seconds: props.with_seconds.unwrap_or(false),
+            step: props.step,
+            twelve_hour: props
+                .twelve_hour
+                .unwrap_or_else(|| uses_twelve_hours(theme.date.time_format)),
+            ..PickerOptions::default()
+        },
+        today: None,
+        size: props.size,
+        focusable: props.focusable.unwrap_or(true),
+        name: props.name,
+        class: props.class,
+        sx: props.sx,
+        states: props.states,
+        attributes: props.attributes,
+    })
+}
+
+/// What `TimePicker` draws, with every option resolved. Its props are plain,
+/// so `DatePicker` can hand on the caller's attributes.
+#[derive(Props, Clone, PartialEq)]
+pub(super) struct ClockProps {
+    value: Option<NaiveTime>,
+    onchange: Option<EventHandler<Option<NaiveTime>>>,
+    variant: TimePickerVariant,
+    with_seconds: bool,
+    step: Option<u8>,
+    twelve_hour: bool,
+    min: Option<NaiveTime>,
+    max: Option<NaiveTime>,
+    size: Input<Size>,
+    focusable: bool,
+    name: Option<String>,
+    class: Input<ClassList>,
+    sx: Input<Sx>,
+    states: Input<States>,
+    attributes: Vec<Attribute>,
+}
+
+/// A column of the digital variant.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Column {
+    Hours,
+    Minutes,
+    Seconds,
+    Meridiem,
+}
+
+/// One option of a digital column.
+struct Choice {
+    key: String,
+    label: String,
+    selected: bool,
+    disabled: bool,
+    pick: NaiveTime,
+}
+
+#[component]
+pub(super) fn Clock(props: ClockProps) -> Element {
+    let theme = use_theme();
     let names = &theme.date;
     let size = props.size.copied_or(theme.time_picker.size);
-    let variant = props.variant.copied_or(theme.time_picker.variant);
-    let with_seconds = props.with_seconds.unwrap_or(false);
+    let variant = props.variant;
+    let with_seconds = props.with_seconds;
     let step = props.step.unwrap_or(1).clamp(1, 30);
-    let twelve = props
-        .twelve_hour
-        .unwrap_or_else(|| uses_twelve_hours(names.time_format));
-    let focusable = props.focusable.unwrap_or(true);
+    let twelve = props.twelve_hour;
+    let focusable = props.focusable;
     let tabindex = if focusable { "0" } else { "-1" };
     let (value, min, max, onchange) = (props.value, props.min, props.max, props.onchange);
 
@@ -195,39 +265,98 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
     };
 
     let mut hand = use_signal(|| Hand::Hour);
+    let root = use_element();
     let hours_column = use_element();
     let minutes_column = use_element();
     let seconds_column = use_element();
+    let meridiem_column = use_element();
     // Once each column mounts, its picked option scrolls to the top.
     use_effect(move || {
         for column in [hours_column, minutes_column, seconds_column] {
             scroll_picked_into_view(column);
         }
     });
+    // The digital option the keyboard is on, and a selector to focus after the
+    // next render.
+    let mut active = use_signal(|| None::<(Column, usize)>);
+    let mut focus_request = use_signal(|| None::<String>);
+    use_effect(move || {
+        let Some(selector) = focus_request() else {
+            return;
+        };
+        focus_request.set(None);
+        let _ = root
+            .query_selector(&selector)
+            .and_then(|element| element.focus());
+    });
 
-    let option =
-        move |key: String, label: String, selected: bool, disabled: bool, pick: NaiveTime| {
+    // One tab stop per column: the option the keyboard is on, else the picked
+    // one, else the first enabled. Up and Down, Home and End move within it.
+    let column = move |column: Column,
+                       label: Option<&'static str>,
+                       handle: ElementHandle,
+                       choices: Vec<Choice>| {
+        let enabled: Vec<usize> = choices
+            .iter()
+            .enumerate()
+            .filter(|(_, choice)| !choice.disabled)
+            .map(|(index, _)| index)
+            .collect();
+        let stop = active()
+            .filter(|(active, index)| *active == column && enabled.contains(index))
+            .map(|(_, index)| index)
+            .or_else(|| {
+                choices
+                    .iter()
+                    .position(|choice| choice.selected && !choice.disabled)
+            })
+            .or_else(|| enabled.first().copied());
+        let onkeydown = move |event: KeyboardEvent| {
+            let Some(at) = stop.and_then(|stop| enabled.iter().position(|index| *index == stop))
+            else {
+                return;
+            };
+            let next = match event.key() {
+                Key::ArrowDown => enabled[(at + 1).min(enabled.len() - 1)],
+                Key::ArrowUp => enabled[at.saturating_sub(1)],
+                Key::Home => enabled[0],
+                Key::End => enabled[enabled.len() - 1],
+                _ => return,
+            };
+            event.prevent_default();
+            active.set(Some((column, next)));
+            focus_request.set(Some(format!(
+                "[data-column='{column:?}'] [data-index='{next}']"
+            )));
+        };
+        let options = choices.into_iter().enumerate().map(|(index, choice)| {
+            let pick = choice.pick;
             rsx! {
                 button {
-                    key: "{key}",
+                    key: "{choice.key}",
                     r#type: "button",
                     "data-slot": "option",
-                    "data-selected": selected.then_some("true"),
-                    disabled,
-                    tabindex,
+                    "data-index": "{index}",
+                    "data-selected": choice.selected.then_some("true"),
+                    disabled: choice.disabled,
+                    tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
+                    onfocus: move |_| active.set(Some((column, index))),
                     onclick: move |_| emit(pick),
-                    "{label}"
+                    "{choice.label}"
                 }
             }
-        };
-    let meridiem = twelve.then(|| {
+        });
         rsx! {
-            div { "data-slot": "column",
-                {option("am".into(), names.am.into(), value.is_some() && !pm, false, at(base.hour() % 12, base.minute(), base.second()))}
-                {option("pm".into(), names.pm.into(), value.is_some() && pm, false, at(base.hour() % 12 + 12, base.minute(), base.second()))}
+            div {
+                "data-slot": "column",
+                "data-column": "{column:?}",
+                "aria-label": label,
+                onmounted: handle.mount(),
+                onkeydown,
+                {options}
             }
         }
-    });
+    };
 
     let body = match variant {
         TimePickerVariant::Digital => {
@@ -235,61 +364,72 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
                 true => std::iter::once(12).chain(1..12).collect(),
                 false => (0..24).collect(),
             };
-            let hours = hour_labels.into_iter().map(|label| {
-                let hour = hour_of(label);
-                option(
-                    label.to_string(),
-                    format!("{label:02}"),
-                    value.is_some_and(|value| value.hour() == hour),
-                    !within(at(hour, 0, 0), at(hour, 59, 59)),
-                    at(hour, base.minute(), base.second()),
-                )
-            });
-            let minutes = (0..60u32).step_by(step as usize).map(|minute| {
-                option(
-                    minute.to_string(),
-                    format!("{minute:02}"),
-                    value.is_some_and(|value| value.minute() == minute),
-                    !within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
-                    at(base.hour(), minute, base.second()),
-                )
-            });
-            let seconds = with_seconds.then(|| {
-                let options = (0..60u32).map(|second| {
-                    option(
-                        second.to_string(),
-                        format!("{second:02}"),
-                        value.is_some_and(|value| value.second() == second),
-                        !within(
-                            at(base.hour(), base.minute(), second),
-                            at(base.hour(), base.minute(), second),
-                        ),
-                        at(base.hour(), base.minute(), second),
-                    )
-                });
-                rsx! {
-                    div {
-                        "data-slot": "column",
-                        "aria-label": names.seconds_label,
-                        onmounted: seconds_column.mount(),
-                        {options}
+            let hours = hour_labels
+                .into_iter()
+                .map(|label| {
+                    let hour = hour_of(label);
+                    Choice {
+                        key: label.to_string(),
+                        label: format!("{label:02}"),
+                        selected: value.is_some_and(|value| value.hour() == hour),
+                        disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
+                        pick: at(hour, base.minute(), base.second()),
                     }
-                }
+                })
+                .collect();
+            let minutes = (0..60u32)
+                .step_by(step as usize)
+                .map(|minute| Choice {
+                    key: minute.to_string(),
+                    label: format!("{minute:02}"),
+                    selected: value.is_some_and(|value| value.minute() == minute),
+                    disabled: !within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
+                    pick: at(base.hour(), minute, base.second()),
+                })
+                .collect();
+            let seconds = with_seconds.then(|| {
+                let choices = (0..60u32)
+                    .map(|second| {
+                        let time = at(base.hour(), base.minute(), second);
+                        Choice {
+                            key: second.to_string(),
+                            label: format!("{second:02}"),
+                            selected: value.is_some_and(|value| value.second() == second),
+                            disabled: !within(time, time),
+                            pick: time,
+                        }
+                    })
+                    .collect();
+                column(
+                    Column::Seconds,
+                    Some(names.seconds_label),
+                    seconds_column,
+                    choices,
+                )
+            });
+            let meridiem = twelve.then(|| {
+                let choices = vec![
+                    Choice {
+                        key: "am".into(),
+                        label: names.am.into(),
+                        selected: value.is_some() && !pm,
+                        disabled: false,
+                        pick: at(base.hour() % 12, base.minute(), base.second()),
+                    },
+                    Choice {
+                        key: "pm".into(),
+                        label: names.pm.into(),
+                        selected: value.is_some() && pm,
+                        disabled: false,
+                        pick: at(base.hour() % 12 + 12, base.minute(), base.second()),
+                    },
+                ];
+                column(Column::Meridiem, None, meridiem_column, choices)
             });
             rsx! {
                 div { "data-slot": "columns",
-                    div {
-                        "data-slot": "column",
-                        "aria-label": names.hours_label,
-                        onmounted: hours_column.mount(),
-                        {hours}
-                    }
-                    div {
-                        "data-slot": "column",
-                        "aria-label": names.minutes_label,
-                        onmounted: minutes_column.mount(),
-                        {minutes}
-                    }
+                    {column(Column::Hours, Some(names.hours_label), hours_column, hours)}
+                    {column(Column::Minutes, Some(names.minutes_label), minutes_column, minutes)}
                     {seconds}
                     {meridiem}
                 }
@@ -316,7 +456,10 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
                         "data-slot": "mark",
                         "data-selected": selected.then_some("true"),
                         disabled,
-                        tabindex,
+                        // The face is the tab stop; a click must not move focus
+                        // onto a mark the hand change is about to replace.
+                        tabindex: "-1",
+                        onmousedown: move |event| event.prevent_default(),
                         style,
                         onclick: move |_| {
                             emit(pick);
@@ -426,6 +569,69 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
                     }
                 }
             });
+            // The face is a slider over the hand it shows: the arrows step an
+            // hour, or `step` minutes, past what `min` and `max` rule out; Enter
+            // moves from the hour to the minute.
+            let face_keydown = move |event: KeyboardEvent| {
+                let delta: i64 = match event.key() {
+                    Key::ArrowUp | Key::ArrowRight => 1,
+                    Key::ArrowDown | Key::ArrowLeft => -1,
+                    Key::Enter => {
+                        event.prevent_default();
+                        if hand() == Hand::Hour {
+                            hand.set(Hand::Minute);
+                        }
+                        return;
+                    }
+                    _ => return,
+                };
+                event.prevent_default();
+                let step = i64::from(step);
+                let mut next = base;
+                for _ in 0..60 {
+                    let (candidate, open) = match hand() {
+                        Hand::Hour => {
+                            let hour = (i64::from(next.hour()) + delta).rem_euclid(24) as u32;
+                            (
+                                at(hour, next.minute(), 0),
+                                within(at(hour, 0, 0), at(hour, 59, 59)),
+                            )
+                        }
+                        Hand::Minute => {
+                            let minute = i64::from(next.minute());
+                            // Off the step, the first press lands on it.
+                            let snapped = match delta > 0 {
+                                true => (minute / step + 1) * step,
+                                false => (minute + step - 1) / step * step - step,
+                            };
+                            let minute = snapped.rem_euclid(60) as u32;
+                            (
+                                at(next.hour(), minute, 0),
+                                within(at(next.hour(), minute, 0), at(next.hour(), minute, 59)),
+                            )
+                        }
+                    };
+                    next = candidate;
+                    if open {
+                        emit(next);
+                        return;
+                    }
+                }
+            };
+            let (face_label, face_text, face_now, face_max) = match hand() {
+                Hand::Hour => (
+                    names.hours_label,
+                    hour_text.clone(),
+                    value.map(|value| value.hour()),
+                    23,
+                ),
+                Hand::Minute => (
+                    names.minutes_label,
+                    minute_text.clone(),
+                    value.map(|value| value.minute()),
+                    59,
+                ),
+            };
             rsx! {
                 div { "data-slot": "readout",
                     button {
@@ -447,7 +653,16 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
                     }
                     {halves}
                 }
-                div { "data-slot": "face",
+                div {
+                    "data-slot": "face",
+                    role: "slider",
+                    tabindex,
+                    "aria-label": face_label,
+                    "aria-valuetext": face_text,
+                    "aria-valuenow": face_now,
+                    "aria-valuemin": 0,
+                    "aria-valuemax": face_max,
+                    onkeydown: face_keydown,
                     {pointer}
                     div {
                         "data-slot": "pivot",
@@ -464,7 +679,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
         .unwrap_or_default()
         .with(size.state_name(), true)
         .into();
-    let root = use_box()
+    let root_box = use_box()
         .framework_sx(&TIME_PICKER_SX)
         .class(&props.class)
         .sx(&props.sx)
@@ -479,7 +694,7 @@ pub fn TimePicker(props: TimePickerProps) -> Element {
             }
         }
     });
-    root.render(
+    root_box.element(&root).render(
         HtmlTag::Div,
         props.attributes,
         rsx! {

@@ -1,4 +1,4 @@
-//! What every date and time page's demo shares: the caption and state
+//! What the DateField and DatePicker demos share: the caption and state
 //! controls of a field, and reading them back.
 
 use crate::components::{Control, DemoValues};

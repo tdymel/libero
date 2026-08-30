@@ -5,13 +5,16 @@ mod common;
 
 use common::{body, render};
 
+use std::cell::Cell;
+
+use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     chrono::{NaiveDate, NaiveDateTime, NaiveTime},
     components::{
-        DateField, DateFieldPrototype, DatePicker, DateRange, DateRangePicker, MonthPicker,
-        SegmentedControl, TimePicker, YearPicker,
+        DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
+        MonthPicker, SegmentedControl, TimePicker, YearPicker,
     },
 };
 
@@ -20,7 +23,7 @@ fn a_time_picker_draws_a_column_per_part_and_posts_the_time() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, step: 15, name: "at" }
+                TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "digital", step: 15, name: "at" }
             }
         }
     }
@@ -80,7 +83,7 @@ fn a_picker_draws_six_weeks_from_the_first_weekday() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day" }
+                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day" }
             }
         }
     }
@@ -108,7 +111,7 @@ fn days_outside_min_and_max_are_disabled() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DatePicker {
+                DayPicker {
                     value: NaiveDate::from_ymd_opt(2026, 9, 14),
                     min: NaiveDate::from_ymd_opt(2026, 9, 10),
                     max: NaiveDate::from_ymd_opt(2026, 9, 20),
@@ -137,8 +140,8 @@ fn a_field_shows_its_format_and_posts_iso() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                DateField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "arrival" }
-                DateField {
+                DayField { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "arrival" }
+                DayField {
                     value: NaiveDate::from_ymd_opt(2026, 9, 4),
                     onchange: move |_| {},
                     format: "DD.MM.YYYY",
@@ -203,7 +206,7 @@ fn a_year_picker_is_one_tab_stop_on_the_picked_year() {
 }
 
 #[test]
-fn one_prototype_field_takes_its_format_and_posting_from_the_value_type() {
+fn one_field_takes_its_format_and_posting_from_the_value_type() {
     fn app() -> Element {
         let moment = |day, hour| {
             NaiveDate::from_ymd_opt(2026, 9, day)
@@ -212,10 +215,10 @@ fn one_prototype_field_takes_its_format_and_posting_from_the_value_type() {
         };
         rsx! {
             LiberoProvider {
-                DateFieldPrototype::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "day" }
-                DateFieldPrototype::<NaiveTime> { value: NaiveTime::from_hms_opt(13, 5, 0), onchange: move |_| {}, name: "time" }
+                DateField::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {}, name: "day" }
+                DateField::<NaiveTime> { value: NaiveTime::from_hms_opt(13, 5, 0), onchange: move |_| {}, name: "time" }
                 // `value` goes through `SuperInto`, so it never names `V`: a turbofish does.
-                DateFieldPrototype::<DateRange<NaiveDateTime>> {
+                DateField::<DateRange<NaiveDateTime>> {
                     value: moment(14, 9).map(|start| DateRange::new(start, moment(16, 17))),
                     onchange: move |_| {},
                     name: "stay",
@@ -232,4 +235,79 @@ fn one_prototype_field_takes_its_format_and_posting_from_the_value_type() {
     assert!(html.contains("value=\"September 14, 2026 09:00 – September 16, 2026 17:00\""));
     // chrono's `Display` would put a space where ISO 8601 puts the `T`.
     assert!(html.contains("name=\"stay\" value=\"2026-09-14T09:00:00/2026-09-16T17:00:00\""));
+}
+
+#[test]
+fn one_picker_draws_what_the_value_type_calls_for() {
+    fn app() -> Element {
+        let moment = |day, hour| {
+            NaiveDate::from_ymd_opt(2026, 9, day)
+                .zip(NaiveTime::from_hms_opt(hour, 0, 0))
+                .map(|(day, time)| NaiveDateTime::new(day, time))
+        };
+        rsx! {
+            LiberoProvider {
+                DatePicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, name: "day", class: "day-picker" }
+                DatePicker::<NaiveDate> { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, level: DateLevel::Month, name: "month" }
+                DatePicker::<NaiveTime> { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, name: "time", id: "clock" }
+                DatePicker::<NaiveDateTime> { value: moment(14, 9), onchange: move |_| {}, name: "moment", class: "flow" }
+                DatePicker::<DateRange<NaiveDate>> {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 14).map(|start| DateRange::new(start, NaiveDate::from_ymd_opt(2026, 9, 18))),
+                    onchange: move |_| {},
+                    name: "stay",
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    // A day picker, the day grid of the date-time flow, and two months of range.
+    assert_eq!(html.matches("role=\"grid\"").count(), 4);
+    assert!(html.contains("name=\"day\" value=\"2026-09-14\""));
+    // A month is held as its first day.
+    assert!(html.contains("name=\"month\" value=\"2026-09-01\""));
+    assert!(html.contains("name=\"time\" value=\"09:30:00\""));
+    assert!(html.contains("name=\"moment\" value=\"2026-09-14T09:00:00\""));
+    assert!(html.contains("name=\"stay\" value=\"2026-09-14/2026-09-18\""));
+    // The caller's attributes reach every kind of root.
+    assert!(html.contains("day-picker"));
+    assert!(html.contains("id=\"clock\""));
+    assert!(html.contains("flow"));
+}
+
+thread_local! {
+    static LEVEL: Cell<DateLevel> = const { Cell::new(DateLevel::Day) };
+}
+
+#[test]
+fn a_picker_follows_a_level_change_in_the_same_scope() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DatePicker::<NaiveDate> {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 14),
+                    onchange: move |_| {},
+                    level: LEVEL.with(Cell::get),
+                }
+            }
+        }
+    }
+    LEVEL.with(|level| level.set(DateLevel::Day));
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut NoOpMutations);
+    assert_eq!(
+        body(&dioxus_ssr::render(&dom))
+            .matches("data-slot=\"day\"")
+            .count(),
+        42
+    );
+
+    // The scope is reused: its own view state must not keep the days.
+    LEVEL.with(|level| level.set(DateLevel::Month));
+    dom.mark_dirty(ScopeId::APP);
+    dom.render_immediate(&mut NoOpMutations);
+    let html = body(&dioxus_ssr::render(&dom));
+    assert_eq!(html.matches("data-slot=\"day\"").count(), 0);
+    assert_eq!(html.matches("data-slot=\"cell\"").count(), 12);
 }

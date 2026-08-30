@@ -443,7 +443,7 @@ impl Theme {
         },
         time_picker: TimePickerDefaults {
             size: Size::Md,
-            variant: TimePickerVariant::Digital,
+            variant: TimePickerVariant::Analog,
         },
         autocomplete: AutocompleteDefaults {
             size: Size::Md,

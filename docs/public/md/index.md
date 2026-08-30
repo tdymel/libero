@@ -51,21 +51,9 @@ fetch only the file you need.
 - [RangeSlider](range_slider.md): Two thumbs on one track for a span rather than a point - the `Slider` engine, over a pair of values.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
 - [ColorPicker](color_picker.md): A saturation panel and a hue slider, with an optional alpha slider and preset swatches, holding one `ColorCode` that converts to any CSS form. Also documents `HueSlider`, `AlphaSlider` and `ColorSwatch`.
+- [DateField](date_field.md): One text field for every date and time value, typed leniently, with the matching `DatePicker` in a dropdown. Also lists `DayField`, `TimeField`, `DateTimeField`, `DateRangeField` and `DateTimeRangeField`.
+- [DatePicker](date_picker.md): One picker for every date and time value - days, months, years, times, date-times and ranges of them. Also lists `DayPicker`, `MonthPicker`, `YearPicker`, `TimePicker` and `DateRangePicker`.
 - [FileField](file_field.md): Files picked from the system dialog or dropped on the control, as a one-line input or a drop surface.
-
-## Date
-
-- [DateField](date_field.md): A text field holding a `Date`, typed leniently against a dayjs format, with a `DatePicker` in a dropdown.
-- [TimeField](time_field.md): A text field holding a `Time`, typed leniently, with a `TimePicker` in a dropdown.
-- [DateTimeField](date_time_field.md): A text field holding a `DateTime`; its dropdown picks the day, then the time.
-- [DateRangeField](date_range_field.md): A text field holding a `DateRange` of days, with two months in a dropdown.
-- [DateTimeRangeField](date_time_range_field.md): A text field holding a `DateRange` of `DateTime`s, picked start first.
-- [DatePicker](date_picker.md): A month of days to pick one `Date` from - a keyboard grid with min, max and excluded days.
-- [DateRangePicker](date_range_picker.md): Months side by side to pick a start and an end from, with a hover preview.
-- [DateFieldPrototype](date_field_prototype.md): A prototype of one date field for every date and time value; the type picks the dropdown.
-- [MonthPicker](month_picker.md): The months of a year to pick one from.
-- [YearPicker](year_picker.md): The years of a decade to pick one from.
-- [TimePicker](time_picker.md): A time to pick - digital columns or an analog clock face.
 
 ## Inputs
 

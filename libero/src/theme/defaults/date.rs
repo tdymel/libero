@@ -132,9 +132,9 @@ str_enum! {
     /// How a `TimePicker` shows the time.
     pub enum TimePickerVariant {
         /// Scrolling columns of hours, minutes and seconds.
-        #[default]
         Digital = "digital",
         /// A clock face: the hour, then the minute.
+        #[default]
         Analog = "analog",
     }
 }

@@ -6,7 +6,7 @@ use dioxus::prelude::*;
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use super::{
-    DatePicker, DateRange, DateRangePicker, TimePicker,
+    DateRange, DateRangePicker, DayPicker, TimePicker,
     flows::{DateTimeFlow, DateTimeRangeFlow},
     format::uses_twelve_hours,
     picker_field::{DropdownArgs, Formats, picker_field, use_picker_field},
@@ -67,7 +67,7 @@ pub(super) fn time_format(
 
 field_props! {
     extends(input);
-    pub struct DateFieldProps {
+    pub struct DayFieldProps {
         /// The day in the field; strictly controlled. `None` is the empty
         /// field. Inside a `Form`, a path `name` can supply it instead.
         #[props(default)]
@@ -112,7 +112,7 @@ field_props! {
     }
 }
 
-/// A text field holding a day, with a `DatePicker` in a dropdown - Mantine's
+/// A text field holding a day, with a `DayPicker` in a dropdown - Mantine's
 /// `DateInput`.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
@@ -120,7 +120,7 @@ field_props! {
 /// it is read leniently against `format`. Text that is not an accepted day
 /// stays, and the field shows an error.
 #[component]
-pub fn DateField(props: DateFieldProps) -> Element {
+pub fn DayField(props: DayFieldProps) -> Element {
     let theme = use_theme();
     let names = &theme.date;
     let (min, max, exclude_date) = (props.min, props.max, props.exclude_date);
@@ -140,7 +140,7 @@ pub fn DateField(props: DateFieldProps) -> Element {
         day_allowed(min, max, exclude_date),
         move |args: DropdownArgs<NaiveDate>| {
             rsx! {
-                DatePicker {
+                DayPicker {
                     value: args.value,
                     min,
                     max,
@@ -317,7 +317,8 @@ pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
                     max,
                     exclude_date,
                     today: args.today,
-                    size: args.size,
+                    size: Input::Value(args.size),
+                    focusable: false,
                     variant,
                     with_seconds,
                     step,
@@ -489,7 +490,8 @@ pub fn DateTimeRangeField(props: DateTimeRangeFieldProps) -> Element {
                     max,
                     exclude_date,
                     today: args.today,
-                    size: args.size,
+                    size: Input::Value(args.size),
+                    focusable: false,
                     variant,
                     with_seconds,
                     step,

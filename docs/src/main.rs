@@ -21,16 +21,14 @@ use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BoxPage, ButtonPage, CenterPage,
     CheckboxPage, ChipPage, CodeBlockPage, CodePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
-    ContainerPage, DataListPage, DateFieldPage, DateFieldPrototypePage, DatePickerPage,
-    DateRangeFieldPage, DateRangePickerPage, DateTimeFieldPage, DateTimeRangeFieldPage, DialogPage,
-    DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
+    ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage, DividerPage,
+    DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
     FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
-    KbdPage, ListPage, MarkPage, ModalPage, MonthPickerPage, MultiSelectPage, NativeSelectPage,
-    NavLinkPage, NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, PinFieldPage,
-    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage,
-    SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage,
-    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimeFieldPage, TimePickerPage, TitlePage,
-    TooltipPage, TreePage, VisuallyHiddenPage, YearPickerPage,
+    KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
+    NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, PinFieldPage, QrCodePage,
+    RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage,
+    SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage,
+    TextPage, TextareaPage, ThemingPage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -78,29 +76,6 @@ pub(crate) enum Route {
     #[route("/data-display/qr-code")]
     QrCodePage {},
 
-    #[route("/date/date-field")]
-    DateFieldPage {},
-    #[route("/date/date-field-prototype")]
-    DateFieldPrototypePage {},
-    #[route("/date/date-picker")]
-    DatePickerPage {},
-    #[route("/date/date-range-field")]
-    DateRangeFieldPage {},
-    #[route("/date/date-range-picker")]
-    DateRangePickerPage {},
-    #[route("/date/date-time-field")]
-    DateTimeFieldPage {},
-    #[route("/date/date-time-range-field")]
-    DateTimeRangeFieldPage {},
-    #[route("/date/month-picker")]
-    MonthPickerPage {},
-    #[route("/date/time-field")]
-    TimeFieldPage {},
-    #[route("/date/time-picker")]
-    TimePickerPage {},
-    #[route("/date/year-picker")]
-    YearPickerPage {},
-
     #[route("/form/getting-started")]
     FormGettingStartedPage {},
     #[route("/form/autocomplete")]
@@ -111,6 +86,10 @@ pub(crate) enum Route {
     ColorFieldPage {},
     #[route("/form/color-picker")]
     ColorPickerPage {},
+    #[route("/form/date-field")]
+    DateFieldPage {},
+    #[route("/form/date-picker")]
+    DatePickerPage {},
     #[route("/form/fieldset")]
     FieldsetPage {},
     #[route("/form/file-field")]

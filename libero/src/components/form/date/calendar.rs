@@ -201,12 +201,20 @@ impl Selection {
 }
 
 /// The view a calendar shows: days of a month, months of a year, years of a
-/// decade.
+/// decade. `DatePicker`'s `level` picks the lowest one - the one a pick lands
+/// on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-pub(super) enum Level {
+pub enum DateLevel {
     Day,
     Month,
     Year,
+}
+
+/// Where focus goes after the next render.
+#[derive(Clone, Copy, PartialEq)]
+enum Focus {
+    Date(NaiveDate),
+    Title,
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -218,8 +226,8 @@ pub(super) struct CalendarProps {
     #[props(default = 1)]
     columns: usize,
     /// The level a pick lands on; the levels above only navigate.
-    #[props(default = Level::Day)]
-    lowest: Level,
+    #[props(default = DateLevel::Day)]
+    lowest: DateLevel,
     #[props(default)]
     min: Option<NaiveDate>,
     #[props(default)]
@@ -260,12 +268,21 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let tabindex = move |stop: bool| if focusable && stop { "0" } else { "-1" };
 
     let today = use_today(props.today);
+    // A new `lowest` remounts the calendar - `DateValue::picker` keys it - so
+    // the view only has to start there.
     let mut level = use_signal(|| lowest);
     // Only ever set by paging; until then the view follows the value.
     let mut paged = use_signal(|| None::<NaiveDate>);
-    // The keyboard's day, and whether the next render must move focus to it.
+    // The keyboard's day, and where focus goes after the next render.
     let mut active = use_signal(|| None::<NaiveDate>);
-    let mut refocus = use_signal(|| false);
+    let focus_request = use_signal(|| None::<Focus>);
+    // Only a focusable calendar moves focus: inside a field the input keeps it.
+    let focus_to = move |target: Focus| {
+        if focusable {
+            let mut request = focus_request;
+            request.set(Some(target));
+        }
+    };
     // The day under the mouse while a range waits for its end.
     let mut hover = use_signal(|| None::<NaiveDate>);
     let root = use_element();
@@ -284,18 +301,21 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .or(today.filter(|day| shown(*day)))
         .unwrap_or(first);
 
-    // Runs after the render that drew the new day, so the cell exists.
+    // Runs after the render that drew the target, so it exists. A level change
+    // replaces the heading and the cells, which would leave focus on `body`.
     use_effect(move || {
-        let Some(day) = active() else {
+        let Some(target) = focus_request() else {
             return;
         };
-        if !*refocus.peek() {
-            return;
-        }
-        refocus.set(false);
+        let mut request = focus_request;
+        request.set(None);
+        let selector = match target {
+            Focus::Title => "[data-slot='title']".to_string(),
+            Focus::Date(day) => format!("[data-date='{day}']:not([data-outside])"),
+        };
         let _ = root
-            .query_selector(&format!("[data-date='{day}']:not([data-outside])"))
-            .and_then(|cell| cell.focus());
+            .query_selector(&selector)
+            .and_then(|element| element.focus());
     });
 
     let first_weekday = names.first_weekday.num_days_from_monday() as usize;
@@ -328,19 +348,19 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         } else if month > last {
             paged.set(Some(add_months(month, 1 - columns)));
         }
-        refocus.set(true);
         active.set(Some(next));
+        focus_to(Focus::Date(next));
     };
 
     // The month and year views: a grid three wide, one cell a month or a
     // year, with one tab stop. A step off the shown year or decade pages it.
     let decade = first.year() - first.year().rem_euclid(10);
     let cell_of = move |day: NaiveDate| match level() {
-        Level::Year => NaiveDate::from_ymd_opt(day.year(), 1, 1).unwrap_or(day),
+        DateLevel::Year => NaiveDate::from_ymd_opt(day.year(), 1, 1).unwrap_or(day),
         _ => first_of_month(day),
     };
     let in_view = move |cell: NaiveDate| match level() {
-        Level::Year => (decade..decade + 10).contains(&cell.year()),
+        DateLevel::Year => (decade..decade + 10).contains(&cell.year()),
         _ => cell.year() == first.year(),
     };
     let cell_stop = [active(), selection.anchor(), today]
@@ -349,7 +369,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .map(cell_of)
         .find(|cell| in_view(*cell))
         .unwrap_or_else(|| {
-            let year = if level() == Level::Year {
+            let year = if level() == DateLevel::Year {
                 decade
             } else {
                 first.year()
@@ -358,9 +378,9 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         });
     let cell_keydown = move |event: KeyboardEvent| {
         let (months_per_cell, cells_per_page, column) = match level() {
-            Level::Day => return,
-            Level::Month => (1, 12, i64::from(cell_stop.month0() % 3)),
-            Level::Year => (
+            DateLevel::Day => return,
+            DateLevel::Month => (1, 12, i64::from(cell_stop.month0() % 3)),
+            DateLevel::Year => (
                 12,
                 10,
                 i64::from((cell_stop.year() - decade + 1).rem_euclid(3)),
@@ -380,8 +400,8 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         event.prevent_default();
         let next = add_months(cell_stop, cells * months_per_cell);
         paged.set(Some(next));
-        refocus.set(true);
         active.set(Some(next));
+        focus_to(Focus::Date(next));
     };
 
     let awaits_end = selection.awaits_end();
@@ -479,7 +499,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let forward = rsx! { ChevronRightIcon {} };
 
     let body = match level() {
-        Level::Day => {
+        DateLevel::Day => {
             let months: Vec<NaiveDate> =
                 (0..columns).map(|index| add_months(first, index)).collect();
             rsx! {
@@ -494,7 +514,8 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                             tabindex: tabindex(true),
                             onclick: move |_| {
                                 paged.set(Some(month));
-                                level.set(Level::Month);
+                                level.set(DateLevel::Month);
+                                focus_to(Focus::Title);
                             },
                             {format_date(month, names.month_format, names)}
                         }
@@ -514,7 +535,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                 }
             }
         }
-        Level::Month => {
+        DateLevel::Month => {
             let year = first.year();
             let cell = move |index: u32| {
                 let Some(month) = NaiveDate::from_ymd_opt(year, index + 1, 1) else {
@@ -539,11 +560,13 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         disabled,
                         tabindex: tabindex(month == cell_stop),
                         onclick: move |_| {
-                            if lowest == Level::Month {
+                            if lowest == DateLevel::Month {
                                 onpick.call(month);
                             } else {
                                 paged.set(Some(month));
-                                level.set(Level::Day);
+                                level.set(DateLevel::Day);
+                                active.set(Some(month));
+                                focus_to(Focus::Date(month));
                             }
                         },
                         {names.months_short[index as usize]}
@@ -558,7 +581,10 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         "data-slot": "title",
                         "aria-live": "polite",
                         tabindex: tabindex(true),
-                        onclick: move |_| level.set(Level::Year),
+                        onclick: move |_| {
+                            level.set(DateLevel::Year);
+                            focus_to(Focus::Title);
+                        },
                         "{year}"
                     }
                     {nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), forward)}
@@ -570,7 +596,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                 }
             }
         }
-        Level::Year => {
+        DateLevel::Year => {
             let cell = move |offset: i32| {
                 let Some(start) = NaiveDate::from_ymd_opt(decade + offset, first.month(), 1) else {
                     return rsx! {};
@@ -597,11 +623,13 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         disabled,
                         tabindex: tabindex(year_start == cell_stop),
                         onclick: move |_| {
-                            if lowest == Level::Year {
+                            if lowest == DateLevel::Year {
                                 onpick.call(year_start);
                             } else {
                                 paged.set(Some(start));
-                                level.set(Level::Month);
+                                level.set(DateLevel::Month);
+                                active.set(Some(start));
+                                focus_to(Focus::Date(start));
                             }
                         },
                         "{shown_year}"

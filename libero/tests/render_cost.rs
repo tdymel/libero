@@ -207,10 +207,10 @@ fn render_cost_per_component() {
         // Closed: the dropdown's picker is not rendered until it opens.
         "ColorField" { ColorField { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
         // 42 day buttons, each with its own click handler.
-        "DatePicker" { DatePicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
+        "DayPicker" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
         // Closed: the dropdown's picker is not rendered until it opens.
-        "DateField" { DateField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
-        "TimePicker" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {} } }
+        "DayField" { DayField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
+        "TimePicker" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "digital" } }
         "TimePicker-analog" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "analog" } }
         "MonthPicker" { MonthPicker { value: NaiveDate::from_ymd_opt(2026, 9, 1), onchange: move |_| {} } }
         "DateRangePicker" { DateRangePicker { onchange: move |_| {} } }
