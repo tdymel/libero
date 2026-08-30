@@ -83,6 +83,14 @@ impl ElementApi for ElementHandle {
         self.get()?.click()
     }
 
+    fn reset(&self) -> Result<(), PlatformError> {
+        self.get()?.reset()
+    }
+
+    fn request_submit(&self) -> Result<(), PlatformError> {
+        self.get()?.request_submit()
+    }
+
     fn set_files(&self, files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
         self.get()?.set_files(files)
     }

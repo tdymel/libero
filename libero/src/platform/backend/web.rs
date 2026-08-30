@@ -109,6 +109,12 @@ impl WebElement {
             .dyn_ref::<web_sys::HtmlElement>()
             .ok_or(PlatformError::NotFound)
     }
+
+    fn form(&self) -> Result<&web_sys::HtmlFormElement, PlatformError> {
+        self.element
+            .dyn_ref::<web_sys::HtmlFormElement>()
+            .ok_or(PlatformError::NotFound)
+    }
 }
 
 fn resolved<T: 'static>(value: T) -> Read<T> {
@@ -127,6 +133,17 @@ impl ElementApi for WebElement {
     fn click(&self) -> Result<(), PlatformError> {
         self.html()?.click();
         Ok(())
+    }
+
+    fn reset(&self) -> Result<(), PlatformError> {
+        self.form()?.reset();
+        Ok(())
+    }
+
+    fn request_submit(&self) -> Result<(), PlatformError> {
+        self.form()?
+            .request_submit()
+            .map_err(|_| PlatformError::NotFound)
     }
 
     /// The list is rebuilt through a `DataTransfer`, which is the only

@@ -34,6 +34,14 @@ pub trait ElementApi {
     fn blur(&self) -> Result<(), PlatformError>;
     fn click(&self) -> Result<(), PlatformError>;
 
+    /// A `<form>`'s own reset: every control back to its default value. A
+    /// control whose value a component sets keeps getting it from there.
+    fn reset(&self) -> Result<(), PlatformError>;
+
+    /// Submits a `<form>` as its submit button would, so `onsubmit` fires with
+    /// a real event. Only the web has one to fire.
+    fn request_submit(&self) -> Result<(), PlatformError>;
+
     /// Whether this is the currently focused element.
     fn is_focused(&self) -> bool;
 

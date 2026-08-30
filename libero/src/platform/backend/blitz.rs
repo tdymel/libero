@@ -197,6 +197,16 @@ impl ElementApi for BlitzElement {
         Err(PlatformError::Unsupported)
     }
 
+    /// Blitz implements no form reset.
+    fn reset(&self) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
+    /// Blitz fires no submit event from code.
+    fn request_submit(&self) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
     /// Blitz has no pointer capture. A native drag keeps tracking anyway while
     /// the handlers sit on a container the pointer stays inside.
     fn set_pointer_capture(&self, _pointer_id: i32) -> Result<(), PlatformError> {

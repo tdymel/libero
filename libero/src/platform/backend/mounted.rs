@@ -83,6 +83,15 @@ impl ElementApi for MountedElement {
         Err(PlatformError::Unsupported)
     }
 
+    /// A form's reset and submit are DOM methods no mounted handle reaches.
+    fn reset(&self) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
+    fn request_submit(&self) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
     /// A `FileList` is a browser object; no mounted handle reaches one.
     fn set_files(&self, _files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
         Err(PlatformError::Unsupported)
