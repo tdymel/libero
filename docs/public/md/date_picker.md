@@ -102,7 +102,7 @@ clock.
 | `onchange` | `EventHandler<Option<V>>` | - | Called with the value the caller should hold next. |
 | `level` | `DateLevel` | `Day` | A `NaiveDate` as a day, a month or a year. |
 | `min` / `max` | `V::Bound` | - | Limits for picking. |
-| `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked. Always compares equal, so changing only the closure does not redraw. |
+| `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked. |
 | `allow_deselect` | `bool` | `false` | Clicking the picked day again clears it. |
 | `columns` | `usize` | `1`, `2` for a range | Months side by side. |
 | `variant` | `TimePickerVariant` | `analog` | Columns or a clock face, for values with a time. |

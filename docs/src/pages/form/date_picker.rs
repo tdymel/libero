@@ -42,7 +42,7 @@ pub fn DatePickerPage() -> Element {
                     prop("min", "V::Bound").doc("The earliest value that can be picked. For a range, the earliest end."),
                     prop("max", "V::Bound").doc("The latest value, likewise."),
                     prop("exclude_date", "Callback<NaiveDate, bool>")
-                        .doc("Days that cannot be picked. A `Callback` always compares equal, so changing only this closure does not redraw the picker."),
+                        .doc("Days that cannot be picked."),
                     prop("allow_deselect", "bool").default("false").doc("Clicking the picked day again clears it. Only for a day."),
                     prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side, for a day or a range of days."),
                     prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers or a clock face, for values with a time."),

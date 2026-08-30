@@ -11,7 +11,7 @@ use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    chrono::{NaiveDate, NaiveDateTime, NaiveTime},
+    chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime},
     components::{
         DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
@@ -310,4 +310,45 @@ fn a_picker_follows_a_level_change_in_the_same_scope() {
     let html = body(&dioxus_ssr::render(&dom));
     assert_eq!(html.matches("data-slot=\"day\"").count(), 0);
     assert_eq!(html.matches("data-slot=\"cell\"").count(), 12);
+}
+
+thread_local! {
+    static FIRST_EXCLUDED_WEEKDAY: Cell<u32> = const { Cell::new(7) };
+}
+
+/// Re-renders `app` in one scope while the rule flips between nothing and the
+/// weekends, and counts the disabled days after each pass.
+fn disabled_per_flip(app: fn() -> Element) -> Vec<usize> {
+    let disabled = |dom: &VirtualDom| body(&dioxus_ssr::render(dom)).matches("disabled").count();
+    FIRST_EXCLUDED_WEEKDAY.with(|first| first.set(7));
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut NoOpMutations);
+    let mut counts = vec![disabled(&dom)];
+    for pass in 1..=8 {
+        FIRST_EXCLUDED_WEEKDAY.with(|first| first.set(if pass % 2 == 1 { 5 } else { 7 }));
+        dom.mark_dirty(ScopeId::APP);
+        dom.render_immediate(&mut NoOpMutations);
+        counts.push(disabled(&dom));
+    }
+    counts
+}
+
+#[test]
+fn a_picker_follows_a_new_exclude_date_rule_in_the_same_scope() {
+    fn app() -> Element {
+        // Captured while rendering, as a caller's own state would be: only the
+        // closure changes between the two passes.
+        let first = FIRST_EXCLUDED_WEEKDAY.with(Cell::get);
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 14),
+                    onchange: move |_| {},
+                    exclude_date: move |day: NaiveDate| day.weekday().num_days_from_monday() >= first,
+                }
+            }
+        }
+    }
+    assert_eq!(disabled_per_flip(app), [0, 12, 0, 12, 0, 12, 0, 12, 0]);
 }
