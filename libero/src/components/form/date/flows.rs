@@ -69,8 +69,7 @@ fn time_limits(
     (on(min), on(max))
 }
 
-/// A switch between the calendar and the clock. Not focusable inside a field:
-/// its text input keeps focus while the dropdown is open.
+/// A switch between the calendar and the clock.
 fn part_switch(part: Signal<Part>, size: Size, focusable: bool) -> Element {
     let names = &use_theme().date;
     let mut part = part;
@@ -121,7 +120,10 @@ fn use_handoff() -> (ElementHandle, Signal<bool>) {
         }
         handoff.set(false);
         let _ = root
-            .query_selector("[data-slot='part'] [tabindex='0']")
+            // The clock itself, not the readout above an analog face.
+            .query_selector(
+                "[data-slot='part'] [data-slot='face'][tabindex='0'], [data-slot='part'] [data-slot='columns'] [tabindex='0']",
+            )
             .and_then(|element| element.focus());
     });
     (root, handoff)
@@ -189,7 +191,7 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                     if let Some(day) = day {
                         onpick.call(Some(NaiveDateTime::new(day, time.unwrap_or(MIDNIGHT))));
                         part.set(Part::Time);
-                        handoff.set(focusable);
+                        handoff.set(focusable && root.query_selector(":focus").is_ok());
                     }
                 },
             }
@@ -304,7 +306,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                         }
                     }
                     part.set(Part::Time);
-                    handoff.set(focusable);
+                    handoff.set(focusable && root.query_selector(":focus").is_ok());
                 },
             }
         },
@@ -342,10 +344,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let children = rsx! {
             SegmentedControl {
                 value: side(),
-                onchange: move |next| {
-                    side.set(next);
-                    part.set(Part::Date);
-                },
+                onchange: move |next| side.set(next),
                 size,
                 full_width: true,
                 focusable: props.focusable,

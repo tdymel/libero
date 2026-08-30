@@ -148,6 +148,13 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
                 .hover(sx().background("transparent")),
         )
         .selector("& button:focus-visible", focus_ring_sx())
+        // A picked cell's fill sets the ring's contrast colour, which is
+        // meant for its inside: drawn around it, a light ring vanishes on the
+        // page. After the ring above, and more specific, so it wins.
+        .selector(
+            "& [data-selected]:focus-visible",
+            sx().outline_offset("-4px"),
+        )
 });
 
 /// What a calendar marks as picked.
@@ -276,16 +283,17 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     // The keyboard's day, and where focus goes after the next render.
     let mut active = use_signal(|| None::<NaiveDate>);
     let focus_request = use_signal(|| None::<Focus>);
-    // Only a focusable calendar moves focus: inside a field the input keeps it.
+    let root = use_element();
+    // Only moves focus that is already in the calendar: a click inside a
+    // field's dropdown leaves it on the text input.
     let focus_to = move |target: Focus| {
-        if focusable {
+        if focusable && root.query_selector(":focus").is_ok() {
             let mut request = focus_request;
             request.set(Some(target));
         }
     };
     // The day under the mouse while a range waits for its end.
     let mut hover = use_signal(|| None::<NaiveDate>);
-    let root = use_element();
 
     let first = first_of_month(
         paged()
