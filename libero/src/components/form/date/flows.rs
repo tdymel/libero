@@ -281,6 +281,23 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
     let editing_end = side() == Side::End && start.is_some();
     let current = if editing_end { end } else { start };
     let (min_time, max_time) = time_limits(current.map(|value| value.date()), props.min, props.max);
+    // One identity across renders, so the calendar's props compare equal and
+    // a re-render from above skips it.
+    let onpick_day = use_callback(move |day: NaiveDate| {
+        match (editing_end, start) {
+            (true, Some(start)) => {
+                let time = end.map_or(start.time(), |end| end.time());
+                emit(start, Some(NaiveDateTime::new(day, time)));
+            }
+            _ => {
+                let time = start.map_or(MIDNIGHT, |start| start.time());
+                let next = NaiveDateTime::new(day, time);
+                emit(next, end.filter(|end| *end >= next));
+            }
+        }
+        part.set(Part::Time);
+        handoff.set(focusable && root.query_selector(":focus").is_ok());
+    });
 
     let picker = match part() {
         Part::Date => rsx! {
@@ -297,21 +314,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                 today,
                 size,
                 focusable: props.focusable,
-                onpick: move |day: NaiveDate| {
-                    match (editing_end, start) {
-                        (true, Some(start)) => {
-                            let time = end.map_or(start.time(), |end| end.time());
-                            emit(start, Some(NaiveDateTime::new(day, time)));
-                        }
-                        _ => {
-                            let time = start.map_or(MIDNIGHT, |start| start.time());
-                            let next = NaiveDateTime::new(day, time);
-                            emit(next, end.filter(|end| *end >= next));
-                        }
-                    }
-                    part.set(Part::Time);
-                    handoff.set(focusable && root.query_selector(":focus").is_ok());
-                },
+                onpick: onpick_day,
             }
         },
         Part::Time => rsx! {

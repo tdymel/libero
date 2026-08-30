@@ -249,6 +249,25 @@ enum Focus {
     Title,
 }
 
+/// `exclude_date` as a calendar holds it. Two `Callback`s built on different
+/// renders can compare equal, so a changed rule would not redraw a calendar
+/// whose other props did not change. A rule never compares equal: only a
+/// calendar without one skips a re-render from above.
+#[derive(Clone, Copy, Default)]
+pub(super) struct DayRule(Option<Callback<NaiveDate, bool>>);
+
+impl PartialEq for DayRule {
+    fn eq(&self, other: &Self) -> bool {
+        self.0.is_none() && other.0.is_none()
+    }
+}
+
+impl From<Option<Callback<NaiveDate, bool>>> for DayRule {
+    fn from(rule: Option<Callback<NaiveDate, bool>>) -> Self {
+        Self(rule)
+    }
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub(super) struct CalendarProps {
     selection: Selection,
@@ -269,8 +288,8 @@ pub(super) struct CalendarProps {
     min: Option<NaiveDate>,
     #[props(default)]
     max: Option<NaiveDate>,
-    #[props(default)]
-    exclude_date: Option<Callback<NaiveDate, bool>>,
+    #[props(default, into)]
+    exclude_date: DayRule,
     #[props(default)]
     today: Option<NaiveDate>,
     size: Size,
@@ -300,7 +319,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let onpick = props.onpick;
     let columns = props.columns.max(1) as i64;
     let lowest = props.lowest;
-    let (min, max, exclude_date) = (props.min, props.max, props.exclude_date);
+    let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
     let focusable = props.focusable;
     let tabindex = move |stop: bool| if focusable && stop { "0" } else { "-1" };
 

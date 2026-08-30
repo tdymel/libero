@@ -120,6 +120,17 @@ impl DateValue for NaiveDate {
         let allow_deselect = options.allow_deselect && level == DateLevel::Day;
         // Only days come as a mini calendar.
         let mini = level == DateLevel::Day && options.calendar == CalendarVariant::Mini;
+        // One identity across renders, so the calendar's props compare equal
+        // and a re-render from above skips it.
+        let onpick = use_callback(move |day: NaiveDate| {
+            let next = match allow_deselect && value == Some(day) {
+                true => None,
+                false => Some(day),
+            };
+            if let Some(onchange) = &onchange {
+                onchange.call(next);
+            }
+        });
         // Keyed by level and layout inside a one-item list: dioxus remounts a
         // keyed child whose key changes, and the calendar's own view state
         // starts over.
@@ -129,15 +140,7 @@ impl DateValue for NaiveDate {
                 variant: if mini { CalendarVariant::Mini } else { CalendarVariant::Full },
                 days: options.days,
                 selection: Selection::Single(value),
-                onpick: move |day: NaiveDate| {
-                    let next = match allow_deselect && value == Some(day) {
-                        true => None,
-                        false => Some(day),
-                    };
-                    if let Some(onchange) = &onchange {
-                        onchange.call(next);
-                    }
-                },
+                onpick,
                 columns: match level {
                     DateLevel::Day => options.columns.unwrap_or(1),
                     _ => 1,
@@ -257,14 +260,16 @@ impl DateValue for DateRange<NaiveDate> {
     fn picker(args: PickerArgs<Self>) -> Element {
         let (value, onchange, options) = (args.value, args.onchange, args.options);
         let size = args.size.copied_or(use_theme().date_picker.size);
+        // One identity across renders, as for a single day.
+        let onpick = use_callback(move |day: NaiveDate| {
+            if let Some(onchange) = &onchange {
+                onchange.call(Some(DateRange::pick(value, day)));
+            }
+        });
         rsx! {
             Calendar {
                 selection: Selection::Range(value),
-                onpick: move |day: NaiveDate| {
-                    if let Some(onchange) = &onchange {
-                        onchange.call(Some(DateRange::pick(value, day)));
-                    }
-                },
+                onpick,
                 columns: options.columns.unwrap_or(2),
                 lowest: DateLevel::Day,
                 min: options.min,
