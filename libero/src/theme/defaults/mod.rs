@@ -92,9 +92,9 @@ pub use combobox::{
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use data_list::{DATA_LIST_GAP, DataListDefaults};
 pub use date::{
-    DATE_PICKER_DAY, DATE_PICKER_DAY_SIZE_SIZE, DATE_PICKER_FONT_SIZE, DATE_PICKER_FONT_SIZE_SIZE,
-    DateDefaults, DateFieldDefaults, DatePickerDefaults, DatePickerSizeLevel, TimePickerDefaults,
-    TimePickerVariant,
+    CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_DAY_SIZE_SIZE, DATE_PICKER_FONT_SIZE,
+    DATE_PICKER_FONT_SIZE_SIZE, DateDefaults, DateFieldDefaults, DatePickerDefaults,
+    DatePickerSizeLevel, TimePickerDefaults, TimePickerVariant,
 };
 pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};

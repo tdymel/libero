@@ -1,7 +1,7 @@
 use super::date_common::{
-    SIZES, day_limits, field_controls, has_days, has_time, is_on, is_weekend, moment_limits,
-    shared_controls, shown, status_of, step_of, switches_last, text_of, time_limits, today_of,
-    twelve_hour_of,
+    SIZES, calendar_controls, day_limits, field_controls, has_days, has_time, is_on, is_weekend,
+    moment_limits, shared_controls, shown, status_of, step_of, switches_last, text_of, time_limits,
+    today_of, twelve_hour_of,
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
@@ -71,6 +71,8 @@ pub fn DateFieldPage() -> Element {
                     prop("with_seconds", "bool").default("false").doc("Seconds in the text and the clock, for values with a time."),
                     prop("step", "u8").default("1").doc("Minutes between the offered minutes."),
                     prop("twelve_hour", "bool").doc("A 12-hour clock. Defaults to whether the time format is one."),
+                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`: one row of days with buttons that page it. For a day or a date-time."),
+                    prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
                     prop("columns", "usize").default("2").doc("Months side by side, for a range of days."),
                     prop("close_on_change", "bool").default("true").doc("Picking a day, or a range's end, closes the dropdown."),
                     prop("name", "FieldName<Option<V>>").doc("What the field posts as - the value in ISO 8601, whatever the text shows. A path also binds it to the surrounding `Form`."),
@@ -178,7 +180,7 @@ pub fn DateFieldPage() -> Element {
                             false => vec![],
                         }),
                     ];
-                    switches_last([controls, shared_controls(), field_controls()].concat())
+                    switches_last([controls, calendar_controls(), shared_controls(), field_controls()].concat())
                 },
                 render: move |values: DemoValues| rsx! {
                     DateFieldDemo { values }
@@ -251,6 +253,8 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let disabled = is_on(&values, "disabled").then_some(true);
     let time_format = Some(values.str("time_format")).filter(|format| format != "default");
     let columns = values.str("columns").parse::<usize>().ok();
+    let calendar = values.str("calendar");
+    let days = values.str("days").parse::<usize>().ok();
     let step = step_of(&values);
     let with_seconds = is_on(&values, "with_seconds");
     let twelve_hour = twelve_hour_of(&values);
@@ -277,7 +281,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
                 DateField {
                     value: date_time(), onchange: move |next| date_time.set(next),
                     min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
-                    with_seconds, step, twelve_hour, close_on_change,
+                    with_seconds, step, twelve_hour, close_on_change, calendar, days,
                     validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
@@ -311,7 +315,7 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: date(), onchange: move |next| date.set(next),
-                    min: min_day, max: max_day, format, exclude_date, today, close_on_change,
+                    min: min_day, max: max_day, format, exclude_date, today, close_on_change, calendar, days,
                     validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }

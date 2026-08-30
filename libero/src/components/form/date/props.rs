@@ -14,7 +14,8 @@
 /// `name` and `placeholder`. `picker` builds on `base_props!` and adds `value`,
 /// `onchange`, `size`, `name` and `focusable`. The groups are `format`,
 /// `time_format`, `limits` (`min`, `max`), `exclude_date`, `today`, `clock`
-/// (`variant`, `with_seconds`, `step`, `twelve_hour`), `columns`,
+/// (`variant`, `with_seconds`, `step`, `twelve_hour`), `calendar` (`calendar`,
+/// `days`), `columns`,
 /// `close_on_change`, `allow_deselect` and `level`.
 ///
 /// The docs are written for every value type at once. What is special about
@@ -88,6 +89,19 @@ macro_rules! date_props {
             /// format is one.
             #[props(default)]
             twelve_hour: Option<bool>,
+        ] $($rest)*);
+    };
+    (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] calendar $($rest:ident)*) => {
+        $crate::components::form::date::props::date_props!(@munch $kind $head $types [$($acc)*
+            /// A month of days, or one row of days with buttons that page it.
+            /// Defaults to the theme's `DatePickerDefaults::calendar`. Ignored
+            /// for times, ranges, months and years.
+            #[props(default, into)]
+            calendar: $crate::components::Input<$crate::theme::CalendarVariant>,
+            /// Days in the mini calendar's row. Defaults to the theme's
+            /// `DatePickerDefaults::days`.
+            #[props(default)]
+            days: Option<usize>,
         ] $($rest)*);
     };
     (@munch $kind:ident $head:tt $types:tt [$($acc:tt)*] columns $($rest:ident)*) => {

@@ -208,6 +208,8 @@ fn render_cost_per_component() {
         "ColorField" { ColorField { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
         // 42 day buttons, each with its own click handler.
         "DayPicker" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
+        // Seven days in one row, each with a month label.
+        "DayPicker-mini" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, calendar: "mini" } }
         // Closed: the dropdown's picker is not rendered until it opens.
         "DayField" { DayField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
         "TimePicker" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "digital" } }

@@ -16,6 +16,7 @@ use libero::{
         DateField, DateLevel, DatePicker, DateRange, DateRangePicker, DayField, DayPicker,
         MonthPicker, SegmentedControl, TimePicker, YearPicker,
     },
+    theme::CalendarVariant,
 };
 
 #[test]
@@ -310,6 +311,99 @@ fn a_picker_follows_a_level_change_in_the_same_scope() {
     let html = body(&dioxus_ssr::render(&dom));
     assert_eq!(html.matches("data-slot=\"day\"").count(), 0);
     assert_eq!(html.matches("data-slot=\"cell\"").count(), 12);
+}
+
+#[test]
+fn a_mini_calendar_draws_one_row_of_days_and_posts_the_day() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 14),
+                    onchange: move |_| {},
+                    calendar: "mini",
+                    days: 5,
+                    name: "arrival",
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert_eq!(html.matches("data-slot=\"day\"").count(), 5);
+    assert_eq!(html.matches("data-slot=\"month\"").count(), 5);
+    assert_eq!(html.matches("role=\"grid\"").count(), 1);
+    // The row starts at the value.
+    assert!(html.contains("data-date=\"2026-09-14\""));
+    assert!(html.contains("data-date=\"2026-09-18\""));
+    assert!(!html.contains("data-date=\"2026-09-19\""));
+    assert!(html.contains(">Sep<"));
+    assert!(html.contains("aria-label=\"Previous days\""));
+    assert!(html.contains("aria-label=\"Next days\""));
+    assert!(html.contains("name=\"arrival\" value=\"2026-09-14\""));
+}
+
+#[test]
+fn a_mini_calendar_cannot_page_past_its_limits() {
+    fn open() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, calendar: "mini" }
+            }
+        }
+    }
+    fn limited() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 14),
+                    onchange: move |_| {},
+                    calendar: "mini",
+                    min: NaiveDate::from_ymd_opt(2026, 9, 14),
+                    max: NaiveDate::from_ymd_opt(2026, 9, 20),
+                }
+            }
+        }
+    }
+    let disabled = |app: fn() -> Element| body(&render(app)).matches("disabled=true").count();
+
+    assert_eq!(disabled(open), 0);
+    // Both buttons, and no day: the seven days are exactly the limits.
+    assert_eq!(disabled(limited), 2);
+}
+
+thread_local! {
+    static CALENDAR: Cell<CalendarVariant> = const { Cell::new(CalendarVariant::Full) };
+}
+
+#[test]
+fn a_picker_follows_a_calendar_change_in_the_same_scope() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DatePicker::<NaiveDate> {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 14),
+                    onchange: move |_| {},
+                    calendar: CALENDAR.with(Cell::get).as_str(),
+                }
+            }
+        }
+    }
+    let days = |dom: &VirtualDom| {
+        body(&dioxus_ssr::render(dom))
+            .matches("data-slot=\"day\"")
+            .count()
+    };
+    CALENDAR.with(|calendar| calendar.set(CalendarVariant::Full));
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut NoOpMutations);
+    assert_eq!(days(&dom), 42);
+
+    CALENDAR.with(|calendar| calendar.set(CalendarVariant::Mini));
+    dom.mark_dirty(ScopeId::APP);
+    dom.render_immediate(&mut NoOpMutations);
+    assert_eq!(days(&dom), 7);
 }
 
 thread_local! {

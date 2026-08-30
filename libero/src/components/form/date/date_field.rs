@@ -13,11 +13,11 @@ use super::{
 use crate::{
     components::Input,
     hooks::use_theme,
-    theme::TimePickerVariant,
+    theme::{CalendarVariant, TimePickerVariant},
 };
 
 date_props! {
-    field DateFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, columns, close_on_change
+    field DateFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, calendar, columns, close_on_change
 }
 
 /// One text field for every date and time value, with the [`DatePicker`](super::DatePicker)
@@ -31,7 +31,8 @@ date_props! {
 /// `onchange` or a turbofish has to.
 ///
 /// Props a value type does not use are ignored: the clock props need a time,
-/// `exclude_date` a day, `columns` a range of days.
+/// `exclude_date` a day, `columns` a range of days, `calendar` and `days` a day
+/// or a date-time.
 #[component]
 pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
     let options = FieldOptions {
@@ -46,6 +47,8 @@ pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
         step: props.step,
         twelve_hour: props.twelve_hour,
         close_on_change: props.close_on_change,
+        calendar: props.calendar.clone(),
+        days: props.days,
     };
     date_field(picker_field!(props, props.today), options)
 }
@@ -65,6 +68,8 @@ pub(super) struct FieldOptions<B: 'static> {
     pub step: Option<u8>,
     pub twelve_hour: Option<bool>,
     pub close_on_change: Option<bool>,
+    pub calendar: Input<CalendarVariant>,
+    pub days: Option<usize>,
 }
 
 impl<B> Default for FieldOptions<B> {
@@ -81,6 +86,8 @@ impl<B> Default for FieldOptions<B> {
             step: None,
             twelve_hour: None,
             close_on_change: None,
+            calendar: Input::None,
+            days: None,
         }
     }
 }
@@ -111,6 +118,8 @@ pub(super) fn date_field<V: DateValue>(
         twelve_hour: options
             .twelve_hour
             .unwrap_or_else(|| uses_twelve_hours(&time)),
+        calendar: options.calendar.copied_or(theme.date_picker.calendar),
+        days: options.days.unwrap_or(theme.date_picker.days),
     };
     let close = options
         .close_on_change
@@ -141,6 +150,8 @@ pub(super) fn date_field<V: DateValue>(
                     with_seconds: picker.with_seconds,
                     step: picker.step,
                     twelve_hour: picker.twelve_hour,
+                    calendar: Input::Value(picker.calendar),
+                    days: picker.days,
                 }
             }
         },

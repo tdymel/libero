@@ -1,20 +1,21 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, AutocompleteDefaults,
-    ButtonDefaults, ButtonSizeLevel, CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel,
-    CodeBlockDefaults, CodeDefaults, Color, ColorFieldDefaults, ColorPickerDefaults,
-    ColorPickerSizeLevel, ColorShade, ColorSwatchDefaults, ColorValue, ComboboxDefaults,
-    ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DateDefaults, DateFieldDefaults,
-    DatePickerDefaults, DatePickerSizeLevel, DialogDefaults, DividerDefaults, DrawerDefaults,
-    FieldDefaults, FieldSizeLevel, FieldsetDefaults, FileFieldDefaults, FileFieldVariant,
-    FlexAxisDefaults, FlexDefaults, FloatDefaults, FormDefaults, GridDefaults, HeaderDefaults,
-    HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, PinFieldDefaults,
-    PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults,
-    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
-    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
-    SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant,
-    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    ButtonDefaults, ButtonSizeLevel, CalendarVariant, CenterDefaults, CheckboxDefaults,
+    ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults, Color, ColorFieldDefaults,
+    ColorPickerDefaults, ColorPickerSizeLevel, ColorShade, ColorSwatchDefaults, ColorValue,
+    ComboboxDefaults, ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DateDefaults,
+    DateFieldDefaults, DatePickerDefaults, DatePickerSizeLevel, DialogDefaults, DividerDefaults,
+    DrawerDefaults, FieldDefaults, FieldSizeLevel, FieldsetDefaults, FileFieldDefaults,
+    FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults, FormDefaults, GridDefaults,
+    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
+    MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults,
+    PinFieldDefaults, PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness,
+    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults, TabsDefaults, TabsSizeLevel,
+    TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults, TimePickerDefaults,
+    TimePickerVariant, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
+    ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -409,6 +410,8 @@ impl Theme {
         date: DateDefaults::ENGLISH,
         date_picker: DatePickerDefaults {
             size: Size::Md,
+            calendar: CalendarVariant::Full,
+            days: 7,
             sizes: Sizes::new(
                 DatePickerSizeLevel {
                     day_size: "28px",

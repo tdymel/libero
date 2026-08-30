@@ -91,6 +91,36 @@ pub fn has_days(values: &DemoValues) -> bool {
     !matches!(values.str("value").as_str(), "time" | "month" | "year")
 }
 
+/// Whether the demoed value type is picked from a calendar that can be mini.
+pub fn has_calendar(values: &DemoValues) -> bool {
+    matches!(values.str("value").as_str(), "date" | "date-time")
+}
+
+/// Whether the demo shows the mini calendar.
+pub fn is_mini(values: &DemoValues) -> bool {
+    has_calendar(values) && values.str("calendar") == "mini"
+}
+
+/// `calendar` and `days`, for the value types that draw days in one piece.
+pub fn calendar_controls() -> Vec<Control> {
+    vec![
+        Control::toggle("calendar", ["full", "mini"])
+            .default("full")
+            .hidden_when(|values| !has_calendar(values))
+            .code(|_, values| match values.str("calendar").as_str() {
+                "mini" => vec![r#"calendar: "mini""#.to_string()],
+                _ => vec![],
+            }),
+        Control::toggle("days", ["5", "7", "10"])
+            .default("7")
+            .hidden_when(|values| !is_mini(values))
+            .code(|_, values| match values.str("days").as_str() {
+                "7" => vec![],
+                days => vec![format!("days: {days}")],
+            }),
+    ]
+}
+
 /// The controls both demos have beyond their own: the limits, the clock's
 /// minute step and hour cycle, a fixed today and a posted name.
 pub fn shared_controls() -> Vec<Control> {

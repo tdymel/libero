@@ -9,7 +9,7 @@ use super::{
 use crate::{components::Input, hooks::use_theme};
 
 date_props! {
-    picker DatePickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, today, clock
+    picker DatePickerProps<V: DateValue>(V, V::Bound): limits, exclude_date, allow_deselect, columns, level, calendar, today, clock
 }
 
 /// One picker for every date and time value - the value's type picks what it
@@ -23,7 +23,7 @@ date_props! {
 ///
 /// Props a value type does not use are ignored: the clock props need a time,
 /// `exclude_date` and `columns` days, `level` and `allow_deselect` a single
-/// `NaiveDate`.
+/// `NaiveDate`, `calendar` and `days` a day or a date-time.
 #[component]
 pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
     let theme = use_theme();
@@ -43,6 +43,8 @@ pub fn DatePicker<V: DateValue>(props: DatePickerProps<V>) -> Element {
             twelve_hour: props
                 .twelve_hour
                 .unwrap_or_else(|| uses_twelve_hours(theme.date.time_format)),
+            calendar: props.calendar.copied_or(theme.date_picker.calendar),
+            days: props.days.unwrap_or(theme.date_picker.days),
         },
         today: props.today,
         size: props.size,

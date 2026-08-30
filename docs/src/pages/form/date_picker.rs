@@ -1,6 +1,7 @@
 use super::date_common::{
-    SIZES, day_limits, has_days, has_time, is_on, is_weekend, moment_limits, shared_controls,
-    shown, step_of, switches_last, time_limits, today_of, twelve_hour_of,
+    SIZES, calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend,
+    moment_limits, shared_controls, shown, step_of, switches_last, time_limits, today_of,
+    twelve_hour_of,
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
@@ -45,6 +46,8 @@ pub fn DatePickerPage() -> Element {
                         .doc("Days that cannot be picked."),
                     prop("allow_deselect", "bool").default("false").doc("Clicking the picked day again clears it. Only for a day."),
                     prop("columns", "usize").default("1, or 2 for a range").doc("Months side by side, for a day or a range of days."),
+                    prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`: one row of days with buttons that page it. For a day or a date-time."),
+                    prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
                     prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
                     prop("step", "u8").default("1").doc("Minutes between the offered minutes."),
@@ -67,7 +70,9 @@ pub fn DatePickerPage() -> Element {
                     Code { source: "DateRange" }
                     " of either a start and an end. "
                     Code { source: "level" }
-                    " turns a day picker into a month or a year picker."
+                    " turns a day picker into a month or a year picker, and "
+                    Code { source: "calendar: \"mini\"" }
+                    " into one row of days - Mantine's MiniCalendar."
                 }
                 Text {
                     "Controlled through "
@@ -109,7 +114,7 @@ pub fn DatePickerPage() -> Element {
                     // A range defaults to two months, so `1` prints there.
                     Control::toggle("columns", ["1", "2", "3"])
                         .default("1")
-                        .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "date-range"))
+                        .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "date-range") || is_mini(values))
                         .code(|_, values| {
                             let default = if values.str("value") == "date-range" { "2" } else { "1" };
                             match values.str("columns").as_str() {
@@ -124,7 +129,7 @@ pub fn DatePickerPage() -> Element {
                             false => vec![],
                         }
                     }),
-                ], shared_controls()].concat()),
+                ], calendar_controls(), shared_controls()].concat()),
                 render: move |values: DemoValues| rsx! {
                     DatePickerDemo { values }
                 },
@@ -155,6 +160,12 @@ pub fn DatePickerPage() -> Element {
                     "Digital columns are one tab stop each: "
                     Kbd { "↑" } " " Kbd { "↓" } " " Kbd { "Home" } " " Kbd { "End" } " move within the column, "
                     Kbd { "Enter" } " picks, and " Kbd { "Tab" } " goes to the next column."
+                }
+                Text {
+                    "The mini calendar's days are one tab stop: "
+                    Kbd { "←" } " " Kbd { "→" } " move a day and slide the row past its ends, "
+                    Kbd { "Home" } " " Kbd { "End" } " go to the row's ends, and "
+                    Kbd { "PageUp" } " " Kbd { "PageDown" } " move a row's worth of days. The buttons page the row."
                 }
                 Text { "A date-time picks the day first; picking it moves focus into the clock." }
             }
@@ -190,6 +201,8 @@ fn DatePickerDemo(values: DemoValues) -> Element {
     let allow_deselect = is_on(&values, "allow_deselect");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
     let columns = values.str("columns").parse::<usize>().ok();
+    let calendar = values.str("calendar");
+    let days = values.str("days").parse::<usize>().ok();
     let step = step_of(&values);
     let with_seconds = is_on(&values, "with_seconds");
     let twelve_hour = twelve_hour_of(&values);
@@ -230,7 +243,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
             rsx! {
                 DatePicker {
                     value: date_time(), onchange: move |next| date_time.set(next),
-                    min: min_moment, max: max_moment, exclude_date, today,
+                    min: min_moment, max: max_moment, exclude_date, today, calendar, days,
                     variant, with_seconds, step, twelve_hour, size,
                 }
             },
@@ -259,7 +272,7 @@ fn DatePickerDemo(values: DemoValues) -> Element {
             rsx! {
                 DatePicker {
                     value: date(), onchange: move |next| date.set(next),
-                    min: min_day, max: max_day, allow_deselect, exclude_date, columns, today, size,
+                    min: min_day, max: max_day, allow_deselect, exclude_date, columns, calendar, days, today, size,
                 }
             },
             shown(date()),

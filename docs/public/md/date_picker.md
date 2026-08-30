@@ -22,6 +22,10 @@ dropdown.
 | `DateRange<NaiveDate>` | two months; the second pick ends the range | `NaiveDate` |
 | `DateRange<NaiveDateTime>` | start then end, each a day and a time | `NaiveDateTime` |
 
+With `calendar: "mini"` a day or a date-time is picked from one row of
+`days` days instead of a month - Mantine's `MiniCalendar`. Each day shows its
+month over its number. The row starts at the value, else today.
+
 At `DateLevel::Month` the value is the month's first day; at `DateLevel::Year`
 it is the year's January 1. A range whose `end` is `None` waits for its second
 pick, and the days up to the hovered one preview it.
@@ -80,6 +84,10 @@ else the first.
 Enter on a heading climbs a level and keeps focus on the new heading; picking
 a month or a year below the lowest level climbs back down with focus on it.
 
+The mini calendar's days are one tab stop too. Arrow Left / Right move a day
+and slide the row one day past its ends, Home / End go to the row's ends, and
+Page Up / Page Down move `days` days. The two buttons page the row by `days`.
+
 The clock:
 
 | Key | Analog face (one tab stop) | Digital column (one tab stop each) |
@@ -105,6 +113,8 @@ clock.
 | `exclude_date` | `Callback<NaiveDate, bool>` | - | Days that cannot be picked. |
 | `allow_deselect` | `bool` | `false` | Clicking the picked day again clears it. |
 | `columns` | `usize` | `1`, `2` for a range | Months side by side. |
+| `calendar` | `CalendarVariant` | `full` | `mini`: one row of days with buttons that page it. For a day or a date-time. |
+| `days` | `usize` | `7` | Days in the mini calendar's row. |
 | `variant` | `TimePickerVariant` | `analog` | Columns or a clock face, for values with a time. |
 | `with_seconds` | `bool` | `false` | A seconds column. Digital only. |
 | `step` | `u8` | `1` | Minutes between offered minutes. |
@@ -131,5 +141,5 @@ and no turbofish.
 
 `Theme::date` (`DateDefaults`) holds the month and weekday names, the first
 weekday, the formats and the button labels - one place to translate.
-`Theme::date_picker` and `Theme::time_picker` hold the size steps and the
-default clock variant.
+`Theme::date_picker` and `Theme::time_picker` hold the size steps, the
+default calendar and its `days`, and the default clock variant.

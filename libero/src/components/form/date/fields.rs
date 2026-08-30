@@ -64,7 +64,7 @@ pub(super) fn time_format(
 }
 
 date_props! {
-    field DayFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, close_on_change
+    field DayFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, calendar, close_on_change
 }
 
 /// A text field holding a day, with a `DayPicker` in a dropdown - Mantine's
@@ -82,6 +82,8 @@ pub fn DayField(props: DayFieldProps) -> Element {
         max: props.max,
         exclude_date: props.exclude_date,
         close_on_change: props.close_on_change,
+        calendar: props.calendar.clone(),
+        days: props.days,
         ..FieldOptions::default()
     };
     date_field::<NaiveDate>(picker_field!(props, props.today), options)
@@ -109,7 +111,7 @@ pub fn TimeField(props: TimeFieldProps) -> Element {
 }
 
 date_props! {
-    field DateTimeFieldProps(NaiveDateTime, NaiveDateTime): format, time_format, limits, exclude_date, today, clock
+    field DateTimeFieldProps(NaiveDateTime, NaiveDateTime): format, time_format, limits, exclude_date, today, clock, calendar
 }
 
 /// A text field holding a day and a time. The dropdown picks the day, then
@@ -127,6 +129,8 @@ pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
         with_seconds: props.with_seconds,
         step: props.step,
         twelve_hour: props.twelve_hour,
+        calendar: props.calendar.clone(),
+        days: props.days,
         ..FieldOptions::default()
     };
     date_field::<NaiveDateTime>(picker_field!(props, props.today), options)

@@ -110,6 +110,8 @@ whatever the text shows: `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
 | `with_seconds` | `bool` | `false` | Seconds, for values with a time. |
 | `step` | `u8` | `1` | Minutes between offered minutes. |
 | `twelve_hour` | `bool` | from the time format | A 12-hour clock. |
+| `calendar` | `CalendarVariant` | `full` | `mini`: one row of days in the dropdown. For a day or a date-time. |
+| `days` | `usize` | `7` | Days in the mini calendar's row. |
 | `columns` | `usize` | `2` | Months side by side, for a range of days. |
 | `close_on_change` | `bool` | `true` | Picking a day, or a range's end, closes the dropdown. |
 | `name` | `FieldName<Option<V>>` | - | Posts ISO 8601; a path binds to a `Form`. |

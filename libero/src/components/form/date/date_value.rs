@@ -17,7 +17,7 @@ use crate::{
     components::{ClassList, Input, States},
     hooks::use_theme,
     sx::Sx,
-    theme::{Size, TimePickerVariant},
+    theme::{CalendarVariant, Size, TimePickerVariant},
 };
 
 /// Everything a picker takes besides the value, resolved once by the
@@ -34,6 +34,8 @@ pub struct PickerOptions<B: 'static> {
     pub with_seconds: bool,
     pub step: Option<u8>,
     pub twelve_hour: bool,
+    pub calendar: CalendarVariant,
+    pub days: usize,
 }
 
 impl<B> Default for PickerOptions<B> {
@@ -49,6 +51,8 @@ impl<B> Default for PickerOptions<B> {
             with_seconds: false,
             step: None,
             twelve_hour: false,
+            calendar: CalendarVariant::Full,
+            days: 7,
         }
     }
 }
@@ -114,11 +118,16 @@ impl DateValue for NaiveDate {
                 .and_then(|day| NaiveDate::from_ymd_opt(day.year(), 1, 1)),
         };
         let allow_deselect = options.allow_deselect && level == DateLevel::Day;
-        // Keyed by level inside a one-item list: dioxus remounts a keyed child
-        // whose key changes, and the calendar's own view state starts over.
+        // Only days come as a mini calendar.
+        let mini = level == DateLevel::Day && options.calendar == CalendarVariant::Mini;
+        // Keyed by level and layout inside a one-item list: dioxus remounts a
+        // keyed child whose key changes, and the calendar's own view state
+        // starts over.
         let calendar = rsx! {
             Calendar {
-                key: "{level:?}",
+                key: "{level:?}-{mini}",
+                variant: if mini { CalendarVariant::Mini } else { CalendarVariant::Full },
+                days: options.days,
                 selection: Selection::Single(value),
                 onpick: move |day: NaiveDate| {
                     let next = match allow_deselect && value == Some(day) {
@@ -221,6 +230,8 @@ impl DateValue for NaiveDateTime {
                 with_seconds: options.with_seconds,
                 step: options.step,
                 twelve_hour: options.twelve_hour,
+                calendar: options.calendar,
+                days: options.days,
                 focusable: args.focusable,
                 name: args.name,
                 class: args.class,

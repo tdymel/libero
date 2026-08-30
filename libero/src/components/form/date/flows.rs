@@ -152,6 +152,8 @@ pub(super) struct DateTimeFlowProps {
     with_seconds: bool,
     step: Option<u8>,
     twelve_hour: bool,
+    calendar: crate::theme::CalendarVariant,
+    days: usize,
     focusable: bool,
     #[props(default)]
     name: Option<String>,
@@ -184,6 +186,8 @@ pub(super) fn DateTimeFlow(props: DateTimeFlowProps) -> Element {
                 min: props.min.map(|min| min.date()),
                 max: props.max.map(|max| max.date()),
                 exclude_date: props.exclude_date,
+                calendar: Input::Value(props.calendar),
+                days: props.days,
                 today,
                 size,
                 focusable: props.focusable,

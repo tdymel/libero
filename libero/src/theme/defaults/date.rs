@@ -62,6 +62,9 @@ pub struct DateDefaults {
     /// Names the button that pages a calendar's years back ten.
     pub previous_decade: &'static str,
     pub next_decade: &'static str,
+    /// Names the button that pages a mini calendar's days back.
+    pub previous_days: &'static str,
+    pub next_days: &'static str,
     /// The segments that switch a dropdown between its calendar and its clock.
     pub date_label: &'static str,
     pub time_label: &'static str,
@@ -118,6 +121,8 @@ impl DateDefaults {
         next_year: "Next year",
         previous_decade: "Previous decade",
         next_decade: "Next decade",
+        previous_days: "Previous days",
+        next_days: "Next days",
         date_label: "Date",
         time_label: "Time",
         start_label: "Start",
@@ -139,6 +144,18 @@ str_enum! {
     }
 }
 
+str_enum! {
+    /// How a calendar lays out its days.
+    pub enum CalendarVariant {
+        /// A month of days, with a heading that climbs to months and years.
+        #[default]
+        Full = "full",
+        /// One row of days, with buttons that page it - Mantine's
+        /// `MiniCalendar`.
+        Mini = "mini",
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TimePickerDefaults {
     pub size: Size,
@@ -156,6 +173,10 @@ pub struct DatePickerSizeLevel {
 pub struct DatePickerDefaults {
     pub size: Size,
     pub sizes: Sizes<DatePickerSizeLevel>,
+    /// A month of days, or the mini calendar's row.
+    pub calendar: CalendarVariant,
+    /// Days in the mini calendar's row.
+    pub days: usize,
 }
 
 impl DatePickerDefaults {

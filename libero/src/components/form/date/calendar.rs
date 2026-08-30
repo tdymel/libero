@@ -11,8 +11,12 @@ use crate::{
     hooks::{use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss},
+    theme::{
+        CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
+    },
 };
+
+crate::components::common::input_from_str!(CalendarVariant);
 
 /// Where a calendar opens with no value and no clock.
 const FALLBACK_MONTH: NaiveDate = match NaiveDate::from_ymd_opt(1970, 1, 1) {
@@ -119,6 +123,27 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .selector(
             "& [data-slot='day']",
             button.clone().width(day.clone()).height(day.clone()),
+        )
+        // The mini variant: one row of taller days, a month label over the
+        // number.
+        .selector(
+            "& [data-slot='strip']",
+            sx().display("flex").align_items("center").gap("4px"),
+        )
+        .selector(
+            "& [data-slot='strip'] [role='grid']",
+            sx().display("flex").gap("2px"),
+        )
+        .selector(
+            "& [data-slot='strip'] [data-slot='day']",
+            sx().flex_direction("column")
+                .gap("2px")
+                .width(format!("calc(1.4 * {day})"))
+                .height(format!("calc(1.6 * {day})")),
+        )
+        .selector(
+            "& [data-slot='strip'] [data-slot='month']",
+            sx().font_size("0.75em").opacity("0.7"),
         )
         .selector(
             "& [data-slot='cell']",
@@ -235,6 +260,11 @@ pub(super) struct CalendarProps {
     /// The level a pick lands on; the levels above only navigate.
     #[props(default = DateLevel::Day)]
     lowest: DateLevel,
+    /// A month grid, or one row of `days` days. Only at the day level.
+    #[props(default)]
+    variant: CalendarVariant,
+    #[props(default = 7)]
+    days: usize,
     #[props(default)]
     min: Option<NaiveDate>,
     #[props(default)]
@@ -506,7 +536,91 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let back = rsx! { ChevronLeftIcon {} };
     let forward = rsx! { ChevronRightIcon {} };
 
+    // The mini variant: one row of `days` days from its own first day. The
+    // buttons page it; an arrow key past an end slides it.
+    let mini = props.variant == CalendarVariant::Mini;
+    let strip_days = props.days.max(1) as i64;
+    let strip_start = paged()
+        .or(selection.anchor())
+        .or(today)
+        .unwrap_or(FALLBACK_MONTH);
+    let strip_end = add_days(strip_start, strip_days - 1);
+    let in_strip = move |day: NaiveDate| (strip_start..=strip_end).contains(&day);
+    let strip_stop = [active(), selection.anchor(), today]
+        .into_iter()
+        .flatten()
+        .find(|day| in_strip(*day))
+        .unwrap_or(strip_start);
+    let strip_keydown = move |event: KeyboardEvent| {
+        let next = match event.key() {
+            Key::ArrowLeft => add_days(strip_stop, -1),
+            Key::ArrowRight => add_days(strip_stop, 1),
+            Key::Home => strip_start,
+            Key::End => strip_end,
+            Key::PageUp => add_days(strip_stop, -strip_days),
+            Key::PageDown => add_days(strip_stop, strip_days),
+            _ => return,
+        };
+        event.prevent_default();
+        // A step off an end moves the row as far: an arrow a day, a page a
+        // page.
+        let start = match in_strip(next) {
+            true => strip_start,
+            false => add_days(strip_start, (next - strip_stop).num_days()),
+        };
+        paged.set(Some(start));
+        active.set(Some(next));
+        focus_to(Focus::Date(next));
+    };
+    let strip_cell = move |day: NaiveDate| {
+        let (picked, _) = selection.marks(day, None);
+        rsx! {
+            div {
+                key: "{day}",
+                role: "gridcell",
+                "aria-selected": picked.to_string(),
+                button {
+                    r#type: "button",
+                    "data-slot": "day",
+                    "data-date": "{day}",
+                    "data-today": (today == Some(day)).then_some("true"),
+                    "data-selected": picked.then_some("true"),
+                    "aria-label": format_date(day, names.format, names),
+                    disabled: day_disabled(day),
+                    tabindex: tabindex(day == strip_stop),
+                    onclick: move |_| {
+                        // Pinned, so the new value does not move the row.
+                        paged.set(Some(strip_start));
+                        active.set(Some(day));
+                        onpick.call(day);
+                    },
+                    span { "data-slot": "month", {format_date(day, "MMM", names)} }
+                    span { "{day.day()}" }
+                }
+            }
+        }
+    };
+
     let body = match level() {
+        _ if mini => rsx! {
+            div { "data-slot": "strip",
+                {nav(names.previous_days, min.is_some_and(|min| add_days(strip_start, -1) < min), add_days(strip_start, -strip_days), rsx! { ChevronLeftIcon {} })}
+                // The slot a field's dropdown looks for to hand focus in.
+                div { "data-slot": "months",
+                    div {
+                        role: "grid",
+                        "aria-label": format_date(strip_start, names.month_format, names),
+                        onkeydown: strip_keydown,
+                        div { role: "row",
+                            for offset in 0..strip_days {
+                                {strip_cell(add_days(strip_start, offset))}
+                            }
+                        }
+                    }
+                }
+                {nav(names.next_days, max.is_some_and(|max| add_days(strip_end, 1) > max), add_days(strip_start, strip_days), rsx! { ChevronRightIcon {} })}
+            }
+        },
         DateLevel::Day => {
             let months: Vec<NaiveDate> =
                 (0..columns).map(|index| add_months(first, index)).collect();

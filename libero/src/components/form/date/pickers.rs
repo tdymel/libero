@@ -11,10 +11,10 @@ use super::{
     date_value::{DateValue, PickerArgs, PickerOptions},
     props::date_props,
 };
-use crate::components::Input;
+use crate::{components::Input, hooks::use_theme};
 
 date_props! {
-    picker DayPickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, today
+    picker DayPickerProps(NaiveDate, NaiveDate): limits, exclude_date, allow_deselect, columns, calendar, today
 }
 
 /// A month of days to pick one from - Mantine's `DatePicker`, and what
@@ -29,6 +29,7 @@ date_props! {
 /// Shift a year. Enter and Space pick.
 #[component]
 pub fn DayPicker(props: DayPickerProps) -> Element {
+    let theme = use_theme();
     NaiveDate::picker(PickerArgs {
         value: props.value,
         onchange: props.onchange,
@@ -38,6 +39,8 @@ pub fn DayPicker(props: DayPickerProps) -> Element {
             exclude_date: props.exclude_date,
             allow_deselect: props.allow_deselect.unwrap_or(false),
             columns: props.columns,
+            calendar: props.calendar.copied_or(theme.date_picker.calendar),
+            days: props.days.unwrap_or(theme.date_picker.days),
             ..PickerOptions::default()
         },
         today: props.today,
