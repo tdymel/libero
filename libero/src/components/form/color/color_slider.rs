@@ -3,7 +3,7 @@
 
 use crate::{
     components::Input,
-    sx::Sx,
+    sx::{StaticSx, Sx},
     theme::{COLOR_PICKER_THUMB, ColorPickerDefaults, SLIDER_THUMB, SLIDER_TRACK},
 };
 
@@ -21,12 +21,16 @@ pub(super) const CHECKERBOARD: &str =
 /// On the root rather than inherited from a `ColorPicker`, so a slider used
 /// on its own sizes the same as one inside the picker.
 pub(super) fn color_slider_sx(caller: &Input<Sx>) -> Input<Sx> {
-    let skin = ColorPickerDefaults::theme_vars()
-        .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
-        .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value());
     match caller.as_ref() {
-        Some(sx) => skin.and(sx.clone()),
-        None => skin,
+        Some(sx) => COLOR_SLIDER_SX.clone().and(sx.clone()).into(),
+        // The same static every render, so the slider's props compare by
+        // address instead of walking the style.
+        None => Input::Static(&COLOR_SLIDER_SX),
     }
-    .into()
 }
+
+static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
+    ColorPickerDefaults::theme_vars()
+        .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
+        .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value())
+});

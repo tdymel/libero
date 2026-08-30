@@ -83,7 +83,9 @@ pub fn AlphaSlider(props: AlphaSliderProps) -> Element {
             invalid: false,
             required: false,
             name: None,
-            oninput: props.oninput.is_some().then(|| EventHandler::new(move |event| emit.call(event))),
+            // The same `use_callback` every render, so the core's props can
+            // compare equal.
+            oninput: props.oninput.is_some().then_some(emit),
             track: Some(track),
             plain: true,
             focusable: props.focusable.unwrap_or(true),

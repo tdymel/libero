@@ -192,18 +192,25 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
         .variables(&root_variables)
         .prepare();
 
+    let emit = move |event: SliderChangeEvent<f64>, apply: fn(ColorCode, f64) -> ColorCode| {
+        if let Some(oninput) = &oninput {
+            oninput.call(match event {
+                SliderChangeEvent::Start(part) => SliderChangeEvent::Start(apply(value, part)),
+                SliderChangeEvent::Change(part) => SliderChangeEvent::Change(apply(value, part)),
+                SliderChangeEvent::End(part) => SliderChangeEvent::End(apply(value, part)),
+            });
+        }
+    };
+    // One identity across renders, so a slider whose own value did not move -
+    // the hue during a drag on the panel - skips the re-render.
+    let hue_input = use_callback(move |event: SliderChangeEvent<f64>| {
+        emit(event, ColorCode::with_hue);
+    });
+    let alpha_input = use_callback(move |event: SliderChangeEvent<f64>| {
+        emit(event, ColorCode::with_alpha);
+    });
+
     let picker = with_picker.then(|| {
-        let emit = move |event: SliderChangeEvent<f64>, apply: fn(ColorCode, f64) -> ColorCode| {
-            if let Some(oninput) = &oninput {
-                oninput.call(match event {
-                    SliderChangeEvent::Start(part) => SliderChangeEvent::Start(apply(value, part)),
-                    SliderChangeEvent::Change(part) => {
-                        SliderChangeEvent::Change(apply(value, part))
-                    }
-                    SliderChangeEvent::End(part) => SliderChangeEvent::End(apply(value, part)),
-                });
-            }
-        };
         let alpha = with_alpha.then(|| {
             rsx! {
                 AlphaSlider {
@@ -212,7 +219,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                     size,
                     aria_label: props.alpha_label.clone(),
                     focusable,
-                    oninput: move |event| emit(event, ColorCode::with_alpha),
+                    oninput: alpha_input,
                 }
             }
         });
@@ -238,7 +245,7 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
                         size,
                         aria_label: props.hue_label.clone(),
                         focusable,
-                        oninput: move |event| emit(event, ColorCode::with_hue),
+                        oninput: hue_input,
                     }
                     {alpha}
                 }
@@ -248,32 +255,18 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
     });
 
     let onswatchclick = props.onswatchclick;
-    let swatches = (!props.swatches.is_empty()).then(|| {
-        let buttons = props.swatches.iter().copied().map(|color| {
-            let color = match with_alpha {
-                true => color,
-                false => color.opaque(),
-            };
-            rsx! {
-                ColorSwatch {
-                    color,
-                    size,
-                    radius,
-                    aria_label: color.to_string(),
-                    tabindex: (!focusable).then_some("-1"),
-                    onclick: move |_| {
-                        if let Some(oninput) = &oninput {
-                            oninput.call(SliderChangeEvent::Change(color));
-                        }
-                        if let Some(onswatchclick) = &onswatchclick {
-                            onswatchclick.call(color);
-                        }
-                    },
-                }
-            }
-        });
+    let presets = props.swatches;
+    let swatches = (!presets.is_empty()).then(|| {
         rsx! {
-            div { "data-slot": "swatches", {buttons} }
+            SwatchRow {
+                swatches: presets,
+                with_alpha,
+                size,
+                radius,
+                focusable,
+                oninput,
+                onswatchclick,
+            }
         }
     });
 
@@ -296,4 +289,56 @@ pub fn ColorPicker(props: ColorPickerProps) -> Element {
             {hidden}
         },
     )
+}
+
+/// The preset swatches. Its own scope with plain values: a drag on the panel
+/// or a slider leaves its props equal, so it skips the re-render.
+#[derive(Props, Clone, PartialEq)]
+struct SwatchRowProps {
+    swatches: Swatches,
+    with_alpha: bool,
+    size: Size,
+    radius: Size,
+    focusable: bool,
+    oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
+    onswatchclick: Option<EventHandler<ColorCode>>,
+}
+
+#[component]
+fn SwatchRow(props: SwatchRowProps) -> Element {
+    let SwatchRowProps {
+        swatches,
+        with_alpha,
+        size,
+        radius,
+        focusable,
+        oninput,
+        onswatchclick,
+    } = props;
+    let buttons = swatches.iter().copied().map(|color| {
+        let color = match with_alpha {
+            true => color,
+            false => color.opaque(),
+        };
+        rsx! {
+            ColorSwatch {
+                color,
+                size,
+                radius,
+                aria_label: color.to_string(),
+                tabindex: (!focusable).then_some("-1"),
+                onclick: move |_| {
+                    if let Some(oninput) = &oninput {
+                        oninput.call(SliderChangeEvent::Change(color));
+                    }
+                    if let Some(onswatchclick) = &onswatchclick {
+                        onswatchclick.call(color);
+                    }
+                },
+            }
+        }
+    });
+    rsx! {
+        div { "data-slot": "swatches", {buttons} }
+    }
 }
