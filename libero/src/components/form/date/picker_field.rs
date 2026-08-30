@@ -1,7 +1,7 @@
 //! The engine every date and time field shares: a text input read on blur or
 //! Enter, a dropdown holding a picker, and a hidden input posting ISO 8601.
-//! Generic over the value, but private - each public field names its own
-//! type, so a caller never meets an inference error.
+//! Generic over the value, but private - `DateField` and the typed fields
+//! reach it through `date_field::date_field`.
 
 use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use dioxus::prelude::*;
@@ -21,6 +21,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{PopoverOptions, use_element, use_popover, use_theme},
+    platform::{ElementApi, next_task},
     sx::{StaticSx, Sx, sx},
     theme::{DateDefaults, Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -36,6 +37,10 @@ static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
         .box_shadow("0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)")
 });
+
+/// Where Arrow Down in the text input puts focus: the picker's own tab stop in
+/// the days, the months or years, or the clock - not the navigation above it.
+const DROPDOWN_ENTRY: &str = ":is([data-slot='months'], [data-slot='cells'], [data-slot='columns']) [tabindex='0'], [data-slot='face'][tabindex='0']";
 
 /// The formats a field shows its value in, and reads typed text against.
 #[derive(Clone)]
@@ -171,14 +176,12 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
     }
 }
 
-/// Everything a field hands the engine - its `field_props!` and what it
-/// resolved from its own.
+/// Everything a field hands the engine from its `field_props!`.
 pub(super) struct PickerField<'a, V: 'static> {
     pub value: Option<V>,
     pub onchange: Option<EventHandler<Option<V>>>,
     pub validate: &'a Validators<Option<V>>,
     pub name: &'a FieldName<Option<V>>,
-    pub formats: Formats,
     pub today: Option<NaiveDate>,
     pub placeholder: Option<String>,
     pub label: &'a Caption,
@@ -207,13 +210,12 @@ pub struct DropdownArgs<V: 'static> {
 /// Builds a [`PickerField`] from a field's props, which all spell the shared
 /// ones the same way.
 macro_rules! picker_field {
-    ($props:ident, $formats:expr, $today:expr) => {
+    ($props:ident, $today:expr) => {
         $crate::components::form::date::picker_field::PickerField {
             value: $props.value,
             onchange: $props.onchange,
             validate: &$props.validate,
             name: &$props.name,
-            formats: $formats,
             today: $today,
             placeholder: $props.placeholder.clone(),
             label: &$props.label,
@@ -239,6 +241,7 @@ pub(super) use picker_field;
 /// `DateDefaults::invalid_date`.
 pub(super) fn use_picker_field<V: FieldValue>(
     field: PickerField<'_, V>,
+    formats: Formats,
     accepts: impl Fn(V) -> bool + Clone + 'static,
     dropdown: impl FnOnce(DropdownArgs<V>) -> Element,
 ) -> Element {
@@ -252,13 +255,17 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let disabled = bound.disabled(field.disabled);
     let value = bound.value().unwrap_or(field.value);
     let today = use_today(field.today);
-    let formats = field.formats;
 
     let mut opened = use_signal(|| false);
     // The text as typed, until it is committed. `None` shows `value`.
     let mut draft = use_signal(|| Option::<String>::None);
     // The last commit found nothing it accepts; cleared by the next keystroke.
     let mut rejected = use_signal(|| false);
+    // Focus is coming back to the text input from the dropdown, which closed:
+    // that focus must not open it again.
+    let mut returning = use_signal(|| false);
+    // Arrow Down asked for focus in the picker, once the dropdown is drawn.
+    let mut entering = use_signal(|| false);
 
     let onchange = field.onchange;
     let setter = bound.setter();
@@ -330,10 +337,46 @@ pub(super) fn use_picker_field<V: FieldValue>(
         showing,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
+    let floating = *popover.floating();
     let dropdown_box = use_box()
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
         .style(popover.style())
         .prepare();
+    // Waits for placement too: Arrow Down on a closed field opens it, and the
+    // picker is not drawn until the box has been measured.
+    use_effect(move || {
+        if !entering() || !popover.placed() {
+            return;
+        }
+        entering.set(false);
+        let _ = floating
+            .query_selector(DROPDOWN_ENTRY)
+            .and_then(|element| element.focus());
+    });
+
+    // After the platform's next task focus has landed, so this can tell
+    // whether it went somewhere else in the field - the text input or the
+    // dropdown - or left. Without a platform answer it counts as left.
+    let settle = move || {
+        spawn(async move {
+            next_task().await;
+            let inside = anchor.query_selector(":focus").is_ok()
+                || floating.query_selector(":focus").is_ok();
+            if !inside {
+                opened.set(false);
+            }
+        });
+    };
+    let mut focus_input = move || {
+        returning.set(true);
+        if anchor
+            .query_selector("input[data-controlled]")
+            .and_then(|input| input.focus())
+            .is_err()
+        {
+            returning.set(false);
+        }
+    };
 
     let input = field_box
         .aria(control)
@@ -350,14 +393,22 @@ pub(super) fn use_picker_field<V: FieldValue>(
             rejected.set(false);
             draft.set(Some(event.value()));
         })
-        .event("onfocus", move |_: FocusEvent| opened.set(true))
+        .event("onfocus", move |_: FocusEvent| match returning() {
+            true => returning.set(false),
+            false => opened.set(true),
+        })
         .event("onclick", move |_: MouseEvent| opened.set(true))
         .event("onblur", move |_: FocusEvent| {
-            opened.set(false);
             commit_on_blur();
+            settle();
         })
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
             Key::Enter => commit_on_enter(),
+            Key::ArrowDown => {
+                event.prevent_default();
+                opened.set(true);
+                entering.set(true);
+            }
             Key::Escape if opened() => {
                 event.prevent_default();
                 opened.set(false);
@@ -377,15 +428,20 @@ pub(super) fn use_picker_field<V: FieldValue>(
         }
     });
 
-    // Portaled, so no `overflow: hidden` ancestor clips it. The pickers inside
-    // are not focusable, and a mousedown anywhere in the box is cancelled: the
-    // text input keeps focus throughout, and its blur is what closes the box.
+    // Portaled, so no `overflow: hidden` ancestor clips it. A mousedown in the
+    // box is cancelled, so a click keeps focus on the text input; the keyboard
+    // enters the picker with Arrow Down and leaves it with Escape. The box
+    // closes once focus is in neither.
     popover.show(showing.then(|| {
         let pick = Callback::new(move |(next, close): (Option<V>, bool)| {
             draft.set(None);
             rejected.set(false);
             emit(next);
             if close {
+                // The focused cell is about to go; focus goes back first.
+                if floating.query_selector(":focus").is_ok() {
+                    focus_input();
+                }
                 opened.set(false);
             }
         });
@@ -393,6 +449,14 @@ pub(super) fn use_picker_field<V: FieldValue>(
             .element(popover.floating())
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
+            })
+            .event("onfocusout", move |_: FocusEvent| settle())
+            .event("onkeydown", move |event: KeyboardEvent| {
+                if event.key() == Key::Escape {
+                    event.prevent_default();
+                    focus_input();
+                    opened.set(false);
+                }
             })
             .render(
                 HtmlTag::Div,

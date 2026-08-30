@@ -1,19 +1,19 @@
-//! The public date and time fields: each names its own value type and hands
-//! the shared engine its picker.
+//! The typed date and time fields: each names its own value type and fills
+//! the part of [`FieldOptions`] that type uses, then draws through the same
+//! path as `DateField`.
 
 use dioxus::prelude::*;
 
 use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 
 use super::{
-    DateRange, DateRangePicker, DayPicker, TimePicker,
-    flows::{DateTimeFlow, DateTimeRangeFlow},
+    DateRange,
+    date_field::{FieldOptions, date_field},
     format::uses_twelve_hours,
-    picker_field::{DropdownArgs, Formats, picker_field, use_picker_field},
+    picker_field::picker_field,
 };
 use crate::{
     components::{FieldName, Input, Validators, common::field_props},
-    hooks::use_theme,
     theme::{DateDefaults, TimePickerVariant},
 };
 
@@ -121,38 +121,15 @@ field_props! {
 /// stays, and the field shows an error.
 #[component]
 pub fn DayField(props: DayFieldProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let (min, max, exclude_date) = (props.min, props.max, props.exclude_date);
-    let close = props
-        .close_on_change
-        .unwrap_or(theme.date_field.close_on_change);
-    let formats = Formats {
-        date: props
-            .format
-            .clone()
-            .unwrap_or_else(|| names.format.to_string()),
-        time: names.time_format.to_string(),
-        names,
+    let options = FieldOptions {
+        format: props.format.clone(),
+        min: props.min,
+        max: props.max,
+        exclude_date: props.exclude_date,
+        close_on_change: props.close_on_change,
+        ..FieldOptions::default()
     };
-    use_picker_field(
-        picker_field!(props, formats, props.today),
-        day_allowed(min, max, exclude_date),
-        move |args: DropdownArgs<NaiveDate>| {
-            rsx! {
-                DayPicker {
-                    value: args.value,
-                    min,
-                    max,
-                    exclude_date,
-                    today: args.today,
-                    size: args.size,
-                    focusable: false,
-                    onchange: move |day: Option<NaiveDate>| args.pick.call((day, close)),
-                }
-            }
-        },
-    )
+    date_field::<NaiveDate>(picker_field!(props, props.today), options)
 }
 
 field_props! {
@@ -198,45 +175,17 @@ field_props! {
 /// `TimeInput` with a picker. Typing reads `13:05`, `1:05 pm`, `1305`.
 #[component]
 pub fn TimeField(props: TimeFieldProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let (min, max, step) = (props.min, props.max, props.step);
-    let with_seconds = props.with_seconds.unwrap_or(false);
-    let variant = props.variant.copied_or(theme.time_picker.variant);
-    let time = props
-        .format
-        .clone()
-        .unwrap_or_else(|| time_format(names, props.twelve_hour, with_seconds));
-    let twelve_hour = props
-        .twelve_hour
-        .unwrap_or_else(|| uses_twelve_hours(&time));
-    let formats = Formats {
-        date: names.format.to_string(),
-        time,
-        names,
+    let options = FieldOptions {
+        time_format: props.format.clone(),
+        min: props.min,
+        max: props.max,
+        variant: props.variant.clone(),
+        with_seconds: props.with_seconds,
+        step: props.step,
+        twelve_hour: props.twelve_hour,
+        ..FieldOptions::default()
     };
-    use_picker_field(
-        picker_field!(props, formats, None),
-        move |time: NaiveTime| {
-            !(min.is_some_and(|min| time < min) || max.is_some_and(|max| time > max))
-        },
-        move |args: DropdownArgs<NaiveTime>| {
-            rsx! {
-                TimePicker {
-                    value: args.value,
-                    variant: Input::Value(variant),
-                    with_seconds,
-                    step,
-                    twelve_hour,
-                    min,
-                    max,
-                    size: args.size,
-                    focusable: false,
-                    onchange: move |time: Option<NaiveTime>| args.pick.call((time, false)),
-                }
-            }
-        },
-    )
+    date_field::<NaiveTime>(picker_field!(props, None), options)
 }
 
 field_props! {
@@ -285,48 +234,19 @@ field_props! {
 /// the time - a `SegmentedControl` goes back - Mantine's `DateTimePicker`.
 #[component]
 pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let (min, max, exclude_date, step) = (props.min, props.max, props.exclude_date, props.step);
-    let with_seconds = props.with_seconds.unwrap_or(false);
-    let variant = props.variant.copied_or(theme.time_picker.variant);
-    let time = props
-        .time_format
-        .clone()
-        .unwrap_or_else(|| time_format(names, props.twelve_hour, with_seconds));
-    let twelve_hour = props
-        .twelve_hour
-        .unwrap_or_else(|| uses_twelve_hours(&time));
-    let formats = Formats {
-        date: props
-            .format
-            .clone()
-            .unwrap_or_else(|| names.format.to_string()),
-        time,
-        names,
+    let options = FieldOptions {
+        format: props.format.clone(),
+        time_format: props.time_format.clone(),
+        min: props.min,
+        max: props.max,
+        exclude_date: props.exclude_date,
+        variant: props.variant.clone(),
+        with_seconds: props.with_seconds,
+        step: props.step,
+        twelve_hour: props.twelve_hour,
+        ..FieldOptions::default()
     };
-    use_picker_field(
-        picker_field!(props, formats, props.today),
-        moment_allowed(min, max, exclude_date),
-        move |args: DropdownArgs<NaiveDateTime>| {
-            rsx! {
-                DateTimeFlow {
-                    value: args.value,
-                    onpick: move |moment: Option<NaiveDateTime>| args.pick.call((moment, false)),
-                    min,
-                    max,
-                    exclude_date,
-                    today: args.today,
-                    size: Input::Value(args.size),
-                    focusable: false,
-                    variant,
-                    with_seconds,
-                    step,
-                    twelve_hour,
-                }
-            }
-        },
-    )
+    date_field::<NaiveDateTime>(picker_field!(props, props.today), options)
 }
 
 field_props! {
@@ -371,44 +291,16 @@ field_props! {
 /// Mantine's `DatePickerInput type="range"`.
 #[component]
 pub fn DateRangeField(props: DateRangeFieldProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let (min, max, exclude_date, columns) =
-        (props.min, props.max, props.exclude_date, props.columns);
-    let close = props
-        .close_on_change
-        .unwrap_or(theme.date_field.close_on_change);
-    let formats = Formats {
-        date: props
-            .format
-            .clone()
-            .unwrap_or_else(|| names.format.to_string()),
-        time: names.time_format.to_string(),
-        names,
+    let options = FieldOptions {
+        format: props.format.clone(),
+        min: props.min,
+        max: props.max,
+        exclude_date: props.exclude_date,
+        columns: props.columns,
+        close_on_change: props.close_on_change,
+        ..FieldOptions::default()
     };
-    let allowed = day_allowed(min, max, exclude_date);
-    use_picker_field(
-        picker_field!(props, formats, props.today),
-        move |range: DateRange<NaiveDate>| allowed(range.start) && range.end.is_none_or(allowed),
-        move |args: DropdownArgs<DateRange<NaiveDate>>| {
-            rsx! {
-                DateRangePicker {
-                    value: args.value,
-                    min,
-                    max,
-                    exclude_date,
-                    columns,
-                    today: args.today,
-                    size: args.size,
-                    focusable: false,
-                    onchange: move |range: Option<DateRange<NaiveDate>>| {
-                        let complete = range.is_some_and(|range| range.end.is_some());
-                        args.pick.call((range, close && complete));
-                    },
-                }
-            }
-        },
-    )
+    date_field::<DateRange<NaiveDate>>(picker_field!(props, props.today), options)
 }
 
 field_props! {
@@ -455,49 +347,17 @@ field_props! {
 /// parts.
 #[component]
 pub fn DateTimeRangeField(props: DateTimeRangeFieldProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let (min, max, exclude_date, step) = (props.min, props.max, props.exclude_date, props.step);
-    let with_seconds = props.with_seconds.unwrap_or(false);
-    let variant = props.variant.copied_or(theme.time_picker.variant);
-    let time = props
-        .time_format
-        .clone()
-        .unwrap_or_else(|| time_format(names, props.twelve_hour, with_seconds));
-    let twelve_hour = props
-        .twelve_hour
-        .unwrap_or_else(|| uses_twelve_hours(&time));
-    let formats = Formats {
-        date: props
-            .format
-            .clone()
-            .unwrap_or_else(|| names.format.to_string()),
-        time,
-        names,
+    let options = FieldOptions {
+        format: props.format.clone(),
+        time_format: props.time_format.clone(),
+        min: props.min,
+        max: props.max,
+        exclude_date: props.exclude_date,
+        variant: props.variant.clone(),
+        with_seconds: props.with_seconds,
+        step: props.step,
+        twelve_hour: props.twelve_hour,
+        ..FieldOptions::default()
     };
-    let allowed = moment_allowed(min, max, exclude_date);
-    use_picker_field(
-        picker_field!(props, formats, props.today),
-        move |range: DateRange<NaiveDateTime>| {
-            allowed(range.start) && range.end.is_none_or(allowed)
-        },
-        move |args: DropdownArgs<DateRange<NaiveDateTime>>| {
-            rsx! {
-                DateTimeRangeFlow {
-                    value: args.value,
-                    onpick: move |range: Option<DateRange<NaiveDateTime>>| args.pick.call((range, false)),
-                    min,
-                    max,
-                    exclude_date,
-                    today: args.today,
-                    size: Input::Value(args.size),
-                    focusable: false,
-                    variant,
-                    with_seconds,
-                    step,
-                    twelve_hour,
-                }
-            }
-        },
-    )
+    date_field::<DateRange<NaiveDateTime>>(picker_field!(props, props.today), options)
 }

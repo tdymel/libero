@@ -7,7 +7,7 @@ use super::{
     date_value::{DateValue, PickerOptions},
     fields::time_format,
     format::uses_twelve_hours,
-    picker_field::{DropdownArgs, Formats, picker_field, use_picker_field},
+    picker_field::{DropdownArgs, Formats, PickerField, picker_field, use_picker_field},
 };
 use crate::{
     components::{FieldName, Input, Validators, common::field_props},
@@ -96,41 +96,96 @@ field_props! {
 /// `onchange` or a turbofish has to.
 #[component]
 pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let with_seconds = props.with_seconds.unwrap_or(false);
-    let time = props
-        .time_format
-        .clone()
-        .unwrap_or_else(|| time_format(names, props.twelve_hour, with_seconds));
-    let options = PickerOptions {
+    let options = FieldOptions {
+        format: props.format.clone(),
+        time_format: props.time_format.clone(),
         min: props.min,
         max: props.max,
         exclude_date: props.exclude_date,
-        allow_deselect: false,
         columns: props.columns,
-        level: DateLevel::Day,
-        variant: props.variant.copied_or(theme.time_picker.variant),
-        with_seconds,
+        variant: props.variant.clone(),
+        with_seconds: props.with_seconds,
         step: props.step,
-        twelve_hour: props
+        twelve_hour: props.twelve_hour,
+        close_on_change: props.close_on_change,
+    };
+    date_field(picker_field!(props, props.today), options)
+}
+
+/// What a field's text and dropdown are drawn from, besides the props every
+/// field shares. `DateField` fills all of it; a typed field fills what its
+/// value type uses and leaves the rest unset.
+pub(super) struct FieldOptions<B: 'static> {
+    pub format: Option<String>,
+    pub time_format: Option<String>,
+    pub min: Option<B>,
+    pub max: Option<B>,
+    pub exclude_date: Option<Callback<NaiveDate, bool>>,
+    pub columns: Option<usize>,
+    pub variant: Input<TimePickerVariant>,
+    pub with_seconds: Option<bool>,
+    pub step: Option<u8>,
+    pub twelve_hour: Option<bool>,
+    pub close_on_change: Option<bool>,
+}
+
+impl<B> Default for FieldOptions<B> {
+    fn default() -> Self {
+        Self {
+            format: None,
+            time_format: None,
+            min: None,
+            max: None,
+            exclude_date: None,
+            columns: None,
+            variant: Input::None,
+            with_seconds: None,
+            step: None,
+            twelve_hour: None,
+            close_on_change: None,
+        }
+    }
+}
+
+/// The one path from a field's props to its text and its dropdown, so every
+/// field hands the picker the same props. Calls hooks: only from a component
+/// body.
+pub(super) fn date_field<V: DateValue>(
+    field: PickerField<'_, V>,
+    options: FieldOptions<V::Bound>,
+) -> Element {
+    let theme = use_theme();
+    let names = &theme.date;
+    let with_seconds = options.with_seconds.unwrap_or(false);
+    let time = options
+        .time_format
+        .unwrap_or_else(|| time_format(names, options.twelve_hour, with_seconds));
+    let picker = PickerOptions {
+        min: options.min,
+        max: options.max,
+        exclude_date: options.exclude_date,
+        allow_deselect: false,
+        columns: options.columns,
+        level: DateLevel::Day,
+        variant: options.variant.copied_or(theme.time_picker.variant),
+        with_seconds,
+        step: options.step,
+        twelve_hour: options
             .twelve_hour
             .unwrap_or_else(|| uses_twelve_hours(&time)),
     };
-    let close = props
+    let close = options
         .close_on_change
         .unwrap_or(theme.date_field.close_on_change);
     let formats = Formats {
-        date: props
-            .format
-            .clone()
-            .unwrap_or_else(|| names.format.to_string()),
+        date: options.format.unwrap_or_else(|| names.format.to_string()),
         time,
         names,
     };
     use_picker_field(
-        picker_field!(props, formats, props.today),
-        move |value: V| value.accepts(&options),
+        field,
+        formats,
+        move |value: V| value.accepts(&picker),
         move |args: DropdownArgs<V>| {
             rsx! {
                 DatePicker::<V> {
@@ -138,17 +193,16 @@ pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
                     onchange: move |next: Option<V>| {
                         args.pick.call((next, close && V::closes(next)));
                     },
-                    min: options.min,
-                    max: options.max,
-                    exclude_date: options.exclude_date,
-                    columns: options.columns,
+                    min: picker.min,
+                    max: picker.max,
+                    exclude_date: picker.exclude_date,
+                    columns: picker.columns,
                     today: args.today,
                     size: args.size,
-                    variant: Input::Value(options.variant),
-                    with_seconds: options.with_seconds,
-                    step: options.step,
-                    twelve_hour: options.twelve_hour,
-                    focusable: false,
+                    variant: Input::Value(picker.variant),
+                    with_seconds: picker.with_seconds,
+                    step: picker.step,
+                    twelve_hour: picker.twelve_hour,
                 }
             }
         },
