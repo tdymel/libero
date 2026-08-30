@@ -26,6 +26,10 @@ categories = ["gui", "wasm", "web-programming"]
 dioxus = { path = "../.dioxus-active/packages/dioxus", default-features = false, features = ["macro", "html", "signals", "hooks", "document", "mounted", "router", "logger"] }
 fast_qr = { version = "0.13.1", default-features = false, features = ["svg"] }
 libero-macros = { path = "../libero-macros", version = "0.1.0" }
+# The date and time components hold `chrono`'s naive types. No `clock`: today
+# comes from `platform::clock()`, so neither `js-sys` nor a time zone database
+# is pulled in through it.
+chrono = { version = "0.4", default-features = false, features = ["std"] }
 
 # Everything web-specific is wasm32-only, so a native build (`cargo test`, or
 # any future non-web renderer) compiles without it and the platform-backed

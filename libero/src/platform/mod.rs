@@ -12,6 +12,7 @@
 
 pub(crate) mod backend;
 mod clipboard;
+mod clock;
 mod document;
 mod element;
 mod error;
@@ -21,6 +22,7 @@ mod scroll;
 
 pub use clipboard::ClipboardApi;
 pub(crate) use clipboard::clipboard;
+pub use clock::{ClockApi, clock};
 pub use document::{DocumentApi, document};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;

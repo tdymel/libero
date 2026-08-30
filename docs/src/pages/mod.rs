@@ -1,6 +1,7 @@
 mod a11y;
 mod about;
 mod data_display;
+mod date;
 mod form;
 mod inputs;
 mod layout;
@@ -12,6 +13,11 @@ mod typography;
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
+pub use date::{
+    DateFieldPage, DateFieldPrototypePage, DatePickerPage, DateRangeFieldPage, DateRangePickerPage,
+    DateTimeFieldPage, DateTimeRangeFieldPage, MonthPickerPage, TimeFieldPage, TimePickerPage,
+    YearPickerPage,
+};
 pub use form::{
     AutocompletePage, CheckboxPage, ColorFieldPage, ColorPickerPage, FieldsetPage, FileFieldPage,
     FormGettingStartedPage, FormPage, MultiSelectPage, NativeSelectPage, NumberFieldPage,

@@ -152,6 +152,23 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             ],
         ),
         group(
+            "date",
+            "Date",
+            vec![
+                page(Route::DateFieldPrototypePage {}, "DateFieldPrototype"),
+                page(Route::DateFieldPage {}, "DateField"),
+                page(Route::TimeFieldPage {}, "TimeField"),
+                page(Route::DateTimeFieldPage {}, "DateTimeField"),
+                page(Route::DateRangeFieldPage {}, "DateRangeField"),
+                page(Route::DateTimeRangeFieldPage {}, "DateTimeRangeField"),
+                page(Route::DatePickerPage {}, "DatePicker"),
+                page(Route::DateRangePickerPage {}, "DateRangePicker"),
+                page(Route::MonthPickerPage {}, "MonthPicker"),
+                page(Route::YearPickerPage {}, "YearPicker"),
+                page(Route::TimePickerPage {}, "TimePicker"),
+            ],
+        ),
+        group(
             "inputs",
             "Inputs",
             vec![

@@ -2,6 +2,7 @@ mod autocomplete;
 mod caption;
 mod checkbox;
 mod color;
+mod date;
 mod field_status;
 mod fieldset;
 mod file_field;
@@ -33,6 +34,7 @@ pub use color::{
     ColorPicker, ColorPickerProps, ColorSwatch, ColorSwatchProps, HueSlider, HueSliderProps,
     ParseColorError, Swatches,
 };
+pub use date::*;
 pub use field_status::FieldStatus;
 pub use fieldset::{Fieldset, FieldsetProps};
 pub use file_field::{FileField, FileFieldProps, Files};

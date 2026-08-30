@@ -120,6 +120,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         pin_field,
         color_picker,
         color_swatch,
+        date_picker,
         primary,
         secondary,
         error,
@@ -134,6 +135,9 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         text_field: _,
         textarea: _,
         number_field: _,
+        date: _,
+        date_field: _,
+        time_picker: _,
         native_select: _,
         select: _,
         multi_select: _,
@@ -178,6 +182,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(pin_field.to_css_declarations());
     declarations.extend(color_picker.to_css_declarations());
     declarations.extend(color_swatch.to_css_declarations());
+    declarations.extend(date_picker.to_css_declarations());
     declarations.extend(combobox.to_css_declarations());
     declarations.extend(slider.to_css_declarations());
     declarations.extend(list.to_css_declarations());
