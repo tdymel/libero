@@ -17,10 +17,16 @@
 //! compiles: what is measured is the framework overhead a caller pays for
 //! reaching for the component at all, not any particular feature of it.
 //!
+//! A row that reads [`flip`] prices a state change instead: every round
+//! re-renders with the other of two values, so a component that skips an
+//! unchanged re-render still shows what a pick, a page or a drag costs.
+//!
 //! A row marked `memoized` came in below `Leaf`. That component takes no
 //! `children`, so its props compare equal and dioxus skips the re-render
 //! entirely - the number is the parent's diff, not the component's render.
 //! Price those with a first render instead.
+
+use std::sync::atomic::{AtomicBool, Ordering};
 
 use dioxus::dioxus_core::{NoOpMutations, ScopeId, VirtualDom};
 use dioxus::prelude::*;
@@ -37,6 +43,15 @@ enum CostPane {
 /// A shape to measure: what to call it, and the app that renders
 /// [`CHILDREN`] of it.
 type Shape = (&'static str, fn() -> Element);
+
+static FLIP: AtomicBool = AtomicBool::new(false);
+
+/// Which of two values a state-change shape renders this round. False for the
+/// first render, true in round 0, then alternating, so no round repeats the
+/// render before it.
+fn flip() -> bool {
+    FLIP.load(Ordering::Relaxed)
+}
 
 /// Children per app. Big enough that per-render fixed costs disappear into the
 /// per-item average.
@@ -103,6 +118,7 @@ fn Leaf(children: Element) -> Element {
 /// sequential best-of-N drifts enough between variants to invert small
 /// differences.
 fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
+    FLIP.store(false, Ordering::Relaxed);
     let mut doms: Vec<_> = shapes
         .iter()
         .map(|(name, app)| {
@@ -112,7 +128,8 @@ fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
         })
         .collect();
 
-    for _ in 0..ROUNDS {
+    for round in 0..ROUNDS {
+        FLIP.store(round % 2 == 0, Ordering::Relaxed);
         for (_, dom, best) in doms.iter_mut() {
             dom.mark_dirty(ScopeId::APP);
             let started = std::time::Instant::now();
@@ -204,18 +221,25 @@ fn render_cost_per_component() {
         "ColorSwatch" { ColorSwatch { color: ColorCode::hex(0x228be6) } }
         // The panel, a hue slider and nothing else - no alpha, no swatches.
         "ColorPicker" { ColorPicker { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
+        // One drag frame.
+        "ColorPicker drag" { ColorPicker { value: ColorCode::hex(if flip() { 0x228be6 } else { 0x2f8fe0 }), oninput: move |_| {} } }
         // Closed: the dropdown's picker is not rendered until it opens.
         "ColorField" { ColorField { value: ColorCode::hex(0x228be6), oninput: move |_| {} } }
         // 42 day buttons, each with its own click handler.
         "DayPicker" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
         // Seven days in one row, each with a month label.
+        "DayPicker pick" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 }), onchange: move |_| {} } }
+        "DayPicker page" { DayPicker { value: NaiveDate::from_ymd_opt(2026, if flip() { 10 } else { 9 }, 14), onchange: move |_| {} } }
         "DayPicker-mini" { DayPicker { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {}, calendar: "mini" } }
         // Closed: the dropdown's picker is not rendered until it opens.
         "DayField" { DayField { value: NaiveDate::from_ymd_opt(2026, 9, 14), onchange: move |_| {} } }
         "TimePicker" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "digital" } }
+        "TimePicker pick" { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange: move |_| {}, variant: "digital" } }
         "TimePicker-analog" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "analog" } }
         "MonthPicker" { MonthPicker { value: NaiveDate::from_ymd_opt(2026, 9, 1), onchange: move |_| {} } }
         "DateRangePicker" { DateRangePicker { onchange: move |_| {} } }
+        // A range end moving, as a hover preview does.
+        "DateRangePicker end" { DateRangePicker { value: DateRange::new(NaiveDate::from_ymd_opt(2026, 9, 10).expect("a day"), NaiveDate::from_ymd_opt(2026, 9, if flip() { 15 } else { 14 })), onchange: move |_| {} } }
         "TimeField" { TimeField { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {} } }
         "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
         "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
@@ -256,7 +280,7 @@ fn render_cost_per_component() {
         } else {
             ""
         };
-        println!("{name:<16} {ns:>8.0} {:>6.2}x{memoized}", ns / leaf);
+        println!("{name:<22} {ns:>8.0} {:>6.2}x{memoized}", ns / leaf);
     }
     println!();
 
