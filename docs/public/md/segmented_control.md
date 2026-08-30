@@ -240,6 +240,7 @@ component: those are separate booleans, not one selection. Use a
 | `radius` | `Size` | `md` | Corner radius of the control's outer corners; inner ones are square. |
 | `gap` | `Size` | - | Space between the segments. Set it and they stop sharing borders - each keeps its own, and its own radius. |
 | `full_width` | `bool` | `false` | Segments share the width evenly instead of sizing to their label. |
+| `focusable` | `bool` | `true` | `false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown. |
 
 ### OptionLabel
 

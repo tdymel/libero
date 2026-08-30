@@ -120,6 +120,9 @@ pub fn SegmentedControlPage() -> Element {
                     prop("full_width", "bool")
                         .default("false")
                         .doc("Segments share the width evenly instead of sizing to their label."),
+                    prop("focusable", "bool")
+                        .default("true")
+                        .doc("`false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),

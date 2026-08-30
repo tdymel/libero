@@ -166,12 +166,24 @@ pub(crate) struct SegmentedControlView {
     pub size: Size,
     pub radius: Size,
     pub gap: Option<Size>,
+    /// `false` keeps the radios out of the tab order and stops a label click
+    /// from focusing its radio.
+    pub focusable: bool,
     /// `--lsx-button-*`, rendered. Set on the root, and the segments inherit.
     pub style: String,
     pub class: Input<ClassList>,
     pub sx: Input<Sx>,
     pub states: Input<States>,
     pub attributes: Vec<Attribute>,
+}
+
+/// A segment label's `data-state`.
+fn segment_state(shared: &str, disabled: bool, checked: bool) -> String {
+    match (disabled, checked) {
+        (true, _) => format!("{shared} disabled"),
+        (false, true) => format!("{shared} checked"),
+        (false, false) => shared.to_string(),
+    }
 }
 
 /// A plain `fn`, not a component: `Vec<Element>` props defeat memoization, so
@@ -187,6 +199,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         size,
         radius,
         gap,
+        focusable,
         style,
         class,
         sx: user_sx,
@@ -243,6 +256,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                         // reads `disabled` by presence - so `false` would
                         // disable every segment.
                         disabled: segment.disabled.then_some(true),
+                        tabindex: (!focusable).then_some("-1"),
                         // `onclick` and cancelled, not `onchange`: dioxus
                         // writes `checked` as a DOM property and skips
                         // unchanged attributes, so a controlled radio that
@@ -285,16 +299,31 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                             }
                         },
                     }
-                    label {
-                        r#for: "{root}-segment-{index}",
-                        "data-state": if segment.disabled {
-                            format!("{segment_states} disabled")
-                        } else if selected == Some(index) {
-                            format!("{segment_states} checked")
-                        } else {
-                            segment_states.clone()
-                        },
-                        {segment.content.clone()}
+                    if focusable {
+                        label {
+                            r#for: "{root}-segment-{index}",
+                            "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
+                            {segment.content.clone()}
+                        }
+                    } else {
+                        // A label click focuses its radio even when the
+                        // `mousedown` was cancelled. Inside a dropdown that
+                        // keeps focus on its field, that blur closes it, so
+                        // the click is cancelled and selects here instead.
+                        label {
+                            r#for: "{root}-segment-{index}",
+                            "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
+                            onclick: {
+                                let disabled = segment.disabled;
+                                move |event: Event<MouseData>| {
+                                    event.prevent_default();
+                                    if !disabled {
+                                        onselect.call(index);
+                                    }
+                                }
+                            },
+                            {segment.content.clone()}
+                        }
                     }
                 }
             },

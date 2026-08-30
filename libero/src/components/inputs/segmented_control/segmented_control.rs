@@ -58,6 +58,11 @@ pub struct SegmentedControlProps<T: Options> {
     /// Segments share the width evenly instead of sizing to their label.
     #[props(default)]
     full_width: Option<bool>,
+    /// `false` keeps the segments out of the tab order, and a click on one
+    /// leaves focus where it is - for a control inside a field's dropdown.
+    /// On by default.
+    #[props(default)]
+    focusable: Option<bool>,
     #[props(extends = GlobalAttributes)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -140,6 +145,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             size: props.size.copied_or(theme.button.size),
             radius: props.radius.copied_or(theme.button.radius),
             gap: props.gap.as_ref().copied(),
+            focusable: props.focusable.unwrap_or(true),
             style,
             class: props.class,
             sx: props.sx,
