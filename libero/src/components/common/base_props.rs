@@ -72,11 +72,11 @@ macro_rules! base_props {
     };
 
     (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
-        base_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
+        crate::components::common::base_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
     };
 
     ($($rest:tt)*) => {
-        base_props!(@build [] $($rest)*);
+        crate::components::common::base_props!(@build [] $($rest)*);
     };
 }
 

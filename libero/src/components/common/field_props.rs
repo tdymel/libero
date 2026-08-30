@@ -63,11 +63,11 @@ macro_rules! field_props {
     };
 
     (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
-        field_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
+        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
     };
 
     ($($rest:tt)*) => {
-        field_props!(@build [] $($rest)*);
+        crate::components::common::field_props!(@build [] $($rest)*);
     };
 }
 
