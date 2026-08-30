@@ -50,7 +50,7 @@ pub fn DatePickerPage() -> Element {
                     prop("days", "usize").default("7").doc("Days in the mini calendar's row."),
                     prop("variant", "TimePickerVariant").default("analog").doc("Columns of numbers or a clock face, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("A seconds column. Digital only."),
-                    prop("step", "u8").default("1").doc("Minutes between the offered minutes."),
+                    prop("step", "u8").default("5").doc("Minutes between the offered minutes. Defaults to the theme's `TimePickerDefaults::step`."),
                     prop("twelve_hour", "bool").default("theme").doc("A 12-hour clock. Defaults to whether `DateDefaults::time_format` is one."),
                     prop("today", "NaiveDate").doc("The day marked as today. Unset, the platform clock answers after mount - on the web; elsewhere no day is marked."),
                     prop("size", "Size").default("md").doc("Cell, option and font size."),

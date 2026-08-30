@@ -69,7 +69,7 @@ pub fn DateFieldPage() -> Element {
                     prop("today", "NaiveDate").doc("The day marked as today, and the year typed text without one falls back to. Unset, the platform clock answers after mount."),
                     prop("variant", "TimePickerVariant").default("analog").doc("The clock, for values with a time."),
                     prop("with_seconds", "bool").default("false").doc("Seconds in the text and the clock, for values with a time."),
-                    prop("step", "u8").default("1").doc("Minutes between the offered minutes."),
+                    prop("step", "u8").default("5").doc("Minutes between the offered minutes. Defaults to the theme's `TimePickerDefaults::step`."),
                     prop("twelve_hour", "bool").doc("A 12-hour clock. Defaults to whether the time format is one."),
                     prop("calendar", "CalendarVariant").default("full").doc("A month of days, or `mini`: one row of days with buttons that page it. For a day or a date-time."),
                     prop("days", "usize").default("7").doc("Days in the mini calendar's row."),

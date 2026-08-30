@@ -108,7 +108,7 @@ whatever the text shows: `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
 | `today` | `NaiveDate` | clock | Marked day, and the year a yearless text takes. |
 | `variant` | `TimePickerVariant` | `analog` | The clock, for values with a time. |
 | `with_seconds` | `bool` | `false` | Seconds, for values with a time. |
-| `step` | `u8` | `1` | Minutes between offered minutes. |
+| `step` | `u8` | `5` | Minutes between offered minutes. Theme: `TimePickerDefaults::step`. |
 | `twelve_hour` | `bool` | from the time format | A 12-hour clock. |
 | `calendar` | `CalendarVariant` | `full` | `mini`: one row of days in the dropdown. For a day or a date-time. |
 | `days` | `usize` | `7` | Days in the mini calendar's row. |

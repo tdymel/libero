@@ -160,6 +160,8 @@ str_enum! {
 pub struct TimePickerDefaults {
     pub size: Size,
     pub variant: TimePickerVariant,
+    /// Minutes between the offered minutes.
+    pub step: u8,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

@@ -82,7 +82,8 @@ macro_rules! date_props {
             /// Seconds in the text and on the clock.
             #[props(default)]
             with_seconds: Option<bool>,
-            /// Minutes between the offered minutes. `1` by default.
+            /// Minutes between the offered minutes. Defaults to the theme's
+            /// `TimePickerDefaults::step`, 5.
             #[props(default)]
             step: Option<u8>,
             /// A 12-hour clock with AM and PM. Defaults to whether the time

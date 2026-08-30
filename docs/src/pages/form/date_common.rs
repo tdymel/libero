@@ -126,10 +126,10 @@ pub fn calendar_controls() -> Vec<Control> {
 pub fn shared_controls() -> Vec<Control> {
     vec![
         Control::toggle("step", ["1", "5", "15", "30"])
-            .default("1")
+            .default("5")
             .hidden_when(|values| !has_time(values))
             .code(|_, values| match values.str("step").as_str() {
-                "1" => vec![],
+                "5" => vec![],
                 step => vec![format!("step: {step}")],
             }),
         Control::switch("min_max").code(|_, values| match is_on(values, "min_max") {

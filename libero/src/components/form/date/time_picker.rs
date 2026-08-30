@@ -206,7 +206,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     let size = props.size.copied_or(theme.time_picker.size);
     let variant = props.variant;
     let with_seconds = props.with_seconds;
-    let step = props.step.unwrap_or(1).clamp(1, 30);
+    let step = props.step.unwrap_or(theme.time_picker.step).clamp(1, 30);
     let twelve = props.twelve_hour;
     let focusable = props.focusable;
     let tabindex = if focusable { "0" } else { "-1" };

@@ -447,6 +447,7 @@ impl Theme {
         time_picker: TimePickerDefaults {
             size: Size::Md,
             variant: TimePickerVariant::Analog,
+            step: 5,
         },
         autocomplete: AutocompleteDefaults {
             size: Size::Md,
