@@ -11,11 +11,9 @@ use super::{
     date_field::{FieldOptions, date_field},
     format::uses_twelve_hours,
     picker_field::picker_field,
+    props::date_props,
 };
-use crate::{
-    components::{FieldName, Input, Validators, common::field_props},
-    theme::{DateDefaults, TimePickerVariant},
-};
+use crate::{components::Input, theme::DateDefaults};
 
 /// Whether a day passes `min`, `max` and `exclude_date`.
 pub(super) fn day_allowed(
@@ -65,51 +63,8 @@ pub(super) fn time_format(
     }
 }
 
-field_props! {
-    extends(input);
-    pub struct DayFieldProps {
-        /// The day in the field; strictly controlled. `None` is the empty
-        /// field. Inside a `Form`, a path `name` can supply it instead.
-        #[props(default)]
-        value: Option<NaiveDate>,
-        /// Called with the day the caller should hold next: when typed text is
-        /// committed - on blur or Enter - and when a day is picked. Emptied
-        /// text commits `None`.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<NaiveDate>>>,
-        /// Rules over the day, shown once the field loses focus or its form is
-        /// submitted.
-        #[props(default, into)]
-        validate: Validators<Option<NaiveDate>>,
-        /// How the text shows the day, in dayjs tokens. Defaults to the
-        /// theme's `DateDefaults::format`. Typing is lenient either way: only
-        /// the order of day, month and year has to match.
-        #[props(default, into)]
-        format: Option<String>,
-        /// The earliest day that can be picked or typed.
-        #[props(default)]
-        min: Option<NaiveDate>,
-        /// The latest day that can be picked or typed.
-        #[props(default)]
-        max: Option<NaiveDate>,
-        /// Days that cannot be picked or typed, on top of `min` and `max`.
-        #[props(default)]
-        exclude_date: Option<Callback<NaiveDate, bool>>,
-        /// The day marked as today, and the year typed text without one
-        /// falls back to. Unset, the platform clock answers after mount.
-        #[props(default)]
-        today: Option<NaiveDate>,
-        /// Picking a day closes the dropdown.
-        #[props(default)]
-        close_on_change: Option<bool>,
-        /// What the field posts as - the day in ISO 8601, whatever `format`
-        /// shows. A path also binds it to the surrounding `Form`'s value when
-        /// it has no `onchange`.
-        #[props(default, into)]
-        name: FieldName<Option<NaiveDate>>,
-        #[props(default, into)]
-        placeholder: Option<String>,
-    }
+date_props! {
+    field DayFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, close_on_change
 }
 
 /// A text field holding a day, with a `DayPicker` in a dropdown - Mantine's
@@ -132,43 +87,8 @@ pub fn DayField(props: DayFieldProps) -> Element {
     date_field::<NaiveDate>(picker_field!(props, props.today), options)
 }
 
-field_props! {
-    extends(input);
-    pub struct TimeFieldProps {
-        /// The time in the field; strictly controlled.
-        #[props(default)]
-        value: Option<NaiveTime>,
-        /// Called when typed text is committed - on blur or Enter - and when a
-        /// part is picked.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<NaiveTime>>>,
-        #[props(default, into)]
-        validate: Validators<Option<NaiveTime>>,
-        /// How the text shows the time, in dayjs tokens. Defaults to the
-        /// theme's `DateDefaults::time_format`, adjusted for `with_seconds`
-        /// and `twelve_hour`.
-        #[props(default, into)]
-        format: Option<String>,
-        #[props(default)]
-        min: Option<NaiveTime>,
-        #[props(default)]
-        max: Option<NaiveTime>,
-        /// Columns of numbers, or a clock face.
-        #[props(default, into)]
-        variant: Input<TimePickerVariant>,
-        #[props(default)]
-        with_seconds: Option<bool>,
-        /// Minutes between the offered minutes.
-        #[props(default)]
-        step: Option<u8>,
-        #[props(default)]
-        twelve_hour: Option<bool>,
-        /// Posts the time as `HH:MM:SS`.
-        #[props(default, into)]
-        name: FieldName<Option<NaiveTime>>,
-        #[props(default, into)]
-        placeholder: Option<String>,
-    }
+date_props! {
+    field TimeFieldProps(NaiveTime, NaiveTime): time_format, limits, clock
 }
 
 /// A text field holding a time, with a `TimePicker` in a dropdown - Mantine's
@@ -176,7 +96,7 @@ field_props! {
 #[component]
 pub fn TimeField(props: TimeFieldProps) -> Element {
     let options = FieldOptions {
-        time_format: props.format.clone(),
+        time_format: props.time_format.clone(),
         min: props.min,
         max: props.max,
         variant: props.variant.clone(),
@@ -188,50 +108,13 @@ pub fn TimeField(props: TimeFieldProps) -> Element {
     date_field::<NaiveTime>(picker_field!(props, None), options)
 }
 
-field_props! {
-    extends(input);
-    pub struct DateTimeFieldProps {
-        /// The day and time in the field; strictly controlled.
-        #[props(default)]
-        value: Option<NaiveDateTime>,
-        /// Called when typed text is committed and when a day or a time is
-        /// picked.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<NaiveDateTime>>>,
-        #[props(default, into)]
-        validate: Validators<Option<NaiveDateTime>>,
-        /// How the text shows the day. The time follows it after a space.
-        #[props(default, into)]
-        format: Option<String>,
-        /// How the text shows the time.
-        #[props(default, into)]
-        time_format: Option<String>,
-        #[props(default)]
-        min: Option<NaiveDateTime>,
-        #[props(default)]
-        max: Option<NaiveDateTime>,
-        #[props(default)]
-        exclude_date: Option<Callback<NaiveDate, bool>>,
-        #[props(default)]
-        today: Option<NaiveDate>,
-        #[props(default, into)]
-        variant: Input<TimePickerVariant>,
-        #[props(default)]
-        with_seconds: Option<bool>,
-        #[props(default)]
-        step: Option<u8>,
-        #[props(default)]
-        twelve_hour: Option<bool>,
-        /// Posts `2026-09-14T13:05:00`.
-        #[props(default, into)]
-        name: FieldName<Option<NaiveDateTime>>,
-        #[props(default, into)]
-        placeholder: Option<String>,
-    }
+date_props! {
+    field DateTimeFieldProps(NaiveDateTime, NaiveDateTime): format, time_format, limits, exclude_date, today, clock
 }
 
 /// A text field holding a day and a time. The dropdown picks the day, then
 /// the time - a `SegmentedControl` goes back - Mantine's `DateTimePicker`.
+/// The text shows the day, then the time after a space.
 #[component]
 pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
     let options = FieldOptions {
@@ -249,46 +132,14 @@ pub fn DateTimeField(props: DateTimeFieldProps) -> Element {
     date_field::<NaiveDateTime>(picker_field!(props, props.today), options)
 }
 
-field_props! {
-    extends(input);
-    pub struct DateRangeFieldProps {
-        /// The range in the field; strictly controlled. An `end` of `None` is
-        /// a range still being picked.
-        #[props(default)]
-        value: Option<DateRange<NaiveDate>>,
-        /// Called when typed text is committed and on every pick.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<DateRange<NaiveDate>>>>,
-        #[props(default, into)]
-        validate: Validators<Option<DateRange<NaiveDate>>>,
-        /// How the text shows each day; the theme's `range_separator` joins
-        /// them. Typing takes `–`, ` - ` or ` to ` between them.
-        #[props(default, into)]
-        format: Option<String>,
-        #[props(default)]
-        min: Option<NaiveDate>,
-        #[props(default)]
-        max: Option<NaiveDate>,
-        #[props(default)]
-        exclude_date: Option<Callback<NaiveDate, bool>>,
-        #[props(default)]
-        today: Option<NaiveDate>,
-        /// Months side by side in the dropdown. Two by default.
-        #[props(default)]
-        columns: Option<usize>,
-        /// Picking the end closes the dropdown.
-        #[props(default)]
-        close_on_change: Option<bool>,
-        /// Posts an ISO 8601 interval: `2026-09-01/2026-09-05`.
-        #[props(default, into)]
-        name: FieldName<Option<DateRange<NaiveDate>>>,
-        #[props(default, into)]
-        placeholder: Option<String>,
-    }
+date_props! {
+    field DateRangeFieldProps(DateRange<NaiveDate>, NaiveDate): format, limits, exclude_date, today, columns, close_on_change
 }
 
 /// A text field holding a range of days, with two months in a dropdown -
-/// Mantine's `DatePickerInput type="range"`.
+/// Mantine's `DatePickerInput type="range"`. An `end` of `None` is a range
+/// still being picked. The text joins both days with the theme's
+/// `range_separator`; typing takes `–`, ` - ` or ` to ` between them.
 #[component]
 pub fn DateRangeField(props: DateRangeFieldProps) -> Element {
     let options = FieldOptions {
@@ -303,43 +154,8 @@ pub fn DateRangeField(props: DateRangeFieldProps) -> Element {
     date_field::<DateRange<NaiveDate>>(picker_field!(props, props.today), options)
 }
 
-field_props! {
-    extends(input);
-    pub struct DateTimeRangeFieldProps {
-        /// The range in the field; strictly controlled.
-        #[props(default)]
-        value: Option<DateRange<NaiveDateTime>>,
-        /// Called when typed text is committed and on every pick.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<DateRange<NaiveDateTime>>>>,
-        #[props(default, into)]
-        validate: Validators<Option<DateRange<NaiveDateTime>>>,
-        #[props(default, into)]
-        format: Option<String>,
-        #[props(default, into)]
-        time_format: Option<String>,
-        #[props(default)]
-        min: Option<NaiveDateTime>,
-        #[props(default)]
-        max: Option<NaiveDateTime>,
-        #[props(default)]
-        exclude_date: Option<Callback<NaiveDate, bool>>,
-        #[props(default)]
-        today: Option<NaiveDate>,
-        #[props(default, into)]
-        variant: Input<TimePickerVariant>,
-        #[props(default)]
-        with_seconds: Option<bool>,
-        #[props(default)]
-        step: Option<u8>,
-        #[props(default)]
-        twelve_hour: Option<bool>,
-        /// Posts an ISO 8601 interval of two date-times.
-        #[props(default, into)]
-        name: FieldName<Option<DateRange<NaiveDateTime>>>,
-        #[props(default, into)]
-        placeholder: Option<String>,
-    }
+date_props! {
+    field DateTimeRangeFieldProps(DateRange<NaiveDateTime>, NaiveDateTime): format, time_format, limits, exclude_date, today, clock
 }
 
 /// A text field holding a range of moments. The dropdown picks the start - a

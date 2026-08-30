@@ -6,11 +6,12 @@ use super::{
     date_value::{DateValue, PickerArgs, PickerOptions},
     format::uses_twelve_hours,
     parse_time::MIDNIGHT,
+    props::date_props,
 };
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{base_props, focus_ring_sx, input_from_str},
+        common::{focus_ring_sx, input_from_str},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -115,43 +116,8 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .selector("& [data-slot='face']:focus-visible", focus_ring_sx())
 });
 
-base_props! {
-    pub struct TimePickerProps {
-        /// The picked time; strictly controlled. `None` picks nothing.
-        #[props(default)]
-        value: Option<NaiveTime>,
-        /// Called with the time the caller should hold next. A part picked
-        /// with no value yet starts from `min`, else midnight.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<NaiveTime>>>,
-        /// Columns of numbers, or a clock face. Analog by default.
-        #[props(default, into)]
-        variant: Input<TimePickerVariant>,
-        /// A seconds column. Digital only.
-        #[props(default)]
-        with_seconds: Option<bool>,
-        /// Minutes between the offered minutes. `1` by default.
-        #[props(default)]
-        step: Option<u8>,
-        /// A 12-hour clock with AM and PM. Defaults to whether the theme's
-        /// `DateDefaults::time_format` is one.
-        #[props(default)]
-        twelve_hour: Option<bool>,
-        /// The earliest time that can be picked.
-        #[props(default)]
-        min: Option<NaiveTime>,
-        /// The latest time that can be picked.
-        #[props(default)]
-        max: Option<NaiveTime>,
-        #[props(default, into)]
-        size: Input<Size>,
-        /// Emits a hidden input of that name, posting the time as `HH:MM:SS`.
-        #[props(default, into)]
-        name: Option<String>,
-        /// `false` keeps the buttons out of the tab order. On by default.
-        #[props(default)]
-        focusable: Option<bool>,
-    }
+date_props! {
+    picker TimePickerProps(NaiveTime, NaiveTime): clock, limits
 }
 
 /// Which hand an analog picker is setting.
@@ -165,6 +131,7 @@ enum Hand {
 /// analog clock face that takes the hour, then the minute.
 ///
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
+/// A part picked with no value yet starts from `min`, else midnight.
 #[component]
 pub fn TimePicker(props: TimePickerProps) -> Element {
     let theme = use_theme();

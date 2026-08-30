@@ -17,6 +17,7 @@ mod parse;
 mod parse_time;
 mod picker_field;
 mod pickers;
+mod props;
 mod range;
 mod time_picker;
 mod today;

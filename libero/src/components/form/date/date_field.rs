@@ -8,81 +8,16 @@ use super::{
     fields::time_format,
     format::uses_twelve_hours,
     picker_field::{DropdownArgs, Formats, PickerField, picker_field, use_picker_field},
+    props::date_props,
 };
 use crate::{
-    components::{FieldName, Input, Validators, common::field_props},
+    components::Input,
     hooks::use_theme,
     theme::TimePickerVariant,
 };
 
-field_props! {
-    extends(input);
-    pub struct DateFieldProps<V: DateValue> {
-        /// The value in the field; strictly controlled. `None` is the empty
-        /// field. Its type picks the dropdown. Inside a `Form`, a path `name`
-        /// can supply it instead.
-        #[props(default)]
-        value: Option<V>,
-        /// Called with the value the caller should hold next: when typed text
-        /// is committed - on blur or Enter - and on every pick. Emptied text
-        /// commits `None`.
-        #[props(default)]
-        onchange: Option<EventHandler<Option<V>>>,
-        /// Rules over the value, shown once the field loses focus or its form
-        /// is submitted.
-        #[props(default, into)]
-        validate: Validators<Option<V>>,
-        /// How the text shows a day, in dayjs tokens. Defaults to the theme's
-        /// `DateDefaults::format`. Typing is lenient either way: only the
-        /// order of day, month and year has to match.
-        #[props(default, into)]
-        format: Option<String>,
-        /// How the text shows a time. Defaults to the theme's
-        /// `DateDefaults::time_format`, adjusted for `with_seconds` and
-        /// `twelve_hour`.
-        #[props(default, into)]
-        time_format: Option<String>,
-        /// The earliest value that can be picked or typed - a range's
-        /// earliest end.
-        #[props(default)]
-        min: Option<V::Bound>,
-        /// The latest value that can be picked or typed - a range's latest
-        /// end.
-        #[props(default)]
-        max: Option<V::Bound>,
-        /// Days that cannot be picked or typed. Ignored for a time.
-        #[props(default)]
-        exclude_date: Option<Callback<NaiveDate, bool>>,
-        /// The day marked as today, and the year typed text without one falls
-        /// back to. Unset, the platform clock answers after mount.
-        #[props(default)]
-        today: Option<NaiveDate>,
-        /// A clock's look. Only for values with a time.
-        #[props(default, into)]
-        variant: Input<TimePickerVariant>,
-        /// Seconds in the text and the clock. Only for values with a time.
-        #[props(default)]
-        with_seconds: Option<bool>,
-        /// Minutes between the offered minutes. Only for values with a time.
-        #[props(default)]
-        step: Option<u8>,
-        /// A 12-hour clock. Defaults to whether the time format is one.
-        #[props(default)]
-        twelve_hour: Option<bool>,
-        /// Months side by side. Only for a range of days.
-        #[props(default)]
-        columns: Option<usize>,
-        /// Picking a day, or a range's end, closes the dropdown.
-        #[props(default)]
-        close_on_change: Option<bool>,
-        /// What the field posts as - the value in ISO 8601, whatever the text
-        /// shows. A path also binds it to the surrounding `Form`'s value when
-        /// it has no `onchange`.
-        #[props(default, into)]
-        name: FieldName<Option<V>>,
-        #[props(default, into)]
-        placeholder: Option<String>,
-    }
+date_props! {
+    field DateFieldProps<V: DateValue>(V, V::Bound): format, time_format, limits, exclude_date, today, clock, columns, close_on_change
 }
 
 /// One text field for every date and time value, with the [`DatePicker`](super::DatePicker)
@@ -94,6 +29,9 @@ field_props! {
 /// it is read leniently. Text that is not an accepted value stays, and the
 /// field shows an error. A typed `value` alone does not name `V`, so a typed
 /// `onchange` or a turbofish has to.
+///
+/// Props a value type does not use are ignored: the clock props need a time,
+/// `exclude_date` a day, `columns` a range of days.
 #[component]
 pub fn DateField<V: DateValue>(props: DateFieldProps<V>) -> Element {
     let options = FieldOptions {
