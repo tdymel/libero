@@ -19,6 +19,7 @@ mod error;
 mod eye_dropper;
 mod regex;
 mod scroll;
+mod task;
 
 pub use clipboard::ClipboardApi;
 pub(crate) use clipboard::clipboard;
@@ -30,3 +31,4 @@ pub use eye_dropper::EyeDropperApi;
 pub(crate) use eye_dropper::eye_dropper;
 pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
+pub(crate) use task::next_task;
