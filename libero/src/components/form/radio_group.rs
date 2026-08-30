@@ -10,7 +10,7 @@ use crate::{
     hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::FIELD_GAP,
+    theme::{FIELD_GAP, Size},
     utils::warn,
 };
 
@@ -143,9 +143,11 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let onchange = props.onchange;
     let setter = bound.setter();
+    // One identity across renders, so an option whose own props did not
+    // change skips the re-render.
     let pick = {
         let values = values.clone();
-        move |index: usize| {
+        use_callback(move |index: usize| {
             let Some(option) = values.get(index) else {
                 return;
             };
@@ -154,7 +156,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 (None, Some(setter)) => setter.set(Some(option.clone())),
                 (None, None) => {}
             }
-        }
+        })
     };
 
     // One tab stop for the whole group: the selected option, or the first one
@@ -163,7 +165,6 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let count = values.len();
 
     let arrows = {
-        let pick = pick.clone();
         move |event: Event<KeyboardData>| {
             if disabled {
                 return;
@@ -180,7 +181,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             // cancelling it keeps one code path, and gives Blitz - which does
             // neither - the same behaviour.
             event.prevent_default();
-            pick(next);
+            pick.call(next);
             focus_option(&root, next);
         }
     };
@@ -200,19 +201,18 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             Some(format) => format.call(option.clone()),
             None => option.label(),
         };
-        let pick = pick.clone();
         rsx! {
-            Radio {
+            GroupRadio {
                 key: "{index}",
+                index,
                 label,
                 name: name.clone(),
                 size,
                 color: color.clone(),
                 checked: selected == Some(index),
                 disabled,
-                tabindex: if index == tab_stop { "0" } else { "-1" },
-                onselect: move |_| pick(index),
-                "data-radio-index": "{index}",
+                tab_stop: index == tab_stop,
+                pick,
             }
         }
     });
@@ -234,4 +234,47 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         );
 
     field.render(group)
+}
+
+/// One option of a group. Its own scope with plain props, so a new selection
+/// redraws the two options it changes, not every one.
+#[derive(Props, Clone, PartialEq)]
+struct GroupRadioProps {
+    index: usize,
+    label: String,
+    name: String,
+    size: Size,
+    color: Input<ThemeAwareValue>,
+    checked: bool,
+    disabled: bool,
+    tab_stop: bool,
+    pick: Callback<usize>,
+}
+
+#[component]
+fn GroupRadio(props: GroupRadioProps) -> Element {
+    let GroupRadioProps {
+        index,
+        label,
+        name,
+        size,
+        color,
+        checked,
+        disabled,
+        tab_stop,
+        pick,
+    } = props;
+    rsx! {
+        Radio {
+            label,
+            name,
+            size,
+            color,
+            checked,
+            disabled,
+            tabindex: if tab_stop { "0" } else { "-1" },
+            onselect: move |_| pick.call(index),
+            "data-radio-index": "{index}",
+        }
+    }
 }
