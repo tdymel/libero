@@ -69,23 +69,27 @@ fn time_limits(
     (on(min), on(max))
 }
 
-/// A switch between the calendar and the clock.
+/// A switch between the calendar and the clock. Calls hooks: its handlers
+/// keep one identity across renders, so the control skips a re-render that
+/// does not change the part.
 fn part_switch(part: Signal<Part>, size: Size, focusable: bool) -> Element {
     let names = &use_theme().date;
     let mut part = part;
+    let onchange = use_callback(move |next: Part| part.set(next));
+    let label = use_callback(move |part: Part| {
+        OptionLabel::from(match part {
+            Part::Date => names.date_label,
+            Part::Time => names.time_label,
+        })
+    });
     rsx! {
         SegmentedControl {
             value: part(),
-            onchange: move |next| part.set(next),
+            onchange,
             size,
             full_width: true,
             focusable,
-            label: Callback::new(move |part: Part| {
-                OptionLabel::from(match part {
-                    Part::Date => names.date_label,
-                    Part::Time => names.time_label,
-                })
-            }),
+            label,
         }
     }
 }
@@ -348,21 +352,25 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
         },
     };
 
+    // One identity across renders, as in `part_switch`.
+    let side_change = use_callback(move |next: Side| side.set(next));
+    let side_label = use_callback(move |side: Side| {
+        OptionLabel::from(match side {
+            Side::Start => names.start_label,
+            Side::End => names.end_label,
+        })
+    });
+    let switch = part_switch(part, size, props.focusable);
     let children = rsx! {
             SegmentedControl {
                 value: side(),
-                onchange: move |next| side.set(next),
+                onchange: side_change,
                 size,
                 full_width: true,
                 focusable: props.focusable,
-                label: Callback::new(move |side: Side| {
-                    OptionLabel::from(match side {
-                        Side::Start => names.start_label,
-                        Side::End => names.end_label,
-                    })
-                }),
+                label: side_label,
             }
-            {part_switch(part, size, props.focusable)}
+            {switch}
             div { "data-slot": "part", {picker} }
             {hidden(props.name, value)}
     };
