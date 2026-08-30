@@ -1,10 +1,26 @@
-use super::date_common::{SIZES, field_controls, is_on, is_weekend, shown, status_of, text_of};
+use super::date_common::{
+    SIZES, day_limits, field_controls, has_days, has_time, is_on, is_weekend, moment_limits,
+    shared_controls, shown, status_of, step_of, switches_last, text_of, time_limits, today_of,
+    twelve_hour_of,
+};
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{Code, CodeBlock, DateField, DateRange, Flex, List, ListItem, Text};
+use libero::components::{
+    Code, CodeBlock, DateField, DateRange, Flex, Kbd, List, ListItem, Rule, Text, Validators,
+    not_empty,
+};
 
 const KINDS: [&str; 5] = ["date", "time", "date-time", "date-range", "date-time-range"];
+
+const TIME_FORMATS: [&str; 4] = ["default", "HH:mm", "h:mm A", "HH:mm:ss"];
+
+fn rules<V: 'static>(on: bool) -> Validators<Option<V>> {
+    match on {
+        true => not_empty::<Option<V>>.error("Pick a value.").into(),
+        false => Validators::default(),
+    }
+}
 
 const FORMATS: [&str; 5] = [
     "MMMM D, YYYY",
@@ -103,7 +119,7 @@ pub fn DateFieldPage() -> Element {
                 component: "DateField",
                 children_text: "",
                 controls: {
-                    let mut controls = vec![
+                    let controls = vec![
                         Control::select("value", KINDS).default("date").code(|_, values| {
                             let value = match values.str("value").as_str() {
                                 "time" => "time() /* Option<NaiveTime> */",
@@ -118,35 +134,66 @@ pub fn DateFieldPage() -> Element {
                         Control::slider("radius", SIZES).default("sm"),
                         Control::select("format", FORMATS)
                             .default("MMMM D, YYYY")
+                            .hidden_when(|values| values.str("value") == "time")
                             .code(|_, values| match values.str("format").as_str() {
                                 "MMMM D, YYYY" => vec![],
                                 format => vec![format!("format: {format:?}")],
                             }),
-                        Control::toggle("variant", ["analog", "digital"]).default("analog").code(|_, values| {
+                        // `default` leaves it unset: the theme's, adjusted for
+                        // `with_seconds` and `twelve_hour`.
+                        Control::select("time_format", TIME_FORMATS)
+                            .default("default")
+                            .hidden_when(|values| !has_time(values))
+                            .code(|_, values| match values.str("time_format").as_str() {
+                                "default" => vec![],
+                                format => vec![format!("time_format: {format:?}")],
+                            }),
+                        Control::toggle("variant", ["analog", "digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                             match values.str("variant").as_str() {
                                 "digital" => vec![r#"variant: "digital""#.to_string()],
                                 _ => vec![],
                             }
                         }),
-                        Control::switch("exclude_weekends").code(|_, values| {
+                        Control::toggle("columns", ["1", "2", "3"])
+                            .default("2")
+                            .hidden_when(|values| values.str("value") != "date-range")
+                            .code(|_, values| match values.str("columns").as_str() {
+                                "2" => vec![],
+                                columns => vec![format!("columns: {columns}")],
+                            }),
+                        Control::switch("exclude_weekends").hidden_when(|values| !has_days(values)).code(|_, values| {
                             match is_on(values, "exclude_weekends") {
                                 true => vec!["exclude_date: |day: NaiveDate| day.weekday().num_days_from_monday() >= 5".to_string()],
                                 false => vec![],
                             }
                         }),
-                        Control::switch("close_on_change").default("true").code(|_, values| {
+                        Control::switch("close_on_change").default("true").hidden_when(|values| values.str("value") == "time").code(|_, values| {
                             match is_on(values, "close_on_change") {
                                 true => vec![],
                                 false => vec!["close_on_change: false".to_string()],
                             }
                         }),
+                        Control::switch("validate").code(|_, values| match is_on(values, "validate") {
+                            true => vec![r#"validate: not_empty.error("Pick a value.")"#.to_string()],
+                            false => vec![],
+                        }),
                     ];
-                    controls.extend(field_controls());
-                    controls
+                    switches_last([controls, shared_controls(), field_controls()].concat())
                 },
                 render: move |values: DemoValues| rsx! {
                     DateFieldDemo { values }
                 },
+            }
+            DocSection {
+                title: "Keyboard",
+                Text {
+                    "Focus opens the dropdown and stays in the text, so typing works at once. "
+                    Kbd { "↓" } " moves focus into the picker, onto the picked day or the clock, where the "
+                    Code { source: "DatePicker" }
+                    " keys apply. "
+                    Kbd { "Escape" } " goes back to the text, and so does a pick that closes the dropdown. "
+                    "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
+                }
             }
             DocSection {
                 title: "Naming the value type",
@@ -202,13 +249,25 @@ fn DateFieldDemo(values: DemoValues) -> Element {
     let status = status_of(&values);
     let required = is_on(&values, "required").then_some(true);
     let disabled = is_on(&values, "disabled").then_some(true);
+    let time_format = Some(values.str("time_format")).filter(|format| format != "default");
+    let columns = values.str("columns").parse::<usize>().ok();
+    let step = step_of(&values);
+    let with_seconds = is_on(&values, "with_seconds");
+    let twelve_hour = twelve_hour_of(&values);
+    let today = today_of(&values);
+    let validate = is_on(&values, "validate");
+    let (min_day, max_day) = day_limits(&values);
+    let (min_time, max_time) = time_limits(&values);
+    let (min_moment, max_moment) = moment_limits(&values);
 
     let (field, readout) = match values.str("value").as_str() {
         "time" => (
             rsx! {
                 DateField {
                     value: time(), onchange: move |next| time.set(next),
-                    variant, size, radius, label, description, helper, placeholder, status, required, disabled,
+                    min: min_time, max: max_time, time_format, variant, with_seconds, step, twelve_hour,
+                    validate: rules(validate),
+                    size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
             },
             shown(time()),
@@ -217,7 +276,9 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: date_time(), onchange: move |next| date_time.set(next),
-                    format, variant, exclude_date,
+                    min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
+                    with_seconds, step, twelve_hour, close_on_change,
+                    validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
             },
@@ -227,7 +288,8 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: date_range(), onchange: move |next| date_range.set(next),
-                    format, exclude_date, close_on_change,
+                    min: min_day, max: max_day, format, exclude_date, columns, today, close_on_change,
+                    validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
             },
@@ -237,7 +299,9 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: date_time_range(), onchange: move |next| date_time_range.set(next),
-                    format, variant, exclude_date,
+                    min: min_moment, max: max_moment, format, time_format, variant, exclude_date, today,
+                    with_seconds, step, twelve_hour, close_on_change,
+                    validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
             },
@@ -247,7 +311,8 @@ fn DateFieldDemo(values: DemoValues) -> Element {
             rsx! {
                 DateField {
                     value: date(), onchange: move |next| date.set(next),
-                    format, exclude_date, close_on_change,
+                    min: min_day, max: max_day, format, exclude_date, today, close_on_change,
+                    validate: rules(validate),
                     size, radius, label, description, helper, placeholder, status, required, disabled,
                 }
             },

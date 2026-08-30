@@ -1,8 +1,8 @@
 //! What the DateField and DatePicker demos share: the caption and state
-//! controls of a field, and reading them back.
+//! controls of a field, the controls both demos have, and reading them back.
 
-use crate::components::{Control, DemoValues};
-use libero::chrono::{Datelike, NaiveDate};
+use crate::components::{Control, ControlKind, DemoValues};
+use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::FieldStatus;
 
 pub const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
@@ -58,6 +58,13 @@ pub fn field_controls() -> Vec<Control> {
     ]
 }
 
+/// Switches after every other control, so they share rows as one group.
+/// Stable, so each group keeps its order.
+pub fn switches_last(mut controls: Vec<Control>) -> Vec<Control> {
+    controls.sort_by_key(|control| control.kind == ControlKind::Switch);
+    controls
+}
+
 pub fn text_of(values: &DemoValues, name: &str, text: &str) -> Option<String> {
     is_on(values, name).then(|| text.to_string())
 }
@@ -67,5 +74,127 @@ pub fn shown(value: Option<impl std::fmt::Display>) -> String {
     match value {
         Some(value) => format!("value: {value}"),
         None => "value: None".to_string(),
+    }
+}
+
+/// Whether the demoed value type has a time, so the clock props apply.
+pub fn has_time(values: &DemoValues) -> bool {
+    matches!(
+        values.str("value").as_str(),
+        "time" | "date-time" | "date-time-range"
+    )
+}
+
+/// Whether the demoed value type is picked from days, so `exclude_date`
+/// applies.
+pub fn has_days(values: &DemoValues) -> bool {
+    !matches!(values.str("value").as_str(), "time" | "month" | "year")
+}
+
+/// The controls both demos have beyond their own: the limits, the clock's
+/// minute step and hour cycle, a fixed today and a posted name.
+pub fn shared_controls() -> Vec<Control> {
+    vec![
+        Control::toggle("step", ["1", "5", "15", "30"])
+            .default("1")
+            .hidden_when(|values| !has_time(values))
+            .code(|_, values| match values.str("step").as_str() {
+                "1" => vec![],
+                step => vec![format!("step: {step}")],
+            }),
+        Control::switch("min_max").code(|_, values| match is_on(values, "min_max") {
+            true => limits_code(values),
+            false => vec![],
+        }),
+        Control::switch("with_seconds").hidden_when(|values| !has_time(values)),
+        Control::switch("twelve_hour").hidden_when(|values| !has_time(values)),
+        Control::switch("today").code(|_, values| match is_on(values, "today") {
+            true => vec!["today: NaiveDate::from_ymd_opt(2026, 9, 20)".to_string()],
+            false => vec![],
+        }),
+    ]
+}
+
+pub fn step_of(values: &DemoValues) -> Option<u8> {
+    values.str("step").parse().ok()
+}
+
+/// `None` leaves the hour cycle to the theme or the time format.
+pub fn twelve_hour_of(values: &DemoValues) -> Option<bool> {
+    is_on(values, "twelve_hour").then_some(true)
+}
+
+pub fn today_of(values: &DemoValues) -> Option<NaiveDate> {
+    is_on(values, "today")
+        .then(|| NaiveDate::from_ymd_opt(2026, 9, 20))
+        .flatten()
+}
+
+fn limits_code(values: &DemoValues) -> Vec<String> {
+    let (min, max) = match values.str("value").as_str() {
+        "month" => (
+            "NaiveDate::from_ymd_opt(2026, 3, 1)",
+            "NaiveDate::from_ymd_opt(2026, 10, 1)",
+        ),
+        "year" => (
+            "NaiveDate::from_ymd_opt(2022, 1, 1)",
+            "NaiveDate::from_ymd_opt(2028, 1, 1)",
+        ),
+        "time" => (
+            "NaiveTime::from_hms_opt(8, 0, 0)",
+            "NaiveTime::from_hms_opt(18, 0, 0)",
+        ),
+        "date-time" | "date-time-range" => (
+            "NaiveDate::from_ymd_opt(2026, 9, 5).and_then(|day| day.and_hms_opt(8, 0, 0))",
+            "NaiveDate::from_ymd_opt(2026, 9, 25).and_then(|day| day.and_hms_opt(18, 0, 0))",
+        ),
+        _ => (
+            "NaiveDate::from_ymd_opt(2026, 9, 5)",
+            "NaiveDate::from_ymd_opt(2026, 9, 25)",
+        ),
+    };
+    vec![format!("min: {min}"), format!("max: {max}")]
+}
+
+type Limits<T> = (Option<T>, Option<T>);
+
+/// The days `min_max` limits a day, a range of days, a month or a year to.
+pub fn day_limits(values: &DemoValues) -> Limits<NaiveDate> {
+    if !is_on(values, "min_max") {
+        return (None, None);
+    }
+    match values.str("value").as_str() {
+        "month" => (
+            NaiveDate::from_ymd_opt(2026, 3, 1),
+            NaiveDate::from_ymd_opt(2026, 10, 1),
+        ),
+        "year" => (
+            NaiveDate::from_ymd_opt(2022, 1, 1),
+            NaiveDate::from_ymd_opt(2028, 1, 1),
+        ),
+        _ => (
+            NaiveDate::from_ymd_opt(2026, 9, 5),
+            NaiveDate::from_ymd_opt(2026, 9, 25),
+        ),
+    }
+}
+
+pub fn time_limits(values: &DemoValues) -> Limits<NaiveTime> {
+    match is_on(values, "min_max") {
+        true => (
+            NaiveTime::from_hms_opt(8, 0, 0),
+            NaiveTime::from_hms_opt(18, 0, 0),
+        ),
+        false => (None, None),
+    }
+}
+
+pub fn moment_limits(values: &DemoValues) -> Limits<NaiveDateTime> {
+    match is_on(values, "min_max") {
+        true => (
+            NaiveDate::from_ymd_opt(2026, 9, 5).and_then(|day| day.and_hms_opt(8, 0, 0)),
+            NaiveDate::from_ymd_opt(2026, 9, 25).and_then(|day| day.and_hms_opt(18, 0, 0)),
+        ),
+        false => (None, None),
     }
 }

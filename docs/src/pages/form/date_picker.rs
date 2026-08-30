@@ -1,4 +1,7 @@
-use super::date_common::{SIZES, is_on, is_weekend, shown};
+use super::date_common::{
+    SIZES, day_limits, has_days, has_time, is_on, is_weekend, moment_limits, shared_controls,
+    shown, step_of, switches_last, time_limits, today_of, twelve_hour_of,
+};
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
@@ -84,7 +87,7 @@ pub fn DatePickerPage() -> Element {
             Demo {
                 component: "DatePicker",
                 children_text: "",
-                controls: vec![
+                controls: switches_last([vec![
                     Control::select("value", KINDS).default("date").code(|_, values| {
                         match values.str("value").as_str() {
                             "month" => vec!["value: month() /* Option<NaiveDate> */".to_string(), "level: DateLevel::Month".to_string()],
@@ -97,20 +100,31 @@ pub fn DatePickerPage() -> Element {
                         }
                     }),
                     Control::slider("size", SIZES).default("md"),
-                    Control::toggle("variant", ["analog", "digital"]).default("analog").code(|_, values| {
+                    Control::toggle("variant", ["analog", "digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {
                         match values.str("variant").as_str() {
                             "digital" => vec![r#"variant: "digital""#.to_string()],
                             _ => vec![],
                         }
                     }),
-                    Control::switch("allow_deselect"),
-                    Control::switch("exclude_weekends").code(|_, values| {
+                    // A range defaults to two months, so `1` prints there.
+                    Control::toggle("columns", ["1", "2", "3"])
+                        .default("1")
+                        .hidden_when(|values| !matches!(values.str("value").as_str(), "date" | "date-range"))
+                        .code(|_, values| {
+                            let default = if values.str("value") == "date-range" { "2" } else { "1" };
+                            match values.str("columns").as_str() {
+                                columns if columns == default => vec![],
+                                columns => vec![format!("columns: {columns}")],
+                            }
+                        }),
+                    Control::switch("allow_deselect").hidden_when(|values| values.str("value") != "date"),
+                    Control::switch("exclude_weekends").hidden_when(|values| !has_days(values)).code(|_, values| {
                         match is_on(values, "exclude_weekends") {
                             true => vec!["exclude_date: |day: NaiveDate| day.weekday().num_days_from_monday() >= 5".to_string()],
                             false => vec![],
                         }
                     }),
-                ],
+                ], shared_controls()].concat()),
                 render: move |values: DemoValues| rsx! {
                     DatePickerDemo { values }
                 },
@@ -175,34 +189,79 @@ fn DatePickerDemo(values: DemoValues) -> Element {
     let variant = values.str("variant");
     let allow_deselect = is_on(&values, "allow_deselect");
     let exclude_date = is_on(&values, "exclude_weekends").then(|| Callback::new(is_weekend));
+    let columns = values.str("columns").parse::<usize>().ok();
+    let step = step_of(&values);
+    let with_seconds = is_on(&values, "with_seconds");
+    let twelve_hour = twelve_hour_of(&values);
+    let today = today_of(&values);
+    let (min_day, max_day) = day_limits(&values);
+    let (min_time, max_time) = time_limits(&values);
+    let (min_moment, max_moment) = moment_limits(&values);
 
     let (picker, readout) = match values.str("value").as_str() {
         "month" => (
-            rsx! { DatePicker { value: month(), onchange: move |next| month.set(next), level: DateLevel::Month, size } },
+            rsx! {
+                DatePicker {
+                    value: month(), onchange: move |next| month.set(next), level: DateLevel::Month,
+                    min: min_day, max: max_day, today, size,
+                }
+            },
             shown(month()),
         ),
         "year" => (
-            rsx! { DatePicker { value: year(), onchange: move |next| year.set(next), level: DateLevel::Year, size } },
+            rsx! {
+                DatePicker {
+                    value: year(), onchange: move |next| year.set(next), level: DateLevel::Year,
+                    min: min_day, max: max_day, today, size,
+                }
+            },
             shown(year()),
         ),
         "time" => (
-            rsx! { DatePicker { value: time(), onchange: move |next| time.set(next), variant, size } },
+            rsx! {
+                DatePicker {
+                    value: time(), onchange: move |next| time.set(next),
+                    min: min_time, max: max_time, variant, with_seconds, step, twelve_hour, size,
+                }
+            },
             shown(time()),
         ),
         "date-time" => (
-            rsx! { DatePicker { value: date_time(), onchange: move |next| date_time.set(next), variant, exclude_date, size } },
+            rsx! {
+                DatePicker {
+                    value: date_time(), onchange: move |next| date_time.set(next),
+                    min: min_moment, max: max_moment, exclude_date, today,
+                    variant, with_seconds, step, twelve_hour, size,
+                }
+            },
             shown(date_time()),
         ),
         "date-range" => (
-            rsx! { DatePicker { value: date_range(), onchange: move |next| date_range.set(next), exclude_date, size } },
+            rsx! {
+                DatePicker {
+                    value: date_range(), onchange: move |next| date_range.set(next),
+                    min: min_day, max: max_day, exclude_date, columns, today, size,
+                }
+            },
             shown(date_range()),
         ),
         "date-time-range" => (
-            rsx! { DatePicker { value: date_time_range(), onchange: move |next| date_time_range.set(next), variant, exclude_date, size } },
+            rsx! {
+                DatePicker {
+                    value: date_time_range(), onchange: move |next| date_time_range.set(next),
+                    min: min_moment, max: max_moment, exclude_date, today,
+                    variant, with_seconds, step, twelve_hour, size,
+                }
+            },
             shown(date_time_range()),
         ),
         _ => (
-            rsx! { DatePicker { value: date(), onchange: move |next| date.set(next), allow_deselect, exclude_date, size } },
+            rsx! {
+                DatePicker {
+                    value: date(), onchange: move |next| date.set(next),
+                    min: min_day, max: max_day, allow_deselect, exclude_date, columns, today, size,
+                }
+            },
             shown(date()),
         ),
     };

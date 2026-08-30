@@ -76,6 +76,19 @@ Emptied text commits `None`. Text that is not a value the field accepts -
 including one outside `min`/`max` or excluded - stays, and the field shows
 `DateDefaults::invalid_date` as its error.
 
+## Keyboard
+
+Focus opens the dropdown and stays in the text input, so typing works at once.
+
+| Key | In the text input | In the dropdown |
+|---|---|---|
+| Arrow Down | moves focus into the picker: the picked day, else today, or the clock | the picker's own keys ([DatePicker](date_picker.md#keyboard)) |
+| Enter | commits the typed text | picks; a pick that closes returns focus to the text |
+| Escape | closes the dropdown | closes it and returns focus to the text |
+
+Focus leaving both the text and the dropdown closes it. A mouse click in the
+dropdown leaves focus in the text.
+
 ## Posting
 
 The text input carries no `name`. A hidden input does, holding ISO 8601
