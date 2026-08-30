@@ -84,7 +84,7 @@ Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
 ## Known limits
 
 - A `Form` needs a `value` or rules for Rust to infer its type. A form with
-  neither currently writes `Form::<()> { .. }`.
+  neither writes `Form::<()> { .. }`.
 - Every bound field re-renders on any change to the form's value.
 
 ## Props

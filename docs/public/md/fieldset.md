@@ -80,7 +80,7 @@ The description, helper and status join the fieldset's `aria-describedby`.
 
 ## Known limits
 
-- A fieldset with no `value`, `path` or rules currently writes
+- A fieldset with no `value`, `path` or rules writes
   `Fieldset::<()> { .. }` so Rust can infer its type.
 
 ## Props
