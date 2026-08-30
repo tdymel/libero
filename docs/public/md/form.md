@@ -6,7 +6,7 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/f
 Index: [index.md](index.md) - every other component's markdown page
 Description: A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
 
-A `<form novalidate>` that holds the whole value in one signal, runs rules
+A `<form novalidate>` that holds the whole value in one store, runs rules
 across its fields, and validates on submit. How fields, fieldsets, rules, typed
 paths and binding fit together is explained in
 [Forms: Getting Started](form_getting_started.md).
@@ -27,7 +27,7 @@ struct Signup {
 
 #[component]
 fn SignupForm() -> Element {
-    let signup = use_signal(Signup::default);
+    let signup = use_store(Signup::default);
     let mut sent = use_signal(|| false);
 
     rsx! {
@@ -71,7 +71,7 @@ a line leaves once it is fixed, and none is added until the next submit.
 ```rust
 #[component]
 fn TermsForm() -> Element {
-    let terms = use_signal(Terms::default);
+    let terms = use_store(Terms::default);
     let form = use_form();
 
     rsx! {
@@ -146,7 +146,7 @@ Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Signal<V>` | - | The whole form's value, which `validate` checks and fields named by a path read and write. `V` is inferred from it. |
+| `value` | `Store<V>` | - | The whole form's value, which `validate` checks and fields named by a path read and write. `V` is inferred from it. |
 | `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. |
 | `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit nothing blocks. |
 | `summary_title` | `String` | - | A heading over the error summary. |

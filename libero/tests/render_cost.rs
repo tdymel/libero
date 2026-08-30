@@ -80,7 +80,7 @@ fn UnboundForm(children: Element) -> Element {
 
 #[component]
 fn BoundForm(children: Element) -> Element {
-    let value = use_signal(CostForm::default);
+    let value = use_store(CostForm::default);
     rsx! {
         Form {
             value,

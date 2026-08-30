@@ -92,7 +92,7 @@ fn derived_paths_bind_fields_to_the_form_value_and_nest_under_a_fieldset() {
     };
 
     fn app() -> Element {
-        let order = use_signal(|| Order {
+        let order = use_store(|| Order {
             name: "Tom".into(),
             address: Address {
                 street: "Hauptstr. 1".into(),
@@ -128,4 +128,67 @@ fn derived_paths_bind_fields_to_the_form_value_and_nest_under_a_fieldset() {
     ] {
         assert!(html.contains(expected), "missing {expected} in {html}");
     }
+}
+
+/// `#[derive(Fields)]` keys a field by its position, like `#[derive(Store)]`,
+/// so a write through the caller's own store selector reaches the bound field.
+#[test]
+fn a_write_through_a_derived_store_selector_reaches_the_bound_field() {
+    use std::cell::Cell;
+
+    use dioxus::prelude::*;
+    use libero::{
+        LiberoProvider,
+        components::{Fieldset, Form, TextField},
+    };
+
+    #[derive(Clone, PartialEq, Default, Fields, Store)]
+    pub struct Parcel {
+        pub street: String,
+        pub zip: String,
+    }
+
+    #[derive(Clone, PartialEq, Default, Fields, Store)]
+    pub struct Shipment {
+        pub name: String,
+        #[fields(nested)]
+        pub parcel: Parcel,
+    }
+
+    thread_local! {
+        static SHIPMENT: Cell<Option<Store<Shipment>>> = const { Cell::new(None) };
+    }
+
+    fn app() -> Element {
+        let shipment = use_store(Shipment::default);
+        SHIPMENT.with(|cell| cell.set(Some(shipment)));
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: shipment,
+                    TextField { name: Shipment::FIELDS.name() }
+                    Fieldset {
+                        path: Shipment::FIELDS.parcel(),
+                        TextField { name: Parcel::FIELDS.zip() }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    dom.in_runtime(|| {
+        let shipment = SHIPMENT.with(Cell::get).expect("mounted");
+        shipment.parcel().zip().set("10115".into());
+        shipment.name().set("Tom".into());
+    });
+    dom.process_events();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+
+    assert!(html.contains(r#"value="10115""#), "{html}");
+    assert!(html.contains(r#"value="Tom""#), "{html}");
 }

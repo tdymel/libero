@@ -32,7 +32,7 @@ struct Signup {
 
 #[component]
 fn SignupForm() -> Element {
-    let signup = use_signal(Signup::default);
+    let signup = use_store(Signup::default);
     let mut sent = use_signal(|| false);
 
     rsx! {
@@ -61,7 +61,7 @@ fn SignupForm() -> Element {
 
 const CONTROL_CODE: &str = r#"#[component]
 fn TermsForm() -> Element {
-    let terms = use_signal(Terms::default);
+    let terms = use_store(Terms::default);
     let form = use_form();
 
     rsx! {
@@ -120,7 +120,7 @@ pub fn FormPage() -> Element {
             markdown: "/md/form.md",
             properties: vec![
                 props("Form", vec![
-                    prop("value", "Signal<V>")
+                    prop("value", "Store<V>")
                         .doc("The whole form's value, which `validate` checks and fields named by a path read and write. `V` is inferred from it."),
                     prop("validate", "Validators<V>")
                         .doc("Composite rules over `value` - one rule, or an array. A rule naming fields with `.on(..)` shows its status on each of them."),
@@ -144,7 +144,7 @@ pub fn FormPage() -> Element {
                 Text {
                     "A "
                     Code { source: "<form novalidate>" }
-                    " that holds the whole value in one signal, runs rules across its fields, and "
+                    " that holds the whole value in one store, runs rules across its fields, and "
                     "validates on submit. How fields, fieldsets, rules and paths fit together is "
                     "explained in Forms: Getting Started."
                 }
@@ -233,7 +233,7 @@ pub fn FormPage() -> Element {
 
 #[component]
 fn SignupForm(summary_title: bool) -> Element {
-    let signup = use_signal(Signup::default);
+    let signup = use_store(Signup::default);
     let mut sent = use_signal(|| false);
 
     rsx! {
@@ -268,7 +268,7 @@ pub struct Terms {
 
 #[component]
 fn TermsForm() -> Element {
-    let terms = use_signal(Terms::default);
+    let terms = use_store(Terms::default);
     let form = use_form();
 
     rsx! {

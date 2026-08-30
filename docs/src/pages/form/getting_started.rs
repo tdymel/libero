@@ -74,7 +74,7 @@ struct Order {
 
 #[component]
 fn OrderForm() -> Element {
-    let order = use_signal(|| Order { same_billing: true, ..Default::default() });
+    let order = use_store(|| Order { same_billing: true, ..Default::default() });
     let mut placed = use_signal(|| false);
 
     rsx! {
@@ -151,10 +151,10 @@ TextField { name: Order::FIELDS.email() }         // binds and posts
 TextField { name: Order::FIELDS.same_billing() }  // does not compile: a TextField holds a String
 rule.on([Order::FIELDS.email()])                  // a composite rule over `Order` names a field"#;
 
-const BINDING_CODE: &str = r#"let order = use_signal(Order::default);
+const BINDING_CODE: &str = r#"let order = use_store(Order::default);
 
 Form {
-    value: order,                                  // the form holds the signal
+    value: order,                                  // the form holds the store
     TextField { name: Order::FIELDS.email() }      // reads and writes order.email
     Fieldset {
         path: Order::FIELDS.shipping(),            // everything inside is relative to order.shipping
@@ -198,7 +198,7 @@ pub fn FormGettingStartedPage() -> Element {
                     Code { source: "Fieldset" }
                     ", and a "
                     Code { source: "Form" }
-                    " holds the whole value in one signal, validates it and submits it. Rules live at "
+                    " holds the whole value in one store, validates it and submits it. Rules live at "
                     "the layer that can see the values they check, and typed paths from "
                     Code { source: "#[derive(Fields)]" }
                     " tie every layer to your own structs."
@@ -380,13 +380,16 @@ pub fn FormGettingStartedPage() -> Element {
                     "A "
                     Code { source: "Form" }
                     " takes your value as a "
-                    Code { source: "Signal" }
-                    ". A field inside it named by a path reads its value from that signal and writes "
+                    Code { source: "Store" }
+                    ", made with "
+                    Code { source: "use_store" }
+                    ". A field inside it named by a path reads its value from that store and writes "
                     "every change back - no "
                     Code { source: "value" }
                     " and "
                     Code { source: "oninput" }
-                    " pair per field. A "
+                    " pair per field. Typing re-renders only the field that changed, plus whatever "
+                    "reads the whole value, such as the form's own rules. A "
                     Code { source: "Fieldset" }
                     " with a "
                     Code { source: "path" }
@@ -447,7 +450,7 @@ fn AddressFieldset(
 
 #[component]
 fn OrderForm() -> Element {
-    let order = use_signal(|| Order {
+    let order = use_store(|| Order {
         same_billing: true,
         ..Default::default()
     });

@@ -54,8 +54,9 @@ base_props! {
         /// The whole form's value, which `validate` checks. A field inside
         /// whose `name` is a path into it - `Signup::FIELDS.email()` - reads
         /// and writes its place in it, unless it has a handler of its own.
+        /// A `Store`, so typing into one field re-renders that field only.
         #[props(default)]
-        value: Option<Signal<V>>,
+        value: Option<Store<V>>,
         /// Composite rules over `value`. Name the fields a rule concerns with
         /// `.on(..)` and its status shows on each of them.
         #[props(default, into)]

@@ -23,7 +23,7 @@ struct Address {
 
 #[component]
 fn AddressFieldset() -> Element {
-    let address = use_signal(Address::default);
+    let address = use_store(Address::default);
 
     rsx! {
         Fieldset {
@@ -110,7 +110,7 @@ pub fn FieldsetPage() -> Element {
                 prop("status", "FieldStatus")
                     .default("Valid")
                     .doc("The group's own status, under the fields. A bare `&str` is an error."),
-                prop("value", "Signal<V>")
+                prop("value", "Store<V>")
                     .doc("The group's own value, for a fieldset outside a `Form`. Inside one, the value is the form's at `path`."),
                 prop("validate", "Validators<V>")
                     .doc("Composite rules over `value` - one rule, or an array. With `.on(..)` a status lands on the named fields; without, under the fields."),
@@ -157,7 +157,7 @@ pub fn FieldsetPage() -> Element {
                     ". Field names and rule paths inside are relative to it. On its own a fieldset "
                     "takes a "
                     Code { source: "value" }
-                    " signal instead."
+                    " store instead."
                 }
                 CodeBlock { source: IN_FORM_CODE, language: "rust" }
             }
@@ -177,7 +177,7 @@ pub fn FieldsetPage() -> Element {
 
 #[component]
 fn AddressFieldset(description: bool, helper: bool, disabled: bool, status: String) -> Element {
-    let address = use_signal(Address::default);
+    let address = use_store(Address::default);
 
     rsx! {
         Fieldset {

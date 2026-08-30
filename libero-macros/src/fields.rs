@@ -30,7 +30,10 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
     let methods = named
         .named
         .iter()
-        .map(|field| {
+        .enumerate()
+        .map(|(index, field)| {
+            // The position `#[derive(Store)]` keys the field by, as a `u16`.
+            let index = index as u16;
             let ident = field.ident.as_ref().expect("a named field");
             let field_vis = &field.vis;
             let ty = &field.ty;
@@ -52,7 +55,11 @@ pub(crate) fn derive(input: TokenStream) -> Result<TokenStream> {
                             .downcast_mut::<#name>()
                             .map(|parent| &mut parent.#ident as &mut dyn ::std::any::Any)
                     }
-                    ::libero::components::Step { get, get_mut }
+                    ::libero::components::Step {
+                        get,
+                        get_mut,
+                        key: ::libero::components::StepKey::Index(#index),
+                    }
                 }
             };
             Ok(match is_nested(field)? {

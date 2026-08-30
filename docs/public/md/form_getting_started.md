@@ -8,7 +8,7 @@ Description: How libero forms are meant to be built - specialized fields, compos
 libero's forms are built in layers. A field holds one value. A specialized
 field is a field with a narrower contract. A composed part groups fields into
 one value with a [Fieldset](fieldset.md), and a [Form](form.md) holds the whole
-value in one signal, validates it and submits it. Rules live at the layer that
+value in one store, validates it and submits it. Rules live at the layer that
 can see the values they check, and typed paths from `#[derive(Fields)]` tie
 every layer to your own structs.
 
@@ -116,7 +116,7 @@ struct Order {
 
 #[component]
 fn OrderForm() -> Element {
-    let order = use_signal(|| Order { same_billing: true, ..Default::default() });
+    let order = use_store(|| Order { same_billing: true, ..Default::default() });
     let mut placed = use_signal(|| false);
 
     rsx! {
@@ -242,17 +242,18 @@ paths rooted at the rule's own value type.
 
 ## Binding
 
-A `Form` takes your value as a `Signal`. A field inside it named by a path
-reads its value from that signal and writes every change back - no `value` and
-`oninput` pair per field. A `Fieldset` with a `path` moves everything inside it
+A `Form` takes your value as a `Store`, made with `use_store`. A field inside it named by a path
+reads its value from that store and writes every change back - no `value` and
+`oninput` pair per field. Typing re-renders only the field that changed, plus
+whatever reads the whole value, such as the form's own rules. A `Fieldset` with a `path` moves everything inside it
 one level down, which is what lets a composed part use paths rooted at its own
 type.
 
 ```rust
-let order = use_signal(Order::default);
+let order = use_store(Order::default);
 
 Form {
-    value: order,                                  // the form holds the signal
+    value: order,                                  // the form holds the store
     TextField { name: Order::FIELDS.email() }      // reads and writes order.email
     Fieldset {
         path: Order::FIELDS.shipping(),            // everything inside is relative to order.shipping

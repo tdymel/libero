@@ -1,25 +1,41 @@
 use std::{any::Any, rc::Rc};
 
-use dioxus::prelude::*;
+use dioxus::{prelude::*, stores::scope::SelectorScope};
 
-use super::path::{Step, join, resolve, resolve_mut};
+use super::path::{Step, StepKey, join, resolve, resolve_mut};
 
 /// A form's value with its type erased, so a field typed only by its own
-/// value can read and write its place in it.
+/// value can read and write its place in it. Both take the path in two parts,
+/// the scope's steps and the field's, to spare a joined copy per render.
 pub(crate) trait Source {
-    fn read_value(&self, reader: &mut dyn FnMut(&dyn Any));
-    fn write_value(&self, writer: &mut dyn FnMut(&mut dyn Any));
+    /// Subscribes the caller to the value at the path and everything under it.
+    fn read_value(&self, path: [&[Step]; 2], reader: &mut dyn FnMut(&dyn Any));
+    /// Re-renders whoever reads the value at the path, under it, or the whole
+    /// of anything above it - never a sibling.
+    fn write_value(&self, path: [&[Step]; 2], writer: &mut dyn FnMut(&mut dyn Any));
 }
 
-impl<V: 'static> Source for Signal<V> {
-    /// Subscribes the reader's scope, like any signal read.
-    fn read_value(&self, reader: &mut dyn FnMut(&dyn Any)) {
-        reader(&*self.read());
+impl<V: 'static> Source for Store<V> {
+    fn read_value(&self, path: [&[Step]; 2], reader: &mut dyn FnMut(&dyn Any)) {
+        selector_at(self, path).track();
+        reader(&*self.peek());
     }
 
-    fn write_value(&self, writer: &mut dyn FnMut(&mut dyn Any)) {
-        writer(&mut *self.clone().write());
+    fn write_value(&self, path: [&[Step]; 2], writer: &mut dyn FnMut(&mut dyn Any)) {
+        let at = selector_at(self, path);
+        at.mark_dirty();
+        writer(&mut *at.write_untracked());
     }
+}
+
+/// The store's subscription node for the path.
+fn selector_at<V: 'static>(store: &Store<V>, path: [&[Step]; 2]) -> SelectorScope<WriteSignal<V>> {
+    path.iter()
+        .flat_map(|steps| steps.iter())
+        .fold(*store.selector(), |scope, step| match step.key {
+            StepKey::Index(index) => scope.child_unmapped(index),
+            StepKey::Name(name) => scope.hash_child_unmapped(&name),
+        })
 }
 
 /// What a `Form` or `Fieldset` shares so the fields inside bind by `name`: the
@@ -75,7 +91,7 @@ impl Binding {
         let source = self.source.as_ref()?;
         let mut reader = Some(reader);
         let mut result = None;
-        source.read_value(&mut |root| {
+        source.read_value([&self.steps, steps], &mut |root| {
             let value = resolve(root, &self.steps)
                 .and_then(|scope| resolve(scope, steps))
                 .and_then(|value| value.downcast_ref::<T>());
@@ -93,7 +109,7 @@ impl Binding {
             return false;
         };
         let mut next = Some(next);
-        source.write_value(&mut |root| {
+        source.write_value([&self.steps, steps], &mut |root| {
             let slot = resolve_mut(root, &self.steps)
                 .and_then(|scope| resolve_mut(scope, steps))
                 .and_then(|value| value.downcast_mut::<T>());

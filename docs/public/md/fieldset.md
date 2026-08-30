@@ -24,7 +24,7 @@ struct Address {
 
 #[component]
 fn AddressFieldset() -> Element {
-    let address = use_signal(Address::default);
+    let address = use_store(Address::default);
 
     rsx! {
         Fieldset {
@@ -57,7 +57,7 @@ fn AddressFieldset() -> Element {
 ## Inside a Form
 
 Give the group a `path`. Field names and rule paths inside are relative to it.
-On its own a fieldset takes a `value` signal instead.
+On its own a fieldset takes a `value` store instead.
 
 ```rust
 Form {
@@ -93,7 +93,7 @@ The description, helper and status join the fieldset's `aria-describedby`.
 | `description` | `Caption` | - | Under the label. |
 | `helper` | `Caption` | - | Under the fields. |
 | `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error. |
-| `value` | `Signal<V>` | - | The group's own value, for a fieldset outside a `Form`. Inside one the value is the form's, at `path`. |
+| `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. Inside one the value is the form's, at `path`. |
 | `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. |
 | `path` | `FieldName<V>` | - | Where the group sits in a `Form`'s value, e.g. `Order::FIELDS.address()`. Field names and rule paths inside are relative to it. |
 | `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included - their look, their own controls such as a `Select` trigger, and every native control. A field's own `disabled: false` cannot re-enable it. |

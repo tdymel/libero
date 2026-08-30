@@ -10,6 +10,21 @@ use dioxus::dioxus_core::{AttributeValue, IntoAttributeValue};
 pub struct Step {
     pub get: fn(&dyn Any) -> Option<&dyn Any>,
     pub get_mut: fn(&mut dyn Any) -> Option<&mut dyn Any>,
+    /// Where the step leads in the form store's subscriptions.
+    pub key: StepKey,
+}
+
+/// A step's place in a [`Store`](dioxus::prelude::Store)'s subscription tree,
+/// so a field subscribes to its own part of the form's value only.
+#[doc(hidden)]
+#[derive(Clone, Copy)]
+pub enum StepKey {
+    /// The field's position in its struct - the key `#[derive(Store)]` uses,
+    /// so a write through a derived store selector reaches the field too.
+    Index(u16),
+    /// A whole path spelled out, from [`path!`](crate::path), which cannot
+    /// know field positions. Hashed by the store.
+    Name(&'static str),
 }
 
 /// Follows `steps` from `root`. `None` when a step meets a type it was not
@@ -261,7 +276,11 @@ macro_rules! path {
                 .downcast_mut::<$root>()
                 .map(|root| &mut root.$first $(.$rest)* as &mut dyn ::std::any::Any)
         }
-        const STEPS: &[$crate::components::Step] = &[$crate::components::Step { get, get_mut }];
+        const STEPS: &[$crate::components::Step] = &[$crate::components::Step {
+            get,
+            get_mut,
+            key: $crate::components::StepKey::Name(concat!(stringify!($first) $(, ".", stringify!($rest))*)),
+        }];
         typed(
             |root: &$root| &root.$first $(.$rest)*,
             concat!(stringify!($first) $(, ".", stringify!($rest))*),

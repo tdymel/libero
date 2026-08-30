@@ -52,7 +52,7 @@ base_props! {
         /// The group's own value, for a fieldset outside a `Form`. Inside one
         /// the value is the form's, at `path`.
         #[props(default)]
-        value: Option<Signal<V>>,
+        value: Option<Store<V>>,
         /// Composite rules over `value`. A rule naming fields with `.on(..)`
         /// shows on each of them; one naming none shows under the fields.
         #[props(default, into)]

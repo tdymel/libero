@@ -109,7 +109,7 @@ fn an_explicit_status_never_waits_and_the_worst_one_shows() {
 #[test]
 fn a_composite_rule_lands_on_every_field_it_names() {
     fn app() -> Element {
-        let signup = use_signal(|| Signup {
+        let signup = use_store(|| Signup {
             password: "a".into(),
             confirm: "b".into(),
         });
@@ -151,7 +151,7 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
                 Fieldset {
                     label: "Address",
                     path: "address",
-                    value: use_signal(Address::default),
+                    value: use_store(Address::default),
                     validate: [
                         (|a: &Address| !a.zip.is_empty()).error("Zip needed").on([crate::path!(Address => zip)]),
                         (|_: &Address| false).warn("Check the whole address"),
@@ -175,7 +175,7 @@ fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
 #[test]
 fn the_summary_lists_field_errors_and_composite_errors() {
     fn app() -> Element {
-        let signup = use_signal(|| Signup {
+        let signup = use_store(|| Signup {
             password: "a".into(),
             confirm: "b".into(),
         });
@@ -217,7 +217,7 @@ struct Shipping {
 #[test]
 fn a_path_name_binds_the_field_to_the_form_value_and_posts_in_full() {
     fn app() -> Element {
-        let order = use_signal(|| Order {
+        let order = use_store(|| Order {
             email: "tom@libero.dev".into(),
             address: Shipping {
                 zip: "10115".into(),
@@ -247,7 +247,7 @@ fn a_path_name_binds_the_field_to_the_form_value_and_posts_in_full() {
 #[test]
 fn a_handler_or_a_string_name_leaves_the_field_unbound() {
     fn app() -> Element {
-        let order = use_signal(|| Order {
+        let order = use_store(|| Order {
             email: "tom@libero.dev".into(),
             address: Shipping::default(),
         });
@@ -276,7 +276,7 @@ fn a_bound_write_lands_in_the_form_value() {
     let mut dom = VirtualDom::new(|| rsx! {});
     dom.rebuild_in_place();
     dom.in_scope(dioxus::core::ScopeId::ROOT, || {
-        let order = Signal::new(Order::default());
+        let order = Store::new(Order::default());
         let form = Binding::root(Some(Rc::new(order) as Rc<dyn Source>));
         let address = crate::components::FieldName::from(crate::path!(Order => address));
         let fieldset = form.narrow(address.as_str(), address.steps());
@@ -286,6 +286,95 @@ fn a_bound_write_lands_in_the_form_value() {
         assert_eq!(order.peek().address.zip, "10115");
         assert_eq!(fieldset.prefix(), "address");
     });
+}
+
+thread_local! {
+    static EMAIL_RENDERS: Cell<usize> = const { Cell::new(0) };
+    static STREET_RENDERS: Cell<usize> = const { Cell::new(0) };
+    static ZIP_RENDERS: Cell<usize> = const { Cell::new(0) };
+    static SET_ZIP: std::cell::RefCell<Option<crate::components::form::Setter<String>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// A bound field reduced to what binding does: reads its value, counts its
+/// renders, and hands out its setter.
+#[component]
+fn Probe(#[props(into)] name: crate::components::FieldName<String>, renders: usize) -> Element {
+    let bound = crate::components::form::use_bound(&name, false);
+    let value = bound.value().unwrap_or_default();
+    let counter = match renders {
+        0 => &EMAIL_RENDERS,
+        1 => &STREET_RENDERS,
+        _ => &ZIP_RENDERS,
+    };
+    counter.with(|count| count.set(count.get() + 1));
+    if renders == 2 {
+        SET_ZIP.with(|cell| *cell.borrow_mut() = bound.setter());
+    }
+    rsx! { "{value}" }
+}
+
+#[test]
+fn a_bound_write_re_renders_only_the_field_it_names() {
+    #[derive(Clone, PartialEq, Default)]
+    struct Place {
+        email: String,
+        address: Address,
+    }
+    #[derive(Clone, PartialEq, Default)]
+    struct Address {
+        street: String,
+        zip: String,
+    }
+
+    fn app() -> Element {
+        let place = use_store(Place::default);
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: place,
+                    validate: [(|p: &Place| !p.email.is_empty()).error("Email needed")],
+                    Probe { name: crate::path!(Place => email), renders: 0 }
+                    Fieldset {
+                        path: crate::path!(Place => address),
+                        Probe { name: crate::path!(Address => street), renders: 1 }
+                        Probe { name: crate::path!(Address => zip), renders: 2 }
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    let counts =
+        || [&EMAIL_RENDERS, &STREET_RENDERS, &ZIP_RENDERS].map(|count| count.with(Cell::get));
+    let before = counts();
+
+    dom.in_runtime(|| {
+        SET_ZIP.with(|cell| {
+            cell.borrow()
+                .clone()
+                .expect("zip mounted")
+                .set("10115".into())
+        })
+    });
+    let html = settle(&mut dom);
+    let after = counts();
+
+    assert!(html.contains("10115"), "{html}");
+    assert_eq!(
+        after[2],
+        before[2] + 1,
+        "the written field did not re-render"
+    );
+    assert_eq!(
+        after[0], before[0],
+        "a field elsewhere in the form re-rendered"
+    );
+    assert_eq!(
+        after[1], before[1],
+        "a sibling field in the fieldset re-rendered"
+    );
 }
 
 thread_local! {
@@ -332,7 +421,7 @@ fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggl
 thread_local! {
     static HANDLE: Cell<Option<FormHandle>> = const { Cell::new(None) };
     static PASSED: Cell<Option<FormHandle>> = const { Cell::new(None) };
-    static LOGIN: Cell<Option<Signal<Login>>> = const { Cell::new(None) };
+    static LOGIN: Cell<Option<Store<Login>>> = const { Cell::new(None) };
 }
 
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -369,7 +458,7 @@ fn summary_of(html: &str) -> Option<&str> {
 
 /// Both fields fail while empty, so a submit lists two lines.
 fn login_app() -> Element {
-    let login = use_signal(Login::default);
+    let login = use_store(Login::default);
     LOGIN.with(|cell| cell.set(Some(login)));
     rsx! {
         LiberoProvider {
@@ -391,7 +480,7 @@ fn login_app() -> Element {
     }
 }
 
-fn login() -> Signal<Login> {
+fn login() -> Store<Login> {
     LOGIN.with(Cell::get).expect("the login app mounted")
 }
 
@@ -487,7 +576,7 @@ fn a_fixed_line_leaves_the_summary_and_a_new_error_does_not_join_it() {
 fn is_valid_follows_the_fields_without_revealing_them() {
     fn app() -> Element {
         let form = use_form();
-        let login = use_signal(Login::default);
+        let login = use_store(Login::default);
         LOGIN.with(|cell| cell.set(Some(login)));
         rsx! {
             LiberoProvider {
