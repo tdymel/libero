@@ -153,6 +153,7 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
         .attr("required", required)
+        .attr("data-controlled", true)
         .event("onchange", move |event: FormEvent| {
             if let Ok(index) = event.value().parse::<usize>() {
                 pick.call(index);

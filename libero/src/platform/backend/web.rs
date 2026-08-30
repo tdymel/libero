@@ -16,6 +16,14 @@ pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> 
     Some(Box::new(WebElement { element }))
 }
 
+/// What a component-driven control held before a form reset.
+enum Controlled {
+    Input(String, bool),
+    Text(String),
+    Select(i32),
+    Other,
+}
+
 pub(super) fn document() -> Option<Box<dyn DocumentApi>> {
     Some(Box::new(WebDocument))
 }
@@ -135,8 +143,52 @@ impl ElementApi for WebElement {
         Ok(())
     }
 
+    /// The native reset, then every control marked `data-controlled` gets its
+    /// value back: its component still holds that value, and dioxus never
+    /// sets a value again that did not change, so the control would show its
+    /// default while the component's state says otherwise.
     fn reset(&self) -> Result<(), PlatformError> {
-        self.form()?.reset();
+        let form = self.form()?;
+        let marked = form
+            .query_selector_all("[data-controlled]")
+            .map_err(|_| PlatformError::NotFound)?;
+        let saved: Vec<_> = (0..marked.length())
+            .filter_map(|index| marked.item(index))
+            .map(|node| {
+                let state = if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
+                    Controlled::Input(input.value(), input.checked())
+                } else if let Some(text) = node.dyn_ref::<web_sys::HtmlTextAreaElement>() {
+                    Controlled::Text(text.value())
+                } else if let Some(select) = node.dyn_ref::<web_sys::HtmlSelectElement>() {
+                    Controlled::Select(select.selected_index())
+                } else {
+                    Controlled::Other
+                };
+                (node, state)
+            })
+            .collect();
+        form.reset();
+        for (node, state) in saved {
+            match state {
+                Controlled::Input(value, checked) => {
+                    if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
+                        input.set_value(&value);
+                        input.set_checked(checked);
+                    }
+                }
+                Controlled::Text(value) => {
+                    if let Some(text) = node.dyn_ref::<web_sys::HtmlTextAreaElement>() {
+                        text.set_value(&value);
+                    }
+                }
+                Controlled::Select(index) => {
+                    if let Some(select) = node.dyn_ref::<web_sys::HtmlSelectElement>() {
+                        select.set_selected_index(index);
+                    }
+                }
+                Controlled::Other => {}
+            }
+        }
         Ok(())
     }
 

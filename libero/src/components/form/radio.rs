@@ -173,6 +173,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .attr("name", props.name)
         .attr("tabindex", props.tabindex)
         .attr("checked", checked)
+        .attr("data-controlled", true)
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("aria-label", props.aria_label)

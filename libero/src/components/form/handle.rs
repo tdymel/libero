@@ -95,8 +95,9 @@ impl FormHandle {
     }
 
     /// Back to the start: the form's value to its default, nothing touched,
-    /// not submitted, no summary. On the web the controls not bound to the
-    /// value reset too, the way a native reset does.
+    /// not submitted, no summary. On the web uncontrolled controls reset too,
+    /// the way a native reset does. A field with a `value` and handler of its
+    /// own keeps what it shows - reset that state yourself.
     pub fn reset(&self) {
         // Before the value, so a bound control ends on the value's default
         // rather than on its markup default.

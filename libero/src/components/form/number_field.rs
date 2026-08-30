@@ -259,6 +259,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .attr("aria-valuemax", max.map(|max| max.to_string()))
         .attr("name", bound.name().map(str::to_string))
         .attr("value", display)
+        .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("required", required)

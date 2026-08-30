@@ -192,6 +192,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .aria(input)
         .attr("type", "checkbox")
         .attr("checked", checked && !indeterminate)
+        .attr("data-controlled", true)
         .attr("aria-checked", indeterminate.then_some("mixed"))
         .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)

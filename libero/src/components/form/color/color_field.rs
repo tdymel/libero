@@ -235,6 +235,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .attr_default("type", "text")
         .attr("name", bound.name().map(str::to_string))
         .attr("value", text)
+        .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("required", required)

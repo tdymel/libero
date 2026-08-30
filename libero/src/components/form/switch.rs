@@ -197,6 +197,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .attr("type", "checkbox")
         .attr("role", "switch")
         .attr("checked", checked)
+        .attr("data-controlled", true)
         .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
         .attr("required", required)

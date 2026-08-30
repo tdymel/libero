@@ -56,7 +56,8 @@ pub fn attributes_of(html: &str, tag: &str) -> BTreeMap<String, String> {
     let mut rest = &open_tag[format!("<{tag}").len()..];
 
     while let Some(equals) = rest.find("=\"") {
-        let name = rest[..equals].trim();
+        // An unquoted value before it (`checked=true`) is not part of the name.
+        let name = rest[..equals].split_whitespace().last().unwrap_or_default();
         let value_start = equals + 2;
         let value_end = value_start
             + rest[value_start..]

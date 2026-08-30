@@ -338,6 +338,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             .element(&search)
             .attr_default("type", "text")
             .attr("value", query())
+            .attr("data-controlled", true)
             .attr("placeholder", search_placeholder)
             // Ours is the list underneath; the browser's would cover it.
             .attr("autocomplete", "off")

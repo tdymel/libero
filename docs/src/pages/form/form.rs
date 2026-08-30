@@ -185,7 +185,9 @@ pub fn FormPage() -> Element {
                     " submits as the submit button would. "
                     Code { source: "reset()" }
                     " puts the value back to its default and clears touched fields, the submit and "
-                    "the summary. "
+                    "the summary. A field with its own "
+                    Code { source: "value" }
+                    " and handler keeps what it shows - reset that state yourself. "
                     Code { source: "is_valid()" }
                     " checks without showing anything and follows changes. "
                     Code { source: "clear_summary()" }

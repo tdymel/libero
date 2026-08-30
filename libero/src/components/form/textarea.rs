@@ -98,6 +98,8 @@ pub fn Textarea(props: TextareaProps) -> Element {
     let textarea = field
         .aria(control)
         .attr("name", bound.name().map(str::to_string))
+        // A form reset leaves the text alone when this component sets it.
+        .attr("data-controlled", value.is_some())
         .attr("value", value)
         .attr("rows", props.rows.to_string())
         .attr("placeholder", props.placeholder)

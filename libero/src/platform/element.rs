@@ -34,8 +34,9 @@ pub trait ElementApi {
     fn blur(&self) -> Result<(), PlatformError>;
     fn click(&self) -> Result<(), PlatformError>;
 
-    /// A `<form>`'s own reset: every control back to its default value. A
-    /// control whose value a component sets keeps getting it from there.
+    /// A `<form>`'s own reset: every control back to its default value, except
+    /// one marked `data-controlled`, whose component sets its value - that one
+    /// keeps what it showed.
     fn reset(&self) -> Result<(), PlatformError>;
 
     /// Submits a `<form>` as its submit button would, so `onsubmit` fires with

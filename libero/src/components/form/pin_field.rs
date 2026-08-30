@@ -354,6 +354,7 @@ pub fn PinField(props: PinFieldProps) -> Element {
                 },
             )
             .attr("value", cell.map(String::from).unwrap_or_default())
+            .attr("data-controlled", true)
             .attr("data-pin-index", index.to_string())
             .attr("disabled", disabled)
             .attr("readonly", readonly)
