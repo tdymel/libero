@@ -190,13 +190,15 @@ enum Column {
     Meridiem,
 }
 
-/// One option of a digital column.
+/// One option of a digital column. Plain values only: what a click picks is
+/// worked out from the column and the index, so the options do not change
+/// when another column's value does.
+#[derive(Clone, PartialEq)]
 struct Choice {
     key: String,
     label: String,
     selected: bool,
     disabled: bool,
-    pick: NaiveTime,
 }
 
 #[component]
@@ -245,7 +247,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     });
     // The digital option the keyboard is on, and a selector to focus after the
     // next render.
-    let mut active = use_signal(|| None::<(Column, usize)>);
+    let active = use_signal(|| None::<(Column, usize)>);
     let mut focus_request = use_signal(|| None::<String>);
     use_effect(move || {
         let Some(selector) = focus_request() else {
@@ -257,90 +259,70 @@ pub(super) fn Clock(props: ClockProps) -> Element {
             .and_then(|element| element.focus());
     });
 
-    // One tab stop per column: the option the keyboard is on, else the picked
-    // one, else the first enabled. Up and Down, Home and End move within it.
-    let column = move |column: Column,
-                       label: Option<&'static str>,
-                       handle: ElementHandle,
-                       choices: Vec<Choice>| {
-        let enabled: Vec<usize> = choices
-            .iter()
-            .enumerate()
-            .filter(|(_, choice)| !choice.disabled)
-            .map(|(index, _)| index)
-            .collect();
-        let stop = active()
-            .filter(|(active, index)| *active == column && enabled.contains(index))
-            .map(|(_, index)| index)
-            .or_else(|| {
-                choices
-                    .iter()
-                    .position(|choice| choice.selected && !choice.disabled)
-            })
-            .or_else(|| enabled.first().copied());
-        let onkeydown = move |event: KeyboardEvent| {
-            let Some(at) = stop.and_then(|stop| enabled.iter().position(|index| *index == stop))
-            else {
-                return;
-            };
-            let next = match event.key() {
-                Key::ArrowDown => enabled[(at + 1).min(enabled.len() - 1)],
-                Key::ArrowUp => enabled[at.saturating_sub(1)],
-                Key::Home => enabled[0],
-                Key::End => enabled[enabled.len() - 1],
-                _ => return,
-            };
-            event.prevent_default();
-            active.set(Some((column, next)));
-            focus_request.set(Some(format!(
-                "[data-column='{column:?}'] [data-index='{next}']"
-            )));
-        };
-        let options = choices.into_iter().enumerate().map(|(index, choice)| {
-            let pick = choice.pick;
-            rsx! {
-                button {
-                    key: "{choice.key}",
-                    r#type: "button",
-                    "data-slot": "option",
-                    "data-index": "{index}",
-                    "data-selected": choice.selected.then_some("true"),
-                    disabled: choice.disabled,
-                    tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
-                    onfocus: move |_| active.set(Some((column, index))),
-                    onclick: move |_| emit(pick),
-                    "{choice.label}"
-                }
-            }
-        });
-        rsx! {
-            div {
-                "data-slot": "column",
-                "data-column": "{column:?}",
-                "aria-label": label,
-                onmounted: handle.mount(),
-                onkeydown,
-                {options}
-            }
-        }
+    // The hour label at an index of the hours column.
+    let hour_label = move |index: usize| match (twelve, index) {
+        (true, 0) => 12,
+        (_, index) => index as u32,
     };
+    // One identity across renders, so the columns' props compare equal and a
+    // pick in one column skips the others.
+    let pick = use_callback(move |(column, index): (Column, usize)| {
+        let (hour, minute, second) = (base.hour(), base.minute(), base.second());
+        emit(match column {
+            Column::Hours => at(hour_of(hour_label(index)), minute, second),
+            Column::Minutes => at(hour, index as u32 * u32::from(step), second),
+            Column::Seconds => at(hour, minute, index as u32),
+            Column::Meridiem => at(hour % 12 + if index == 1 { 12 } else { 0 }, minute, second),
+        });
+    });
+
+    // The same for a mark on the analog face: an hour moves the hand on to
+    // the minutes.
+    let pick_mark = use_callback(move |(shown, inner, index): (Hand, bool, u32)| {
+        let mut hand = hand;
+        match shown {
+            Hand::Hour => {
+                let hour = match (inner, index) {
+                    (false, 0) => hour_of(12),
+                    (false, index) => hour_of(index),
+                    (true, 0) => 0,
+                    (true, index) => index + 12,
+                };
+                emit(at(hour, base.minute(), 0));
+                hand.set(Hand::Minute);
+            }
+            Hand::Minute => emit(at(base.hour(), index * 5, 0)),
+        }
+    });
 
     let body = match variant {
         TimePickerVariant::Digital => {
-            let hour_labels: Vec<u32> = match twelve {
-                true => std::iter::once(12).chain(1..12).collect(),
-                false => (0..24).collect(),
+            let column = move |column: Column,
+                               label: Option<&'static str>,
+                               handle: ElementHandle,
+                               choices: Vec<Choice>| {
+                rsx! {
+                    ClockColumn {
+                        column,
+                        label,
+                        handle,
+                        choices,
+                        focusable,
+                        active,
+                        focus_request,
+                        onpick: pick,
+                    }
+                }
             };
-            let hours = hour_labels
-                .into_iter()
-                .map(|label| {
+            let hours = (0..if twelve { 12 } else { 24 })
+                .map(|index| {
+                    let label = hour_label(index);
                     let hour = hour_of(label);
                     Choice {
                         key: label.to_string(),
                         label: format!("{label:02}"),
                         selected: value.is_some_and(|value| value.hour() == hour),
                         disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
-                        pick: at(hour, base.minute(), base.second()),
                     }
                 })
                 .collect();
@@ -351,7 +333,6 @@ pub(super) fn Clock(props: ClockProps) -> Element {
                     label: format!("{minute:02}"),
                     selected: value.is_some_and(|value| value.minute() == minute),
                     disabled: !within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
-                    pick: at(base.hour(), minute, base.second()),
                 })
                 .collect();
             let seconds = with_seconds.then(|| {
@@ -363,7 +344,6 @@ pub(super) fn Clock(props: ClockProps) -> Element {
                             label: format!("{second:02}"),
                             selected: value.is_some_and(|value| value.second() == second),
                             disabled: !within(time, time),
-                            pick: time,
                         }
                     })
                     .collect();
@@ -381,14 +361,12 @@ pub(super) fn Clock(props: ClockProps) -> Element {
                         label: names.am.into(),
                         selected: value.is_some() && !pm,
                         disabled: false,
-                        pick: at(base.hour() % 12, base.minute(), base.second()),
                     },
                     Choice {
                         key: "pm".into(),
                         label: names.pm.into(),
                         selected: value.is_some() && pm,
                         disabled: false,
-                        pick: at(base.hour() % 12 + 12, base.minute(), base.second()),
                     },
                 ];
                 column(Column::Meridiem, None, meridiem_column, choices)
@@ -403,88 +381,43 @@ pub(super) fn Clock(props: ClockProps) -> Element {
             }
         }
         TimePickerVariant::Analog => {
-            let mark = move |index: u32,
-                             radius: f64,
-                             label: String,
-                             selected: bool,
-                             disabled: bool,
-                             pick: NaiveTime,
-                             next: Option<Hand>| {
-                let angle = f64::from(index) * std::f64::consts::PI / 6.0;
-                let style = format!(
-                    "left: {:.3}%; top: {:.3}%; transform: translate(-50%, -50%)",
-                    50.0 + radius * angle.sin(),
-                    50.0 - radius * angle.cos()
-                );
-                rsx! {
-                    button {
-                        key: "{label}",
-                        r#type: "button",
-                        "data-slot": "mark",
-                        "data-selected": selected.then_some("true"),
-                        disabled,
-                        // The face is the tab stop; a click must not move focus
-                        // onto a mark the hand change is about to replace.
-                        tabindex: "-1",
-                        onmousedown: move |event| event.prevent_default(),
-                        style,
-                        onclick: move |_| {
-                            emit(pick);
-                            if let Some(next) = next {
-                                hand.set(next);
-                            }
-                        },
-                        "{label}"
-                    }
-                }
-            };
-            let marks: Vec<Element> = match hand() {
+            let marks: Vec<Mark> = match hand() {
                 Hand::Hour => {
-                    let mut marks: Vec<Element> = (0..12u32)
-                        .map(|index| {
-                            let label = if index == 0 { 12 } else { index };
-                            let hour = hour_of(label);
-                            mark(
-                                index,
-                                40.0,
-                                label.to_string(),
-                                value.is_some_and(|value| value.hour() == hour),
-                                !within(at(hour, 0, 0), at(hour, 59, 59)),
-                                at(hour, base.minute(), 0),
-                                Some(Hand::Minute),
-                            )
-                        })
-                        .collect();
+                    let outer = (0..12u32).map(|index| {
+                        let label = if index == 0 { 12 } else { index };
+                        let hour = hour_of(label);
+                        Mark {
+                            index,
+                            inner: false,
+                            label: label.to_string(),
+                            selected: value.is_some_and(|value| value.hour() == hour),
+                            disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
+                        }
+                    });
                     // A 24-hour face rings 13 to 00 inside 1 to 12.
-                    if !twelve {
-                        marks.extend((0..12u32).map(|index| {
-                            let hour = if index == 0 { 0 } else { index + 12 };
-                            mark(
-                                index,
-                                26.0,
-                                format!("{hour:02}"),
-                                value.is_some_and(|value| value.hour() == hour),
-                                !within(at(hour, 0, 0), at(hour, 59, 59)),
-                                at(hour, base.minute(), 0),
-                                Some(Hand::Minute),
-                            )
-                        }));
-                    }
-                    marks
+                    let inner = (0..12u32).filter(|_| !twelve).map(|index| {
+                        let hour = if index == 0 { 0 } else { index + 12 };
+                        Mark {
+                            index,
+                            inner: true,
+                            label: format!("{hour:02}"),
+                            selected: value.is_some_and(|value| value.hour() == hour),
+                            disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
+                        }
+                    });
+                    outer.chain(inner).collect()
                 }
                 Hand::Minute => (0..12u32)
                     .map(|index| {
                         let minute = index * 5;
-                        mark(
+                        Mark {
                             index,
-                            40.0,
-                            format!("{minute:02}"),
-                            value.is_some_and(|value| value.minute() == minute),
-                            minute % u32::from(step) != 0
+                            inner: false,
+                            label: format!("{minute:02}"),
+                            selected: value.is_some_and(|value| value.minute() == minute),
+                            disabled: minute % u32::from(step) != 0
                                 || !within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
-                            at(base.hour(), minute, 0),
-                            None,
-                        )
+                        }
                     })
                     .collect(),
             };
@@ -635,7 +568,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
                         "data-slot": "pivot",
                         style: "left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%)",
                     }
-                    {marks.into_iter()}
+                    ClockMarks { hand: hand(), marks, onpick: pick_mark }
                 }
             }
         }
@@ -669,6 +602,163 @@ pub(super) fn Clock(props: ClockProps) -> Element {
             {hidden}
         },
     )
+}
+
+/// A column of the digital variant. Its own scope: a pick in another column
+/// leaves its props equal, so it skips the re-render.
+#[derive(Props, Clone, PartialEq)]
+struct ClockColumnProps {
+    column: Column,
+    #[props(!optional)]
+    label: Option<&'static str>,
+    handle: ElementHandle,
+    choices: Vec<Choice>,
+    focusable: bool,
+    /// The option the keyboard is on, in whichever column.
+    active: Signal<Option<(Column, usize)>>,
+    /// A selector the clock focuses after the next render.
+    focus_request: Signal<Option<String>>,
+    onpick: Callback<(Column, usize)>,
+}
+
+/// One tab stop: the option the keyboard is on, else the picked one, else the
+/// first enabled. Up and Down, Home and End move within the column.
+#[component]
+fn ClockColumn(props: ClockColumnProps) -> Element {
+    let ClockColumnProps {
+        column,
+        label,
+        handle,
+        choices,
+        focusable,
+        mut active,
+        mut focus_request,
+        onpick,
+    } = props;
+    let enabled: Vec<usize> = choices
+        .iter()
+        .enumerate()
+        .filter(|(_, choice)| !choice.disabled)
+        .map(|(index, _)| index)
+        .collect();
+    let stop = active()
+        .filter(|(active, index)| *active == column && enabled.contains(index))
+        .map(|(_, index)| index)
+        .or_else(|| {
+            choices
+                .iter()
+                .position(|choice| choice.selected && !choice.disabled)
+        })
+        .or_else(|| enabled.first().copied());
+    let onkeydown = move |event: KeyboardEvent| {
+        let Some(at) = stop.and_then(|stop| enabled.iter().position(|index| *index == stop)) else {
+            return;
+        };
+        let next = match event.key() {
+            Key::ArrowDown => enabled[(at + 1).min(enabled.len() - 1)],
+            Key::ArrowUp => enabled[at.saturating_sub(1)],
+            Key::Home => enabled[0],
+            Key::End => enabled[enabled.len() - 1],
+            _ => return,
+        };
+        event.prevent_default();
+        active.set(Some((column, next)));
+        focus_request.set(Some(format!(
+            "[data-column='{column:?}'] [data-index='{next}']"
+        )));
+    };
+    let options = choices.into_iter().enumerate().map(|(index, choice)| {
+        rsx! {
+            button {
+                key: "{choice.key}",
+                r#type: "button",
+                "data-slot": "option",
+                "data-index": "{index}",
+                "data-selected": choice.selected.then_some("true"),
+                disabled: choice.disabled,
+                tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
+                onfocus: move |_| active.set(Some((column, index))),
+                onclick: move |_| onpick.call((column, index)),
+                "{choice.label}"
+            }
+        }
+    });
+    rsx! {
+        div {
+            "data-slot": "column",
+            "data-column": "{column:?}",
+            "aria-label": label,
+            onmounted: handle.mount(),
+            onkeydown,
+            {options}
+        }
+    }
+}
+
+/// One mark on the analog face.
+#[derive(Clone, PartialEq)]
+struct Mark {
+    /// Its place on the ring, 0 at the top.
+    index: u32,
+    /// On the inner ring of a 24-hour face.
+    inner: bool,
+    label: String,
+    selected: bool,
+    disabled: bool,
+}
+
+/// The marks on the analog face. Its own scope with plain values, so a value
+/// change that moves no mark - a minute, while the face shows hours - skips
+/// it.
+#[derive(Props, Clone, PartialEq)]
+struct ClockMarksProps {
+    hand: Hand,
+    marks: Vec<Mark>,
+    onpick: Callback<(Hand, bool, u32)>,
+}
+
+#[component]
+fn ClockMarks(props: ClockMarksProps) -> Element {
+    let ClockMarksProps {
+        hand,
+        marks,
+        onpick,
+    } = props;
+    let marks = marks.into_iter().map(|mark| {
+        let Mark {
+            index,
+            inner,
+            label,
+            selected,
+            disabled,
+        } = mark;
+        let radius = if inner { 26.0 } else { 40.0 };
+        let angle = f64::from(index) * std::f64::consts::PI / 6.0;
+        let style = format!(
+            "left: {:.3}%; top: {:.3}%; transform: translate(-50%, -50%)",
+            50.0 + radius * angle.sin(),
+            50.0 - radius * angle.cos()
+        );
+        rsx! {
+            button {
+                key: "{label}",
+                r#type: "button",
+                "data-slot": "mark",
+                "data-selected": selected.then_some("true"),
+                disabled,
+                // The face is the tab stop; a click must not move focus
+                // onto a mark the hand change is about to replace.
+                tabindex: "-1",
+                onmousedown: move |event| event.prevent_default(),
+                style,
+                onclick: move |_| onpick.call((hand, inner, index)),
+                "{label}"
+            }
+        }
+    });
+    rsx! {
+        {marks}
+    }
 }
 
 /// Scrolls a column so its picked option sits at the top. The reads start

@@ -236,6 +236,7 @@ fn render_cost_per_component() {
         "TimePicker" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "digital" } }
         "TimePicker pick" { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange: move |_| {}, variant: "digital" } }
         "TimePicker-analog" { TimePicker { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {}, variant: "analog" } }
+        "TimePicker-analog pick" { TimePicker { value: NaiveTime::from_hms_opt(9, if flip() { 35 } else { 30 }, 0), onchange: move |_| {}, variant: "analog" } }
         "MonthPicker" { MonthPicker { value: NaiveDate::from_ymd_opt(2026, 9, 1), onchange: move |_| {} } }
         "DateRangePicker" { DateRangePicker { onchange: move |_| {} } }
         // A range end moving, as a hover preview does.
