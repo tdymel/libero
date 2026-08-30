@@ -449,7 +449,10 @@ fn validate_shows_the_summary_and_reset_clears_it_with_the_value() {
     });
     let reset = settle(&mut dom);
     assert!(summary_of(&reset).is_none(), "the summary survived a reset");
-    assert!(!reset.contains("needed"), "a status survived a reset: {reset}");
+    assert!(
+        !reset.contains("needed"),
+        "a status survived a reset: {reset}"
+    );
     assert_eq!(dom.in_runtime(|| login().peek().clone()), Login::default());
 }
 
@@ -474,7 +477,10 @@ fn a_fixed_line_leaves_the_summary_and_a_new_error_does_not_join_it() {
 
     dom.in_runtime(|| login().write().name = "Tom".into());
     let all_fixed = settle(&mut dom);
-    assert!(summary_of(&all_fixed).is_none(), "an empty summary still shows");
+    assert!(
+        summary_of(&all_fixed).is_none(),
+        "an empty summary still shows"
+    );
 }
 
 #[test]
@@ -498,7 +504,10 @@ fn is_valid_follows_the_fields_without_revealing_them() {
     let (mut dom, _) = mount(app);
     let before = settle(&mut dom);
     assert!(before.contains(">invalid<"), "{before}");
-    assert!(!before.contains("Email needed"), "is_valid revealed a status");
+    assert!(
+        !before.contains("Email needed"),
+        "is_valid revealed a status"
+    );
 
     dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
     let after = settle(&mut dom);

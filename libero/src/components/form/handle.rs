@@ -64,7 +64,10 @@ impl FormHandle {
     }
 
     fn control(&self) -> Option<Control> {
-        self.control.try_peek().ok().and_then(|control| control.clone())
+        self.control
+            .try_peek()
+            .ok()
+            .and_then(|control| control.clone())
     }
 
     /// Checks the form the way a submit does, without `onsubmit`: every status

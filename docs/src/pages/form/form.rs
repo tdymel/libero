@@ -2,8 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, pr
 use dioxus::prelude::*;
 use libero::components::{
     Button, Checkbox, Code, CodeBlock, FieldName, Fields, Fieldset, Flex, Form, PasswordField,
-    Rule, Text, TextField, Validators, is_email, min_length, not_empty, use_form,
-    use_form_context,
+    Rule, Text, TextField, Validators, is_email, min_length, not_empty, use_form, use_form_context,
 };
 
 #[derive(Clone, PartialEq, Default, Fields)]
