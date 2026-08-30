@@ -1,8 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Checkbox, Code, FieldName, Fields, Fieldset, Form, PasswordField, Rule, Text,
-    TextField, Validators, is_email, min_length, not_empty,
+    Button, Checkbox, Code, CodeBlock, FieldName, Fields, Fieldset, Flex, Form, PasswordField,
+    Rule, Text, TextField, Validators, is_email, min_length, not_empty, use_form,
+    use_form_context,
 };
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -59,6 +60,44 @@ fn SignupForm() -> Element {
     }
 }"#;
 
+const CONTROL_CODE: &str = r#"#[component]
+fn TermsForm() -> Element {
+    let terms = use_signal(Terms::default);
+    let form = use_form();
+
+    rsx! {
+        Form {
+            form,
+            value: terms,
+            EmailField { label: "Email", name: Terms::FIELDS.email(), validate: not_empty.error("Enter your email.") }
+            Checkbox { label: "I accept the terms", name: Terms::FIELDS.accepted(), validate: not_empty.error("Accept the terms to continue.") }
+            Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+            Flex { gap: "sm",
+                Button { r#type: "submit", "Send" }
+                CheckButton {}
+                Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
+            }
+        }
+    }
+}
+
+/// Anything inside a form reaches its handle without a prop.
+#[component]
+fn CheckButton() -> Element {
+    let form = use_form_context();
+    rsx! {
+        Button {
+            variant: "tonal",
+            onclick: move |_| {
+                if let Some(form) = form {
+                    form.validate();
+                }
+            },
+            "Check"
+        }
+    }
+}"#;
+
 fn form_code(values: &DemoValues, _: &str) -> String {
     FORM_CODE.replace(
         "__SUMMARY__",
@@ -90,6 +129,8 @@ pub fn FormPage() -> Element {
                         .doc("Fires on a submit nothing blocks. Without an `action` the browser's own submit is cancelled."),
                     prop("summary_title", "String")
                         .doc("A heading over the error summary."),
+                    prop("form", "FormHandle")
+                        .doc("Controls the form from outside, made with `use_form()`. Without it the form makes its own, which `use_form_context()` reaches from inside."),
                     prop("children", "Element")
                         .doc("The fields, fieldsets and buttons."),
                 ]),
@@ -125,8 +166,43 @@ pub fn FormPage() -> Element {
                     Code { source: "onsubmit" }
                     " fires; the browser's own submit is cancelled unless the form has an "
                     Code { source: "action" }
-                    ". Warnings never block. The summary is a snapshot, refreshed on the next submit."
+                    ". Warnings never block. The summary keeps the problems of that submit: a line "
+                    "leaves once it is fixed, and none is added until the next submit."
                 }
+            }
+            DocSection { title: "Controlling a form",
+                Text {
+                    Code { source: "use_form()" }
+                    " makes a handle to pass as "
+                    Code { source: "form" }
+                    ". Inside a form, "
+                    Code { source: "use_form_context()" }
+                    " returns the same handle. "
+                    Code { source: "validate()" }
+                    " checks like a submit without calling "
+                    Code { source: "onsubmit" }
+                    " and returns whether nothing is an error. "
+                    Code { source: "submit()" }
+                    " submits as the submit button would. "
+                    Code { source: "reset()" }
+                    " puts the value back to its default and clears touched fields, the submit and "
+                    "the summary. "
+                    Code { source: "is_valid()" }
+                    " checks without showing anything and follows changes. "
+                    Code { source: "clear_summary()" }
+                    " only hides the summary."
+                }
+                Text {
+                    "Off the web, "
+                    Code { source: "submit()" }
+                    " does nothing and returns "
+                    Code { source: "PlatformError::Unsupported" }
+                    ", and "
+                    Code { source: "reset()" }
+                    " cannot clear a control that is not bound to the value."
+                }
+                TermsForm {}
+                CodeBlock { source: CONTROL_CODE, language: "rust" }
             }
             DocSection { title: "Accessibility",
                 Text {
@@ -181,6 +257,50 @@ fn SignupForm(summary_title: bool) -> Element {
             if sent() {
                 Text { "Account created." }
             }
+        }
+    }
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+pub struct Terms {
+    pub email: String,
+    pub accepted: bool,
+}
+
+#[component]
+fn TermsForm() -> Element {
+    let terms = use_signal(Terms::default);
+    let form = use_form();
+
+    rsx! {
+        Form {
+            sx: libero::sx::sx().width("320px"),
+            form,
+            value: terms,
+            EmailField { label: "Email", name: Terms::FIELDS.email(), validate: not_empty.error("Enter your email.") }
+            Checkbox { label: "I accept the terms", name: Terms::FIELDS.accepted(), validate: not_empty.error("Accept the terms to continue.") }
+            Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+            Flex { gap: "sm",
+                Button { r#type: "submit", "Send" }
+                CheckButton {}
+                Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
+            }
+        }
+    }
+}
+
+#[component]
+fn CheckButton() -> Element {
+    let form = use_form_context();
+    rsx! {
+        Button {
+            variant: "tonal",
+            onclick: move |_| {
+                if let Some(form) = form {
+                    form.validate();
+                }
+            },
+            "Check"
         }
     }
 }

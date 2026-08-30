@@ -1,7 +1,7 @@
 # Form
 
 Crate: `libero`
-Import: `use libero::components::{Form, Fields, Rule};`
+Import: `use libero::components::{Form, Fields, Rule, use_form, use_form_context};`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/form.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A `<form>` that validates on submit - plain `Fn(&V) -> bool` rules, typed field paths from `#[derive(Fields)]`, and a focused error summary.
@@ -60,8 +60,61 @@ fn SignupForm() -> Element {
 A submit reveals every status. With any error it is cancelled, and a summary of
 every problem appears above the fields and takes focus. Without errors
 `onsubmit` fires; the browser's own submit is cancelled unless the form has an
-`action`. Warnings never block. The summary is a snapshot, refreshed on the
-next submit.
+`action`. Warnings never block. The summary keeps the problems of that submit:
+a line leaves once it is fixed, and none is added until the next submit.
+
+## Controlling a form
+
+`use_form()` makes a handle to pass as `form`. Inside a form,
+`use_form_context()` returns the same handle.
+
+```rust
+#[component]
+fn TermsForm() -> Element {
+    let terms = use_signal(Terms::default);
+    let form = use_form();
+
+    rsx! {
+        Form {
+            form,
+            value: terms,
+            EmailField { label: "Email", name: Terms::FIELDS.email(), validate: not_empty.error("Enter your email.") }
+            Checkbox { label: "I accept the terms", name: Terms::FIELDS.accepted(), validate: not_empty.error("Accept the terms to continue.") }
+            Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
+            Flex { gap: "sm",
+                Button { r#type: "submit", "Send" }
+                CheckButton {}
+                Button { variant: "outlined", onclick: move |_| form.reset(), "Clear" }
+            }
+        }
+    }
+}
+
+/// Anything inside a form reaches its handle without a prop.
+#[component]
+fn CheckButton() -> Element {
+    let form = use_form_context();
+    rsx! {
+        Button {
+            variant: "tonal",
+            onclick: move |_| {
+                if let Some(form) = form {
+                    form.validate();
+                }
+            },
+            "Check"
+        }
+    }
+}
+```
+
+| Method | Returns | What it does |
+|---|---|---|
+| `validate()` | `bool` | Checks like a submit without calling `onsubmit`: every status shows, and with an error the summary appears and takes focus. `true` when nothing is an error. |
+| `submit()` | `Result<(), PlatformError>` | Submits as the submit button would. Off the web it does nothing and returns `Unsupported`. |
+| `reset()` | - | The value back to `V::default()`, nothing touched, not submitted, no summary. On the web, controls not bound to the value reset too. |
+| `is_valid()` | `bool` | Whether nothing is an error, shown or not. Follows changes, so it can drive other UI. |
+| `clear_summary()` | - | Hides the summary. Resets nothing. |
 
 ## Accessibility
 
@@ -97,6 +150,7 @@ Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
 | `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. |
 | `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit nothing blocks. |
 | `summary_title` | `String` | - | A heading over the error summary. |
+| `form` | `FormHandle` | - | Controls the form from outside, made with `use_form()`. Without it the form makes its own, which `use_form_context()` reaches from inside. |
 | `children` | `Element` | - | The fields, fieldsets and buttons. |
 
 It also takes the shared props `sx`, `class`, `states`, and any `form`
