@@ -10,7 +10,7 @@ use crate::components::form::{FieldStatus, Validators, worst};
 /// What a `Form` shares with the fields and fieldsets inside it. A `Fieldset`
 /// with no `Form` above it opens one of its own, so its composite rules still
 /// reach its fields.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub(crate) struct FormScope {
     fields: Signal<BTreeMap<usize, FieldEntry>, UnsyncStorage>,
     /// Composite issues by the key of the `Form` or `Fieldset` that raised
@@ -20,6 +20,9 @@ pub(crate) struct FormScope {
     /// waits until every field it names is touched.
     touched: Signal<BTreeSet<String>>,
     submitted: Signal<bool>,
+    /// Bumped by a reset. A field keeps its touched flag to itself, so it
+    /// compares this on render and drops the flag when it moved.
+    generation: Signal<u32>,
     next_key: Signal<usize>,
     /// The scope that created the signals above. Cleanup runs inside it: a
     /// field or fieldset drops while dioxus diffs whatever unmounts the page,
@@ -45,6 +48,8 @@ pub(crate) struct FieldEntry {
     /// The field's own status - its explicit `status` and its rules - whether
     /// or not it shows yet. Composite issues are kept apart.
     pub status: FieldStatus,
+    /// The field's scope, which a reset re-renders.
+    pub owner: ScopeId,
 }
 
 /// One line of the error summary.
@@ -62,6 +67,7 @@ impl FormScope {
             issues: Signal::new(BTreeMap::new()),
             touched: Signal::new(BTreeSet::new()),
             submitted: Signal::new(false),
+            generation: Signal::new(0),
             next_key: Signal::new(0),
             owner: current_scope_id(),
         }
@@ -81,6 +87,32 @@ impl FormScope {
     pub fn submit(&mut self) {
         if !*self.submitted.peek() {
             self.submitted.set(true);
+        }
+    }
+
+    /// Runs drop-time cleanup as the scope that created these signals.
+    pub fn in_owner(&self, cleanup: impl FnOnce()) {
+        in_owner(self.owner, cleanup);
+    }
+
+    /// Which reset the form is at. Not reactive - a reset re-renders the fields.
+    pub fn generation(&self) -> u32 {
+        *self.generation.peek()
+    }
+
+    /// Back to pristine: nothing touched, not submitted, and every registered
+    /// field re-rendered so it drops its own touched flag.
+    pub fn reset(&mut self) {
+        if !self.touched.peek().is_empty() {
+            self.touched.write().clear();
+        }
+        if *self.submitted.peek() {
+            self.submitted.set(false);
+        }
+        *self.generation.write_unchecked() += 1;
+        let runtime = Runtime::current();
+        for field in self.fields.peek().values() {
+            runtime.needs_update(field.owner);
         }
     }
 
@@ -178,16 +210,13 @@ impl FormScope {
     /// Whether anything blocks a submit: an error on a field, or an error
     /// raised by a composite rule. Warnings never block.
     pub fn has_errors(&self) -> bool {
-        self.fields
-            .peek()
-            .values()
-            .any(|field| field.status.is_error())
-            || self
-                .issues
-                .peek()
-                .values()
-                .flatten()
-                .any(|issue| issue.status.is_error())
+        errors_in(&self.fields.peek(), &self.issues.peek())
+    }
+
+    /// [`has_errors`](Self::has_errors), but subscribing the caller to every
+    /// field's status and every composite issue.
+    pub fn has_errors_tracked(&self) -> bool {
+        errors_in(&self.fields.read(), &self.issues.read())
     }
 
     /// One line per field error, in registration order, then one per
@@ -247,6 +276,14 @@ impl FormScope {
             }
         }
     }
+}
+
+fn errors_in(fields: &BTreeMap<usize, FieldEntry>, issues: &BTreeMap<usize, Vec<Issue>>) -> bool {
+    fields.values().any(|field| field.status.is_error())
+        || issues
+            .values()
+            .flatten()
+            .any(|issue| issue.status.is_error())
 }
 
 /// Runs drop-time cleanup as the scope that owns the signals. A whole

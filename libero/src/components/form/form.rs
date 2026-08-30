@@ -6,7 +6,11 @@ use crate::{
     components::{
         HtmlTag, Input,
         common::base_props,
-        form::{Binding, FormScope, Source, SummaryItem, Validators, issues_of},
+        form::{
+            Binding, Source, Validators,
+            handle::{Control, FormHandle, Summary},
+            issues_of,
+        },
         layout::use_box,
     },
     hooks::use_element,
@@ -63,6 +67,11 @@ base_props! {
         /// A heading over the error summary.
         #[props(default, into)]
         summary_title: Option<String>,
+        /// Controls the form from outside, made with `use_form()`. Taken once.
+        /// Without it the form makes its own, which `use_form_context()`
+        /// reaches from inside.
+        #[props(default)]
+        form: Option<FormHandle>,
         children: Element,
     }
 }
@@ -73,8 +82,10 @@ base_props! {
 /// hears every problem at once.
 #[component]
 pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
-    let mut scope = use_hook(FormScope::new);
+    let handle = use_hook(|| props.form.unwrap_or_else(FormHandle::new));
+    let mut scope = handle.scope;
     use_context_provider(|| scope);
+    use_context_provider(|| handle);
     let key = use_hook(|| scope.key());
     use_drop(move || scope.withdraw(key));
     // Taken once: the fields resolve their binding when they mount.
@@ -89,10 +100,24 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     };
     scope.raise(key, issues);
 
-    let mut summary = use_signal(Vec::<SummaryItem>::new);
-    let mut focus_requests = use_signal(|| 0_u32);
+    // Both owned by the handle, which may belong to a parent - see `FormHandle`.
+    let focus_requests = handle.focus_requests;
+    let form_element = handle.element;
     let summary_element = use_element();
-    let form_element = use_element();
+    let summary = use_hook(|| {
+        let summary = Summary::new(focus_requests);
+        let value = props.value;
+        handle.attach(Control {
+            reset_value: Rc::new(move || {
+                if let Some(mut value) = value {
+                    value.set(V::default());
+                }
+            }),
+            summary: summary.clone(),
+        });
+        summary
+    });
+    use_drop(move || handle.detach());
     use_effect(move || {
         if focus_requests() > 0 {
             let _ = summary_element.focus();
@@ -105,15 +130,10 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .any(|attribute| attribute.name == "action");
     let onsubmit = props.onsubmit;
     let handler = move |event: FormEvent| {
-        scope.submit();
-        scope.warn_unknown_paths();
-        if scope.has_errors() {
+        if !handle.validate() {
             event.prevent_default();
-            summary.set(scope.summary());
-            focus_requests += 1;
             return;
         }
-        summary.set(Vec::new());
         if !posts {
             event.prevent_default();
         }
@@ -122,7 +142,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         }
     };
 
-    let items = summary.read();
+    let items = summary.visible(&scope);
     let summary_node = (!items.is_empty()).then(|| {
         rsx! {
             div {

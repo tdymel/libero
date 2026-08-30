@@ -9,7 +9,10 @@ use dioxus::prelude::*;
 
 use crate::{
     LiberoProvider,
-    components::{FieldStatus, Fieldset, Form, FormScope, Rule, TextField, not_empty},
+    components::{
+        FieldStatus, Fieldset, Form, FormHandle, FormScope, Rule, TextField, not_empty, use_form,
+        use_form_context,
+    },
 };
 
 thread_local! {
@@ -324,4 +327,180 @@ fn a_disabled_fieldset_disables_its_fields_and_nested_groups_and_follows_a_toggl
     // the nested group; both fieldsets and both inputs carry the attribute.
     assert_eq!(body.matches("radius-sm disabled").count(), 4, "{body}");
     assert_eq!(body.matches("disabled=true").count(), 4, "{body}");
+}
+
+thread_local! {
+    static HANDLE: Cell<Option<FormHandle>> = const { Cell::new(None) };
+    static PASSED: Cell<Option<FormHandle>> = const { Cell::new(None) };
+    static LOGIN: Cell<Option<Signal<Login>>> = const { Cell::new(None) };
+}
+
+#[derive(Clone, Debug, PartialEq, Default)]
+struct Login {
+    email: String,
+    name: String,
+}
+
+/// Grabs what `use_form_context` answers where it is placed.
+#[component]
+fn HandleSpy() -> Element {
+    let handle = use_form_context();
+    HANDLE.with(|cell| cell.set(handle));
+    rsx! {}
+}
+
+fn handle() -> FormHandle {
+    HANDLE.with(Cell::get).expect("a HandleSpy inside a form")
+}
+
+fn settle(dom: &mut VirtualDom) -> String {
+    dom.process_events();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dioxus_ssr::render(dom)
+}
+
+/// The summary's markup alone, or `None` while it is not shown.
+fn summary_of(html: &str) -> Option<&str> {
+    let start = html.find(r#"data-slot="summary""#)?;
+    let body = &html[start..];
+    Some(&body[..body.find("</ul>").unwrap_or(body.len())])
+}
+
+/// Both fields fail while empty, so a submit lists two lines.
+fn login_app() -> Element {
+    let login = use_signal(Login::default);
+    LOGIN.with(|cell| cell.set(Some(login)));
+    rsx! {
+        LiberoProvider {
+            Form {
+                value: login,
+                HandleSpy {}
+                TextField {
+                    label: "Email",
+                    name: crate::path!(Login => email),
+                    validate: [not_empty.error("Email needed")],
+                }
+                TextField {
+                    label: "Name",
+                    name: crate::path!(Login => name),
+                    validate: [not_empty.error("Name needed")],
+                }
+            }
+        }
+    }
+}
+
+fn login() -> Signal<Login> {
+    LOGIN.with(Cell::get).expect("the login app mounted")
+}
+
+#[test]
+fn the_context_reaches_a_forms_handle_and_nothing_outside_one() {
+    fn inside() -> Element {
+        let form = use_form();
+        PASSED.with(|cell| cell.set(Some(form)));
+        rsx! {
+            LiberoProvider {
+                Form::<()> { form, HandleSpy {} }
+            }
+        }
+    }
+    fn alone() -> Element {
+        rsx! {
+            LiberoProvider {
+                Fieldset::<()> { HandleSpy {} }
+            }
+        }
+    }
+
+    mount(inside);
+    assert!(
+        HANDLE.with(Cell::get) == PASSED.with(Cell::get),
+        "the context is not the handle passed as `form`"
+    );
+
+    HANDLE.with(|cell| cell.set(None));
+    mount(alone);
+    assert!(
+        HANDLE.with(Cell::get).is_none(),
+        "a fieldset without a form hands out a handle"
+    );
+}
+
+#[test]
+fn validate_shows_the_summary_and_reset_clears_it_with_the_value() {
+    let (mut dom, before) = mount(login_app);
+    assert!(summary_of(&before).is_none());
+
+    let valid = dom.in_runtime(|| handle().validate());
+    let failed = settle(&mut dom);
+    assert!(!valid);
+    let summary = summary_of(&failed).expect("a failed validate shows no summary");
+    assert!(summary.contains("Email: Email needed"), "{summary}");
+    assert!(summary.contains("Name: Name needed"), "{summary}");
+
+    dom.in_runtime(|| {
+        login().set(Login {
+            email: "tom@libero.dev".into(),
+            name: "Tom".into(),
+        });
+        handle().reset();
+    });
+    let reset = settle(&mut dom);
+    assert!(summary_of(&reset).is_none(), "the summary survived a reset");
+    assert!(!reset.contains("needed"), "a status survived a reset: {reset}");
+    assert_eq!(dom.in_runtime(|| login().peek().clone()), Login::default());
+}
+
+#[test]
+fn a_fixed_line_leaves_the_summary_and_a_new_error_does_not_join_it() {
+    let (mut dom, _) = mount(login_app);
+    dom.in_runtime(|| handle().validate());
+    settle(&mut dom);
+
+    dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
+    let one_fixed = settle(&mut dom);
+    let summary = summary_of(&one_fixed).expect("the summary vanished with a line left");
+    assert!(!summary.contains("Email needed"), "{summary}");
+    assert!(summary.contains("Name needed"), "{summary}");
+
+    // Broken again: the field shows it, the summary does not take it back.
+    dom.in_runtime(|| login().write().email.clear());
+    let broken_again = settle(&mut dom);
+    let summary = summary_of(&broken_again).expect("the summary vanished with a line left");
+    assert!(!summary.contains("Email needed"), "{summary}");
+    assert!(broken_again.contains("Email needed"));
+
+    dom.in_runtime(|| login().write().name = "Tom".into());
+    let all_fixed = settle(&mut dom);
+    assert!(summary_of(&all_fixed).is_none(), "an empty summary still shows");
+}
+
+#[test]
+fn is_valid_follows_the_fields_without_revealing_them() {
+    fn app() -> Element {
+        let form = use_form();
+        let login = use_signal(Login::default);
+        LOGIN.with(|cell| cell.set(Some(login)));
+        rsx! {
+            LiberoProvider {
+                span { if form.is_valid() { "valid" } else { "invalid" } }
+                Form {
+                    form,
+                    value: login,
+                    TextField { name: crate::path!(Login => email), validate: [not_empty.error("Email needed")] }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    let before = settle(&mut dom);
+    assert!(before.contains(">invalid<"), "{before}");
+    assert!(!before.contains("Email needed"), "is_valid revealed a status");
+
+    dom.in_runtime(|| login().write().email = "tom@libero.dev".into());
+    let after = settle(&mut dom);
+    assert!(after.contains(">valid<"), "{after}");
 }

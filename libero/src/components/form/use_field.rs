@@ -263,6 +263,10 @@ impl<'a> FieldBuilder<'a> {
         let rules = self.rules.unwrap_or_default();
 
         if let Some((mut scope, key)) = hook.form {
+            let generation = scope.generation();
+            if hook.generation.replace(generation) != generation {
+                hook.touched.set(false);
+            }
             scope.register(
                 key,
                 FieldEntry {
@@ -270,6 +274,7 @@ impl<'a> FieldBuilder<'a> {
                     label: label.text().map(|text| text.to_string()),
                     name: name.clone(),
                     status: worst(explicit.clone(), rules.clone()),
+                    owner: hook.owner,
                 },
             );
         }
@@ -363,6 +368,8 @@ impl<'a> FieldBuilder<'a> {
 /// than through a signal.
 pub(crate) struct FieldHook {
     touched: Cell<bool>,
+    /// The form's reset generation this field last rendered at.
+    generation: Cell<u32>,
     /// Whether a `name` that does not fit the form's value was warned about.
     warned: Cell<bool>,
     owner: ScopeId,
@@ -373,11 +380,13 @@ pub(crate) struct FieldHook {
 
 impl FieldHook {
     fn new() -> Rc<Self> {
+        let form = try_consume_context::<FormScope>().map(|mut scope| (scope, scope.key()));
         Rc::new(Self {
             touched: Cell::new(false),
+            generation: Cell::new(form.map_or(0, |(scope, _)| scope.generation())),
             warned: Cell::new(false),
             owner: current_scope_id(),
-            form: try_consume_context::<FormScope>().map(|mut scope| (scope, scope.key())),
+            form,
             binding: try_consume_context::<Binding>().unwrap_or_default(),
             disabled: try_consume_context::<Disabled>(),
         })

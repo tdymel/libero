@@ -47,6 +47,15 @@ impl ElementHandle {
             .map(|mounted| Rc::as_ptr(mounted) as *const () as usize)
     }
 
+    /// A handle owned by the current scope, for one that outlives the element's
+    /// own component - a `FormHandle` a parent holds. Not a hook: call it where
+    /// a signal may be created.
+    pub(crate) fn new() -> Self {
+        Self {
+            mounted: Signal::new(None),
+        }
+    }
+
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
         match self.mounted.read().as_ref() {
             Some(mounted) => Ok(backend::element(mounted)),
