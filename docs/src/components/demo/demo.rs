@@ -183,7 +183,10 @@ pub fn Demo(
                         .padding("24px")
                         .display("flex")
                         .align_items("center")
-                        .justify_content("center"),
+                        // A preview wider than the card scrolls rather than
+                        // being cut off; `safe` keeps its start reachable.
+                        .justify_content("safe center")
+                        .overflow_x("auto"),
                     {render.call(values())}
                 }
                 // No props, no panel - the preview and the code block are

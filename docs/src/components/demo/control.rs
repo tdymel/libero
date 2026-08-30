@@ -174,16 +174,23 @@ pub fn generate_code(
     values: &DemoValues,
 ) -> String {
     let mut set: Vec<String> = fixed.to_vec();
-    set.extend(controls.iter().flat_map(|control| {
-        let value = values.str(control.name);
-        match control.code {
-            Some(code) => code(control, values),
-            None if value != control.default => {
-                vec![format!("{}: {value:?}", control.name)]
-            }
-            None => vec![],
-        }
-    }));
+    // A hidden control's prop does not exist in the current state, so it
+    // prints nothing whatever it was left at.
+    set.extend(
+        controls
+            .iter()
+            .filter(|control| !control.is_hidden(values))
+            .flat_map(|control| {
+                let value = values.str(control.name);
+                match control.code {
+                    Some(code) => code(control, values),
+                    None if value != control.default => {
+                        vec![format!("{}: {value:?}", control.name)]
+                    }
+                    None => vec![],
+                }
+            }),
+    );
 
     // A component driven entirely by props (`Code`'s `source`) has no child.
     let child = children_code
