@@ -169,7 +169,9 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             invalid: field.invalid(),
             required,
             name: bound.name().map(str::to_string),
-            oninput: (props.oninput.is_some() || bound.is_bound()).then(|| EventHandler::new(move |event| emit.call(event))),
+            // The same `use_callback` every render, so the core's props can
+            // compare equal.
+            oninput: (props.oninput.is_some() || bound.is_bound()).then_some(emit),
         }
     };
 
