@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use chrono::{Datelike, Days, Months, NaiveDate};
 
-use super::{DateRange, format::format_date, today::use_today};
+use super::{DateRange, fields::day_allowed, format::format_date, today::use_today};
 use crate::{
     components::{
         ActionIcon, ButtonVariant, ClassList, HtmlTag, Input, States, common::focus_ring_sx,
@@ -210,6 +210,33 @@ impl Selection {
 
     fn awaits_end(self) -> bool {
         matches!(self, Self::Range(Some(range)) if range.end.is_none())
+    }
+
+    /// The same marks on `first..=last` and none past them, with `hover`
+    /// folded in. A mark moving outside those days leaves the result equal.
+    fn clip(self, hover: Option<NaiveDate>, first: NaiveDate, last: NaiveDate) -> Self {
+        let inside = |day: NaiveDate| (first..=last).contains(&day);
+        match self {
+            Self::Single(day) => Self::Single(day.filter(|day| inside(*day))),
+            Self::Range(None) => self,
+            Self::Range(Some(range)) => {
+                let Some(end) = range.end.or(hover) else {
+                    return Self::Range(inside(range.start).then_some(range));
+                };
+                let (from, to) = match end < range.start {
+                    true => (end, range.start),
+                    false => (range.start, end),
+                };
+                if to < first || from > last {
+                    return Self::Range(None);
+                }
+                // An end past the days is pulled in to just past them: still
+                // outside, so nothing inside changes.
+                let from = from.max(add_days(first, -1));
+                let to = to.min(add_days(last, 1));
+                Self::Range(Some(DateRange::new(from, Some(to))))
+            }
+        }
     }
 
     /// Whether `day` is picked, and whether it lies strictly inside the range.
@@ -466,44 +493,27 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     // mouse movement.
     let hovered = if awaits_end { hover() } else { None };
 
-    let day_cell = move |day: NaiveDate, month: NaiveDate| {
-        let outside = first_of_month(day) != month;
-        // Side by side, a neighbour's days would appear twice.
-        if outside && columns > 1 {
-            return rsx! {
-                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
-            };
-        }
-        let (picked, in_range) = selection.marks(day, hovered);
+    let week_row = move |week: i64, first: NaiveDate, month: NaiveDate| {
+        let last = add_days(first, 6);
+        let inside = move |day: Option<NaiveDate>| day.filter(|day| (first..=last).contains(day));
         rsx! {
-            div {
-                key: "{day}",
-                role: "gridcell",
-                "aria-selected": picked.to_string(),
-                button {
-                    r#type: "button",
-                    "data-slot": "day",
-                    "data-date": "{day}",
-                    "data-outside": outside.then_some("true"),
-                    "data-today": (today == Some(day)).then_some("true"),
-                    "data-selected": picked.then_some("true"),
-                    "data-in-range": in_range.then_some("true"),
-                    disabled: day_disabled(day),
-                    tabindex: tabindex(!outside && day == tab_stop),
-                    onmouseenter: move |_| {
-                        if awaits_end {
-                            hover.set(Some(day));
-                        }
-                    },
-                    onclick: move |_| {
-                        active.set(Some(day));
-                        if !shown(day) {
-                            paged.set(Some(first_of_month(day)));
-                        }
-                        onpick.call(day);
-                    },
-                    "{day.day()}"
-                }
+            Week {
+                key: "{week}",
+                first,
+                month,
+                blanks: columns > 1,
+                selection: selection.clip(hovered, first, last),
+                today: inside(today),
+                tab_stop: inside(Some(tab_stop)),
+                min,
+                max,
+                exclude_date,
+                focusable,
+                awaits_end,
+                hover,
+                active,
+                paged,
+                onpick,
             }
         }
     };
@@ -517,43 +527,20 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                 role: "grid",
                 "aria-label": "{title}",
                 onkeydown,
-                div { role: "row",
-                    for index in 0..7 {
-                        div {
-                            key: "{index}",
-                            role: "columnheader",
-                            "aria-label": names.weekdays[(first_weekday + index) % 7],
-                            {names.weekdays_min[(first_weekday + index) % 7]}
-                        }
-                    }
-                }
+                Weekdays { first_weekday }
                 for week in 0..6 {
-                    div { key: "{week}", role: "row",
-                        for offset in 0..7 {
-                            {day_cell(add_days(start, week * 7 + offset), month)}
-                        }
-                    }
+                    {week_row(week, add_days(start, week * 7), month)}
                 }
             }
         }
     };
 
-    let icon_size = ThemeAwareValue::Size(nav_size(props.size));
-    let nav = move |label: &'static str, disabled: bool, target: NaiveDate, glyph: Element| {
+    let size = props.size;
+    let nav = move |label: &'static str, disabled: bool, target: NaiveDate, forward: bool| {
         rsx! {
-            ActionIcon {
-                aria_label: label,
-                variant: Input::Value(ButtonVariant::Standard),
-                size: icon_size.clone(),
-                tabindex: tabindex(true),
-                disabled,
-                onclick: move |_| paged.set(Some(target)),
-                {glyph}
-            }
+            Nav { label, disabled, target, forward, size, focusable, paged }
         }
     };
-    let back = rsx! { ChevronLeftIcon {} };
-    let forward = rsx! { ChevronRightIcon {} };
 
     // The mini variant: one row of `days` days from its own first day. The
     // buttons page it; an arrow key past an end slides it.
@@ -623,7 +610,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let body = match level() {
         _ if mini => rsx! {
             div { "data-slot": "strip",
-                {nav(names.previous_days, min.is_some_and(|min| add_days(strip_start, -1) < min), add_days(strip_start, -strip_days), rsx! { ChevronLeftIcon {} })}
+                {nav(names.previous_days, min.is_some_and(|min| add_days(strip_start, -1) < min), add_days(strip_start, -strip_days), false)}
                 // The slot a field's dropdown looks for to hand focus in.
                 div { "data-slot": "months",
                     div {
@@ -637,7 +624,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         }
                     }
                 }
-                {nav(names.next_days, max.is_some_and(|max| add_days(strip_end, 1) > max), add_days(strip_start, strip_days), rsx! { ChevronRightIcon {} })}
+                {nav(names.next_days, max.is_some_and(|max| add_days(strip_end, 1) > max), add_days(strip_start, strip_days), true)}
             }
         },
         DateLevel::Day => {
@@ -645,7 +632,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                 (0..columns).map(|index| add_months(first, index)).collect();
             rsx! {
                 div { "data-slot": "header",
-                    {nav(names.previous_month, min.is_some_and(|min| add_days(first, -1) < min), add_months(first, -1), back)}
+                    {nav(names.previous_month, min.is_some_and(|min| add_days(first, -1) < min), add_months(first, -1), false)}
                     for month in months.iter().copied() {
                         button {
                             key: "{month}",
@@ -661,7 +648,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                             {format_date(month, names.month_format, names)}
                         }
                     }
-                    {nav(names.next_month, max.is_some_and(|max| add_months(last, 1) > max), add_months(first, 1), forward)}
+                    {nav(names.next_month, max.is_some_and(|max| add_months(last, 1) > max), add_months(first, 1), true)}
                 }
                 div {
                     "data-slot": "months",
@@ -716,7 +703,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             };
             rsx! {
                 div { "data-slot": "header",
-                    {nav(names.previous_year, min.is_some_and(|min| year <= min.year()), add_months(first, -12), back)}
+                    {nav(names.previous_year, min.is_some_and(|min| year <= min.year()), add_months(first, -12), false)}
                     button {
                         r#type: "button",
                         "data-slot": "title",
@@ -728,7 +715,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         },
                         "{year}"
                     }
-                    {nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), forward)}
+                    {nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), true)}
                 }
                 div { "data-slot": "cells", onkeydown: cell_keydown,
                     for index in 0..12 {
@@ -779,7 +766,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             };
             rsx! {
                 div { "data-slot": "header",
-                    {nav(names.previous_decade, min.is_some_and(|min| decade <= min.year()), add_months(first, -120), back)}
+                    {nav(names.previous_decade, min.is_some_and(|min| decade <= min.year()), add_months(first, -120), false)}
                     button {
                         r#type: "button",
                         "data-slot": "title",
@@ -787,7 +774,7 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                         disabled: true,
                         "{decade} – {decade + 9}"
                     }
-                    {nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), forward)}
+                    {nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), true)}
                 }
                 div { "data-slot": "cells", onkeydown: cell_keydown,
                     for offset in -1..11 {
@@ -823,6 +810,157 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             {hidden}
         },
     )
+}
+
+/// One row of a month grid. Its own scope, and the calendar hands it only what
+/// lands on its seven days, so a pick or a range preview elsewhere leaves its
+/// props equal and it skips the re-render.
+#[derive(Props, Clone, PartialEq)]
+struct WeekProps {
+    first: NaiveDate,
+    /// The month the grid shows. The other days are its neighbours'.
+    month: NaiveDate,
+    /// Side by side, a neighbour's days would appear twice: draw blanks.
+    blanks: bool,
+    /// Clipped to the week.
+    selection: Selection,
+    today: Option<NaiveDate>,
+    tab_stop: Option<NaiveDate>,
+    min: Option<NaiveDate>,
+    max: Option<NaiveDate>,
+    #[props(into)]
+    exclude_date: DayRule,
+    focusable: bool,
+    awaits_end: bool,
+    hover: Signal<Option<NaiveDate>>,
+    active: Signal<Option<NaiveDate>>,
+    paged: Signal<Option<NaiveDate>>,
+    onpick: EventHandler<NaiveDate>,
+}
+
+#[component]
+fn Week(props: WeekProps) -> Element {
+    let WeekProps {
+        first,
+        month,
+        blanks,
+        selection,
+        today,
+        tab_stop,
+        min,
+        max,
+        exclude_date,
+        focusable,
+        awaits_end,
+        hover,
+        active,
+        paged,
+        onpick,
+    } = props;
+    let allowed = day_allowed(min, max, exclude_date.0);
+
+    let day_cell = move |day: NaiveDate| {
+        let outside = first_of_month(day) != month;
+        if outside && blanks {
+            return rsx! {
+                div { key: "{day}", role: "gridcell", "data-slot": "blank" }
+            };
+        }
+        let (mut hover, mut active, mut paged) = (hover, active, paged);
+        let (picked, in_range) = selection.marks(day, None);
+        rsx! {
+            div {
+                key: "{day}",
+                role: "gridcell",
+                "aria-selected": picked.to_string(),
+                button {
+                    r#type: "button",
+                    "data-slot": "day",
+                    "data-date": "{day}",
+                    "data-outside": outside.then_some("true"),
+                    "data-today": (today == Some(day)).then_some("true"),
+                    "data-selected": picked.then_some("true"),
+                    "data-in-range": in_range.then_some("true"),
+                    disabled: !allowed(day),
+                    tabindex: if focusable && !outside && tab_stop == Some(day) { "0" } else { "-1" },
+                    onmouseenter: move |_| {
+                        if awaits_end {
+                            hover.set(Some(day));
+                        }
+                    },
+                    onclick: move |_| {
+                        active.set(Some(day));
+                        // A neighbour's day pages to its month.
+                        if outside {
+                            paged.set(Some(first_of_month(day)));
+                        }
+                        onpick.call(day);
+                    },
+                    "{day.day()}"
+                }
+            }
+        }
+    };
+
+    rsx! {
+        div { role: "row",
+            for offset in 0..7 {
+                {day_cell(add_days(first, offset))}
+            }
+        }
+    }
+}
+
+/// The weekday names over a month. Its own scope: nothing in it moves with the
+/// calendar's state, so it skips every re-render.
+#[component]
+fn Weekdays(first_weekday: usize) -> Element {
+    let names = &use_theme().date;
+    rsx! {
+        div { role: "row",
+            for index in 0..7 {
+                div {
+                    key: "{index}",
+                    role: "columnheader",
+                    "aria-label": names.weekdays[(first_weekday + index) % 7],
+                    {names.weekdays_min[(first_weekday + index) % 7]}
+                }
+            }
+        }
+    }
+}
+
+/// A button that pages the calendar. Its own scope with its icon drawn inside,
+/// so it skips a re-render until its target moves.
+#[derive(Props, Clone, PartialEq)]
+struct NavProps {
+    label: &'static str,
+    disabled: bool,
+    target: NaiveDate,
+    forward: bool,
+    size: Size,
+    focusable: bool,
+    paged: Signal<Option<NaiveDate>>,
+}
+
+#[component]
+fn Nav(props: NavProps) -> Element {
+    let (target, mut paged) = (props.target, props.paged);
+    rsx! {
+        ActionIcon {
+            aria_label: props.label,
+            variant: Input::Value(ButtonVariant::Standard),
+            size: ThemeAwareValue::Size(nav_size(props.size)),
+            tabindex: if props.focusable { "0" } else { "-1" },
+            disabled: props.disabled,
+            onclick: move |_| paged.set(Some(target)),
+            if props.forward {
+                ChevronRightIcon {}
+            } else {
+                ChevronLeftIcon {}
+            }
+        }
+    }
 }
 
 /// The navigation buttons' icon step for a picker step. `ActionIcon`'s scale
@@ -884,6 +1022,32 @@ mod tests {
         assert_eq!(waiting.marks(day(8), Some(day(6))), (false, true));
         assert_eq!(waiting.marks(day(12), None), (false, false));
         assert!(waiting.awaits_end());
+    }
+
+    #[test]
+    fn a_clipped_selection_marks_its_days_as_the_whole_one_does() {
+        let hover = Some(day(24));
+        let selections = [
+            Selection::Single(Some(day(9))),
+            Selection::Range(Some(DateRange::new(day(20), Some(day(3))))),
+            Selection::Range(Some(DateRange::new(day(10), None))),
+        ];
+        for selection in selections {
+            for first in (1..=22).map(day) {
+                let last = add_days(first, 6);
+                let clipped = selection.clip(hover, first, last);
+                for offset in 0..7 {
+                    let shown = add_days(first, offset);
+                    assert_eq!(clipped.marks(shown, None), selection.marks(shown, hover));
+                }
+            }
+        }
+        // A range moving past a week leaves the week's marks equal.
+        let range = |end| Selection::Range(Some(DateRange::new(day(1), Some(day(end)))));
+        assert_eq!(
+            range(20).clip(None, day(8), day(14)),
+            range(27).clip(None, day(8), day(14))
+        );
     }
 
     #[test]
