@@ -9,13 +9,13 @@ use super::{
     FileFieldDefaults, FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults,
     FormDefaults, GridDefaults, HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit,
     KbdDefaults, ListDefaults, MarkDefaults, NativeSelectDefaults, NavLinkDefaults,
-    NumberFieldDefaults, OverlayDefaults, PinFieldDefaults, PinKind, Placement, PopoverDefaults,
-    QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
-    ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults,
-    SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TableDefaults,
-    TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
-    TimePickerDefaults, TimePickerVariant, TitleDefaults, TitleSize, TooltipDefaults,
-    TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    NumberFieldDefaults, OverlayDefaults, PaperDefaults, PinFieldDefaults, PinKind, Placement,
+    PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis,
+    ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
+    SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
+    TextareaDefaults, TimePickerDefaults, TimePickerVariant, TitleDefaults, TitleSize,
+    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -41,6 +41,7 @@ pub struct Theme {
     pub overlay: OverlayDefaults,
     pub z_index: ZIndexDefaults,
     pub popover: PopoverDefaults,
+    pub paper: PaperDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
     pub sidebar: SidebarDefaults,
@@ -172,6 +173,13 @@ impl Theme {
         popover: PopoverDefaults {
             gap: 4.0,
             padding: 8.0,
+        },
+        paper: PaperDefaults {
+            radius: Size::Md,
+            shadow: Size::Sm,
+            background: "#fff",
+            contrast: ColorValue::Shade(Color::Black, ColorShade::S1),
+            border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
         },
         dialog: DialogDefaults {
             size: Sizes::new(240, 300, 510, 600, 750, 900),

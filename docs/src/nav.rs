@@ -206,7 +206,10 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
         group(
             "surface",
             "Surface",
-            vec![page(Route::DialogPage {}, "Dialog")],
+            vec![
+                page(Route::PaperPage {}, "Paper"),
+                page(Route::DialogPage {}, "Dialog"),
+            ],
         ),
         group(
             "typography",

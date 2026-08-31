@@ -95,6 +95,7 @@ fetch only the file you need.
 
 ## Surface
 
+- [Paper](paper.md): The library's surface - a background, a corner radius, an elevation and an optional hairline border, with no semantics of its own.
 - [Dialog](dialog.md): The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
 
 ## Typography
