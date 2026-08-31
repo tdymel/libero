@@ -14,11 +14,13 @@ use std::rc::Rc;
 
 use dioxus::prelude::MountedData;
 
-use super::{DocumentApi, ElementApi, ScrollApi};
+use super::{DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 mod blitz;
 mod mounted;
+#[cfg(not(target_arch = "wasm32"))]
+mod thread;
 #[cfg(target_arch = "wasm32")]
 mod web;
 
@@ -51,6 +53,27 @@ pub(crate) fn document() -> Option<Box<dyn DocumentApi>> {
 pub(crate) fn scroll() -> Option<Box<dyn ScrollApi>> {
     #[cfg(target_arch = "wasm32")]
     return web::scroll();
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
+/// A timer everywhere: the browser's own off `setTimeout` on the web, and
+/// [`thread`]'s sleeping thread on every other renderer - it needs nothing
+/// from the renderer beyond dioxus's own task queue, so Blitz and the WebView
+/// floor are both covered by the one arm.
+pub(crate) fn timer() -> Option<Box<dyn TimerApi>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::timer();
+    #[cfg(not(target_arch = "wasm32"))]
+    return thread::timer();
+}
+
+/// Only the web can report a document-level key press today, for the same
+/// reason [`scroll`] cannot: the notification has to come from the renderer,
+/// and Blitz's would be fork work.
+pub(crate) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
+    #[cfg(target_arch = "wasm32")]
+    return web::keyboard();
     #[cfg(not(target_arch = "wasm32"))]
     return None;
 }

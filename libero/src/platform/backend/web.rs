@@ -1,12 +1,14 @@
 use std::rc::Rc;
+use std::time::Duration;
 
-use dioxus::prelude::MountedData;
+use dioxus::prelude::{Key, Modifiers, MountedData};
 use wasm_bindgen::{JsCast, JsValue};
 
 use wasm_bindgen::prelude::Closure;
 
 use crate::platform::{
-    Dimensions, DocumentApi, ElementApi, PlatformError, Read, ScrollApi, ScrollSubscription,
+    Dimensions, DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError,
+    Read, ScrollApi, ScrollSubscription, TimerApi, TimerSubscription,
 };
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
@@ -296,5 +298,181 @@ impl ElementApi for WebElement {
             .collect();
 
         Ok(items)
+    }
+}
+
+pub(super) fn timer() -> Option<Box<dyn TimerApi>> {
+    Some(Box::new(WebTimer))
+}
+
+struct WebTimer;
+
+/// `set_timeout` takes an `i32` of milliseconds. A delay past that is 24 days
+/// out and a browser would not honour it anyway, so it saturates rather than
+/// wrapping into a timer that fires at once.
+fn millis(duration: Duration) -> i32 {
+    i32::try_from(duration.as_millis()).unwrap_or(i32::MAX)
+}
+
+impl TimerApi for WebTimer {
+    fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription> {
+        let closure = Closure::once(callback);
+        let handle = web_sys::window().and_then(|window| {
+            window
+                .set_timeout_with_callback_and_timeout_and_arguments_0(
+                    closure.as_ref().unchecked_ref(),
+                    millis(delay),
+                )
+                .ok()
+        });
+
+        Box::new(WebTimerSubscription {
+            handle,
+            repeating: false,
+            _closure: closure,
+        })
+    }
+
+    fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
+        let closure = Closure::<dyn FnMut()>::new(move || callback());
+        let handle = web_sys::window().and_then(|window| {
+            window
+                .set_interval_with_callback_and_timeout_and_arguments_0(
+                    closure.as_ref().unchecked_ref(),
+                    millis(interval),
+                )
+                .ok()
+        });
+
+        Box::new(WebTimerSubscription {
+            handle,
+            repeating: true,
+            _closure: closure,
+        })
+    }
+}
+
+struct WebTimerSubscription {
+    /// `None` when there was no window to schedule on, so `Drop` has nothing to
+    /// undo - the timer still exists, it just never fires.
+    handle: Option<i32>,
+    /// `clear_timeout` and `clear_interval` are separate calls in web-sys even
+    /// though the browser's handle space is shared, so the subscription has to
+    /// remember which one made it.
+    repeating: bool,
+    /// Kept alive for exactly as long as the timer is pending: dropping a
+    /// `Closure` frees the JS function the browser still holds. A one-shot's
+    /// `Closure::once` drops its boxed `FnOnce` when it fires, and the handle
+    /// it leaves behind is stale - clearing a stale handle does nothing.
+    _closure: Closure<dyn FnMut()>,
+}
+
+impl TimerSubscription for WebTimerSubscription {}
+
+impl Drop for WebTimerSubscription {
+    fn drop(&mut self) {
+        let Some(handle) = self.handle else {
+            return;
+        };
+        if let Some(window) = web_sys::window() {
+            if self.repeating {
+                window.clear_interval_with_handle(handle);
+            } else {
+                window.clear_timeout_with_handle(handle);
+            }
+        }
+    }
+}
+
+pub(super) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
+    Some(Box::new(WebKeyboard))
+}
+
+struct WebKeyboard;
+
+/// Whether this event landed in something the user types into. `select` is in
+/// the list because a key press there drives the native option search.
+fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
+    let Some(target) = event
+        .target()
+        .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+    else {
+        return false;
+    };
+
+    if matches!(target.tag_name().as_str(), "INPUT" | "TEXTAREA" | "SELECT") {
+        return true;
+    }
+
+    target
+        .dyn_ref::<web_sys::HtmlElement>()
+        .is_some_and(|html| html.is_content_editable())
+}
+
+impl KeyboardApi for WebKeyboard {
+    /// **In the capture phase, on the window.** A key press does bubble, unlike
+    /// a scroll, but a handler anywhere along the way can stop it - and a
+    /// global shortcut that a dialog's own key handling can silently swallow is
+    /// not global. Capture sees the press on the way down, before anything has
+    /// the chance.
+    fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription> {
+        let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
+            move |event: web_sys::KeyboardEvent| {
+                // `Key` parses every named key it knows and falls back to the
+                // character itself, which is what `KeyboardData` does too.
+                let key = event.key().parse().unwrap_or(Key::Unidentified);
+                let mut modifiers = Modifiers::empty();
+                modifiers.set(Modifiers::CONTROL, event.ctrl_key());
+                modifiers.set(Modifiers::SHIFT, event.shift_key());
+                modifiers.set(Modifiers::ALT, event.alt_key());
+                modifiers.set(Modifiers::META, event.meta_key());
+
+                let handled = callback(KeyChord {
+                    key,
+                    modifiers,
+                    editable_target: editable_target(&event),
+                });
+                if handled {
+                    event.prevent_default();
+                }
+            },
+        );
+
+        let target = web_sys::window().and_then(|window| {
+            let target: web_sys::EventTarget = window.into();
+            target
+                .add_event_listener_with_callback_and_bool(
+                    "keydown",
+                    closure.as_ref().unchecked_ref(),
+                    true,
+                )
+                .ok()?;
+            Some(target)
+        });
+
+        Box::new(WebKeySubscription { target, closure })
+    }
+}
+
+struct WebKeySubscription {
+    /// `None` when there was no window to listen on - the subscription exists
+    /// and never fires, so `Drop` has nothing to undo.
+    target: Option<web_sys::EventTarget>,
+    closure: Closure<dyn FnMut(web_sys::KeyboardEvent)>,
+}
+
+impl KeySubscription for WebKeySubscription {}
+
+impl Drop for WebKeySubscription {
+    fn drop(&mut self) {
+        if let Some(target) = &self.target {
+            // The same three arguments it was added with, capture included, or
+            // the browser removes nothing.
+            let _ = target.remove_event_listener_with_callback_and_bool(
+                "keydown",
+                self.closure.as_ref().unchecked_ref(),
+                true,
+            );
+        }
     }
 }
