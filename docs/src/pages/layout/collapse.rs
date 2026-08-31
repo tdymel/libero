@@ -50,14 +50,22 @@ fn wrap_page(_: &DemoValues, source: &str) -> String {
     )
 }
 
-/// Printed verbatim below the live example, which renders exactly this.
+/// Printed verbatim below the live example. **This and `FocusReturnDemo` are
+/// the same code written twice - change one and you must change the other**,
+/// or the page stops being a promise that pasting it reproduces the preview.
 const FOCUS_RETURN: &str = r#"let mut open = use_signal(|| false);
 let trigger = use_focus_return();
 
 rsx! {
     Button {
-        onmounted: move |event| trigger.remember(event),
-        onclick: move |_| open.toggle(),
+        // Armed on the opening edge, every open: `restore()` takes the
+        // trigger and forgets it, so arming once would work once.
+        onclick: move |_| {
+            if !open() {
+                trigger.remember_active();
+            }
+            open.toggle();
+        },
         aria_expanded: open(),
         aria_controls: "returning-panel",
         "Edit address"
@@ -84,6 +92,9 @@ rsx! {
 
 /// The pattern the section describes, rendered so it can actually be tabbed
 /// through - a closing panel that hands focus back instead of dropping it.
+///
+/// **Kept in step with `FOCUS_RETURN` by hand**; change one and change the
+/// other.
 #[component]
 fn FocusReturnDemo() -> Element {
     let mut open = use_signal(|| false);
@@ -95,8 +106,13 @@ fn FocusReturnDemo() -> Element {
             align: "flex-start",
             gap: "sm",
             Button {
-                onmounted: move |event| trigger.remember(event),
-                onclick: move |_| open.toggle(),
+                // See `FOCUS_RETURN`: armed on every open, not once on mount.
+                onclick: move |_| {
+                    if !open() {
+                        trigger.remember_active();
+                    }
+                    open.toggle();
+                },
                 aria_expanded: open(),
                 aria_controls: "returning-panel",
                 "Edit address"
@@ -333,13 +349,32 @@ pub fn CollapsePage() -> Element {
                     " rather than reaching for the element yourself - it is the one focus-return "
                     "contract in the library, and it spawns the focus call, which matters "
                     "because focusing inside the dispatch of the event that closed the panel "
-                    "re-enters a handler whose click is still bubbling. Name the trigger from "
-                    "its "
-                    Code { source: "onmounted" }
+                    "re-enters a handler whose click is still bubbling. Arm it on the opening edge "
+                    "with "
+                    Code { source: "remember_active()" }
                     ", then call "
                     Code { source: "restore()" }
                     " wherever you close the panel from inside it. Tab to the Done button below "
-                    "and press it: focus lands back on the trigger, not on the body."
+                    "and press it: focus lands back on the trigger, not on the body - and it "
+                    "does so every time, not just the first."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
+                    "Arming on every open is the part that is easy to get wrong. "
+                    Code { source: "restore()" }
+                    " takes the trigger and forgets it, deliberately, so a second close cannot "
+                    "pull focus off whatever holds it by then - which means a pattern that arms "
+                    "once works once, and then silently drops focus to the body on every close "
+                    "after it. "
+                    Code { source: "use_modal" }
+                    " re-arms the same way, inside the handler that opens."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
+                    "One caveat: some browsers do not focus a button on a mouse click, so a "
+                    "panel opened with the mouse may remember the document body instead of the "
+                    "trigger. That is acceptable here, because the return only matters to a "
+                    "keyboard user - and for them the trigger is focused when they activate it."
                 }
                 FocusReturnDemo {}
                 CodeBlock { source: FOCUS_RETURN, language: "rust" }

@@ -121,8 +121,19 @@ Use `use_focus_return` rather than reaching for the element yourself. It is the
 one focus-return contract in the library, and its `restore()` spawns the focus
 call - which matters, because focusing inside the dispatch of the event that
 closed the panel re-enters a handler whose click is still bubbling, and that
-panics. Name the trigger from its `onmounted`, then call `restore()` wherever
-you close the panel from inside it.
+panics. Arm it on the opening edge with `remember_active()`, then call
+`restore()` wherever you close the panel from inside it.
+
+**Arm on every open, not once.** `restore()` takes the trigger and forgets it,
+deliberately, so a second close cannot pull focus off whatever holds it by then.
+A pattern that arms once therefore works once and then silently drops focus to
+the body on every close after it. `use_modal` re-arms the same way, inside the
+handler that opens.
+
+Some browsers do not focus a button on a mouse click, so a panel opened with the
+mouse may remember the document body instead of the trigger. That is acceptable
+here: the return only matters to a keyboard user, and for them the trigger is
+focused when they activate it.
 
 ```rust
 use dioxus::prelude::*;
@@ -138,8 +149,12 @@ fn Demo() -> Element {
 
     rsx! {
         Button {
-            onmounted: move |event| trigger.remember(event),
-            onclick: move |_| open.toggle(),
+            onclick: move |_| {
+                if !open() {
+                    trigger.remember_active();
+                }
+                open.toggle();
+            },
             aria_expanded: open(),
             aria_controls: "returning-panel",
             "Edit address"
