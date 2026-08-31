@@ -422,17 +422,24 @@ fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
         .is_some_and(|html| html.is_content_editable())
 }
 
-impl KeyboardApi for WebKeyboard {
+impl WebKeyboard {
     /// **In the capture phase, on the window.** A key press does bubble, unlike
     /// a scroll, but a handler anywhere along the way can stop it - and a
     /// global shortcut that a dialog's own key handling can silently swallow is
     /// not global. Capture sees the press on the way down, before anything has
     /// the chance.
-    fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription> {
+    ///
+    /// `skip_text_entry` is per subscription rather than per capability, so one
+    /// subscriber opting out cannot widen what another receives: each holds its
+    /// own listener and its own closure.
+    fn listen(
+        &self,
+        skip_text_entry: bool,
+        callback: Box<dyn Fn(KeyChord) -> bool>,
+    ) -> Box<dyn KeySubscription> {
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |event: web_sys::KeyboardEvent| {
-                // Enforced here, not reported: see `KeyboardApi::on_key`.
-                if editable_target(&event) {
+                if skip_text_entry && editable_target(&event) {
                     return;
                 }
 
@@ -465,6 +472,19 @@ impl KeyboardApi for WebKeyboard {
         });
 
         Box::new(WebKeySubscription { target, closure })
+    }
+}
+
+impl KeyboardApi for WebKeyboard {
+    fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription> {
+        self.listen(true, callback)
+    }
+
+    fn on_key_unfiltered(
+        &self,
+        callback: Box<dyn Fn(KeyChord) -> bool>,
+    ) -> Box<dyn KeySubscription> {
+        self.listen(false, callback)
     }
 }
 
