@@ -142,7 +142,7 @@ fn the_height_animation_is_a_grid_row() {
         )),
         "{html}"
     );
-    assert!(html.contains("min-height:0;overflow:hidden;box-sizing:border-box;"));
+    assert!(html.contains("min-height:0;overflow:hidden;"));
 }
 
 /// Closed content is not a tab stop, and the delay is what keeps it visible

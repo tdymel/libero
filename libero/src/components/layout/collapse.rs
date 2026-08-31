@@ -12,8 +12,17 @@ use crate::{
 };
 
 /// The property the exit transition is measured on, and the one
-/// [`use_presence`] filters `transitionend` by: the content's own `opacity`
-/// finishes first and bubbles to the same root.
+/// [`use_presence`] filters `transitionend` by. The content's own `opacity`
+/// bubbles a second event to this same root; it shares `COLLAPSE_DURATION`, so
+/// the two finish together rather than one arriving early, but the filter is
+/// what keeps either from standing in for the other.
+///
+/// The filter discriminates on the property name, **not on the target**, so a
+/// nested `Collapse` inside this one's children bubbles a matching
+/// `grid-template-rows` event to this root. If both are closing and the inner
+/// one is faster, this one unmounts its children at the inner one's end time.
+/// Unfixable here - `TransitionData` exposes no target - and only reachable
+/// with `keep_mounted: false`. See todo 41.
 const EXIT_PROPERTY: &str = "grid-template-rows";
 
 const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
@@ -73,10 +82,6 @@ static COLLAPSE_CONTENT_SX: StaticSx = StaticSx::new(|| {
 
     sx().min_height("0")
         .overflow("hidden")
-        // Both reference implementations set it, and it is the difference
-        // between a clean close and a jumping one: padding on the content
-        // would otherwise sit outside the height being animated.
-        .with("box-sizing", "border-box")
         .when(
             "open",
             sx().opacity("1")
@@ -186,14 +191,7 @@ pub fn Collapse(props: CollapseProps) -> Element {
         .framework_sx(&COLLAPSE_CONTENT_SX)
         .states(&content_states)
         .prepare()
-        .render(
-            HtmlTag::Div,
-            Vec::new(),
-            match mounted {
-                true => props.children,
-                false => rsx! {},
-            },
-        )?;
+        .render(HtmlTag::Div, Vec::new(), mounted.then_some(props.children));
 
     use_box()
         .framework_sx(&COLLAPSE_BASE_SX)
@@ -208,7 +206,7 @@ pub fn Collapse(props: CollapseProps) -> Element {
         .event("ontransitionend", move |event: Event<TransitionData>| {
             presence.on_transition_end(&event)
         })
-        .render(HtmlTag::Div, props.attributes, rsx! { {content} })
+        .render(HtmlTag::Div, props.attributes, content)
 }
 
 #[cfg(test)]
