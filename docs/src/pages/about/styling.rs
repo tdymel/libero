@@ -83,6 +83,21 @@ const RESPONSIVE: &str = r#"sx()
 
 const RESPONSIVE_VALUE: &str = r#"sx().width(bp().sm("480px").lg("720px"))"#;
 
+const MEDIA: &str = r#"sx()
+    .transition("transform 200ms ease")
+    .media("(prefers-reduced-motion: reduce)", sx().transition("none"))"#;
+
+const MEDIA_NESTING: &str = r#"// Wrong - the transition still plays under reduced motion.
+sx().when("open", sx().transition("transform 200ms ease"))
+    .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
+
+// Right - both rules are 0-2-0, and the media one comes later.
+sx().when(
+    "open",
+    sx().transition("transform 200ms ease")
+        .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
+)"#;
+
 const CONTAINER: &str = r#"// The ancestor whose width the answer depends on:
 sx().container("demo-card")
 
@@ -323,6 +338,60 @@ pub fn StylingPage() -> Element {
                             source: "{size.as_str()} {size.breakpoint_value()}",
                         }
                     }
+                }
+            }
+
+            DocSection {
+                title: "Media queries",
+                Text {
+                    Code { source: "media" }
+                    " nests an "
+                    Code { source: "Sx" }
+                    " under any "
+                    Code { source: "@media" }
+                    " query, passed through verbatim. It is the general form "
+                    Code { source: "breakpoint" }
+                    " is the shorthand of, and the reason it exists is "
+                    Code { source: "prefers-reduced-motion" }
+                    ":"
+                }
+                CodeBlock { source: MEDIA, language: "rust" }
+                Text {
+                    "Nothing validates the query, so a typo silently matches nothing - the "
+                    "same tradeoff "
+                    Code { source: "when" }
+                    " makes. Nested "
+                    Code { source: "media" }
+                    " modifiers fold into a single "
+                    Code { source: "and" }
+                    " query, exactly like nested "
+                    Code { source: "breakpoint" }
+                    "s."
+                }
+                Text {
+                    "Nest "
+                    Code { source: "media" }
+                    " inside the condition, never the condition inside "
+                    Code { source: "media" }
+                    ". A media query adds no specificity: the rule inside it carries the "
+                    "same selector as the one outside. A condition appends "
+                    Code { source: "[data-state~=\"open\"]" }
+                    ", so it is one class and one attribute (0-2-0) against a bare class "
+                    "(0-1-0), and the flat form loses no matter where it sits in the file:"
+                }
+                CodeBlock { source: MEDIA_NESTING, language: "rust" }
+                Text {
+                    "The same applies to any modifier that changes the selector - "
+                    Code { source: "hover" }
+                    ", "
+                    Code { source: "selector" }
+                    " and "
+                    Code { source: "when" }
+                    " all do. "
+                    Code { source: "breakpoint" }
+                    " and "
+                    Code { source: "container_query" }
+                    " do not, so those compose in either order."
                 }
             }
 

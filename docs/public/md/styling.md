@@ -144,6 +144,45 @@ query cannot read a CSS custom property:
 | `xl` | `88rem` |
 | `xxl` | `101rem` |
 
+## Media queries
+
+`media` nests an `Sx` under any `@media` query, passed through verbatim. It is
+the general form `breakpoint` is the shorthand of, and the reason it exists is
+`prefers-reduced-motion`:
+
+```rust
+sx()
+    .transition("transform 200ms ease")
+    .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
+```
+
+Nothing validates the query, so a typo silently matches nothing - the same
+tradeoff `when` makes. Nested `media` modifiers fold into a single `and` query,
+exactly like nested `breakpoint`s.
+
+**Nest `media` inside the condition, never the condition inside `media`.** A
+media query adds no specificity: the rule inside it carries the same selector as
+the one outside. A condition appends `[data-state~="open"]`, so it is one class
+and one attribute (0-2-0) against a bare class (0-1-0), and the flat form loses
+no matter where it sits in the file:
+
+```rust
+// Wrong - the transition still plays under reduced motion.
+sx().when("open", sx().transition("transform 200ms ease"))
+    .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
+
+// Right - both rules are 0-2-0, and the media one comes later.
+sx().when(
+    "open",
+    sx().transition("transform 200ms ease")
+        .media("(prefers-reduced-motion: reduce)", sx().transition("none")),
+)
+```
+
+The same applies to any modifier that changes the selector - `hover`, `selector`
+and `when` all do. `breakpoint` and `container_query` do not, so those compose
+in either order.
+
 ## Container queries
 
 `breakpoint` asks about the viewport, but "does this component have room" is
