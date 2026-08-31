@@ -102,6 +102,12 @@ Two limits of that mode, both about the `transitionend` it unmounts on:
 - `duration: 0` is handled: a zero-length transition never runs either, so
   `Collapse` unmounts straight from `open` instead of waiting for an event that
   cannot come.
+- A `Collapse` **nested inside another one's content** can unmount the outer
+  one's children early. `transitionend` bubbles, and the filter discriminates on
+  the property name rather than on the element the event came from, so an inner
+  panel's `grid-template-rows` event reaches the outer root. If both are closing
+  and the inner one is faster, the outer unmounts at the inner one's end time.
+  Only `keep_mounted: false` is affected.
 
 ## Accessibility
 
@@ -156,8 +162,10 @@ properties inherit, which is how the value reaches the content element too.
 
 ## Data attributes
 
-Both elements carry the same token, so either can be styled from a `states`
-selector.
+Both the root and the inner content element carry the same token, for the
+component's own rules. Only the root is reachable from the outside: a caller's
+`sx`, `class` and `states` all land there, and the content element's tokens are
+`Collapse`'s own.
 
 | Token | When |
 |---|---|

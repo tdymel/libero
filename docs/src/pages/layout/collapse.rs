@@ -216,6 +216,18 @@ pub fn CollapsePage() -> Element {
                 }
                 Text {
                     sx: sx().margin_top("sm"),
+                    "One more limit of that mode: a "
+                    Code { source: "Collapse" }
+                    " nested inside another one's content can unmount the outer one's "
+                    "children early. "
+                    Code { source: "transitionend" }
+                    " bubbles, and the filter discriminates on the property name rather than "
+                    "on the element the event came from, so an inner panel's event reaches the "
+                    "outer root. If both are closing and the inner one is faster, the outer "
+                    "unmounts at the inner one's end time."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
                     Code { source: "Collapse" }
                     " renders no role and no ARIA, so the trigger carries the disclosure "
                     "semantics - that is what the example above wires: "
