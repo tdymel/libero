@@ -218,17 +218,17 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
     /// Opens with `args`, superseding whatever this modal was showing.
     pub fn open_with(&self, args: impl Into<S>) -> Opening<R> {
         let mut signal = self.resolution;
-        let generation = {
+        let (generation, focus_return) = {
             let mut resolution = signal.write();
             resolution.generation += 1;
             resolution.outcome = None;
             resolution.handlers.clear();
             resolution.wakers.clear();
-            // Synchronous inside the trigger's own handler, so the active
-            // element *is* the one the user acted on.
-            resolution.focus_return.remember_active();
-            resolution.generation
+            (resolution.generation, resolution.focus_return)
         };
+        // Out of the guard, still inside the trigger's own handler - which is
+        // what makes the active element the one the user acted on.
+        focus_return.remember_active();
 
         let mut slot = self.args;
         slot.set(Some(args.into()));

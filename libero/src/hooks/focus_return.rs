@@ -19,7 +19,9 @@ pub struct FocusReturn {
 }
 
 impl FocusReturn {
-    /// Attach to the trigger's `onmounted`.
+    /// Attach to the trigger's `onmounted`. Kept for the overlay that never
+    /// opens from a click - `FloatingWindow` restores on unmount, where there
+    /// is no active element left to have read.
     pub fn remember(&self, event: Event<MountedData>) {
         let mut trigger = self.trigger;
         trigger.set(Some(Trigger::Mounted(event.data.clone())));
@@ -42,9 +44,10 @@ impl FocusReturn {
     /// Hands focus back, and forgets the trigger - a second close cannot then
     /// take focus off whatever holds it by then.
     ///
-    /// Focus lands from a task rather than inline. Called from the handler of
-    /// the event that closed the overlay, a synchronous focus would be taken
-    /// straight back by the focus trap the overlay has not finished leaving.
+    /// The `spawn` is load-bearing: this runs inside the dispatch of the event
+    /// that closed the overlay, where focusing re-enters a dioxus
+    /// `EventHandler` whose click is still bubbling, and that panics. It also
+    /// lands the focus after the overlay is gone rather than beside it.
     pub fn restore(&self) {
         let mut signal = self.trigger;
         let Some(trigger) = signal.write().take() else {
