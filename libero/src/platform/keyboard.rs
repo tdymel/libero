@@ -15,15 +15,6 @@ pub trait KeySubscription {}
 pub struct KeyChord {
     pub key: Key,
     pub modifiers: Modifiers,
-    /// Whether the press landed in something the user is typing into: an
-    /// `input`, `textarea` or `select`, or anything `contenteditable`.
-    ///
-    /// **A hotkey has to check this itself.** Mantine keeps the same rule in
-    /// `tagsToIgnore`, and it is a policy, not a fact about the platform: a
-    /// palette's Ctrl+K should still open while the user is typing in a search
-    /// box, while a bare `/` should not. The capability reports where the press
-    /// landed and lets each consumer decide.
-    pub editable_target: bool,
 }
 
 /// Hearing a key press anywhere in the document, not just inside one subtree.
@@ -36,6 +27,15 @@ pub trait KeyboardApi {
     /// subscription is dropped. **Returning `true` prevents the default
     /// action** - what an `event.prevent_default()` would do from a handler,
     /// which is how Ctrl+K opens a palette instead of the browser's search bar.
+    ///
+    /// **A press the user is typing never arrives.** The capability drops
+    /// anything targeting an `input`, `textarea`, `select` or a
+    /// `contenteditable` - Mantine's `tagsToIgnore`, enforced here rather than
+    /// left to each consumer (decided 2026-09-16). So a document-level shortcut
+    /// cannot eat a character out of a text field, and equally cannot fire
+    /// while focus is in one: a palette opens from the page, not from a search
+    /// box. Focus on `<body>` or inside a portal is unaffected, which is the
+    /// case an element's own `onkeydown` could not reach.
     fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription>;
 }
 

@@ -32,8 +32,11 @@ pub trait TimerApi {
 
 /// `Some` on every renderer: the browser's own `setTimeout` on the web, and a
 /// sleeping thread delivering through a dioxus task everywhere else. `None`
-/// only where there is no dioxus runtime to deliver into, which is a server
-/// render.
+/// only outside a dioxus runtime, since the task is what delivers.
+///
+/// **A server render is `Some` and inert**, not `None` - SSR has a runtime, and
+/// the render ends long before a delay does. So nothing fires there rather than
+/// nothing being scheduled, and a consumer gets no branch to write against it.
 pub fn timer() -> Option<Box<dyn TimerApi>> {
     backend::timer()
 }

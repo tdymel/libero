@@ -25,8 +25,9 @@ use dioxus::prelude::ScopeId;
 use crate::platform::{TimerApi, TimerSubscription};
 
 /// `None` outside a dioxus runtime, because delivery goes through a dioxus
-/// task - the same house rule as any other absent capability. Every real caller
-/// is a component or a hook, so this is about SSR and bare tests.
+/// task - the same house rule as any other absent capability. That is a bare
+/// test, not a server render: SSR has a runtime, so it gets a timer that
+/// schedules and never fires.
 pub(super) fn timer() -> Option<Box<dyn TimerApi>> {
     Runtime::try_current().map(|_| Box::new(ThreadTimer) as Box<dyn TimerApi>)
 }
@@ -73,24 +74,25 @@ struct ThreadTimerSubscription {
 impl TimerSubscription for ThreadTimerSubscription {}
 
 impl Drop for ThreadTimerSubscription {
-    /// Only a flag, deliberately. Cancelling the dioxus task instead would need
-    /// a runtime at *drop* time, and a drop runs wherever the owner is dropped.
-    /// The flag is checked immediately before the callback, so a cancelled
-    /// timer never fires; the task and its thread just finish the sleep they
-    /// were already in and then go away.
+    /// A flag rather than cancelling the task, because cancelling would need a
+    /// runtime at *drop* time and a drop runs wherever its owner does.
     fn drop(&mut self) {
         self.cancelled.store(true, Ordering::Release);
     }
 }
 
 fn spawn_on_root(future: impl Future<Output = ()> + 'static) {
-    if let Some(runtime) = Runtime::try_current() {
-        // The root scope, not the calling one: a timer outlives the component
-        // that started it only until its subscription is dropped, and that
-        // subscription is what ties the lifetime - not whichever scope happened
-        // to be rendering.
-        runtime.spawn(ScopeId::ROOT, future);
-    }
+    let Some(runtime) = Runtime::try_current() else {
+        // Unreachable: `timer()` already answered `None` without a runtime. If
+        // it ever happens the caller holds a subscription that can never fire,
+        // which is worth failing loudly for in a debug build.
+        debug_assert!(false, "a timer was scheduled outside a dioxus runtime");
+        return;
+    };
+
+    // The root scope, not the calling one: what ties a timer's lifetime is its
+    // subscription, not whichever scope happened to be rendering.
+    runtime.spawn(ScopeId::ROOT, future);
 }
 
 /// One thread per sleep. The count is tiny by construction - a few

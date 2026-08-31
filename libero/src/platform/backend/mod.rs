@@ -1,4 +1,6 @@
-//! One module per renderer, plus [`mounted`] - the portable floor.
+//! One module per renderer, plus two portable ones: [`mounted`], the floor
+//! every renderer shares for elements, and [`thread`], the non-wasm timer that
+//! needs no renderer at all.
 //!
 //! Every renderer gives a mounted element the same `MountedData`, and that
 //! covers measuring, scrolling and focus everywhere. The rest of
@@ -57,7 +59,7 @@ pub(crate) fn scroll() -> Option<Box<dyn ScrollApi>> {
     return None;
 }
 
-/// A timer everywhere: the browser's own off `setTimeout` on the web, and
+/// A timer everywhere: the browser's own `setTimeout` on the web, and
 /// [`thread`]'s sleeping thread on every other renderer - it needs nothing
 /// from the renderer beyond dioxus's own task queue, so Blitz and the WebView
 /// floor are both covered by the one arm.

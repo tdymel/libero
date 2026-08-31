@@ -1,3 +1,4 @@
+use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
@@ -316,15 +317,26 @@ fn millis(duration: Duration) -> i32 {
 
 impl TimerApi for WebTimer {
     fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription> {
-        let closure = Closure::once(callback);
-        let handle = web_sys::window().and_then(|window| {
+        // The subscription and the callback share the handle so that a timer
+        // which has already fired forgets its own: the spec only requires an
+        // id to be unused, not unique forever, so a later `Drop` clearing a
+        // stale id could cancel an unrelated timer that inherited it.
+        let handle: Rc<Cell<Option<i32>>> = Rc::new(Cell::new(None));
+        let fired = handle.clone();
+
+        let closure = Closure::once(Box::new(move || {
+            fired.set(None);
+            callback();
+        }) as Box<dyn FnOnce()>);
+
+        handle.set(web_sys::window().and_then(|window| {
             window
                 .set_timeout_with_callback_and_timeout_and_arguments_0(
                     closure.as_ref().unchecked_ref(),
                     millis(delay),
                 )
                 .ok()
-        });
+        }));
 
         Box::new(WebTimerSubscription {
             handle,
@@ -335,14 +347,16 @@ impl TimerApi for WebTimer {
 
     fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
         let closure = Closure::<dyn FnMut()>::new(move || callback());
-        let handle = web_sys::window().and_then(|window| {
+        // An interval never goes stale on its own - it runs until it is
+        // cleared - so nothing has to forget this one.
+        let handle = Rc::new(Cell::new(web_sys::window().and_then(|window| {
             window
                 .set_interval_with_callback_and_timeout_and_arguments_0(
                     closure.as_ref().unchecked_ref(),
                     millis(interval),
                 )
                 .ok()
-        });
+        })));
 
         Box::new(WebTimerSubscription {
             handle,
@@ -353,17 +367,15 @@ impl TimerApi for WebTimer {
 }
 
 struct WebTimerSubscription {
-    /// `None` when there was no window to schedule on, so `Drop` has nothing to
-    /// undo - the timer still exists, it just never fires.
-    handle: Option<i32>,
+    /// `None` when there was no window to schedule on, or when a one-shot has
+    /// already fired and cleared it. Either way `Drop` has nothing to undo.
+    handle: Rc<Cell<Option<i32>>>,
     /// `clear_timeout` and `clear_interval` are separate calls in web-sys even
     /// though the browser's handle space is shared, so the subscription has to
     /// remember which one made it.
     repeating: bool,
     /// Kept alive for exactly as long as the timer is pending: dropping a
-    /// `Closure` frees the JS function the browser still holds. A one-shot's
-    /// `Closure::once` drops its boxed `FnOnce` when it fires, and the handle
-    /// it leaves behind is stale - clearing a stale handle does nothing.
+    /// `Closure` frees the JS function the browser still holds.
     _closure: Closure<dyn FnMut()>,
 }
 
@@ -371,7 +383,7 @@ impl TimerSubscription for WebTimerSubscription {}
 
 impl Drop for WebTimerSubscription {
     fn drop(&mut self) {
-        let Some(handle) = self.handle else {
+        let Some(handle) = self.handle.get() else {
             return;
         };
         if let Some(window) = web_sys::window() {
@@ -390,8 +402,9 @@ pub(super) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
 
 struct WebKeyboard;
 
-/// Whether this event landed in something the user types into. `select` is in
-/// the list because a key press there drives the native option search.
+/// Whether this event landed in something the user types into - Mantine's
+/// `tagsToIgnore`. `select` is in the list because a key press there drives the
+/// native option search.
 fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
     let Some(target) = event
         .target()
@@ -418,6 +431,11 @@ impl KeyboardApi for WebKeyboard {
     fn on_key(&self, callback: Box<dyn Fn(KeyChord) -> bool>) -> Box<dyn KeySubscription> {
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |event: web_sys::KeyboardEvent| {
+                // Enforced here, not reported: see `KeyboardApi::on_key`.
+                if editable_target(&event) {
+                    return;
+                }
+
                 // `Key` parses every named key it knows and falls back to the
                 // character itself, which is what `KeyboardData` does too.
                 let key = event.key().parse().unwrap_or(Key::Unidentified);
@@ -427,11 +445,7 @@ impl KeyboardApi for WebKeyboard {
                 modifiers.set(Modifiers::ALT, event.alt_key());
                 modifiers.set(Modifiers::META, event.meta_key());
 
-                let handled = callback(KeyChord {
-                    key,
-                    modifiers,
-                    editable_target: editable_target(&event),
-                });
+                let handled = callback(KeyChord { key, modifiers });
                 if handled {
                     event.prevent_default();
                 }
