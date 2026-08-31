@@ -1,7 +1,6 @@
 use std::{
     future::{Future, IntoFuture},
     pin::Pin,
-    rc::Rc,
     task::{Context, Poll, Waker},
 };
 
@@ -10,8 +9,7 @@ use dioxus::prelude::*;
 use crate::{
     components::Modal,
     context::{ModalContext, ModalHost},
-    hooks::use_portal,
-    platform::{ElementApi, document},
+    hooks::{FocusReturn, use_focus_return, use_portal},
 };
 
 pub(crate) fn use_modal_z_index() -> i32 {
@@ -36,18 +34,18 @@ struct Resolution<R: 'static> {
     outcome: Option<Option<R>>,
     handlers: Vec<Box<dyn FnMut(Option<R>)>>,
     wakers: Vec<Waker>,
-    /// What had focus when this opening started, to hand it back on close.
-    trigger: Option<Rc<dyn ElementApi>>,
+    /// Where focus came from, to hand it back on close.
+    focus_return: FocusReturn,
 }
 
 impl<R: 'static> Resolution<R> {
-    fn new() -> Self {
+    fn new(focus_return: FocusReturn) -> Self {
         Self {
             generation: 0,
             outcome: None,
             handlers: Vec::new(),
             wakers: Vec::new(),
-            trigger: None,
+            focus_return,
         }
     }
 }
@@ -63,7 +61,7 @@ fn finish<R: Clone + 'static>(
     generation: u64,
     value: Option<R>,
 ) {
-    let (handlers, wakers, trigger) = {
+    let (handlers, wakers, focus_return) = {
         let mut resolution = resolution.write();
         if resolution.generation != generation || resolution.outcome.is_some() {
             return;
@@ -72,19 +70,12 @@ fn finish<R: Clone + 'static>(
         (
             std::mem::take(&mut resolution.handlers),
             std::mem::take(&mut resolution.wakers),
-            resolution.trigger.take(),
+            resolution.focus_return,
         )
     };
 
     closer.call(());
-
-    // Out of this event's dispatch, so focus lands after the modal is gone
-    // rather than being taken back by the trap it is leaving.
-    if let Some(trigger) = trigger {
-        spawn(async move {
-            let _ = trigger.focus();
-        });
-    }
+    focus_return.restore();
 
     for mut handler in handlers {
         handler(value.clone());
@@ -233,11 +224,9 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
             resolution.outcome = None;
             resolution.handlers.clear();
             resolution.wakers.clear();
-            // Synchronous inside the trigger's own handler, so this *is* the
-            // element the user acted on.
-            resolution.trigger = document()
-                .and_then(|document| document.active_element())
-                .map(Rc::from);
+            // Synchronous inside the trigger's own handler, so the active
+            // element *is* the one the user acted on.
+            resolution.focus_return.remember_active();
             resolution.generation
         };
 
@@ -291,7 +280,8 @@ where
     R: Clone + 'static,
 {
     let args = use_signal(|| None::<S>);
-    let resolution = use_signal(Resolution::<R>::new);
+    let focus_return = use_focus_return();
+    let resolution = use_signal(move || Resolution::<R>::new(focus_return));
     // `use_callback`, not the closure directly: rsx rebuilds `render` every
     // render, and a context-provided handle is stored once - the swap keeps
     // captured values live instead of frozen at mount.
