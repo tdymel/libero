@@ -22,6 +22,7 @@ mod regex;
 mod scroll;
 mod task;
 mod timer;
+mod transition;
 
 pub use clipboard::ClipboardApi;
 pub(crate) use clipboard::clipboard;
@@ -36,3 +37,4 @@ pub(crate) use regex::{PreparedText, RegexMatch, regex_api};
 pub use scroll::{ScrollApi, ScrollSubscription, scroll};
 pub(crate) use task::next_task;
 pub use timer::{TimerApi, TimerSubscription, timer};
+pub(crate) use transition::transition_property;

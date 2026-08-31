@@ -14,7 +14,7 @@
 
 use std::rc::Rc;
 
-use dioxus::prelude::MountedData;
+use dioxus::prelude::{Event, MountedData, TransitionData};
 
 use super::{DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
@@ -76,6 +76,18 @@ pub(crate) fn timer() -> Option<Box<dyn TimerApi>> {
 pub(crate) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
     #[cfg(target_arch = "wasm32")]
     return web::keyboard();
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
+}
+
+/// Only the web can name a finished transition's property today - see
+/// [`transition_property`](crate::platform::transition_property) for why this
+/// has to be asked of the platform at all.
+pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::transition_property(event);
     #[cfg(not(target_arch = "wasm32"))]
     return None;
 }

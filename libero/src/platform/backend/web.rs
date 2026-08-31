@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use dioxus::prelude::{Key, Modifiers, MountedData};
+use dioxus::prelude::{Event, Key, Modifiers, MountedData, TransitionData};
 use wasm_bindgen::{JsCast, JsValue};
 
 use wasm_bindgen::prelude::Closure;
@@ -25,6 +25,17 @@ enum Controlled {
     Text(String),
     Select(i32),
     Other,
+}
+
+/// dioxus-web's `HasTransitionData::as_any` hands back the `web_sys` event
+/// itself rather than dioxus's wrapper around it, so that is what the
+/// downcast names.
+pub(super) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
+    Some(
+        event
+            .downcast::<web_sys::TransitionEvent>()?
+            .property_name(),
+    )
 }
 
 pub(super) fn document() -> Option<Box<dyn DocumentApi>> {

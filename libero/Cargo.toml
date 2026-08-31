@@ -41,7 +41,7 @@ chrono = { version = "0.4", default-features = false, features = ["std"] }
 js-sys = "0.3"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
-web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "NodeList", "Navigator", "Clipboard", "DomRect", "KeyboardEvent", "console"] }
+web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "NodeList", "Navigator", "Clipboard", "DomRect", "KeyboardEvent", "TransitionEvent", "console"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
 regex = "1"
