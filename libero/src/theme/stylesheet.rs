@@ -84,6 +84,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         center,
         container,
         aspect_ratio,
+        collapse,
         float,
         overlay,
         z_index,
@@ -164,6 +165,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(center.to_css_declarations());
     declarations.extend(container.to_css_declarations());
     declarations.extend(aspect_ratio.to_css_declarations());
+    declarations.extend(collapse.to_css_declarations());
     declarations.extend(float.to_css_declarations());
     declarations.extend(overlay.to_css_declarations());
     declarations.extend(z_index.to_css_declarations());

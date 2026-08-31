@@ -1,6 +1,7 @@
 mod aspect_ratio;
 mod r#box;
 mod center;
+mod collapse;
 mod container;
 mod divider;
 mod flex;
@@ -15,6 +16,7 @@ pub use aspect_ratio::AspectRatio;
 pub use r#box::Box;
 pub(crate) use r#box::{BoxStyle, box_style, use_box};
 pub use center::Center;
+pub use collapse::{Collapse, CollapseProps};
 pub use container::Container;
 pub use divider::{Divider, DividerProps, LabelPosition};
 pub use flex::{Flex, FlexDirection, FlexWrap};

@@ -8,6 +8,7 @@ mod checkbox;
 mod chip;
 mod code;
 mod code_block;
+mod collapse;
 mod color_field;
 mod color_picker;
 mod color_swatch;
@@ -74,6 +75,7 @@ pub use code_block::{
     CODE_BLOCK_BACKGROUND, CODE_BLOCK_BORDER, CODE_BLOCK_COPY_HOVER_BACKGROUND,
     CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CodeBlockDefaults,
 };
+pub use collapse::{COLLAPSE_DURATION, COLLAPSE_EASING, COLLAPSE_OPACITY_CLOSED, CollapseDefaults};
 pub use color_field::ColorFieldDefaults;
 pub use color_picker::{
     COLOR_PICKER_PREVIEW, COLOR_PICKER_PREVIEW_SIZE, COLOR_PICKER_SATURATION_HEIGHT,

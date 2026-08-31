@@ -20,9 +20,9 @@ use icons::BurgerIcon;
 use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BoxPage, ButtonPage, CenterPage,
-    CheckboxPage, ChipPage, CodeBlockPage, CodePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
-    ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage, DividerPage,
-    DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
+    CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage,
+    ComboboxPage, ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage,
+    DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
     FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
     KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
     NumberFieldPage, OverlayPage, PasswordFieldPage, PerformancePage, PinFieldPage, QrCodePage,
@@ -137,6 +137,8 @@ pub(crate) enum Route {
     BoxPage {},
     #[route("/layout/center")]
     CenterPage {},
+    #[route("/layout/collapse")]
+    CollapsePage {},
     #[route("/layout/container")]
     ContainerPage {},
     #[route("/layout/divider")]

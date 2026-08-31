@@ -171,6 +171,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::AspectRatioPage {}, "AspectRatio"),
                 page(Route::BoxPage {}, "Box"),
                 page(Route::CenterPage {}, "Center"),
+                page(Route::CollapsePage {}, "Collapse"),
                 page(Route::ContainerPage {}, "Container"),
                 page(Route::DividerPage {}, "Divider"),
                 page(Route::FlexPage {}, "Flex"),

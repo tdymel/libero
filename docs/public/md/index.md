@@ -68,6 +68,7 @@ fetch only the file you need.
 - [AspectRatio](aspect_ratio.md): Enforces a width-to-height ratio on its child, cropping it to fill the box.
 - [Box](box.md): The polymorphic primitive every other component is built on - renders as any tag via `component`, styled entirely through `sx`.
 - [Center](center.md): Centers its child horizontally and vertically.
+- [Collapse](collapse.md): Animates its children's height open and closed, over a grid row rather than a measured pixel height.
 - [Container](container.md): Centers content and caps its width at a breakpoint.
 - [Divider](divider.md): A horizontal or vertical rule, with an optional label sitting in the line.
 - [Flex](flex.md): A flexbox container - direction, gap, align, justify and wrap, all theme-aware.
