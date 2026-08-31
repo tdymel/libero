@@ -228,7 +228,15 @@ impl<S: 'static, R: Clone + 'static> ModalHandle<S, R> {
         };
         // Out of the guard, still inside the trigger's own handler - which is
         // what makes the active element the one the user acted on.
-        focus_return.remember_active();
+        //
+        // Skipped when this modal is *already* open, because then the active
+        // element is a control inside the overlay that is about to be torn
+        // down, and remembering it would clobber the trigger that is still the
+        // right answer ([[todos]] item 37). `peek`: `open_with` is called from
+        // handlers, and nothing here should subscribe.
+        if self.args.peek().is_none() {
+            focus_return.remember_active();
+        }
 
         let mut slot = self.args;
         slot.set(Some(args.into()));
