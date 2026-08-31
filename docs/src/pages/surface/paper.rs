@@ -40,9 +40,11 @@ pub fn PaperPage() -> Element {
                         .doc("A hairline border in the themed surface border colour. Legal together with a shadow."),
                     prop("component", "HtmlTag")
                         .default("div")
-                        .doc("Which element to render as - div, section, article, aside, or a for a clickable card."),
+                        .doc("Which element to render as - div, section, article, aside, or a for a clickable card. section and aside are landmarks, and the caller owns the aria-label that names them."),
                     prop("variables", "Variables")
                         .doc("Per-instance CSS custom properties, for a component built on Paper."),
+                    prop("framework_sx", "Option<&'static StaticSx>")
+                        .doc("Base styles for a component built on Paper, on the framework layer. It replaces Paper's own base, so build it from paper_sx()."),
                     prop("children", "Element").doc("The surface's contents."),
                 ]),
             ],
@@ -59,7 +61,13 @@ pub fn PaperPage() -> Element {
                     " with a role. It renders no ARIA of its own, because a surface is "
                     "presentational; a "
                     Code { source: "Paper" }
-                    " that becomes a landmark owns its own name. Padding is yours, through "
+                    " rendered as a "
+                    Code { source: "section" }
+                    " or an "
+                    Code { source: "aside" }
+                    " is a landmark, and the caller owns the "
+                    Code { source: "aria-label" }
+                    " that names it. Padding is yours, through "
                     Code { source: "sx" }
                     "."
                 }
@@ -76,17 +84,17 @@ pub fn PaperPage() -> Element {
                     // and this control prints the line that does it.
                     Control::slider("shadow", ["none", "xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.paper.shadow.as_str())
-                        .code(|_, values| match values.str("shadow").as_str() {
+                        .code(|control, values| match values.str("shadow").as_str() {
                             "none" => vec![NO_SHADOW.to_string()],
+                            // At the themed default the prop would not be
+                            // typed, so it does not print - but the padding
+                            // still has to.
+                            shadow if shadow == control.default => vec![PADDING.to_string()],
                             shadow => {
                                 vec![format!("shadow: {shadow:?}"), PADDING.to_string()]
                             }
                         }),
-                    Control::switch("bordered")
-                        .code(|_, values| match values.str("bordered").as_str() {
-                            "true" => vec!["bordered: true".to_string()],
-                            _ => vec![],
-                        }),
+                    Control::switch("bordered"),
                     Control::toggle("component", ["div", "section", "article"]),
                 ],
                 render: move |values: DemoValues| {
@@ -123,10 +131,12 @@ pub fn PaperPage() -> Element {
                     "component: \"a\" is a whole card that is one link. The card owns the "
                     "accessible name the same way any other link does - from its contents.",
                 }
+                // No `target: "_blank"`: `extends(a)` offers it, but a new tab
+                // needs an affordance that says so, and this example is about
+                // the link arm rather than about targeting.
                 Paper {
                     component: "a",
                     href: "https://dioxuslabs.com",
-                    target: "_blank",
                     bordered: true,
                     sx: sx().padding("lg"),
                     Title { size: "md", "Dioxus" }

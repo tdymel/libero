@@ -48,8 +48,12 @@ misuse, and nothing warns about it.
 ## As a link
 
 The base is `display: block` with `text-decoration: none`, which is what lets a
-whole card be one link. `href` and `target` are available on any `Paper`; the
-card takes its accessible name from its contents, like any other link.
+whole card be one link. `href`, `target` and `rel` are declared on `PaperProps`
+and so accepted on any `Paper`, but they mean something only on the
+`component: "a"` form; nothing warns if you set one elsewhere. The card takes its accessible name from its contents, like any other
+link. Nothing interactive belongs inside it - a button or a field nested in a
+link is an interactive-nesting hazard - and `target: "_blank"` needs a visible
+affordance saying the link opens a new tab, so neither is in the example.
 
 ```rust
 use dioxus::prelude::*;
@@ -64,7 +68,6 @@ fn Demo() -> Element {
         Paper {
             component: "a",
             href: "https://dioxuslabs.com",
-            target: "_blank",
             bordered: true,
             sx: sx().padding("lg"),
             Title { size: "md", "Dioxus" }
@@ -77,8 +80,8 @@ fn Demo() -> Element {
 ## Building on it
 
 A component that renders a surface as part of its own element - rather than
-nesting a `Paper` inside itself - builds its base style from the crate-internal
-`paper_sx()` and chains its own declarations on top. `Dialog` is the worked
+nesting a `Paper` inside itself - builds its base style from `paper_sx()`
+(`use libero::components::paper_sx;`) and chains its own declarations on top. `Dialog` is the worked
 example: its static is `paper_sx()` plus the dialog chrome, handed back to
 `Paper` as `framework_sx`, so there is one element, one CSS class and one
 definition of what a surface is. Chaining works because `Paper` emits a
@@ -103,13 +106,17 @@ it so; as an `<a href>` it is focusable and carries the library's shared
 | `radius` | `Size` | `md` | Corner radius, a step on the shared radius scale. |
 | `shadow` | `Size` | `sm` | Elevation, a step on the shared shadow scale. A flat surface is `sx: sx().box_shadow("none")`. |
 | `bordered` | `bool` | `false` | A hairline border in the themed surface border colour. Legal together with a shadow. |
-| `component` | `HtmlTag` | `div` | Which element to render as - `div`, `section`, `article`, `aside`, or `a` for a clickable card. |
+| `component` | `HtmlTag` | `div` | Which element to render as - `div`, `section`, `article`, `aside`, or `a` for a clickable card. `section` and `aside` are landmarks; the caller owns the `aria-label` that names them. |
 | `variables` | `Variables` | - | Per-instance CSS custom properties, for a component built on `Paper`. |
+| `framework_sx` | `Option<&'static StaticSx>` | - | Base styles for a component built on `Paper`, on the framework layer. It **replaces** `Paper`'s own base, so build it from `paper_sx()`. |
 | `children` | `Element` | required | The surface's contents. |
 
 Like every component, `Paper` also takes the shared props `sx`, `class`,
-`style`, `states`, and any extra HTML attributes - `href` and `target`
-included, for the link form.
+`style`, `states`, and any extra HTML attributes - `href`, `target` and `rel`
+included, though only the `component: "a"` form does anything with them.
+`Paper` sets no `role` and no ARIA of its own and
+forwards what it is given untouched, so a caller's `role` or `aria-label`
+reaches the element.
 
 ## Theme defaults
 
@@ -120,6 +127,7 @@ included, for the link form.
 | `radius` | `Size` | `Md` | Corner radius of a `Paper` that names none. |
 | `shadow` | `Size` | `Sm` | Elevation of a `Paper` that names none. |
 | `background` | `&'static str` | `#fff` | The surface colour itself. A dark theme changes this value, not any component. |
+| `contrast` | `ColorValue` | `black` | What reads against `background`. Change one and change the other. |
 | `border_color` | `ColorValue` | `grey.3` | The `bordered` hairline. |
 
 ## CSS variables
@@ -127,6 +135,7 @@ included, for the link form.
 | Variable | Description |
 |---|---|
 | `--lsx-paper-background` | The surface colour. Anything that has to disappear against a surface reads this. |
+| `--lsx-paper-contrast` | What reads against the background. Published as `--lsx-focus-contrast`, so a focus ring inside a surface contrasts against it. |
 | `--lsx-paper-border-color` | The `bordered` hairline colour. |
 | `--lsx-paper-radius` | The themed corner radius, as a reference into the radius scale. |
 | `--lsx-paper-shadow` | The themed elevation, as a reference into the shadow scale. |
