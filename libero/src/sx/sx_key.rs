@@ -71,6 +71,7 @@ properties! {
     JustifyContent => "justify-content", justify_content;
     Gap => "gap", gap, SizeCss::SPACING;
     GridTemplateColumns => "grid-template-columns", grid_template_columns;
+    GridTemplateRows => "grid-template-rows", grid_template_rows;
     GridTemplateAreas => "grid-template-areas", grid_template_areas;
     GridColumn => "grid-column", grid_column;
     GridRow => "grid-row", grid_row;
@@ -146,6 +147,13 @@ properties! {
     TextAlign => "text-align", text_align;
     TextOverflow => "text-overflow", text_overflow;
     ScrollMargin => "scroll-margin", scroll_margin;
+    ScrollPaddingInline => "scroll-padding-inline", scroll_padding_inline;
+    ScrollBehavior => "scroll-behavior", scroll_behavior;
+    ScrollSnapType => "scroll-snap-type", scroll_snap_type;
+    ScrollSnapAlign => "scroll-snap-align", scroll_snap_align;
+    ScrollSnapStop => "scroll-snap-stop", scroll_snap_stop;
+    OverscrollBehaviorX => "overscroll-behavior-x", overscroll_behavior_x;
+    OverscrollBehaviorY => "overscroll-behavior-y", overscroll_behavior_y;
     Transform => "transform", transform;
     Animation => "animation", animation;
     Visibility => "visibility", visibility;

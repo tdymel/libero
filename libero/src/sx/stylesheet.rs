@@ -283,6 +283,27 @@ mod tests {
     }
 
     #[test]
+    fn the_scroll_and_grid_row_builders_emit_their_declarations() {
+        let css = Stylesheet::from(
+            &sx()
+                .grid_template_rows("0fr")
+                .scroll_snap_type("x mandatory")
+                .scroll_snap_align("start")
+                .scroll_snap_stop("always")
+                .scroll_behavior("smooth")
+                .overscroll_behavior_x("contain")
+                .overscroll_behavior_y("none")
+                .scroll_padding_inline("1rem"),
+        );
+
+        assert!(css.as_str().contains(
+            "grid-template-rows:0fr;scroll-snap-type:x mandatory;scroll-snap-align:start;\
+             scroll-snap-stop:always;scroll-behavior:smooth;overscroll-behavior-x:contain;\
+             overscroll-behavior-y:none;scroll-padding-inline:1rem;"
+        ));
+    }
+
+    #[test]
     fn sx_media_emits_its_query_verbatim() {
         let css = Stylesheet::from(
             &sx().media("(prefers-reduced-motion: reduce)", sx().transition("none")),
