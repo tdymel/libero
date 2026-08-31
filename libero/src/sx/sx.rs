@@ -90,6 +90,17 @@ impl Sx {
         self.modifier(SxModifierKey::Breakpoint(breakpoint), nested)
     }
 
+    /// Styles that apply while `query` matches, e.g.
+    /// `"(prefers-reduced-motion: reduce)"`.
+    ///
+    /// The query is passed through verbatim. Nothing validates it, so a typo
+    /// silently matches nothing - the same tradeoff [`when`](Self::when)
+    /// makes. Nested media modifiers fold into one `and` query, exactly like
+    /// nested [`breakpoint`](Self::breakpoint)s.
+    pub fn media(self, query: impl Into<String>, nested: Sx) -> Self {
+        self.modifier(SxModifierKey::Media(query.into()), nested)
+    }
+
     /// Marks this element as a named inline-size query container, so
     /// descendants can [`container_query`](Self::container_query) it.
     ///

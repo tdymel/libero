@@ -113,6 +113,10 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext 
             selectors: context.selectors.clone(),
             at_rules: context.wrapped_in(breakpoint_at_rule(*size)),
         },
+        SxModifierKey::Media(query) => CssContext {
+            selectors: context.selectors.clone(),
+            at_rules: context.wrapped_in(AtRule::Media(query.clone())),
+        },
         SxModifierKey::Container { name, condition } => CssContext {
             selectors: context.selectors.clone(),
             at_rules: context.wrapped_in(AtRule::Container {
@@ -276,6 +280,47 @@ mod tests {
         assert!(css.contains("@media (min-width: 62rem) and (min-width: 75rem){"));
         assert!(css.contains("background:var(--lsx-secondary-4);"));
         assert!(!css.contains("background:var(--lsx-secondary-2);"));
+    }
+
+    #[test]
+    fn sx_media_emits_its_query_verbatim() {
+        let css = Stylesheet::from(
+            &sx().media("(prefers-reduced-motion: reduce)", sx().transition("none")),
+        );
+
+        assert!(
+            css.as_str()
+                .contains("@media (prefers-reduced-motion: reduce){")
+        );
+        assert!(css.as_str().contains("transition:none;"));
+    }
+
+    #[test]
+    fn nested_media_modifiers_fold_into_one_query() {
+        let css = Stylesheet::from(&sx().media(
+            "(prefers-reduced-motion: reduce)",
+            sx().breakpoint(Size::Md, sx().color("red")),
+        ));
+
+        assert!(
+            css.as_str()
+                .contains("@media (prefers-reduced-motion: reduce) and (min-width: 62rem){")
+        );
+        assert!(css.as_str().contains("color:red;"));
+        assert_eq!(css.as_str().matches("@media").count(), 1);
+    }
+
+    #[test]
+    fn a_media_modifier_nests_inside_a_selector() {
+        let css = Stylesheet::from(
+            &sx().hover(sx().media("(prefers-reduced-motion: reduce)", sx().color("red"))),
+        );
+
+        assert!(
+            css.as_str()
+                .contains("@media (prefers-reduced-motion: reduce){")
+        );
+        assert!(css.as_str().contains(":hover{color:red;}"));
     }
 
     #[test]
