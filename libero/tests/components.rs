@@ -1049,6 +1049,40 @@ fn scroll_area_renders_its_content() {
     assert!(body(&html).contains("scrollable content"));
 }
 
+/// The default opts the viewport *out* of Chromium's implicit tab stop, which
+/// is what every existing call site relies on.
+#[test]
+fn a_scroll_area_is_not_a_tab_stop_by_default() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ScrollArea { "scrollable content" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(html.contains(r#"tabindex="-1""#));
+    assert!(!html.contains(r#"tabindex="0""#));
+}
+
+#[test]
+fn a_focusable_scroll_area_is_a_tab_stop() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ScrollArea { focusable: true, "scrollable content" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(html.contains(r#"tabindex="0""#));
+    assert!(!html.contains(r#"tabindex="-1""#));
+}
+
 #[test]
 fn float_renders_its_child_with_placement_state() {
     fn app() -> Element {

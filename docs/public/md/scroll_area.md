@@ -134,6 +134,24 @@ scrolling still works once something inside has focus, and
 `scrollbar_visibility: "hover"` also reveals the bar on `:focus-within` so a
 keyboard user is not left without one.
 
+`focusable: true` is for the case that assumption does not hold - a strip of
+images, a block of plain text, anything whose content has nothing to focus. It
+makes the viewport a tab stop (`tabindex="0"`) and the browser's own arrow-key
+scrolling comes with it, so the content can be read without a mouse.
+
+Name it as well as focusing it. APG's scrollable-region pattern wants a `role`
+and an accessible name on a focusable region, and `ScrollArea` sets no `role` of
+its own, so both go through the attribute spread:
+
+```rust
+ScrollArea {
+    focusable: true,
+    role: "region",
+    aria_label: "Release notes",
+    Text { "..." }
+}
+```
+
 `scrollbars: "none"` hides overflow on both axes - content outside the box becomes
 unreachable, so use it only when something else provides the scrolling.
 
@@ -147,6 +165,7 @@ unreachable, so use it only when something else provides the scrolling.
 | `scrollbar_color` | `ThemeAwareValue` | - | Scrollbar thumb color - the track stays transparent. Unset it is `grey.5`. |
 | `scroll_position_x` | `f64` | - | Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount. |
 | `scroll_position_y` | `f64` | - | Percent (0-100) along the vertical axis - see `scroll_position_x`. |
+| `focusable` | `bool` | `false` | Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed. |
 | `on_scroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
 | `on_top_reached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
 | `on_bottom_reached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |

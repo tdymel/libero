@@ -146,6 +146,17 @@ base_props! {
         scroll_position_x: Option<f64>,
         /// Percent (0-100) along the vertical axis - see `scroll_position_x`.
         scroll_position_y: Option<f64>,
+        /// Makes the viewport itself a tab stop, so content that carries no
+        /// focusable elements of its own can still be reached and scrolled
+        /// with the arrow keys. Off by default, and only correct when the
+        /// content is genuinely not reachable otherwise - a tab stop that
+        /// does nothing is worse than none.
+        ///
+        /// APG's scrollable-region pattern also wants a `role="region"` (or
+        /// `"group"`) and an accessible name. `ScrollArea` sets no `role` of
+        /// its own, so both go through `attributes` as usual.
+        #[props(default)]
+        focusable: bool,
         #[props(default)]
         on_scroll: Option<EventHandler<ScrollPositionEvent>>,
         #[props(default)]
@@ -336,9 +347,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .prepare()
         .element(&root)
         // Chromium makes an overflowing `overflow: auto` region an implicit
-        // tab stop unless opted out. Always the case here, and the content
-        // carries its own focusable elements.
-        .attr("tabindex", "-1")
+        // tab stop unless opted out, and the usual case is content that
+        // carries its own focusable elements. `focusable` is the other case:
+        // a strip of plain images or text, where the viewport is the only
+        // thing there is to focus.
+        .attr("tabindex", if props.focusable { "0" } else { "-1" })
         .event("onscroll", onscroll)
         .event("onscrollend", onscrollend)
         .render(HtmlTag::Div, props.attributes, rsx! { {body} })

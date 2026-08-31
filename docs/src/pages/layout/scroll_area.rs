@@ -11,6 +11,13 @@ use libero::{
     use_theme,
 };
 
+const FOCUSABLE_EXAMPLE: &str = r#"ScrollArea {
+    focusable: true,
+    role: "region",
+    aria_label: "Release notes",
+    Text { "..." }
+}"#;
+
 /// Fifty thousand rows, of which the section below renders about a dozen.
 const VIRTUAL_ROWS: usize = 50_000;
 
@@ -96,6 +103,9 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount."),
                 prop("scroll_position_y", "f64")
                     .doc("Percent (0-100) along the vertical axis - see `scroll_position_x`."),
+                prop("focusable", "bool")
+                    .default("false")
+                    .doc("Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed."),
                 prop("on_scroll", "EventHandler<ScrollPositionEvent>")
                     .doc("Fires on every scroll tick with the position as a percent of each axis's scrollable range."),
                 prop("on_top_reached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
@@ -217,6 +227,53 @@ pub fn ScrollAreaPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_frame),
+            }
+
+            DocSection {
+                title: "Keyboard access",
+                Text {
+                    "A scroll area is not a tab stop. Its content usually carries its own "
+                    "focusable elements, and tabbing to those scrolls them into view, so a "
+                    "stop on the viewport would be one more press on the way to anything "
+                    "useful - Chromium adds one to every overflowing region, and "
+                    Code { source: "ScrollArea" }
+                    " opts out of it."
+                }
+                Text {
+                    "Content that has nothing to focus is the other case: a strip of images, "
+                    "or a block of text. There the viewport is the only thing to focus, and "
+                    "without it the content cannot be read with a keyboard at all. "
+                    Code { source: "focusable: true" }
+                    " gives it the tab stop, and the browser's own arrow-key scrolling comes "
+                    "with it."
+                }
+                CodeBlock { source: FOCUSABLE_EXAMPLE, language: "rust" }
+                Box {
+                    sx: sx()
+                        .height("120px")
+                        .width("100%")
+                        .border("1px solid var(--lsx-grey-3)"),
+                    ScrollArea {
+                        id: "focusable-demo",
+                        focusable: true,
+                        role: "region",
+                        aria_label: "Release notes",
+                        Box {
+                            sx: sx().padding("md"),
+                            for i in 0..20 {
+                                Text { key: "{i}", "Line {i} of text nothing can focus." }
+                            }
+                        }
+                    }
+                }
+                Text {
+                    "Name it as well as focus it. A tab stop that reads as nothing is worse "
+                    "than none, so APG's scrollable-region pattern wants a "
+                    Code { source: "role" }
+                    " and an accessible name alongside the stop. "
+                    Code { source: "ScrollArea" }
+                    " sets no role of its own, so both go through the usual attribute spread."
+                }
             }
 
             DocSection {
