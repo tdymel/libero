@@ -39,7 +39,10 @@ pub fn DialogPage() -> Element {
             lead: rsx! {
                 Text {
                     "The dialog surface itself - padding, radius, shadow, and the role/"
-                    "aria-modal wiring. Inside a modal it also names itself from "
+                    "aria-modal wiring. It is a "
+                    Code { source: "Paper" }
+                    ": the background, the border colour and the default radius are the "
+                    "surface's, and only the chrome above is its own. Inside a modal it also names itself from "
                     Code { source: "title" }
                     " and closes itself from its own header button; open one with "
                     Code { source: "use_modal" }

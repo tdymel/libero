@@ -7,7 +7,8 @@ Index: [index.md](index.md) - every other component's markdown page
 Description: The dialog surface - padding, radius, shadow and the `role="dialog"` wiring - which inside a modal also names and closes itself.
 
 The dialog surface itself - padding, radius, shadow, and the `role`/`aria-modal`
-wiring. Inside a modal it also names itself from `title` and closes itself from
+wiring. It is a [`Paper`](paper.md): the background, the border colour and the
+default radius are the surface's, and only the chrome above is its own. Inside a modal it also names itself from `title` and closes itself from
 its own header button; open one with [`use_modal`](modal.md). `size` caps its
 width from the dialog scale (`md` is 510px).
 
@@ -76,4 +77,4 @@ Like every component, `Dialog` also takes the shared props `sx`, `class`,
 |---|---|
 | `--lsx-dialog-size-<size>` | Max width for that size step, from the theme. |
 | `--lsx-dialog-size-override` | Set from the `size` prop; wins over the scale value. |
-| `--lsx-dialog-radius` | Set from the `radius` prop; falls back to the `md` radius. |
+| `--lsx-dialog-radius` | Set from the `radius` prop; falls back to `--lsx-paper-radius`. |
