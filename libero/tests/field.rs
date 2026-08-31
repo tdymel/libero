@@ -818,8 +818,14 @@ fn a_segmented_control_wears_the_field_around_its_radiogroup() {
     let group = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
     assert_eq!(group["role"], "radiogroup");
     assert_eq!(group["aria-labelledby"], format!("{id}-label"));
-    assert!(group["aria-describedby"].contains(&format!("{id}-helper")), "{group:?}");
-    assert!(group["aria-describedby"].contains(&format!("{id}-status")), "{group:?}");
+    assert!(
+        group["aria-describedby"].contains(&format!("{id}-helper")),
+        "{group:?}"
+    );
+    assert!(
+        group["aria-describedby"].contains(&format!("{id}-status")),
+        "{group:?}"
+    );
     assert_eq!(group["aria-invalid"], "true");
     assert_eq!(group["aria-required"], "true");
 
@@ -828,7 +834,10 @@ fn a_segmented_control_wears_the_field_around_its_radiogroup() {
         .map(|(at, _)| &body[at..at + body[at..].find('>').unwrap()])
         .collect();
     assert_eq!(radios.len(), 3, "{body}");
-    assert!(radios.iter().all(|radio| radio.contains("disabled")), "{radios:?}");
+    assert!(
+        radios.iter().all(|radio| radio.contains("disabled")),
+        "{radios:?}"
+    );
 }
 
 /// `full_width` fills the wrapper, so the wrapper has to fill its parent too -
@@ -847,7 +856,10 @@ fn a_full_width_segmented_control_stretches_its_field_wrapper() {
     let body = body(&html);
     let wrapper = attributes_of(&body, "div");
     assert!(wrapper["data-state"].contains("full-width"), "{wrapper:?}");
-    assert!(html.contains("[data-state~=\"full-width\"]{width:100%"), "{html}");
+    assert!(
+        html.contains("[data-state~=\"full-width\"]{width:100%"),
+        "{html}"
+    );
 }
 
 #[derive(Clone, Copy, PartialEq, Default, Options)]
