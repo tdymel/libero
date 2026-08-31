@@ -439,6 +439,18 @@ impl WebKeyboard {
     ) -> Box<dyn KeySubscription> {
         let closure = Closure::<dyn FnMut(web_sys::KeyboardEvent)>::new(
             move |event: web_sys::KeyboardEvent| {
+                // Ahead of the filter, so it guards the unfiltered path too -
+                // which is the one that needs it. Escape mid-composition means
+                // "cancel the composition", and every consumer of the opt-out
+                // matches Escape and returns `true`, so without this the
+                // `prevent_default()` below would eat the cancel and dismiss
+                // the surface instead. A press carrying `isComposing` is never
+                // a shortcut the user meant, so it costs the filtered path
+                // nothing either.
+                if event.is_composing() {
+                    return;
+                }
+
                 if skip_text_entry && editable_target(&event) {
                     return;
                 }
