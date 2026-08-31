@@ -59,7 +59,6 @@ pub(crate) fn scroll() -> Option<Box<dyn ScrollApi>> {
     return None;
 }
 
-<<<<<<< HEAD
 /// A timer everywhere: the browser's own `setTimeout` on the web, and
 /// [`thread`]'s sleeping thread on every other renderer - it needs nothing
 /// from the renderer beyond dioxus's own task queue, so Blitz and the WebView
@@ -84,8 +83,6 @@ pub(crate) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
 /// Only the web can name a finished transition's property today - see
 /// [`transition_property`](crate::platform::transition_property) for why this
 /// has to be asked of the platform at all.
-=======
->>>>>>> 9739a68 (fix(hooks): correct the focus-return rationale and tighten the presence API)
 pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = event;
