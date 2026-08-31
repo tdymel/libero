@@ -9,7 +9,7 @@ use libero::{
 
 /// A surface has no size of its own, so the preview needs contents. They are
 /// fixed markup rather than a control - there is nothing here to vary.
-const CONTENT: &str = r#"Title { size: "md", "Invoice #4021" }
+const CONTENT: &str = r#"Title { size: "md", component: "h2", "Invoice #4021" }
 Text { "Due 30 September." }"#;
 
 /// Padding is the caller's `sx`, deliberately: `Paper` is the surface, not the
@@ -118,7 +118,11 @@ pub fn PaperPage() -> Element {
                             bordered: values.str("bordered") == "true",
                             component: values.str("component"),
                             sx,
-                            Title { size: "md", "Invoice #4021" }
+                            // `md` is an h4 by size, and the preview sits
+                            // straight under the page's h1 - the level is a
+                            // document decision, the size a design one
+                            // ([[codebase/heading-order]]).
+                            Title { size: "md", component: "h2", "Invoice #4021" }
                             Text { "Due 30 September." }
                         }
                     }
@@ -139,7 +143,8 @@ pub fn PaperPage() -> Element {
                     href: "https://dioxuslabs.com",
                     bordered: true,
                     sx: sx().padding("lg"),
-                    Title { size: "md", "Dioxus" }
+                    // Under `DocSection`'s h2, so h3.
+                    Title { size: "md", component: "h3", "Dioxus" }
                     Text { "The framework Libero is built on." }
                 }
             }

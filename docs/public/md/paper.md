@@ -27,7 +27,7 @@ fn Demo() -> Element {
         Paper {
             shadow: "sm",
             sx: sx().padding("lg"),
-            Title { size: "md", "Invoice #4021" }
+            Title { size: "md", component: "h2", "Invoice #4021" }
             Text { "Due 30 September." }
         }
     }
@@ -70,7 +70,7 @@ fn Demo() -> Element {
             href: "https://dioxuslabs.com",
             bordered: true,
             sx: sx().padding("lg"),
-            Title { size: "md", "Dioxus" }
+            Title { size: "md", component: "h3", "Dioxus" }
             Text { "The framework Libero is built on." }
         }
     }
