@@ -2,19 +2,26 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Box, HtmlTag, Input, Title, Variables, common::base_props, layout::use_box,
+        ActionIcon, Box, Input, Paper, Title, Variables,
+        common::{attr, base_props},
+        surface::paper_sx,
         variables,
     },
     context::ModalContext,
     hooks::use_id,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, DIALOG_SIZE, Size, SizeCss},
+    theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
 };
 
 const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
 
+// A dialog is a `Paper`, so its chrome comes from `paper_sx()` - background,
+// border and the themed radius - and this adds only what makes it a dialog.
+// Both overrides below are plain declarations chained on top, which is what
+// `paper_sx()` leaves room for: `Paper` emits a `data-state` token only for a
+// step a caller names, and `Dialog` names none.
 static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
-    sx().background("white")
+    paper_sx()
         // `Modal`'s wrapper is pointer-events:none so backdrop clicks fall
         // through; the dialog itself needs them back.
         .pointer_events("auto")
@@ -23,7 +30,8 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
         .max_width(DIALOG_SIZE.overridable(Size::Md))
         .margin("md")
         .padding("lg")
-        .border_radius(DIALOG_RADIUS_VAR.value_or(SizeCss::RADIUS.value(Size::Md)))
+        .border_radius(DIALOG_RADIUS_VAR.value_or(PAPER_RADIUS.value()))
+        // A dialog floats above everything, where the surface default rests.
         .box_shadow(SizeCss::SHADOW.value(Size::Xl))
 });
 
@@ -107,46 +115,51 @@ pub fn Dialog(props: DialogProps) -> Element {
         .merge(props.variables.unwrap_or_default())
         .into();
 
-    use_box()
-        .framework_sx(&DIALOG_BASE_SX)
-        .class(&props.class)
-        .sx(&props.sx)
-        .states(&props.states)
-        .variables(&variables)
-        .prepare()
-        .attr("role", "dialog")
-        .attr("aria-modal", is_modal.then_some("true"))
-        .attr(
-            "aria-labelledby",
-            (props.aria_label.is_none() && props.title.is_some()).then(&*title_id),
-        )
-        .attr("aria-label", props.aria_label.clone())
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                if props.title.is_some() || close_button {
-                    Box { framework_sx: &DIALOG_HEADER_SX,
-                        if let Some(title) = props.title.clone() {
-                            Title { id: title_id(), size: "xl", sx: &DIALOG_HEADER_TITLE_SX, "{title}" }
-                        }
-                        if close_button {
-                            ActionIcon {
-                                variant: "transparent",
-                                color: "gray",
-                                size: "sm",
-                                aria_label: props.close_label.clone().unwrap_or_else(|| "Close".to_string()),
-                                onclick: move |_| {
-                                    if let Some(modal) = modal {
-                                        modal.close();
-                                    }
-                                },
-                                {close_icon()}
-                            }
+    // Pushed onto the caller's own, not handed to `Paper` as props: the
+    // component's attributes have to render after the caller's to win a
+    // duplicate name, which is the order `BoxStyle::render` keeps.
+    let mut attributes = props.attributes;
+    attributes.push(attr("role", "dialog"));
+    if is_modal {
+        attributes.push(attr("aria-modal", "true"));
+    }
+    if props.aria_label.is_none() && props.title.is_some() {
+        attributes.push(attr("aria-labelledby", title_id()));
+    }
+    if let Some(aria_label) = props.aria_label.clone() {
+        attributes.push(attr("aria-label", aria_label));
+    }
+
+    rsx! {
+        Paper {
+            framework_sx: &DIALOG_BASE_SX,
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            variables,
+            attributes,
+            if props.title.is_some() || close_button {
+                Box { framework_sx: &DIALOG_HEADER_SX,
+                    if let Some(title) = props.title.clone() {
+                        Title { id: title_id(), size: "xl", sx: &DIALOG_HEADER_TITLE_SX, "{title}" }
+                    }
+                    if close_button {
+                        ActionIcon {
+                            variant: "transparent",
+                            color: "gray",
+                            size: "sm",
+                            aria_label: props.close_label.clone().unwrap_or_else(|| "Close".to_string()),
+                            onclick: move |_| {
+                                if let Some(modal) = modal {
+                                    modal.close();
+                                }
+                            },
+                            {close_icon()}
                         }
                     }
                 }
-                {props.children}
-            },
-        )
+            }
+            {props.children}
+        }
+    }
 }

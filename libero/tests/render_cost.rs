@@ -258,6 +258,7 @@ fn render_cost_per_component() {
         "TreeItem" { TreeItem { "x" } }
 
         "Overlay" { Overlay {} }
+        "Paper" { Paper { "x" } }
         "Dialog" { Dialog { "x" } }
         "Tooltip" { Tooltip { label: rsx! { "t" }, "x" } }
 
