@@ -7,6 +7,8 @@ use crate::platform::transition_property;
 pub struct Presence {
     mounted: Signal<bool>,
     visible: Signal<bool>,
+    /// A snapshot, not a signal: rebuilt every render, so never cache a
+    /// `Presence` across renders - a stashed one answers with a frozen `open`.
     open: bool,
     property: &'static str,
 }

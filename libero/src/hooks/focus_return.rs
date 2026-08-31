@@ -19,9 +19,10 @@ pub struct FocusReturn {
 }
 
 impl FocusReturn {
-    /// Attach to the trigger's `onmounted`. Kept for the overlay that never
-    /// opens from a click - `FloatingWindow` restores on unmount, where there
-    /// is no active element left to have read.
+    /// Attach to the trigger's `onmounted`. Kept for the overlay whose trigger
+    /// belongs to the caller and is never handed to the component -
+    /// `FloatingWindow` has no opening handler of its own to call
+    /// `remember_active()` from, so the caller names the trigger instead.
     pub fn remember(&self, event: Event<MountedData>) {
         let mut trigger = self.trigger;
         trigger.set(Some(Trigger::Mounted(event.data.clone())));
