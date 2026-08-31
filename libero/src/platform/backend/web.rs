@@ -464,7 +464,11 @@ impl WebKeyboard {
                 modifiers.set(Modifiers::ALT, event.alt_key());
                 modifiers.set(Modifiers::META, event.meta_key());
 
-                let handled = callback(KeyChord { key, modifiers });
+                let handled = callback(KeyChord {
+                    key,
+                    modifiers,
+                    repeat: event.repeat(),
+                });
                 if handled {
                     event.prevent_default();
                 }

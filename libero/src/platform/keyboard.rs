@@ -12,9 +12,25 @@ pub trait KeySubscription {}
 ///
 /// The same `Key` and `Modifiers` a `KeyboardData` handler gets, so a component
 /// that already matches on `event.key()` matches on this unchanged.
+///
+/// `#[non_exhaustive]`: a chord is something the platform hands you, never
+/// something you build, and the next field to be needed should not be a
+/// breaking change.
+#[non_exhaustive]
 pub struct KeyChord {
     pub key: Key,
     pub modifiers: Modifiers,
+    /// Whether the platform is repeating a key the user is still holding.
+    ///
+    /// **Held keys are not rare and not always deliberate.** A motor
+    /// impairment, Sticky Keys, Slow Keys or a switch device all turn one
+    /// intended press into a stream of them, and a toggle that fires per press
+    /// flaps - Ctrl+K opening and closing a palette over and over.
+    ///
+    /// Reported rather than debounced, because unlike the text-entry filter
+    /// this is a fact about the event and not a policy: a toggle ignores a
+    /// repeat, while a held ArrowDown scrolling a list wants every one.
+    pub repeat: bool,
 }
 
 /// Hearing a key press anywhere in the document, not just inside one subtree.
@@ -27,6 +43,12 @@ pub trait KeyboardApi {
     /// subscription is dropped. **Returning `true` prevents the default
     /// action** - what an `event.prevent_default()` would do from a handler,
     /// which is how Ctrl+K opens a palette instead of the browser's search bar.
+    ///
+    /// **Never return `true` for Tab or Shift+Tab.** This listens in capture on
+    /// the window, so preventing the default there stops focus moving anywhere
+    /// in the document, and a keyboard or screen-reader user has no way back -
+    /// the one mistake on this surface with no recovery. Answer the one chord
+    /// the subscription is for and return `false` to everything else.
     ///
     /// **A press the user is typing never arrives.** The capability drops
     /// anything targeting an `input`, `textarea`, `select` or a
