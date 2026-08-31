@@ -314,6 +314,7 @@ mod tests {
             ("--lsx-paper-radius", "var(--lsx-radius-md)"),
             ("--lsx-paper-shadow", "var(--lsx-shadow-sm)"),
             ("--lsx-paper-background", "#fff"),
+            ("--lsx-paper-contrast", "var(--lsx-black)"),
             ("--lsx-paper-border-color", "var(--lsx-grey-3)"),
         ]);
     }

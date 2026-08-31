@@ -8,6 +8,10 @@ use crate::{
 
 /// The library's one definition of a surface, as an `Sx` to build on.
 ///
+/// Public because [`PaperProps::framework_sx`] is: that prop **replaces**
+/// `Paper`'s own base rather than layering on it, so without this a caller
+/// outside the crate could only use it to delete the surface.
+///
 /// A component that renders a surface in bulk, or that would rather not pay
 /// for a `Paper` scope, starts its own base static here and chains its own
 /// declarations on top - `Dialog` is the worked example. Everything else
@@ -17,7 +21,7 @@ use crate::{
 /// defaults as plain declarations, so chaining `border_radius`/`box_shadow`
 /// on top of this overrides the default without fighting a `[data-state]`
 /// block's specificity.
-pub(crate) fn paper_sx() -> Sx {
+pub fn paper_sx() -> Sx {
     PaperDefaults::theme_vars()
         // Mantine's two base declarations: a surface is a block, and it drops
         // the underline so `component: "a"` reads as a card, not as a link.
@@ -96,9 +100,18 @@ pub fn Paper(props: PaperProps) -> Element {
 
 /// The caller's states plus a token per axis the caller actually set.
 ///
-/// A `Paper` that names no step carries no token of its own, which is what
-/// lets a component building on [`paper_sx`] override the themed default in
-/// its own base static.
+/// **This deliberately diverges from `Button`**, which always emits its
+/// `size`/`radius` token and defaults it from the theme. `Paper` emits one
+/// only for a step the caller named; with the prop unset there is no token at
+/// all and the themed default arrives as a plain `border-radius:
+/// var(--lsx-paper-radius)` declaration from [`paper_sx`].
+///
+/// The difference is not an omission. A fold is a `[data-state~="radius-lg"]`
+/// block at 0-2-0 and beats a top-level declaration whatever the source order,
+/// so a component building its own base static from [`paper_sx`] - `Dialog`,
+/// and every later surface - could never override the radius or the shadow if
+/// `Paper` always emitted one. The rule: a gate others derive their base from
+/// emits a token only for an explicit step; a leaf component can always emit.
 fn paper_states(props: &PaperProps) -> Input<States> {
     let radius = props.radius.as_ref();
     let shadow = props.shadow.as_ref();
@@ -188,6 +201,12 @@ mod tests {
         assert!(css.contains("box-shadow:var(--lsx-paper-shadow);"), "{css}");
         assert!(
             css.contains("border:1px solid var(--lsx-paper-border-color);"),
+            "{css}"
+        );
+        // `background()` publishes this for free only for a colour it can
+        // read; a `var()` is opaque to it, so the surface owes it by hand.
+        assert!(
+            css.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
             "{css}"
         );
     }
