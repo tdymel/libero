@@ -52,6 +52,13 @@ impl Presence {
 
 /// `property` is the CSS property carrying the **exit** transition -
 /// `"grid-template-rows"` for a collapse, `"opacity"` for a fade.
+///
+/// **The closed state must also hide the content from the a11y tree** - a
+/// `visibility: hidden` step (delayed by the duration, so it lands as the exit
+/// ends) or `inert`. Between the close and the unmount the content is still
+/// mounted, still focusable and still announced; a filtered exit makes that
+/// window as long as the animation rather than as short as its quickest
+/// property.
 pub fn use_presence(open: bool, property: &'static str) -> Presence {
     let mut mounted = use_signal(|| open);
     // Not `false`: the first render is the one a server sends, and
