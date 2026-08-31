@@ -1,0 +1,192 @@
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
+use dioxus::prelude::*;
+use libero::{
+    components::{Button, Code, Collapse, Flex, Text},
+    sx::sx,
+};
+
+const SHORT: &str = r#"Text { "Shipping is calculated at checkout." }"#;
+
+const LONG: &str = r#"Flex {
+    direction: "column",
+    gap: "sm",
+    Text { "Shipping is calculated at checkout." }
+    Text { "Standard delivery arrives in three to five working days." }
+    Text { "Returns are free within thirty days of delivery." }
+}"#;
+
+/// The height only visibly changes if the content's height does, so the two
+/// options are a one-liner and a paragraph rather than two of the same size.
+fn content_code(values: &DemoValues) -> String {
+    match values.str("content").as_str() {
+        "long" => LONG.to_string(),
+        _ => SHORT.to_string(),
+    }
+}
+
+/// `open` is not a control: it is a signal the trigger toggles, which is the
+/// whole controlled-disclosure contract. The preview renders that button, so
+/// the snippet has to print it - along with the `use_signal` behind it, or the
+/// paste does not compile.
+fn wrap_page(_: &DemoValues, source: &str) -> String {
+    let collapse = indent(&indent(source));
+    format!(
+        "let mut open = use_signal(|| false);\n\n\
+         rsx! {{\n    \
+         Flex {{\n        \
+         direction: \"column\",\n        \
+         align: \"flex-start\",\n        \
+         gap: \"sm\",\n        \
+         Button {{ onclick: move |_| open.toggle(), \"Shipping details\" }}\n\
+         {collapse}    }}\n}}"
+    )
+}
+
+/// The `use_signal` lives here rather than in `Demo`'s `render` closure, which
+/// runs in `Demo`'s own scope - a hook written there lands in `Demo`'s hook
+/// slots.
+#[component]
+fn CollapseDemo(keep_mounted: Option<bool>, duration: Option<u32>, long: bool) -> Element {
+    let mut open = use_signal(|| false);
+
+    rsx! {
+        Flex {
+            direction: "column",
+            align: "flex-start",
+            gap: "sm",
+            Button { onclick: move |_| open.toggle(), "Shipping details" }
+            Collapse {
+                open: open(),
+                keep_mounted,
+                duration,
+                if long {
+                    Flex {
+                        direction: "column",
+                        gap: "sm",
+                        Text { "Shipping is calculated at checkout." }
+                        Text { "Standard delivery arrives in three to five working days." }
+                        Text { "Returns are free within thirty days of delivery." }
+                    }
+                } else {
+                    Text { "Shipping is calculated at checkout." }
+                }
+            }
+        }
+    }
+}
+
+#[component]
+pub fn CollapsePage() -> Element {
+    rsx! {
+        DocPage {
+            title: "Collapse",
+            source: "libero/src/components/layout/collapse.rs",
+            markdown: "/md/collapse.md",
+            properties: vec![props("Collapse", vec![
+                prop("open", "bool")
+                    .default("required")
+                    .doc("Whether the panel is expanded. Strictly controlled - `Collapse` holds no open state of its own."),
+                prop("keep_mounted", "bool")
+                    .default("true")
+                    .doc("Keep the children in the DOM while closed. `false` unmounts them when the exit transition ends."),
+                prop("duration", "u32")
+                    .default("theme.collapse.duration")
+                    .doc("Milliseconds. `0` disables the animation."),
+                prop("children", "Element").doc("The content that grows and shrinks."),
+            ])],
+            lead: rsx! {
+                Text {
+                    "Animates its children's height open and closed. It renders two "
+                    Code { source: "div" }
+                    "s - a grid whose single row goes from "
+                    Code { source: "0fr" }
+                    " to "
+                    Code { source: "1fr" }
+                    ", and the clipped box holding your content - so the animation "
+                    "re-measures itself for free whenever the content's own height changes. "
+                    Code { source: "open" }
+                    " is strictly controlled, and "
+                    Code { source: "Collapse" }
+                    " renders no role and no ARIA of its own: the disclosure semantics "
+                    "belong to whatever owns the trigger."
+                }
+            },
+            Demo {
+                component: "Collapse",
+                children_text: "",
+                code_child: Child(content_code),
+                fixed: vec!["open: open()".to_string()],
+                controls: vec![
+                    Control::switch("keep_mounted").default("true"),
+                    Control::slider("duration", ["0", "100", "200", "600", "1200"])
+                        .default("200")
+                        .labels(["0ms", "100ms", "200ms", "600ms", "1200ms"])
+                        .code(|control, values| {
+                            let value = values.str("duration");
+                            match value == control.default {
+                                true => vec![],
+                                false => vec![format!("duration: {value}")],
+                            }
+                        }),
+                    // Not a prop - it picks the children, which the code block
+                    // prints through `code_child`.
+                    Control::toggle("content", ["short", "long"])
+                        .labels(["Short", "Long"])
+                        .code(|_, _| vec![]),
+                ],
+                wrap: Wrap(wrap_page),
+                render: move |values: DemoValues| {
+                    let keep_mounted = match values.str("keep_mounted").as_str() {
+                        "false" => Some(false),
+                        _ => None,
+                    };
+                    let duration = match values.str("duration").as_str() {
+                        "200" => None,
+                        value => value.parse::<u32>().ok(),
+                    };
+
+                    rsx! {
+                        CollapseDemo {
+                            keep_mounted,
+                            duration,
+                            long: values.str("content") == "long",
+                        }
+                    }
+                },
+            }
+            DocSection {
+                title: "What closed content costs",
+                Text {
+                    "A closed panel keeps its children in the DOM by default, so a half-typed "
+                    "form survives being collapsed and a trigger's "
+                    Code { source: "aria-controls" }
+                    " always resolves - the root element is present whatever "
+                    Code { source: "keep_mounted" }
+                    " says. What closed content is not is reachable: the inner box is "
+                    Code { source: "visibility: hidden" }
+                    ", which takes it out of the focus order and out of the accessibility "
+                    "tree, and that step is delayed by the animation's duration so the panel "
+                    "stays visible and announced for the whole close rather than vanishing on "
+                    "the first frame."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
+                    Code { source: "keep_mounted: false" }
+                    " goes further and removes the children once the exit transition ends. "
+                    "Use it when there is nothing to preserve - content built from a closure, "
+                    "or a long list you would rather not pay for while it is hidden - and "
+                    "expect the state inside to be gone on reopen."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
+                    "Either way, if focus is inside the panel when it closes, it does not come "
+                    "back on its own: the browser drops it to the document body. A component "
+                    "that owns both the trigger and the panel should send focus back to the "
+                    "trigger when it closes one that contained it."
+                }
+            }
+        }
+    }
+}
