@@ -7,7 +7,10 @@ mod common;
 use common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::Collapse};
+use libero::{
+    LiberoProvider,
+    components::{Button, Collapse},
+};
 
 fn open_app() -> Element {
     rsx! {
@@ -223,4 +226,34 @@ fn an_open_panel_settles_at_full_opacity() {
         html.contains("[data-state~=\"closed\"]{opacity:var(--lsx-collapse-opacity-closed);"),
         "{html}"
     );
+}
+
+fn disclosure_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            Button {
+                aria_expanded: false,
+                aria_controls: "shipping-panel",
+                "Shipping details"
+            }
+            Collapse { open: false, id: "shipping-panel", "panel body" }
+        }
+    }
+}
+
+/// `Collapse` renders no ARIA on purpose, so the docs example's trigger wiring
+/// is the only place a consumer learns it - and all of it rests on dioxus
+/// emitting `aria-expanded=false` rather than dropping it the way it drops a
+/// falsey boolean attribute. Nothing else in the repo sets `aria_expanded`, so
+/// nothing else would catch a dioxus bump taking that away.
+#[test]
+fn a_false_aria_expanded_is_still_rendered_on_the_trigger() {
+    let html = body(&render(disclosure_app));
+
+    assert!(html.contains("aria-expanded"), "{html}");
+    assert!(html.contains("aria-expanded=false"), "{html}");
+    // The pair only works if both halves survive: the control reference has to
+    // resolve to the panel that is still in the DOM while closed.
+    assert!(html.contains(r#"aria-controls="shipping-panel""#), "{html}");
+    assert!(html.contains(r#"id="shipping-panel""#), "{html}");
 }
