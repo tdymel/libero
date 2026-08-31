@@ -108,6 +108,13 @@ impl ElementApi for ElementHandle {
         self.get().is_ok_and(|element| element.is_focused())
     }
 
+    /// An unmounted handle answers `false`: there is no node, so there is
+    /// nothing in the document. That differs from the mounted floor's `true`,
+    /// which is about a node that exists and cannot be asked about.
+    fn is_connected(&self) -> bool {
+        self.get().is_ok_and(|element| element.is_connected())
+    }
+
     fn dimensions(&self) -> Read<Dimensions> {
         self.read(|element| element.dimensions())
     }

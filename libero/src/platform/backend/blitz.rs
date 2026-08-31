@@ -147,6 +147,31 @@ impl ElementApi for BlitzElement {
             .is_some_and(|doc| doc.get_focussed_node_id() == Some(self.node_id))
     }
 
+    /// Blitz keeps a removed node in its arena, so the node id still resolves
+    /// after the node has left the tree. Connectedness is therefore a walk up
+    /// the parent chain to the document root, not a lookup.
+    ///
+    /// No document in reach answers `true`, the trait's rule for a renderer
+    /// that cannot tell. That case is real here: `try_doc` fails while dioxus
+    /// is draining tasks, and an optimistic answer keeps focus return doing
+    /// what it did before the predicate existed.
+    fn is_connected(&self) -> bool {
+        let Some(doc) = self.anchor.try_doc() else {
+            return true;
+        };
+        let root = doc.root_node().id;
+        let mut node = self.node_id;
+        loop {
+            if node == root {
+                return true;
+            }
+            match doc.get_node(node).and_then(|node| node.parent) {
+                Some(parent) => node = parent,
+                None => return false,
+            }
+        }
+    }
+
     fn dimensions(&self) -> Read<Dimensions> {
         self.read(|doc, node_id| {
             let rect = doc.get_client_bounding_rect(node_id)?;

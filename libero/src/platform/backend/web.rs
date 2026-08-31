@@ -242,6 +242,13 @@ impl ElementApi for WebElement {
             .is_some_and(|active| JsValue::from(active) == JsValue::from(self.element.clone()))
     }
 
+    /// `Node::isConnected`, which is what "still in the document" means on the
+    /// web: it is false for a node the renderer has removed and for one that
+    /// was built but never appended.
+    fn is_connected(&self) -> bool {
+        self.element.is_connected()
+    }
+
     // The DOM answers all four immediately - they are futures only because a
     // webview-backed renderer cannot.
     fn dimensions(&self) -> Read<Dimensions> {

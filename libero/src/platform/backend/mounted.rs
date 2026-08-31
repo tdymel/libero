@@ -103,6 +103,15 @@ impl ElementApi for MountedElement {
         false
     }
 
+    /// A mounted handle carries no way to ask whether its node is still in the
+    /// document, so this answers `true` - the trait's rule for a renderer that
+    /// cannot tell. On a WebView that keeps focus return doing exactly what it
+    /// did before the predicate existed, rather than routing every restore
+    /// into the fallback chain.
+    fn is_connected(&self) -> bool {
+        true
+    }
+
     fn query_selector(&self, _selector: &str) -> Result<Box<dyn ElementApi>, PlatformError> {
         Err(PlatformError::Unsupported)
     }

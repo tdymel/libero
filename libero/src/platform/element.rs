@@ -46,6 +46,20 @@ pub trait ElementApi {
     /// Whether this is the currently focused element.
     fn is_focused(&self) -> bool;
 
+    /// Whether this node is still in the document - the DOM's `isConnected`.
+    ///
+    /// A plain `bool` rather than a [`Read`], like
+    /// [`is_focused`](Self::is_focused): every renderer that can answer it at
+    /// all can answer it synchronously, and the one caller that matters -
+    /// handing focus back to a trigger the application has since deleted -
+    /// has to decide *inside* the closing handler, before a `spawn`.
+    ///
+    /// **A renderer that cannot tell answers `true`.** `focus()` on a detached
+    /// node already returns `Ok(())` everywhere and does nothing, so the
+    /// optimistic answer is the one that leaves behaviour where it was; `false`
+    /// would claim every element on that renderer had been removed.
+    fn is_connected(&self) -> bool;
+
     /// This element's rendered pixel size.
     fn dimensions(&self) -> Read<Dimensions>;
 
