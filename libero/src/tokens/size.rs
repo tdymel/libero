@@ -78,6 +78,19 @@ impl Size {
             Self::Xxl => "radius-xxl",
         }
     }
+
+    /// The same, for an elevation step - a surface's `shadow` scales
+    /// independently of both its `size` and its `radius`.
+    pub const fn shadow_state_name(&self) -> &'static str {
+        match self {
+            Self::Xs => "shadow-xs",
+            Self::Sm => "shadow-sm",
+            Self::Md => "shadow-md",
+            Self::Lg => "shadow-lg",
+            Self::Xl => "shadow-xl",
+            Self::Xxl => "shadow-xxl",
+        }
+    }
 }
 
 impl From<&str> for Size {

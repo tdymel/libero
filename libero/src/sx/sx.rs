@@ -82,6 +82,13 @@ impl Sx {
         })
     }
 
+    /// Same, keyed by `shadow-{size}`, for an elevation axis.
+    pub fn per_shadow(self, shadow_sx: impl Fn(Size) -> Sx) -> Self {
+        Size::ALL.into_iter().fold(self, |base, shadow| {
+            base.when(shadow.shadow_state_name(), shadow_sx(shadow))
+        })
+    }
+
     pub fn selector(self, selector: impl Into<String>, nested: Sx) -> Self {
         self.modifier(SxModifierKey::Selector(selector.into()), nested)
     }

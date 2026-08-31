@@ -89,6 +89,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         overlay,
         z_index,
         popover,
+        paper,
         divider,
         splitter,
         button,
@@ -170,6 +171,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(overlay.to_css_declarations());
     declarations.extend(z_index.to_css_declarations());
     declarations.extend(popover.to_css_declarations());
+    declarations.extend(paper.to_css_declarations());
     declarations.extend(divider.to_css_declarations());
     declarations.extend(splitter.to_css_declarations());
     declarations.extend(button.to_css_declarations());
@@ -309,6 +311,10 @@ mod tests {
             ("--lsx-container-size", "var(--lsx-breakpoint-lg)"),
             ("--lsx-container-gutters", "var(--lsx-spacing-md)"),
             ("--lsx-divider-spacing", "0"),
+            ("--lsx-paper-radius", "var(--lsx-radius-md)"),
+            ("--lsx-paper-shadow", "var(--lsx-shadow-sm)"),
+            ("--lsx-paper-background", "#fff"),
+            ("--lsx-paper-border-color", "var(--lsx-grey-3)"),
         ]);
     }
 
