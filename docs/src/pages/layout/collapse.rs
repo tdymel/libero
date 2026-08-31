@@ -39,7 +39,12 @@ fn wrap_page(_: &DemoValues, source: &str) -> String {
          direction: \"column\",\n        \
          align: \"flex-start\",\n        \
          gap: \"sm\",\n        \
-         Button {{ onclick: move |_| open.toggle(), \"Shipping details\" }}\n\
+         Button {{\n            \
+         onclick: move |_| open.toggle(),\n            \
+         aria_expanded: open(),\n            \
+         aria_controls: \"shipping-details\",\n            \
+         \"Shipping details\"\n        \
+         }}\n\
          {collapse}    }}\n}}"
     )
 }
@@ -56,8 +61,14 @@ fn CollapseDemo(keep_mounted: Option<bool>, duration: Option<u32>, long: bool) -
             direction: "column",
             align: "flex-start",
             gap: "sm",
-            Button { onclick: move |_| open.toggle(), "Shipping details" }
+            Button {
+                onclick: move |_| open.toggle(),
+                aria_expanded: open(),
+                aria_controls: "shipping-details",
+                "Shipping details"
+            }
             Collapse {
+                id: "shipping-details",
                 open: open(),
                 keep_mounted,
                 duration,
@@ -86,7 +97,6 @@ pub fn CollapsePage() -> Element {
             markdown: "/md/collapse.md",
             properties: vec![props("Collapse", vec![
                 prop("open", "bool")
-                    .default("required")
                     .doc("Whether the panel is expanded. Strictly controlled - `Collapse` holds no open state of its own."),
                 prop("keep_mounted", "bool")
                     .default("true")
@@ -117,7 +127,10 @@ pub fn CollapsePage() -> Element {
                 component: "Collapse",
                 children_text: "",
                 code_child: Child(content_code),
-                fixed: vec!["open: open()".to_string()],
+                fixed: vec![
+                    "id: \"shipping-details\"".to_string(),
+                    "open: open()".to_string(),
+                ],
                 controls: vec![
                     Control::switch("keep_mounted").default("true"),
                     Control::slider("duration", ["0", "100", "200", "600", "1200"])
@@ -178,6 +191,42 @@ pub fn CollapsePage() -> Element {
                     "Use it when there is nothing to preserve - content built from a closure, "
                     "or a long list you would rather not pay for while it is hidden - and "
                     "expect the state inside to be gone on reopen."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
+                    "One degradation to know about: under "
+                    Code { source: "prefers-reduced-motion: reduce" }
+                    " there is no transition, so no "
+                    Code { source: "transitionend" }
+                    " ever arrives and a "
+                    Code { source: "keep_mounted: false" }
+                    " panel keeps its children after the close. They are still "
+                    Code { source: "visibility: hidden" }
+                    ", so neither focusable nor announced - the mode degrades to "
+                    Code { source: "keep_mounted: true" }
+                    " rather than breaking, at the cost of the DOM weight and the retained "
+                    "state. A "
+                    Code { source: "duration" }
+                    " of "
+                    Code { source: "0" }
+                    " has the same missing event and is handled: the panel unmounts straight "
+                    "from "
+                    Code { source: "open" }
+                    "."
+                }
+                Text {
+                    sx: sx().margin_top("sm"),
+                    Code { source: "Collapse" }
+                    " renders no role and no ARIA, so the trigger carries the disclosure "
+                    "semantics - that is what the example above wires: "
+                    Code { source: "aria_expanded" }
+                    " on the button and an "
+                    Code { source: "aria_controls" }
+                    " pointing at an "
+                    Code { source: "id" }
+                    " you set on the "
+                    Code { source: "Collapse" }
+                    ", which resolves whether the panel is open, closed, or unmounted."
                 }
                 Text {
                     sx: sx().margin_top("sm"),

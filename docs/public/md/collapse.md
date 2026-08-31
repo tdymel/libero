@@ -28,8 +28,14 @@ fn Demo() -> Element {
             direction: "column",
             align: "flex-start",
             gap: "sm",
-            Button { onclick: move |_| open.toggle(), "Shipping details" }
+            Button {
+                onclick: move |_| open.toggle(),
+                aria_expanded: open(),
+                aria_controls: "shipping-details",
+                "Shipping details"
+            }
             Collapse {
+                id: "shipping-details",
                 open: open(),
                 Text { "Shipping is calculated at checkout." }
             }
@@ -40,6 +46,11 @@ fn Demo() -> Element {
 
 `Collapse` never owns `open`. Hold it in a signal, flip it from whatever your
 trigger is, and pass it down - the same shape `Tabs::value` uses.
+
+`Collapse` renders no ARIA of its own, so the trigger carries the disclosure
+semantics: `aria_expanded` on the button, and an `aria_controls` pointing at an
+`id` you set on the `Collapse`. The root element is in the DOM whether the panel
+is open, closed or unmounted, so that reference never dangles.
 
 ## What closed content costs
 
@@ -116,7 +127,7 @@ Motion is guarded: under `prefers-reduced-motion: reduce` every transition is
 | `open` | `bool` | required | Whether the panel is expanded. Strictly controlled - `Collapse` holds no open state of its own. |
 | `keep_mounted` | `bool` | `true` | Keep the children in the DOM while closed. `false` unmounts them when the exit transition ends. |
 | `duration` | `u32` | `theme.collapse.duration` | Milliseconds. `0` disables the animation. |
-| `children` | `Element` | - | The content that grows and shrinks. |
+| `children` | `Element` | required | The content that grows and shrinks. |
 
 Like every component, `Collapse` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

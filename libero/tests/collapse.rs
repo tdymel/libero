@@ -192,3 +192,35 @@ fn the_reduced_motion_guard_is_nested_inside_each_condition() {
         "{html}"
     );
 }
+
+fn identified_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            Collapse { open: false, keep_mounted: false, id: "shipping-panel", "panel body" }
+        }
+    }
+}
+
+/// A consumer's `aria-controls` points at this `id`, so it has to survive the
+/// mode where the children are gone - `Box` drops every `id` after the first,
+/// and a wrapper between `Collapse` and `Box` would silently eat it.
+#[test]
+fn a_callers_id_reaches_the_root_even_with_the_content_unmounted() {
+    let html = render(identified_app);
+
+    assert_eq!(attributes_of(&html, "div")["id"], "shipping-panel");
+    assert_eq!(body(&html).matches("shipping-panel").count(), 1, "{html}");
+}
+
+/// Not a themed value: a settled open panel at anything but `1` would be a
+/// permanent contrast regression on every open panel in the app.
+#[test]
+fn an_open_panel_settles_at_full_opacity() {
+    let html = render(open_app);
+
+    assert!(html.contains("[data-state~=\"open\"]{opacity:1;"), "{html}");
+    assert!(
+        html.contains("[data-state~=\"closed\"]{opacity:var(--lsx-collapse-opacity-closed);"),
+        "{html}"
+    );
+}

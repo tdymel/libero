@@ -23,11 +23,15 @@ const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 /// it re-animates for free when the content's own height changes - which a
 /// measured height cannot without a resize observer we do not have.
 ///
-/// Each `transition` sits **inside** its condition, so its reduced-motion
-/// guard has to be nested inside that condition too. A `media` modifier adds
-/// no specificity, so a guard written beside the conditions would be 0-1-0
-/// against their 0-2-0 and the motion would still play - see
-/// `docs/public/md/styling.md`.
+/// **The reduced-motion guard lives wherever the transition lives.** Here each
+/// `transition` is declared inside the `when(..)` block whose values it
+/// animates, so each guard is nested inside that same block. A `media`
+/// modifier adds no specificity, so a guard hoisted out beside the conditions
+/// would be 0-1-0 against their 0-2-0 and the motion would still play. If a
+/// transition is ever moved to the base level, its guard moves with it - the
+/// invariant is the pairing, not the nesting. See `docs/public/md/styling.md`,
+/// and `libero/tests/collapse.rs`, which asserts the emitted CSS text rather
+/// than trusting the builder.
 static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
     let transition = format!(
         "{EXIT_PROPERTY} {} {}",
