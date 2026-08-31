@@ -109,6 +109,63 @@ Two limits of that mode, both about the `transitionend` it unmounts on:
   and the inner one is faster, the outer unmounts at the inner one's end time.
   Only `keep_mounted: false` is affected.
 
+## Returning focus when it closes
+
+If focus is inside the panel when it closes, it does not come back on its own -
+the browser drops it to the document body, and a keyboard user loses their
+place. `Collapse` cannot fix this for you: it never sees the trigger, so it has
+no element to hand focus back to. Whoever owns both the trigger and the panel
+owns the return.
+
+Use `use_focus_return` rather than reaching for the element yourself. It is the
+one focus-return contract in the library, and its `restore()` spawns the focus
+call - which matters, because focusing inside the dispatch of the event that
+closed the panel re-enters a handler whose click is still bubbling, and that
+panics. Name the trigger from its `onmounted`, then call `restore()` wherever
+you close the panel from inside it.
+
+```rust
+use dioxus::prelude::*;
+use libero::{
+    components::{Button, Collapse, Flex, Text},
+    hooks::use_focus_return,
+};
+
+#[component]
+fn Demo() -> Element {
+    let mut open = use_signal(|| false);
+    let trigger = use_focus_return();
+
+    rsx! {
+        Button {
+            onmounted: move |event| trigger.remember(event),
+            onclick: move |_| open.toggle(),
+            aria_expanded: open(),
+            aria_controls: "returning-panel",
+            "Edit address"
+        }
+        Collapse {
+            id: "returning-panel",
+            open: open(),
+            keep_mounted: false,
+            Flex {
+                direction: "column",
+                align: "flex-start",
+                gap: "sm",
+                Text { "Focus this button, then close the panel with it." }
+                Button {
+                    onclick: move |_| {
+                        open.set(false);
+                        trigger.restore();
+                    },
+                    "Done"
+                }
+            }
+        }
+    }
+}
+```
+
 ## Accessibility
 
 `Collapse` renders no `role`, no ARIA state and no keyboard handling. It never
@@ -118,10 +175,9 @@ button `aria-expanded` and an `aria-controls` pointing at an `id` you set on the
 unmounted.
 
 Closed content is removed from the focus order and the accessibility tree by
-`visibility: hidden`, so it is never a phantom tab stop. If focus is inside the
-panel when it closes, it does not come back on its own - the browser drops it to
-the document body. A component that owns both the trigger and the panel should
-send focus back to the trigger when it closes one that contained focus.
+`visibility: hidden`, so it is never a phantom tab stop. Focus that was inside a
+closing panel is not returned - see "Returning focus when it closes" above for
+the pattern, which is the caller's to apply.
 
 Motion is guarded: under `prefers-reduced-motion: reduce` every transition is
 `none`, and the panel opens and closes instantly.

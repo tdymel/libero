@@ -3,7 +3,8 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, Collapse, Flex, Text},
+    components::{Button, Code, CodeBlock, Collapse, Flex, Text},
+    hooks::use_focus_return,
     sx::sx,
 };
 
@@ -47,6 +48,79 @@ fn wrap_page(_: &DemoValues, source: &str) -> String {
          }}\n\
          {collapse}    }}\n}}"
     )
+}
+
+/// Printed verbatim below the live example, which renders exactly this.
+const FOCUS_RETURN: &str = r#"let mut open = use_signal(|| false);
+let trigger = use_focus_return();
+
+rsx! {
+    Button {
+        onmounted: move |event| trigger.remember(event),
+        onclick: move |_| open.toggle(),
+        aria_expanded: open(),
+        aria_controls: "returning-panel",
+        "Edit address"
+    }
+    Collapse {
+        id: "returning-panel",
+        open: open(),
+        keep_mounted: false,
+        Flex {
+            direction: "column",
+            align: "flex-start",
+            gap: "sm",
+            Text { "Focus this button, then close the panel with it." }
+            Button {
+                onclick: move |_| {
+                    open.set(false);
+                    trigger.restore();
+                },
+                "Done"
+            }
+        }
+    }
+}"#;
+
+/// The pattern the section describes, rendered so it can actually be tabbed
+/// through - a closing panel that hands focus back instead of dropping it.
+#[component]
+fn FocusReturnDemo() -> Element {
+    let mut open = use_signal(|| false);
+    let trigger = use_focus_return();
+
+    rsx! {
+        Flex {
+            direction: "column",
+            align: "flex-start",
+            gap: "sm",
+            Button {
+                onmounted: move |event| trigger.remember(event),
+                onclick: move |_| open.toggle(),
+                aria_expanded: open(),
+                aria_controls: "returning-panel",
+                "Edit address"
+            }
+            Collapse {
+                id: "returning-panel",
+                open: open(),
+                keep_mounted: false,
+                Flex {
+                    direction: "column",
+                    align: "flex-start",
+                    gap: "sm",
+                    Text { "Focus this button, then close the panel with it." }
+                    Button {
+                        onclick: move |_| {
+                            open.set(false);
+                            trigger.restore();
+                        },
+                        "Done"
+                    }
+                }
+            }
+        }
+    }
 }
 
 /// The `use_signal` lives here rather than in `Demo`'s `render` closure, which
@@ -240,13 +314,35 @@ pub fn CollapsePage() -> Element {
                     Code { source: "Collapse" }
                     ", which resolves whether the panel is open, closed, or unmounted."
                 }
+            }
+            DocSection {
+                title: "Returning focus when it closes",
+                Text {
+                    "If focus is inside the panel when it closes, it does not come back on its "
+                    "own - the browser drops it to the document body, and a keyboard user "
+                    "loses their place. "
+                    Code { source: "Collapse" }
+                    " cannot fix this for you: it never sees the trigger, so it has no element "
+                    "to hand focus back to. Whoever owns both the trigger and the panel owns "
+                    "the return."
+                }
                 Text {
                     sx: sx().margin_top("sm"),
-                    "Either way, if focus is inside the panel when it closes, it does not come "
-                    "back on its own: the browser drops it to the document body. A component "
-                    "that owns both the trigger and the panel should send focus back to the "
-                    "trigger when it closes one that contained it."
+                    "Use "
+                    Code { source: "use_focus_return" }
+                    " rather than reaching for the element yourself - it is the one focus-return "
+                    "contract in the library, and it spawns the focus call, which matters "
+                    "because focusing inside the dispatch of the event that closed the panel "
+                    "re-enters a handler whose click is still bubbling. Name the trigger from "
+                    "its "
+                    Code { source: "onmounted" }
+                    ", then call "
+                    Code { source: "restore()" }
+                    " wherever you close the panel from inside it. Tab to the Done button below "
+                    "and press it: focus lands back on the trigger, not on the body."
                 }
+                FocusReturnDemo {}
+                CodeBlock { source: FOCUS_RETURN, language: "rust" }
             }
         }
     }
