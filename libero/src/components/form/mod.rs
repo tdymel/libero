@@ -16,6 +16,7 @@ mod password_field;
 mod pin_field;
 mod radio;
 mod radio_group;
+mod segmented_control;
 mod select;
 mod slider;
 mod switch;
@@ -52,6 +53,7 @@ pub use password_field::{PasswordField, PasswordFieldProps};
 pub use pin_field::{PinField, PinFieldProps, PinKind};
 pub use radio::{Radio, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupProps};
+pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectProps,
     SelectionArgs,

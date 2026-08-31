@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ClassList, HtmlTag, Input, States,
+        HtmlTag, States,
         common::{Orientation, focus_ring_sx},
         inputs::{
             BUTTON_COLOR_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, ButtonVariant,
@@ -10,7 +10,7 @@ use crate::{
         },
         layout::use_box,
     },
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, sx},
     theme::{ButtonDefaults, Size, SizeCss},
 };
 
@@ -169,11 +169,16 @@ pub(crate) struct SegmentedControlView {
     /// `false` keeps the radios out of the tab order and stops a label click
     /// from focusing its radio.
     pub focusable: bool,
+    /// What the radios post as, and what makes them one exclusive set.
+    pub name: String,
+    /// The field's wiring, which lands on the `radiogroup` because that is
+    /// the element a screen reader names.
+    pub labelledby: Option<String>,
+    pub describedby: Option<String>,
+    pub invalid: bool,
+    pub required: bool,
     /// `--lsx-button-*`, rendered. Set on the root, and the segments inherit.
     pub style: String,
-    pub class: Input<ClassList>,
-    pub sx: Input<Sx>,
-    pub states: Input<States>,
     pub attributes: Vec<Attribute>,
 }
 
@@ -200,15 +205,16 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         radius,
         gap,
         focusable,
+        name,
+        labelledby,
+        describedby,
+        invalid,
+        required,
         style,
-        class,
-        sx: user_sx,
-        states,
         attributes,
     } = view;
 
-    let mut own = states
-        .unwrap_or_default()
+    let mut own = States::default()
         .with(orientation.state_name(), true)
         .with(variant.state_name(), true)
         .with("full-width", full_width)
@@ -216,7 +222,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     if let Some(gap) = gap {
         own = own.with(gap.state_name(), true);
     }
-    let states: Input<States> = own.into();
+    let states = own.into();
 
     // Every segment carries the same pair, so it is built once rather than
     // per segment.
@@ -224,12 +230,14 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
 
     use_box()
         .framework_sx(&SEGMENTED_CONTROL_SX)
-        .class(&class)
-        .sx(&user_sx)
         .states(&states)
         .style(Some(style).filter(|style| !style.is_empty()))
         .prepare()
         .attr_default("role", "radiogroup")
+        .attr("aria-labelledby", labelledby)
+        .attr("aria-describedby", describedby)
+        .attr("aria-invalid", invalid.then_some("true"))
+        .attr("aria-required", required.then_some("true"))
         .render(
             HtmlTag::Div,
             attributes,
@@ -245,7 +253,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                         key: "{index}",
                         id: "{root}-segment-{index}",
                         r#type: "radio",
-                        name: "{root}",
+                        name: "{name}",
                         value: "{index}",
                         // The label's text is not the name when the
                         // label is an icon, so the radio carries it.

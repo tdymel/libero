@@ -66,7 +66,7 @@ fn a_non_focusable_segmented_control_leaves_the_tab_order() {
             LiberoProvider {
                 SegmentedControl::<String> {
                     value: "a".to_string(),
-                    segments: vec!["a".to_string(), "b".to_string()],
+                    options: vec!["a".to_string(), "b".to_string()],
                     onchange: move |_| {},
                     focusable: false,
                 }

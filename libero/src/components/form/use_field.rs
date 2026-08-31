@@ -32,6 +32,10 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
         // label instead of under it. The control takes column one of the
         // first row; the label and every caption take column two, so the
         // captions line up under the label rather than under the box.
+        // A control that fills its width can only fill the wrapper's, so the
+        // wrapper has to fill its parent too - a centring parent would
+        // otherwise shrink it to the control's natural width.
+        .when("full-width", sx().width("100%"))
         .when(
             "inline",
             sx().display("grid")

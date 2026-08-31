@@ -16,10 +16,10 @@ pub use form::{
     AutocompletePage, CheckboxPage, ColorFieldPage, ColorPickerPage, ComboboxPage, DateFieldPage,
     DatePickerPage, FieldsetPage, FileFieldPage, FormGettingStartedPage, FormPage,
     MultiSelectPage, NativeSelectPage, NumberFieldPage, PasswordFieldPage, PinFieldPage,
-    RadioGroupPage, RangeSliderPage, SelectPage, SliderPage, SwitchPage, TextFieldPage,
-    TextareaPage,
+    RadioGroupPage, RangeSliderPage, SegmentedControlPage, SelectPage, SliderPage, SwitchPage,
+    TextFieldPage, TextareaPage,
 };
-pub use inputs::{ActionIconPage, ButtonPage, ChipPage, SegmentedControlPage};
+pub use inputs::{ActionIconPage, ButtonPage, ChipPage};
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, ContainerPage, DividerPage, FlexPage, FloatPage,
     GridPage, HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,

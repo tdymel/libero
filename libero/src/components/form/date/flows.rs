@@ -89,7 +89,7 @@ fn part_switch(part: Signal<Part>, size: Size, focusable: bool) -> Element {
             size,
             full_width: true,
             focusable,
-            label,
+            option_label: label,
         }
     }
 }
@@ -368,7 +368,7 @@ pub(super) fn DateTimeRangeFlow(props: DateTimeRangeFlowProps) -> Element {
                 size,
                 full_width: true,
                 focusable: props.focusable,
-                label: side_label,
+                option_label: side_label,
             }
             {switch}
             div { "data-slot": "part", {picker} }

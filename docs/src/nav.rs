@@ -145,6 +145,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::CheckboxPage {}, "Checkbox"),
                 page(Route::SwitchPage {}, "Switch"),
                 page(Route::RadioGroupPage {}, "RadioGroup"),
+                page(Route::SegmentedControlPage {}, "SegmentedControl"),
                 page(Route::SliderPage {}, "Slider"),
                 page(Route::RangeSliderPage {}, "RangeSlider"),
                 page(Route::ColorFieldPage {}, "ColorField"),
@@ -161,7 +162,6 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ActionIconPage {}, "ActionIcon"),
                 page(Route::ButtonPage {}, "Button"),
                 page(Route::ChipPage {}, "Chip"),
-                page(Route::SegmentedControlPage {}, "SegmentedControl"),
             ],
         ),
         group(

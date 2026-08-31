@@ -3,7 +3,9 @@ use crate::components::{
 };
 use crate::icons::{AlignCenterIcon, AlignLeftIcon, AlignRightIcon};
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, Input, OptionLabel, Options, SegmentedControl, Text};
+use libero::components::{
+    Code, FieldStatus, Icon, Input, OptionLabel, Options, SegmentedControl, Text,
+};
 
 /// The enum is the strip, so the snippet has to show it.
 const ALIGNMENT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -18,7 +20,7 @@ enum Alignment {
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
 /// closure right below - the block is a promise that the two are the same.
-const RENAMED: &str = r#"label: |alignment: Alignment| match alignment {
+const RENAMED: &str = r#"option_label: |alignment: Alignment| match alignment {
     Alignment::Left => "Links".into(),
     Alignment::Center => "Mitte".into(),
     Alignment::Right => "Rechts".into(),
@@ -27,7 +29,7 @@ const RENAMED: &str = r#"label: |alignment: Alignment| match alignment {
 // A segment is a `label`, so its content has to stay phrasing content: `Icon`
 // is an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a
 // `div`.
-const RICH: &str = r#"label: |alignment: Alignment| OptionLabel::rich(
+const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
     alignment.label(),
     rsx! {
         Icon {
@@ -43,7 +45,7 @@ const RICH: &str = r#"label: |alignment: Alignment| OptionLabel::rich(
     },
 )"#;
 
-const DISABLED: &str = "disabled: vec![Alignment::Center]";
+const DISABLED_OPTIONS: &str = "disabled_options: vec![Alignment::Center]";
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
@@ -79,6 +81,10 @@ fn rich(alignment: Alignment) -> OptionLabel {
     )
 }
 
+fn is_on(values: &DemoValues, name: &str) -> bool {
+    values.str(name) == "true"
+}
+
 #[component]
 pub fn SegmentedControlPage() -> Element {
     let mut alignment = use_signal(|| Alignment::Left);
@@ -86,21 +92,25 @@ pub fn SegmentedControlPage() -> Element {
     rsx! {
         DocPage {
             title: "SegmentedControl",
-            source: "libero/src/components/inputs/segmented_control",
+            source: "libero/src/components/form/segmented_control",
             markdown: "/md/segmented_control.md",
             properties: vec![
                 props("SegmentedControl", vec![
                     prop("value", "T")
-                        .doc("Strictly controlled - pair it with `onchange`. Exactly one segment is selected, which is what makes this a radio group and not a row of toggles."),
+                        .doc("Strictly controlled - pair it with `onchange`. Exactly one segment is selected, which is what makes this a radio group and not a row of toggles. A control bound to a `Form` through `name` leaves it out."),
                     prop("onchange", "EventHandler<T>")
                         .doc("Called with the segment that should become selected."),
-                    prop("segments", "Vec<T>")
+                    prop("name", "FieldName<T>")
+                        .doc("What the control posts as. A path - `Settings::FIELDS.align()` - also binds it to the surrounding `Form`'s value when it has no `onchange`."),
+                    prop("validate", "Validators<T>")
+                        .doc("Rules over the selection, shown once the control loses focus or its form is submitted."),
+                    prop("options", "Vec<T>")
                         .default("T::options()")
                         .doc("Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own."),
-                    prop("label", "Callback<T, OptionLabel>")
+                    prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a segment. Runs during render, so it can read a locale from context."),
-                    prop("disabled", "Vec<T>")
+                    prop("disabled_options", "Vec<T>")
                         .doc("Segments that render but cannot be picked."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
@@ -111,7 +121,7 @@ pub fn SegmentedControlPage() -> Element {
                     prop("color", "ThemeAwareValue")
                         .default("primary")
                         .doc("Accent color; a theme color name or a literal CSS color."),
-                    prop("size", "Size").default("md").doc("Shared by every segment."),
+                    prop("size", "Size").default("md").doc("Shared by every segment, and by the captions around them."),
                     prop("radius", "Size")
                         .default("md")
                         .doc("Corner radius of the control's outer corners; inner ones are square."),
@@ -123,6 +133,21 @@ pub fn SegmentedControlPage() -> Element {
                     prop("focusable", "bool")
                         .default("true")
                         .doc("`false` keeps the segments out of the tab order, and a click leaves focus where it is - for a control inside a field's dropdown."),
+                    prop("label", "Caption")
+                        .doc("The question. Names the group through `aria-labelledby`, since `for` cannot name a `role=\"radiogroup\"`."),
+                    prop("description", "Caption")
+                        .doc("Between the label and the segments: how to choose."),
+                    prop("helper", "Caption")
+                        .doc("Under the segments. Consequences of the choice."),
+                    prop("status", "FieldStatus")
+                        .default("Valid")
+                        .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
+                    prop("required", "bool")
+                        .default("false")
+                        .doc("Adds `aria-required` to the group and marks the label."),
+                    prop("disabled", "bool")
+                        .default("false")
+                        .doc("Disables every segment and dims the captions."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),
@@ -144,8 +169,19 @@ pub fn SegmentedControlPage() -> Element {
                     " reports the segment that should become selected. A runtime set of "
                     Code { source: "String" }
                     "s goes through "
-                    Code { source: "segments" }
+                    Code { source: "options" }
                     " instead."
+                }
+                Text {
+                    "It is a field like "
+                    Code { source: "RadioGroup" }
+                    ": a label, captions and a status around the strip, a "
+                    Code { source: "name" }
+                    " that binds it to a "
+                    Code { source: "Form" }
+                    ", and rules through "
+                    Code { source: "validate" }
+                    "."
                 }
             },
             Demo {
@@ -187,12 +223,42 @@ pub fn SegmentedControlPage() -> Element {
                     // "auto" is no gap at all: the segments stay connected
                     // and share their borders.
                     Control::slider("gap", ["auto", "xs", "sm", "md", "lg", "xl", "xxl"]),
+                    Control::toggle("status", ["valid", "warning", "error"])
+                        .default("valid")
+                        .code(|_, values| match values.str("status").as_str() {
+                            "warning" => vec![
+                                r#"status: FieldStatus::Warning("Justified text is harder to read.".into())"#
+                                    .to_string(),
+                            ],
+                            "error" => vec![r#"status: "Pick an alignment.""#.to_string()],
+                            _ => vec![],
+                        }),
+                    Control::switch("label").default("true").code(|_, values| {
+                        match values.str("label").as_str() {
+                            "true" => vec![r#"label: "Alignment""#.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("description").code(|_, values| {
+                        match values.str("description").as_str() {
+                            "true" => vec![r#"description: "Where each line starts.""#.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    Control::switch("helper").code(|_, values| {
+                        match values.str("helper").as_str() {
+                            "true" => vec![r#"helper: "Applies to the whole document.""#.to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("full_width"),
-                    // `disabled` is a `Vec<T>`, not a bool, so the switch
-                    // stands for one named segment rather than the prop.
-                    Control::switch("disabled").code(|_, values| {
-                        match values.str("disabled") == "true" {
-                            true => vec![DISABLED.to_string()],
+                    Control::switch("required"),
+                    Control::switch("disabled"),
+                    // `disabled_options` is a `Vec<T>`, not a bool, so the
+                    // switch stands for one named segment rather than the prop.
+                    Control::switch("disabled_options").code(|_, values| {
+                        match values.str("disabled_options") == "true" {
+                            true => vec![DISABLED_OPTIONS.to_string()],
                             false => vec![],
                         }
                     }),
@@ -208,13 +274,25 @@ pub fn SegmentedControlPage() -> Element {
                         radius: values.str("radius"),
                         orientation: values.str("orientation"),
                         gap: or_unset(values.str("gap")),
-                        full_width: values.str("full_width") == "true",
-                        label: match values.str("labels").as_str() {
+                        full_width: is_on(&values, "full_width"),
+                        label: is_on(&values, "label").then(|| "Alignment".to_string()),
+                        description: is_on(&values, "description")
+                            .then(|| "Where each line starts.".to_string()),
+                        helper: is_on(&values, "helper")
+                            .then(|| "Applies to the whole document.".to_string()),
+                        status: match values.str("status").as_str() {
+                            "warning" => FieldStatus::Warning("Justified text is harder to read.".to_string()),
+                            "error" => FieldStatus::Error("Pick an alignment.".to_string()),
+                            _ => FieldStatus::Valid,
+                        },
+                        required: is_on(&values, "required").then_some(true),
+                        disabled: is_on(&values, "disabled").then_some(true),
+                        option_label: match values.str("labels").as_str() {
                             "renamed" => Some(Callback::new(renamed)),
                             "rich" => Some(Callback::new(rich)),
                             _ => None,
                         },
-                        disabled: match values.str("disabled") == "true" {
+                        disabled_options: match is_on(&values, "disabled_options") {
                             true => vec![Alignment::Center],
                             false => Vec::new(),
                         },
@@ -230,7 +308,7 @@ pub fn SegmentedControlPage() -> Element {
                     Code { source: "role=\"radiogroup\"" }
                     " and every segment is a "
                     Code { source: "label" }
-                    " around a visually hidden "
+                    " for a visually hidden "
                     Code { source: "input type=\"radio\"" }
                     ". That is what a segmented control is: exactly one of a set, never none "
                     "and never two - so a screen reader announces \"1 of 3\", and arrow keys "
@@ -242,8 +320,12 @@ pub fn SegmentedControlPage() -> Element {
                     Code { source: "value" }
                     " instead, so the DOM property, "
                     Code { source: ":checked" }
-                    " and the accessibility tree can never disagree with Rust. Name the control "
-                    "with an "
+                    " and the accessibility tree can never disagree with Rust. The "
+                    Code { source: "label" }
+                    " names the group through "
+                    Code { source: "aria-labelledby" }
+                    ", and the description, helper and status describe it. Without a visible "
+                    "label, name it with an "
                     Code { source: "aria_label" }
                     " where its purpose is not obvious from the segments themselves."
                 }

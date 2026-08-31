@@ -91,7 +91,9 @@ fn a_segmented_control_checks_only_the_selected_radio() {
 
     let html = render(app);
     let body = body(&html);
-    let root = attributes_of(&body, "div");
+    // The first `div` is the field's wrapper; the group is the one inside it.
+    let body = &body[body[1..].find("<div").expect("the group") + 1..];
+    let root = attributes_of(body, "div");
 
     // A radio group, not a toolbar: exactly one segment is ever selected, so
     // the semantics are the browser's rather than `aria-pressed`.
@@ -165,7 +167,8 @@ fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
 
     let html = render(app);
     let body = body(&html);
-    let root = attributes_of(&body, "div");
+    let body = &body[body[1..].find("<div").expect("the group") + 1..];
+    let root = attributes_of(body, "div");
 
     // No `collapsed`, so the corner-squashing rules below cannot match.
     assert_eq!(root["data-state"], "horizontal filled size-xs");

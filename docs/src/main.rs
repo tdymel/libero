@@ -112,6 +112,8 @@ pub(crate) enum Route {
     RadioGroupPage {},
     #[route("/form/range-slider")]
     RangeSliderPage {},
+    #[route("/form/segmented-control")]
+    SegmentedControlPage {},
     #[route("/form/select")]
     SelectPage {},
     #[route("/form/slider")]
@@ -129,8 +131,6 @@ pub(crate) enum Route {
     ButtonPage {},
     #[route("/inputs/chip")]
     ChipPage {},
-    #[route("/inputs/segmented-control")]
-    SegmentedControlPage {},
     #[route("/layout/aspect-ratio")]
     AspectRatioPage {},
     #[route("/layout/box")]

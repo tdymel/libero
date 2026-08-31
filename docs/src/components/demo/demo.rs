@@ -397,8 +397,8 @@ pub fn Demo(
                                             // A control panel's options are data, so
                                             // they arrive here rather than from a `T`
                                             // that could list them statically.
-                                            segments: control.options.clone(),
-                                            label: {
+                                            options: control.options.clone(),
+                                            option_label: {
                                                 let control = control.clone();
                                                 move |option: String| OptionLabel::from(control.label_of(&option))
                                             },

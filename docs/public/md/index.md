@@ -48,6 +48,7 @@ fetch only the file you need.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
 - [Switch](switch.md): A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
 - [RadioGroup](radio_group.md): A group of radios over an enum, exactly one selected - one tab stop, arrow-key selection, and the question announced as the group's name.
+- [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected, wearing the field slots.
 - [Slider](slider.md): A value dragged along a track - continuous over `f64`, or discrete over an ordered enum that derives `SliderValue`.
 - [RangeSlider](range_slider.md): Two thumbs on one track for a span rather than a point - the `Slider` engine, over a pair of values.
 - [ColorField](color_field.md): A text field holding a `ColorCode`, with a preview swatch, an eyedropper and a `ColorPicker` in a dropdown.
@@ -61,7 +62,6 @@ fetch only the file you need.
 - [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
 - [Chip](chip.md): A compact token - a tag, a filter, or a small inline action.
-- [SegmentedControl](segmented_control.md): A connected strip of segments over an enum, exactly one of them selected.
 
 ## Layout
 

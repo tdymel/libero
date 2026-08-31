@@ -10,8 +10,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, MultiSelect, NativeSelect, NumberField, NumberValue, Options, PasswordField,
-        PinField, Radio, RadioGroup, Select, Slider, Switch, TextField, Textarea,
+        Checkbox, Fields, Form, MultiSelect, NativeSelect, NumberField, NumberValue, Options,
+        PasswordField, PinField, Radio, RadioGroup, SegmentedControl, Select, Slider, Switch,
+        TextField, Textarea,
     },
 };
 
@@ -785,6 +786,111 @@ fn an_unanswered_radio_group_still_has_a_way_in() {
         body.find(r#"tabindex="0""#) < body.find(r#"tabindex="-1""#),
         "{body}"
     );
+}
+
+/// A segmented control is a radio group with the field around it: the label
+/// names the group, the captions describe it, and `disabled` reaches every
+/// segment rather than only the ones in `disabled_options`.
+#[test]
+fn a_segmented_control_wears_the_field_around_its_radiogroup() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl {
+                    label: "Plan",
+                    helper: "Change it later.",
+                    status: "Pick a plan.",
+                    required: true,
+                    disabled: true,
+                    value: Plan::Pro,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let label = attributes_of(&body, "label");
+    let id = label["id"].trim_end_matches("-label").to_string();
+
+    // The wrapper is the first div; the group itself is the second.
+    let group = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
+    assert_eq!(group["role"], "radiogroup");
+    assert_eq!(group["aria-labelledby"], format!("{id}-label"));
+    assert!(group["aria-describedby"].contains(&format!("{id}-helper")), "{group:?}");
+    assert!(group["aria-describedby"].contains(&format!("{id}-status")), "{group:?}");
+    assert_eq!(group["aria-invalid"], "true");
+    assert_eq!(group["aria-required"], "true");
+
+    let radios: Vec<&str> = body
+        .match_indices("<input")
+        .map(|(at, _)| &body[at..at + body[at..].find('>').unwrap()])
+        .collect();
+    assert_eq!(radios.len(), 3, "{body}");
+    assert!(radios.iter().all(|radio| radio.contains("disabled")), "{radios:?}");
+}
+
+/// `full_width` fills the wrapper, so the wrapper has to fill its parent too -
+/// inside a centring parent it would otherwise shrink to the strip.
+#[test]
+fn a_full_width_segmented_control_stretches_its_field_wrapper() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl { full_width: true, value: Plan::Pro, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let wrapper = attributes_of(&body, "div");
+    assert!(wrapper["data-state"].contains("full-width"), "{wrapper:?}");
+    assert!(html.contains("[data-state~=\"full-width\"]{width:100%"), "{html}");
+}
+
+#[derive(Clone, Copy, PartialEq, Default, Options)]
+enum Density {
+    Compact,
+    #[default]
+    Cosy,
+    Roomy,
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+pub struct Layout {
+    density: Density,
+}
+
+/// Bound through a path, the control reads its selection out of the form's
+/// value and posts under the path's name - no `value` and no `onchange`.
+#[test]
+fn a_bound_segmented_control_reads_its_form_value_and_posts_its_name() {
+    fn app() -> Element {
+        let layout = use_store(|| Layout {
+            density: Density::Roomy,
+        });
+        rsx! {
+            LiberoProvider {
+                Form {
+                    value: layout,
+                    SegmentedControl { name: Layout::FIELDS.density() }
+                }
+            }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let html = dioxus_ssr::render(&dom);
+
+    assert_eq!(html.matches(r#"name="density""#).count(), 3, "{html}");
+    let checked: Vec<bool> = html
+        .match_indices("<input")
+        .map(|(at, _)| html[at..at + html[at..].find('>').unwrap()].contains("checked"))
+        .collect();
+    assert_eq!(checked, [false, false, true], "{html}");
 }
 
 /// A radio is turned off by another being turned on, so `onselect` reports a
