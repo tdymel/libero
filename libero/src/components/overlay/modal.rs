@@ -6,7 +6,7 @@ use crate::{
         variables,
     },
     context::ModalContext,
-    hooks::use_modal_z_index,
+    hooks::{use_dismiss_layer, use_modal_z_index},
     sx::{StaticSx, sx},
     theme::CssVar,
 };
@@ -64,6 +64,13 @@ pub fn Modal(props: ModalProps) -> Element {
     use_context_provider(|| ModalContext { onclose });
 
     let z_index = use_modal_z_index();
+    // A `Modal` is only ever rendered while it is open, so mounting *is*
+    // opening. Its Escape stays a bubbled subtree `onkeydown` rather than
+    // moving to `KeyboardApi`: `platform::keyboard()` is `None` on every
+    // backend but the web, so the capability would regress Escape natively.
+    // Only the arbitration is shared.
+    let layer = use_dismiss_layer();
+    use_hook(move || layer.open());
     let variables: Input<Variables> = variables()
         .with(MODAL_Z_INDEX_VAR, z_index.to_string())
         .into();
@@ -90,7 +97,10 @@ pub fn Modal(props: ModalProps) -> Element {
         .prepare()
         .attr("data-lsx-scroll-lock", true)
         .event("onkeydown", move |event: Event<KeyboardData>| {
-            if event.key() == Key::Escape {
+            // Only the top layer answers: a popover open inside this modal
+            // hears the same press on its own box, and without the guard both
+            // would close.
+            if event.key() == Key::Escape && layer.is_top() {
                 close();
             }
         })
