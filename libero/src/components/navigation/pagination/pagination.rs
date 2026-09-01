@@ -107,10 +107,15 @@ base_props! {
         /// Names the `<nav>` landmark. Required: two paginations on one page
         /// have to be distinguishable.
         aria_label: String,
-        #[props(default, into)]
-        siblings: Input<u8>,
-        #[props(default, into)]
-        boundaries: Input<u8>,
+        /// `Option`, not `Input`: `Input` exists for values that chain through
+        /// `sx`/theme resolution, and these are plain scalars with a theme
+        /// default - the `disabled`/`with_controls` shape. It also keeps `u8`
+        /// out of `input_from!`, which is a shared file this does not need to
+        /// touch.
+        #[props(default)]
+        siblings: Option<u8>,
+        #[props(default)]
+        boundaries: Option<u8>,
         #[props(default, into)]
         size: Input<Size>,
         #[props(default, into)]
@@ -155,8 +160,8 @@ pub fn Pagination(props: PaginationProps) -> Element {
 
     let size = props.size.copied_or(defaults.size);
     let radius = props.radius.copied_or(defaults.radius);
-    let siblings = props.siblings.copied_or(defaults.siblings);
-    let boundaries = props.boundaries.copied_or(defaults.boundaries);
+    let siblings = props.siblings.unwrap_or(defaults.siblings);
+    let boundaries = props.boundaries.unwrap_or(defaults.boundaries);
     let disabled = props.disabled.unwrap_or(false);
     let with_controls = props.with_controls.unwrap_or(true);
     let with_edges = props.with_edges.unwrap_or(false);
