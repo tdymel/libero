@@ -1,4 +1,5 @@
 mod anchor;
+mod carousel;
 mod internal_anchor;
 mod nav_link;
 mod pagination;
@@ -6,6 +7,7 @@ mod tabs;
 mod tree;
 
 pub use anchor::{Anchor, AnchorUnderline};
+pub use carousel::{Carousel, CarouselAlign, CarouselProps};
 pub(crate) use internal_anchor::InternalAnchor;
 pub use nav_link::NavLink;
 pub use pagination::{

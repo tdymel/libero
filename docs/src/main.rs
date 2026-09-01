@@ -20,16 +20,17 @@ use icons::BurgerIcon;
 use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BlockquotePage, BoxPage,
-    ButtonPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage,
-    ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage,
-    DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
-    FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
-    HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
-    NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
-    PasswordFieldPage, PerformancePage, PinFieldPage, PopoverPage, QrCodePage, RadioGroupPage,
-    RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SliderPage,
-    SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TextFieldPage, TextPage,
-    TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    ButtonPage, CarouselPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage,
+    CollapsePage, ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage,
+    DateFieldPage, DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage,
+    FileFieldPage, FlexPage, FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage,
+    GettingStarted, GridPage, HeaderPage, IconPage, ImagePage, KbdPage, ListPage, MarkPage,
+    ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage,
+    PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PinFieldPage, PopoverPage,
+    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage,
+    SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage,
+    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
+    TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -161,6 +162,8 @@ pub(crate) enum Route {
     #[route("/layout/splitter")]
     SplitterPage {},
 
+    #[route("/navigation/carousel")]
+    CarouselPage {},
     #[route("/navigation/anchor")]
     AnchorPage {},
     #[route("/navigation/nav-link")]

@@ -81,6 +81,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         sidebar,
         flex,
         grid,
+        carousel,
         center,
         container,
         aspect_ratio,
@@ -167,6 +168,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(sidebar.to_css_declarations());
     declarations.extend(flex.to_css_declarations());
     declarations.extend(grid.to_css_declarations());
+    declarations.extend(carousel.to_css_declarations());
     declarations.extend(center.to_css_declarations());
     declarations.extend(container.to_css_declarations());
     declarations.extend(aspect_ratio.to_css_declarations());
@@ -370,6 +372,9 @@ mod tests {
             ("--lsx-container-size", "var(--lsx-breakpoint-lg)"),
             ("--lsx-container-gutters", "var(--lsx-spacing-md)"),
             ("--lsx-divider-spacing", "0"),
+            ("--lsx-carousel-gap", "var(--lsx-spacing-md)"),
+            ("--lsx-carousel-per-view", "1"),
+            ("--lsx-carousel-control-size", "28px"),
             ("--lsx-paper-radius", "var(--lsx-radius-md)"),
             ("--lsx-paper-shadow", "var(--lsx-shadow-sm)"),
             ("--lsx-paper-background", "#fff"),

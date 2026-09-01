@@ -4,6 +4,7 @@ mod aspect_ratio;
 mod autocomplete;
 mod blockquote;
 mod button;
+mod carousel;
 mod center;
 mod checkbox;
 mod chip;
@@ -71,6 +72,12 @@ pub use blockquote::{
 };
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
+};
+pub use carousel::{
+    CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
+    CAROUSEL_INDICATOR_CURRENT_COLOR, CAROUSEL_INDICATOR_CURRENT_LENGTH, CAROUSEL_INDICATOR_LENGTH,
+    CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP, CAROUSEL_PER_VIEW, CAROUSEL_RADIUS,
+    CarouselAlign, CarouselDefaults,
 };
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use checkbox::{CHECKBOX_BOX, CHECKBOX_BOX_SIZE, CHECKBOX_RADIUS, CheckboxDefaults};

@@ -83,6 +83,7 @@ fetch only the file you need.
 ## Navigation
 
 - [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`.
+- [Carousel](carousel.md): A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
 - [NavLink](nav_link.md): A navigation list item - a link with a themed active/hover background and `aria-current`, for a sidebar or nav bar.
 - [Pagination](pagination.md): A row of page controls in a named nav landmark, with an ellipsis range that never reflows as you click through it.
 - [Tabs](tabs.md): One strip of tabs over an enum, with only the selected tab's panel built.

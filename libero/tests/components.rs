@@ -9,10 +9,10 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Anchor, AspectRatio, Autocomplete, Box, Button, Center, Chip, Code, CodeBlock,
-        Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, Container, DataList,
-        DataListItem, Dialog, Divider, FileField, Flex, Float, FocusTrap, Grid, GridArea, GridItem,
-        GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
+        ActionIcon, Anchor, AspectRatio, Autocomplete, Box, Button, Carousel, Center, Chip, Code,
+        CodeBlock, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, Container,
+        DataList, DataListItem, Dialog, Divider, FileField, Flex, Float, FocusTrap, Grid, GridArea,
+        GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
         MultiSelect, NativeSelect, NavLink, OptionLabel, Options, Overlay, Paper, QrCode,
         RangeSlider, ScrollArea, SegmentedControl, Select, SelectionArgs, Sidebar, Slider,
         SliderMark, SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem,
@@ -1174,6 +1174,223 @@ fn a_dialog_renders_the_paper_surface_under_its_own_chrome() {
         "{html}"
     );
     assert!(html.contains("box-shadow:var(--lsx-shadow-xl);"), "{html}");
+}
+
+/// The five-part DOM and the a11y wiring in one pass, because every part of it
+/// is a projection of the same `(count, current)` pair.
+#[test]
+fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    indicators: true,
+                    per_view: 3.0,
+                    slides: (0..6).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let root = attributes_of(&html, "section");
+
+    assert_eq!(root["role"], "region");
+    assert_eq!(root["aria-roledescription"], "carousel");
+    assert_eq!(root["aria-label"], "Photos");
+
+    // Every slide is a named group, and none is hidden: in a real scroll
+    // container an offscreen slide is still reachable.
+    assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 6);
+    assert!(html.contains(r#"aria-label="1 of 6""#), "{html}");
+    assert!(html.contains(r#"aria-label="6 of 6""#), "{html}");
+    assert!(!html.contains("aria-hidden"), "{html}");
+
+    // The controls name the element they scroll, and the track is the tab stop.
+    // The track is the only element here that carries an id, and the controls
+    // have to name that one rather than whatever `attributes_of` finds first.
+    let track_id = html
+        .split_once(r#" id=""#)
+        .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
+        .expect("the track carries an id");
+    assert_eq!(
+        html.matches(&format!(r#"aria-controls="{track_id}""#))
+            .count(),
+        2
+    );
+    assert!(html.contains(r#"tabindex="0""#), "{html}");
+
+    // Six slides three-up stop at index 3, so four dots, not six.
+    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 4);
+    // At the first slide the previous control is disabled but keeps its place
+    // in the tab order.
+    assert!(html.contains(r#"aria-disabled="true""#), "{html}");
+    assert!(!html.contains("disabled=true"), "{html}");
+
+    // The live region reads the settled slide, politely, as one utterance.
+    assert!(html.contains(r#"role="status""#), "{html}");
+    assert!(html.contains(r#"aria-live="polite""#), "{html}");
+    assert!(html.contains("Slide 1 of 6"), "{html}");
+}
+
+/// Centred three-up over six slides reaches indices 1-4, not 0-3, so an index
+/// seeded at 0 sits outside the window. Left there it strands the keyboard:
+/// four dots and no tab stop among them, nothing marked current, and no scroll
+/// at rest to correct any of it.
+#[test]
+fn an_index_outside_the_reachable_window_is_pulled_into_it() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    indicators: true,
+                    per_view: 3.0,
+                    align: "center",
+                    slides: (0..6).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    // The indicator strip is reachable at all.
+    assert!(
+        html.contains(r#"tabindex="0""#),
+        "no tab stop in the strip: {html}"
+    );
+    assert!(html.contains(r#"aria-current="true""#), "{html}");
+    // Slide 1 is the one actually centred at rest, so it is the current one.
+    let slide_one = html.find("slide 1").expect("slide 1");
+    let current = html
+        .find(r#"data-current="true""#)
+        .expect("a current slide");
+    let slide_two = html.find("slide 2").expect("slide 2");
+    assert!(
+        current < slide_one && slide_one < slide_two,
+        "the current slide should be slide 1: {html}"
+    );
+}
+
+/// The mount-time clamp speaks only to a controlled caller, which is the only
+/// party that can be holding an index the component disagrees with.
+/// `onindexchange` documents itself as a scroll, control, key, indicator or
+/// autoplay event, and a clamp is none of those.
+#[test]
+fn an_uncontrolled_carousel_reports_no_index_change_on_mount() {
+    #[component]
+    fn Counted(controlled: bool) -> Element {
+        let mut calls = use_signal(|| 0usize);
+
+        rsx! {
+            div { "calls: {calls}" }
+            Carousel {
+                aria_label: "Photos",
+                per_view: 3.0,
+                align: "center",
+                index: controlled.then_some(0),
+                onindexchange: move |_| calls += 1,
+                slides: (0..6).map(|i| rsx! { div { "slide {i}" } }).collect(),
+            }
+        }
+    }
+
+    fn uncontrolled() -> Element {
+        rsx! { LiberoProvider { Counted { controlled: false } } }
+    }
+    fn controlled() -> Element {
+        rsx! { LiberoProvider { Counted { controlled: true } } }
+    }
+
+    // Both clamp - the window is 1..=4 either way.
+    assert!(body(&render(uncontrolled)).contains("calls: 0"));
+    assert!(body(&render(controlled)).contains("calls: 1"));
+}
+
+/// The roving `tabindex` moves focus by looking the new dot up by id, so the
+/// ids have to be on the dots and have to match what the lookup builds. If they
+/// were not, focus would silently never move and only the comment would say
+/// otherwise.
+#[test]
+fn every_indicator_carries_the_id_its_focus_lookup_targets() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    indicators: true,
+                    slides: (0..3).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let track_id = html
+        .split_once(r#" id=""#)
+        .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
+        .expect("the track carries an id");
+
+    for index in 0..3 {
+        let id = format!("{track_id}-indicator-{index}");
+        assert!(html.contains(&format!(r#"id="{id}""#)), "no {id} in {html}");
+    }
+}
+
+/// The clones are what a looping strip scrolls into past either edge. They
+/// carry the same content, so they are hidden rather than announced twice.
+#[test]
+fn a_looping_carousel_clones_its_ends_and_hides_the_copies() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    r#loop: true,
+                    slides: (0..4).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    // One clone at each end at one-up: six positions for four slides.
+    assert_eq!(html.matches("<div>slide").count(), 6);
+    assert_eq!(html.matches(r#"aria-hidden="true""#).count(), 2);
+    // Only the four real slides are named and grouped.
+    assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 4);
+    assert_eq!(html.matches(r#"aria-label="1 of 4""#).count(), 1);
+
+    // The strip opens on the last slide (the leading clone) and the first
+    // slide (the trailing one), in that order.
+    let first = html.find("slide 3").expect("the leading clone");
+    let second = html.find("slide 0").expect("the first real slide");
+    assert!(first < second, "{html}");
+
+    // No end to be at, so neither control is disabled and there is one dot per
+    // real slide.
+    assert!(!html.contains(r#"aria-disabled="true""#), "{html}");
+    assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 0);
+}
+
+/// A generic name beats none at all, so the theme's stands in - the warning is
+/// what says to do better.
+#[test]
+fn an_unnamed_carousel_falls_back_to_the_theme_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel { slides: vec![rsx! { div { "one" } }] }
+            }
+        }
+    }
+
+    let root = attributes_of(&body(&render(app)), "section");
+
+    assert_eq!(root["aria-label"], "Carousel");
 }
 
 #[test]
