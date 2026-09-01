@@ -35,6 +35,7 @@ mod native_select;
 mod nav_link;
 mod number_field;
 mod overlay;
+mod pagination;
 mod paper;
 mod pin_field;
 mod popover;
@@ -132,6 +133,11 @@ pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use number_field::NumberFieldDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
+pub use pagination::{
+    PAGINATION_ACTIVE_BACKGROUND, PAGINATION_ACTIVE_COLOR, PAGINATION_BORDER,
+    PAGINATION_CONTROL_SIZE, PAGINATION_FONT_SIZE, PAGINATION_GAP, PaginationDefaults,
+    PaginationLabels,
+};
 pub use paper::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW, PaperDefaults};
 pub use pin_field::{PIN_FIELD_GAP, PinFieldDefaults, PinKind};
 pub use popover::{POPOVER_GAP, POPOVER_PADDING, PopoverDefaults};

@@ -9,14 +9,14 @@ use super::{
     FileFieldDefaults, FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults,
     FormDefaults, GridDefaults, HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit,
     KbdDefaults, ListDefaults, MarkDefaults, NativeSelectDefaults, NavLinkDefaults,
-    NumberFieldDefaults, OverlayDefaults, PaperDefaults, PinFieldDefaults, PinKind, Placement,
-    PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis,
-    ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
-    SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
-    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant,
-    TimelineAlign, TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
-    TreeDefaults, ZIndexDefaults,
+    NumberFieldDefaults, OverlayDefaults, PaginationDefaults, PaginationLabels, PaperDefaults,
+    PinFieldDefaults, PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness,
+    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT,
+    TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
+    TextareaDefaults, TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults,
+    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -97,6 +97,9 @@ pub struct Theme {
     pub image: ImageDefaults,
     pub mark: MarkDefaults,
     pub kbd: KbdDefaults,
+    pub pagination: PaginationDefaults,
+    /// Every string `Pagination` shows a reader. Swapped whole for a locale.
+    pub pagination_labels: PaginationLabels,
     pub nav_link: NavLinkDefaults,
     pub anchor: AnchorDefaults,
     pub primary: HexColor,
@@ -833,6 +836,19 @@ impl Theme {
             border: "#d0d7de",
             color: "#57606a",
         },
+        pagination: PaginationDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            color: Color::Primary,
+            siblings: 1,
+            boundaries: 1,
+            gap: Size::Xs,
+            // Mantine's control scale, plus an `xxl` continuing its steps.
+            control_size: Sizes::new(22, 26, 32, 38, 44, 52),
+            font_size: Sizes::new(11, 12, 14, 16, 18, 20),
+            border: "grey.4",
+        },
+        pagination_labels: PaginationLabels::ENGLISH,
         nav_link: NavLinkDefaults {
             color: Color::Primary,
         },

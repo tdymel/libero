@@ -118,6 +118,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         qr_code,
         image,
         kbd,
+        pagination,
+        pagination_labels: _,
         anchor,
         file_field,
         pin_field,
@@ -205,6 +207,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(action_icon.to_css_declarations());
     declarations.extend(qr_code.to_css_declarations());
     declarations.extend(kbd.to_css_declarations());
+    declarations.extend(pagination.to_css_declarations());
     declarations.extend(image.to_css_declarations());
     declarations.extend(anchor.to_css_declarations());
     push_named_color_declarations(&mut declarations, *black, *white);
