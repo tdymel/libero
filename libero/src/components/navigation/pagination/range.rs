@@ -67,13 +67,20 @@ pub fn pagination_range(
     //   zero.
     //
     // - **The rendered width is the same for every `page`**, which is what keeps
-    //   the strip from reflowing as you click through it. The two clamps have
-    //   identical widths and their bounds differ by exactly `2 * siblings`, so
-    //   `right - left == 2 * siblings` whatever `page` is, and the total is
-    //   always `2 * boundaries + 2 * siblings + 3` - `window`, which is what
-    //   `with_capacity` below is given. The sweep in the tests confirms this
-    //   over a range; the identity is why it holds outside that range too.
-    //   (Karen3, reviewing C4.)
+    //   the strip from reflowing as you click through it. **This rests on the
+    //   same branch condition as the clamp fact above and is not independent of
+    //   it**: given neither clamp inverts, the two have identical widths and
+    //   bounds differing by exactly `2 * siblings`, so `right - left` is
+    //   `2 * siblings` whatever `page` is and the total is always
+    //   `2 * boundaries + 2 * siblings + 3` - `window`, which is what
+    //   `with_capacity` below is given. Move one of these without the other and
+    //   the survivor loses its footing. (Karen3, reviewing C4.)
+    //
+    // The test sweep and this derivation are not the same evidence, and the
+    // difference is worth keeping. The sweep establishes that the width was
+    // constant for `total` 1..39; the derivation is why it is constant at
+    // `window` for every `total`. A reader who sees only the sweep will take
+    // the bound for empirical and re-run it after any change.
     //
     // Proved rather than sampled: a u32 underflow panics in debug and wraps in
     // release, and neither shows up in a test that only walks the pinned table.

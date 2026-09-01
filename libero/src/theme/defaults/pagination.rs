@@ -75,14 +75,17 @@ impl ToCssDeclarations for PaginationDefaults {
 /// arrangement, which is locale-only and sits beside `DatePickerDefaults`
 /// rather than inside it.
 ///
+/// The `<nav>`'s own name is **not** here. `aria_label` is a required prop, so
+/// the caller supplies it and localises it themselves; a default sitting here
+/// would be set by a translator, read by nothing, and indistinguishable from
+/// their own wiring being wrong (Bob3, reviewing C4).
+///
 /// **`format!("{page_label} {n}")` assumes the number goes last**, which is
 /// wrong in plenty of languages. `Pagination`'s `label` prop is the escape
 /// hatch for a language this shape cannot reach; see [`todos`] item 28 for the
 /// i18n work this is waiting on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PaginationLabels {
-    /// Names the `<nav>` landmark.
-    pub nav_label: &'static str,
     /// Prefix for a page the reader is not on: `Go to page 4`.
     pub page_label: &'static str,
     /// Prefix for the current page: `Page 4`. `aria-current` already says
@@ -96,7 +99,6 @@ pub struct PaginationLabels {
 
 impl PaginationLabels {
     pub const ENGLISH: Self = Self {
-        nav_label: "Pagination",
         page_label: "Go to page",
         current_page_label: "Page",
         previous_label: "Go to previous page",

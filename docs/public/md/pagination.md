@@ -144,6 +144,17 @@ you are already on.
 The repair needs the platform to find the focused element and search a subtree.
 Where it cannot, on the webview floor, nothing moves and nothing else changes.
 
+## Target size
+
+Every size from `sm` up clears WCAG 2.2 SC 2.5.8's 24px minimum on its own. `xs`
+is a 22px control and passes through the **spacing** exception instead: 22px plus
+the `xs` gap of 4px is 26px centre to centre, clear of the 24px the exception
+asks for.
+
+That margin is 2px and it depends on `theme.pagination.gap`. A theme that sets
+the gap to zero drops an `xs` pagination below AA, with nothing to warn it has.
+Larger sizes are unaffected.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -183,11 +194,11 @@ different reasons - the `DateDefaults` arrangement.
 | `border` | `&'static str` | Control border colour |
 
 `PaginationLabels` on `theme.pagination_labels`, English by default and swapped
-whole for a locale:
+whole for a locale. The `<nav>`'s own name is not here: `aria_label` is a
+required prop, so the caller supplies and localises it.
 
 | Field | Default |
 |---|---|
-| `nav_label` | `Pagination` |
 | `page_label` | `Go to page` |
 | `current_page_label` | `Page` |
 | `previous_label` / `next_label` | `Go to previous page` / `Go to next page` |
