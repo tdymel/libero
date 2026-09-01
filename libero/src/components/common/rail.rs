@@ -11,16 +11,27 @@
 //! `--lsx-stepper-*`. Sharing geometry must not mean sharing a theme
 //! namespace, which would couple two components' theming for nothing.
 //!
-//! **On the formula.** The E4 plan quotes Mantine's
-//! `--offset: calc(bullet/2 + line/2)` as the single inset expression. That is
-//! not reproduced literally, because it is only correct relative to an origin
-//! the plan does not state, and the reference source was not reachable to
-//! check which one. Derived from our own box model instead: the marker's
-//! inline-start edge sits at the item's edge, so the rail's centreline is at
-//! `marker / 2`, and a connector of width `line` centred on it starts at
-//! `marker / 2 - line / 2`. `libero/tests/timeline.rs` asserts the emitted
-//! values, so the geometry is pinned by what it renders rather than by which
-//! formula was copied.
+//! **On the formula, and why ours differs.** The E4 plan quotes Mantine's
+//! `--offset: calc(bullet/2 + line/2)` as the single inset expression. Both
+//! are correct; they measure different things from different origins.
+//!
+//! Mantine draws the connector as the **item's own `border-left`**, so its
+//! origin is the *line's* leading edge. With the bullet centred on the line's
+//! centreline (at `line / 2`), the bullet spans
+//! `[line/2 - bullet/2, line/2 + bullet/2]`, so its trailing edge - where
+//! content has to begin - is at `bullet/2 + line/2`. `--offset` is therefore a
+//! **content inset measured from a line origin**. It is not a centreline, and
+//! it does not transfer to a box model where the connector is an absolutely
+//! positioned `::before` and the marker's leading edge sits at the item's
+//! edge.
+//!
+//! In our origin that same quantity is `marker` plus the space term, which is
+//! what [`Rail::content_inset`] returns. Hence three named methods rather than
+//! one `offset()`: three different measurements were being carried by one
+//! name, and the name is what got copied without its origin.
+//!
+//! `libero/tests/timeline.rs` asserts the emitted values, so the geometry is
+//! pinned by what it renders rather than by which formula was quoted.
 
 use crate::sx::{Sx, sx};
 
@@ -57,9 +68,28 @@ impl Rail {
         format!("calc({} / 2 - {} / 2)", self.marker, self.line)
     }
 
-    /// Where content sits, clear of the marker plus one space.
+    /// Where content sits in a **one-sided** rail: clear of the marker, plus
+    /// one space. See [`Rail::centred_content_inset`] for the centred twin.
     pub fn content_inset(&self, space: &str) -> String {
         format!("calc({} + {space})", self.marker)
+    }
+
+    /// The same clearance for a **centred** rail, where the marker straddles
+    /// the midline: content starts a full half-marker past 50%, not at 50%.
+    ///
+    /// Getting this wrong is silent - the inset still looks plausible, and the
+    /// clearance comes out as `space - marker/2`, so it shrinks as the marker
+    /// grows and goes negative on the larger steps of a size scale. SSR cannot
+    /// see it.
+    ///
+    /// **Unstated invariant of the centred arm**: the two `50%`s resolve
+    /// against different boxes - percentage padding against the containing
+    /// block, `left` on the marker against the item's padding box - and they
+    /// agree only while the item is exactly the list's content width. A column
+    /// flex at the default `align-items: stretch` gives that. Setting
+    /// `align-items` on the list breaks it.
+    pub fn centred_content_inset(&self, space: &str) -> String {
+        format!("calc(50% + {} / 2 + {space})", self.marker)
     }
 
     /// The connector, as an absolutely positioned `::before` on the item.

@@ -123,6 +123,12 @@ impl ToCssDeclarations for TimelineDefaults {
         declarations.push(TIMELINE_LINE_COLOR.declare(self.line_color));
         declarations.push(TIMELINE_LINE_WIDTH.declare(format!("{}px", self.line_width)));
         declarations.push(TIMELINE_BULLET_BACKGROUND.declare(self.bullet_background));
+        // Every item sets its own, so this is never the value that renders -
+        // but an *unset* custom property inside the `border-left` shorthand
+        // makes the whole declaration invalid at computed-value time, and the
+        // connector vanishes rather than falling back to solid. This is what
+        // makes the `::before` rule robust for whoever renders an item next.
+        declarations.push(TIMELINE_LINE_STYLE.declare("solid"));
         declarations
     }
 }

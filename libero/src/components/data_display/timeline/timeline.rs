@@ -60,6 +60,11 @@ static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
 static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
     let rail = rail();
     let inset = rail.content_inset(CONTENT_SPACE);
+    // Through `Rail`, not hand-rolled: the marker straddles the midline here,
+    // so content starts a half-marker past 50%. Inlining `calc(50% + space)`
+    // left a clearance of `space - marker/2`, which is negative on the two
+    // largest bullet sizes - and C3's centred arm needs the same expression.
+    let centred = rail.centred_content_inset(CONTENT_SPACE);
 
     let base = sx()
         .position("relative")
@@ -98,12 +103,12 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
             .container_query(
                 CONTAINER,
                 ALTERNATE_MIN,
-                sx().padding_left(format!("calc(50% + {CONTENT_SPACE})"))
+                sx().padding_left(centred.clone())
                     .and(rail.connector_sx(RailInset::Center))
                     .selector(
                         "&:nth-of-type(even)",
                         sx().padding_left("0")
-                            .padding_right(format!("calc(50% + {CONTENT_SPACE})"))
+                            .padding_right(centred.clone())
                             .text_align("right"),
                     ),
             ),
@@ -272,7 +277,7 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .attr("data-state", bullet_states.data_state())
                 // The rail's drawing; the title is the text.
                 .attr("aria-hidden", "true")
-                .render(HtmlTag::Span, Vec::new(), item.bullet.clone())?;
+                .render(HtmlTag::Span, Vec::new(), item.bullet.clone());
 
             let title =
                 title_style
@@ -294,7 +299,9 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 // current event carries one. Completed events are conveyed
                 // visually; hidden text on every prior item is noise.
                 .attr("aria-current", is_current.then_some("step"))
-                .render(HtmlTag::Li, Vec::new(), rsx! { {bullet} {body} })
+                // Two already-built elements and no markup of our own, so a
+                // `vec!` rather than an `rsx!` block wrapping them.
+                .render(HtmlTag::Li, Vec::new(), vec![bullet, body])
         })
         .collect::<Vec<_>>();
 

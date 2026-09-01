@@ -145,6 +145,34 @@ fn the_rail_geometry_is_derived_from_one_centreline() {
     // Never below the last event - a rail past the final marker points at
     // nothing.
     assert!(html.contains(":not(:last-of-type)::before"), "{html}");
+    // The one-sided content inset clears the whole marker, so the gap between
+    // bullet and text is the space term and nothing else.
+    assert!(
+        html.contains("padding-left:calc(var(--lsx-timeline-bullet) + var(--lsx-spacing-md))"),
+        "{html}"
+    );
+}
+
+/// The centred arm's inset is the one that was wrong: the marker straddles the
+/// midline, so content has to start a half-marker past 50%. Inlining
+/// `calc(50% + space)` left a clearance of `space - marker/2` - 2px at the
+/// default bullet size, and negative at the two largest. Pinned here because
+/// neither SSR nor a diff read can see it, and C3's centred arm inherits the
+/// same expression.
+#[test]
+fn the_centred_arm_clears_the_whole_half_marker() {
+    let html = render(alternate_app);
+    let inset = "calc(50% + var(--lsx-timeline-bullet) / 2 + var(--lsx-spacing-md))";
+
+    assert!(html.contains(&format!("padding-left:{inset}")), "{html}");
+    // The mirrored side has to match, or even and odd events sit at different
+    // distances from the same rail.
+    assert!(html.contains(&format!("padding-right:{inset}")), "{html}");
+    // And the half-marker term is exactly what a hand-rolled version drops.
+    assert!(
+        !html.contains("padding-left:calc(50% + var(--lsx-spacing-md))"),
+        "{html}"
+    );
 }
 
 /// The specificity trap this library keeps meeting: a container query adds no
