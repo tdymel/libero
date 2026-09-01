@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{Code, Input, Paper, Text, Title},
@@ -127,26 +127,6 @@ pub fn PaperPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection {
-                title: "As a link",
-                Text {
-                    "The base drops the underline and makes the element a block, so "
-                    "component: \"a\" is a whole card that is one link. The card owns the "
-                    "accessible name the same way any other link does - from its contents.",
-                }
-                // No `target: "_blank"`: `extends(a)` offers it, but a new tab
-                // needs an affordance that says so, and this example is about
-                // the link arm rather than about targeting.
-                Paper {
-                    component: "a",
-                    href: "https://dioxuslabs.com",
-                    bordered: true,
-                    sx: sx().padding("lg"),
-                    // Under `DocSection`'s h2, so h3.
-                    Title { size: "md", component: "h3", "Dioxus" }
-                    Text { "The framework Libero is built on." }
-                }
             }
         }
     }

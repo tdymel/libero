@@ -45,38 +45,6 @@ Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 `bordered` and a shadow are legal together. That is a design choice, not a
 misuse, and nothing warns about it.
 
-## As a link
-
-The base is `display: block` with `text-decoration: none`, which is what lets a
-whole card be one link. `href`, `target` and `rel` are declared on `PaperProps`
-and so accepted on any `Paper`, but they mean something only on the
-`component: "a"` form; nothing warns if you set one elsewhere. The card takes its accessible name from its contents, like any other
-link. Nothing interactive belongs inside it - a button or a field nested in a
-link is an interactive-nesting hazard - and `target: "_blank"` needs a visible
-affordance saying the link opens a new tab, so neither is in the example.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Paper, Text, Title},
-    sx::sx,
-};
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        Paper {
-            component: "a",
-            href: "https://dioxuslabs.com",
-            bordered: true,
-            sx: sx().padding("lg"),
-            Title { size: "md", component: "h3", "Dioxus" }
-            Text { "The framework Libero is built on." }
-        }
-    }
-}
-```
-
 ## Building on it
 
 A component that renders a surface as part of its own element - rather than
@@ -114,6 +82,8 @@ it so; as an `<a href>` it is focusable and carries the library's shared
 Like every component, `Paper` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes - `href`, `target` and `rel`
 included, though only the `component: "a"` form does anything with them.
+That form makes the whole surface one link: it takes its accessible name from
+its contents, and nothing interactive belongs inside it.
 `Paper` sets no `role` and no ARIA of its own and
 forwards what it is given untouched, so a caller's `role` or `aria-label`
 reaches the element.
