@@ -70,8 +70,14 @@ static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
             "(prefers-reduced-motion: reduce)",
             sx().scroll_behavior("auto"),
         )
-        // A drag is the pointer's own position: animating towards it lags.
-        .when("dragging", sx().scroll_behavior("auto"))
+        // A drag is the pointer's own position: animating towards it lags,
+        // and a mandatory snap pulls every write back to the slide it left, so
+        // the strip sat still and then jumped a whole slide. After the
+        // orientation arms, which it has to beat at equal specificity.
+        .when(
+            "dragging",
+            sx().scroll_behavior("auto").scroll_snap_type("none"),
+        )
         .when("seam", sx().scroll_behavior("auto"))
         // Inset: the viewport is `overflow: hidden` and exactly this size, so
         // an outset ring is clipped away entirely.
@@ -748,7 +754,14 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let delay = props
         .autoplay_delay
         .unwrap_or(theme.carousel.autoplay_delay);
-    use_effect(use_reactive!(|running, delay, nav, last| {
+    // The timer's callback runs outside every scope (`TimerApi`), and a move
+    // needs one: `scroll_to_index` spawns. So a tick only counts, and the
+    // effect below it, which has a scope, does the moving. A `go_to` from the
+    // callback set both indices and then panicked in `spawn` on the web - the
+    // dots advanced and the strip never did.
+    let ticks = use_signal(|| 0usize);
+    let mut advanced = use_signal(|| 0usize);
+    use_effect(use_reactive!(|running, delay| {
         if !running {
             subscription.set(None);
             return;
@@ -760,15 +773,30 @@ pub fn Carousel(props: CarouselProps) -> Element {
         let handle = timer.every(
             Duration::from_millis(delay.max(1) as u64),
             Box::new(move || {
-                let next = match *nav.current.peek() >= last {
-                    // Autoplay wraps; the controls deliberately do not.
-                    true => 0,
-                    false => *nav.current.peek() + 1,
-                };
-                nav.go_to(next);
+                let mut ticks = ticks;
+                ticks += 1;
             }),
         );
         subscription.set(Some(handle));
+    }));
+    use_effect(use_reactive!(|nav, last| {
+        let tick = ticks();
+        if tick == *advanced.peek() {
+            return;
+        }
+        advanced.set(tick);
+        // A looping strip runs over every slide; a plain one stops where the
+        // scrolling does.
+        let end = match nav.clones > 0 {
+            true => nav.count.saturating_sub(1),
+            false => last,
+        };
+        let next = match *nav.current.peek() >= end {
+            // Autoplay wraps; the controls deliberately do not.
+            true => 0,
+            false => *nav.current.peek() + 1,
+        };
+        nav.go_to(next);
     }));
 
     let onscroll = move |event: Event<ScrollData>| {
@@ -1323,6 +1351,30 @@ mod tests {
             css[..guard].contains("scroll-behavior:smooth"),
             "the guard has to come after what it overrides: {css}"
         );
+    }
+
+    /// A mandatory snap pulls every programmatic write back to the slide it
+    /// left, so a drag that keeps it on does not move the strip at all until
+    /// it jumps a whole slide. The `dragging` arm shares its specificity with
+    /// the orientation arms, so it only wins by coming after both.
+    #[test]
+    fn a_drag_switches_the_snap_off_after_the_axis_switched_it_on() {
+        let css = Stylesheet::from(&CAROUSEL_TRACK_SX);
+        let css = css.as_str();
+        let off = css
+            .find("scroll-snap-type:none")
+            .expect("the dragging arm switches the snap off");
+
+        for axis in [
+            "scroll-snap-type:x mandatory",
+            "scroll-snap-type:y mandatory",
+        ] {
+            let on = css.find(axis).expect(axis);
+            assert!(
+                on < off,
+                "`{axis}` has to come before the drag's `none`: {css}"
+            );
+        }
     }
 
     /// The leading clones are the tail and the trailing ones are the head, so
