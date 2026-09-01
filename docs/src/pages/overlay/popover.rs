@@ -55,16 +55,25 @@ const DISMISS: &str = r#"let dismiss = use_dismiss(
 );
 
 // On the trigger, synchronously - that is where the active element
-// still is the one the user acted on. For a trigger the application
-// may delete while the box is open, name where focus should land
-// instead:
+// still is the one the user acted on.
 onclick: move |_| {
     dismiss.focus_return().remember_active();
+    // Where focus goes if the application deletes the trigger while
+    // the box is open - the row whose Delete button opened a confirm
+    // dialog. Nearest first: the container the trigger lived in, then
+    // a landing place you make focusable yourself with
+    // `tabindex="-1"`, so focus lands somewhere a screen reader
+    // announces rather than falling to the document.
     dismiss.focus_return().fallback(list);
+    dismiss.focus_return().fallback(page_heading);
     opened.toggle();
 }
 
-// On the floating box: Escape and the focus-leaves check.
+// Spread both. `anchor_events()` is what hears Escape while focus is
+// still on the trigger - off the web it is the only thing that can,
+// because the box is portaled and the trigger is not inside it.
+trigger.render(HtmlTag::Button, dismiss.anchor_events(), rsx! { .. })
+
 popover.show(opened().then(|| dropdown
     .element(popover.floating())
     .render(HtmlTag::Div, dismiss.floating_events(), rsx! { .. })));"#;
