@@ -66,6 +66,15 @@ pub fn pagination_range(
     //   `total - boundaries - 1 >= boundaries + 2·siblings + 3`, both above
     //   zero.
     //
+    // - **The rendered width is the same for every `page`**, which is what keeps
+    //   the strip from reflowing as you click through it. The two clamps have
+    //   identical widths and their bounds differ by exactly `2 * siblings`, so
+    //   `right - left == 2 * siblings` whatever `page` is, and the total is
+    //   always `2 * boundaries + 2 * siblings + 3` - `window`, which is what
+    //   `with_capacity` below is given. The sweep in the tests confirms this
+    //   over a range; the identity is why it holds outside that range too.
+    //   (Karen3, reviewing C4.)
+    //
     // Proved rather than sampled: a u32 underflow panics in debug and wraps in
     // release, and neither shows up in a test that only walks the pinned table.
     let left = (page.saturating_sub(siblings))
@@ -183,6 +192,10 @@ mod tests {
                         );
 
                         // An ellipsis always stands for two pages or more.
+                        // `index - 1` and `index + 1` cannot go out of bounds:
+                        // `boundaries >= 1` puts a page before every ellipsis,
+                        // and the trailing boundary pages are pushed after the
+                        // second one.
                         for index in 0..items.len() {
                             if at(index) != PaginationItem::Ellipsis {
                                 continue;

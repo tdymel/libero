@@ -200,7 +200,18 @@ pub fn Pagination(props: PaginationProps) -> Element {
         // on the render where the control actually disabled, not on the one
         // where the click happened.
         let _ = page;
-        if !owed_focus() {
+        // `peek`, not a read. Reading would subscribe this effect to the debt
+        // as well, so setting the flag in the click handler would run the
+        // repair immediately - while the control is still enabled and still
+        // holds focus. It would find focus inside, return early, and clear the
+        // debt; then the caller's `onchange` resolves, the control disables,
+        // and focus falls to the document with nothing left owing.
+        //
+        // That is invisible when `onchange` is synchronous, because both
+        // signals land in one batch, and it is the normal case for the table
+        // pagination this component is mostly for - the caller fetches, then
+        // sets the page. Found by Karen3.
+        if !*owed_focus.peek() {
             return;
         }
         owed_focus.set(false);
@@ -308,7 +319,22 @@ pub fn Pagination(props: PaginationProps) -> Element {
         }
     };
 
-    let items = pagination_range(total, page, siblings, boundaries);
+    // Keyed by *value*, not position: the range shifts as you page, so an index
+    // key would keep the focused node and re-label it, leaving the user on a
+    // button they did not click. By value the clicked node stays the page it
+    // was, which is also the node that becomes `aria-current`. Built here
+    // because rsx only takes a key as a formatted string.
+    let items: Vec<(String, PaginationItem)> = pagination_range(total, page, siblings, boundaries)
+        .into_iter()
+        .enumerate()
+        .map(|(index, item)| {
+            let key = match item {
+                PaginationItem::Page(number) => format!("page-{number}"),
+                PaginationItem::Ellipsis => format!("ellipsis-{index}"),
+            };
+            (key, item)
+        })
+        .collect();
 
     rsx! {
         {
@@ -331,14 +357,21 @@ pub fn Pagination(props: PaginationProps) -> Element {
                                         if with_controls {
                                             {arrow(PaginationLabel::Previous, page.saturating_sub(1).max(1), page == 1, rsx! { PreviousIcon {} })}
                                         }
-                                        for (index , item) in items.iter().enumerate() {
-                                            li { key: "{index}",
+                                        for (key , item) in items.iter() {
+                                            li {
+                                                key: "{key}",
+                                                // The gap is hidden at the `<li>`, not just on
+                                                // the text inside it. Hiding only the span
+                                                // silences the `…` but leaves an empty list
+                                                // item in the accessibility tree, so the list
+                                                // announces more entries than it has.
+                                                "aria-hidden": matches!(item, PaginationItem::Ellipsis)
+                                                    .then_some("true"),
                                                 {
                                                     match item {
                                                         PaginationItem::Ellipsis => {
                                                             ellipsis
                                                                 .clone()
-                                                                .attr("aria-hidden", "true")
                                                                 .render(HtmlTag::Span, vec![], rsx! { "…" })
                                                         }
                                                         PaginationItem::Page(number) => {

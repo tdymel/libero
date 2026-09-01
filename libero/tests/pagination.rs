@@ -74,9 +74,13 @@ fn the_ellipsis_is_hidden_from_the_accessibility_tree() {
         html.contains("…"),
         "expected an ellipsis at total=40: {html}"
     );
+    // The `<li>` carries it, not just the span inside. Hiding only the text
+    // silences the `…` and leaves an empty list item in the tree, so the list
+    // announces more entries than it has - and the old assertion passed either
+    // way, which is why this names the element.
     assert!(
-        html.contains(r#"aria-hidden="true""#),
-        "the ellipsis must be hidden: {html}"
+        html.contains(r#"<li aria-hidden="true""#),
+        "the gap itself must be out of the accessibility tree: {html}"
     );
 }
 
