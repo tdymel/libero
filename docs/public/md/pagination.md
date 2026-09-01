@@ -133,25 +133,6 @@ No roving tabindex, deliberately. `Tree` and `Tabs` rove because each is one
 composite widget; this is a short row of independent buttons, and roving would
 make Tab skip past the whole strip.
 
-## Focus when a control disables under you
-
-Clicking previous until you reach page 1 disables the button your finger is on.
-Nothing is removed, so focus is simply left on a disabled control, which
-browsers drop to the document. Focus goes to the current page's button instead -
-which is why that button stays enabled rather than being disabled as the page
-you are already on.
-
-The repair needs the platform to find the focused element and search a subtree.
-Where it cannot, on the webview floor, nothing moves and nothing else changes.
-
-**Shrinking `total` is yours to handle, not the component's.** A filter that
-takes a listing from 40 pages to 3 destroys most of the page buttons, and if
-focus was on one of them it falls to the document. Nothing was clicked, so the
-component has nothing owing and no way to know a control it rendered last time
-has gone. If you narrow a result set while a pagination is on screen, move focus
-yourself - to the filter the user just used, or to the heading above the
-results.
-
 ## Target size
 
 Every size from `sm` up clears WCAG 2.2 SC 2.5.8's 24px minimum on its own. `xs`

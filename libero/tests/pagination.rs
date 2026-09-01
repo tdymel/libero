@@ -227,6 +227,37 @@ fn the_end_controls_disable_and_the_current_page_does_not() {
     );
 }
 
+/// The list's `<li>`s are flex containers, which is what keeps a digit level
+/// with an arrow: a `list-item` `<li>` puts its `inline-flex` control in a line
+/// box, and an `<svg>`-only control's synthesized baseline makes that line box
+/// a strut-descender taller than a digit control's.
+///
+/// **SSR cannot see the alignment itself.** There is no layout here and no
+/// computed rect - this asserts only that the rule reaches the stylesheet. The
+/// offset it removes (2.5px at `md`, 3.75px at `xs`) was measured in Chromium
+/// and lives in the comment on `PAGINATION_LIST_SX`.
+#[test]
+fn the_list_items_are_flex_containers_rather_than_list_items() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination { total: 10, page: 1, aria_label: "Pages", onchange: |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let rule = html
+        .split('}')
+        .find(|rule| rule.contains(">li") || rule.contains("> li"))
+        .unwrap_or_else(|| panic!("no `> li` rule in the emitted CSS:\n{html}"));
+
+    assert!(
+        rule.contains("display:flex"),
+        "the `> li` rule must make the list items flex containers: {rule}"
+    );
+}
+
 /// The whole opening tag carrying `aria-label="{name}"`, so a test can assert
 /// on one control rather than on the document.
 fn control(html: &str, name: &str) -> String {

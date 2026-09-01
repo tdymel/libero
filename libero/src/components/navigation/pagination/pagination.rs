@@ -45,6 +45,27 @@ pub enum PaginationLabel {
 /// off the nav they are inside.
 const PAGINATION_RADIUS: CssVar = CssVar::new("--lsx-pagination-radius");
 
+/// The `<li>`s are flex containers, and that is what keeps the digits level
+/// with the arrows.
+///
+/// A control is `inline-flex`, so a `display: list-item` `<li>` wraps it in a
+/// **line box** - and a line box reserves the strut's descender below the
+/// baseline whether anything sits there or not. Where that baseline falls
+/// differs between the two kinds of control: a page button's first flex item is
+/// its digit, so the button's baseline is the digit's and the descender space
+/// lands *inside* the button's own height; an arrow's only item is an `<svg>`,
+/// which has no baseline, so the button's baseline is synthesized at its bottom
+/// edge and the descender is added *underneath* it. The arrow's `<li>` comes
+/// out one strut-descender taller than the page button's, `align-items: center`
+/// on this list centres the short one against the tall one, and every digit
+/// sits half a descender lower than every arrow - 2.5px at `md`, and 3.75px at
+/// `xs`, where the button is shorter than the strut's ascent as well.
+///
+/// `display: flex` on the `<li>` removes the line box, so both kinds are
+/// exactly their control's height. Measured in Chromium: the list goes from
+/// 37px to 32px at `md` and the offset from 2.5px to 0. `list-item` is what is
+/// being given up, and the AX tree was checked rather than assumed - Chromium
+/// still reports `list` / `listitem` for the `<ul>` and its children.
 static PAGINATION_LIST_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("center")
@@ -52,6 +73,7 @@ static PAGINATION_LIST_SX: StaticSx = StaticSx::new(|| {
         .list_style("none")
         .margin("0")
         .padding("0")
+        .selector("& > li", sx().display("flex"))
 });
 
 /// One style for every control, arrows included.
