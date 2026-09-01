@@ -7,9 +7,16 @@
 //! folding policy into the placement hook would contradict the promise in its
 //! own doc comment.
 //!
-//! It renders nothing. [`DismissHandle::floating_events`] hands the consumer
-//! two attributes to spread on its own box, and the consumer keeps whatever
-//! role, theming and ARIA its popup type needs.
+//! It renders nothing. [`DismissHandle::floating_events`] and
+//! [`DismissHandle::anchor_events`] hand the consumer attributes to spread on
+//! its own box and trigger, and the consumer keeps whatever role, theming and
+//! ARIA its popup type needs.
+//!
+//! **Off the web, Escape reaches only the element that has focus.** There is no
+//! document-level listener there, so a consumer that can leave focus on its
+//! trigger - a combobox-shaped dropdown, any pointer-opened surface - has to
+//! spread `anchor_events()` too, or the surface cannot be dismissed from the
+//! keyboard at all.
 
 // The hook lands ahead of its first consumer: `Menu`, `Menubar` and
 // `HoverCard` are what it exists for, and none of them is written yet, while
@@ -165,10 +172,17 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
 /// Why a box is closing, which is what decides whether focus goes back.
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Dismissal {
-    /// Escape, or the consumer telling us an item was chosen. Focus goes back
-    /// to the trigger: the keyboard user is where they were, and the element
-    /// they were on is about to disappear.
-    Deliberate,
+    /// Escape heard by one of *our own* element handlers, or the consumer
+    /// telling us an item was chosen. Focus was inside the box or on the
+    /// trigger - an element handler is how we heard about it at all - and the
+    /// element under it is about to disappear, so focus goes back.
+    FromInside,
+    /// Escape heard at the document, through
+    /// [`KeyboardApi`](crate::platform::KeyboardApi). The press carries no
+    /// information about where focus is, and for a pointer-opened box it is
+    /// usually somewhere else entirely - where the user is actually working.
+    /// Focus goes back only if it was inside.
+    FromDocument,
     /// Focus left the box on its own - a click elsewhere. Focus stays where it
     /// went. It was already moved somewhere deliberate, and pulling it back to
     /// the trigger fights the user.
@@ -306,27 +320,90 @@ impl DismissHandle {
     }
 
     /// Closes deliberately, handing focus back - for a consumer whose item was
-    /// chosen. Escape takes the same path.
+    /// chosen. Focus is inside the box by construction when an item is chosen,
+    /// which is why this takes the same path as an Escape we heard ourselves.
     pub(crate) fn dismiss(&self) {
-        self.close(Dismissal::Deliberate);
+        self.close(Dismissal::FromInside);
+    }
+
+    /// The Escape handler for the consumer's **trigger**, where there is no
+    /// document-level transport. Empty where there is one.
+    ///
+    /// Spread this on the anchor whenever the consumer can leave focus there,
+    /// which is most of them: a combobox-shaped dropdown keeps focus on its
+    /// input, and any pointer-opened surface never moves focus at all. Off the
+    /// web the only transport is an element handler, and
+    /// [`floating_events`](Self::floating_events) sits on a box the trigger is
+    /// not inside - the box is portaled to the document root - so without this
+    /// Escape reaches nothing and the surface cannot be dismissed from the
+    /// keyboard at all. That is a plain SC 1.4.13 failure on a shipped target.
+    ///
+    /// It is the same listener as the box's, deliberately: whichever element
+    /// has focus hears the press, stops it, and closes. They cannot both fire,
+    /// because the box is not a descendant of the trigger, and where it is the
+    /// box's own `stop_propagation` settles it.
+    pub(crate) fn anchor_events(&self) -> Vec<Attribute> {
+        let mut events = Vec::new();
+        if self.escape && !self.global {
+            events.push(self.escape_listener());
+        }
+        events
     }
 
     /// The attributes for the consumer's floating box: `onfocusout` for the
     /// outside check, and `onkeydown` for Escape **only where there is no
     /// document-level transport**. Where there is one, this box would be the
     /// second handler for the same press.
+    ///
+    /// This covers focus *inside the box*. Focus on the trigger is
+    /// [`anchor_events`](Self::anchor_events), and a consumer that can leave
+    /// focus there needs both.
     pub(crate) fn floating_events(&self) -> Vec<Attribute> {
         let mut events = Vec::new();
 
         if self.escape && !self.global {
+            events.push(self.escape_listener());
+        }
+
+        if self.outside {
             let handle = *self;
-            events.push(listener("onkeydown", move |event: Event<KeyboardData>| {
+            events.push(listener("onfocusout", move |_: Event<FocusData>| {
+                // `focusout` is dispatched *before* `focusin`, so a check here
+                // sees focus nowhere at all. After the platform's next task it
+                // has landed. Off the web `next_task()` is a no-op, which is
+                // why this settle is web-only in practice.
+                spawn(async move {
+                    next_task().await;
+                    if !handle.holds_focus() {
+                        handle.close(Dismissal::FocusMoved);
+                    }
+                });
+            }));
+        }
+
+        events
+    }
+
+    /// The Escape listener both surfaces share.
+    fn escape_listener(&self) -> Attribute {
+        {
+            let handle = *self;
+            listener("onkeydown", move |event: Event<KeyboardData>| {
                 // A held Escape is one intent, not a stream of them. Without
                 // this it walks down the stack, closing the menu and then the
                 // modal behind it inside one press. A held ArrowDown scrolling
                 // a list still wants every repeat, so this is not a global
                 // filter.
                 if event.key() != Key::Escape || event.is_auto_repeating() {
+                    return;
+                }
+                // Mid-composition, Escape means "cancel the composition", not
+                // "dismiss". `KeyboardApi` drops a composing press on both its
+                // paths ahead of the filter ([[codebase/platform-api]]); this
+                // is the same guard on the element path, so the contract does
+                // not change with the transport. Reasoned rather than measured
+                // there and here alike - headless Chromium has no IME.
+                if event.is_composing() {
                     return;
                 }
                 // No stack consultation here on purpose: a layer with only this
@@ -351,27 +428,9 @@ impl DismissHandle {
                 // through.
                 event.prevent_default();
                 event.stop_propagation();
-                handle.close(Dismissal::Deliberate);
-            }));
+                handle.close(Dismissal::FromInside);
+            })
         }
-
-        if self.outside {
-            let handle = *self;
-            events.push(listener("onfocusout", move |_: Event<FocusData>| {
-                // `focusout` is dispatched *before* `focusin`, so a check here
-                // sees focus nowhere at all. After the platform's next task it
-                // has landed. Off the web `next_task()` is a no-op, which is
-                // why this settle is web-only in practice.
-                spawn(async move {
-                    next_task().await;
-                    if !handle.holds_focus() {
-                        handle.close(Dismissal::FocusMoved);
-                    }
-                });
-            }));
-        }
-
-        events
     }
 
     /// Whether focus is still somewhere that counts as inside this box.
@@ -408,13 +467,36 @@ impl DismissHandle {
     /// `EventHandler` and panics. Focus is restored *after* `onclose` for the
     /// same reason `use_modal` restores after its closer - focus landed beside
     /// a box that is still up is taken straight back when it goes.
+    ///
+    /// **Whether to restore is decided by how we heard about the close**, and
+    /// the check is taken here, synchronously, while the box is still mounted
+    /// and the platform can still answer for it.
+    ///
+    /// An element handler only fires when focus is inside the box or on the
+    /// trigger, so hearing it that way *is* the evidence and no check is
+    /// needed. The document listener carries no such evidence: for a
+    /// pointer-opened box focus is usually where the user is working, and
+    /// yanking it to the trigger on Escape is the same defect as yanking it on
+    /// an outside click, arriving through the other door. So that path asks.
+    ///
+    /// Asking only on the path that needs it also keeps the answer honest.
+    /// `holds_focus()` answers `false` unconditionally off the web
+    /// ([[todos]] item 46), and the document listener exists only on the web -
+    /// so the predicate is only ever consulted where it works.
     fn close(&self, reason: Dismissal) {
+        let restore = self.return_focus
+            && match reason {
+                Dismissal::FromInside => true,
+                Dismissal::FromDocument => self.holds_focus(),
+                Dismissal::FocusMoved => false,
+            };
+
         let handle = *self;
         spawn(async move {
             if let Some(onclose) = handle.onclose {
                 onclose.call(());
             }
-            if handle.return_focus && reason == Dismissal::Deliberate {
+            if restore {
                 handle.focus_return.restore();
             }
         });
@@ -444,8 +526,13 @@ impl DismissHandle {
 /// floating-box `onkeydown` never fires. If it took the top of the stack
 /// anyway, the `Modal` that *did* hear the press would decline as not-top and
 /// Escape would do nothing at all, which is worse than the behaviour it
-/// replaced. So off the web this hook does not push, the `Modal` stays top, and
-/// Escape closes the modal exactly as it does today.
+/// replaced. So off the web this hook does not push and the `Modal` stays top,
+/// and **the `Modal`'s** Escape behaves exactly as it does today.
+///
+/// That is a statement about the `Modal`, not about this box. Off the web this
+/// box hears Escape only through an element handler, so the consumer has to put
+/// one where focus actually is: [`DismissHandle::anchor_events`] on the
+/// trigger as well as [`DismissHandle::floating_events`] on the box.
 ///
 /// ```ignore
 /// let anchor = use_element();
@@ -552,7 +639,7 @@ pub(crate) fn use_dismiss(
             return;
         }
         seen.set(tick);
-        handle.close(Dismissal::Deliberate);
+        handle.close(Dismissal::FromDocument);
     });
 
     // Armed on the opening edge and consumed once the focus lands, so reopening
@@ -971,14 +1058,17 @@ mod tests {
                 ..Default::default()
             },
         );
+        let trigger = use_box().prepare();
         let style = use_box().prepare();
 
-        if !open() {
-            return rsx! {};
+        // The trigger renders first, so the box is always the *last* keydown
+        // listener and the trigger the one before it.
+        rsx! {
+            {trigger.element(&anchor).render(HtmlTag::Button, dismiss.anchor_events(), rsx! { "open" })}
+            if open() {
+                {style.element(&floating).render(HtmlTag::Div, dismiss.floating_events(), rsx! { "region" })}
+            }
         }
-        style
-            .element(&floating)
-            .render(HtmlTag::Div, dismiss.floating_events(), rsx! { "region" })
     }
 
     fn region_in_modal() -> Element {
@@ -1050,6 +1140,56 @@ mod tests {
             state(&dom),
             "state: modal=false region=true",
             "the modal must answer a press the region cannot hear"
+        );
+    }
+
+    /// Bob3's block: off the web, Escape has to reach a box whose trigger still
+    /// has focus.
+    ///
+    /// This is the combobox-shaped consumer and every pointer-opened surface -
+    /// `initial_focus: None`, focus never moves into the box. The floating box
+    /// is portaled to the document root, so the trigger is not inside it and
+    /// the box's own handler never fires. Without `anchor_events()` on the
+    /// trigger the press reaches nothing at all and the surface cannot be
+    /// dismissed from the keyboard, which is an SC 1.4.13 failure on a shipped
+    /// target rather than a degradation.
+    #[test]
+    fn escape_on_the_trigger_closes_the_box_where_there_is_no_document_listener() {
+        fn app() -> Element {
+            let region = use_signal(|| true);
+
+            rsx! {
+                LiberoProvider { Region { open: region } }
+                "state: region={region}"
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+
+        // **Load-bearing, not a sanity check.** With no listener on the
+        // trigger there would be one listener instead of two, `keydown[0]`
+        // would silently be the *box's*, and pressing that closes the region -
+        // so the behaviour assertion below would pass for the wrong reason.
+        // Checked by stubbing `anchor_events()` out: this is the assertion that
+        // fails.
+        assert_eq!(
+            find.keydown.len(),
+            2,
+            "expected the trigger and the box, got {:?}",
+            find.keydown
+        );
+        let trigger = find.keydown[0];
+        assert_eq!(state(&dom), "state: region=true");
+
+        press(&mut dom, trigger);
+        assert_eq!(
+            state(&dom),
+            "state: region=false",
+            "Escape on the trigger should close the box"
         );
     }
 

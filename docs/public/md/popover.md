@@ -133,13 +133,25 @@ let dismiss = use_dismiss(
     },
 );
 
+// Spread both. `anchor_events()` is what hears Escape while focus is
+// still on the trigger, which off the web is the only thing that can.
+// ... on the trigger:
+dismiss.anchor_events()
+// ... and on the box:
+dismiss.floating_events()
+
 // On the trigger, synchronously - that is where the active element
 // still is the one the user acted on. For a trigger the application
 // may delete while the box is open, name where focus should land
 // instead:
 onclick: move |_| {
     dismiss.focus_return().remember_active();
+    // Nearest first. Tier two is the container the trigger lived in;
+    // tier three is a landing place you make focusable yourself with
+    // `tabindex="-1"`, so focus lands somewhere a screen reader
+    // announces rather than falling to the document.
     dismiss.focus_return().fallback(list);
+    dismiss.focus_return().fallback(page_heading);
     opened.toggle();
 }
 
@@ -170,7 +182,16 @@ key press. A pointer-opened box leaves focus where it was, so its own
 `onkeydown` never fires; if it took the top of the stack anyway, the modal that
 did hear the press would decline and Escape would do nothing at all. Where there
 is no document-level listener the box keeps its own handler, the modal stays
-top, and Escape behaves exactly as it did before.
+top, and **the modal's** Escape behaves exactly as it did before.
+
+That is a statement about the modal, not about the box. Off the web Escape
+reaches only the element that actually has focus, so a consumer that can leave
+focus on its trigger - a combobox-shaped dropdown, any pointer-opened surface -
+must spread `anchor_events()` on the trigger as well as `floating_events()` on
+the box. The box is portaled to the document root, so the trigger is not inside
+it and the box's own handler will never fire for a press made there. Without
+both, the surface cannot be dismissed from the keyboard at all (WCAG 2.1
+SC 1.4.13).
 
 A held Escape is one intent, so dismissal ignores an auto-repeat - otherwise a
 press-and-hold walks down the stack, closing the menu and then the modal behind
@@ -232,10 +253,70 @@ semantics. The consumer supplies `role="menu"`, `"listbox"` or `"dialog"`, and
 the `aria-haspopup`, `aria-expanded` and `aria-controls` that name the trigger,
 because only the consumer knows which popup type it is and owns the id scheme.
 
+**Drive `aria-expanded` from the same `open` you pass the hook.** Nothing stops
+the two disagreeing, and a trigger that says `aria-expanded="false"` over an
+open box is announced as closed.
+
+```rust
+use dioxus::prelude::*;
+use libero::{
+    components::{Box, Button},
+    hooks::{use_element, use_id, use_popover, PopoverOptions},
+    use_theme,
+};
+
+#[component]
+fn Demo() -> Element {
+    let theme = use_theme();
+    let mut opened = use_signal(|| false);
+    let anchor = use_element();
+    // One id, owned here, pointed at from the trigger.
+    let list_id = use_id();
+
+    let popover = use_popover(
+        anchor,
+        opened(),
+        PopoverOptions::new(theme.popover.gap, theme.popover.padding),
+    );
+    let floating = *popover.floating();
+
+    popover.show(opened().then(|| rsx! {
+        Box {
+            id: "{list_id}",
+            role: "listbox",
+            style: popover.style(),
+            onmounted: floating.mount(),
+            "Popover content"
+        }
+    }));
+
+    rsx! {
+        Button {
+            onmounted: anchor.mount(),
+            onclick: move |_| opened.toggle(),
+            aria_haspopup: "listbox",
+            // The same signal the hook is given, never a second copy.
+            aria_expanded: "{opened()}",
+            aria_controls: "{list_id}",
+            "Open"
+        }
+    }
+}
+```
+
 Escape must close a popover (WCAG 2.1 SC 1.4.13), which is what `use_dismiss`
-answers, and only the top layer acts. Focus is deliberately **not** trapped: a
-menu's Tab closes it and moves on, which is what the ARIA Authoring Practices
-ask for.
+answers, and only the top layer acts. Off the web that needs `anchor_events()`
+on the trigger as well - see the dismissal section above.
+
+Focus is deliberately **not** trapped: a menu's Tab closes it and moves on,
+which is what the ARIA Authoring Practices ask for.
+
+**If you animate the close, the box stays in the accessibility tree while it
+plays.** Between the close and the unmount it is still mounted, still tabbable
+and still announced, so a screen reader reads a box the sighted user has already
+dismissed. Give the closing box `visibility: hidden` or `inert` for the
+duration. Nothing in the library animates a popover yet; this is the obligation
+the first one inherits.
 
 ## Hook API
 

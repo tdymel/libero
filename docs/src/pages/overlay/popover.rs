@@ -4,7 +4,7 @@ use crate::components::{
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button, Code, CodeBlock, Text},
-    hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_popover},
+    hooks::{Align, PopoverOptions, PopoverWidth, Side, use_element, use_id, use_popover},
     sx::sx,
     use_theme,
 };
@@ -178,6 +178,8 @@ fn PopoverDemo(
     let theme = use_theme();
     let mut opened = use_signal(|| false);
     let anchor = use_element();
+    // One id, owned here and pointed at from the trigger.
+    let list_id = use_id();
 
     let options = PopoverOptions::new(gap, theme.popover.padding)
         .side(side_of(&side))
@@ -191,6 +193,8 @@ fn PopoverDemo(
     popover.show(opened().then(|| {
         rsx! {
             Box {
+                id: "{list_id}",
+                role: "listbox",
                 style: popover.style(),
                 onmounted: floating.mount(),
                 sx: sx()
@@ -211,6 +215,11 @@ fn PopoverDemo(
             Button {
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
+                aria_haspopup: "listbox",
+                // The same signal the hook is given, never a second copy -
+                // nothing else stops the two disagreeing.
+                aria_expanded: "{opened()}",
+                aria_controls: "{list_id}",
                 variant: "outlined",
                 if opened() { "Close" } else { "Open popover" }
             }
@@ -369,7 +378,22 @@ pub fn PopoverPage() -> Element {
                     " never fires; if it took the top of the stack anyway, the modal that did "
                     "hear the press would decline and Escape would do nothing at all. Where "
                     "there is no document-level listener the box keeps its own handler, the "
-                    "modal stays top, and Escape behaves exactly as it did before."
+                    "modal stays top, and the "
+                    Code { source: "Modal" }
+                    "'s Escape behaves exactly as it did before."
+                }
+                Text {
+                    "That is a statement about the modal, not about the box. Off the web "
+                    "Escape reaches only the element that actually has focus, so a consumer "
+                    "that can leave focus on its trigger - a combobox-shaped dropdown, any "
+                    "pointer-opened surface - spreads "
+                    Code { source: "anchor_events()" }
+                    " on the trigger as well as "
+                    Code { source: "floating_events()" }
+                    " on the box. The box is portaled to the document root, so the trigger is "
+                    "not inside it and the box's own handler never fires for a press made "
+                    "there. Without both, the surface cannot be dismissed from the keyboard "
+                    "at all."
                 }
                 Text {
                     "A held Escape is one intent. Dismissal ignores an auto-repeat, or a "
@@ -403,6 +427,42 @@ pub fn PopoverPage() -> Element {
                     "moving into it looks exactly like focus leaving."
                 }
                 CodeBlock { source: NESTED, language: "rust" }
+            }
+
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "The hook contributes no role and no keyboard of its own - a popover has "
+                    "no semantics. The consumer supplies "
+                    Code { source: "role" }
+                    " and the "
+                    Code { source: "aria-haspopup" }
+                    ", "
+                    Code { source: "aria-expanded" }
+                    " and "
+                    Code { source: "aria-controls" }
+                    " that name the trigger, because only the consumer knows which popup type "
+                    "it is and owns the id scheme. Drive "
+                    Code { source: "aria-expanded" }
+                    " from the same signal the hook is given: nothing stops the two "
+                    "disagreeing, and a trigger claiming to be closed over an open box is "
+                    "announced as closed. The demo above is wired this way."
+                }
+                Text {
+                    "Focus is deliberately not trapped. A menu's Tab closes it and moves on, "
+                    "which is what the ARIA Authoring Practices ask for."
+                }
+                Text {
+                    "If you animate the close, the box stays in the accessibility tree while "
+                    "the animation plays: between the close and the unmount it is still "
+                    "mounted, still tabbable and still announced, so a screen reader reads a "
+                    "box the sighted user has already dismissed. Give the closing box "
+                    Code { source: "visibility: hidden" }
+                    " or "
+                    Code { source: "inert" }
+                    " for the duration. Nothing here animates a popover yet - this is the "
+                    "obligation the first one inherits."
+                }
             }
 
             DocSection {
