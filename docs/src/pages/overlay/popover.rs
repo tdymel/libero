@@ -89,7 +89,7 @@ const NESTED: &str = r#"// A submenu is its own popover, anchored to the row tha
 // What does need saying: the submenu is not a descendant of the menu in
 // the DOM, so focus moving into it reads as focus *leaving* the menu.
 // Register it, and keep the guard for as long as the submenu is open.
-let _inside = use_hook(move || parent.contain(submenu_box));"#;
+let _inside = use_hook(move || parent.register_inside(submenu_box));"#;
 
 fn side_of(value: &str) -> Side {
     match value {

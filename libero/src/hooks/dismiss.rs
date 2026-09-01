@@ -89,10 +89,18 @@ impl DismissLayer {
     /// failure signature as a detached `focus()` returning `Ok(())`. So the pop
     /// lives in `Drop` rather than in a close handler, where it cannot be
     /// forgotten.
+    ///
+    /// `write`, not `try_write`. The tolerance in [`LayerGuard::drop`] is
+    /// earned - it runs during the dom's own teardown - and there is no such
+    /// path here: a push happens from an effect, in a live scope. A push that
+    /// quietly did not happen would leave the layer never on top, so its own
+    /// Escape does nothing *and* the `Modal` under it closes instead. Silent,
+    /// unassertable, and the same failure class this unit exists to remove.
     #[must_use = "the layer is popped when the guard is dropped"]
     pub(crate) fn push(&self) -> LayerGuard {
         let mut open = self.stack.open;
-        if let Ok(mut layers) = open.try_write() {
+        {
+            let mut layers = open.write();
             layers.retain(|id| *id != self.id);
             layers.push(self.id);
         }
@@ -167,13 +175,22 @@ pub(crate) enum Dismissal {
 ///
 /// Nothing reactive lives here. `open` and `placed` are parameters of the hook
 /// for that reason, and the "also inside" list is registered through
-/// [`DismissHandle::contain`], because a submenu only exists after its parent's
-/// hook has already run.
+/// [`DismissHandle::register_inside`], because a submenu only exists after its
+/// parent's hook has already run.
 #[derive(Clone, PartialEq)]
 pub(crate) struct DismissOptions {
     /// Escape closes the box, if it is the top layer.
     pub escape: bool,
     /// Focus leaving the box closes it.
+    ///
+    /// **Web-only in practice, and off the web it is wrong rather than inert.**
+    /// The settle waits for `next_task()`, which is a no-op off the web, so the
+    /// check runs before focus has landed; and on the mounted floor
+    /// `is_focused()` always answers `false` and `query_selector` is
+    /// `Unsupported`, so nothing ever counts as inside and *every* focusout
+    /// closes the box - including focus moving from the trigger into the list.
+    /// A consumer that has to work on those backends should pass `false` and
+    /// close on its own signal.
     pub outside: bool,
     /// A deliberate close hands focus back to whatever opened the box.
     pub return_focus: bool,
@@ -195,7 +212,7 @@ impl Default for DismissOptions {
 }
 
 /// Counts one more element as inside, until dropped. Handed out by
-/// [`DismissHandle::contain`]; dropping it unregisters, the same contract
+/// [`DismissHandle::register_inside`]; dropping it unregisters, the same contract
 /// [`KeySubscription`] and
 /// [`TimerSubscription`](crate::platform::TimerSubscription) state.
 pub(crate) struct InsideGuard {
@@ -249,15 +266,15 @@ impl DismissHandle {
         self.focus_return
     }
 
-    /// Counts `element` as inside for the outside check, until the returned
-    /// guard is dropped.
+    /// Registers `element` as counting *inside* for the outside check, until
+    /// the returned guard is dropped.
     ///
     /// A submenu is portaled to the document root, so it is not a descendant of
     /// the menu that owns it and focus moving into it reads as focus leaving.
     /// Registration is a call rather than a field because the submenu only
     /// exists after this hook has already run.
     #[must_use = "the element stops counting as inside when the guard is dropped"]
-    pub(crate) fn contain(&self, element: ElementHandle) -> InsideGuard {
+    pub(crate) fn register_inside(&self, element: ElementHandle) -> InsideGuard {
         let mut next = self.inside_next;
         let id = *next.peek();
         next.set(id + 1);
@@ -375,10 +392,16 @@ impl DismissHandle {
 ///
 /// Owns no open state - `open` is the consumer's, and `onclose` is how this
 /// asks for it to change, exactly as [`use_popover`](super::use_popover) owns no
-/// placement state of the consumer's. `placed` sits beside `open` because it is
-/// reactive per-render state too: it gates
-/// [`DismissOptions::initial_focus`](DismissOptions), and a consumer with no
-/// placement to wait for passes `true`.
+/// placement state of the consumer's.
+///
+/// `placed` is a parameter rather than a `DismissOptions` field because **the
+/// dangerous value is the default one**. It gates
+/// [`DismissOptions::initial_focus`](DismissOptions), and a defaulted `true`
+/// would hand a consumer who simply forgot it the exact trap the input exists
+/// to prevent: `focus()` on the pre-placement `visibility: hidden` box returns
+/// `Ok(())` and moves nothing, with nothing to catch. Here it cannot be
+/// forgotten. A consumer with no placement to wait for passes `true` on
+/// purpose.
 ///
 /// **This layer joins the Escape stack only where it can hear Escape from
 /// outside its own subtree**, which means only where

@@ -205,7 +205,7 @@ like focus leaving.
 // Register the submenu's box as counting *inside* the parent, and keep
 // the guard for as long as the submenu is open. It is a call rather than
 // a field because the submenu only exists after the parent's hook ran.
-let _inside = use_hook(move || parent.contain(submenu_box));
+let _inside = use_hook(move || parent.register_inside(submenu_box));
 ```
 
 ## What it cannot do
@@ -215,6 +215,12 @@ answers today - natively an open popover drifts when the page scrolls. Nothing
 tracks a resize on any backend; `remeasure` is the only answer there, on every
 platform. The focus-leaves check needs to wait for the platform's next task to
 see where focus landed, and that wait is a real one only on the web.
+
+Off the web that check is wrong rather than merely inert. Where the platform
+cannot report which element has focus or search a subtree, nothing counts as
+inside, so every focusout closes the box - including focus moving from the
+trigger into the list. A consumer that has to work on those backends passes
+`outside: false` and closes on its own signal instead.
 
 ## Accessibility
 
