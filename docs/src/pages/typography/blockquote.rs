@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Blockquote, Code, CodeBlock, Text},
+    components::{Blockquote, Code, Text},
     use_theme,
 };
 
@@ -11,18 +11,6 @@ const QUOTE: &str = "Life is like riding a bicycle. To keep your balance, you mu
 const SPEAKER: &str = "Albert Einstein";
 const WORK: &str = "Letter to his son Eduard";
 const SOURCE_URL: &str = "https://example.org/letters/1930-02-05";
-
-/// What the component renders with all three set - the only way to show an
-/// attribute no browser draws.
-const RENDERED: &str = r#"<figure>
-  <blockquote cite="https://example.org/letters/1930-02-05">   <!-- cite_url -->
-    Life is like riding a bicycle...
-  </blockquote>
-  <figcaption>
-    Albert Einstein,                                           <!-- attribution -->
-    <cite>Letter to his son Eduard</cite>                      <!-- work -->
-  </figcaption>
-</figure>"#;
 
 #[component]
 pub fn BlockquotePage() -> Element {
@@ -115,32 +103,6 @@ pub fn BlockquotePage() -> Element {
                         {QUOTE}
                     }
                 },
-            }
-            DocSection {
-                title: "Three things called cite",
-                Text {
-                    "HTML has a "
-                    Code { source: "<cite>" }
-                    " element and a "
-                    Code { source: "cite" }
-                    " attribute, they are unrelated, and neither is for a person's name. So "
-                    "there are three props, one per thing. "
-                    Code { source: "attribution" }
-                    " is who said it, and stays plain text: the spec reserves "
-                    Code { source: "<cite>" }
-                    " for the title of a work and says it must not mark up people's names. "
-                    Code { source: "work" }
-                    " is that title - a book, a talk, a letter - and is the only prop that "
-                    "becomes a "
-                    Code { source: "<cite>" }
-                    ". "
-                    Code { source: "cite_url" }
-                    " is the attribute on the quote itself: a URL for the source document "
-                    "that no browser draws, which is why the switch above changes nothing you "
-                    "can see. All three are independent, and with all three set the markup is:"
-                }
-                // Markup, which the docs build carries no highlighter for.
-                CodeBlock { source: RENDERED, header: false }
             }
         }
     }

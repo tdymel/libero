@@ -59,36 +59,6 @@ literal CSS color (`"gold"`) is used as-is for both the background and the bar,
 and the text color is left to inherit, because no contrast color can be derived
 from a literal.
 
-## Three things called cite
-
-HTML has a `<cite>` element and a `cite` attribute, they are unrelated, and
-neither is for a person's name. So there are three props, one per thing.
-
-- `attribution` is who said it, and stays plain text: the spec reserves `<cite>`
-  for the title of a work and says it must not mark up people's names.
-- `work` is that title - a book, a talk, a letter - and is the only prop that
-  becomes a `<cite>`.
-- `cite_url` is the attribute on the quote itself: a URL for the source document
-  that no browser draws.
-
-All three are independent. With all three set the markup is:
-
-```html
-<figure>
-  <blockquote cite="https://example.org/letters/1930-02-05">   <!-- cite_url -->
-    Life is like riding a bicycle...
-  </blockquote>
-  <figcaption>
-    Albert Einstein,                                           <!-- attribution -->
-    <cite>Letter to his son Eduard</cite>                      <!-- work -->
-  </figcaption>
-</figure>
-```
-
-The comma between the two appears only when both are set, and sits outside the
-`<cite>`. For any other join, pass the whole line as `attribution` - it is an
-`Element`, so it can hold its own `<cite>`.
-
 ## Accessibility
 
 Not interactive: no role, no `tabindex`, no ARIA, and nothing to press. The
@@ -118,6 +88,12 @@ page background.
 
 Like every component, `Blockquote` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<figure>`.
+
+`attribution`, `work` and `cite_url` are three different things: a person's name
+as plain text, the title of a work as a `<cite>` element, and the `cite`
+attribute on the `<blockquote>`. They are independent. For any join other than
+the comma, pass the whole line as `attribution` - it is an `Element`, so it can
+hold its own `<cite>`.
 
 ## Theme defaults
 
