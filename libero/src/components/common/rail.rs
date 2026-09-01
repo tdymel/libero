@@ -53,19 +53,34 @@ pub(crate) struct Rail {
 }
 
 impl Rail {
-    /// Distance from the item's rail-side edge to the rail's centreline.
+    /// Half a marker: the distance from the item's rail-side edge to the
+    /// rail's **centreline**, as a bare expression fragment.
     ///
-    /// The one expression the marker, the connector and the content inset all
-    /// derive from, so the three cannot drift. This is what `Stepper`
-    /// inherits.
-    pub fn center(&self) -> String {
-        format!("calc({} / 2)", self.marker)
+    /// Private, and every public method below composes it, so the centreline
+    /// is defined once rather than spelled `marker / 2` at four sites. It is a
+    /// fragment rather than a wrapped `calc(..)` so the callers stay flat -
+    /// nested `calc()` is valid CSS but harder to read in a diff, and these
+    /// expressions are read far more often than they are written.
+    ///
+    /// There is deliberately no public `center()`. Nothing calls it: the
+    /// centred marker wants [`Rail::centred_marker_start`] and the one-sided
+    /// marker sits at the item's edge and needs no expression at all. If
+    /// `Stepper` turns out to want the bare centreline, make this `pub` at
+    /// that point, with its caller.
+    fn half_marker(&self) -> String {
+        format!("{} / 2", self.marker)
+    }
+
+    /// Half a connector's thickness - what an expression backs off by to sit
+    /// centred on a line rather than beside it.
+    fn half_line(&self) -> String {
+        format!("{} / 2", self.line)
     }
 
     /// Where a connector of width `line` has to start for its centre to land
     /// on [`Rail::center`].
     pub fn connector_start(&self) -> String {
-        format!("calc({} / 2 - {} / 2)", self.marker, self.line)
+        format!("calc({} - {})", self.half_marker(), self.half_line())
     }
 
     /// Where content sits in a **one-sided** rail: clear of the marker, plus
@@ -82,7 +97,7 @@ impl Rail {
     /// measuring its space from. Kept here rather than composed at the call
     /// site so the two cannot be changed apart.
     pub fn centred_marker_start(&self) -> String {
-        format!("calc(50% - {} / 2)", self.marker)
+        format!("calc(50% - {})", self.half_marker())
     }
 
     /// The same clearance for a **centred** rail, where the marker straddles
@@ -100,7 +115,7 @@ impl Rail {
     /// flex at the default `align-items: stretch` gives that. Setting
     /// `align-items` on the list breaks it.
     pub fn centred_content_inset(&self, space: &str) -> String {
-        format!("calc(50% + {} / 2 + {space})", self.marker)
+        format!("calc(50% + {} + {space})", self.half_marker())
     }
 
     /// The connector, as an absolutely positioned `::before` on the item.
@@ -129,7 +144,7 @@ impl Rail {
             RailInset::End => declarations.right(self.connector_start()),
             // Centred: the rail is on the item's midline, so it backs itself
             // off by its own half-width rather than by the marker's.
-            RailInset::Center => declarations.left(format!("calc(50% - {} / 2)", self.line)),
+            RailInset::Center => declarations.left(format!("calc(50% - {})", self.half_line())),
         };
 
         sx().selector("&:not(:last-of-type)::before", placed)

@@ -2,7 +2,7 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, PAPER_BACKGROUND, Size, SizeCss, Sizes};
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const TIMELINE_COLOR: CssVar = CssVar::new("--lsx-timeline-color");
 pub const TIMELINE_LINE_COLOR: CssVar = CssVar::new("--lsx-timeline-line-color");
@@ -136,6 +136,7 @@ impl ToCssDeclarations for TimelineDefaults {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme::PAPER_BACKGROUND;
 
     /// The bullet is a ring filled with whatever surface it sits on, so its
     /// default has to *be* `PAPER_BACKGROUND` rather than a second spelling of
