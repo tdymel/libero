@@ -33,6 +33,10 @@ const CHIP_VARS: VariantVars<'static> = VariantVars {
 
 static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = ChipDefaults::theme_vars()
+        // The containing block of a selectable chip's hidden checkbox, which
+        // would otherwise be laid out against the viewport - see
+        // `SegmentedControl`'s root.
+        .position("relative")
         .display("inline-flex")
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Xs))

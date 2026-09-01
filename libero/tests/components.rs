@@ -22,6 +22,38 @@ use libero::{
     theme::{Color, Size},
 };
 
+/// The hidden checkbox is `position: absolute`, so the chip has to be its
+/// containing block - the same defect `SegmentedControl` had, where a focused
+/// input laid out against the viewport scrolls the whole document.
+#[test]
+fn a_selectable_chip_contains_its_hidden_checkbox() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { checked: true, onchange: move |_| {}, "tag" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let input = classes_of(&html, "input");
+    assert!(
+        input
+            .iter()
+            .any(|class| html.contains(&format!(".{class}{{position:absolute"))),
+        "{input:?}"
+    );
+
+    let positioned = classes_of(&html, "span").iter().any(|class| {
+        let rule = format!(".{class}{{");
+        html.find(&rule).is_some_and(|at| {
+            let base = &html[at..];
+            base[..base.find('}').unwrap()].contains("position:relative")
+        })
+    });
+    assert!(positioned, "no positioned class on the chip root");
+}
+
 #[test]
 fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
     fn app() -> Element {
