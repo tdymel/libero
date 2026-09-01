@@ -862,6 +862,38 @@ fn a_full_width_segmented_control_stretches_its_field_wrapper() {
     );
 }
 
+/// The hidden radio is `position: absolute` beside its label, so the group has
+/// to be its containing block. Without one the radio is laid out against the
+/// viewport: it escapes every scroll container above it, makes the document
+/// itself scrollable, and focusing it - which a click on a segment does -
+/// scrolls the whole page instead of nothing.
+#[test]
+fn a_segmented_control_contains_its_hidden_radios() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl { value: Plan::Pro, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let group = attributes_of(&body[body.find("<div").unwrap() + 4..], "div");
+    assert_eq!(group["role"], "radiogroup");
+
+    let class = group["class"]
+        .split_whitespace()
+        .find(|class| html.contains(&format!(".{class} > input{{position:absolute")))
+        .unwrap_or_else(|| panic!("no class positions the radio: {group:?}"));
+    let rule = format!(".{class}{{");
+    let base = &html[html
+        .find(&rule)
+        .unwrap_or_else(|| panic!("no {rule} in {html}"))..];
+    let base = &base[..base.find('}').unwrap()];
+    assert!(base.contains("position:relative"), "{base}");
+}
+
 #[derive(Clone, Copy, PartialEq, Default, Options)]
 enum Density {
     Compact,

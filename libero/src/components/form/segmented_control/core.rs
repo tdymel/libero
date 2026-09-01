@@ -27,6 +27,10 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
     let collapse_end = "& > label:not(:last-of-type)";
 
     let base = sx()
+        // The containing block of the radios below. Without it they are laid
+        // out against the viewport: they stay put while a scroll container
+        // moves the labels, and focusing one scrolls the document to it.
+        .position("relative")
         .display("inline-flex")
         .align_items("center")
         // Pins its own size, so a `Flex` column's `stretch` cannot widen it.
