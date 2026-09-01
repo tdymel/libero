@@ -36,10 +36,6 @@ impl ComboboxDefaults {
             .padding_right(COMBOBOX_PADDING_X.value(size))
     }
 
-    pub fn radius_sx(radius: Size) -> Sx {
-        sx().border_radius(SizeCss::RADIUS.value(radius))
-    }
-
     /// A row nests `COMBOBOX_PADDING` inside the dropdown, so its corner has
     /// to be that much tighter or it crosses the dropdown's own - visibly, at
     /// `xxl`, where the radius is 64px. `max` keeps the small steps at 0
@@ -53,10 +49,6 @@ impl ComboboxDefaults {
 
     pub fn row_theme_vars() -> Sx {
         sx().per_size(Self::row_sx).per_radius(Self::row_radius_sx)
-    }
-
-    pub fn dropdown_theme_vars() -> Sx {
-        sx().per_radius(Self::radius_sx)
     }
 }
 

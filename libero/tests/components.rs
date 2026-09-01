@@ -2409,6 +2409,47 @@ mod combobox_highlight {
         assert!(row_of(&html, 1).contains("plum"), "row 1 stayed stale");
     }
 
+    /// The dropdown's chrome is `Paper`'s, and both halves have to agree: the
+    /// class reads the themed surface, and the root carries the `bordered`
+    /// token that class's border fold answers.
+    #[test]
+    fn the_dropdown_is_a_bordered_paper_surface() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+
+        let markup = body(&html);
+        let listbox = markup
+            .find(r#"role="listbox""#)
+            .expect("the dropdown rendered");
+        let root = markup[..listbox]
+            .rfind("position:fixed")
+            .and_then(|style| markup[..style].rfind("<div"))
+            .expect("the portaled dropdown root");
+        let root = attributes_of(&markup[root..], "div");
+
+        assert!(
+            root["data-state"]
+                .split(' ')
+                .any(|token| token == "bordered"),
+            "{root:?}"
+        );
+        let class = root["class"].split(' ').next().expect("a framework class");
+        assert!(
+            html.contains(&format!(
+                ".{class}{{background:var(--lsx-paper-background);--lsx-focus-contrast:var(--lsx-paper-contrast);"
+            )),
+            "the dropdown's base no longer starts from `paper_sx()`"
+        );
+        assert!(
+            html.contains(&format!(
+                r#".{class}[data-state~="bordered"]{{border:1px solid var(--lsx-paper-border-color);}}"#
+            )),
+            "nothing answers the `bordered` token"
+        );
+    }
+
     /// The port to `use_popover`: the dropdown leaves the wrapper entirely, so
     /// no `overflow: hidden` ancestor can clip it.
     #[test]

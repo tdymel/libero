@@ -3,13 +3,14 @@ use dioxus::prelude::*;
 use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input,
+        ActionIcon, HtmlTag, Input, States,
         common::field_props,
         form::{
             FIELD_CONTROL_SX, SliderChangeEvent, glyphs::EyeDropperIcon, use_bound, use_field,
             use_field_frame,
         },
         layout::use_box,
+        surface::paper_sx,
     },
     hooks::{PopoverOptions, use_element, use_popover, use_theme},
     platform::eye_dropper,
@@ -18,15 +19,16 @@ use crate::{
 };
 
 static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    // Everything positional comes from `use_popover` as an inline style.
-    sx().z_index(Z_INDEX_POPOVER.value())
+    // A surface, so the background and the `bordered` border are
+    // `paper_sx()`'s. Everything positional comes from `use_popover` as an
+    // inline style.
+    paper_sx()
+        .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
-        .background("white")
-        .border_style("solid")
-        .border_width("1px")
-        .border_color("grey.3")
+        // The field's own corner rather than the surface default, and a
+        // dropdown floats over the page, where that default rests.
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
-        .box_shadow("0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)")
+        .box_shadow(SizeCss::SHADOW.value(Size::Lg))
 });
 
 /// The leading preview, sized to the text rather than to a size step.
@@ -224,8 +226,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         showing,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
+    let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
+        .states(&dropdown_states)
         .style(popover.style())
         .prepare();
 
@@ -322,4 +326,37 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         div { onmounted: anchor.mount(), {frame.render(input)} }
     };
     field.render(control)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// The dropdown is a `Paper` surface with two overrides. The `bordered`
+    /// token it is rendered with only exists in a browser - the box opens on
+    /// an event.
+    #[test]
+    fn the_dropdown_starts_from_the_paper_surface() {
+        let css = Stylesheet::from(&*COLOR_FIELD_DROPDOWN_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains("background:var(--lsx-paper-background);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("border:1px solid var(--lsx-paper-border-color);"),
+            "{css}"
+        );
+        // The overrides replace the surface defaults rather than race them.
+        assert!(css.contains("border-radius:var(--lsx-radius-sm);"), "{css}");
+        assert!(css.contains("box-shadow:var(--lsx-shadow-lg);"), "{css}");
+        assert!(!css.contains("var(--lsx-paper-radius)"), "{css}");
+        assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
+    }
 }

@@ -1,17 +1,21 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    components::{HtmlTag, Input, States, common::base_props, layout::use_box, surface::paper_sx},
     hooks::{ElementHandle, PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
     platform::ElementApi,
     sx::StaticSx,
-    theme::{COMBOBOX_PADDING, ComboboxDefaults, Size, Z_INDEX_POPOVER},
+    theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 use super::{dropdown::ComboboxDropdown, option::ComboboxContext};
 
+// The dropdown is a surface, so its background, border and corner come from
+// `paper_sx()`: the `bordered` and `radius-{step}` tokens below are the ones
+// its folds answer. It renders through `use_box` rather than `Paper` because
+// it needs the popover's element handle and its own events.
 static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    ComboboxDefaults::dropdown_theme_vars()
+    paper_sx()
         // Everything positional - `position`, `left`, `top`, `width` - comes
         // from `use_popover` as an inline style, measured per open.
         .z_index(Z_INDEX_POPOVER.value())
@@ -22,11 +26,8 @@ static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         // A row still has square-ish corners next to an `xxl` radius, so the
         // dropdown clips rather than trusting them to nest.
         .overflow("hidden")
-        .background("white")
-        .border_style("solid")
-        .border_width("1px")
-        .border_color("grey.3")
-        .box_shadow("0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)")
+        // A dropdown floats over the page, where the surface default rests.
+        .box_shadow(SizeCss::SHADOW.value(Size::Lg))
 });
 
 base_props! {
@@ -195,6 +196,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         .unwrap_or_default()
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true)
+        .with("bordered", true)
         .with("disabled", disabled)
         .into();
 

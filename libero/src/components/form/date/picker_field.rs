@@ -19,23 +19,25 @@ use crate::{
         Caption, ClassList, FieldName, HtmlTag, Input, States, Validators,
         form::{FIELD_CONTROL_SX, FieldStatus, use_bound, use_field, use_field_frame},
         layout::use_box,
+        surface::paper_sx,
     },
     hooks::{PopoverOptions, use_element, use_popover, use_theme},
     platform::{ElementApi, next_task},
-    sx::{StaticSx, Sx, sx},
+    sx::{StaticSx, Sx},
     theme::{DateDefaults, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
 static PICKER_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    // Everything positional comes from `use_popover` as an inline style.
-    sx().z_index(Z_INDEX_POPOVER.value())
+    // A surface, so the background and the `bordered` border are
+    // `paper_sx()`'s. Everything positional comes from `use_popover` as an
+    // inline style.
+    paper_sx()
+        .z_index(Z_INDEX_POPOVER.value())
         .padding(SizeCss::SPACING.value(Size::Sm))
-        .background("white")
-        .border_style("solid")
-        .border_width("1px")
-        .border_color("grey.3")
+        // The field's own corner rather than the surface default, and a
+        // dropdown floats over the page, where that default rests.
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
-        .box_shadow("0 4px 8px rgba(0, 0, 0, 0.10), 0 8px 20px rgba(0, 0, 0, 0.14)")
+        .box_shadow(SizeCss::SHADOW.value(Size::Lg))
 });
 
 /// Where Arrow Down in the text input puts focus: the picker's own tab stop in
@@ -338,8 +340,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
     let floating = *popover.floating();
+    let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown_box = use_box()
         .framework_sx(&PICKER_FIELD_DROPDOWN_SX)
+        .states(&dropdown_states)
         .style(popover.style())
         .prepare();
     // Waits for placement too: Arrow Down on a closed field opens it, and the
@@ -477,4 +481,37 @@ pub(super) fn use_picker_field<V: FieldValue>(
         }
     };
     field_box.render(control)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// The dropdown is a `Paper` surface with two overrides. The `bordered`
+    /// token it is rendered with only exists in a browser - the box opens on
+    /// an event.
+    #[test]
+    fn the_dropdown_starts_from_the_paper_surface() {
+        let css = Stylesheet::from(&*PICKER_FIELD_DROPDOWN_SX);
+        let css = css.as_str();
+
+        assert!(
+            css.contains("background:var(--lsx-paper-background);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
+            "{css}"
+        );
+        assert!(
+            css.contains("border:1px solid var(--lsx-paper-border-color);"),
+            "{css}"
+        );
+        // The overrides replace the surface defaults rather than race them.
+        assert!(css.contains("border-radius:var(--lsx-radius-sm);"), "{css}");
+        assert!(css.contains("box-shadow:var(--lsx-shadow-lg);"), "{css}");
+        assert!(!css.contains("var(--lsx-paper-radius)"), "{css}");
+        assert!(!css.contains("var(--lsx-paper-shadow)"), "{css}");
+    }
 }
