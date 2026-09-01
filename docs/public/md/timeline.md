@@ -181,7 +181,7 @@ Like every component, `Timeline` also takes the shared props `sx`, `class`,
 | `align` | `TimelineAlign` | `Left` | Which side content sits on. |
 | `color` | `&'static str` | `"primary.6"` | The active accent. |
 | `line_color` | `&'static str` | `"grey.3"` | Inactive bullets and connectors. |
-| `bullet_background` | `&'static str` | `"white"` | The bullet's fill, and the glyph colour once it inverts. |
+| `bullet_background` | `&'static str` | `PAPER_BACKGROUND` | The bullet's fill, and the glyph colour once it inverts. Reads the surface token, so dark mode is a change to `PaperDefaults`. |
 | `radius` | `Size` | `Xl` | Bullet corner radius. |
 | `bullet_size` | `Size` | `Md` | Which step of `bullet_sizes` is the default. |
 | `bullet_sizes` | `Sizes<u16>` | 12/16/20/24/28/32 px | The bullet scale. |
@@ -196,7 +196,7 @@ Like every component, `Timeline` also takes the shared props `sx`, `class`,
 | `--lsx-timeline-color` | The active accent. Set per event by `.color(..)`. |
 | `--lsx-timeline-line-color` | Inactive bullets and connectors. |
 | `--lsx-timeline-line-width` | Connector thickness and bullet ring width. |
-| `--lsx-timeline-bullet-background` | The bullet's fill. |
+| `--lsx-timeline-bullet-background` | The bullet's fill; `var(--lsx-paper-background)` by default. |
 | `--lsx-timeline-bullet-size-*` | The bullet scale, one per `Size`. |
 | `--lsx-timeline-gap-*` | The event-spacing scale, one per `Size`. |
 

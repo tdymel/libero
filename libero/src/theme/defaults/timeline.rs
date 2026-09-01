@@ -2,7 +2,7 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
+use crate::theme::{CssVar, PAPER_BACKGROUND, Size, SizeCss, Sizes};
 
 pub const TIMELINE_COLOR: CssVar = CssVar::new("--lsx-timeline-color");
 pub const TIMELINE_LINE_COLOR: CssVar = CssVar::new("--lsx-timeline-line-color");
@@ -26,6 +26,12 @@ pub const TIMELINE_RADIUS: CssVar = CssVar::new("--lsx-timeline-radius");
 pub const TIMELINE_LINE_STYLE: CssVar = CssVar::new("--lsx-timeline-line-style");
 pub const TIMELINE_CONNECTOR: CssVar = CssVar::new("--lsx-timeline-connector");
 pub const TIMELINE_MARKER: CssVar = CssVar::new("--lsx-timeline-marker");
+
+/// `PAPER_BACKGROUND.value()`, spelled as a `const` because `Theme::DEFAULT`
+/// is one and `CssVar::value` formats at runtime. `a_bullet_sits_on_the_paper
+/// _surface` pins the two together, so the duplicated spelling cannot drift
+/// from the var it names.
+pub const TIMELINE_BULLET_BACKGROUND_DEFAULT: &str = "var(--lsx-paper-background)";
 
 str_enum! {
     /// Which side of the rail an event's content sits on.
@@ -64,6 +70,10 @@ pub struct TimelineDefaults {
     pub align: TimelineAlign,
     pub color: &'static str,
     pub line_color: &'static str,
+    /// The surface the bullet is drawn on, and the glyph colour once an
+    /// active bullet inverts. Defaults to `PAPER_BACKGROUND` rather than a
+    /// literal `white`, so dark mode is a change to `PaperDefaults` and not to
+    /// this component - see todo 45.
     pub bullet_background: &'static str,
     /// `Xl` is the dot; lower it for a squarer marker.
     pub radius: Size,
@@ -114,5 +124,19 @@ impl ToCssDeclarations for TimelineDefaults {
         declarations.push(TIMELINE_LINE_WIDTH.declare(format!("{}px", self.line_width)));
         declarations.push(TIMELINE_BULLET_BACKGROUND.declare(self.bullet_background));
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The bullet is a ring filled with whatever surface it sits on, so its
+    /// default has to *be* `PAPER_BACKGROUND` rather than a second spelling of
+    /// white. Dark mode is then a change to `PaperDefaults` and not to this
+    /// component.
+    #[test]
+    fn a_bullet_sits_on_the_paper_surface() {
+        assert_eq!(TIMELINE_BULLET_BACKGROUND_DEFAULT, PAPER_BACKGROUND.value());
     }
 }
