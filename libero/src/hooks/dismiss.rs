@@ -69,8 +69,13 @@ fn layer_stack() -> LayerStack {
 /// element handler for the press in the whole document, and it hands the veto
 /// to whichever subscriber ran first, which is not layer order.
 ///
-/// **A layer may only be on this stack if it can hear Escape from outside its
-/// own subtree.** See [`use_dismiss`].
+/// **A layer may only be on this stack if its transport reaches every press it
+/// would have to answer.** `Modal` qualifies with a bubbled subtree
+/// `onkeydown`, because everything inside a modal is inside that subtree and a
+/// modal has nothing outside itself to answer for. `use_dismiss` does not,
+/// unless it has the document-level transport: a pointer-opened box leaves
+/// focus outside itself, so its own handler would never fire and the press
+/// would reach a `Modal` that then declined as not-top. See [`use_dismiss`].
 #[derive(Clone, Copy)]
 pub(crate) struct DismissLayer {
     id: LayerId,
@@ -275,6 +280,10 @@ impl DismissHandle {
     /// exists after this hook has already run.
     #[must_use = "the element stops counting as inside when the guard is dropped"]
     pub(crate) fn register_inside(&self, element: ElementHandle) -> InsideGuard {
+        // A counter rather than the element itself, because the same handle can
+        // legitimately be registered twice - a submenu that closes and reopens
+        // against a parent that never unmounted - and removing by handle on the
+        // first `Drop` would unregister the live registration too.
         let mut next = self.inside_next;
         let id = *next.peek();
         next.set(id + 1);
@@ -316,7 +325,25 @@ impl DismissHandle {
                 // No stack consultation here on purpose: a layer with only this
                 // transport never pushed, so it would always find itself not on
                 // top and never act.
+                //
+                // The press stops here. This is a *bubble-phase* stop on this
+                // box's own handler, declining to let a press past the layer
+                // that just consumed it, and it is not the thing the layer
+                // stack rejected - that was a capture-phase stop at the
+                // document, which kills every element handler for the press in
+                // the whole document and hands the veto to whichever subscriber
+                // ran first. `FileField` and `MultiSelect` already stop at
+                // their own handlers for the same reason.
+                //
+                // Without it an enclosing `Modal` hears the same press and
+                // closes too. The earlier version of this comment called that
+                // "no worse than what shipped", which was true only because no
+                // non-portaled consumer existed yet - and this hook's own doc
+                // offers one two paragraphs up, a tooltip wanting dismissal
+                // without placement, which has no portal to be a sibling
+                // through.
                 event.prevent_default();
+                event.stop_propagation();
                 handle.close(Dismissal::Deliberate);
             }));
         }
@@ -434,6 +461,15 @@ pub(crate) fn use_dismiss(
 
     // Decided once. Whether the document can be listened to is a property of
     // the running renderer, not of this render.
+    //
+    // This is the first place in the codebase to read a platform capability at
+    // render time, so: [[codebase/platform-api]]'s "ask in an effect" rule is
+    // about *reads that need a mounted element*, and this needs none. It is
+    // also safe across hydration, which is the reason the rule looks like it
+    // should apply - SSR serialises no listeners, so the server and the client
+    // emit identical HTML whichever way this answers, and hydration walks nodes
+    // rather than attributes. Moving it into an effect costs a render and buys
+    // nothing anyone has been able to name.
     let global = use_hook(|| keyboard().is_some());
 
     let handle = DismissHandle {
@@ -954,19 +990,16 @@ mod tests {
         }
     }
 
-    /// The regression the amended push rule exists to prevent.
+    /// The layer consumes the press, so the `Modal` around it never hears it.
     ///
-    /// `platform::keyboard()` is `None` here, so the region has only its own
-    /// `onkeydown` and deliberately does **not** join the stack. If it did, the
-    /// `Modal` would hear the press, decline as not-top, and Escape would do
-    /// nothing at all on a backend where it closes the modal today.
-    ///
-    /// Being no worse than what shipped is the whole property, so what this
-    /// asserts is that the modal still closes. The region's own state is moot:
-    /// the modal unmounts it, and a task spawned from a scope that is going
-    /// away does not run.
+    /// This is the assertion that discriminates. Before the bubble-phase
+    /// `stop_propagation`, both closed, and the doc comment called that "no
+    /// worse than what shipped" - true only because no non-portaled consumer
+    /// existed yet, which is a rationalisation rather than a reason. The old
+    /// test asserted only that the modal closed, so it passed either way and
+    /// made the defect look intentional.
     #[test]
-    fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
+    fn a_layers_own_handler_consumes_the_press_before_the_modal_hears_it() {
         dioxus::html::set_event_converter(Box::new(EscapeConverter));
         let mut dom = VirtualDom::new(region_in_modal);
         let mut find = FindKeydownListeners::default();
@@ -977,10 +1010,39 @@ mod tests {
         assert_eq!(state(&dom), "state: modal=true region=true");
 
         press(&mut dom, region);
-        assert!(
-            state(&dom).contains("modal=false"),
-            "the modal must still answer Escape where the region cannot hear it, got {}",
-            state(&dom)
+        assert_eq!(
+            state(&dom),
+            "state: modal=true region=false",
+            "the press should have stopped at the layer that consumed it"
+        );
+    }
+
+    /// The other side, and the control property the amended push rule exists
+    /// for.
+    ///
+    /// The press lands outside the region - focus on the trigger, which is
+    /// every `initial_focus: None` consumer - so the region's own handler never
+    /// fires. `platform::keyboard()` is `None` here, so the region is not on
+    /// the stack either, and the `Modal` is therefore top and closes. If the
+    /// region had pushed without a transport that could hear this press, the
+    /// modal would have declined as not-top and Escape would have done nothing
+    /// at all, where today it closes the modal.
+    #[test]
+    fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(region_in_modal);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+
+        let modal_root = find.keydown[0];
+        assert_eq!(state(&dom), "state: modal=true region=true");
+
+        press(&mut dom, modal_root);
+        assert_eq!(
+            state(&dom),
+            "state: modal=false region=true",
+            "the modal must answer a press the region cannot hear"
         );
     }
 

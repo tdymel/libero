@@ -159,7 +159,9 @@ popover, and a [Modal](modal.md) too - is on one stack ordered by open time,
 and a handler acts only if its own layer is on top. So a popover open inside a
 modal closes on Escape and the modal under it stays up, without either of them
 stopping the event: stopping propagation on a document-level listener would
-kill every other handler for that press in the whole document.
+kill every other handler for that press in the whole document. A box drawn
+inline rather than portaled does stop the press at its own handler, so the modal
+around it never sees the Escape that already closed the box.
 
 A layer joins that stack only where it can hear Escape from outside its own
 subtree, which today means only where the platform can report a document-level
