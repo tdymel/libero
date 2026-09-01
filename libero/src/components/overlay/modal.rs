@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -70,7 +72,12 @@ pub fn Modal(props: ModalProps) -> Element {
     // backend but the web, so the capability would regress Escape natively.
     // Only the arbitration is shared.
     let layer = use_dismiss_layer();
-    use_hook(move || layer.open());
+    // The guard lives in this component's hook state, so the layer comes off
+    // the stack when the modal unmounts, whatever path got it there. `Rc`
+    // because `use_hook` clones what it stores on every render, and the guard
+    // is deliberately not `Clone` - there is one of it, and it pops when it
+    // dies.
+    use_hook(move || Rc::new(layer.push()));
     let variables: Input<Variables> = variables()
         .with(MODAL_Z_INDEX_VAR, z_index.to_string())
         .into();
