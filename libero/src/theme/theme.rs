@@ -629,8 +629,8 @@ impl Theme {
         },
         timeline: TimelineDefaults {
             align: TimelineAlign::Left,
-            color: "primary.6",
-            line_color: "grey.3",
+            color: ColorValue::Shade(Color::Primary, ColorShade::S6),
+            line_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
             bullet_background: TIMELINE_BULLET_BACKGROUND_DEFAULT,
             radius: Size::Xl,
             bullet_size: Size::Md,
@@ -846,7 +846,7 @@ impl Theme {
             // Mantine's control scale, plus an `xxl` continuing its steps.
             control_size: Sizes::new(22, 26, 32, 38, 44, 52),
             font_size: Sizes::new(11, 12, 14, 16, 18, 20),
-            border: "grey.4",
+            border: ColorValue::Shade(Color::Grey, ColorShade::S4),
         },
         pagination_labels: PaginationLabels::ENGLISH,
         nav_link: NavLinkDefaults {

@@ -270,6 +270,58 @@ mod tests {
 
     use super::*;
 
+    /// Every palette name, so the check below cannot be defeated by a colour
+    /// nobody thought of.
+    const PALETTE: &[&str] = &[
+        "primary",
+        "secondary",
+        "error",
+        "warning",
+        "info",
+        "success",
+        "neutral",
+        "grey",
+    ];
+
+    /// A `*Defaults` that declares a colour as `"primary.6"` rather than
+    /// resolving it ships a bare palette token into `:root`. That is not a CSS
+    /// colour, and because a custom property accepts any tokens the var is
+    /// *set* - so no `var()` fallback fires, and any shorthand reading it is
+    /// invalid at computed-value time and is dropped whole.
+    ///
+    /// `Timeline` shipped exactly this: its rail was invisible under the
+    /// default theme, with every test green, because the tests asserted the
+    /// `Sx` expressions and nothing looked at what `:root` resolved them to.
+    ///
+    /// This is the cheap general guard - one test covering every component,
+    /// including the ones not written yet.
+    #[test]
+    fn no_root_declaration_ships_a_bare_palette_token() {
+        let css = Stylesheet::from(&Theme::DEFAULT);
+        let root = css
+            .as_str()
+            .split_once(":root{")
+            .and_then(|(_, rest)| rest.split_once('}'))
+            .map(|(block, _)| block)
+            .expect("a :root block");
+
+        for declaration in root.split(';').filter(|part| !part.is_empty()) {
+            let Some((name, value)) = declaration.split_once(':') else {
+                continue;
+            };
+            let value = value.trim();
+            for colour in PALETTE {
+                // `primary.6` - a palette token. `var(--lsx-primary-6)` is the
+                // resolved form and starts with `var(`, so it never matches.
+                assert!(
+                    !value.starts_with(colour) || !value[colour.len()..].starts_with('.'),
+                    "{name} declares the bare palette token {value:?}; \
+                     use ColorValue and declare its .value() instead"
+                );
+            }
+        }
+    }
+
     fn assert_declares(pairs: &[(&str, &str)]) {
         let css = Stylesheet::from(&Theme::DEFAULT);
         let css = css.as_str();

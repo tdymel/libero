@@ -2,7 +2,7 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
+use crate::theme::{ColorValue, CssVar, Size, SizeCss, Sizes};
 
 pub const TIMELINE_COLOR: CssVar = CssVar::new("--lsx-timeline-color");
 pub const TIMELINE_LINE_COLOR: CssVar = CssVar::new("--lsx-timeline-line-color");
@@ -68,8 +68,11 @@ pub const fn gap_state_name(gap: Size) -> &'static str {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TimelineDefaults {
     pub align: TimelineAlign,
-    pub color: &'static str,
-    pub line_color: &'static str,
+    /// `ColorValue`, not a `&'static str`. A raw `"primary.6"` is declared
+    /// verbatim and is not a CSS colour, which silently deletes every
+    /// shorthand that reads it - see the `to_css_declarations` note below.
+    pub color: ColorValue,
+    pub line_color: ColorValue,
     /// The surface the bullet is drawn on, and the glyph colour once an
     /// active bullet inverts. Defaults to `PAPER_BACKGROUND` rather than a
     /// literal `white`, so dark mode is a change to `PaperDefaults` and not to
@@ -119,8 +122,14 @@ impl ToCssDeclarations for TimelineDefaults {
             .bullet_sizes
             .to_css_declarations(TIMELINE_BULLET_SIZE, "px");
         declarations.extend(self.gaps.to_css_declarations(TIMELINE_GAP, "px"));
-        declarations.push(TIMELINE_COLOR.declare(self.color));
-        declarations.push(TIMELINE_LINE_COLOR.declare(self.line_color));
+        // `.value()`, never the field itself. Declared raw, `primary.6` reaches
+        // `:root` as a bare token: a custom property accepts it, so the var is
+        // *set* and no `var()` fallback can fire, and then
+        // `border: 2px solid var(--lsx-timeline-marker)` is invalid at
+        // computed-value time and the whole declaration is dropped - no bullet
+        // ring and no rail at all.
+        declarations.push(TIMELINE_COLOR.declare(self.color.value()));
+        declarations.push(TIMELINE_LINE_COLOR.declare(self.line_color.value()));
         declarations.push(TIMELINE_LINE_WIDTH.declare(format!("{}px", self.line_width)));
         declarations.push(TIMELINE_BULLET_BACKGROUND.declare(self.bullet_background));
         // Every item sets its own, so this is never the value that renders -

@@ -30,7 +30,9 @@ pub struct PaginationDefaults {
     /// Control box, in px. Mantine's scale plus an `xxl`.
     pub control_size: Sizes<u16>,
     pub font_size: Sizes<u16>,
-    pub border: &'static str,
+    /// `ColorValue`, not a `&'static str`: a raw `"grey.4"` is declared
+    /// verbatim, and a bare palette token is not a CSS colour.
+    pub border: ColorValue,
 }
 
 impl PaginationDefaults {
@@ -60,7 +62,7 @@ impl ToCssDeclarations for PaginationDefaults {
                 .to_css_declarations(PAGINATION_FONT_SIZE, "px"),
         );
         declarations.push(PAGINATION_GAP.declare(SizeCss::SPACING.value(self.gap)));
-        declarations.push(PAGINATION_BORDER.declare(self.border));
+        declarations.push(PAGINATION_BORDER.declare(self.border.value()));
         declarations.push(PAGINATION_ACTIVE_BACKGROUND.declare(active.value()));
         declarations.push(PAGINATION_ACTIVE_COLOR.declare(on_active.value()));
         declarations
