@@ -10,7 +10,6 @@ use libero::{
 const QUOTE: &str = "Life is like riding a bicycle. To keep your balance, you must keep moving.";
 const SPEAKER: &str = "Albert Einstein";
 const WORK: &str = "Letter to his son Eduard";
-const SOURCE_URL: &str = "https://example.org/letters/1930-02-05";
 
 #[component]
 pub fn BlockquotePage() -> Element {
@@ -83,12 +82,6 @@ pub fn BlockquotePage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    Control::switch("cite_url").code(|_, values| {
-                        match values.str("cite_url").as_str() {
-                            "true" => vec![format!("cite_url: {SOURCE_URL:?}")],
-                            _ => vec![],
-                        }
-                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Blockquote {
@@ -98,8 +91,6 @@ pub fn BlockquotePage() -> Element {
                         attribution: (values.str("attribution") == "true")
                             .then(|| rsx! { {SPEAKER} }),
                         work: (values.str("work") == "true").then(|| WORK.to_string()),
-                        cite_url: (values.str("cite_url") == "true")
-                            .then(|| SOURCE_URL.to_string()),
                         {QUOTE}
                     }
                 },
