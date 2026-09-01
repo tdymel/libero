@@ -57,6 +57,14 @@ impl TimelineEvent {
     ///
     /// A bullet holding a child inverts when active: it *fills* with the
     /// accent, because a light glyph on a white ring vanishes.
+    ///
+    /// **Never put anything focusable in here.** The bullet is
+    /// `aria-hidden="true"` - it is the rail's drawing, and the title is the
+    /// text - but `aria-hidden` does not remove an element from the tab order.
+    /// A `Button` or a link in a bullet stays tabbable and announces as
+    /// nothing, which is a dead stop for a keyboard user. The type cannot
+    /// prevent it and no `warn()` can detect focusability, so this note is the
+    /// whole guard. Interactive content belongs in `.content(..)`.
     pub fn bullet(mut self, bullet: Element) -> Self {
         self.bullet = Some(bullet);
         self

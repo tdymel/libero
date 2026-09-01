@@ -191,7 +191,15 @@ pub fn TimelinePage() -> Element {
                     " names the current event: bullets up to and including it draw in the "
                     "accent, as do the connectors between them, so the rail reads as progress "
                     "rather than as a highlight. Bullets are decorative and hidden from the "
-                    "accessibility tree; the title is the text."
+                    "accessibility tree; the title is the text. A custom "
+                    Code { source: ".bullet(..)" }
+                    " is hidden too, so never put anything focusable in one - "
+                    Code { source: "aria-hidden" }
+                    " does not remove an element from the tab order, and a button in a bullet "
+                    "would stay tabbable while announcing as nothing. Interactive content "
+                    "belongs in "
+                    Code { source: ".content(..)" }
+                    "."
                 }
             },
             Demo {

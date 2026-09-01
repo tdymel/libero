@@ -112,6 +112,12 @@ A `.bullet(..)` holding an icon inverts when active: the ring fills with the
 accent instead of outlining it, because a light glyph on a white ring is
 invisible.
 
+**Never put anything focusable in a bullet.** It is `aria-hidden="true"`, and
+`aria-hidden` does not remove an element from the tab order - a `Button` or a
+link in a bullet stays tabbable and announces as nothing, which is a dead stop
+for a keyboard user. Nothing can detect this for you: `.bullet()` takes any
+`Element`. Interactive content belongs in `.content(..)`.
+
 ## Alignment
 
 `align` puts content on either side of the rail, or alternates it:
@@ -141,7 +147,10 @@ needs no translation. Completed events carry nothing: they read as complete
 visually, and hidden text on every prior item is noise.
 
 Bullets are `aria-hidden="true"`. They are the rail's drawing; the title is the
-text, and a custom bullet holding an icon does not change that.
+text, and a custom bullet holding an icon does not change that. It stays hidden
+rather than becoming conditional on there being a child, because unhiding a
+caller's icon would announce the title twice. The corollary is that a focusable
+element inside a bullet is a tab stop with no accessible name - see "Events".
 
 `Timeline` is not interactive. It has no keyboard contract, takes no focus and
 sets no `tabindex`. Focusable content inside an event keeps document order,
