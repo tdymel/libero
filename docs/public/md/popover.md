@@ -125,17 +125,23 @@ let dismiss = use_dismiss(
     anchor,
     *popover.floating(),
     opened(),
+    popover.placed(),
     Some(close),
     DismissOptions {
         initial_focus: Some(first_item),
-        placed: popover.placed(),
         ..Default::default()
     },
 );
 
 // On the trigger, synchronously - that is where the active element
-// still is the one the user acted on.
-onclick: move |_| { dismiss.remember(); opened.toggle(); }
+// still is the one the user acted on. For a trigger the application
+// may delete while the box is open, name where focus should land
+// instead:
+onclick: move |_| {
+    dismiss.focus_return().remember_active();
+    dismiss.focus_return().fallback(list);
+    opened.toggle();
+}
 
 // On the floating box: Escape and the focus-leaves check.
 popover.show(opened().then(|| dropdown
@@ -143,12 +149,31 @@ popover.show(opened().then(|| dropdown
     .render(HtmlTag::Div, dismiss.floating_events(), rsx! { .. })));
 ```
 
+`placed` sits beside `open` rather than inside `DismissOptions` because it is
+reactive per-render state, not configuration. A reactive value hidden in an
+options struct eventually gets read once and goes stale, and the failure is
+silent: the box never receives focus and nothing errors.
+
 Escape is arbitrated rather than claimed. Every open dismissible layer - a
 popover, and a [Modal](modal.md) too - is on one stack ordered by open time,
 and a handler acts only if its own layer is on top. So a popover open inside a
 modal closes on Escape and the modal under it stays up, without either of them
 stopping the event: stopping propagation on a document-level listener would
 kill every other handler for that press in the whole document.
+
+A layer joins that stack only where it can hear Escape from outside its own
+subtree, which today means only where the platform can report a document-level
+key press. A pointer-opened box leaves focus where it was, so its own
+`onkeydown` never fires; if it took the top of the stack anyway, the modal that
+did hear the press would decline and Escape would do nothing at all. Where there
+is no document-level listener the box keeps its own handler, the modal stays
+top, and Escape behaves exactly as it did before.
+
+A held Escape is one intent, so dismissal ignores an auto-repeat - otherwise a
+press-and-hold walks down the stack, closing the menu and then the modal behind
+it. Focus returns to the trigger on a deliberate close, meaning Escape or an
+item being chosen, and not when focus simply left the box: a click has already
+put it somewhere the user meant.
 
 ## Context across the portal
 
@@ -177,8 +202,10 @@ box is not a descendant of the outer one, so focus moving into it looks exactly
 like focus leaving.
 
 ```rust
-let dismiss = use_dismiss(anchor, *popover.floating(), opened(), Some(close),
-    DismissOptions { also_inside: vec![submenu_box], ..Default::default() });
+// Register the submenu's box as counting *inside* the parent, and keep
+// the guard for as long as the submenu is open. It is a call rather than
+// a field because the submenu only exists after the parent's hook ran.
+let _inside = use_hook(move || parent.contain(submenu_box));
 ```
 
 ## What it cannot do

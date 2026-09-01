@@ -46,17 +46,23 @@ const DISMISS: &str = r#"let dismiss = use_dismiss(
     anchor,
     *popover.floating(),
     opened(),
+    popover.placed(),
     Some(close),
     DismissOptions {
         initial_focus: Some(first_item),
-        placed: popover.placed(),
         ..Default::default()
     },
 );
 
 // On the trigger, synchronously - that is where the active element
-// still is the one the user acted on.
-onclick: move |_| { dismiss.remember(); opened.toggle(); }
+// still is the one the user acted on. For a trigger the application
+// may delete while the box is open, name where focus should land
+// instead:
+onclick: move |_| {
+    dismiss.focus_return().remember_active();
+    dismiss.focus_return().fallback(list);
+    opened.toggle();
+}
 
 // On the floating box: Escape and the focus-leaves check.
 popover.show(opened().then(|| dropdown
@@ -82,9 +88,8 @@ const NESTED: &str = r#"// A submenu is its own popover, anchored to the row tha
 //
 // What does need saying: the submenu is not a descendant of the menu in
 // the DOM, so focus moving into it reads as focus *leaving* the menu.
-// That is what `also_inside` is for.
-let dismiss = use_dismiss(anchor, *popover.floating(), opened(), Some(close),
-    DismissOptions { also_inside: vec![submenu_box], ..Default::default() });"#;
+// Register it, and keep the guard for as long as the submenu is open.
+let _inside = use_hook(move || parent.contain(submenu_box));"#;
 
 fn side_of(value: &str) -> Side {
     match value {
@@ -352,6 +357,24 @@ pub fn PopoverPage() -> Element {
                     "Escape and the modal under it stays up, without either of them stopping "
                     "the event: stopping propagation on a document-level listener would kill "
                     "every other handler for that press in the whole document."
+                }
+                Text {
+                    "A layer joins that stack only where it can hear Escape from outside its "
+                    "own subtree, which today means only where the platform can report a "
+                    "document-level key press. A pointer-opened box leaves focus where it was, "
+                    "so its own "
+                    Code { source: "onkeydown" }
+                    " never fires; if it took the top of the stack anyway, the modal that did "
+                    "hear the press would decline and Escape would do nothing at all. Where "
+                    "there is no document-level listener the box keeps its own handler, the "
+                    "modal stays top, and Escape behaves exactly as it did before."
+                }
+                Text {
+                    "A held Escape is one intent. Dismissal ignores an auto-repeat, or a "
+                    "press-and-hold walks down the stack closing the menu and then the modal "
+                    "behind it. Focus returns to the trigger on a deliberate close - Escape, "
+                    "or an item being chosen - and not when focus simply left the box, since a "
+                    "click has already put it somewhere the user meant."
                 }
             }
 
