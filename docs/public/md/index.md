@@ -46,6 +46,7 @@ fetch only the file you need.
 - [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
 - [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
+- [TagsField](tags_field.md): A field whose value is a `Vec<String>` of free-typed tags, drawn as chips with the editor between them.
 - [NativeSelect](native_select.md): A styled native `<select>` over an enum, strictly controlled by `value` plus `onchange`.
 - [Combobox](combobox.md): A virtualized listbox that hangs off a caller-supplied trigger, holding no state of its own.
 - [Checkbox](checkbox.md): A checkbox with its label beside the box, the field slots under both, and an indeterminate state that lives in Rust rather than in the DOM.
@@ -78,12 +79,14 @@ fetch only the file you need.
 - [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
 - [Grid](grid.md): A named-area layout matrix - `Grid` holds the shape, a `GridZone` is a twelve-column packing container with optional masonry, and a `GridItem` takes a fraction of it.
 - [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
+- [ImageList](image-list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
 - [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
 - [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
 - [Splitter](splitter.md): Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
 
 ## Navigation
 
+- [Burger](burger.md): Three bars that morph into an X - an `ActionIcon` carrying the glyph and the three ARIA facts a nav toggle needs.
 - [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`.
 - [Carousel](carousel.md): A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
 - [NavLink](nav_link.md): A navigation list item - a link with a themed active/hover background and `aria-current`, for a sidebar or nav bar.
