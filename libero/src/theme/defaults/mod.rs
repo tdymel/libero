@@ -54,6 +54,7 @@ mod splitter;
 mod switch;
 mod table;
 mod tabs;
+mod tags_field;
 mod text;
 mod text_field;
 mod textarea;
@@ -188,6 +189,7 @@ pub use tabs::{
     TABS_BORDER_COLOR, TABS_FONT_SIZE, TABS_GAP, TABS_HOVER, TABS_ICON_GAP, TABS_INDICATOR,
     TABS_LINE, TABS_PAD_X, TABS_PAD_Y, TABS_PADDING_X, TABS_PADDING_Y, TabsDefaults, TabsSizeLevel,
 };
+pub use tags_field::TagsFieldDefaults;
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
     TextDefaults, TextSize,

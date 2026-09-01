@@ -15,10 +15,10 @@ use super::{
     PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis,
     ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
     SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
-    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
-    TextFieldDefaults, TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant,
-    TimelineAlign, TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
-    TreeDefaults, ZIndexDefaults,
+    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel,
+    TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
+    TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults, TitleDefaults,
+    TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -69,6 +69,7 @@ pub struct Theme {
     pub multi_select: SelectDefaults,
     pub file_field: FileFieldDefaults,
     pub pin_field: PinFieldDefaults,
+    pub tags_field: TagsFieldDefaults,
     pub text_field: TextFieldDefaults,
     pub textarea: TextareaDefaults,
     pub number_field: NumberFieldDefaults,
@@ -528,6 +529,10 @@ impl Theme {
             radius: Size::Sm,
             kind: PinKind::Numeric,
             gap: "8px",
+        },
+        tags_field: TagsFieldDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
         },
         text_field: TextFieldDefaults {
             size: Size::Md,

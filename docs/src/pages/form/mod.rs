@@ -21,6 +21,7 @@ mod segmented_control;
 mod select;
 mod slider;
 mod switch;
+mod tags_field;
 mod text_field;
 mod textarea;
 
@@ -46,5 +47,6 @@ pub use segmented_control::SegmentedControlPage;
 pub use select::SelectPage;
 pub use slider::SliderPage;
 pub use switch::SwitchPage;
+pub use tags_field::TagsFieldPage;
 pub use text_field::TextFieldPage;
 pub use textarea::TextareaPage;

@@ -20,6 +20,7 @@ mod segmented_control;
 mod select;
 mod slider;
 mod switch;
+mod tags_field;
 mod text_field;
 mod textarea;
 mod use_field;
@@ -63,6 +64,7 @@ pub use slider::{
     SliderValue,
 };
 pub use switch::{Switch, SwitchProps};
+pub use tags_field::{TagsField, TagsFieldProps};
 pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaProps};
 #[cfg(test)]

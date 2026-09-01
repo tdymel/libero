@@ -142,6 +142,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         black,
         white,
         // Plain values read from Rust - no CSS vars of their own.
+        tags_field: _,
         text_field: _,
         textarea: _,
         number_field: _,
