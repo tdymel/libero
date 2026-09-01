@@ -1,3 +1,4 @@
+mod badge;
 mod data_list;
 mod icon;
 mod image;
@@ -6,6 +7,7 @@ mod qr_code;
 mod table;
 mod timeline;
 
+pub use badge::{Badge, BadgeProps};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::Icon;
 // Shared with `ActionIcon` so it renders identically to a plain `Icon`.

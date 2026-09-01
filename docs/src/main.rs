@@ -19,8 +19,8 @@ use icons::BurgerIcon;
 
 use nav::DocsNav;
 use pages::{
-    ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BlockquotePage, BoxPage,
-    ButtonPage, CarouselPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage,
+    ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, BadgePage, BlockquotePage,
+    BoxPage, ButtonPage, CarouselPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage,
     CollapsePage, ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage,
     DateFieldPage, DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage,
     FileFieldPage, FlexPage, FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage,
@@ -65,6 +65,8 @@ pub(crate) enum Route {
     #[route("/a11y/visually-hidden")]
     VisuallyHiddenPage {},
 
+    #[route("/data-display/badge")]
+    BadgePage {},
     #[route("/data-display/data-list")]
     DataListPage {},
     #[route("/data-display/icon")]

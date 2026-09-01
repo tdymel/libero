@@ -113,6 +113,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "data-display",
             "Data Display",
             vec![
+                page(Route::BadgePage {}, "Badge"),
                 page(Route::DataListPage {}, "DataList"),
                 page(Route::IconPage {}, "Icon"),
                 page(Route::ImagePage {}, "Image"),

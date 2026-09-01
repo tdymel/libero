@@ -23,6 +23,7 @@ fetch only the file you need.
 
 ## Data Display
 
+- [Badge](badge.md): A short status label - one uppercase pill, sized under a control, with no role and no interaction.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
 - [Icon](icon.md): A sized, colored badge around an svg child, whose `currentColor` fill inherits the badge's color.
 - [Image](image.md): An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.

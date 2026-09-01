@@ -146,6 +146,7 @@ properties! {
     BoxShadow => "box-shadow", box_shadow;
     TextAlign => "text-align", text_align;
     TextOverflow => "text-overflow", text_overflow;
+    TextTransform => "text-transform", text_transform;
     ScrollMargin => "scroll-margin", scroll_margin;
     ScrollPaddingInline => "scroll-padding-inline", scroll_padding_inline;
     ScrollBehavior => "scroll-behavior", scroll_behavior;
