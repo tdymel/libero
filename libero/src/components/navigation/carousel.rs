@@ -532,12 +532,13 @@ impl Nav {
         );
     }
 
-    /// Crosses the seam: the strip has settled on a clone, so jump to the real
-    /// slide showing the same thing. `seam` switches smooth scrolling off for
-    /// the jump, or the strip would visibly rewind.
-    fn cross_seam(mut self, raw: usize) {
+    /// Asks for the seam to be crossed: the strip has settled on a clone, and
+    /// has to jump to the real slide showing the same thing. `seam` switches
+    /// smooth scrolling off for the jump, or the strip visibly rewinds - so
+    /// this only raises it, and the jump waits for the render that puts it in
+    /// the DOM. See the effect that reads it.
+    fn cross_seam(mut self) {
         self.seam.set(true);
-        self.scroll_to_raw(self.raw_for(self.real_for(raw)));
     }
 
     /// The offset and scrollable range along this carousel's own axis.
@@ -714,6 +715,19 @@ pub fn Carousel(props: CarouselProps) -> Element {
         }
     }));
 
+    // The seam jump itself, from an effect rather than from the handler that
+    // asks for it. The jump is only instant under the `seam` state's
+    // `scroll-behavior: auto`, and a state raised in a handler is not in the
+    // DOM until the next render. Scrolling from the handler started while the
+    // track was still `smooth`, and rewound across the whole strip - the one
+    // thing the clones exist to prevent. `current` is already the real slide:
+    // the settle that found the clone wrote it.
+    use_effect(use_reactive!(|nav| {
+        if seam() {
+            nav.scroll_to_raw(nav.raw_for(*nav.current.peek()));
+        }
+    }));
+
     // A caller driving `index` from outside. The whole tuple is reactive, so
     // the closure is rebuilt whenever any of it changes rather than capturing
     // the first render's values.
@@ -828,7 +842,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         // The jump scrolls again and so settles again, but that landing is a
         // real slide and crosses nothing.
         match nav.is_clone(raw) {
-            true => nav.cross_seam(raw),
+            true => nav.cross_seam(),
             false => {
                 if *seam.peek() {
                     seam.set(false);
