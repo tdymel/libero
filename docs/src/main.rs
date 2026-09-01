@@ -26,9 +26,9 @@ use pages::{
     FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
     KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
     NumberFieldPage, OverlayPage, PaperPage, PasswordFieldPage, PerformancePage, PinFieldPage,
-    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage,
-    SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage,
-    TextFieldPage, TextPage, TextareaPage, ThemingPage, TitlePage, TooltipPage, TreePage,
+    PopoverPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage,
+    SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage,
+    TabsPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TitlePage, TooltipPage, TreePage,
     VisuallyHiddenPage,
 };
 
@@ -174,6 +174,8 @@ pub(crate) enum Route {
     ModalPage {},
     #[route("/overlay/overlay")]
     OverlayPage {},
+    #[route("/overlay/popover")]
+    PopoverPage {},
     #[route("/overlay/tooltip")]
     TooltipPage {},
 
