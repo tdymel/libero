@@ -1,3 +1,4 @@
+mod avatar;
 mod badge;
 mod data_list;
 mod icon;
@@ -7,6 +8,7 @@ mod qr_code;
 mod table;
 mod timeline;
 
+pub use avatar::{Avatar, AvatarGroup, AvatarGroupProps, AvatarProps, AvatarSpec};
 pub use badge::{Badge, BadgeProps};
 pub use data_list::{DataList, DataListItem, DataListItemProps, DataListProps};
 pub use icon::Icon;

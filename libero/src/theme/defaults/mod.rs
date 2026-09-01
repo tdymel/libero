@@ -2,6 +2,7 @@ mod action_icon;
 mod anchor;
 mod aspect_ratio;
 mod autocomplete;
+mod avatar;
 mod badge;
 mod blockquote;
 mod button;
@@ -66,6 +67,10 @@ pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use autocomplete::AutocompleteDefaults;
+pub use avatar::{
+    AVATAR_FONT_SIZE, AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_GROUP_SPACING, AVATAR_RADIUS,
+    AVATAR_SIZE, AvatarDefaults, AvatarGroupDefaults,
+};
 pub use badge::{
     BADGE_BOX, BADGE_FONT, BADGE_FONT_SIZE, BADGE_FONT_WEIGHT, BADGE_HEIGHT, BADGE_LETTER_SPACING,
     BADGE_PAD_X, BADGE_PADDING_X, BADGE_RADIUS, BADGE_TEXT_TRANSFORM, BadgeDefaults,

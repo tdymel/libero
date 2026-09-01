@@ -1,3 +1,4 @@
+mod avatar;
 mod badge;
 mod data_list;
 mod icon;
@@ -7,6 +8,7 @@ mod qr_code;
 mod table;
 mod timeline;
 
+pub use avatar::AvatarPage;
 pub use badge::BadgePage;
 pub use data_list::DataListPage;
 pub use icon::IconPage;

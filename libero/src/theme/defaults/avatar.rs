@@ -1,0 +1,72 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::sx::{Sx, sx};
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
+
+pub const AVATAR_SIZE: SizeCss = SizeCss::new("--lsx-avatar-size-");
+pub const AVATAR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-avatar-font-size-");
+pub const AVATAR_RADIUS: CssVar = CssVar::new("--lsx-avatar-radius");
+
+pub const AVATAR_GROUP_SPACING: CssVar = CssVar::new("--lsx-avatar-group-spacing");
+pub const AVATAR_GROUP_RING: CssVar = CssVar::new("--lsx-avatar-group-ring");
+/// A member's paint order inside a group, set per element by `AvatarGroup`.
+/// The first avatar gets the highest, so each circle overlaps the next.
+pub const AVATAR_GROUP_INDEX: CssVar = CssVar::new("--lsx-avatar-group-index");
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AvatarDefaults {
+    pub size: Size,
+    /// A CSS length rather than a `Size`: the default is a circle, which is
+    /// off the radius scale entirely. Overridden per instance the way
+    /// `ImageDefaults::radius` is, through `AVATAR_RADIUS`'s override twin.
+    pub radius: &'static str,
+    /// The square's side, in px.
+    pub size_scale: Sizes<u16>,
+    /// Derived from the square (`side / 2.5`), not a second scale to keep in
+    /// step with it.
+    pub font_size: Sizes<u16>,
+}
+
+impl AvatarDefaults {
+    fn size_sx(size: Size) -> Sx {
+        sx().width(AVATAR_SIZE.value(size))
+            // `min-width` as well: a flex parent squashes a width-only square
+            // into an ellipse, and an `AvatarGroup` *is* a flex row.
+            .min_width(AVATAR_SIZE.value(size))
+            .height(AVATAR_SIZE.value(size))
+            .font_size(AVATAR_FONT_SIZE.value(size))
+    }
+
+    /// The `Pagination` shape: the size-independent declarations once, then a
+    /// per-size block, so every `Avatar` on a page shares one recycled class.
+    pub fn theme_vars() -> Sx {
+        sx().border_radius(AVATAR_RADIUS.overridable())
+            .per_size(Self::size_sx)
+    }
+}
+
+impl ToCssDeclarations for AvatarDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let mut declarations = self.size_scale.to_css_declarations(AVATAR_SIZE, "px");
+        declarations.extend(self.font_size.to_css_declarations(AVATAR_FONT_SIZE, "px"));
+        declarations.push(AVATAR_RADIUS.declare(self.radius));
+        declarations
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct AvatarGroupDefaults {
+    /// How far each member is pulled over the one before it.
+    pub spacing: Size,
+    /// Width of the ring in the page colour that separates two overlapping
+    /// members. Without it the overlap is unreadable.
+    pub ring: &'static str,
+}
+
+impl ToCssDeclarations for AvatarGroupDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        vec![
+            AVATAR_GROUP_SPACING.declare(SizeCss::SPACING.value(self.spacing)),
+            AVATAR_GROUP_RING.declare(self.ring),
+        ]
+    }
+}

@@ -1,16 +1,16 @@
 use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, AutocompleteDefaults,
-    BadgeDefaults, BadgeSizeLevel, BlockquoteDefaults, BlockquoteSizeLevel, ButtonDefaults,
-    ButtonSizeLevel, CalendarVariant, CarouselAlign, CarouselDefaults, CenterDefaults,
-    CheckboxDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
-    CollapseDefaults, Color, ColorFieldDefaults, ColorPickerDefaults, ColorPickerSizeLevel,
-    ColorShade, ColorSwatchDefaults, ColorValue, ComboboxDefaults, ComboboxSizeLevel,
-    ContainerDefaults, DataListDefaults, DateDefaults, DateFieldDefaults, DatePickerDefaults,
-    DatePickerSizeLevel, DialogDefaults, DividerDefaults, DrawerDefaults, FieldDefaults,
-    FieldSizeLevel, FieldsetDefaults, FileFieldDefaults, FileFieldVariant, FlexAxisDefaults,
-    FlexDefaults, FloatDefaults, FormDefaults, GridDefaults, HeaderDefaults, HexColor,
-    IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults, MarkDefaults,
-    NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults,
+    AvatarDefaults, AvatarGroupDefaults, BadgeDefaults, BadgeSizeLevel, BlockquoteDefaults,
+    BlockquoteSizeLevel, ButtonDefaults, ButtonSizeLevel, CalendarVariant, CarouselAlign,
+    CarouselDefaults, CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel,
+    CodeBlockDefaults, CodeDefaults, CollapseDefaults, Color, ColorFieldDefaults,
+    ColorPickerDefaults, ColorPickerSizeLevel, ColorShade, ColorSwatchDefaults, ColorValue,
+    ComboboxDefaults, ComboboxSizeLevel, ContainerDefaults, DataListDefaults, DateDefaults,
+    DateFieldDefaults, DatePickerDefaults, DatePickerSizeLevel, DialogDefaults, DividerDefaults,
+    DrawerDefaults, FieldDefaults, FieldSizeLevel, FieldsetDefaults, FileFieldDefaults,
+    FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults, FormDefaults, GridDefaults,
+    HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, KbdDefaults, ListDefaults,
+    MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults,
     PaginationDefaults, PaginationLabels, PaperDefaults, PinFieldDefaults, PinKind, Placement,
     PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis,
     ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
@@ -100,6 +100,8 @@ pub struct Theme {
     pub action_icon: ActionIconDefaults,
     pub qr_code: QrCodeDefaults,
     pub image: ImageDefaults,
+    pub avatar: AvatarDefaults,
+    pub avatar_group: AvatarGroupDefaults,
     pub mark: MarkDefaults,
     pub kbd: KbdDefaults,
     pub pagination: PaginationDefaults,
@@ -938,6 +940,19 @@ impl Theme {
         image: ImageDefaults {
             fit: ImageFit::Cover,
             radius: "0",
+        },
+        avatar: AvatarDefaults {
+            size: Size::Md,
+            // A circle. Not `Size::Xl` (64px), which is a rounded square on
+            // the two largest avatars and a circle on the two smallest.
+            radius: "9999px",
+            // Mantine's scale, plus an `xxl` continuing its steps.
+            size_scale: Sizes::new(20, 28, 38, 56, 84, 120),
+            font_size: Sizes::new(8, 11, 15, 22, 34, 48),
+        },
+        avatar_group: AvatarGroupDefaults {
+            spacing: Size::Sm,
+            ring: "2px",
         },
         mark: MarkDefaults {
             color: Color::Warning,
