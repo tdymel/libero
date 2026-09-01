@@ -8,6 +8,7 @@ mod flex;
 mod float;
 mod grid;
 mod header;
+mod image_list;
 mod scroll_area;
 mod sidebar;
 mod splitter;
@@ -27,6 +28,7 @@ pub use grid::{
     StaticGridTemplate, sp,
 };
 pub use header::{Header, HeaderPosition};
+pub use image_list::{ImageBar, ImageItem, ImageList, ImageListProps};
 pub use scroll_area::{ScrollArea, ScrollPositionEvent, Virtualize};
 pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
 pub use splitter::{Splitter, SplitterResizeEvent};

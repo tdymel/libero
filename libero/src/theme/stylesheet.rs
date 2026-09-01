@@ -121,6 +121,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         action_icon,
         qr_code,
         image,
+        image_list,
         avatar,
         avatar_group,
         kbd,
@@ -220,6 +221,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(kbd.to_css_declarations());
     declarations.extend(pagination.to_css_declarations());
     declarations.extend(image.to_css_declarations());
+    declarations.extend(image_list.to_css_declarations());
     declarations.extend(avatar.to_css_declarations());
     declarations.extend(avatar_group.to_css_declarations());
     declarations.extend(anchor.to_css_declarations());

@@ -33,6 +33,7 @@ mod grid;
 mod header;
 mod icon;
 mod image;
+mod image_list;
 mod kbd;
 mod list;
 mod mark;
@@ -156,6 +157,11 @@ pub use grid::{
 pub use header::{HEADER_HEIGHT, HeaderDefaults};
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
+pub use image_list::{
+    BarPosition, IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR,
+    IMAGE_LIST_BAR_PADDING, IMAGE_LIST_BAR_SUBTITLE_OPACITY, IMAGE_LIST_RADIUS, ImageListDefaults,
+    ImageListVariant,
+};
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use mark::MarkDefaults;

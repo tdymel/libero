@@ -25,7 +25,7 @@ pub use form::{
 pub use inputs::{ActionIconPage, ButtonPage, ChipPage};
 pub use layout::{
     AspectRatioPage, BoxPage, CenterPage, CollapsePage, ContainerPage, DividerPage, FlexPage,
-    FloatPage, GridPage, HeaderPage, ScrollAreaPage, SidebarPage, SplitterPage,
+    FloatPage, GridPage, HeaderPage, ImageListPage, ScrollAreaPage, SidebarPage, SplitterPage,
 };
 pub use navigation::{
     AnchorPage, BurgerPage, CarouselPage, NavLinkPage, PaginationPage, TabsPage, TreePage,

@@ -22,13 +22,14 @@ use pages::{
     ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
     ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage, DividerPage,
     DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
-    FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
-    KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
-    NumberFieldPage, OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage,
-    PinFieldPage, PopoverPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage,
-    SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage,
-    SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage, TextPage, TextareaPage,
-    ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage,
+    ImageListPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
+    NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
+    PasswordFieldPage, PerformancePage, PinFieldPage, PopoverPage, QrCodePage, RadioGroupPage,
+    RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SliderPage,
+    SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage,
+    TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage,
+    VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -159,6 +160,8 @@ pub(crate) enum Route {
     GridPage {},
     #[route("/layout/header")]
     HeaderPage {},
+    #[route("/layout/image-list")]
+    ImageListPage {},
     #[route("/layout/scroll-area")]
     ScrollAreaPage {},
     #[route("/layout/sidebar")]
