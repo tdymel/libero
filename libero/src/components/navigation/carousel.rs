@@ -806,6 +806,14 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // Only a settled scroll moves `settled`, which is what the live region and
     // `onindexchange` read - a scroll in progress moves `current` alone.
     let onscrollend = move |event: Event<ScrollData>| {
+        // A drag writes an instant scroll per pointer move, and each of those
+        // ends too. None is a settle: treating them as one reported the index
+        // mid-drag and, on a looping strip, jumped the seam out from under the
+        // pointer on every move past half a slide. Releasing switches the snap
+        // back on, and the scroll that settles the strip ends after this.
+        if *dragging.peek() {
+            return;
+        }
         let (offset, max) = nav.metrics(&event.data());
         let raw = index_at(offset, max, nav.strip_count(), per_view, align);
         let next = nav.real_for(raw);
