@@ -147,9 +147,14 @@ impl ElementApi for BlitzElement {
             .is_some_and(|doc| doc.get_focussed_node_id() == Some(self.node_id))
     }
 
-    /// Blitz keeps a removed node in its arena, so the node id still resolves
-    /// after the node has left the tree. Connectedness is therefore a walk up
-    /// the parent chain to the document root, not a lookup.
+    /// Blitz tracks this itself: `NodeFlags::IS_IN_DOCUMENT` is set across a
+    /// whole subtree when it is inserted and cleared across it again when it
+    /// is removed (`blitz-dom`'s `Mutator::process_added_subtree` /
+    /// `process_removed_subtree`). So this is a flag read, not a walk up the
+    /// parent chain, and it is exactly the DOM's `isConnected`.
+    ///
+    /// A removed node is also dropped from the slab, so a missing node is gone
+    /// too - both answers are covered.
     ///
     /// No document in reach answers `true`, the trait's rule for a renderer
     /// that cannot tell. That case is real here: `try_doc` fails while dioxus
@@ -159,17 +164,8 @@ impl ElementApi for BlitzElement {
         let Some(doc) = self.anchor.try_doc() else {
             return true;
         };
-        let root = doc.root_node().id;
-        let mut node = self.node_id;
-        loop {
-            if node == root {
-                return true;
-            }
-            match doc.get_node(node).and_then(|node| node.parent) {
-                Some(parent) => node = parent,
-                None => return false,
-            }
-        }
+        doc.get_node(self.node_id)
+            .is_some_and(|node| node.flags.is_in_document())
     }
 
     fn dimensions(&self) -> Read<Dimensions> {
