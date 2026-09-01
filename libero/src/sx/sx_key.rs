@@ -52,6 +52,7 @@ macro_rules! properties {
 
 properties! {
     Background => "background", background;
+    BackgroundColor => "background-color", background_color;
     Width => "width", width;
     Height => "height", height;
     Padding => "padding", padding, SizeCss::SPACING;

@@ -191,6 +191,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "navigation",
             "Navigation",
             vec![
+                page(Route::BurgerPage {}, "Burger"),
                 page(Route::AnchorPage {}, "Anchor"),
                 page(Route::CarouselPage {}, "Carousel"),
                 page(Route::NavLinkPage {}, "NavLink"),
@@ -258,6 +259,8 @@ pub fn DocsNav(open: Signal<bool>) -> Element {
 
     rsx! {
         Sidebar {
+            // What the header's `Burger` names in its `aria-controls`.
+            id: "docs-nav",
             side: "left",
             role: "navigation",
             sx: nav_responsive_sx(open()),

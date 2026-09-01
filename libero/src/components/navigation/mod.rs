@@ -1,4 +1,5 @@
 mod anchor;
+mod burger;
 mod carousel;
 mod internal_anchor;
 mod nav_link;
@@ -7,6 +8,7 @@ mod tabs;
 mod tree;
 
 pub use anchor::{Anchor, AnchorUnderline};
+pub use burger::{Burger, BurgerProps};
 pub use carousel::{Carousel, CarouselAlign, CarouselProps};
 pub(crate) use internal_anchor::InternalAnchor;
 pub use nav_link::NavLink;

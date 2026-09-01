@@ -5,7 +5,7 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Container, Flex, Header, Image, ScrollArea, Title},
+    components::{Burger, Container, Flex, Header, Image, ScrollArea, Title},
     sx::sx,
     theme::{HEADER_HEIGHT, Size},
 };
@@ -15,13 +15,11 @@ mod icons;
 mod nav;
 mod pages;
 
-use icons::BurgerIcon;
-
 use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, AvatarPage, BadgePage,
-    BlockquotePage, BoxPage, ButtonPage, CarouselPage, CenterPage, CheckboxPage, ChipPage,
-    CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
+    BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage, CenterPage, CheckboxPage,
+    ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
     ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage, DividerPage,
     DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
     FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage, ImagePage,
@@ -168,6 +166,8 @@ pub(crate) enum Route {
     #[route("/layout/splitter")]
     SplitterPage {},
 
+    #[route("/navigation/burger")]
+    BurgerPage {},
     #[route("/navigation/carousel")]
     CarouselPage {},
     #[route("/navigation/anchor")]
@@ -237,19 +237,25 @@ fn AppShell() -> Element {
             Header {
                 color: "primary",
                 sx: sx().gap("md"),
-                ActionIcon {
-                    aria_label: if open() { "Close navigation" } else { "Open navigation" },
+                Burger {
+                    opened: open(),
+                    "aria-controls": "docs-nav",
                     onclick: move |_| open.set(!open()),
-                    // No `variant`/`color` prop - ActionIcon then contributes
-                    // no background/color/hover of its own (same reasoning
-                    // as `Code`'s copy button), so this `sx` is the only
-                    // thing controlling its look. Needed here specifically:
-                    // the shade-based hover `variant`/`color` would compute
-                    // (tinting `color` a shade lighter) is a no-op on white -
-                    // there's no lighter shade of white, so it rendered as a
-                    // solid white box instead of a subtle hover. A
-                    // translucent white overlay is the actual right look for
-                    // a light control against Header's solid primary banner.
+                    // No `variant`/`color` prop - the underlying ActionIcon
+                    // then contributes no background/color/hover of its own
+                    // (same reasoning as `Code`'s copy button), so this `sx`
+                    // is the only thing controlling its look. Needed here
+                    // specifically: the shade-based hover `variant`/`color`
+                    // would compute (tinting `color` a shade lighter) is a
+                    // no-op on white - there's no lighter shade of white, so
+                    // it rendered as a solid white box instead of a subtle
+                    // hover. A translucent white overlay is the actual right
+                    // look for a light control against Header's solid
+                    // primary banner.
+                    //
+                    // `color` stays an `sx` rather than the `color` prop: the
+                    // bars fall back to `currentColor`, so one declaration
+                    // still drives them.
                     sx: sx()
                         .color("white")
                         .hover(sx().background("rgba(255, 255, 255, 0.15)"))
@@ -258,7 +264,6 @@ fn AppShell() -> Element {
                         // mobile drawer can never actually be open at
                         // desktop widths.
                         .breakpoint(Size::Sm, sx().display("none")),
-                    BurgerIcon {}
                 }
                 Flex {
                     direction: "row",

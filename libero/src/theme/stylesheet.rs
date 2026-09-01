@@ -94,6 +94,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         divider,
         splitter,
         blockquote,
+        burger,
         button,
         chip,
         badge,
@@ -185,6 +186,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(divider.to_css_declarations());
     declarations.extend(splitter.to_css_declarations());
     declarations.extend(blockquote.to_css_declarations());
+    declarations.extend(burger.to_css_declarations());
     declarations.extend(button.to_css_declarations());
     declarations.extend(chip.to_css_declarations());
     declarations.extend(badge.to_css_declarations());

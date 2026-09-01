@@ -5,6 +5,7 @@ mod autocomplete;
 mod avatar;
 mod badge;
 mod blockquote;
+mod burger;
 mod button;
 mod carousel;
 mod center;
@@ -81,6 +82,10 @@ pub use blockquote::{
     BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR, BLOCKQUOTE_BORDER_WIDTH,
     BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BLOCKQUOTE_PADDING_X, BLOCKQUOTE_PADDING_Y,
     BlockquoteDefaults, BlockquoteSizeLevel,
+};
+pub use burger::{
+    BURGER_COLOR, BURGER_LINE_SIZE, BURGER_RADIUS, BURGER_SIZE, BURGER_SIZES,
+    BURGER_TRANSITION_DURATION, BURGER_TRANSITION_TIMING, BurgerDefaults, BurgerLabels,
 };
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
