@@ -69,13 +69,14 @@ fn layer_stack() -> LayerStack {
 /// element handler for the press in the whole document, and it hands the veto
 /// to whichever subscriber ran first, which is not layer order.
 ///
-/// **A layer may only be on this stack if its transport reaches every press it
-/// would have to answer.** `Modal` qualifies with a bubbled subtree
-/// `onkeydown`, because everything inside a modal is inside that subtree and a
-/// modal has nothing outside itself to answer for. `use_dismiss` does not,
-/// unless it has the document-level transport: a pointer-opened box leaves
-/// focus outside itself, so its own handler would never fire and the press
-/// would reach a `Modal` that then declined as not-top. See [`use_dismiss`].
+/// **A layer may push only if it hears Escape at least as widely as any layer it
+/// may sit above.** The condition is relative, not absolute: `Modal` qualifies
+/// with nothing but a bubbled subtree `onkeydown`, because it is the bottom
+/// layer and the fallback, so there is nothing beneath it whose presses it
+/// could swallow. `use_dismiss` off the web does not qualify - it would sit
+/// above a `Modal` while hearing strictly less than the `Modal` does, and a
+/// pointer-opened box leaves focus outside itself, so the press it silenced by
+/// being top is one its own handler never receives. See [`use_dismiss`].
 #[derive(Clone, Copy)]
 pub(crate) struct DismissLayer {
     id: LayerId,
@@ -284,6 +285,12 @@ impl DismissHandle {
         // legitimately be registered twice - a submenu that closes and reopens
         // against a parent that never unmounted - and removing by handle on the
         // first `Drop` would unregister the live registration too.
+        //
+        // **Nothing subscribes to either signal**, and nothing should: this is
+        // called from a `use_hook`, so it writes during a render, and a
+        // subscriber would turn that write into a re-render loop. `holds_focus`
+        // reads `inside` with `peek` for the same reason. The `also_inside`
+        // field this replaced carried the same note.
         let mut next = self.inside_next;
         let id = *next.peek();
         next.set(id + 1);

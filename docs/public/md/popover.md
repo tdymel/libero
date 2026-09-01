@@ -149,10 +149,11 @@ popover.show(opened().then(|| dropdown
     .render(HtmlTag::Div, dismiss.floating_events(), rsx! { .. })));
 ```
 
-`placed` sits beside `open` rather than inside `DismissOptions` because it is
-reactive per-render state, not configuration. A reactive value hidden in an
-options struct eventually gets read once and goes stale, and the failure is
-silent: the box never receives focus and nothing errors.
+`placed` is a parameter rather than a `DismissOptions` field because the
+dangerous value is the default one. Defaulted to `true`, a consumer who simply
+forgot it would get the very trap the input exists to prevent: `focus()` on the
+pre-placement box returns `Ok(())` and moves nothing, with nothing to catch. As
+a parameter it cannot be forgotten.
 
 Escape is arbitrated rather than claimed. Every open dismissible layer - a
 popover, and a [Modal](modal.md) too - is on one stack ordered by open time,
