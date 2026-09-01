@@ -1159,13 +1159,18 @@ mod tests {
     /// The other side, and the control property the amended push rule exists
     /// for.
     ///
-    /// The press lands outside the region - focus on the trigger, which is
-    /// every `initial_focus: None` consumer - so the region's own handler never
-    /// fires. `platform::keyboard()` is `None` here, so the region is not on
-    /// the stack either, and the `Modal` is therefore top and closes. If the
-    /// region had pushed without a transport that could hear this press, the
-    /// modal would have declined as not-top and Escape would have done nothing
-    /// at all, where today it closes the modal.
+    /// The press lands **elsewhere in the modal, not on the trigger** - focus on
+    /// some other control the modal holds - so neither of the region's handlers
+    /// fires. Focus on the trigger is the *neighbouring* test's scenario, and
+    /// since `anchor_events()` landed that case closes the region rather than
+    /// reaching the modal; a comment pointing at it here would claim this
+    /// control property covers something it does not.
+    ///
+    /// `platform::keyboard()` is `None` here, so the region is not on the stack
+    /// either, and the `Modal` is therefore top and closes. If the region had
+    /// pushed without a transport that could hear this press, the modal would
+    /// have declined as not-top and Escape would have done nothing at all,
+    /// where today it closes the modal.
     #[test]
     fn a_layer_that_cannot_hear_escape_never_wedges_the_modal() {
         dioxus::html::set_event_converter(Box::new(EscapeConverter));
