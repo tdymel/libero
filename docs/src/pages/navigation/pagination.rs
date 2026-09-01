@@ -195,6 +195,17 @@ pub fn PaginationPage() -> Element {
                     "search a subtree. Where it cannot - a webview, where neither is available "
                     "- nothing moves and nothing else changes."
                 }
+                Text {
+                    "Shrinking "
+                    Code { source: "total" }
+                    " is yours to handle, not the component's. A filter that takes a listing "
+                    "from 40 pages to 3 destroys most of the page buttons, and if focus was on "
+                    "one of them it falls to the document - nothing was clicked, so there is "
+                    "nothing owing and no way to know a control rendered last time has gone. "
+                    "If you narrow a result set while a pagination is on screen, move focus "
+                    "yourself: to the filter the user just used, or to the heading above the "
+                    "results."
+                }
             }
         }
     }
