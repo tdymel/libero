@@ -173,9 +173,18 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub(crate) enum Dismissal {
     /// Escape heard by one of *our own* element handlers, or the consumer
-    /// telling us an item was chosen. Focus was inside the box or on the
-    /// trigger - an element handler is how we heard about it at all - and the
-    /// element under it is about to disappear, so focus goes back.
+    /// telling us an item was chosen. Focus goes back either way, for two
+    /// different reasons.
+    ///
+    /// For Escape it is evidence: an element handler only fires when focus is
+    /// inside the box or on the trigger, so hearing the press that way *is* the
+    /// proof, and no predicate is needed.
+    ///
+    /// For a selection it is not. Clicking a non-focusable item moves focus
+    /// nowhere, so focus may well be outside. Focus goes back because the box
+    /// is going away and the trigger is where the user was - which is what APG
+    /// asks for after a menu item is activated - not because focus is provably
+    /// inside.
     FromInside,
     /// Escape heard at the document, through
     /// [`KeyboardApi`](crate::platform::KeyboardApi). The press carries no
@@ -255,6 +264,10 @@ impl Drop for InsideGuard {
 pub(crate) struct DismissHandle {
     anchor: ElementHandle,
     floating: ElementHandle,
+    /// Needed because [`anchor_events`](DismissHandle::anchor_events) sits on
+    /// an element that exists whether the box is open or not. The floating box
+    /// asks nobody because it is simply not rendered when closed.
+    open: bool,
     onclose: Option<Callback<()>>,
     focus_return: FocusReturn,
     layer: DismissLayer,
@@ -320,8 +333,10 @@ impl DismissHandle {
     }
 
     /// Closes deliberately, handing focus back - for a consumer whose item was
-    /// chosen. Focus is inside the box by construction when an item is chosen,
-    /// which is why this takes the same path as an Escape we heard ourselves.
+    /// chosen. Focus goes back because the box is about to disappear and the
+    /// trigger is where the user was, not because focus is provably inside:
+    /// clicking a non-focusable item moves focus nowhere. See
+    /// [`Dismissal::FromInside`].
     pub(crate) fn dismiss(&self) {
         self.close(Dismissal::FromInside);
     }
@@ -342,9 +357,18 @@ impl DismissHandle {
     /// has focus hears the press, stops it, and closes. They cannot both fire,
     /// because the box is not a descendant of the trigger, and where it is the
     /// box's own `stop_propagation` settles it.
+    ///
+    /// **Empty while the box is closed.** The trigger outlives the box, so
+    /// unlike [`floating_events`](Self::floating_events) this listener would
+    /// otherwise stay live with nothing open behind it - and its
+    /// `stop_propagation` would swallow Escape for whatever *is* open. A closed
+    /// popover inside a `Modal`, with focus on its trigger, would make Escape
+    /// dead for as long as focus sat there: a layer that is not even open
+    /// wedging one that is, which is the thing the layer stack exists to
+    /// prevent arriving through a third door.
     pub(crate) fn anchor_events(&self) -> Vec<Attribute> {
         let mut events = Vec::new();
-        if self.escape && !self.global {
+        if self.open && self.escape && !self.global {
             events.push(self.escape_listener());
         }
         events
@@ -569,6 +593,7 @@ pub(crate) fn use_dismiss(
     let handle = DismissHandle {
         anchor,
         floating,
+        open,
         onclose,
         focus_return,
         layer,
@@ -718,6 +743,11 @@ mod tests {
     struct FindKeydownListeners {
         last: Option<ElementId>,
         keydown: Vec<ElementId>,
+        /// The element carrying `id="trigger"`, so a press can be dispatched at
+        /// it even when it has no listener of its own - which is exactly the
+        /// state `a_closed_box_does_not_swallow_escape_from_the_modal_around_it`
+        /// is about.
+        trigger: Option<ElementId>,
     }
 
     impl WriteMutations for FindKeydownListeners {
@@ -743,7 +773,14 @@ mod tests {
         fn replace_with(&mut self, _m: usize) {}
         fn insert_after(&mut self, _m: usize) {}
         fn insert_before(&mut self, _m: usize) {}
-        fn set_attribute(&mut self, _n: &str, _ns: Option<&str>, _v: &AttributeValue) {}
+        fn set_attribute(&mut self, n: &str, _ns: Option<&str>, v: &AttributeValue) {
+            if n == "id"
+                && let AttributeValue::Text(value) = v
+                && value == "trigger"
+            {
+                self.trigger = self.last;
+            }
+        }
         fn set_text(&mut self, _value: &str) {}
         fn remove_event_listener(&mut self, _name: &str) {}
         fn remove(&mut self) {}
@@ -1064,7 +1101,12 @@ mod tests {
         // The trigger renders first, so the box is always the *last* keydown
         // listener and the trigger the one before it.
         rsx! {
-            {trigger.element(&anchor).render(HtmlTag::Button, dismiss.anchor_events(), rsx! { "open" })}
+            {
+                trigger
+                    .element(&anchor)
+                    .attr("id", "trigger")
+                    .render(HtmlTag::Button, dismiss.anchor_events(), rsx! { "open" })
+            }
             if open() {
                 {style.element(&floating).render(HtmlTag::Div, dismiss.floating_events(), rsx! { "region" })}
             }
@@ -1190,6 +1232,68 @@ mod tests {
             state(&dom),
             "state: region=false",
             "Escape on the trigger should close the box"
+        );
+    }
+
+    /// Karen3's block 11: a **closed** popover must not swallow Escape for
+    /// whatever is open behind it.
+    ///
+    /// The trigger outlives the box, so its listener has to ask whether the box
+    /// is open - the floating box never has to, because it is not rendered when
+    /// closed. Without the guard the trigger's `stop_propagation` eats the
+    /// press and the enclosing `Modal` never hears it, so Escape is dead for as
+    /// long as focus sits on a closed popover's trigger. A layer that is not
+    /// even open wedging one that is.
+    #[test]
+    fn a_closed_box_does_not_swallow_escape_from_the_modal_around_it() {
+        #[component]
+        fn Shut(modal: Signal<bool>) -> Element {
+            let region = use_signal(|| false);
+            rsx! {
+                Modal { onclose: move |_| { let mut modal = modal; modal.set(false); },
+                    Region { open: region }
+                }
+            }
+        }
+
+        fn app() -> Element {
+            let modal = use_signal(|| true);
+
+            rsx! {
+                LiberoProvider {
+                    if modal() {
+                        Shut { modal }
+                    }
+                }
+                "state: modal={modal}"
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+
+        // The modal's root and its focus trap, and nothing else: a closed box
+        // contributes no listener at all. This is the discriminating
+        // assertion - before the fix there were three.
+        assert_eq!(
+            find.keydown.len(),
+            2,
+            "a closed box should contribute no keydown listener, got {:?}",
+            find.keydown
+        );
+        // Dispatched at the trigger even though it has no listener, because
+        // that is where focus is in the scenario and dioxus bubbles from there.
+        let trigger = find.trigger.expect("the trigger element");
+        assert_eq!(state(&dom), "state: modal=true");
+
+        press(&mut dom, trigger);
+        assert_eq!(
+            state(&dom),
+            "state: modal=false",
+            "a closed box must let the press through to the modal"
         );
     }
 
