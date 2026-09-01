@@ -453,9 +453,6 @@ struct Nav {
     first: usize,
     last: usize,
     onindexchange: Option<EventHandler<usize>>,
-    /// Whether the caller is driving `index`. Only then is there a second
-    /// party holding an index that a clamp has to resolve with.
-    controlled: bool,
     /// Slides cloned onto each end so a looping strip has something to scroll
     /// into past either edge. Zero when not looping.
     clones: usize,
@@ -497,30 +494,18 @@ impl Nav {
         }
     }
 
-    /// Pulls both indices into the reachable window, reporting whether it had
-    /// to. No scroll: at rest the strip is already showing the slide this
-    /// corrects to - the reading was wrong, not the position.
-    fn pull_into_range(mut self) -> bool {
+    /// Pulls both indices into the reachable window. No scroll: at rest the
+    /// strip is already showing the slide this corrects to - the reading was
+    /// wrong, not the position. And no callback: an uncontrolled carousel has
+    /// no second party holding a wrong value, and a controlled one is told by
+    /// the effect that reads its `index`.
+    fn pull_into_range(mut self) {
         let held = *self.current.peek();
         let clamped = self.clamp_index(held);
-        if clamped == held {
-            return false;
+        if clamped != held {
+            self.current.set(clamped);
+            self.settled.set(clamped);
         }
-        self.current.set(clamped);
-        self.settled.set(clamped);
-        // Only for a controlled caller. That is where the permanent
-        // disagreement lives - it pushes the unreachable index back on every
-        // render and the clamp undoes it on every render, and nothing
-        // converges until one side speaks. An uncontrolled carousel has no
-        // second party holding a wrong value, and `onindexchange` documents
-        // itself as a scroll, control, key, indicator or autoplay event, none
-        // of which a mount-time clamp is.
-        if self.controlled
-            && let Some(handler) = &self.onindexchange
-        {
-            handler.call(clamped);
-        }
-        true
     }
 
     fn go_to(mut self, index: usize) {
@@ -708,7 +693,6 @@ pub fn Carousel(props: CarouselProps) -> Element {
         first,
         last,
         onindexchange: props.onindexchange,
-        controlled: props.index.is_some(),
         clones,
     };
 
@@ -742,12 +726,23 @@ pub fn Carousel(props: CarouselProps) -> Element {
         // slide `clones` positions in, and the clamp has to be the same one
         // `go_to` uses or a controlled index is legal through one path and
         // silently trimmed through the other.
-        let index = nav.clamp_index(index);
+        let asked = index;
+        let index = nav.clamp_index(asked);
         if index != *current.peek() {
             current.set(index);
             settled.set(index);
         }
         nav.scroll_to_raw(nav.raw_for(index));
+        // The caller is holding an index that cannot be shown, so say which
+        // one is - here, where every such index arrives, and not only at
+        // mount. Otherwise it pushes the unreachable value back on every
+        // render, the clamp undoes it on every render, and the two disagree
+        // until something else moves the carousel.
+        if index != asked
+            && let Some(handler) = &nav.onindexchange
+        {
+            handler.call(index);
+        }
     }));
 
     let running = props.autoplay && !paused() && !hovered() && !focused() && count > 1;

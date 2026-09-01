@@ -1309,6 +1309,52 @@ fn an_uncontrolled_carousel_reports_no_index_change_on_mount() {
     assert!(body(&render(controlled)).contains("calls: 1"));
 }
 
+/// A controlled index that leaves the window *after* mount is clamped like one
+/// that starts outside it, and the caller has to hear about it the same way -
+/// or it goes on holding 5 while the carousel shows 4.
+#[test]
+fn a_controlled_index_pushed_out_of_the_window_later_is_reported_back() {
+    #[component]
+    fn Driven() -> Element {
+        // In the window (1..=4) at mount, so the mount-time clamp is not what
+        // this sees.
+        let mut index = use_signal(|| 3usize);
+        let mut reported = use_signal(Vec::<usize>::new);
+        use_effect(move || index.set(5));
+
+        rsx! {
+            div { "holding: {index}, reported: {reported:?}" }
+            Carousel {
+                aria_label: "Photos",
+                per_view: 3.0,
+                align: "center",
+                index: index(),
+                onindexchange: move |next| {
+                    reported.write().push(next);
+                    index.set(next);
+                },
+                slides: (0..6).map(|i| rsx! { div { "slide {i}" } }).collect(),
+            }
+        }
+    }
+
+    fn app() -> Element {
+        rsx! { LiberoProvider { Driven {} } }
+    }
+
+    // Its own dom rather than `render`, which stops after one pass: this
+    // needs the effect, the re-render it causes, the carousel's answer and the
+    // re-render after that.
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    for _ in 0..6 {
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+    let html = body(&dioxus_ssr::render(&dom));
+
+    assert!(html.contains("holding: 4, reported: [4]"), "{html}");
+}
+
 /// The roving `tabindex` moves focus by looking the new dot up by id, so the
 /// ids have to be on the dots and have to match what the lookup builds. If they
 /// were not, focus would silently never move and only the comment would say
