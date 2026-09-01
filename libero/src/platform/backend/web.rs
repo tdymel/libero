@@ -279,8 +279,10 @@ impl ElementApi for WebElement {
     }
 
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
-        self.element.set_scroll_left(x as i32);
-        self.element.set_scroll_top(y as i32);
+        // One call, not `scrollLeft` then `scrollTop`: under
+        // `scroll-behavior: smooth` the second write starts a new scroll from
+        // the current position and replaces the first, so nothing moves.
+        self.element.scroll_to_with_x_and_y(x, y);
         Ok(())
     }
 
