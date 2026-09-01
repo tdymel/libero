@@ -1,0 +1,118 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::str_enum::str_enum;
+use crate::sx::{Sx, sx};
+
+use crate::theme::{CssVar, Size, SizeCss, Sizes};
+
+pub const TIMELINE_COLOR: CssVar = CssVar::new("--lsx-timeline-color");
+pub const TIMELINE_LINE_COLOR: CssVar = CssVar::new("--lsx-timeline-line-color");
+pub const TIMELINE_LINE_WIDTH: CssVar = CssVar::new("--lsx-timeline-line-width");
+pub const TIMELINE_BULLET_BACKGROUND: CssVar = CssVar::new("--lsx-timeline-bullet-background");
+
+pub const TIMELINE_BULLET_SIZE: SizeCss = SizeCss::new("--lsx-timeline-bullet-size-");
+pub const TIMELINE_GAP: SizeCss = SizeCss::new("--lsx-timeline-gap-");
+
+// The picked level of each axis, resolved on the root so the `<li>`s and the
+// bullets - which carry no `data-state` of their own - inherit it. The
+// `Slider` inherited-var trick.
+pub const TIMELINE_BULLET: CssVar = CssVar::new("--lsx-timeline-bullet");
+pub const TIMELINE_SPACE: CssVar = CssVar::new("--lsx-timeline-space");
+pub const TIMELINE_RADIUS: CssVar = CssVar::new("--lsx-timeline-radius");
+
+// Resolved per item rather than per timeline, so one `::before` rule serves
+// every line style and every active state instead of one rule per
+// combination. The `<li>` sets the first from its own `TimelineLine`; the
+// other two flip on the item's `data-state`.
+pub const TIMELINE_LINE_STYLE: CssVar = CssVar::new("--lsx-timeline-line-style");
+pub const TIMELINE_CONNECTOR: CssVar = CssVar::new("--lsx-timeline-connector");
+pub const TIMELINE_MARKER: CssVar = CssVar::new("--lsx-timeline-marker");
+
+str_enum! {
+    /// Which side of the rail an event's content sits on.
+    #[state_prefix = "align"]
+    pub enum TimelineAlign {
+        #[default]
+        Left = "left",
+        Right = "right",
+        /// Content alternates either side of a centred rail, collapsing to
+        /// `Left` when the timeline itself is too narrow for two columns.
+        ///
+        /// A variant rather than a second `alternate` prop: beside `align` it
+        /// would make `align: "right", alternate: true` expressible and
+        /// meaningless.
+        Alternate = "alternate",
+    }
+}
+
+/// The `data-state` token for the gap axis.
+///
+/// `const fn` because `States::with` needs a `&'static str`, and shared with
+/// [`TimelineDefaults::gap_sx`] so the rule and the token cannot drift.
+pub const fn gap_state_name(gap: Size) -> &'static str {
+    match gap {
+        Size::Xs => "gap-xs",
+        Size::Sm => "gap-sm",
+        Size::Md => "gap-md",
+        Size::Lg => "gap-lg",
+        Size::Xl => "gap-xl",
+        Size::Xxl => "gap-xxl",
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct TimelineDefaults {
+    pub align: TimelineAlign,
+    pub color: &'static str,
+    pub line_color: &'static str,
+    pub bullet_background: &'static str,
+    /// `Xl` is the dot; lower it for a squarer marker.
+    pub radius: Size,
+    pub bullet_size: Size,
+    pub bullet_sizes: Sizes<u16>,
+    pub line_width: u8,
+    pub gap: Size,
+    pub gaps: Sizes<u16>,
+}
+
+impl TimelineDefaults {
+    fn size_sx(size: Size) -> Sx {
+        sx().var(TIMELINE_BULLET, TIMELINE_BULLET_SIZE.value(size))
+    }
+
+    fn radius_sx(radius: Size) -> Sx {
+        sx().var(TIMELINE_RADIUS, SizeCss::RADIUS.value(radius))
+    }
+
+    /// Hand-rolled rather than a `per_gap` helper beside `per_size` and
+    /// `per_radius`: `Timeline` is the only component with a third
+    /// independent size axis, and adding one would mean a `Size` method and
+    /// an `Sx` method in two files another unit owns, for a single caller.
+    /// Promote it if a second component ever needs one - this is exactly what
+    /// `per_size` does underneath.
+    fn gap_sx(base: Sx) -> Sx {
+        Size::ALL.into_iter().fold(base, |acc, gap| {
+            acc.when(
+                gap_state_name(gap),
+                sx().var(TIMELINE_SPACE, TIMELINE_GAP.value(gap)),
+            )
+        })
+    }
+
+    pub fn theme_vars() -> Sx {
+        Self::gap_sx(sx().per_size(Self::size_sx).per_radius(Self::radius_sx))
+    }
+}
+
+impl ToCssDeclarations for TimelineDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        let mut declarations = self
+            .bullet_sizes
+            .to_css_declarations(TIMELINE_BULLET_SIZE, "px");
+        declarations.extend(self.gaps.to_css_declarations(TIMELINE_GAP, "px"));
+        declarations.push(TIMELINE_COLOR.declare(self.color));
+        declarations.push(TIMELINE_LINE_COLOR.declare(self.line_color));
+        declarations.push(TIMELINE_LINE_WIDTH.declare(format!("{}px", self.line_width)));
+        declarations.push(TIMELINE_BULLET_BACKGROUND.declare(self.bullet_background));
+        declarations
+    }
+}

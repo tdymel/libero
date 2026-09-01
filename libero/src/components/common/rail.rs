@@ -1,0 +1,104 @@
+//! The marker-and-connector geometry shared by a vertical rail: `Timeline`
+//! today, `Stepper`'s vertical arm next.
+//!
+//! **This is a shape contract, not a convenience.** The two components must
+//! not drift apart geometrically - a stepper and a timeline on the same page
+//! with different rail insets reads as a bug - so the formulae and the
+//! `::before` recipe live here once and both call in.
+//!
+//! Everything is taken as a **CSS length expression**, never a baked variable
+//! name: `Timeline` resolves `--lsx-timeline-*` and `Stepper` will resolve
+//! `--lsx-stepper-*`. Sharing geometry must not mean sharing a theme
+//! namespace, which would couple two components' theming for nothing.
+//!
+//! **On the formula.** The E4 plan quotes Mantine's
+//! `--offset: calc(bullet/2 + line/2)` as the single inset expression. That is
+//! not reproduced literally, because it is only correct relative to an origin
+//! the plan does not state, and the reference source was not reachable to
+//! check which one. Derived from our own box model instead: the marker's
+//! inline-start edge sits at the item's edge, so the rail's centreline is at
+//! `marker / 2`, and a connector of width `line` centred on it starts at
+//! `marker / 2 - line / 2`. `libero/tests/timeline.rs` asserts the emitted
+//! values, so the geometry is pinned by what it renders rather than by which
+//! formula was copied.
+
+use crate::sx::{Sx, sx};
+
+/// The lengths a rail is built from, each a CSS expression the caller has
+/// already resolved from its own theme vars.
+pub(crate) struct Rail {
+    /// Diameter of the bullet, dot or numbered marker.
+    pub marker: String,
+    /// Thickness of the connector.
+    pub line: String,
+    /// Space between two events, which is also how far the connector has to
+    /// reach past the bottom of its own item.
+    pub gap: String,
+    /// `border-left`'s value after the width - `"solid"`, `"dashed"`,
+    /// `"dotted"`, or a var reading a per-item override.
+    pub style: String,
+    /// The connector's colour, as a CSS expression.
+    pub color: String,
+}
+
+impl Rail {
+    /// Distance from the item's rail-side edge to the rail's centreline.
+    ///
+    /// The one expression the marker, the connector and the content inset all
+    /// derive from, so the three cannot drift. This is what `Stepper`
+    /// inherits.
+    pub fn center(&self) -> String {
+        format!("calc({} / 2)", self.marker)
+    }
+
+    /// Where a connector of width `line` has to start for its centre to land
+    /// on [`Rail::center`].
+    pub fn connector_start(&self) -> String {
+        format!("calc({} / 2 - {} / 2)", self.marker, self.line)
+    }
+
+    /// Where content sits, clear of the marker plus one space.
+    pub fn content_inset(&self, space: &str) -> String {
+        format!("calc({} + {space})", self.marker)
+    }
+
+    /// The connector, as an absolutely positioned `::before` on the item.
+    ///
+    /// It runs from the bottom of the marker to `calc(gap * -1)` - past the
+    /// item's own box and into the space before the next one - which is what
+    /// makes one continuous rail out of separate items. `border-left` rather
+    /// than a background, so `dashed` and `dotted` come free.
+    ///
+    /// `:not(:last-of-type)` rather than a token on the last item: a rail that
+    /// runs past its final marker points at nothing, and the selector needs no
+    /// help from the component to know which item is last.
+    pub fn connector_sx(&self, inset: RailInset) -> Sx {
+        let declarations = sx()
+            .content("\"\"")
+            .position("absolute")
+            .top(self.marker.clone())
+            .bottom(format!("calc({} * -1)", self.gap))
+            .with(
+                "border-left",
+                format!("{} {} {}", self.line, self.style, self.color),
+            );
+
+        let placed = match inset {
+            RailInset::Start => declarations.left(self.connector_start()),
+            RailInset::End => declarations.right(self.connector_start()),
+            // Centred: the rail is on the item's midline, so it backs itself
+            // off by its own half-width rather than by the marker's.
+            RailInset::Center => declarations.left(format!("calc(50% - {} / 2)", self.line)),
+        };
+
+        sx().selector("&:not(:last-of-type)::before", placed)
+    }
+}
+
+/// Which edge of the item the rail runs down.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum RailInset {
+    Start,
+    End,
+    Center,
+}
