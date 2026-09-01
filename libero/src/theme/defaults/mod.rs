@@ -52,6 +52,7 @@ mod tabs;
 mod text;
 mod text_field;
 mod textarea;
+mod timeline;
 mod title;
 mod tooltip;
 mod tree;
@@ -163,6 +164,12 @@ pub use text::{
 };
 pub use text_field::TextFieldDefaults;
 pub use textarea::TextareaDefaults;
+pub use timeline::{
+    TIMELINE_BULLET, TIMELINE_BULLET_BACKGROUND, TIMELINE_BULLET_BACKGROUND_DEFAULT,
+    TIMELINE_BULLET_SIZE, TIMELINE_COLOR, TIMELINE_CONNECTOR, TIMELINE_GAP, TIMELINE_LINE_COLOR,
+    TIMELINE_LINE_STYLE, TIMELINE_LINE_WIDTH, TIMELINE_MARKER, TIMELINE_RADIUS, TIMELINE_SPACE,
+    TimelineAlign, TimelineDefaults, gap_state_name,
+};
 pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,
     TitleDefaults, TitleSize,

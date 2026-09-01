@@ -119,6 +119,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ListPage {}, "List"),
                 page(Route::QrCodePage {}, "QrCode"),
                 page(Route::TablePage {}, "Table"),
+                page(Route::TimelinePage {}, "Timeline"),
             ],
         ),
         // Fields built on `use_field`. A component moves here when it is

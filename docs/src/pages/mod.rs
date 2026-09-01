@@ -11,7 +11,9 @@ mod typography;
 
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
-pub use data_display::{DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage};
+pub use data_display::{
+    DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage, TimelinePage,
+};
 pub use form::{
     AutocompletePage, CheckboxPage, ColorFieldPage, ColorPickerPage, ComboboxPage, DateFieldPage,
     DatePickerPage, FieldsetPage, FileFieldPage, FormGettingStartedPage, FormPage, MultiSelectPage,

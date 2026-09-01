@@ -29,6 +29,7 @@ fetch only the file you need.
 - [List](list.md): An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
+- [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
 
 ## Form
 

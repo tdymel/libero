@@ -105,6 +105,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         list,
         data_list,
         table,
+        timeline,
         tabs,
         titles,
         texts,
@@ -192,6 +193,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(list.to_css_declarations());
     declarations.extend(data_list.to_css_declarations());
     declarations.extend(table.to_css_declarations());
+    declarations.extend(timeline.to_css_declarations());
     declarations.extend(tabs.to_css_declarations());
     declarations.extend(titles.to_css_declarations());
     declarations.extend(texts.to_css_declarations());

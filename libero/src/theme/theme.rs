@@ -13,9 +13,10 @@ use super::{
     PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis,
     ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
     SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
-    TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults, TextFieldDefaults, TextSize,
-    TextareaDefaults, TimePickerDefaults, TimePickerVariant, TitleDefaults, TitleSize,
-    TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel, TextDefaults,
+    TextFieldDefaults, TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant,
+    TimelineAlign, TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement,
+    TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -81,6 +82,7 @@ pub struct Theme {
     pub list: ListDefaults,
     pub data_list: DataListDefaults,
     pub table: TableDefaults,
+    pub timeline: TimelineDefaults,
     pub tabs: TabsDefaults,
     pub tree: TreeDefaults,
     pub titles: TitleDefaults,
@@ -621,6 +623,18 @@ impl Theme {
             font_size: 14,
             border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
             hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        },
+        timeline: TimelineDefaults {
+            align: TimelineAlign::Left,
+            color: "primary.6",
+            line_color: "grey.3",
+            bullet_background: TIMELINE_BULLET_BACKGROUND_DEFAULT,
+            radius: Size::Xl,
+            bullet_size: Size::Md,
+            bullet_sizes: Sizes::new(12, 16, 20, 24, 28, 32),
+            line_width: 2,
+            gap: Size::Xl,
+            gaps: Sizes::new(12, 16, 24, 32, 40, 48),
         },
         tabs: TabsDefaults {
             size: Size::Md,
