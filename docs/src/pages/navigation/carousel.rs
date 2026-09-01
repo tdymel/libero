@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Carousel, Code, CodeBlock, Text},
+    components::{Box, Carousel, Code, CodeBlock, Kbd, List, ListItem, Text},
     sx::sx,
     use_theme,
 };
@@ -202,76 +202,27 @@ pub fn CarouselPage() -> Element {
             }
 
             DocSection {
-                title: "Looping",
-                Text {
-                    Code { source: "r#loop" }
-                    " wraps at both ends. A scroll container has no wrap of its own, so it is "
-                    "done the way it has always been done: enough slides are cloned onto each "
-                    "end for the strip to scroll a full viewport past either edge, and once the "
-                    "scroll settles on a clone the carousel jumps to the real slide showing the "
-                    "same thing, with smooth scrolling switched off for that one jump so nothing "
-                    "visibly rewinds."
-                }
-                Text {
-                    "The clones carry "
-                    Code { source: "aria-hidden" }
-                    " and no name, so the content is not announced twice, and the controls stop "
-                    "disabling because there is no longer an end to be at. The indicator strip "
-                    "goes back to one dot per slide."
-                }
-            }
-
-            DocSection {
                 title: "Accessibility",
-                Text {
-                    Code { source: "aria_label" }
-                    " is not optional: the root is a "
-                    Code { source: "role=\"region\"" }
-                    " with "
-                    Code { source: "aria-roledescription=\"carousel\"" }
-                    ", and an unnamed region is a landmark a screen reader user cannot tell "
-                    "apart from any other. Leaving it unset warns in the console."
-                }
-                Text {
-                    "The arrow keys belong to the track rather than to the carousel as a whole, "
-                    "so a slide may hold a text field and keep its own keys - the caret still "
-                    "moves, Home and End still work inside it, and the carousel does not advance "
-                    "underneath."
-                }
-                Text {
-                    "The track itself is the tab stop, because it is the scrollable region and "
-                    "that is how a keyboard user scrolls one. Arrow keys move a slide at a time, "
-                    "Home and End jump to the ends, and the indicator strip is a single tab stop "
-                    "whose arrows move both the focus and the slide. A control at either end goes "
-                    Code { source: "aria-disabled" }
-                    " but keeps its place in the tab order, so focus is never dropped."
-                }
-                Text {
-                    "A live region announces the settled slide - \"Slide 3 of 7\" - and not every "
-                    "scroll frame. Offscreen slides are deliberately not hidden: in a real scroll "
-                    "container they are reachable, and hiding them would remove content. A slide "
-                    "may hold focusable content, and tabbing into an offscreen one scrolls it into "
-                    "view, which settles the index the same way a swipe does - the announcement "
-                    "follows rather than desyncing, because the index comes from the scroll "
-                    "position rather than from intent."
-                }
-                Text {
-                    "With "
-                    Code { source: "autoplay" }
-                    ", the pause control is not optional and it is a real button, not a hover "
-                    "affordance: hovering does pause, and so does focus landing anywhere inside, "
-                    "but neither helps a touch user. While it is rotating unattended the live "
-                    "region is "
-                    Code { source: "aria-live=\"off\"" }
-                    " - an unprompted change is not worth interrupting a screen reader for - and "
-                    "it becomes polite again the moment it stops."
-                }
-                Text {
-                    "Dragging with a mouse is opt-in and does not exist for touch, on purpose: "
-                    "the swipe is already the platform's own scroll, and making the track a drag "
-                    "handle would need "
-                    Code { source: "touch-action: none" }
-                    ", which would take that away."
+                List {
+                    ListItem {
+                        "Set "
+                        Code { source: "aria_label" }
+                        ": it names the region."
+                    }
+                    ListItem {
+                        "The track is a tab stop. "
+                        Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
+                        " when vertical: previous and next. "
+                        Kbd { "Home" } " " Kbd { "End" } ": first and last."
+                    }
+                    ListItem {
+                        "The indicators are one tab stop with the same keys, and focus follows "
+                        "the slide."
+                    }
+                    ListItem {
+                        "Announces \"Slide 3 of 7\" once a move settles. Autoplay stays silent "
+                        "until it is paused - by its button, by hover or by focus."
+                    }
                 }
             }
         }

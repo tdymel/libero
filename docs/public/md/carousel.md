@@ -137,56 +137,12 @@ capture is unsupported on Blitz and on the WebView floor, so a mouse drag there
 loses the pointer once it leaves the track; touch and every other input are
 unaffected.
 
-## Looping
-
-`r#loop` wraps at both ends. A scroll container has no wrap of its own, so it
-is done the way it has always been done: enough slides are cloned onto each end
-for the strip to scroll a full viewport past either edge, and once the scroll
-settles on a clone the carousel jumps to the real slide showing the same thing,
-with smooth scrolling switched off for that one jump so nothing visibly
-rewinds.
-
-```rust
-Carousel { aria_label: "Offers", r#loop: true, slides: slides() }
-```
-
-The clones carry `aria-hidden` and no name, so the content is not announced
-twice. The controls stop disabling, because there is no longer an end to be at,
-and the indicator strip goes back to one dot per slide.
-
 ## Accessibility
 
-`aria_label` is not optional. The root is a `role="region"` with
-`aria-roledescription="carousel"`, and an unnamed region is a landmark a screen
-reader user cannot tell apart from any other. Leaving it unset falls back to
-the theme's `label` - a named region beats an unnamed one even when the name is
-generic - and warns, because a generic name is not the one you want.
-
-The track itself is the tab stop, because it is the scrollable region and that
-is how a keyboard user scrolls one - deliberately the opposite of `ScrollArea`,
-which opts out unless you ask. The arrow keys belong to the track rather than
-to the carousel as a whole, so **a slide may hold a text field and keep its own
-keys**: the caret still moves, Home and End still work inside it, and the
-carousel does not advance underneath. Nothing else bubbling out of the carousel
-is affected.
-
-| Key | Where | Action |
-|---|---|---|
-| `ArrowLeft` / `ArrowRight` | the track, horizontal | Previous / next slide |
-| `ArrowUp` / `ArrowDown` | the track, vertical | Previous / next slide |
-| `Home` / `End` | the track, the indicators | First / last slide |
-| `Arrow*` | the indicator strip | Moves the slide and the focus. Wraps only when the carousel does, so the strip and the track never disagree about whether this carousel loops |
-
-A control at either end goes `aria-disabled` but keeps its place in the tab
-order, so focus is never dropped there.
-
-A live region announces the settled slide - "Slide 3 of 7" - rather than every
-scroll frame. Offscreen slides are **not** hidden: in a real scroll container
-they are reachable, and hiding them would remove content. A slide may hold
-focusable content, and tabbing into an offscreen one scrolls it into view,
-which settles the index exactly as a swipe does - so the announcement follows
-rather than desyncing. That falls out of deriving the index from the scroll
-position rather than from intent.
+- Set `aria_label`: it names the region.
+- The track is a tab stop. `ArrowLeft` / `ArrowRight`, or `ArrowUp` / `ArrowDown` when vertical: previous and next. `Home` / `End`: first and last.
+- The indicators are one tab stop with the same keys, and focus follows the slide.
+- Announces "Slide 3 of 7" once a move settles. Autoplay stays silent until it is paused - by its button, by hover or by focus.
 
 ## Props
 
