@@ -74,6 +74,17 @@ impl Rail {
         format!("calc({} + {space})", self.marker)
     }
 
+    /// Where the marker starts in a **centred** rail, so that it straddles the
+    /// midline rather than sitting beside it.
+    ///
+    /// Paired with [`Rail::centred_content_inset`]: the marker's trailing edge
+    /// is at `50% + marker/2`, which is exactly where that inset begins
+    /// measuring its space from. Kept here rather than composed at the call
+    /// site so the two cannot be changed apart.
+    pub fn centred_marker_start(&self) -> String {
+        format!("calc(50% - {} / 2)", self.marker)
+    }
+
     /// The same clearance for a **centred** rail, where the marker straddles
     /// the midline: content starts a full half-marker past 50%, not at 50%.
     ///

@@ -156,7 +156,10 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
             sx().left("0").right("auto").container_query(
                 CONTAINER,
                 ALTERNATE_MIN,
-                sx().left(format!("calc(50% - {})", rail.center())),
+                // Through `Rail` for the same reason the inset is: this and
+                // `centred_content_inset` are two halves of one measurement,
+                // and C3's centred marker needs both.
+                sx().left(rail.centred_marker_start()),
             ),
         )
 });

@@ -173,6 +173,14 @@ fn the_centred_arm_clears_the_whole_half_marker() {
         !html.contains("padding-left:calc(50% + var(--lsx-spacing-md))"),
         "{html}"
     );
+    // The pairing, not just the inset: the marker starts a half-marker before
+    // the midline, so its trailing edge is exactly where the inset begins
+    // measuring its space from. Asserting one without the other would let the
+    // two drift apart while each still looked right.
+    assert!(
+        html.contains("left:calc(50% - var(--lsx-timeline-bullet) / 2)"),
+        "{html}"
+    );
 }
 
 /// The specificity trap this library keeps meeting: a container query adds no
