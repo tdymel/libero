@@ -218,6 +218,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "typography",
             "Typography",
             vec![
+                page(Route::BlockquotePage {}, "Blockquote"),
                 page(Route::CodePage {}, "Code"),
                 page(Route::CodeBlockPage {}, "CodeBlock"),
                 page(Route::KbdPage {}, "Kbd"),

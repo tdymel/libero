@@ -2,6 +2,7 @@ mod action_icon;
 mod anchor;
 mod aspect_ratio;
 mod autocomplete;
+mod blockquote;
 mod button;
 mod center;
 mod checkbox;
@@ -63,6 +64,11 @@ pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use autocomplete::AutocompleteDefaults;
+pub use blockquote::{
+    BLOCKQUOTE_BACKGROUND, BLOCKQUOTE_BORDER_COLOR, BLOCKQUOTE_BORDER_WIDTH,
+    BLOCKQUOTE_CITE_OPACITY, BLOCKQUOTE_COLOR, BLOCKQUOTE_PADDING_X, BLOCKQUOTE_PADDING_Y,
+    BlockquoteDefaults, BlockquoteSizeLevel,
+};
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,
 };

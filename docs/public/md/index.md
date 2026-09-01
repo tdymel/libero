@@ -103,6 +103,7 @@ fetch only the file you need.
 
 ## Typography
 
+- [Blockquote](blockquote.md): A quotation in a tinted frame with an accent bar, rendered as `figure` + `blockquote` + `figcaption` so the attribution sits outside the quote.
 - [Code](code.md): An inline `<code>` snippet, optionally syntax highlighted.
 - [CodeBlock](code_block.md): A `pre`-wrapped, multi-line code block with a line-number gutter, a copy button, a language header, optional diff rendering and line highlighting.
 - [Kbd](kbd.md): A single keyboard key, rendered as a real `<kbd>` and styled entirely from the theme.
