@@ -113,12 +113,13 @@ use_effect(move || {
 
 Closing is not the placement hook's business, so it lives beside it in
 `use_dismiss`: Escape, focus leaving the box, and handing focus back to
-whatever opened it. It renders nothing - it hands back two attributes to spread
-on the box you drew yourself.
+whatever opened it. It renders nothing - it hands back attributes to spread on
+the box you drew yourself and on its trigger, because off the web Escape reaches
+only the element that actually has focus.
 
 `use_dismiss` is internal while `Menu` is still finding its contract; the shape
 below is what it will be when it goes public. Until then a downstream dropdown
-writes the two handlers itself.
+writes the handlers itself, on both surfaces.
 
 ```rust
 let dismiss = use_dismiss(

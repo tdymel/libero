@@ -354,16 +354,17 @@ pub fn PopoverPage() -> Element {
                     "Closing is not the placement hook's business, so it lives beside it in "
                     Code { source: "use_dismiss" }
                     ": Escape, focus leaving the box, and handing focus back to whatever "
-                    "opened it. It renders nothing - it hands back two attributes to spread "
-                    "on the box you drew yourself."
+                    "opened it. It renders nothing - it hands back attributes to spread on "
+                    "the box you drew yourself and on its trigger, because off the web Escape "
+                    "reaches only the element that actually has focus."
                 }
                 Text {
                     Code { source: "use_dismiss" }
                     " is internal while "
                     Code { source: "Menu" }
                     " is still finding its contract; the shape below is what it will be when "
-                    "it goes public. Until then a downstream dropdown writes the two handlers "
-                    "itself."
+                    "it goes public. Until then a downstream dropdown writes the handlers "
+                    "itself, on both surfaces."
                 }
                 CodeBlock { source: DISMISS, language: "rust" }
                 Text {

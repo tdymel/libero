@@ -382,6 +382,19 @@ impl DismissHandle {
     /// This covers focus *inside the box*. Focus on the trigger is
     /// [`anchor_events`](Self::anchor_events), and a consumer that can leave
     /// focus there needs both.
+    ///
+    /// **Ungated, unlike `anchor_events`, and only because the box is rendered
+    /// only while open.** That is a property of the consumer, not of this hook:
+    /// `keepMounted` was declined, so nothing keeps a closed box in the tree
+    /// today. A consumer that starts keeping it mounted - an exit transition
+    /// through [`use_presence`](super::use_presence) holds the subtree for the
+    /// whole animation - has to stop spreading this first, or a box the user
+    /// has already dismissed keeps a live Escape handler whose
+    /// `stop_propagation` eats the press for the `Modal` behind it. Exactly the
+    /// defect `anchor_events` guards against, one door over, and it lands in
+    /// the same window as the accessibility-tree obligation: between close and
+    /// unmount the box is still mounted, still tabbable, still announced, and
+    /// would now still be eating Escape. Raised by Bob3 reviewing D1.
     pub(crate) fn floating_events(&self) -> Vec<Attribute> {
         let mut events = Vec::new();
 
