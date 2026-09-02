@@ -33,6 +33,10 @@ fetch only the file you need.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
 - [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.
 
+## Feedback
+
+- [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
+
 ## Form
 
 - [Getting Started](form_getting_started.md): How libero forms are meant to be built - specialized fields, composed parts, validators at each layer, typed paths from `#[derive(Fields)]` and binding.
