@@ -1,57 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, CodeBlock, FieldStatus, Fields, Flex, Form, PhoneField, Text},
+    components::{Code, FieldStatus, Flex, PhoneField, Text},
     sx::sx,
 };
-
-const FLAG_CODE: &str = r#"PhoneField {
-    label: "Mobile",
-    countries: vec!["DE".into(), "FR".into(), "IT".into(), "BE".into()],
-    // Drawn in the picker and in every row. The library ships none: an SVG
-    // sprite of every flag is ~44 KB gzipped, and emoji flags render as two
-    // letters on Windows.
-    flag: move |iso: String| rsx! { Tricolour { iso } },
-    value: phone(),
-    oninput: move |next| phone.set(next),
-}"#;
-
-const LABEL_CODE: &str = r#"PhoneField {
-    label: "Mobil",
-    // Called during render, so it can read a locale out of context.
-    country_label: move |iso: String| match iso.as_str() {
-        "DE" => "Deutschland".to_string(),
-        "FR" => "Frankreich".to_string(),
-        _ => iso,
-    },
-    countries: vec!["DE".into(), "FR".into()],
-}"#;
-
-const FORM_CODE: &str = r#"#[derive(Clone, PartialEq, Default, Fields)]
-struct Signup {
-    phone: String,
-}
-
-let signup = use_store(Signup::default);
-
-rsx! {
-    Form {
-        value: signup,
-        onsubmit: move |event: FormEvent| {
-            // One entry named "phone", and what it carries is the E.164 - the
-            // visible input has no name and contributes nothing.
-            posted.set(Some(event.values().iter().filter(|(name, _)| name == "phone").count()));
-        },
-        // No `oninput`: a path binds the number to the form's own value.
-        PhoneField { label: "Mobile", country: "DE", name: Signup::FIELDS.phone() }
-        Button { r#type: "submit", "Save" }
-    }
-}"#;
-
-#[derive(Clone, PartialEq, Default, Fields)]
-pub struct Signup {
-    pub phone: String,
-}
 
 /// Three bands, which is every flag this example needs and no more - the
 /// library ships none, so a caller draws their own.
@@ -85,38 +37,9 @@ fn Tricolour(iso: String) -> Element {
     }
 }
 
-/// A bound field with no handler of its own, so the form's value is the only
-/// place the number lives - and the submit shows what the browser would send.
-#[component]
-fn SignupForm() -> Element {
-    let signup = use_store(Signup::default);
-    let mut posted = use_signal(|| None::<usize>);
-
-    rsx! {
-        Form {
-            sx: sx().width("320px"),
-            value: signup,
-            onsubmit: move |event: FormEvent| {
-                posted.set(Some(event.values().iter().filter(|(name, _)| name == "phone").count()));
-            },
-            PhoneField {
-                label: "Mobile",
-                country: "DE",
-                placeholder: "30 123456",
-                name: Signup::FIELDS.phone(),
-            }
-            Button { r#type: "submit", "Save" }
-            if let Some(count) = posted() {
-                Text { "Posted {count} entry named \"phone\", and the form's own value holds \"{signup().phone}\"." }
-            }
-        }
-    }
-}
-
 #[component]
 pub fn PhoneFieldPage() -> Element {
     let mut value = use_signal(String::new);
-    let mut flagged = use_signal(String::new);
 
     rsx! {
         DocPage {
@@ -197,7 +120,7 @@ pub fn PhoneFieldPage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                     Control::toggle("country", ["us", "de", "fr"])
-                        .default("us")
+                        .default("de")
                         .labels(["US", "DE", "FR"])
                         .code(|_, values| {
                             vec![format!("country: \"{}\"", values.str("country").to_uppercase())]
@@ -229,125 +152,51 @@ pub fn PhoneFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("flag").default("true").code(|_, values| {
+                        match values.str("flag").as_str() {
+                            "true" => vec![
+                                "flag: move |iso: String| rsx! { Tricolour { iso } }".to_string(),
+                            ],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("country_select").default("true"),
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    PhoneField {
-                        sx: sx().width("320px"),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        country: values.str("country").to_uppercase(),
-                        label: (values.str("label") == "true").then(|| "Mobile".to_string()),
-                        description: (values.str("description") == "true")
-                            .then(|| "We only text you about deliveries.".to_string()),
-                        placeholder: (values.str("placeholder") == "true")
-                            .then(|| "213 373 4253".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("That looks short.".to_string()),
-                            "error" => FieldStatus::Error("Enter a phone number.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        country_select: values.str("country_select") == "true",
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
-                        value: value(),
-                        oninput: move |next| value.set(next),
+                render: move |values: DemoValues| {
+                    let flag: Option<Callback<String, Element>> = (values.str("flag") == "true")
+                        .then(|| Callback::new(move |iso: String| rsx! { Tricolour { iso } }));
+                    let e164 = value();
+                    rsx! {
+                        Flex { direction: "column", gap: "sm", align: "flex-start",
+                            PhoneField {
+                                sx: sx().width("320px"),
+                                size: values.str("size"),
+                                radius: values.str("radius"),
+                                country: values.str("country").to_uppercase(),
+                                label: (values.str("label") == "true").then(|| "Mobile".to_string()),
+                                description: (values.str("description") == "true")
+                                    .then(|| "We only text you about deliveries.".to_string()),
+                                placeholder: (values.str("placeholder") == "true")
+                                    .then(|| "213 373 4253".to_string()),
+                                status: match values.str("status").as_str() {
+                                    "warning" => FieldStatus::Warning("That looks short.".to_string()),
+                                    "error" => FieldStatus::Error("Enter a phone number.".to_string()),
+                                    _ => FieldStatus::Valid,
+                                },
+                                country_select: values.str("country_select") == "true",
+                                required: (values.str("required") == "true").then_some(true),
+                                disabled: (values.str("disabled") == "true").then_some(true),
+                                flag,
+                                value: value(),
+                                oninput: move |next| value.set(next),
+                            }
+                            // The E.164 that posts, beside the national text on screen.
+                            Text { size: "sm", "value: {e164:?}" }
+                        }
                     }
                 },
-            }
-            DocSection {
-                title: "What posts",
-                Text {
-                    "The visible input holds the text being edited, so it carries no "
-                    Code { source: "name" }
-                    " - it would post what is on screen. The E.164 posts through one hidden "
-                    "input of that name instead, the shape "
-                    Code { source: "Slider" }
-                    " and "
-                    Code { source: "PinField" }
-                    " already use. A "
-                    Code { source: "FieldName" }
-                    " built from a path also binds the number to the surrounding form's value, "
-                    "so a bound field needs no "
-                    Code { source: "oninput" }
-                    " of its own."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    SignupForm {}
-                    CodeBlock { language: "rust", source: FORM_CODE }
-                }
-            }
-            DocSection {
-                title: "Country names and flags",
-                Text {
-                    "The names come from the component's own table, in English. "
-                    Code { source: "country_label" }
-                    " overrides one during render, which is what lets it read a locale out of "
-                    "context - the library bundles no translations. "
-                    Code { source: "countries" }
-                    " narrows the list, in the order given."
-                }
-                Text {
-                    "No flags ship with the library. Emoji flags render as two letters on "
-                    "Windows, and an inline SVG sprite of every flag costs about 44 KB "
-                    "gzipped - a third of what route splitting won back in the bundle audit. "
-                    Code { source: "flag" }
-                    " is the hook for a caller who wants them, drawn in the picker and in "
-                    "every row."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    PhoneField {
-                        sx: sx().width("320px"),
-                        label: "Mobile",
-                        country: "DE",
-                        countries: vec![
-                            "DE".to_string(),
-                            "FR".to_string(),
-                            "IT".to_string(),
-                            "BE".to_string(),
-                        ],
-                        flag: move |iso: String| rsx! { Tricolour { iso } },
-                        value: flagged(),
-                        oninput: move |next| flagged.set(next),
-                    }
-                    CodeBlock { language: "rust", source: FLAG_CODE }
-                    CodeBlock { language: "rust", source: LABEL_CODE }
-                }
-            }
-            DocSection {
-                title: "Accessibility",
-                Text {
-                    "Two tab stops, on purpose. The "
-                    Code { source: "<input type=\"tel\">" }
-                    " is the labelled control, so the label names it with a plain "
-                    Code { source: "for" }
-                    " and the captions reach it through "
-                    Code { source: "aria-describedby" }
-                    ". The picker is the second: it is a real "
-                    Code { source: "<button>" }
-                    " and the only way to reach what it does, so a keyboard has to be able to "
-                    "land on it. With "
-                    Code { source: "country_select: false" }
-                    " the leading slot is a plain span and there is no extra stop."
-                }
-                Text {
-                    "Enter, Space and ArrowDown open the list; the arrows move the highlight, "
-                    "Enter picks, Escape closes, and both hand the focus back to the button. "
-                    "The list opens with a search box focused - 240 countries are not a list "
-                    "anyone scrolls - and while it is open that box owns "
-                    Code { source: "role=\"combobox\"" }
-                    " and "
-                    Code { source: "aria-activedescendant" }
-                    ", with the button keeping only "
-                    Code { source: "aria-haspopup" }
-                    " and "
-                    Code { source: "aria-expanded" }
-                    ". Nothing in the text input is intercepted: digits, Backspace and the "
-                    "arrows are all native, and the number is only regrouped once the field "
-                    "loses focus, because regrouping as it is typed would move the caret."
-                }
             }
         }
     }
