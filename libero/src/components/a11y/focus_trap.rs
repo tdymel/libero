@@ -7,8 +7,6 @@ use crate::{
     sx::{StaticSx, sx},
 };
 
-use super::visually_hidden::VISUALLY_HIDDEN_SX;
-
 /// `FocusTrap` wraps arbitrary consumer children, so the tab order has to
 /// exclude what a browser would never focus. The `:not(..)` tail drops
 /// `hidden`/`inert`/`aria-hidden` elements *and their descendants* - without
@@ -23,6 +21,21 @@ const FOCUSABLE_SELECTOR: &str = concat!(
 );
 
 static FOCUS_TRAP_SX: StaticSx = StaticSx::new(|| sx().display("contents"));
+
+/// The sr-only recipe, but `fixed` rather than `absolute`. `FocusTrap` is
+/// `display: contents` and so cannot host an absolute span; unhosted, focusing
+/// it scrolled the document 609px. A fixed box scrolls nothing into view.
+static INITIAL_FOCUS_SX: StaticSx = StaticSx::new(|| {
+    sx().position("fixed")
+        .width("1px")
+        .height("1px")
+        .padding("0")
+        .margin("-1px")
+        .overflow("hidden")
+        .clip_path("inset(50%)")
+        .white_space("nowrap")
+        .border_width("0")
+});
 
 fn focus_first(root: &ElementHandle) {
     let target = root
@@ -102,7 +115,7 @@ pub fn FocusTrapInitialFocus() -> Element {
     let mark_used = used.clone();
 
     use_box()
-        .framework_sx(&VISUALLY_HIDDEN_SX)
+        .framework_sx(&INITIAL_FOCUS_SX)
         .prepare()
         .attr("tabindex", if used.get() { "-1" } else { "0" })
         .attr("data-autofocus", true)

@@ -11,12 +11,12 @@ use libero::{
     components::{
         ActionIcon, Anchor, AspectRatio, Autocomplete, Box, Button, Carousel, Center, Chip, Code,
         CodeBlock, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, Container,
-        DataList, DataListItem, Dialog, Divider, FileField, Flex, Float, FocusTrap, Grid, GridArea,
-        GridItem, GridSpan, GridTemplate, GridZone, Header, Icon, Image, Kbd, List, ListItem, Mark,
-        MultiSelect, NativeSelect, NavLink, OptionLabel, Options, Overlay, Paper, QrCode,
-        RangeSlider, ScrollArea, SegmentedControl, Select, SelectionArgs, Sidebar, Slider,
-        SliderMark, SliderValue, Splitter, Table, Tabs, Text, Title, Tooltip, Tree, TreeItem,
-        TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
+        DataList, DataListItem, Dialog, Divider, FileField, Flex, Float, FocusTrap,
+        FocusTrapInitialFocus, Grid, GridArea, GridItem, GridSpan, GridTemplate, GridZone, Header,
+        Icon, Image, Kbd, List, ListItem, Mark, MultiSelect, NativeSelect, NavLink, OptionLabel,
+        Options, Overlay, Paper, QrCode, RangeSlider, ScrollArea, SegmentedControl, Select,
+        SelectionArgs, Sidebar, Slider, SliderMark, SliderValue, Splitter, Table, Tabs, Text,
+        Title, Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, VisuallyHidden, column, sp,
     },
     hooks::{DrawerOptions, ModalScope, use_drawer, use_modal},
     theme::{Color, Size},
@@ -1654,6 +1654,29 @@ fn focus_trap_renders_its_children() {
     let html = render(app);
 
     assert!(body(&html).contains("trapped"));
+}
+
+/// `FocusTrap` is `display: contents`, so nothing can host an absolute
+/// initial-focus span; a fixed one never makes the document scroll to it.
+#[test]
+fn focus_trap_initial_focus_is_fixed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FocusTrap {
+                    FocusTrapInitialFocus {}
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let span = classes_of(&html, "span");
+    assert!(
+        span.iter()
+            .any(|class| html.contains(&format!(".{class}{{position:fixed"))),
+        "{span:?}"
+    );
 }
 
 /// Two components with the same styling share one class and one emitted

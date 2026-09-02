@@ -124,6 +124,7 @@ properties! {
     ScrollbarWidth => "scrollbar-width", scrollbar_width;
     ScrollbarColor => "scrollbar-color", scrollbar_color;
     Clip => "clip", clip;
+    ClipPath => "clip-path", clip_path;
     ObjectFit => "object-fit", object_fit;
     BorderRadius => "border-radius", border_radius, SizeCss::RADIUS;
     BorderTopLeftRadius => "border-top-left-radius", border_top_left_radius, SizeCss::RADIUS;
