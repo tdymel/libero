@@ -67,8 +67,12 @@ impl<T> TreeNode<T> {
 /// Type-erased mirror of `TreeNode<T>`. The tree machinery is built against
 /// this so it compiles once instead of once per `T`; `label` is precomputed
 /// at erasure time, so nothing downstream needs `T: TreeLabel`.
+///
+/// `pub(crate)` rather than `pub(super)` since 2026-09-17: `form::cascader`
+/// reuses `TreeNode<T>` as its data vocabulary, so it needs the same erasure
+/// instead of a second one. A cross-category reach the layer order allows.
 #[derive(Clone)]
-pub(super) struct TreeNodeErased {
+pub(crate) struct TreeNodeErased {
     pub id: String,
     pub label: String,
     pub children: Vec<TreeNodeErased>,
@@ -77,7 +81,7 @@ pub(super) struct TreeNodeErased {
 }
 
 impl TreeNodeErased {
-    pub(super) fn has_children(&self) -> bool {
+    pub(crate) fn has_children(&self) -> bool {
         !self.children.is_empty()
     }
 }
@@ -94,7 +98,7 @@ impl PartialEq for TreeNodeErased {
     }
 }
 
-pub(super) fn erase_nodes<T: TreeLabel + Clone + 'static>(
+pub(crate) fn erase_nodes<T: TreeLabel + Clone + 'static>(
     nodes: &[TreeNode<T>],
 ) -> Vec<TreeNodeErased> {
     nodes

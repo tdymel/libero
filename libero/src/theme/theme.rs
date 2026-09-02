@@ -2,8 +2,8 @@ use super::{
     ActionIconDefaults, AnchorDefaults, AnchorUnderline, AspectRatioDefaults, AutocompleteDefaults,
     AvatarDefaults, AvatarGroupDefaults, BadgeDefaults, BadgeSizeLevel, BarPosition,
     BlockquoteDefaults, BlockquoteSizeLevel, BurgerDefaults, BurgerLabels, ButtonDefaults,
-    ButtonSizeLevel, CalendarVariant, CarouselAlign, CarouselDefaults, CenterDefaults,
-    CheckboxDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
+    ButtonSizeLevel, CalendarVariant, CarouselAlign, CarouselDefaults, CascaderDefaults,
+    CenterDefaults, CheckboxDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
     CollapseDefaults, Color, ColorFieldDefaults, ColorPickerDefaults, ColorPickerSizeLevel,
     ColorShade, ColorSwatchDefaults, ColorValue, ComboboxDefaults, ComboboxSizeLevel,
     ContainerDefaults, DataListDefaults, DateDefaults, DateFieldDefaults, DatePickerDefaults,
@@ -70,6 +70,7 @@ pub struct Theme {
     pub native_select: NativeSelectDefaults,
     pub select: SelectDefaults,
     pub multi_select: SelectDefaults,
+    pub cascader: CascaderDefaults,
     pub file_field: FileFieldDefaults,
     pub pin_field: PinFieldDefaults,
     pub phone_field: PhoneFieldDefaults,
@@ -552,6 +553,11 @@ impl Theme {
         tags_field: TagsFieldDefaults {
             size: Size::Md,
             radius: Size::Sm,
+        },
+        cascader: CascaderDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            column_width: "220px",
         },
         text_field: TextFieldDefaults {
             size: Size::Md,

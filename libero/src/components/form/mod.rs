@@ -1,5 +1,6 @@
 mod autocomplete;
 mod caption;
+mod cascader;
 mod checkbox;
 mod color;
 mod combobox;
@@ -32,6 +33,9 @@ pub use autocomplete::{
     Autocomplete, AutocompleteFilterArgs, AutocompleteOptionArgs, AutocompleteProps,
 };
 pub use caption::Caption;
+pub use cascader::{
+    Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderPick, CascaderProps,
+};
 pub use checkbox::{Checkbox, CheckboxProps};
 pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,

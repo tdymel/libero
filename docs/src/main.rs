@@ -18,10 +18,10 @@ mod pages;
 use nav::DocsNav;
 use pages::{
     ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, AvatarPage, BadgePage,
-    BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage, CenterPage, CheckboxPage,
-    ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage, ComboboxPage,
-    ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage, DividerPage,
-    DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
+    BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage, CascaderPage, CenterPage,
+    CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage,
+    ComboboxPage, ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage,
+    DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
     FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage,
     ImageListPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
     NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
@@ -107,6 +107,8 @@ pub(crate) enum Route {
     FormPage {},
     #[route("/form/multi-select")]
     MultiSelectPage {},
+    #[route("/form/cascader")]
+    CascaderPage {},
     #[route("/form/native-select")]
     NativeSelectPage {},
     #[route("/form/number-field")]

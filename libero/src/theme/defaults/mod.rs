@@ -8,6 +8,7 @@ mod blockquote;
 mod burger;
 mod button;
 mod carousel;
+mod cascader;
 mod center;
 mod checkbox;
 mod chip;
@@ -98,6 +99,7 @@ pub use carousel::{
     CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP, CAROUSEL_PER_VIEW, CAROUSEL_RADIUS,
     CarouselAlign, CarouselDefaults,
 };
+pub use cascader::CascaderDefaults;
 pub use center::{CENTER_DISPLAY, CenterDefaults};
 pub use checkbox::{CHECKBOX_BOX, CHECKBOX_BOX_SIZE, CHECKBOX_RADIUS, CheckboxDefaults};
 pub use chip::{CHIP_FONT_SIZE, CHIP_HEIGHT, CHIP_PADDING_X, ChipDefaults, ChipSizeLevel};

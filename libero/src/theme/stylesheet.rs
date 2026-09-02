@@ -155,6 +155,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         native_select: _,
         select: _,
         multi_select: _,
+        cascader: _,
         autocomplete: _,
         color_field: _,
         scroll_area: _,

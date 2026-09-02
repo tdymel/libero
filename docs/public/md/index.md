@@ -45,6 +45,7 @@ fetch only the file you need.
 - [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
 - [PinField](pin_field.md): A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
 - [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.
+- [Cascader](cascader.md): A field whose value is a path through a tree - the ids from root to leaf, picked column by column.
 - [Select](select.md): A listbox over an enum with libero's own rows, in the same field frame as every other input.
 - [MultiSelect](multi_select.md): A listbox over an enum that holds any number of its options, drawn as chips in the trigger.
 - [TagsField](tags_field.md): A field whose value is a `Vec<String>` of free-typed tags, drawn as chips with the editor between them.

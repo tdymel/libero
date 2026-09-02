@@ -145,6 +145,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::SelectPage {}, "Select"),
                 page(Route::MultiSelectPage {}, "MultiSelect"),
                 page(Route::TagsFieldPage {}, "TagsField"),
+                page(Route::CascaderPage {}, "Cascader"),
                 page(Route::NativeSelectPage {}, "NativeSelect"),
                 page(Route::ComboboxPage {}, "Combobox"),
                 page(Route::CheckboxPage {}, "Checkbox"),

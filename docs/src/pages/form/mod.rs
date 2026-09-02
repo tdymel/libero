@@ -1,4 +1,5 @@
 mod autocomplete;
+mod cascader;
 mod checkbox;
 mod color_field;
 mod color_picker;
@@ -27,6 +28,7 @@ mod text_field;
 mod textarea;
 
 pub use autocomplete::AutocompletePage;
+pub use cascader::CascaderPage;
 pub use checkbox::CheckboxPage;
 pub use color_field::ColorFieldPage;
 pub use color_picker::ColorPickerPage;

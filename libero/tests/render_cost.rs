@@ -77,6 +77,18 @@ macro_rules! shapes {
     };
 }
 
+/// One realistic three-level tree, built per instance the way a caller's would
+/// be - the erasure is part of what a `Cascader` costs.
+fn cost_tree() -> Vec<TreeNode<&'static str>> {
+    vec![
+        TreeNode::new("a", "A").children(vec![
+            TreeNode::new("a1", "A1").children(vec![TreeNode::new("a1x", "A1x")]),
+            TreeNode::new("a2", "A2"),
+        ]),
+        TreeNode::new("b", "B").children(vec![TreeNode::new("b1", "B1")]),
+    ]
+}
+
 #[derive(Clone, PartialEq, Default, Fields)]
 struct CostForm {
     text: String,
@@ -209,6 +221,10 @@ fn render_cost_per_component() {
         "FileField" { FileField { onchange: move |_| {} } }
         "FileField-dropzone" { FileField { onchange: move |_| {}, variant: "dropzone" } }
         "PinField+6" { PinField { oninput: move |_| {}, length: 6usize } }
+        // Closed: the columns are not rendered until it opens, and nothing can
+        // open one from a prop. The price of an *open* cascader is a browser
+        // measurement, not this table's.
+        "Cascader" { Cascader { data: cost_tree(), onchange: move |_: CascaderPick<&'static str>| {} } }
         "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
         "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
         "Radio" { Radio { checked: true, onselect: move |_| {} } }

@@ -14,7 +14,7 @@ use super::{dropdown::ComboboxDropdown, option::ComboboxContext};
 // `paper_sx()`: the `bordered` and `radius-{step}` tokens below are the ones
 // its folds answer. It renders through `use_box` rather than `Paper` because
 // it needs the popover's element handle and its own events.
-static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
+pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
     paper_sx()
         // Everything positional - `position`, `left`, `top`, `width` - comes
         // from `use_popover` as an inline style, measured per open.

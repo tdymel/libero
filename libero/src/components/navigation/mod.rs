@@ -20,3 +20,4 @@ pub use tree::{
     Tree, TreeItem, TreeItemProps, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps, TreeValue,
     default_tree_render,
 };
+pub(crate) use tree::{TreeNodeErased, erase_nodes};
