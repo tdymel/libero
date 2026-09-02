@@ -100,6 +100,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         button,
         chip,
         badge,
+        alert,
         switch,
         checkbox,
         radio,
@@ -196,6 +197,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(button.to_css_declarations());
     declarations.extend(chip.to_css_declarations());
     declarations.extend(badge.to_css_declarations());
+    declarations.extend(alert.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(checkbox.to_css_declarations());
     declarations.extend(radio.to_css_declarations());

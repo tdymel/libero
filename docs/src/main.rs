@@ -17,13 +17,13 @@ mod pages;
 
 use nav::DocsNav;
 use pages::{
-    ActionIconPage, AnchorPage, AspectRatioPage, AutocompletePage, AvatarPage, BadgePage,
-    BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage, CascaderPage, CenterPage,
-    CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage, ColorPickerPage,
-    ComboboxPage, ContainerPage, DataListPage, DateFieldPage, DatePickerPage, DialogPage,
-    DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage, FocusTrapPage,
-    FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage,
-    ImageListPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
+    ActionIconPage, AlertPage, AnchorPage, AspectRatioPage, AutocompletePage, AvatarPage,
+    BadgePage, BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage, CascaderPage,
+    CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage,
+    ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage, DatePickerPage,
+    DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage,
+    FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage,
+    IconPage, ImageListPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
     NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
     PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage,
     QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage,
@@ -83,6 +83,8 @@ pub(crate) enum Route {
     #[route("/data-display/qr-code")]
     QrCodePage {},
 
+    #[route("/feedback/alert")]
+    AlertPage {},
     #[route("/feedback/progress-bar")]
     ProgressBarPage {},
 

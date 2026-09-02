@@ -127,7 +127,10 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
         group(
             "feedback",
             "Feedback",
-            vec![page(Route::ProgressBarPage {}, "ProgressBar")],
+            vec![
+                page(Route::AlertPage {}, "Alert"),
+                page(Route::ProgressBarPage {}, "ProgressBar"),
+            ],
         ),
         // Fields built on `use_field`. A component moves here when it is
         // ported onto that pattern, not before. Ordered for reading, not

@@ -4,14 +4,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input,
+        Alert, HtmlTag, Input,
         common::base_props,
         form::{
             Binding, Source, Validators,
             handle::{Control, FormHandle, Summary},
             issues_of,
         },
-        layout::use_box,
+        layout::{Box, use_box},
     },
     hooks::use_element,
     platform::ElementApi,
@@ -28,23 +28,18 @@ static FORM_SX: StaticSx = StaticSx::new(|| {
     FormDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")
+});
+
+// The summary's list is `Form`'s content, not `Alert`'s chrome.
+static SUMMARY_LIST_SX: StaticSx = StaticSx::new(|| {
+    sx().margin("0")
+        .padding_left("20px")
+        // The line itself is the link: readable on the tint, no underline.
         .selector(
-            "& > [data-slot='summary']",
-            sx().border("1px solid")
-                .border_color("error.6")
-                .border_radius("sm")
-                .background("error.1")
-                .color("error-contrast.1")
-                .padding("12px 16px")
-                .selector("& ul", sx().margin("0").padding_left("20px"))
-                // The line itself is the link: readable on the tint, no underline.
-                .selector(
-                    "& a",
-                    sx().color("error-contrast.1")
-                        .text_decoration("none")
-                        .cursor("pointer"),
-                )
-                .selector("& > p", sx().margin("0 0 4px 0").font_weight("600")),
+            "& a",
+            sx().color("inherit")
+                .text_decoration("none")
+                .cursor("pointer"),
         )
 });
 
@@ -146,15 +141,16 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let items = summary.visible(&scope);
     let summary_node = (!items.is_empty()).then(|| {
         rsx! {
-            div {
+            Alert {
+                color: "error",
+                title: props.summary_title.clone(),
                 "data-slot": "summary",
+                // Over `Alert`'s own default, which is the same role - stated so
+                // the focus target below does not depend on that default.
                 role: "alert",
                 tabindex: "-1",
                 onmounted: summary_element.mount(),
-                if let Some(title) = &props.summary_title {
-                    p { "{title}" }
-                }
-                ul {
+                Box { component: HtmlTag::Ul, framework_sx: &SUMMARY_LIST_SX,
                     for item in items.iter() {
                         li {
                             match &item.target {

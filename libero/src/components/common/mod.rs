@@ -2,6 +2,7 @@ mod base_props;
 mod class_list;
 mod color_variant;
 mod field_props;
+mod icons;
 mod input;
 mod number_value;
 mod options;
@@ -19,6 +20,7 @@ pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, hover_color, selected_color, shade_color,
 };
 pub(crate) use field_props::field_props;
+pub(crate) use icons::CloseIcon;
 pub use input::Input;
 pub(crate) use input::input_from_str;
 pub use number_value::NumberValue;

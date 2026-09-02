@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, Box, Input, Paper, Title, Variables,
-        common::{attr, base_props},
+        common::{CloseIcon, attr, base_props},
         surface::paper_sx,
         variables,
     },
@@ -45,23 +45,6 @@ static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
 
 // Pushes a lone close button to the right, where a title would have left it.
 static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));
-
-fn close_icon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            width: "16px",
-            height: "16px",
-            path { d: "M18 6 6 18" }
-            path { d: "m6 6 12 12" }
-        }
-    }
-}
 
 fn dialog_variables(props: &DialogProps) -> Variables {
     variables()
@@ -154,7 +137,7 @@ pub fn Dialog(props: DialogProps) -> Element {
                                     modal.close();
                                 }
                             },
-                            {close_icon()}
+                            CloseIcon {}
                         }
                     }
                 }

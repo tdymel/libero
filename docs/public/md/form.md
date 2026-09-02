@@ -120,8 +120,8 @@ fn CheckButton() -> Element {
 
 The status joins the field's `aria-describedby`, and an error sets
 `aria-invalid`. Checking while someone types stays visual. The announcement
-happens on submit: the summary is a `role="alert"` that takes focus, reads every
-problem at once, and links each one to its field.
+happens on submit: the summary is an [`Alert`](alert.md) with `role="alert"`
+that takes focus, reads every problem at once, and links each one to its field.
 
 A form becomes a `form` landmark only once it has a name. Name it when the page
 holds more than one form, or when the form is the page's main task, like a
@@ -177,4 +177,5 @@ attribute - `action` and `method` among them.
 
 ## Data attributes
 
-The summary is `data-slot="summary"`.
+The summary is `data-slot="summary"`. It is an [`Alert`](alert.md) with
+`color: "error"`, so its tint, radius and padding are `AlertDefaults`'.

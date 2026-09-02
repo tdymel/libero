@@ -19,22 +19,11 @@ pub(super) fn ChevronIcon() -> Element {
     }
 }
 
-#[component]
-pub(super) fn CloseIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M18 6L6 18" }
-            path { d: "M6 6l12 12" }
-        }
-    }
-}
+// The x moved to `components/common/icons.rs`, which is where every glyph
+// lives from now on; `Alert`'s close button was the third module to need it.
+// Re-exported rather than re-pointed at eight call sites, so `glyphs::`
+// stays the one name a field imports.
+pub(super) use crate::components::common::CloseIcon;
 
 /// The dropzone's prompt. A tray with an arrow going into it, which is the
 /// shape every upload control has settled on.

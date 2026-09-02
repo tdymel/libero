@@ -1,4 +1,5 @@
 mod action_icon;
+mod alert;
 mod anchor;
 mod aspect_ratio;
 mod autocomplete;
@@ -70,6 +71,9 @@ mod tree;
 mod z_index;
 
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
+pub use alert::{
+    ALERT_BODY_GAP, ALERT_GAP, ALERT_ICON_SIZE, ALERT_PADDING, ALERT_RADIUS, AlertDefaults,
+};
 pub use anchor::{ANCHOR_COLOR, AnchorDefaults, AnchorUnderline};
 pub use aspect_ratio::{ASPECT_RATIO, AspectRatioDefaults};
 pub use autocomplete::AutocompleteDefaults;
