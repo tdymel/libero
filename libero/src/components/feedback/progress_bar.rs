@@ -93,9 +93,9 @@ fn fraction(value: f64, min: f64, max: f64) -> f64 {
 }
 
 /// The value `aria-valuenow` reports: clamped like the fill, because ARIA
-/// requires it to sit inside `min..=max`. A broken range reports the raw value
-/// - `clamp` panics on `min > max`, and `fraction` has already warned. `NaN`
-/// reports `min`, matching the empty fill it draws.
+/// requires it to sit inside `min..=max`. A broken range reports the raw value,
+/// because `clamp` panics on `min > max` and `fraction` has already warned.
+/// `NaN` reports `min`, matching the empty fill it draws.
 fn value_now(value: f64, min: f64, max: f64) -> f64 {
     if value.is_nan() {
         min
