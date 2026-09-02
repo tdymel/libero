@@ -1,6 +1,7 @@
 mod a11y;
 mod about;
 mod data_display;
+mod feedback;
 mod form;
 mod inputs;
 mod layout;
