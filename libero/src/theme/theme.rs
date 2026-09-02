@@ -292,7 +292,6 @@ impl Theme {
             // `xs`..`xl` are Mantine's own five, adopted exactly. `xxl`
             // continues the ramp past the widest step it offers.
             sizes: Sizes::new(12, 18, 24, 34, 42, 52),
-            radius: Size::Sm,
             transition_duration: "300ms",
             transition_timing: "ease",
             labels: BurgerLabels::ENGLISH,

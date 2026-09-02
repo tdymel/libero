@@ -10,8 +10,8 @@ use crate::{
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        BURGER_COLOR, BURGER_LINE_SIZE, BURGER_RADIUS, BURGER_SIZE, BURGER_SIZES,
-        BURGER_TRANSITION_DURATION, BURGER_TRANSITION_TIMING, Size, SizeCss,
+        BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
+        BURGER_TRANSITION_TIMING, Size, SizeCss,
     },
     utils::warn,
 };
@@ -120,8 +120,6 @@ base_props! {
         /// The bars. Unset, they are `currentColor`.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
         #[props(default)]
         disabled: Option<bool>,
     }
@@ -166,10 +164,6 @@ pub fn Burger(props: BurgerProps) -> Element {
 
     let glyph_size = props.size.resolve(Some(BURGER_SIZES));
     let button_size = button_size(glyph_size.as_ref());
-    let radius = props
-        .radius
-        .resolve(Some(SizeCss::RADIUS))
-        .unwrap_or_else(|| BURGER_RADIUS.value());
 
     // Both vars are declared on every render, never conditionally: a
     // `Variables` set that *shrinks* leaves the dropped custom property behind
@@ -214,7 +208,6 @@ pub fn Burger(props: BurgerProps) -> Element {
             },
             disabled: props.disabled,
             size: button_size,
-            radius,
             class: props.class,
             sx: props.sx,
             states: props.states,

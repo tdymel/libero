@@ -24,13 +24,7 @@ position, so snapping between them stays legible.
 | `label` | `Callback<bool, String>` | theme | Replaces the theme's two labels, keyed by `opened` |
 | `size` | `ThemeAwareValue` | `md` | The glyph's width and height; the bars are a twelfth of it thick, and the button is one `spacing.xs` larger |
 | `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset they inherit |
-| `radius` | `ThemeAwareValue` | `sm` | The button's corners, not the bars' |
 | `disabled` | `bool` | `false` | Passed through to the button |
-
-`aria-controls` is not a prop. It rides `GlobalAttributes` like every other
-attribute, so spread it - and do spread it whenever `opened` is set, or
-`Burger` warns: a disclosure that controls nothing is almost always an
-oversight.
 
 ## Usage
 
@@ -66,24 +60,35 @@ Focus stays on the burger when the panel opens. Moving it into the panel is the
 panel's decision - [`Drawer`](drawer.md) traps already, and a burger that opens
 a static sidebar must not steal focus.
 
-## Opening something that is not a disclosure
+## Accessibility
 
-Leave `opened` unset and no `aria-expanded` is emitted at all. A modal is not
-expanded by its trigger - it replaces the page - so claiming otherwise is worse
-than saying nothing. The glyph then stays three bars, which is honest: nothing
-has opened in place.
+The root is a real `<button type="button">`, so it is in the tab order and
+activates on Enter and on Space; `ActionIcon` draws the `:focus-visible` ring.
+The three facts `Burger` adds on top are the ones a hand-rolled burger misses.
+
+**`aria-expanded` follows `opened`, and is absent when `opened` is.** `true`
+and `false` both emit it, which is what makes the button a disclosure. Leave
+`opened` unset and the attribute is not emitted at all - not `"false"`. A modal
+is not expanded by its trigger; it replaces the page, so claiming otherwise is
+worse than saying nothing. The glyph then stays three bars, which is honest:
+nothing has opened in place.
 
 ```rust
 // No `opened`: nothing is expanded, so nothing announces a state.
 Burger { onclick: move |_| modal.open() }
 ```
 
-## The two words it says
+**`aria-controls` is not a prop.** It rides `GlobalAttributes` like every other
+attribute, so spread it - and do spread it whenever `opened` is set, or
+`Burger` warns: a disclosure that controls nothing is almost always an
+oversight. Nothing sets it internally, so the caller's is the only one, and it
+has to name a real element - without it the state is announced but the thing in
+that state is not.
 
-The accessible name is the theme's, not the caller's, so every burger in a
-project announces itself the same way. `BurgerLabels` holds them apart from the
-geometry, so a translation replaces two strings without restating a pixel
-scale.
+**The accessible name is the theme's, not the caller's**, so every burger in a
+project announces itself the same way, and it changes with `opened`.
+`BurgerLabels` holds the two words apart from the geometry, so a translation
+replaces two strings without restating a pixel scale.
 
 ```rust
 Theme {
@@ -109,10 +114,13 @@ button reaches the bars through the fallback, and neither silently wins over
 the other.
 
 `BurgerDefaults` carries `size` (`md`), the six-step `sizes` scale
-(12/18/24/34/42/52px - Mantine's five plus an `xxl` of ours), `radius` (`sm`),
+(12/18/24/34/42/52px - Mantine's five plus an `xxl` of ours),
 `transition_duration` (`300ms`), `transition_timing` (`ease`) and `labels`.
 Motion is a theme decision, not a per-call-site one; an off-scale one-off goes
 through `sx` like any other off-scale value.
+
+There is no radius, on the prop or in the defaults: a radius is meaningless on
+three bars, so `Burger` neither takes one nor overrides `ActionIcon`'s.
 
 The bar thickness is derived (`size / 12`) rather than a prop: it is right at
 every size, and a `line_size` override is one more thing to get wrong.

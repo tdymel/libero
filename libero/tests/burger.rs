@@ -235,10 +235,9 @@ fn the_glyph_declares_both_of_its_vars_even_when_nothing_is_set() {
     );
 }
 
-/// The button is the glyph plus one spacing step, and the radius is the
-/// burger's own default rather than `ActionIcon`'s.
+/// The button is the glyph plus one spacing step.
 #[test]
-fn it_sizes_the_button_around_the_glyph_and_keeps_its_own_radius() {
+fn it_sizes_the_button_around_the_glyph() {
     fn app() -> Element {
         rsx! { LiberoProvider { Burger {} } }
     }
@@ -252,10 +251,6 @@ fn it_sizes_the_button_around_the_glyph_and_keeps_its_own_radius() {
         style.contains(
             "--lsx-action-icon-size-override:calc(var(--lsx-burger-size) + var(--lsx-spacing-xs))"
         ),
-        "{style}"
-    );
-    assert!(
-        style.contains("--lsx-action-icon-radius-override:var(--lsx-burger-radius)"),
         "{style}"
     );
 }

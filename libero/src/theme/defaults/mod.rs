@@ -85,8 +85,8 @@ pub use blockquote::{
     BlockquoteDefaults, BlockquoteSizeLevel,
 };
 pub use burger::{
-    BURGER_COLOR, BURGER_LINE_SIZE, BURGER_RADIUS, BURGER_SIZE, BURGER_SIZES,
-    BURGER_TRANSITION_DURATION, BURGER_TRANSITION_TIMING, BurgerDefaults, BurgerLabels,
+    BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
+    BURGER_TRANSITION_TIMING, BurgerDefaults, BurgerLabels,
 };
 pub use button::{
     BUTTON_FONT_SIZE, BUTTON_HEIGHT, BUTTON_PADDING_X, ButtonDefaults, ButtonSizeLevel,

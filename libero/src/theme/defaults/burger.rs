@@ -9,7 +9,6 @@ pub const BURGER_SIZES: SizeCss = SizeCss::new("--lsx-burger-size-");
 /// the scale above, a caller's `size` writes the `-override` twin, so nothing
 /// here needs a per-size rule.
 pub const BURGER_SIZE: CssVar = CssVar::new("--lsx-burger-size");
-pub const BURGER_RADIUS: CssVar = CssVar::new("--lsx-burger-radius");
 /// **Deliberately never declared by the theme.** The bars read
 /// `var(--lsx-burger-color, currentColor)`, so a caller who styles the button
 /// with `sx().color("white")` keeps working, a caller who passes `color:`
@@ -50,7 +49,6 @@ pub struct BurgerDefaults {
     /// `xs`..`xl` are Mantine's five, adopted exactly. `xxl` is ours,
     /// continuing the ramp past the widest step Mantine offers.
     pub sizes: Sizes<u16>,
-    pub radius: Size,
     /// Motion is a theme decision, not a per-call-site one - Mantine's
     /// `transitionDuration`/`transitionTimingFunction` props are declined.
     /// An off-scale one-off goes through `sx`.
@@ -63,7 +61,6 @@ impl ToCssDeclarations for BurgerDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = self.sizes.to_css_declarations(BURGER_SIZES, "px");
         declarations.push(BURGER_SIZE.declare(BURGER_SIZES.value(self.size)));
-        declarations.push(BURGER_RADIUS.declare(SizeCss::RADIUS.value(self.radius)));
         declarations.push(BURGER_TRANSITION_DURATION.declare(self.transition_duration));
         declarations.push(BURGER_TRANSITION_TIMING.declare(self.transition_timing));
         declarations
