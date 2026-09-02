@@ -42,11 +42,13 @@ fn Demo() -> Element {
 }
 ```
 
-## Sections
+`Badge` labels; [`Chip`](chip.md) is picked - if the thing can be selected,
+clicked or followed it is a `Chip`, which carries `checked`, `onclick` and `to`.
+A badge has none of that and never changes under the cursor.
 
-There is no `left_section`/`right_section` - the root is a flex container, so a
-`Flex` child does the same job with nothing new to learn. Two direct children
-work too: the root carries a `gap` of one spacing step.
+There is no `left_section`/`right_section` - the root is a flex container with a
+`gap` of one spacing step, so a `Flex` child, or two direct children, does the
+same job with nothing new to learn.
 
 ```rust
 use dioxus::prelude::*;
@@ -68,19 +70,6 @@ fn Demo() -> Element {
         }
     }
 }
-```
-
-## Badge or Chip?
-
-A badge labels; a chip is picked. If the thing can be selected, clicked or
-followed, it is a [`Chip`](chip.md) - which carries `checked`, `onclick` and
-`to`, and responds to the pointer. A badge has none of that and never changes
-under the cursor. Mechanically the two differ in one place: `Badge` folds the
-variant *chrome*, `Chip` folds the chrome plus a `:hover`.
-
-```rust
-Badge { color: "success", "Shipped" }                      // a label
-Chip { checked: on(), onchange: move |v| set(v), "Rust" }  // a choice
 ```
 
 ## Accessibility

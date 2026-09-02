@@ -1,24 +1,12 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, prop, props};
-use crate::icons::CheckmarkIcon;
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Badge, Code, CodeBlock, Flex, Icon, Input, Text};
+use libero::components::{Badge, Code, Input, Text};
 
 /// The label is a child, not a prop, so the control that varies it prints
 /// nothing of its own - `Demo` renders it as the child.
 fn label(values: &DemoValues) -> String {
     values.str("label")
 }
-
-const SECTIONS: &str = r#"Badge {
-    color: "success",
-    Flex { direction: "row", align: "center", gap: "xs",
-        Icon { size: "xs", CheckmarkIcon {} }
-        "Verified"
-    }
-}"#;
-
-const OR_CHIP: &str = r#"Badge { color: "success", "Shipped" }                      // a label
-Chip { checked: on(), onchange: move |v| set(v), "Rust" }  // a choice"#;
 
 #[component]
 pub fn BadgePage() -> Element {
@@ -103,43 +91,6 @@ pub fn BadgePage() -> Element {
                     }
                 },
                 child: Child(label),
-            }
-            DocSection {
-                title: "Sections",
-                Text {
-                    "There is no "
-                    Code { source: "left_section" }
-                    "/"
-                    Code { source: "right_section" }
-                    " - the root is a flex container, so a "
-                    Code { source: "Flex" }
-                    " child does the same job with nothing new to learn."
-                }
-                Badge {
-                    color: "success",
-                    Flex { direction: "row", align: "center", gap: "xs",
-                        Icon { size: "xs", CheckmarkIcon {} }
-                        "Verified"
-                    }
-                }
-                CodeBlock { source: SECTIONS, language: "rust" }
-            }
-            DocSection {
-                title: "Badge or Chip?",
-                Text {
-                    "A badge labels; a chip is picked. If the thing can be selected, clicked or "
-                    "followed, it is a "
-                    Code { source: "Chip" }
-                    " - which carries "
-                    Code { source: "checked" }
-                    ", "
-                    Code { source: "onclick" }
-                    " and "
-                    Code { source: "to" }
-                    ", and responds to the pointer. A badge has none of that and never changes "
-                    "under the cursor."
-                }
-                CodeBlock { source: OR_CHIP, language: "rust" }
             }
         }
     }
