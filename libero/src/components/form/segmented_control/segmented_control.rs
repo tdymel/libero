@@ -8,7 +8,7 @@ use crate::{
         form::{use_bound, use_field},
         inputs::{ButtonVariant, button_variables},
     },
-    hooks::{use_cache, use_theme},
+    hooks::{use_cache, use_element, use_theme},
     sx::ThemeAwareValue,
     theme::Size,
     utils::warn,
@@ -85,6 +85,7 @@ field_props! {
 #[component]
 pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element {
     let theme = use_theme();
+    let element = use_element();
 
     let size = props.size.copied_or(theme.button.size);
     let radius = props.radius.copied_or(theme.button.radius);
@@ -197,6 +198,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             describedby: field.describedby(),
             invalid: field.invalid(),
             required,
+            element,
             style,
             attributes: props.attributes,
         },
