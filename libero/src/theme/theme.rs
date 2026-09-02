@@ -12,14 +12,15 @@ use super::{
     FlexDefaults, FloatDefaults, FormDefaults, GridDefaults, HeaderDefaults, HexColor,
     IconDefaults, ImageDefaults, ImageFit, ImageListDefaults, ImageListVariant, KbdDefaults,
     ListDefaults, MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults,
-    OverlayDefaults, PaginationDefaults, PaginationLabels, PaperDefaults, PinFieldDefaults,
-    PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness, RadioDefaults,
-    ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults,
-    SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel, SplitterDefaults,
-    SwitchDefaults, SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults,
-    TabsDefaults, TabsSizeLevel, TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize,
-    TextareaDefaults, TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults,
-    TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    OverlayDefaults, PaginationDefaults, PaginationLabels, PaperDefaults, PhoneFieldDefaults,
+    PinFieldDefaults, PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness,
+    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT,
+    TableDefaults, TabsDefaults, TabsSizeLevel, TagsFieldDefaults, TextDefaults, TextFieldDefaults,
+    TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant, TimelineAlign,
+    TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
+    ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -71,6 +72,7 @@ pub struct Theme {
     pub multi_select: SelectDefaults,
     pub file_field: FileFieldDefaults,
     pub pin_field: PinFieldDefaults,
+    pub phone_field: PhoneFieldDefaults,
     pub tags_field: TagsFieldDefaults,
     pub text_field: TextFieldDefaults,
     pub textarea: TextareaDefaults,
@@ -541,6 +543,11 @@ impl Theme {
             radius: Size::Sm,
             kind: PinKind::Numeric,
             gap: "8px",
+        },
+        phone_field: PhoneFieldDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            country: "US",
         },
         tags_field: TagsFieldDefaults {
             size: Size::Md,

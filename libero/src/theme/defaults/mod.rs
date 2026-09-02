@@ -43,6 +43,7 @@ mod number_field;
 mod overlay;
 mod pagination;
 mod paper;
+mod phone_field;
 mod pin_field;
 mod popover;
 mod qr_code;
@@ -175,6 +176,7 @@ pub use pagination::{
     PaginationLabels,
 };
 pub use paper::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW, PaperDefaults};
+pub use phone_field::PhoneFieldDefaults;
 pub use pin_field::{PIN_FIELD_GAP, PinFieldDefaults, PinKind};
 pub use popover::{POPOVER_GAP, POPOVER_PADDING, PopoverDefaults};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};

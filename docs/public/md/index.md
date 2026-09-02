@@ -41,6 +41,7 @@ fetch only the file you need.
 - [TextField](text_field.md): A single-line text field with the five field slots - label, description, control, helper text and validation message.
 - [Textarea](textarea.md): A multi-line text field with the five field slots, sized by `rows` and resizable by the user.
 - [PasswordField](password_field.md): A password field - a `TextField` whose `type` flips between `password` and `text`, with the reveal toggle in its trailing slot.
+- [PhoneField](phone_field.md): A phone field - a country picker in front of a `tel` input, whose value is an E.164 string.
 - [NumberField](number_field.md): A numeric field over the caller's own number type, with steppers in its trailing slot.
 - [PinField](pin_field.md): A pin, one character per cell, with auto-advance, paste spreading and an `oncomplete` that fires the moment the last cell fills.
 - [Autocomplete](autocomplete.md): A text field that offers completions - the value stays a `String`, and the suggestions are drawn from any `Options` type.

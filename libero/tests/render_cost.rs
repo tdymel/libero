@@ -187,6 +187,10 @@ fn render_cost_per_component() {
         "Textarea" { Textarea { oninput: move |_| {} } }
         "PasswordField" { PasswordField { oninput: move |_| {} } }
         "PasswordField-toggle" { PasswordField { oninput: move |_| {}, reveal_button: false } }
+        "PhoneField" { PhoneField { oninput: move |_| {} } }
+        // The picker is a `ComboboxCore` shell, a button and a portal - the
+        // escape hatch `reveal_button: false` is for `PasswordField`.
+        "PhoneField-picker" { PhoneField { oninput: move |_| {}, country_select: false } }
         "TextField+frame" { TextField { oninput: move |_| {}, leading: rsx! { "<" }, trailing: rsx! { ">" } } }
         // Rules never compare equal, so this one always re-renders with its parent.
         "TextField+validate" { TextField { value: "", oninput: move |_| {}, validate: [not_empty.error("r")] } }
