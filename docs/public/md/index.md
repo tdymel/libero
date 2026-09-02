@@ -36,6 +36,7 @@ fetch only the file you need.
 ## Feedback
 
 - [Alert](alert.md): A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
+- [Loader](loader.md): An indeterminate busy indicator - oval, bars or dots - silent unless it is the only content of a region, and the `loading` state behind `Button`, `Combobox` and `FileField`.
 - [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
 
 ## Form
