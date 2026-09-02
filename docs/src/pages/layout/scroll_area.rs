@@ -162,11 +162,14 @@ pub fn ScrollAreaPage() -> Element {
                     Control::toggle("scrollbar_size", ["thin", "auto"])
                         .default(theme.scroll_area.size.as_str()),
                     // The unset thumb is grey-5, which a bare `grey` would
-                    // *not* resolve to - so the first swatch is unset.
+                    // *not* resolve to - so the first swatch is unset, and it
+                    // is painted grey-5 rather than white: the swatch shows
+                    // what the scrollbar actually draws without the prop.
                     Control::color(
                         "scrollbar_color",
                         [UNSET, "primary", "secondary", "success", "error", "warning"],
-                    ),
+                    )
+                    .unset_swatch("grey.5"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Flex {

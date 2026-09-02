@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::components::{Avatar, AvatarGroup, AvatarSpec, Code, Input, Text};
@@ -194,9 +194,12 @@ pub fn AvatarPage() -> Element {
                         ["filled", "tonal", "elevated", "outlined", "standard"],
                     )
                     .default("tonal"),
+                    // An unset `color` is `base_color`'s primary shade 6,
+                    // which is exactly what a bare `primary` resolves to - so
+                    // the default swatch is primary, not a white "unset" one.
                     Control::color(
                         "color",
-                        [UNSET, "primary", "secondary", "success", "error", "warning"],
+                        ["primary", "secondary", "success", "error", "warning"],
                     ),
                 ],
                 render: move |values: DemoValues| {
@@ -215,10 +218,7 @@ pub fn AvatarPage() -> Element {
                             size: values.str("size"),
                             radius: values.str("radius"),
                             variant: values.str("variant"),
-                            color: match values.str("color").as_str() {
-                                UNSET => Input::None,
-                                color => Input::from(color.to_string()),
-                            },
+                            color: Input::from(values.str("color")),
                         }
                     }
                 },

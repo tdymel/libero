@@ -38,6 +38,11 @@ pub struct Control {
     /// another control's *mode* has taken off the table entirely, rather than
     /// one it merely pins.
     pub hidden: Option<fn(&DemoValues) -> bool>,
+    /// What the `UNSET` swatch is *painted*, for a `ControlKind::Color` whose
+    /// unset value is a real color the offered names cannot say - `ScrollArea`'s
+    /// grey-5 thumb. `None` leaves it white, which is what an unset color
+    /// renders as wherever nothing else is drawn.
+    pub unset_swatch: Option<String>,
 }
 
 /// `code` is a page-level constant, so whether one is set is all that can
@@ -51,6 +56,7 @@ impl PartialEq for Control {
             && self.code.is_some() == other.code.is_some()
             && self.labels == other.labels
             && self.hidden.is_some() == other.hidden.is_some()
+            && self.unset_swatch == other.unset_swatch
     }
 }
 
@@ -97,6 +103,7 @@ impl Control {
             code: None,
             labels: None,
             hidden: None,
+            unset_swatch: None,
         }
     }
 
@@ -142,6 +149,16 @@ impl Control {
 
     pub fn is_hidden(&self, values: &DemoValues) -> bool {
         self.hidden.is_some_and(|hidden| hidden(values))
+    }
+
+    /// Paints the `UNSET` swatch the color the component actually renders
+    /// without the prop, for the case where no offered name resolves to it.
+    /// Where unset *does* equal a named color, drop the `UNSET` option and
+    /// `default` to that name instead - a swatch standing for a color the
+    /// next swatch already names is what made these read as "white".
+    pub fn unset_swatch(mut self, color: impl Into<String>) -> Self {
+        self.unset_swatch = Some(color.into());
+        self
     }
 
     pub fn labels<const N: usize>(mut self, labels: [&str; N]) -> Self {

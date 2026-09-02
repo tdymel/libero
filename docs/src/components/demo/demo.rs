@@ -87,14 +87,21 @@ where
 }
 
 /// The value a color control uses for "leave the prop unset". Kept apart from
-/// the color names so no swatch has to double as a sentinel; it fills white,
-/// which is what an unset color renders as.
+/// the color names so no swatch has to double as a sentinel.
 pub const UNSET: &str = "unset";
 
-/// Fill and tick color for one swatch.
-fn swatch(option: &str) -> (String, String) {
+/// Fill and tick color for one swatch. The unset swatch shows what the
+/// component renders *without* the prop, which is white only where nothing
+/// else is drawn - `Control::unset_swatch` names the real color otherwise.
+fn swatch(control: &Control, option: &str) -> (String, String) {
     match option {
-        UNSET => ("white".to_string(), "black".to_string()),
+        UNSET => (
+            control
+                .unset_swatch
+                .clone()
+                .unwrap_or_else(|| "white".to_string()),
+            "black".to_string(),
+        ),
         // The palette's own contrast color, so the tick reads on every swatch.
         color => (color.to_string(), format!("{color}-contrast")),
     }
@@ -301,8 +308,8 @@ pub fn Demo(
                                                             .width("100%")
                                                             .height("100%")
                                                             .border_radius("inherit")
-                                                            .background(swatch(option).0)
-                                                            .color(swatch(option).1)
+                                                            .background(swatch(control, option).0)
+                                                            .color(swatch(control, option).1)
                                                             // A pale swatch needs an edge
                                                             // to read as a swatch at all.
                                                             .border(border())

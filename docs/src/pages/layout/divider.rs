@@ -1,4 +1,6 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Child, Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Divider, Input, Text},
@@ -74,10 +76,15 @@ pub fn DividerPage() -> Element {
                             }
                         },
                     ),
+                    // The unset line is grey-4, which a bare `grey` would
+                    // *not* resolve to - it is tinted to shade 3 like every
+                    // other bare color. So the first swatch is unset, painted
+                    // the grey-4 the rule actually draws.
                     Control::color(
                         "color",
-                        ["grey", "primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                        [UNSET, "primary", "secondary", "success", "error", "warning", "info"],
+                    )
+                    .unset_swatch("grey.4"),
                     Control::slider("spacing", ["auto", "xs", "sm", "md", "lg", "xl"])
                         .default("md")
                         .code(
@@ -94,10 +101,8 @@ pub fn DividerPage() -> Element {
                             orientation: values.str("orientation"),
                             size: values.str("size"),
                             label_position: values.str("label_position"),
-                            // A bare `grey` is grey-3; *unset* is grey-4,
-                            // and unset is what the code block prints.
                             color: match values.str("color").as_str() {
-                                "grey" => Input::None,
+                                UNSET => Input::None,
                                 color => Input::from(color),
                             },
                             // An empty string would be a literal value,
