@@ -145,7 +145,7 @@ fn a_segmented_control_checks_only_the_selected_radio() {
     // children - no caller `sx` should be needed for that.
     assert!(html.contains(&format!(
         ".{} > label{{",
-        classes_of(&body, "div").first().expect("a framework class")
+        classes_of(body, "div").first().expect("a framework class")
     )));
     assert!(html.contains("gap:var(--lsx-spacing-xs)"));
 
@@ -163,7 +163,7 @@ fn a_segmented_control_checks_only_the_selected_radio() {
     assert!(attributes_of(first, "label")["data-state"].contains("checked"));
     assert!(!attributes_of(second, "label")["data-state"].contains("checked"));
 
-    let root_class = classes_of(&body, "div");
+    let root_class = classes_of(body, "div");
     let root_class = root_class.first().expect("a framework class");
     assert!(has_rule_for(&html, root_class));
     // The selected block ties the variant's own `:hover` on specificity, so it
@@ -205,7 +205,7 @@ fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
     // No `collapsed`, so the corner-squashing rules below cannot match.
     assert_eq!(root["data-state"], "horizontal filled size-xs");
 
-    let root_class = classes_of(&body, "div");
+    let root_class = classes_of(body, "div");
     let root_class = root_class.first().expect("a framework class");
     assert!(html.contains(&format!(
         ".{root_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"

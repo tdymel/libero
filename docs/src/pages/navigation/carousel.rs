@@ -100,10 +100,10 @@ pub fn CarouselPage() -> Element {
                         .default("auto")
                         .doc("Required for a vertical carousel, which has nothing to take its height from."),
                     prop("controls", "bool")
-                        .default(&theme.carousel.controls.to_string())
+                        .default(theme.carousel.controls.to_string())
                         .doc("Prev/next buttons."),
                     prop("indicators", "bool")
-                        .default(&theme.carousel.indicators.to_string())
+                        .default(theme.carousel.indicators.to_string())
                         .doc("The dot strip - one per scroll position, which is fewer than the slides when per_view is above 1."),
                     prop("aria_label", "String").doc("Names the region. Leaving it unset falls back to the theme label and warns."),
                     prop("draggable", "bool")
@@ -116,7 +116,7 @@ pub fn CarouselPage() -> Element {
                         .default("false")
                         .doc("Wraps at both ends by cloning slides onto each end and jumping back across the seam once the scroll settles. The clones are aria-hidden."),
                     prop("autoplay_delay", "u32")
-                        .default(&theme.carousel.autoplay_delay.to_string())
+                        .default(theme.carousel.autoplay_delay.to_string())
                         .doc("Milliseconds between advances."),
                 ]),
             ],
@@ -164,7 +164,7 @@ pub fn CarouselPage() -> Element {
                             _ => vec![],
                         },
                     ),
-                    Control::switch("controls").default(&theme.carousel.controls.to_string()),
+                    Control::switch("controls").default(theme.carousel.controls.to_string()),
                     // On, though the theme's default is off: above `per_view`
                     // 1 the dot strip is the only thing that shows `align`
                     // moving the reachable window - four dots reading 1-4,

@@ -6,9 +6,10 @@ pub const BADGE_FONT_SIZE: SizeCss = SizeCss::new("--lsx-badge-font-size-");
 pub const BADGE_HEIGHT: SizeCss = SizeCss::new("--lsx-badge-height-");
 pub const BADGE_PADDING_X: SizeCss = SizeCss::new("--lsx-badge-padding-x-");
 
-/// The active step's values, republished unsuffixed by [`BadgeDefaults::size_sx`]
-/// - the `ColorSwatch` pattern. `circle` needs the current height for its
-/// `min-width` and has no way to know which size token is on.
+/// The active step's values, republished unsuffixed by
+/// [`BadgeDefaults::size_sx`] - the `ColorSwatch` pattern. `circle` needs the
+/// current height for its `min-width` and has no way to know which size token
+/// is on.
 pub const BADGE_FONT: CssVar = CssVar::new("--lsx-badge-font");
 pub const BADGE_BOX: CssVar = CssVar::new("--lsx-badge-box");
 pub const BADGE_PAD_X: CssVar = CssVar::new("--lsx-badge-pad-x");

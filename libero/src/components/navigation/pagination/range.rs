@@ -26,9 +26,9 @@ pub enum PaginationItem {
 ///
 /// **An ellipsis never hides exactly one page.** Hiding `9` behind `…` costs
 /// the same width as printing it, so the gap is only drawn where it saves
-/// something. That also fixes the rendered length at `2·siblings + 2·boundaries
-/// + 3` for every `page`, so the strip never reflows while the user clicks
-/// through it.
+/// something. That also fixes the rendered length at `2·siblings +
+/// 2·boundaries + 3` for every `page`, so the strip never reflows while the
+/// user clicks through it.
 ///
 /// Inputs are taken loosely and clamped: `total` of 0 is treated as 1 by the
 /// arithmetic (the component renders nothing for 0 before calling this), `page`

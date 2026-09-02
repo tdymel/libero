@@ -278,8 +278,8 @@ fn a_linked_cell_keeps_the_bar_outside_the_anchor() {
     );
 }
 
-/// And it is clickable because the bar is raised above the stretched `::after`
-/// - by a `z-index` alone, because positioning it would steal the anchor's
+/// And it is clickable because the bar is raised above the stretched `::after` -
+/// by a `z-index` alone, because positioning it would steal the anchor's
 /// containing block. See `nothing_inside_a_cell_is_positioned`.
 #[test]
 fn the_bar_is_raised_above_the_stretched_link() {
