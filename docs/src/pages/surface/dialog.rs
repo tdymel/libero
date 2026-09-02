@@ -5,7 +5,7 @@ use libero::{
     sx::sx,
 };
 
-const CONTENT: &str = r#"Title { size: "lg", "Dialog surface" }
+const CONTENT: &str = r#"Title { size: "lg", component: "h2", "Dialog surface" }
 Text { "Dialog rendered inline, without a modal's portal and backdrop." }"#;
 
 /// Inline, the surface keeps the centering margin it wants in a modal - and it
@@ -66,7 +66,7 @@ pub fn DialogPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         sx: sx().margin("0"),
-                        Title { size: "lg", "Dialog surface" }
+                        Title { size: "lg", component: "h2", "Dialog surface" }
                         Text { "Dialog rendered inline, without a modal's portal and backdrop." }
                     }
                 },

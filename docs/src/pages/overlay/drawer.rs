@@ -14,7 +14,7 @@ const CONTENT: &str = r#"Flex {
     direction: "column",
     gap: "md",
     sx: sx().padding("16px"),
-    Title { size: "lg", "Temporary drawer" }
+    Title { size: "lg", component: "h2", "Temporary drawer" }
     Text { "Closes on Escape or a backdrop click." }
     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
 }"#;
@@ -48,7 +48,7 @@ let details = use_drawer(
         let order = s.args();
 
         rsx! {
-            Title { size: "lg", "Order {order.id}" }
+            Title { size: "lg", component: "h2", "Order {order.id}" }
             Button { onclick: move |_| s.resolve(true), "Mark shipped" }
         }
     },
@@ -74,7 +74,7 @@ fn DrawerDemo(anchor: String, size: String) -> Element {
                     direction: "column",
                     gap: "md",
                     sx: sx().padding("16px"),
-                    Title { size: "lg", "Temporary drawer" }
+                    Title { size: "lg", component: "h2", "Temporary drawer" }
                     Text { "Closes on Escape or a backdrop click." }
                     Button { variant: "outlined", onclick: move |_| s.close(), "Close" }
                 }
