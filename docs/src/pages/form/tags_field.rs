@@ -8,8 +8,8 @@ use libero::{
     sx::sx,
 };
 
-/// The whole chip is the caller's, remove control included - which is also why
-/// a custom tag carries no id, so the focus repair falls back to the input.
+/// The whole chip is the caller's, remove control included - so a custom tag
+/// owns its own x, and with it whether that x is in the tab order.
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     Chip { size: "xs", variant: "outlined",
         "#{t.value}"
@@ -58,8 +58,19 @@ rsx! {
         value: article,
         onsubmit: move |event: FormEvent| {
             // One entry per tag, all named "topics" - the visible input holds
-            // the draft, so it has no name and contributes none.
-            posted.set(Some(event.values().iter().filter(|(name, _)| name == "topics").count()));
+            // the draft, so it has no name and contributes none. `get` keeps
+            // the ones under that name; `FormValue` is an enum, so the text
+            // comes out of it by match and not by an accessor.
+            posted.set(
+                event
+                    .get("topics")
+                    .into_iter()
+                    .filter_map(|value| match value {
+                        FormValue::Text(tag) => Some(tag),
+                        FormValue::File(_) => None,
+                    })
+                    .collect(),
+            );
         },
         // No `onchange`: a path binds the list to the form's own value.
         TagsField { label: "Topics", name: Article::FIELDS.topics() }
@@ -77,7 +88,7 @@ pub struct Article {
 #[component]
 fn TopicsForm() -> Element {
     let article = use_store(Article::default);
-    let mut posted = use_signal(|| None::<usize>);
+    let mut posted = use_signal(Vec::<String>::new);
 
     rsx! {
         Form {
@@ -85,8 +96,19 @@ fn TopicsForm() -> Element {
             value: article,
             onsubmit: move |event: FormEvent| {
                 // One entry per tag, all named "topics" - the draft input has
-                // no name, so it contributes none.
-                posted.set(Some(event.values().iter().filter(|(name, _)| name == "topics").count()));
+                // no name, so it contributes none. `FormValue` is an enum, so
+                // the text comes out of it by match and not by an accessor.
+                posted
+                    .set(
+                        event
+                            .get("topics")
+                            .into_iter()
+                            .filter_map(|value| match value {
+                                FormValue::Text(tag) => Some(tag),
+                                FormValue::File(_) => None,
+                            })
+                            .collect(),
+                    );
             },
             TagsField {
                 label: "Topics",
@@ -95,8 +117,8 @@ fn TopicsForm() -> Element {
                 name: Article::FIELDS.topics(),
             }
             Button { r#type: "submit", "Save" }
-            if let Some(count) = posted() {
-                Text { "Posted {count} entries named \"topics\", and the form's own value holds {article().topics.len()} tags." }
+            if !posted().is_empty() {
+                Text { "Posted as \"topics\": {posted().join(\", \")}." }
             }
         }
     }
@@ -289,7 +311,8 @@ pub fn TagsFieldPage() -> Element {
                     "drops out of the list. A picked suggestion becomes exactly the tag a typed "
                     "one does, which is why the value stays a "
                     Code { source: "Vec<String>" }
-                    " either way."
+                    " either way. The list stays open after a pick - the row it just took has "
+                    "left it, and the next one is one key away."
                 }
                 Flex { direction: "column", gap: "md", align: "flex-start",
                     TagsField {
@@ -376,15 +399,15 @@ pub fn TagsFieldPage() -> Element {
                     " is what moves over the rows."
                 }
                 Text {
-                    "Each chip's x is a real tab stop, unlike "
+                    "The whole field is one tab stop: each chip's x is "
+                    Code { source: "tabindex=\"-1\"" }
+                    ", the shape "
                     Code { source: "MultiSelect" }
-                    "'s. There the trigger owns a chip cursor the arrow keys move; here the "
-                    "arrows belong to the text, and the platform cannot report a caret - so "
-                    "\"ArrowLeft only at caret 0\" is not implementable and Backspace alone "
-                    "would leave every chip but the last unreachable from the keyboard. "
-                    "Removing a chip hands focus to the one that took its place, to the new "
-                    "last chip when the removed one was last, and to the input when nothing is "
-                    "left."
+                    "'s chips have, so Tab moves past the field rather than through it and "
+                    "removing a chip never takes the focus with it. Backspace on an empty "
+                    "input is how a keyboard takes a tag back. There is no chip cursor: the "
+                    "arrows belong to the text, and the platform cannot report a caret, so "
+                    "\"ArrowLeft only at caret 0\" is not implementable."
                 }
             }
         }

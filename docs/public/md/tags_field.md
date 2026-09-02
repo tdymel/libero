@@ -88,7 +88,9 @@ TagsField {
 Without `suggestions` the field renders no listbox and no portal at all - it is
 a frame with chips and an input. With them it is a combobox: the arrows move a
 highlight, Enter picks the highlighted row, and anything already held drops out
-of the list. A picked suggestion becomes exactly the tag a typed one does.
+of the list. A picked suggestion becomes exactly the tag a typed one does. The
+list stays open after a pick - the row it just took has left it, and the next
+one is one key away.
 
 ```rust
 TagsField {
@@ -119,8 +121,18 @@ rsx! {
         value: article,
         onsubmit: move |event: FormEvent| {
             // One entry per tag, all named "topics" - the draft input has no
-            // name, so it contributes none.
-            posted.set(event.values().iter().filter(|(name, _)| name == "topics").count());
+            // name, so it contributes none. `FormValue` is an enum, so the
+            // text comes out of it by match and not by an accessor.
+            posted.set(
+                event
+                    .get("topics")
+                    .into_iter()
+                    .filter_map(|value| match value {
+                        FormValue::Text(tag) => Some(tag),
+                        FormValue::File(_) => None,
+                    })
+                    .collect::<Vec<String>>(),
+            );
         },
         // No `onchange`: the path binds the list to the form's own value.
         TagsField { label: "Topics", name: Article::FIELDS.topics() }
@@ -184,13 +196,12 @@ captions reach it through `aria-describedby`. With `suggestions` it is also the
 combobox: focus never leaves it, and `aria-activedescendant` moves over the
 rows.
 
-Each chip's x is a **real tab stop**, unlike `MultiSelect`'s. There the trigger
-owns a chip cursor the arrow keys move; here the arrows belong to the text, and
-the platform cannot report a caret - so "ArrowLeft only at caret 0" is not
-implementable, and Backspace alone would leave every chip but the last
-unreachable from the keyboard. Removing a chip hands focus to the one that took
-its place, to the new last chip when the removed one was last, and to the input
-when nothing is left.
+The whole field is **one tab stop**: each chip's x is `tabindex="-1"`, the shape
+`MultiSelect`'s chips have, so Tab moves past the field rather than through it
+and removing a chip never takes the focus with it. Backspace on an empty input
+is how a keyboard takes a tag back. There is no chip cursor: the arrows belong
+to the text, and the platform cannot report a caret, so "ArrowLeft only at caret
+0" is not implementable.
 
 ## Data attributes
 

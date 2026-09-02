@@ -78,11 +78,11 @@ fn the_input_is_the_labelled_control() {
     );
 }
 
-/// One wrapper per tag, and its x is a **real tab stop**: there is no chip
-/// cursor here - the arrows belong to the text - so `tabindex="-1"` would leave
-/// every chip but the last unreachable from the keyboard.
+/// One wrapper per tag, and its x is **not** a tab stop: the field is one tab
+/// stop, the way `MultiSelect`'s chips and Mantine's `Pill` are, and Backspace
+/// is how a keyboard takes a tag back.
 #[test]
-fn every_tag_is_a_chip_whose_remove_button_is_a_tab_stop() {
+fn every_tag_is_a_chip_whose_remove_button_is_not_a_tab_stop() {
     let html = body(&render(tagged));
 
     assert_eq!(
@@ -96,9 +96,10 @@ fn every_tag_is_a_chip_whose_remove_button_is_a_tab_stop() {
         html.contains("aria-label=\"Remove rust\""),
         "an icon-only x needs a name:\n{html}"
     );
-    assert!(
-        !html.contains("tabindex=\"-1\""),
-        "the x is the only way a keyboard reaches a chip that is not last:\n{html}"
+    assert_eq!(
+        html.matches("tabindex=\"-1\"").count(),
+        2,
+        "one x per tag, each out of the tab order:\n{html}"
     );
 }
 

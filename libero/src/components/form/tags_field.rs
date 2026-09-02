@@ -10,8 +10,7 @@ use crate::{
         layout::use_box,
         use_combobox,
     },
-    hooks::{PopoverWidth, use_element, use_theme},
-    platform::ElementApi,
+    hooks::{PopoverWidth, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHIP_HEIGHT, Size},
     utils::warn,
@@ -161,12 +160,6 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // be one more thing for every call site to hold.
     let mut text = use_signal(String::new);
     let state = use_combobox();
-    let value_element = use_element();
-    let input_element = use_element();
-    // Removing a chip destroys the button the keyboard was on - the chips are
-    // real tab stops here, because without a chip cursor Backspace could only
-    // ever reach the last one. See [[principles/focus-after-removal]].
-    let mut owed = use_signal(|| None::<usize>);
 
     let rules = TagRules {
         allow_duplicates: props.allow_duplicates.unwrap_or(false),
@@ -217,10 +210,10 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         }
     });
 
-    // The chips. Each carries a stable id, so the focus repair can find the one
-    // that took a removed chip's place without a hook per row.
+    // The chips. The input is the one tab stop, so removing one never destroys
+    // the control the keyboard was on and there is no focus debt to repay
+    // ([[principles/focus-after-removal]] - "where this does not apply").
     let chip_size = Size::ALL[size.index().saturating_sub(1)];
-    let remove_prefix = format!("{}-tag", field.id());
     let removing = held.clone();
     let remove_change = onchange.clone();
     let draw_tag = props.tag;
@@ -231,15 +224,13 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             let Some(onchange) = &onchange else {
                 return;
             };
-            owed.set(Some(index));
             let mut next = list.clone();
             next.remove(index);
             onchange(next);
         });
-        let id = format!("{remove_prefix}-{index}");
         match &draw_tag {
             Some(tag) => tag.call(SelectionArgs { value, remove }),
-            None => default_tag(&value, remove, chip_size, &id, disabled),
+            None => default_tag(&value, remove, chip_size, disabled),
         }
     });
     let tags = rsx! {
@@ -247,32 +238,6 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             span { key: "{index}", "data-slot": "tag", {chip} }
         }
     };
-
-    // Focus goes to the chip that took the removed one's place, to the new last
-    // chip when the removed one was last, and to the input when nothing is
-    // left - which is also the control that adds the next tag.
-    let remaining = held.len();
-    use_effect(use_reactive!(|remaining| {
-        let Some(index) = *owed.peek() else {
-            return;
-        };
-        owed.set(None);
-        if remaining == 0 {
-            let _ = input_element.focus();
-            return;
-        }
-        // A caller's own `tag` may carry no id, so the query simply misses -
-        // the input is the fallback rather than leaving focus on the body.
-        let at = index.min(remaining - 1);
-        match value_element.query_selector(&format!("#{remove_prefix}-{at}-remove")) {
-            Ok(button) => {
-                let _ = button.focus();
-            }
-            Err(_) => {
-                let _ = input_element.focus();
-            }
-        }
-    }));
 
     // The rows: what is already held is never offered again, and the draft
     // narrows what is left.
@@ -361,7 +326,6 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     attributes.extend(props.attributes);
     let input = field
         .aria(control)
-        .element(&input_element)
         .attr_default("type", "text")
         .attr("aria-autocomplete", has_suggestions.then_some("list"))
         .attr("value", text())
@@ -441,7 +405,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         })
         .render(HtmlTag::Input, attributes, ());
 
-    let control = slot.element(&value_element).render(
+    let control = slot.render(
         HtmlTag::Div,
         Vec::new(),
         rsx! {
@@ -480,6 +444,11 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 size,
                 radius,
                 disabled,
+                // The list stays up after a pick, the way Mantine's `TagsInput`
+                // and our own `MultiSelect` keep it up: the picked row leaves
+                // the list and the next one is one key away. `Autocomplete`
+                // closes because its single value is then settled.
+                close_on_pick: false,
                 width: PopoverWidth::Match,
                 // A tag added or taken back resizes the frame under an open
                 // list.
@@ -563,11 +532,10 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
 
 /// The default tag: the text, and an x that drops it.
 ///
-/// The x is a real tab stop, unlike `MultiSelect`'s: there the trigger owns a
-/// chip cursor the arrows move, and here there is none - `ElementApi` cannot
-/// report a caret, so "ArrowLeft only at caret 0" is unimplementable and
-/// Backspace alone would leave every chip but the last unreachable.
-fn default_tag(value: &str, remove: Callback<()>, size: Size, id: &str, disabled: bool) -> Element {
+/// The x is `tabindex="-1"`, the same shape `MultiSelect`'s chips have and the
+/// one Mantine's `Pill` uses: the field is one tab stop, and the keyboard takes
+/// a tag back with Backspace rather than by tabbing onto a button per chip.
+fn default_tag(value: &str, remove: Callback<()>, size: Size, disabled: bool) -> Element {
     let label = value.to_string();
     // A fraction of the chip's own height, not of its font: the two do not
     // scale at the same rate, so an `em` x shrinks against its chip as the
@@ -588,7 +556,6 @@ fn default_tag(value: &str, remove: Callback<()>, size: Size, id: &str, disabled
                 // press must not move it onto the button before the click.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
                 ActionIcon {
-                    id: "{id}-remove",
                     aria_label: "Remove {label}",
                     size: icon_size,
                     disabled,
@@ -606,6 +573,9 @@ fn default_tag(value: &str, remove: Callback<()>, size: Size, id: &str, disabled
                             "&:hover",
                             sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
                         ),
+                    // The control is one tab stop: Backspace, not a button per
+                    // chip, is how a keyboard takes a tag back.
+                    tabindex: "-1",
                     onclick: move |_| remove.call(()),
                     CloseIcon {}
                 }
