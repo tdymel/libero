@@ -40,8 +40,12 @@ str_enum! {
         #[default]
         Left = "left",
         Right = "right",
-        /// Content alternates either side of a centred rail, collapsing to
-        /// `Left` when the timeline itself is too narrow for two columns.
+        /// Content alternates either side of a centred rail, at every width.
+        /// There is no size below which it falls back to one side: asking for
+        /// an alternating timeline in a narrow box is a decision the caller
+        /// has made, and the component does not overrule it. It also makes
+        /// the list fill its parent, since a centred rail needs a width to be
+        /// centred in.
         ///
         /// A variant rather than a second `alternate` prop: beside `align` it
         /// would make `align: "right", alternate: true` expressible and

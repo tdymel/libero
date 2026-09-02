@@ -1,12 +1,10 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
 };
 use crate::icons::{CheckmarkIcon, CodeIcon, FileIcon, GitHubIcon};
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        Code, CodeBlock, Input, SegmentedControl, Text, Timeline, TimelineEvent, TimelineLine,
-    },
+    components::{Code, CodeBlock, SegmentedControl, Text, Timeline, TimelineEvent, TimelineLine},
     sx::sx,
 };
 
@@ -152,7 +150,7 @@ pub fn TimelinePage() -> Element {
                         .doc("The current event. Bullets `0..=active` and the connectors `0..active` draw active; out of range clamps to the last event."),
                     prop("align", "TimelineAlign")
                         .default("theme.timeline.align")
-                        .doc("`\"left\"`, `\"right\"`, or `\"alternate\"` - content either side of a centred rail."),
+                        .doc("`\"left\"`, `\"right\"`, or `\"alternate\"` - content either side of a centred rail. `\"alternate\"` alternates at every width and fills its parent, so a narrower parent is how you make it narrower."),
                     prop("color", "ThemeAwareValue")
                         .default("theme.timeline.color")
                         .doc("The active accent. A per-event `.color(..)` overrides it."),
@@ -214,9 +212,16 @@ pub fn TimelinePage() -> Element {
                         }),
                     Control::toggle("align", ["left", "right", "alternate"])
                         .labels(["Left", "Right", "Alternate"]),
+                    // No `UNSET` swatch: unset resolves to `primary`, and a
+                    // white swatch beside five colours reads as a sixth
+                    // colour choice rather than as "no prop". `primary` is
+                    // the first option, so it is the default, and
+                    // `generate_code` omits a control at its default - the
+                    // block prints no `color:` line there, exactly as the
+                    // unset state did.
                     Control::color(
                         "color",
-                        [UNSET, "primary", "secondary", "success", "error", "warning"],
+                        ["primary", "secondary", "success", "error", "warning"],
                     ),
                     Control::slider("bullet_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
@@ -240,10 +245,7 @@ pub fn TimelinePage() -> Element {
                             items,
                             active,
                             align: values.str("align"),
-                            color: match values.str("color").as_str() {
-                                UNSET => Input::None,
-                                color => Input::from(color.to_string()),
-                            },
+                            color: values.str("color"),
                             bullet_size: values.str("bullet_size"),
                             radius: values.str("radius"),
                             gap: values.str("gap"),

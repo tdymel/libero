@@ -183,23 +183,58 @@ fn the_centred_arm_clears_the_whole_half_marker() {
     );
 }
 
-/// The specificity trap this library keeps meeting: a container query adds no
-/// specificity, so the collapse has to carry the same `[data-state~=..]` the
-/// rule it overrides does. Written beside the condition it would be 0-1-0
-/// against 0-2-0, and a phone-width timeline would stay alternating.
+/// `Alternate` alternates at every width. It used to collapse to the
+/// one-sided layout below 600px of the list's own width, behind a container
+/// query - and a caller who asks for an alternating timeline in a narrow box
+/// gets to have asked for it. The threshold also made the mode
+/// undemonstrable: the docs preview caps the list at 498px, so there was no
+/// window size at which anyone could see `Alternate` work.
+///
+/// Asserted by absence, because that is the only way a removed fallback can
+/// be pinned: nothing queries a container, so nothing declares one either.
 #[test]
-fn the_alternate_collapse_is_nested_inside_the_align_condition() {
+fn the_alternate_layout_has_no_width_below_which_it_collapses() {
     let html = render(alternate_app);
 
+    assert!(!html.contains("@container"), "{html}");
+    assert!(!html.contains("container-type"), "{html}");
+    assert!(!html.contains("container-name"), "{html}");
+    // The centred rules are the only ones the align token carries now - the
+    // one-sided fallback they used to override is gone, not merely outranked.
     assert!(
-        html.contains("@container timeline (min-width: 600px)"),
+        !html.contains(&format!(
+            r#"[data-state~="align-alternate"]{{padding-left:{}"#,
+            "calc(var(--lsx-timeline-bullet) + var(--lsx-spacing-md))"
+        )),
         "{html}"
     );
-    // The guarded rule keeps the align token, rather than sitting on the bare
-    // class the way a hoisted query would.
-    assert!(html.contains(r#"(min-width: 600px){.lsx-"#), "{html}");
+}
+
+/// `Alternate` centres the rail *in the list*, so the list needs a width to
+/// centre it in. Left to size itself it takes its content's width - 192px in
+/// the docs preview, measured in Chromium on 2026-09-17 - and centring a rail
+/// in that is not what anyone means by "alternate". `Left` and `Right` keep
+/// shrink-to-fitting, which is why this is asserted per align token and not
+/// on the bare class.
+///
+/// It also repaired the original defect, by a different route than it reads:
+/// the arm used to carry `container-type: inline-size`, which is inline-axis
+/// size containment, so the list could not take its width from its contents
+/// and resolved to **zero** as a shrink-to-fit flex item. The container is
+/// gone now, but the width it needed is still the right answer.
+#[test]
+fn the_alternate_arm_gives_the_list_a_width() {
+    let html = render(alternate_app);
+
+    assert!(html.contains("width:100%"), "{html}");
+    // Under the align token, not on the bare class - a `width` that drifted
+    // onto the class would widen every timeline, `Left` and `Right` included.
+    let block = html
+        .split('}')
+        .find(|block| block.contains("width:100%"))
+        .unwrap_or_default();
     assert!(
-        html.matches(r#"[data-state~="align-alternate"]"#).count() > 1,
-        "{html}"
+        block.contains(r#"[data-state~="align-alternate"]"#),
+        "{block}"
     );
 }

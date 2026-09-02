@@ -21,13 +21,6 @@ input_from_str!(TimelineAlign);
 /// Horizontal space between the marker and the text column.
 const CONTENT_SPACE: &str = "var(--lsx-spacing-md)";
 
-/// Below this, `Alternate` has no room for two content columns and falls back
-/// to the one-sided layout. A **container** query, not a viewport one: a
-/// timeline in a sidebar has to collapse when it is narrow, not when the
-/// window is.
-const ALTERNATE_MIN: &str = "(min-width: 600px)";
-const CONTAINER: &str = "timeline";
-
 fn rail() -> Rail {
     Rail {
         marker: TIMELINE_BULLET.value(),
@@ -46,13 +39,13 @@ static TIMELINE_BASE_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .flex_direction("column")
         .gap(TIMELINE_SPACE.value())
-        // Only `Alternate` queries it, and `container-type` makes the element
-        // a containing block for absolutely positioned descendants - so it is
-        // scoped to the mode that needs it rather than set on every timeline.
-        .when(
-            TimelineAlign::Alternate.state_name(),
-            sx().container(CONTAINER),
-        )
+        // `Alternate` centres the rail in the list, so the list needs a width
+        // to centre it in. `Left` and `Right` are happy shrink-to-fitting
+        // around their content; an alternating timeline that did the same
+        // would put two columns either side of a rail centred in its own
+        // max-content width, which is not what anyone means by "alternate".
+        // A caller who wants it narrower gives it a narrower parent.
+        .when(TimelineAlign::Alternate.state_name(), sx().width("100%"))
 });
 
 /// One event. The connector is a `::before` on this element, so it has to be
@@ -92,25 +85,20 @@ static TIMELINE_ITEM_SX: StaticSx = StaticSx::new(|| {
                 .and(rail.connector_sx(RailInset::End)),
         );
 
-    // The alternating layout, and its collapse. The container query is nested
-    // **inside** the condition, not beside it: a container query adds no
-    // specificity, so a collapse written outside would be 0-1-0 against this
-    // block's 0-2-0 and a phone-width timeline would stay alternating.
+    // The alternating layout, unconditionally. There is no width below which
+    // it collapses to one side: choosing `Alternate` in a 200px sidebar
+    // buys a cramped alternating timeline, and that is the caller's call to
+    // have made rather than the component's to overrule. A threshold also
+    // made the mode undemonstrable - see the note in the brain page.
     one_sided.when(
         TimelineAlign::Alternate.state_name(),
-        sx().padding_left(inset.clone())
-            .and(rail.connector_sx(RailInset::Start))
-            .container_query(
-                CONTAINER,
-                ALTERNATE_MIN,
-                sx().padding_left(centred.clone())
-                    .and(rail.connector_sx(RailInset::Center))
-                    .selector(
-                        "&:nth-of-type(even)",
-                        sx().padding_left("0")
-                            .padding_right(centred.clone())
-                            .text_align("right"),
-                    ),
+        sx().padding_left(centred.clone())
+            .and(rail.connector_sx(RailInset::Center))
+            .selector(
+                "&:nth-of-type(even)",
+                sx().padding_left("0")
+                    .padding_right(centred.clone())
+                    .text_align("right"),
             ),
     )
 });
@@ -153,14 +141,10 @@ static TIMELINE_BULLET_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             TimelineAlign::Alternate.state_name(),
-            sx().left("0").right("auto").container_query(
-                CONTAINER,
-                ALTERNATE_MIN,
-                // Through `Rail` for the same reason the inset is: this and
-                // `centred_content_inset` are two halves of one measurement,
-                // and C3's centred marker needs both.
-                sx().left(rail.centred_marker_start()),
-            ),
+            // Through `Rail` for the same reason the inset is: this and
+            // `centred_content_inset` are two halves of one measurement, and
+            // C3's centred marker needs both.
+            sx().left(rail.centred_marker_start()).right("auto"),
         )
 });
 
@@ -176,7 +160,9 @@ base_props! {
         #[props(default)]
         active: Option<usize>,
         /// Which side of the rail content sits on - `"left"` (default),
-        /// `"right"`, or `"alternate"`.
+        /// `"right"`, or `"alternate"`. `"alternate"` alternates at every
+        /// width and fills its parent, since a centred rail needs a width to
+        /// be centred in.
         #[props(default, into)]
         align: Input<TimelineAlign>,
         /// The active accent. Per-event colours override it.

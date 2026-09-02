@@ -126,10 +126,14 @@ for a keyboard user. Nothing can detect this for you: `.bullet()` takes any
 Timeline { align: "alternate", items: vec![/* .. */] }
 ```
 
-`"alternate"` needs two content columns, so below roughly 600px of the
-timeline's *own* width it collapses to the one-sided layout. That is a
-container query, not a viewport one - a timeline in a sidebar has to collapse
-when it is narrow, not when the window is.
+`"alternate"` alternates at every width. There is no minimum below which it
+falls back to one side: a timeline that narrow will be cramped, but asking for
+one is a decision you have made and the component does not overrule it.
+
+`"alternate"` also makes the list fill its parent's width, where `"left"` and
+`"right"` shrink to their content - a rail centred in the list needs a width
+to be centred in. Give it a parent with the width you want the rail centred
+in, and that is also how you make it narrower.
 
 `align: "right"` mirrors with physical properties. `Sx` has no logical ones and
 nothing in the crate uses any, so right-to-left text is a library-wide gap
