@@ -42,7 +42,18 @@ pub(super) fn avatar_sx() -> Sx {
     let base = AvatarDefaults::theme_vars()
         .display("inline-flex")
         .align_items("center")
-        .justify_content("center")
+        // `safe`, not a plain `center`: the box is a fixed square with
+        // `overflow: hidden`, and `initials` is whatever the caller wrote. A
+        // centred label longer than the circle is cut at *both* ends, so
+        // "ABCDEFGHIJ" reads as "DEFG" - the start, which is the part that
+        // identifies the person, is the first thing to go, and the overflow
+        // ahead of the box is not even scrollable. `safe` centres exactly as
+        // before while the label fits and falls back to the start edge once it
+        // does not, so nothing about the common one- or two-grapheme avatar
+        // changes. `Badge` met the same defect and answered it by scoping its
+        // centring to the `circle` arm; an avatar is always the circle, so
+        // scoping is not open here [[codebase/components/badge]].
+        .justify_content("safe center")
         // A flex parent would otherwise squash the square, and the group is
         // a flex row.
         .flex_shrink("0")

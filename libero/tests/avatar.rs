@@ -206,3 +206,19 @@ fn a_member_is_told_it_is_in_a_group() {
     assert_eq!(html.matches("grouped").count(), 3, "{html}");
     assert!(!body(&render(initials_app)).contains("grouped"));
 }
+
+/// Measured in Chromium on `/data-display/avatar`, 2026-09-18 (todo 64): with a
+/// plain `center`, a ten-character label in a 38px `md` circle was cut 25.7px at
+/// *each* end and the first visible glyph was the fourth - the start, which is
+/// what identifies the person, was gone, and the overflow ahead of the box was
+/// not even scrollable (`scrollWidth` 64 against a 89px label). `safe` keeps the
+/// centring while the label fits and falls back to the start edge once it does
+/// not. Nothing in the layout is visible to SSR, so what this pins is the
+/// declaration itself.
+#[test]
+fn an_over_long_label_is_cut_at_the_end_rather_than_at_both_ends() {
+    let html = render(initials_app);
+
+    assert!(html.contains("justify-content:safe center"), "{html}");
+    assert!(!html.contains("justify-content:center"), "{html}");
+}
