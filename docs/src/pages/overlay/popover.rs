@@ -15,8 +15,8 @@ const CALL_ORDER: &str = r#"// use_popover first: the style it returns is what t
 let anchor = use_element();
 let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
 
-// Then the box, taking that style. The other way round, the first render
-// styles the box with last render's placement.
+// Then the box. The other way round it styles itself with last
+// render's placement.
 let dropdown = use_box()
     .framework_sx(&DROPDOWN_SX)
     .style(popover.style())
@@ -42,45 +42,9 @@ use_effect(move || {
     let _ = first_item.focus();
 });"#;
 
-const DISMISS: &str = r#"let dismiss = use_dismiss(
-    anchor,
-    *popover.floating(),
-    opened(),
-    popover.placed(),
-    Some(close),
-    DismissOptions {
-        initial_focus: Some(first_item),
-        ..Default::default()
-    },
-);
-
-// On the trigger, synchronously - that is where the active element
-// still is the one the user acted on.
-onclick: move |_| {
-    dismiss.focus_return().remember_active();
-    // Where focus goes if the application deletes the trigger while
-    // the box is open - the row whose Delete button opened a confirm
-    // dialog. Nearest first: the container the trigger lived in, then
-    // a landing place you make focusable yourself with
-    // `tabindex="-1"`, so focus lands somewhere a screen reader
-    // announces rather than falling to the document.
-    dismiss.focus_return().fallback(list);
-    dismiss.focus_return().fallback(page_heading);
-    opened.toggle();
-}
-
-// Spread both. `anchor_events()` is what hears Escape while focus is
-// still on the trigger - off the web it is the only thing that can,
-// because the box is portaled and the trigger is not inside it.
-trigger.render(HtmlTag::Button, dismiss.anchor_events(), rsx! { .. })
-
-popover.show(opened().then(|| dropdown
-    .element(popover.floating())
-    .render(HtmlTag::Div, dismiss.floating_events(), rsx! { .. })));"#;
-
-const CONTEXT_ACROSS_THE_PORTAL: &str = r#"// The box renders at the portal outlet, which sits at the document
-// root - so it inherits none of the context around the call site.
-// Re-provide what the content needs, inside the content itself.
+const CONTEXT_ACROSS_THE_PORTAL: &str = r#"// The box renders at the portal outlet, at the document root, so it
+// inherits none of the context around the call site. Re-provide what
+// the content needs, inside the content itself.
 popover.show(opened().then(|| rsx! {
     MenuProvider { context: menu, {items} }
 }));
@@ -91,13 +55,10 @@ let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
 use_drop(move || tick.manually_drop());"#;
 
 const NESTED: &str = r#"// A submenu is its own popover, anchored to the row that opened it.
-// Geometry needs nothing special: both boxes are `position: fixed` in
-// viewport coordinates, and the one that enters the portal later paints
-// over the earlier one at the same z-index.
-//
-// What does need saying: the submenu is not a descendant of the menu in
-// the DOM, so focus moving into it reads as focus *leaving* the menu.
-// Register it, and keep the guard for as long as the submenu is open.
+// Geometry needs nothing: both boxes are `position: fixed`, and the one
+// portaled later paints over the earlier one. Containment does - the
+// submenu is no descendant of the menu, so focus moving into it reads as
+// focus leaving. Register it, and hold the guard while it is open.
 let _inside = use_hook(move || parent.register_inside(submenu_box));"#;
 
 fn side_of(value: &str) -> Side {
@@ -273,22 +234,15 @@ pub fn PopoverPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "There is no "
-                    Code { source: "Popover" }
-                    " component. A popover is a hook - "
+                    "A popover is a hook, not a component: a dropdown, a menu and a hover "
+                    "card share when and where, never what the box looks like. "
                     Code { source: "use_popover" }
-                    " - because every consumer themes its own box: a dropdown, a menu and a "
-                    "hover card share when and where, never what it looks like. The hook "
-                    "portals the box out to the document root, so it escapes an "
+                    " portals the box to the document root, so it escapes an "
                     Code { source: "overflow: hidden" }
                     " ancestor, and places it in viewport coordinates, flipping and shifting "
-                    "to stay on screen."
-                }
-                Text {
-                    "It owns no open state. "
+                    "to stay on screen. It owns no open state - "
                     Code { source: "show(None)" }
-                    " is how a closed popover stops rendering, and deciding when that happens "
-                    "is the caller's."
+                    " is how a closed popover stops rendering."
                 }
             },
             Demo {
@@ -315,163 +269,52 @@ pub fn PopoverPage() -> Element {
                 wrap: Wrap(wrap_hook_call),
             }
 
-            DocSection {
-                title: "Call order",
-                Text {
-                    "Call "
-                    Code { source: "use_popover" }
-                    " before the "
-                    Code { source: "use_box()" }
-                    " whose "
-                    Code { source: "style()" }
-                    " takes its placement. Hooks are positional, so the order is not a style "
-                    "preference: the box reads the placement the hook produced on this render, "
-                    "and the other way round it styles itself with the previous one."
-                }
-                CodeBlock { source: CALL_ORDER, language: "rust" }
-            }
+            DocSection { title: "Call order", CodeBlock { source: CALL_ORDER, language: "rust" } }
 
             DocSection {
                 title: "Focus after placed, never after mount",
-                Text {
-                    "A box is mounted one render before it is measured, and until then it is "
-                    Code { source: "visibility: hidden" }
-                    " - laid out, so it can be measured, but not shown. "
-                    Code { source: "focus()" }
-                    " on a hidden element returns "
-                    Code { source: "Ok(())" }
-                    " and moves nothing, with no error to catch. That is why this fails "
-                    "silently rather than loudly: wait for "
-                    Code { source: "placed()" }
-                    "."
-                }
                 CodeBlock { source: FOCUS_AFTER_PLACED, language: "rust" }
             }
 
             DocSection {
-                title: "Dismissal",
-                Text {
-                    "Closing is not the placement hook's business, so it lives beside it in "
-                    Code { source: "use_dismiss" }
-                    ": Escape, focus leaving the box, and handing focus back to whatever "
-                    "opened it. It renders nothing - it hands back attributes to spread on "
-                    "the box you drew yourself and on its trigger, because off the web Escape "
-                    "reaches only the element that actually has focus."
-                }
-                Text {
-                    Code { source: "use_dismiss" }
-                    " is internal while "
-                    Code { source: "Menu" }
-                    " is still finding its contract; the shape below is what it will be when "
-                    "it goes public. Until then a downstream dropdown writes the handlers "
-                    "itself, on both surfaces."
-                }
-                CodeBlock { source: DISMISS, language: "rust" }
-                Text {
-                    "Escape is arbitrated rather than claimed. Every open dismissible layer - "
-                    "a popover, and a "
-                    Code { source: "Modal" }
-                    " too - is on one stack ordered by open time, and a handler acts only if "
-                    "its own layer is on top. So a popover open inside a modal closes on "
-                    "Escape and the modal under it stays up, without either of them stopping "
-                    "the event: stopping propagation on a document-level listener would kill "
-                    "every other handler for that press in the whole document. A box drawn "
-                    "inline rather than portaled does stop the press at its own handler, so "
-                    "the modal around it never sees the Escape that already closed the box."
-                }
-                Text {
-                    "A layer joins that stack only where it can hear Escape from outside its "
-                    "own subtree, which today means only where the platform can report a "
-                    "document-level key press. A pointer-opened box leaves focus where it was, "
-                    "so its own "
-                    Code { source: "onkeydown" }
-                    " never fires; if it took the top of the stack anyway, the modal that did "
-                    "hear the press would decline and Escape would do nothing at all. Where "
-                    "there is no document-level listener the box keeps its own handler, the "
-                    "modal stays top, and the "
-                    Code { source: "Modal" }
-                    "'s Escape behaves exactly as it did before."
-                }
-                Text {
-                    "That is a statement about the modal, not about the box. Off the web "
-                    "Escape reaches only the element that actually has focus, so a consumer "
-                    "that can leave focus on its trigger - a combobox-shaped dropdown, any "
-                    "pointer-opened surface - spreads "
-                    Code { source: "anchor_events()" }
-                    " on the trigger as well as "
-                    Code { source: "floating_events()" }
-                    " on the box. The box is portaled to the document root, so the trigger is "
-                    "not inside it and the box's own handler never fires for a press made "
-                    "there. Without both, the surface cannot be dismissed from the keyboard "
-                    "at all."
-                }
-                Text {
-                    "A held Escape is one intent. Dismissal ignores an auto-repeat, or a "
-                    "press-and-hold walks down the stack closing the menu and then the modal "
-                    "behind it. Focus returns to the trigger on a deliberate close - Escape, "
-                    "or an item being chosen - and not when focus simply left the box, since a "
-                    "click has already put it somewhere the user meant."
-                }
-            }
-
-            DocSection {
                 title: "Context across the portal",
-                Text {
-                    "The box does not render where it is written. It renders at the portal "
-                    "outlet, at the document root, so it inherits no context from around the "
-                    "call site - a "
-                    Code { source: "use_context" }
-                    " inside the content finds the outlet's ancestors, not yours. Re-provide "
-                    "what the content needs, inside the content."
-                }
                 CodeBlock { source: CONTEXT_ACROSS_THE_PORTAL, language: "rust" }
             }
 
             DocSection {
                 title: "Nested popovers",
-                Text {
-                    "A popover inside a popover needs nothing from the geometry: both boxes "
-                    "are placed in viewport coordinates, and the one that enters the portal "
-                    "later paints over the earlier one. What it does need is the containment "
-                    "check - the inner box is not a descendant of the outer one, so focus "
-                    "moving into it looks exactly like focus leaving."
-                }
                 CodeBlock { source: NESTED, language: "rust" }
             }
 
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The hook contributes no role and no keyboard of its own - a popover has "
-                    "no semantics. The consumer supplies "
+                    "The hook contributes no role and no keyboard - a popover has no "
+                    "semantics. The consumer supplies "
                     Code { source: "role" }
-                    " and the "
+                    " on the box and the "
                     Code { source: "aria-haspopup" }
                     ", "
                     Code { source: "aria-expanded" }
                     " and "
                     Code { source: "aria-controls" }
-                    " that name the trigger, because only the consumer knows which popup type "
-                    "it is and owns the id scheme. Drive "
+                    " that name the trigger, as the demo above does. Drive "
                     Code { source: "aria-expanded" }
-                    " from the same signal the hook is given: nothing stops the two "
-                    "disagreeing, and a trigger claiming to be closed over an open box is "
-                    "announced as closed. The demo above is wired this way."
+                    " from the same signal the hook is given: a trigger claiming to be closed "
+                    "over an open box is announced as closed."
                 }
                 Text {
-                    "Focus is deliberately not trapped. A menu's Tab closes it and moves on, "
-                    "which is what the ARIA Authoring Practices ask for."
-                }
-                Text {
-                    "If you animate the close, the box stays in the accessibility tree while "
-                    "the animation plays: between the close and the unmount it is still "
-                    "mounted, still tabbable and still announced, so a screen reader reads a "
-                    "box the sighted user has already dismissed. Give the closing box "
+                    "Escape must close the box (WCAG 2.1 SC 1.4.13), and closing it is the "
+                    "consumer's. Off the web only the element that actually holds focus hears "
+                    "the press, and the box is portaled, so a surface that leaves focus on its "
+                    "trigger has to listen on the trigger as well or it cannot be dismissed "
+                    "from the keyboard at all. Focus is deliberately not trapped - Tab closes "
+                    "the surface and moves on. If you animate the close, give the closing box "
                     Code { source: "visibility: hidden" }
                     " or "
                     Code { source: "inert" }
-                    " for the duration. Nothing here animates a popover yet - this is the "
-                    "obligation the first one inherits."
+                    " for the duration: until it unmounts it is still tabbable and still "
+                    "announced."
                 }
             }
 
@@ -482,9 +325,11 @@ pub fn PopoverPage() -> Element {
                     "the web answers today - natively an open popover drifts when the page "
                     "scrolls. Nothing tracks a resize on any backend; "
                     Code { source: "remeasure" }
-                    " is the only answer there, on every platform. The focus-leaves check "
-                    "needs to wait for the platform's next task to see where focus landed, "
-                    "and that wait is a real one only on the web."
+                    " is the only answer there. The focus-leaves check waits for the "
+                    "platform's next task to see where focus landed, which is a real wait "
+                    "only on the web. Elsewhere nothing counts as inside, so every focusout "
+                    "would close the box - including focus moving from the trigger into the "
+                    "content. A consumer that has to work there closes on its own signal."
                 }
             }
         }

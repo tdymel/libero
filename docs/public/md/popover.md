@@ -6,22 +6,22 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/popover/mod
 Index: [index.md](index.md) - every other component's markdown page
 Description: A popover is a hook, not a component - `use_popover` portals a box to the document root and anchors it, flipping and shifting to stay on screen.
 
-There is no `Popover` component. A popover is a hook - `use_popover` - because
-every consumer themes its own box: a dropdown, a menu and a hover card share
-when and where, never what it looks like. The hook portals the box out to the
-document root, so it escapes an `overflow: hidden` ancestor, and places it in
-viewport coordinates, flipping and shifting to stay on screen.
-
-It owns no open state. `show(None)` is how a closed popover stops rendering,
-and deciding when that happens is the caller's.
+A popover is a hook, not a component: a dropdown, a menu and a hover card share
+when and where, never what the box looks like. `use_popover` portals the box to
+the document root, so it escapes an `overflow: hidden` ancestor, and places it in
+viewport coordinates, flipping and shifting to stay on screen. It owns no open
+state - `show(None)` is how a closed popover stops rendering.
 
 ## Usage
+
+The trigger's aria is the consumer's, so this snippet carries it - see
+[Accessibility](#accessibility).
 
 ```rust
 use dioxus::prelude::*;
 use libero::{
     components::{Box, Button},
-    hooks::{use_element, use_popover, Align, PopoverOptions, Side},
+    hooks::{use_element, use_id, use_popover, Align, PopoverOptions, Side},
     sx::sx,
     use_theme,
 };
@@ -31,6 +31,8 @@ fn Demo() -> Element {
     let theme = use_theme();
     let mut opened = use_signal(|| false);
     let anchor = use_element();
+    // One id, owned here, pointed at from the trigger.
+    let list_id = use_id();
 
     let popover = use_popover(
         anchor,
@@ -43,6 +45,8 @@ fn Demo() -> Element {
 
     popover.show(opened().then(|| rsx! {
         Box {
+            id: "{list_id}",
+            role: "listbox",
             style: popover.style(),
             onmounted: floating.mount(),
             sx: sx().background("white").padding("var(--lsx-popover-padding)"),
@@ -54,6 +58,10 @@ fn Demo() -> Element {
         Button {
             onmounted: anchor.mount(),
             onclick: move |_| opened.toggle(),
+            aria_haspopup: "listbox",
+            // The same signal the hook is given, never a second copy.
+            aria_expanded: "{opened()}",
+            aria_controls: "{list_id}",
             "Open popover"
         }
     }
@@ -62,17 +70,13 @@ fn Demo() -> Element {
 
 ## Call order
 
-Call `use_popover` before the `use_box()` whose `style()` takes its placement.
-Hooks are positional, so the order is not a style preference: the box reads the
-placement the hook produced on this render, and the other way round it styles
-itself with the previous one.
-
 ```rust
 // use_popover first: the style it returns is what the box renders with.
 let anchor = use_element();
 let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
 
-// Then the box, taking that style.
+// Then the box. The other way round it styles itself with last
+// render's placement.
 let dropdown = use_box()
     .framework_sx(&DROPDOWN_SX)
     .style(popover.style())
@@ -84,12 +88,6 @@ popover.show(opened().then(|| dropdown
 ```
 
 ## Focus after placed, never after mount
-
-A box is mounted one render before it is measured, and until then it is
-`visibility: hidden` - laid out, so it can be measured, but not shown.
-`focus()` on a hidden element returns `Ok(())` and moves nothing, with no error
-to catch. That is why this fails silently rather than loudly: wait for
-`placed()`.
 
 ```rust
 // Wrong: the box is mounted but not measured, so it is still
@@ -109,105 +107,12 @@ use_effect(move || {
 });
 ```
 
-## Dismissal
-
-Closing is not the placement hook's business, so it lives beside it in
-`use_dismiss`: Escape, focus leaving the box, and handing focus back to
-whatever opened it. It renders nothing - it hands back attributes to spread on
-the box you drew yourself and on its trigger, because off the web Escape reaches
-only the element that actually has focus.
-
-`use_dismiss` is internal while `Menu` is still finding its contract; the shape
-below is what it will be when it goes public. Until then a downstream dropdown
-writes the handlers itself, on both surfaces.
-
-```rust
-let dismiss = use_dismiss(
-    anchor,
-    *popover.floating(),
-    opened(),
-    popover.placed(),
-    Some(close),
-    DismissOptions {
-        initial_focus: Some(first_item),
-        ..Default::default()
-    },
-);
-
-// Spread both. `anchor_events()` is what hears Escape while focus is
-// still on the trigger, which off the web is the only thing that can.
-// ... on the trigger:
-dismiss.anchor_events()
-// ... and on the box:
-dismiss.floating_events()
-
-// On the trigger, synchronously - that is where the active element
-// still is the one the user acted on. For a trigger the application
-// may delete while the box is open, name where focus should land
-// instead:
-onclick: move |_| {
-    dismiss.focus_return().remember_active();
-    // Nearest first. Tier two is the container the trigger lived in;
-    // tier three is a landing place you make focusable yourself with
-    // `tabindex="-1"`, so focus lands somewhere a screen reader
-    // announces rather than falling to the document.
-    dismiss.focus_return().fallback(list);
-    dismiss.focus_return().fallback(page_heading);
-    opened.toggle();
-}
-
-// On the floating box: Escape and the focus-leaves check.
-popover.show(opened().then(|| dropdown
-    .element(popover.floating())
-    .render(HtmlTag::Div, dismiss.floating_events(), rsx! { .. })));
-```
-
-`placed` is a parameter rather than a `DismissOptions` field because the
-dangerous value is the default one. Defaulted to `true`, a consumer who simply
-forgot it would get the very trap the input exists to prevent: `focus()` on the
-pre-placement box returns `Ok(())` and moves nothing, with nothing to catch. As
-a parameter it cannot be forgotten.
-
-Escape is arbitrated rather than claimed. Every open dismissible layer - a
-popover, and a [Modal](modal.md) too - is on one stack ordered by open time,
-and a handler acts only if its own layer is on top. So a popover open inside a
-modal closes on Escape and the modal under it stays up, without either of them
-stopping the event: stopping propagation on a document-level listener would
-kill every other handler for that press in the whole document. A box drawn
-inline rather than portaled does stop the press at its own handler, so the modal
-around it never sees the Escape that already closed the box.
-
-A layer joins that stack only where it can hear Escape from outside its own
-subtree, which today means only where the platform can report a document-level
-key press. A pointer-opened box leaves focus where it was, so its own
-`onkeydown` never fires; if it took the top of the stack anyway, the modal that
-did hear the press would decline and Escape would do nothing at all. Where there
-is no document-level listener the box keeps its own handler, the modal stays
-top, and **the modal's** Escape behaves exactly as it did before.
-
-That is a statement about the modal, not about the box. Off the web Escape
-reaches only the element that actually has focus, so a consumer that can leave
-focus on its trigger - a combobox-shaped dropdown, any pointer-opened surface -
-must spread `anchor_events()` on the trigger as well as `floating_events()` on
-the box. The box is portaled to the document root, so the trigger is not inside
-it and the box's own handler will never fire for a press made there. Without
-both, the surface cannot be dismissed from the keyboard at all (WCAG 2.1
-SC 1.4.13).
-
-A held Escape is one intent, so dismissal ignores an auto-repeat - otherwise a
-press-and-hold walks down the stack, closing the menu and then the modal behind
-it. Focus returns to the trigger on a deliberate close, meaning Escape or an
-item being chosen, and not when focus simply left the box: a click has already
-put it somewhere the user meant.
-
 ## Context across the portal
 
-The box does not render where it is written. It renders at the portal outlet,
-at the document root, so it inherits no context from around the call site - a
-`use_context` inside the content finds the outlet's ancestors, not yours.
-Re-provide what the content needs, inside the content.
-
 ```rust
+// The box renders at the portal outlet, at the document root, so it
+// inherits none of the context around the call site. Re-provide what
+// the content needs, inside the content itself.
 popover.show(opened().then(|| rsx! {
     MenuProvider { context: menu, {items} }
 }));
@@ -220,104 +125,42 @@ use_drop(move || tick.manually_drop());
 
 ## Nested popovers
 
-A popover inside a popover needs nothing from the geometry: both boxes are
-placed in viewport coordinates, and the one that enters the portal later paints
-over the earlier one. What it does need is the containment check - the inner
-box is not a descendant of the outer one, so focus moving into it looks exactly
-like focus leaving.
-
 ```rust
-// Register the submenu's box as counting *inside* the parent, and keep
-// the guard for as long as the submenu is open. It is a call rather than
-// a field because the submenu only exists after the parent's hook ran.
+// A submenu is its own popover, anchored to the row that opened it.
+// Geometry needs nothing: both boxes are `position: fixed`, and the one
+// portaled later paints over the earlier one. Containment does - the
+// submenu is no descendant of the menu, so focus moving into it reads as
+// focus leaving. Register it, and hold the guard while it is open.
 let _inside = use_hook(move || parent.register_inside(submenu_box));
 ```
+
+## Accessibility
+
+The hook contributes no role and no keyboard - a popover has no semantics. The
+consumer supplies `role="menu"`, `"listbox"` or `"dialog"` on the box and the
+`aria-haspopup`, `aria-expanded` and `aria-controls` that name the trigger, as
+the Usage snippet does. Drive `aria-expanded` from the same `open` you pass the
+hook: a trigger claiming to be closed over an open box is announced as closed.
+
+Escape must close the box (WCAG 2.1 SC 1.4.13), and closing it is the consumer's.
+Off the web only the element that actually holds focus hears the press, and the
+box is portaled, so a surface that leaves focus on its trigger has to listen on
+the trigger as well or it cannot be dismissed from the keyboard at all. Focus is
+deliberately **not** trapped -
+Tab closes the surface and moves on, which is what the ARIA Authoring Practices
+ask for. If you animate the close, give the closing box `visibility: hidden` or
+`inert` for the duration: until it unmounts it is still tabbable and still
+announced.
 
 ## What it cannot do
 
 Scroll tracking needs a document-level scroll notification, which only the web
 answers today - natively an open popover drifts when the page scrolls. Nothing
-tracks a resize on any backend; `remeasure` is the only answer there, on every
-platform. The focus-leaves check needs to wait for the platform's next task to
-see where focus landed, and that wait is a real one only on the web.
-
-Off the web that check is wrong rather than merely inert. Where the platform
-cannot report which element has focus or search a subtree, nothing counts as
-inside, so every focusout closes the box - including focus moving from the
-trigger into the list. A consumer that has to work on those backends passes
-`outside: false` and closes on its own signal instead.
-
-## Accessibility
-
-The hook contributes no role and no keyboard of its own - a popover has no
-semantics. The consumer supplies `role="menu"`, `"listbox"` or `"dialog"`, and
-the `aria-haspopup`, `aria-expanded` and `aria-controls` that name the trigger,
-because only the consumer knows which popup type it is and owns the id scheme.
-
-**Drive `aria-expanded` from the same `open` you pass the hook.** Nothing stops
-the two disagreeing, and a trigger that says `aria-expanded="false"` over an
-open box is announced as closed.
-
-```rust
-use dioxus::prelude::*;
-use libero::{
-    components::{Box, Button},
-    hooks::{use_element, use_id, use_popover, PopoverOptions},
-    use_theme,
-};
-
-#[component]
-fn Demo() -> Element {
-    let theme = use_theme();
-    let mut opened = use_signal(|| false);
-    let anchor = use_element();
-    // One id, owned here, pointed at from the trigger.
-    let list_id = use_id();
-
-    let popover = use_popover(
-        anchor,
-        opened(),
-        PopoverOptions::new(theme.popover.gap, theme.popover.padding),
-    );
-    let floating = *popover.floating();
-
-    popover.show(opened().then(|| rsx! {
-        Box {
-            id: "{list_id}",
-            role: "listbox",
-            style: popover.style(),
-            onmounted: floating.mount(),
-            "Popover content"
-        }
-    }));
-
-    rsx! {
-        Button {
-            onmounted: anchor.mount(),
-            onclick: move |_| opened.toggle(),
-            aria_haspopup: "listbox",
-            // The same signal the hook is given, never a second copy.
-            aria_expanded: "{opened()}",
-            aria_controls: "{list_id}",
-            "Open"
-        }
-    }
-}
-```
-
-Escape must close a popover (WCAG 2.1 SC 1.4.13), which is what `use_dismiss`
-answers, and only the top layer acts. Off the web that needs `anchor_events()`
-on the trigger as well - see the dismissal section above.
-
-Focus is deliberately **not** trapped: a menu's Tab closes it and moves on,
-which is what the ARIA Authoring Practices ask for.
-
-**If you animate the close, the box stays in the accessibility tree while it
-plays.** Between the close and the unmount it is still mounted, still tabbable
-and still announced, so a screen reader reads a box the sighted user has already
-dismissed. Give the closing box `visibility: hidden` or `inert` for the
-duration. Nothing in the library animates a popover yet; this is the obligation
-the first one inherits.
+tracks a resize on any backend; `remeasure` is the only answer there. The
+focus-leaves check waits for the platform's next task to see where focus landed,
+which is a real wait only on the web. Elsewhere nothing counts as inside, so
+every focusout would close the box - including focus moving from the trigger into
+the content. A consumer that has to work there closes on its own signal.
 
 ## Hook API
 
