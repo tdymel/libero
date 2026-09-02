@@ -35,6 +35,7 @@ fetch only the file you need.
 
 ## Feedback
 
+- [Alert](alert.md): A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
 - [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
 
 ## Form
