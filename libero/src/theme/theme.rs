@@ -13,14 +13,14 @@ use super::{
     IconDefaults, ImageDefaults, ImageFit, ImageListDefaults, ImageListVariant, KbdDefaults,
     ListDefaults, MarkDefaults, NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults,
     OverlayDefaults, PaginationDefaults, PaginationLabels, PaperDefaults, PhoneFieldDefaults,
-    PinFieldDefaults, PinKind, Placement, PopoverDefaults, QrCodeDefaults, QrRobustness,
-    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
-    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
-    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT,
-    TableDefaults, TabsDefaults, TabsSizeLevel, TagsFieldDefaults, TextDefaults, TextFieldDefaults,
-    TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant, TimelineAlign,
-    TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
-    ZIndexDefaults,
+    PinFieldDefaults, PinKind, Placement, PopoverDefaults, ProgressBarDefaults, QrCodeDefaults,
+    QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
+    ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults,
+    SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel,
+    TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
+    TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults, TitleDefaults,
+    TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
@@ -47,6 +47,7 @@ pub struct Theme {
     pub overlay: OverlayDefaults,
     pub z_index: ZIndexDefaults,
     pub popover: PopoverDefaults,
+    pub progress_bar: ProgressBarDefaults,
     pub paper: PaperDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
@@ -415,6 +416,16 @@ impl Theme {
                     padding_x: "20px",
                 },
             ),
+        },
+        progress_bar: ProgressBarDefaults {
+            size: Size::Md,
+            radius: Size::Xl,
+            track_shade: ColorShade::S2,
+            transition: "100ms",
+            // Track heights. A bar is a full pill once the radius reaches half
+            // of these, which is why most of the radius scale is inert here -
+            // see `ProgressBarDefaults::radius`.
+            sizes: Sizes::new("3px", "5px", "8px", "12px", "16px", "20px"),
         },
         switch: SwitchDefaults {
             size: Size::Md,

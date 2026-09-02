@@ -16,6 +16,7 @@ pub use data_display::{
     AvatarPage, BadgePage, DataListPage, IconPage, ImagePage, ListPage, QrCodePage, TablePage,
     TimelinePage,
 };
+pub use feedback::ProgressBarPage;
 pub use form::{
     AutocompletePage, CascaderPage, CheckboxPage, ColorFieldPage, ColorPickerPage, ComboboxPage,
     DateFieldPage, DatePickerPage, FieldsetPage, FileFieldPage, FormGettingStartedPage, FormPage,

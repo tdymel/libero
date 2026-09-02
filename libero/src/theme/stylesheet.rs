@@ -1,9 +1,9 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
-    Color, ColorShade, ColorValue, HexColor, NamedColorCss, RIPPLE_KEYFRAMES, Size, SizeCss,
-    TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
-    Theme,
+    Color, ColorShade, ColorValue, HexColor, NamedColorCss, PROGRESS_BAR_KEYFRAMES,
+    RIPPLE_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT,
+    TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -25,6 +25,7 @@ impl From<&Theme> for Stylesheet {
         scopes.push(body_scope(theme));
         let mut css = Stylesheet::new(scopes).as_str().to_string();
         css.push_str(RIPPLE_KEYFRAMES);
+        css.push_str(PROGRESS_BAR_KEYFRAMES);
         Stylesheet::from(css)
     }
 }
@@ -90,6 +91,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         overlay,
         z_index,
         popover,
+        progress_bar,
         paper,
         divider,
         splitter,
@@ -185,6 +187,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(overlay.to_css_declarations());
     declarations.extend(z_index.to_css_declarations());
     declarations.extend(popover.to_css_declarations());
+    declarations.extend(progress_bar.to_css_declarations());
     declarations.extend(paper.to_css_declarations());
     declarations.extend(divider.to_css_declarations());
     declarations.extend(splitter.to_css_declarations());

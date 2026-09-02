@@ -47,6 +47,7 @@ mod paper;
 mod phone_field;
 mod pin_field;
 mod popover;
+mod progress_bar;
 mod qr_code;
 mod radio;
 mod ripple;
@@ -180,6 +181,12 @@ pub use paper::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW
 pub use phone_field::PhoneFieldDefaults;
 pub use pin_field::{PIN_FIELD_GAP, PinFieldDefaults, PinKind};
 pub use popover::{POPOVER_GAP, POPOVER_PADDING, PopoverDefaults};
+pub use progress_bar::{
+    INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION, PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL,
+    PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_KEYFRAMES, PROGRESS_BAR_RADIUS,
+    PROGRESS_BAR_SIZE, PROGRESS_BAR_THICKNESS, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION,
+    ProgressBarDefaults,
+};
 pub use qr_code::{QR_CODE_BACKGROUND, QR_CODE_FOREGROUND, QrCodeDefaults, QrRobustness};
 pub use radio::{RADIO_CIRCLE, RADIO_CIRCLE_SIZE, RadioDefaults};
 pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};

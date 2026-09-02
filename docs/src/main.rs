@@ -25,11 +25,11 @@ use pages::{
     FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage, IconPage,
     ImageListPage, ImagePage, KbdPage, ListPage, MarkPage, ModalPage, MultiSelectPage,
     NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
-    PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, QrCodePage,
-    RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage,
-    SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage,
-    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
-    TreePage, VisuallyHiddenPage,
+    PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage,
+    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage,
+    SidebarPage, SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage,
+    TagsFieldPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage,
+    TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -82,6 +82,9 @@ pub(crate) enum Route {
     ListPage {},
     #[route("/data-display/qr-code")]
     QrCodePage {},
+
+    #[route("/feedback/progress-bar")]
+    ProgressBarPage {},
 
     #[route("/form/getting-started")]
     FormGettingStartedPage {},
