@@ -43,6 +43,15 @@ for item in pagination_range(42, 7, 1, 1) {
     }
 }"#;
 
+/// `siblings` and `boundaries` are `u8`s, so they print unquoted.
+fn unquoted(control: &Control, values: &DemoValues) -> Vec<String> {
+    let value = values.str(control.name);
+    match value == control.default {
+        true => vec![],
+        false => vec![format!("{}: {value}", control.name)],
+    }
+}
+
 /// The demo is genuinely controlled: `page` lives here, so clicking through the
 /// preview moves it the way it would in an application.
 #[component]
@@ -101,11 +110,19 @@ pub fn PaginationPage() -> Element {
                 fixed: vec![
                     "page: page()".to_string(),
                     "onchange: move |next| page.set(next)".to_string(),
+                    // Required, so the snippet needs it even though no control
+                    // sets it.
+                    "aria_label: \"Demo pages\"".to_string(),
                 ],
                 controls: vec![
-                    Control::select("total", ["1", "7", "10", "42"]).default("10"),
-                    Control::slider("siblings", ["0", "1", "2", "3"]).default("1"),
-                    Control::slider("boundaries", ["1", "2", "3"]).default("1"),
+                    // Required as well, so it prints even at its default.
+                    Control::select("total", ["1", "7", "10", "42"])
+                        .default("10")
+                        .code(|_, values| vec![format!("total: {}", values.str("total"))]),
+                    Control::slider("siblings", ["0", "1", "2", "3"])
+                        .default("1")
+                        .code(unquoted),
+                    Control::slider("boundaries", ["1", "2", "3"]).default("1").code(unquoted),
                     Control::slider("size", SIZES).default(theme.pagination.size.as_str()),
                     Control::slider("radius", SIZES).default(theme.pagination.radius.as_str()),
                     Control::color("color", ["primary", "secondary", "success", "error"]),
