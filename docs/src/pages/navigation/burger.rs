@@ -129,10 +129,14 @@ pub fn BurgerPage() -> Element {
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+                    // Unset is `currentColor`, not a palette colour, so the
+                    // swatch is painted rather than dropped - see
+                    // `codebase/docs/demo-controls`.
                     Control::color(
                         "color",
                         [UNSET, "primary", "secondary", "success", "error", "warning"],
-                    ),
+                    )
+                    .unset_swatch("currentColor"),
                     Control::switch("disabled"),
                 ],
                 wrap: Wrap(wrap),
