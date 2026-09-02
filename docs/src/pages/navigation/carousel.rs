@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Carousel, Code, CodeBlock, Kbd, List, ListItem, Text},
+    components::{Box, Carousel, Code, CodeBlock, Input, Kbd, List, ListItem, Text},
     sx::sx,
     use_theme,
 };
@@ -17,7 +17,8 @@ const FIXED: [&str; 2] = [
                 .display("flex")
                 .align_items("center")
                 .justify_content("center")
-                .height("160px")
+                .min_height("160px")
+                .height("100%")
                 .background(format!("primary.{n}"))
                 .color(format!("primary-contrast.{n}")),
             Text { "Slide {n}" }
@@ -49,7 +50,13 @@ fn demo_slides() -> Vec<Element> {
                         .display("flex")
                         .align_items("center")
                         .justify_content("center")
-                        .height("160px")
+                        // A slide has whatever length the carousel gives it -
+                        // a vertical one is 300px of the 300px track - so the
+                        // fixed height is a floor, not the size. It used to be
+                        // `height`, and a vertical slide then painted 160 of
+                        // its 300px and left the rest blank.
+                        .min_height("160px")
+                        .height("100%")
                         .background(format!("primary.{n}"))
                         .color(format!("primary-contrast.{n}")),
                     Text { "Slide {n}" }
@@ -130,7 +137,18 @@ pub fn CarouselPage() -> Element {
                 children_text: "",
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
-                    Control::slider("per_view", ["1", "2", "3", "4"]),
+                    // Opens at 3, not at the component's own default of 1.
+                    // At 1 a slide fills the viewport, so all three `align`
+                    // values coincide and that control looks dead - and the
+                    // dot strip is one dot per slide, so `indicators` has
+                    // nothing to say either. `code` prints against the real
+                    // default, and unquoted: `per_view` is an `f64`.
+                    Control::slider("per_view", ["1", "1.5", "2", "3", "4"])
+                        .default("3")
+                        .code(|_, values| match values.str("per_view").as_str() {
+                            "1" => vec![],
+                            value => vec![format!("per_view: {value}")],
+                        }),
                     Control::slider("gap", ["xs", "sm", "md", "lg", "xl"])
                         .default(theme.carousel.gap.as_str()),
                     Control::toggle("align", ["start", "center", "end"])
@@ -147,7 +165,17 @@ pub fn CarouselPage() -> Element {
                         },
                     ),
                     Control::switch("controls").default(&theme.carousel.controls.to_string()),
-                    Control::switch("indicators").default(&theme.carousel.indicators.to_string()),
+                    // On, though the theme's default is off: above `per_view`
+                    // 1 the dot strip is the only thing that shows `align`
+                    // moving the reachable window - four dots reading 1-4,
+                    // 2-5 or 3-6 - while the strip itself is clamped at rest
+                    // and cannot move. `code` prints against the theme.
+                    Control::switch("indicators").default("true").code(|_, values| {
+                        match values.str("indicators").as_str() {
+                            "true" => vec!["indicators: true".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     Control::switch("draggable"),
                     Control::switch("autoplay"),
                     Control::switch("loop").code(|_, values| {
@@ -167,7 +195,13 @@ pub fn CarouselPage() -> Element {
                             gap: values.str("gap"),
                             align: values.str("align"),
                             orientation: values.str("orientation"),
-                            height: if vertical { "300px" } else { "" },
+                            // `Input::None`, not `""`: an empty string is a
+                            // value, and it resolves to an empty declaration
+                            // rather than to "no height".
+                            height: match vertical {
+                                true => Input::Value("300px".into()),
+                                false => Input::None,
+                            },
                             controls: values.str("controls") == "true",
                             indicators: values.str("indicators") == "true",
                             draggable: values.str("draggable") == "true",

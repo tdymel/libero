@@ -34,13 +34,16 @@ fn Demo() -> Element {
                             .display("flex")
                             .align_items("center")
                             .justify_content("center")
-                            .height("160px")
+                            .min_height("160px")
+                            .height("100%")
                             .background(format!("primary.{n}"))
                             .color(format!("primary-contrast.{n}")),
                         Text { "Slide {n}" }
                     }
                 })
                 .collect(),
+            per_view: 3,
+            indicators: true,
         }
     }
 }
@@ -78,6 +81,12 @@ Carousel {
     slides: slides(),
 }
 ```
+
+A vertical slide is as long as the carousel gives it - one third of the
+`height` at `per_view: 3`, all of it at `per_view: 1` - so slide content with a
+fixed height paints that much and leaves the rest of the slide blank. Give the
+content `height: 100%` and keep any fixed height as a `min-height`, which is
+what the usage snippet above does.
 
 ## Controlled slide
 

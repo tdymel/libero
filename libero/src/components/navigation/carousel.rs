@@ -29,10 +29,27 @@ input_from_str!(CarouselAlign);
 static CAROUSEL_ROOT_SX: StaticSx = StaticSx::new(|| {
     // The controls sit over the viewport, so the root is their containing
     // block.
-    sx().position("relative").display("block")
+    sx().position("relative")
+        .display("block")
+        // A viewport takes its cross-axis size from its container, never from
+        // its slides - `ScrollArea`'s root says the same thing. Without this
+        // the root shrink-to-fits wherever it is not a plain block child (a
+        // flex item, a grid cell), and then its width is the *track's*
+        // max-content width. A horizontal track overflows that and gets
+        // clamped back to the space available, so it fills by accident; a
+        // vertical one is as wide as its widest slide's text and collapses to
+        // a sliver.
+        .width("100%")
 });
 
-static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| sx().overflow("hidden"));
+static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
+    // The controls are absolute against *this*, not against the root: the root
+    // is the viewport plus the indicator strip, and positioning against it put
+    // a vertical carousel's next control 172px below the bottom of the strip,
+    // among the dots. They are inset by `CAROUSEL_CONTROLS_OFFSET`, so the
+    // `overflow: hidden` here does not clip them.
+    sx().position("relative").overflow("hidden")
+});
 
 static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -428,9 +445,18 @@ fn carousel_variables(
             CAROUSEL_GAP.override_var(),
             gap.map(|gap| SizeCss::SPACING.value(gap)),
         )
+        // Always declared, never omitted: a `Variables` set that shrinks
+        // between renders leaves the dropped property on the element with its
+        // last value (todo 68, `Burger`'s `d643225`). Without the `auto` arm a
+        // carousel switched from vertical back to horizontal kept the vertical
+        // `height` - measured 300px on a horizontal strip whose prop was unset.
         .with(
             CAROUSEL_HEIGHT,
-            height.and_then(|height| height.resolve(Some(SizeCss::SPACING))),
+            Some(
+                height
+                    .and_then(|height| height.resolve(Some(SizeCss::SPACING)))
+                    .unwrap_or_else(|| "auto".to_string()),
+            ),
         )
 }
 
@@ -1077,44 +1103,46 @@ pub fn Carousel(props: CarouselProps) -> Element {
                 aria_atomic: "true",
                 "{status}"
             }
-            Box { framework_sx: &CAROUSEL_VIEWPORT_SX, {track_element} }
-            if controls {
-                Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states.clone(),
-                    Box {
-                        component: "button",
-                        r#type: "button",
-                        framework_sx: &CAROUSEL_CONTROL_SX,
-                        states: control_states(at_start),
-                        aria_controls: track_id_value.clone(),
-                        aria_disabled: at_start.to_string(),
-                        aria_label: theme.carousel.previous_label,
-                        onclick: move |_| match (looping, current()) {
-                            (true, 0) => nav.go_to(count.saturating_sub(1)),
-                            (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
-                            _ => {}
-                        },
-                        {chevron(match orientation {
-                            Orientation::Horizontal => "m15 18-6-6 6-6",
-                            Orientation::Vertical => "m18 15-6-6-6 6",
-                        })}
-                    }
-                    Box {
-                        component: "button",
-                        r#type: "button",
-                        framework_sx: &CAROUSEL_CONTROL_SX,
-                        states: control_states(at_end),
-                        aria_controls: track_id_value.clone(),
-                        aria_disabled: at_end.to_string(),
-                        aria_label: theme.carousel.next_label,
-                        onclick: move |_| match looping && current() >= count.saturating_sub(1) {
-                            true => nav.go_to(0),
-                            false if !at_end => nav.go_to(current() + 1),
-                            false => {}
-                        },
-                        {chevron(match orientation {
-                            Orientation::Horizontal => "m9 18 6-6-6-6",
-                            Orientation::Vertical => "m6 9 6 6 6-6",
-                        })}
+            Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
+                {track_element}
+                if controls {
+                    Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states.clone(),
+                        Box {
+                            component: "button",
+                            r#type: "button",
+                            framework_sx: &CAROUSEL_CONTROL_SX,
+                            states: control_states(at_start),
+                            aria_controls: track_id_value.clone(),
+                            aria_disabled: at_start.to_string(),
+                            aria_label: theme.carousel.previous_label,
+                            onclick: move |_| match (looping, current()) {
+                                (true, 0) => nav.go_to(count.saturating_sub(1)),
+                                (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
+                                _ => {}
+                            },
+                            {chevron(match orientation {
+                                Orientation::Horizontal => "m15 18-6-6 6-6",
+                                Orientation::Vertical => "m18 15-6-6-6 6",
+                            })}
+                        }
+                        Box {
+                            component: "button",
+                            r#type: "button",
+                            framework_sx: &CAROUSEL_CONTROL_SX,
+                            states: control_states(at_end),
+                            aria_controls: track_id_value.clone(),
+                            aria_disabled: at_end.to_string(),
+                            aria_label: theme.carousel.next_label,
+                            onclick: move |_| match looping && current() >= count.saturating_sub(1) {
+                                true => nav.go_to(0),
+                                false if !at_end => nav.go_to(current() + 1),
+                                false => {}
+                            },
+                            {chevron(match orientation {
+                                Orientation::Horizontal => "m9 18 6-6-6-6",
+                                Orientation::Vertical => "m6 9 6 6 6-6",
+                            })}
+                        }
                     }
                 }
             }
@@ -1351,6 +1379,33 @@ mod tests {
             "{}",
             track.as_str()
         );
+    }
+
+    /// A shrink-to-fit parent - a flex item, a grid cell, the docs preview
+    /// pane - would otherwise size the root from the *track's* max-content
+    /// width. Horizontally that overflows and gets clamped back, so it fills
+    /// by accident; vertically the widest slide's content is the whole width
+    /// and the carousel collapses to a sliver. No test in this repo computes a
+    /// layout, so this is the declaration, not the result.
+    #[test]
+    fn the_root_takes_its_width_from_its_container_not_from_its_slides() {
+        let css = Stylesheet::from(&CAROUSEL_ROOT_SX);
+
+        assert!(css.as_str().contains("width:100%"), "{}", css.as_str());
+    }
+
+    /// Todo 68: a `Variables` set that shrinks between renders leaves the
+    /// dropped property on the element with its last value. `height` is unset
+    /// on every horizontal carousel, so a strip switched from vertical back to
+    /// horizontal kept the vertical height - 300px, measured on the docs page.
+    /// The var is declared either way and carries `auto` when nothing is set.
+    #[test]
+    fn the_height_var_is_declared_even_when_no_height_is_set() {
+        let unset = carousel_variables(1.0, None, None).to_string();
+        let set = carousel_variables(1.0, None, Some(&ThemeAwareValue::from("300px"))).to_string();
+
+        assert!(unset.contains("--lsx-carousel-height:auto;"), "{unset}");
+        assert!(set.contains("--lsx-carousel-height:300px;"), "{set}");
     }
 
     /// Chrome and Safari keep smooth scrolling under reduced motion, so the
