@@ -10,8 +10,6 @@ pub const IMAGE_LIST_BAR_BACKGROUND: CssVar = CssVar::new("--lsx-image-list-bar-
 pub const IMAGE_LIST_BAR_BACKGROUND_TOP: CssVar =
     CssVar::new("--lsx-image-list-bar-background-top");
 pub const IMAGE_LIST_BAR_COLOR: CssVar = CssVar::new("--lsx-image-list-bar-color");
-pub const IMAGE_LIST_BAR_SUBTITLE_OPACITY: CssVar =
-    CssVar::new("--lsx-image-list-bar-subtitle-opacity");
 /// A spacing step, resolved here rather than published per size: the bar's
 /// padding is not a prop, so no `data-state` ever picks a different step.
 pub const IMAGE_LIST_BAR_PADDING: CssVar = CssVar::new("--lsx-image-list-bar-padding");
@@ -29,6 +27,12 @@ str_enum! {
         /// Cells keep their own height and are packed with no dead space,
         /// by `GridZone`'s measuring engine.
         Masonry = "masonry",
+        /// `standard`, plus `ImageItem::rows`: a cell may take more than one
+        /// row, and the quilt's rows stay equal.
+        Quilted = "quilted",
+        /// `standard`, with every second cell shortened to 70% and centred -
+        /// the alternating rhythm MUI calls woven. Decoration, and it crops.
+        Woven = "woven",
     }
 }
 
@@ -61,7 +65,6 @@ pub struct ImageListDefaults {
     pub bar_background: &'static str,
     pub bar_background_top: &'static str,
     pub bar_color: &'static str,
-    pub bar_subtitle_opacity: &'static str,
     pub bar_padding: Size,
 }
 
@@ -84,7 +87,6 @@ impl ToCssDeclarations for ImageListDefaults {
             IMAGE_LIST_BAR_BACKGROUND.declare(self.bar_background),
             IMAGE_LIST_BAR_BACKGROUND_TOP.declare(self.bar_background_top),
             IMAGE_LIST_BAR_COLOR.declare(self.bar_color),
-            IMAGE_LIST_BAR_SUBTITLE_OPACITY.declare(self.bar_subtitle_opacity),
             IMAGE_LIST_BAR_PADDING.declare(SizeCss::SPACING.value(self.bar_padding)),
         ]
     }

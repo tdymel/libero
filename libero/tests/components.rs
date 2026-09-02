@@ -2222,6 +2222,65 @@ fn the_zone_places_items_at_a_higher_specificity_than_the_item_styles_itself() {
     assert!(html.contains("[data-state~=\"span-half\"]"));
 }
 
+/// `rows` is the caller's own row span, and it writes a **different variable**
+/// from the masonry engine's: one property, one writer. Outside a masonry zone
+/// the item sets `grid-row` from its own stylesheet.
+#[test]
+fn an_item_can_span_rows_of_its_own() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                GridZone { GridItem { rows: 2u8, "tall" } }
+            }
+        }
+    }
+
+    let html = render(app);
+    let item = attributes_of(&nth_div(&html, 1), "div");
+
+    assert!(
+        item.get("data-state")
+            .is_some_and(|state| state.contains("rows")),
+        "{html}"
+    );
+    assert!(
+        item.get("style")
+            .expect("the row span")
+            .contains("--lsx-grid-item-row-span:2")
+    );
+    assert!(html.contains("grid-row:span var(--lsx-grid-item-row-span, 1)"));
+}
+
+/// And the masonry engine wins by the item simply not writing it: the span
+/// there is derived from a measured height, so a manual one would leave the
+/// item overlapping its neighbours. The two rules never meet on an element.
+#[test]
+fn a_masonry_zone_drops_an_items_own_row_span() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                GridZone { masonry: true, GridItem { rows: 2u8, "tall" } }
+            }
+        }
+    }
+
+    let html = render(app);
+    let item = attributes_of(&nth_div(&html, 1), "div");
+
+    assert!(
+        !item
+            .get("data-state")
+            .is_some_and(|state| state.split_whitespace().any(|token| token == "rows")),
+        "{html}"
+    );
+    assert!(
+        !item
+            .get("style")
+            .is_some_and(|style| style.contains("--lsx-grid-item-row-span")),
+        "{html}"
+    );
+}
+
 /// `gap` has to reach the item's `margin-bottom` and the zone's cancelling
 /// margin, not just the `gap` shorthand - in masonry the row gap is zero and
 /// the vertical spacing is entirely that margin. A per-size class could only

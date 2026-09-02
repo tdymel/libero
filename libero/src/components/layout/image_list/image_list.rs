@@ -11,9 +11,8 @@ use crate::{
     sx::{StaticSx, Sx, sx},
     theme::{
         ASPECT_RATIO, BarPosition, IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP,
-        IMAGE_LIST_BAR_COLOR, IMAGE_LIST_BAR_PADDING, IMAGE_LIST_BAR_SUBTITLE_OPACITY,
-        IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant, Size, SizeCss, TEXT_FONT_SIZE,
-        TEXT_LINE_HEIGHT,
+        IMAGE_LIST_BAR_COLOR, IMAGE_LIST_BAR_PADDING, IMAGE_LIST_RADIUS, ImageListDefaults,
+        ImageListVariant, Size, SizeCss,
     },
     utils::warn,
 };
@@ -64,6 +63,19 @@ fn snap_cols(cols: u8) -> u8 {
     snapped
 }
 
+/// A quilted cell's aspect ratio: the list's, scaled by how much bigger the
+/// cell is than an ordinary one.
+///
+/// This is the arithmetic MUI does with `rowHeight * rows + gap * (rows - 1)`,
+/// done from `ratio` instead - so a 2x2 cell is exactly twice the size of a
+/// 1x1 one and every row lands on the same height without anyone naming a
+/// pixel. A fixed pixel height does not survive a responsive column count;
+/// an aspect ratio does.
+fn quilt_ratio(ratio: f32, columns: u8, default_columns: u8, rows: u8) -> f32 {
+    let widths = f32::from(columns) / f32::from(default_columns.max(1));
+    ratio * widths / f32::from(rows.max(1))
+}
+
 /// The span one cell takes when `cols` cells share a row.
 fn span_for_cols(cols: u8) -> GridSpan {
     match cols {
@@ -76,9 +88,40 @@ fn span_for_cols(cols: u8) -> GridSpan {
     }
 }
 
+/// Every variant but `masonry` gives the cell a height of its own, from the
+/// list's ratio. A token rather than a list of variant names, so a new variant
+/// says which family it is in at the one place it is decided.
+const RATIO_BOX_STATE: &str = "ratio-box";
+
 /// The `<ul>`. `GridZone` brings the grid, so this is the list reset it has no
-/// reason to carry.
-static IMAGE_LIST_SX: StaticSx = StaticSx::new(|| sx().list_style("none").margin("0").padding("0"));
+/// reason to carry - plus `woven`, which is the only variant whose rules are
+/// about the *relationship* between neighbouring cells and so cannot live on
+/// a cell's own class.
+static IMAGE_LIST_SX: StaticSx = StaticSx::new(|| {
+    sx().list_style("none")
+        .margin("0")
+        .padding("0")
+        // Equal rows, with nothing naming a pixel. A cell's own ratio already
+        // scales with its width and height (see `quilt_ratio`), so the rows
+        // come out near-equal on their own; `1fr` absorbs the residue the gap
+        // terms leave, which an aspect ratio cannot see. This is the whole of
+        // what MUI needs `rowHeight` for.
+        .when(
+            ImageListVariant::Quilted.state_name(),
+            sx().grid_auto_rows("1fr"),
+        )
+        .when(
+            ImageListVariant::Woven.state_name(),
+            // MUI's woven, mechanism included: every cell fills its row, every
+            // second one takes 70% of it, and centring is what turns that into
+            // an alternating rhythm rather than a ragged bottom edge. The
+            // percentages resolve against the row, which the ratio box sizes -
+            // so this is `standard` with one cell in two cropped.
+            sx().align_items("center")
+                .selector("& > li", sx().height("100%"))
+                .selector("& > li:nth-of-type(even)", sx().height("70%")),
+        )
+});
 
 /// The `<li>`. **A one-column grid, and the only positioned box in the cell.**
 ///
@@ -107,7 +150,7 @@ fn media_base() -> Sx {
         .overflow("hidden")
         .selector("& > *", sx().width("100%").display("block"))
         .when(
-            ImageListVariant::Standard.state_name(),
+            RATIO_BOX_STATE,
             // `AspectRatio`'s var pair, not one of our own: it is the same
             // concept, it already carries a themed default, and a caller who
             // retunes `theme.aspect_ratio` gets galleries that match.
@@ -142,8 +185,9 @@ fn media_base() -> Sx {
 }
 
 /// A link that is a link and nothing else, plus the hit area over the tile.
-/// Stretched rather than wrapping the cell: the bar's action is a `<button>`,
-/// and a button inside an anchor is invalid HTML.
+/// Stretched rather than wrapping the cell: the bar holds whatever the caller
+/// rendered, and a `<button>` inside an anchor is invalid HTML - so the anchor
+/// is the picture and the tile is covered by a pseudo-element instead.
 fn link_base() -> Sx {
     sx().color("inherit").text_decoration("none").selector(
         "&::after",
@@ -151,44 +195,42 @@ fn link_base() -> Sx {
     )
 }
 
-fn title_base() -> Sx {
-    sx().display("block")
-        .font_weight("500")
-        .overflow("hidden")
-        .text_overflow("ellipsis")
-        .white_space("nowrap")
-}
-
 static IMAGE_LIST_MEDIA_SX: StaticSx = StaticSx::new(media_base);
 static IMAGE_LIST_MEDIA_LINK_SX: StaticSx = StaticSx::new(|| media_base().and(link_base()));
-static IMAGE_LIST_TITLE_SX: StaticSx = StaticSx::new(title_base);
-static IMAGE_LIST_TITLE_LINK_SX: StaticSx = StaticSx::new(|| title_base().and(link_base()));
+
+/// The scrim's `data-state` token, per position: the gradient fades *away*
+/// from the edge it sits on, so which one is a function of both the position
+/// and whether the caller kept the scrim at all. Encoded as one token rather
+/// than two, because `when` matches a single one.
+fn scrim_state(position: BarPosition) -> &'static str {
+    match position {
+        BarPosition::Bottom => "bar-scrim-bottom",
+        BarPosition::Top => "bar-scrim-top",
+        // In flow on the page's own background - there is nothing to scrim.
+        BarPosition::Below => "",
+    }
+}
 
 static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
     // The picture's own grid cell, aligned to one edge of it - **never**
     // `position: absolute`. See `IMAGE_LIST_CELL_SX`.
-    let overlay = sx()
-        .grid_row("1")
-        .grid_column("1")
-        .color(IMAGE_LIST_BAR_COLOR.value());
+    let overlay = sx().grid_row("1").grid_column("1");
 
     sx().display("flex")
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Sm))
         .padding(IMAGE_LIST_BAR_PADDING.value())
+        // Above the stretched link, so a control the caller put in the bar is
+        // clickable on a cell with a `to`. `z-index` **without** `position`: a
+        // grid item takes one either way, and positioning the bar would make
+        // it the containing block for the anchor's `::after` - the defect the
+        // browser pass found. Nothing inside a cell may be positioned.
+        .z_index("1")
         .when(
             BarPosition::Bottom.state_name(),
-            overlay
-                .clone()
-                .align_self("end")
-                .background(IMAGE_LIST_BAR_BACKGROUND.value()),
+            overlay.clone().align_self("end"),
         )
-        .when(
-            BarPosition::Top.state_name(),
-            overlay
-                .align_self("start")
-                .background(IMAGE_LIST_BAR_BACKGROUND_TOP.value()),
-        )
+        .when(BarPosition::Top.state_name(), overlay.align_self("start"))
         // The implicit second row: in flow under the picture, on the page's own
         // background - so it takes the page's text colour and only its vertical
         // padding.
@@ -200,29 +242,19 @@ static IMAGE_LIST_BAR_SX: StaticSx = StaticSx::new(|| {
                 .padding_right("0")
                 .padding_bottom("0"),
         )
-});
-
-static IMAGE_LIST_TEXT_SX: StaticSx = StaticSx::new(|| sx().flex("1 1 auto").min_width("0"));
-
-static IMAGE_LIST_SUBTITLE_SX: StaticSx = StaticSx::new(|| {
-    // A concrete step, never `0.85em`: the bar is a sibling of the picture and
-    // sits on the cell, so a relative size would resolve against whatever the
-    // caller's page happens to be - the trap `Blockquote`'s caption fell into.
-    sx().font_size(TEXT_FONT_SIZE.value(Size::Sm))
-        .line_height(TEXT_LINE_HEIGHT.value(Size::Sm))
-        .opacity(IMAGE_LIST_BAR_SUBTITLE_OPACITY.value())
-        .overflow("hidden")
-        .text_overflow("ellipsis")
-        .white_space("nowrap")
-});
-
-/// Above the stretched link, or a `to` cell would swallow every click on it.
-static IMAGE_LIST_ACTION_SX: StaticSx = StaticSx::new(|| {
-    sx().position("relative")
-        .z_index("1")
-        .flex("0 0 auto")
-        .display("flex")
-        .align_items("center")
+        // The colour rides the scrim rather than the position: with the scrim
+        // off there is no dark backdrop to be light against, and the caller
+        // owns the design from there.
+        .when(
+            scrim_state(BarPosition::Bottom),
+            sx().background(IMAGE_LIST_BAR_BACKGROUND.value())
+                .color(IMAGE_LIST_BAR_COLOR.value()),
+        )
+        .when(
+            scrim_state(BarPosition::Top),
+            sx().background(IMAGE_LIST_BAR_BACKGROUND_TOP.value())
+                .color(IMAGE_LIST_BAR_COLOR.value()),
+        )
 });
 
 base_props! {
@@ -271,6 +303,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
 
     let variant = props.variant.copied_or(defaults.variant);
     let masonry = variant == ImageListVariant::Masonry;
+    let quilted = variant == ImageListVariant::Quilted;
     let cols = snap_cols(props.cols.copied_or(defaults.cols));
     let gap = props.gap.copied_or(defaults.gap);
     let radius = props.radius.copied_or(defaults.radius);
@@ -283,20 +316,32 @@ pub fn ImageList(props: ImageListProps) -> Element {
 
     let default_span = span_for_cols(cols);
 
-    let media_states: Input<States> = States::default().with(variant.state_name(), true).into();
+    let media_states: Input<States> = States::default()
+        .with(variant.state_name(), true)
+        .with(RATIO_BOX_STATE, !masonry)
+        .into();
     // The list's ratio, published once and inherited by every cell, over
     // `AspectRatio`'s own `-override` twin so the theme default still shows
     // through when no caller names one.
+    //
+    // `quilted` is the exception: there the ratio differs per cell, so it is
+    // published on each `<li>` and inherits down instead - a variable here
+    // would shadow it.
     let media_variables: Input<Variables> = variables()
         .with(
             ASPECT_RATIO.override_var(),
             props
                 .ratio
                 .as_ref()
-                .filter(|_| !masonry)
+                .filter(|_| !masonry && !quilted)
                 .map(f32::to_string),
         )
         .into();
+    let base_ratio = props
+        .ratio
+        .as_ref()
+        .copied()
+        .unwrap_or(theme.aspect_ratio.ratio);
     let cell_states: Input<States> = States::default()
         .with(radius.radius_state_name(), true)
         .into();
@@ -315,30 +360,12 @@ pub fn ImageList(props: ImageListProps) -> Element {
         .framework_sx(&IMAGE_LIST_BAR_SX)
         .focus_ring(false)
         .prepare();
-    let text_style = use_box()
-        .framework_sx(&IMAGE_LIST_TEXT_SX)
-        .focus_ring(false)
-        .prepare();
-    let title_style = use_box()
-        .framework_sx(&IMAGE_LIST_TITLE_SX)
-        .focus_ring(false)
-        .prepare();
-    let subtitle_style = use_box()
-        .framework_sx(&IMAGE_LIST_SUBTITLE_SX)
-        .focus_ring(false)
-        .prepare();
-    let action_style = use_box()
-        .framework_sx(&IMAGE_LIST_ACTION_SX)
-        .focus_ring(false)
-        .prepare();
 
     let cells = props.items.iter().enumerate().map(|(index, item)| {
-        // The anchor goes on the title where there is one, because a title is
-        // text and an image's `alt` may legitimately be empty.
-        let link_on_title = item.to.is_some() && item.bar.is_some();
-
-        let media = match (&item.to, link_on_title) {
-            (Some(to), false) => rsx! {
+        // One link path, always on the picture: the bar's content is the
+        // caller's, so there is no title element for the anchor to be.
+        let media = match &item.to {
+            Some(to) => rsx! {
                 InternalAnchor {
                     to: to.clone(),
                     framework_sx: Some(&IMAGE_LIST_MEDIA_LINK_SX),
@@ -347,44 +374,14 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     {item.content.clone()}
                 }
             },
-            _ => media_style
+            None => media_style
                 .clone()
                 .render(HtmlTag::Div, Vec::new(), item.content.clone()),
         };
 
         let bar = item.bar.as_ref().map(|bar| {
             let position = bar.position.unwrap_or(defaults.bar_position);
-
-            let title = match (&item.to, link_on_title) {
-                (Some(to), true) => rsx! {
-                    InternalAnchor {
-                        to: to.clone(),
-                        framework_sx: Some(&IMAGE_LIST_TITLE_LINK_SX),
-                        {bar.title.render()}
-                    }
-                },
-                _ => title_style
-                    .clone()
-                    .render(HtmlTag::Div, Vec::new(), bar.title.render()),
-            };
-            let subtitle = bar.subtitle.as_ref().map(|subtitle| {
-                subtitle_style
-                    .clone()
-                    .render(HtmlTag::Div, Vec::new(), subtitle.render())
-            });
-            let text = text_style.clone().render(
-                HtmlTag::Div,
-                Vec::new(),
-                [Some(title), subtitle]
-                    .into_iter()
-                    .flatten()
-                    .collect::<Vec<_>>(),
-            );
-            let action = bar.action.as_ref().map(|action| {
-                action_style
-                    .clone()
-                    .render(HtmlTag::Div, Vec::new(), action.clone())
-            });
+            let scrim = scrim_state(position);
 
             bar_style
                 .clone()
@@ -392,26 +389,48 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     "data-state",
                     States::default()
                         .with(position.state_name(), true)
+                        .with(scrim, bar.scrim && !scrim.is_empty())
                         .data_state(),
                 )
-                .render(
-                    HtmlTag::Div,
-                    Vec::new(),
-                    [Some(text), action]
-                        .into_iter()
-                        .flatten()
-                        .collect::<Vec<_>>(),
-                )
+                .render(HtmlTag::Div, Vec::new(), bar.content.clone())
         });
 
         let span = item.span.unwrap_or(default_span);
+        if item.rows.is_some() && !quilted {
+            warn(&format!(
+                "ImageList: ImageItem::rows is ignored by the {} variant - only quilted places a \
+                 cell over more than one row.",
+                variant.as_str()
+            ));
+        }
+        let rows = item.rows.filter(|_| quilted);
+
+        // Every quilted cell, not only a spanning one: the list-level ratio is
+        // suppressed under `quilted`, so an ordinary cell has to be told its
+        // own or it would fall back to the theme's and ignore the `ratio`
+        // prop. One class per distinct shape, not per cell - the registry
+        // recycles by content, and a quilt has a handful of shapes.
+        let cell_sx: Input<Sx> = match quilted.then(|| {
+            quilt_ratio(
+                base_ratio,
+                span.columns(),
+                default_span.columns(),
+                rows.unwrap_or(1),
+            )
+        }) {
+            None => Input::Static(&IMAGE_LIST_CELL_SX),
+            Some(ratio) => Input::Value(
+                Sx::clone(&IMAGE_LIST_CELL_SX).var(ASPECT_RATIO.override_var(), ratio.to_string()),
+            ),
+        };
 
         rsx! {
             GridItem {
                 key: "{index}",
                 component: HtmlTag::Li,
                 span,
-                sx: &IMAGE_LIST_CELL_SX,
+                rows,
+                sx: cell_sx,
                 states: cell_states.clone(),
                 {media}
                 {bar}
@@ -436,6 +455,14 @@ pub fn ImageList(props: ImageListProps) -> Element {
         attributes.push(crate::components::common::attr("role", "list"));
     }
 
+    // The variant reaches the list itself, not only the cells: `woven`'s rules
+    // are about neighbouring cells and key off the root.
+    let list_states: Input<States> = props
+        .states
+        .unwrap_or_default()
+        .with(variant.state_name(), true)
+        .into();
+
     rsx! {
         GridZone {
             masonry,
@@ -443,7 +470,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
             component: HtmlTag::Ul,
             class: props.class.clone(),
             sx: root_sx,
-            states: props.states.clone(),
+            states: list_states,
             attributes,
             {cells.into_iter()}
         }
@@ -472,6 +499,25 @@ mod tests {
         assert_eq!(snap_cols(9), 6);
         assert_eq!(snap_cols(10), 12);
         assert_eq!(snap_cols(200), 12);
+    }
+
+    /// An ordinary quilted cell keeps the list's ratio, and a cell twice as
+    /// wide and twice as tall keeps it too - which is the property that makes
+    /// every row the same height without a `rowHeight` in sight.
+    #[test]
+    fn a_proportional_quilt_cell_keeps_the_lists_ratio() {
+        // Three columns, so an ordinary cell spans four tracks.
+        assert_eq!(quilt_ratio(1.5, 4, 4, 1), 1.5);
+        assert_eq!(quilt_ratio(1.5, 8, 4, 2), 1.5);
+    }
+
+    /// A cell that is not proportional is the case the arithmetic exists for:
+    /// twice as wide over one row is twice as wide a picture, and twice as
+    /// tall over one column is half.
+    #[test]
+    fn an_out_of_proportion_quilt_cell_scales_on_both_axes() {
+        assert_eq!(quilt_ratio(1.0, 8, 4, 1), 2.0);
+        assert_eq!(quilt_ratio(1.0, 4, 4, 2), 0.5);
     }
 
     /// A row of `cols` cells fills the zone exactly - the property the whole

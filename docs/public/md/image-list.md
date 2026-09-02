@@ -8,8 +8,9 @@ Description: A gallery of pictures with optional caption bars, rendered as a `ul
 
 A grid of pictures, each with an optional caption bar. Renders a
 `<ul role="list">` of `<li>`s, so a gallery is announced with a count - and every
-cell is a `GridItem` of a [GridZone](grid.md), so `cols` is a span of the
-library's own twelve tracks rather than a second grid with its own track count.
+cell is a `GridItem` of a [GridZone](grid.md), so `cols` and `ImageItem::span`
+are spans of the library's own twelve tracks rather than a second grid with its
+own track count.
 
 `masonry` is that zone's measuring engine, not a CSS multi-column - so the
 reading order and the visual order agree. Each picture's accessible name is its
@@ -19,7 +20,8 @@ own `alt`; the bar is sibling content and never becomes one.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Image, ImageBar, ImageItem, ImageList};
+use libero::components::{Box, Image, ImageBar, ImageItem, ImageList};
+use libero::sx::sx;
 
 #[component]
 fn Demo(photos: Vec<Photo>) -> Element {
@@ -31,7 +33,12 @@ fn Demo(photos: Vec<Photo>) -> Element {
                     ImageItem::new(rsx! {
                         Image { src: photo.url.clone(), alt: photo.alt.clone(), fit: "cover" }
                     })
-                    .bar(ImageBar::new(photo.title.clone()).subtitle(photo.author.clone()))
+                    .bar(ImageBar::new(rsx! {
+                        Box { sx: sx().flex("1 1 auto").min_width("0"),
+                            Box { sx: sx().font_weight("500"), "{photo.title}" }
+                            Box { sx: sx().font_size("0.75rem").opacity("0.72"), "{photo.author}" }
+                        }
+                    }))
                 })
                 .collect(),
         }
@@ -53,34 +60,73 @@ ImageList {
 }
 ```
 
-### Spans
+## The bar holds an Element
 
-A cell's width is a per-item value. `ImageItem::span` takes the same twelfths a
-`GridItem` does and overrides whatever `cols` derived:
+`ImageBar::new` takes whatever you render. There is no title, subtitle or action
+slot: a caption is content, and a component that shapes it is only ever in the
+way of the next design. `ImageBar` keeps the two things the *cell* owns - where
+the strip sits, and the scrim behind it.
+
+```rust
+ImageBar::new(rsx! {
+    Box { sx: sx().flex("1 1 auto").min_width("0"), "Breakfast" }
+    // A `<button>` inherits no color, and an overlay bar's color comes from
+    // the scrim - so say so. The same line MultiSelect's remove button carries.
+    ActionIcon { variant: "standard", sx: sx().color("inherit"), /* .. */ }
+})
+.position(BarPosition::Top)
+.scrim(false)
+```
+
+Three things to copy from that snippet:
+
+- **`flex: 1 1 auto` and `min-width: 0`** on the text block. The bar is a flex
+  row; without them a long title pushes the control out of the strip.
+- **`color: inherit`** on any `<button>` in an overlay bar.
+- **The bar is above the cell's stretched link** (`z-index: 1`, with no
+  `position` - a grid item takes a z-index either way, and positioning it would
+  break the link, see below). So a control in it works on a linked cell, and the
+  bar strip is not part of the link's hit area.
+
+`.scrim(false)` turns off the gradient *and* the light text color, which hands
+you a bare transparent strip in the right place. `below` never had a scrim.
+
+## Spans and rows
+
+A cell's size is a per-item value, not a prop on the list:
 
 ```rust
 ImageItem::new(rsx! { Image { src, alt, fit: "cover" } })
-    .span(GridSpan::Half)
+    .span(GridSpan::Half) // width, in twelfths - the same GridItem takes
+    .rows(2)              // height, in rows - `quilted` only
 ```
 
-### Linking a cell
+`span` overrides whatever `cols` derived. `rows` is `quilted`'s vocabulary and
+is ignored by every other variant, with a warning: `standard` has one row per
+cell by definition, and `masonry` derives the row span from the measured height,
+so honouring a manual one there would leave the cell overlapping its neighbours.
 
-`ImageItem::to` makes the whole tile a hit target. The anchor wraps the bar's
-title - or the picture, when there is no bar - and a stretched
-`::after { inset: 0 }` extends the hit area over the cell. The bar's `action`
-stays clickable because it is a sibling of the anchor, not inside it: a
-`<button>` inside an `<a>` is invalid HTML.
+## Linking a cell
+
+`ImageItem::to` makes the whole tile a hit target. **The anchor is the picture**,
+and a stretched `::after { inset: 0 }` extends the hit area over the cell.
 
 ```rust
 ImageItem::new(rsx! { Image { src, alt: "Breakfast", fit: "cover" } })
-    .bar(ImageBar::new("Breakfast").action(rsx! { ActionIcon { /* .. */ } }))
+    .bar(ImageBar::new(caption))
     .to(Route::Photo { id })
 ```
 
-A `<button>` inherits no color of its own, so an action on the `bottom` or `top`
-scrim needs to be told - `sx: sx().color("inherit")` on the `ActionIcon`, the
-same line [MultiSelect](multi-select.md)'s remove button carries. The bar sets
-`color` on itself; nothing inside it is reached by that.
+Two consequences:
+
+- **The accessible name is the image's `alt`**, in every linked cell. A
+  decorative image (`alt: ""`) leaves the link unnamed. Give it a real `alt`, or
+  put a link of your own in the bar.
+- **The hit area resolves against the `<li>` only because nothing between the
+  anchor and the `<li>` is positioned.** That is the whole contract, and
+  breaking it is silent: the component shipped once with a `position: absolute`
+  bar, and the hit area was the caption strip rather than the tile. If you style
+  a cell through `sx`, do not make anything inside it positioned.
 
 ## Columns
 
@@ -99,13 +145,21 @@ phone.
 |---|---|
 | `standard` | Every cell takes the list's `ratio`, so the rows are even. |
 | `masonry` | Every cell keeps its picture's own height, and `GridZone`'s `ResizeObserver` packs them with no vertical dead space. |
+| `quilted` | `standard`, plus `ImageItem::rows`: a cell may take more than one row, and the quilt's rows stay equal. |
+| `woven` | `standard`, with every second cell shortened to 70% and centred. Decoration, and it crops one picture in two. |
 
 `masonry` costs one `ResizeObserver` per cell. Without a browser - during SSR, or
 on a target with no DOM - nothing measures and the gallery renders as an ordinary
 grid: unpacked, but correct.
 
-Not implemented: MUI's `quilted` (it needs a per-item `grid-row: span n`, which
-is the masonry engine's own property) and `woven`.
+`quilted` is not a second layout engine. It is `grid-row: span n` per item plus
+an aspect ratio scaled by that cell's own width and height (`ratio * columns /
+rows`), so a 2x2 cell is exactly twice the size of a 1x1 one without anyone
+naming a pixel height. MUI's `rowHeight` exists to do that arithmetic and is not
+implemented here; `ratio` and [AspectRatio](aspect-ratio.md) do it instead.
+
+Not implemented: MUI's `rowHeight`, `actionPosition`, a raw pixel `gap`, and the
+compound `ImageList { ImageListItem {} }` children API.
 
 ## Accessibility
 
@@ -114,29 +168,30 @@ is the masonry engine's own property) and `woven`.
   semantics from a `list-style: none` list.
 - Each picture's accessible name is its own `alt`. `ImageList` never invents one.
 - **The bar is not a label for the image.** It is sibling content, so there is no
-  `aria-labelledby` wiring - the title may repeat the `alt`, and that is the
-  caller's call. A cell with a bar and a decorative image (`alt: ""`) is
-  legitimate.
-- A cell with `to` and no bar puts the anchor on the picture, so a decorative
-  image there would leave the link with no accessible name. Give such a cell a
-  bar, or a real `alt`.
+  `aria-labelledby` wiring - its text may repeat the `alt`, and that is the
+  caller's call.
+- **A cell with `to` puts the anchor on the picture**, so a decorative image
+  there leaves the link with no accessible name. This is true with a bar as well
+  as without one: the bar's content is yours, so nothing in it can be picked as
+  the link's name.
 - No keyboard contract of its own: a gallery is not a composite widget, so there
-  is no roving focus and no arrow keys. A cell's `to` and its bar's `action`
-  contribute native tab stops in document order.
+  is no roving focus and no arrow keys. A cell's `to` and any control you put in
+  its bar contribute native tab stops in document order.
 
 ### Contrast on an overlay bar
 
-The scrim is a gradient, so white text on it has a range rather than a number,
-and the backdrop is your picture. Worst case - a pure-white photograph under the
-default `bar_background` - white text is **9.3:1** at the bar's bottom edge,
-4.2:1 at 40% up, 2.5:1 at the middle stop and 1.8:1 near the top. Over a
-mid-grey picture the same points are 15.5, 10.7 and 7.8:1.
+The scrim is a gradient, so text on it has a range rather than a number, and the
+backdrop is your picture. Worst case - a pure-white photograph under the default
+`bar_background` - white text is **9.3:1** at the bar's bottom edge, 4.2:1 at 40%
+up, 2.5:1 at the middle stop and **1.8:1 near the top**. Over a mid-grey picture
+the same points are 15.5, 10.7 and 7.8:1.
 
 So the common case is comfortable and the failure is specific: the upper part of
-a bar over a bright picture, which a two-line bar's `subtitle` can reach. If your
-pictures are pale, either use `position: "below"` - no scrim, page text colour,
-always legible - or add a `text-shadow` through `sx`. Raising the scrim's opacity
-works too, at the cost of it reading as a solid bar rather than a fade.
+a bar over a bright picture, which the *second line* of a two-line caption
+reaches. You own the bar's content now, so this is yours to handle: use
+`position: "below"` (no scrim, page text color, always legible), add a
+`text-shadow` through `sx`, or raise the scrim's opacity through the theme - at
+the cost of it reading as a solid bar rather than a fade.
 
 ## Props
 
@@ -146,10 +201,10 @@ works too, at the cost of it reading as a solid bar rather than a fade.
 |---|---|---|---|
 | `items` | `Vec<ImageItem>` | required | One cell each, in render order. |
 | `cols` | `u8` | `2` | Columns, snapped to a divisor of twelve. |
-| `variant` | `ImageListVariant` | `standard` | `standard` or `masonry`. |
+| `variant` | `ImageListVariant` | `standard` | `standard`, `masonry`, `quilted` or `woven`. |
 | `gap` | `Size` | `xs` | Between cells. |
 | `radius` | `Size` | `sm` | Each cell's corner radius. |
-| `ratio` | `f32` | `1.0`, from `theme.aspect_ratio` | Cell aspect ratio. Ignored by `masonry`, with a warning. |
+| `ratio` | `f32` | `1.0`, from `theme.aspect_ratio` | Cell aspect ratio. Ignored by `masonry`, with a warning. Under `quilted`, the ratio of one cell of the quilt. |
 
 Like every component, `ImageList` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes. They land on the `<ul>`.
@@ -162,17 +217,17 @@ A builder, the `Table::column()` shape.
 |---|---|---|
 | `new(content)` | `Element` | The cell's content - an `Image` with `fit: "cover"`, usually. |
 | `span(span)` | `GridSpan` | This cell's width, overriding the one `cols` derives. |
+| `rows(rows)` | `u8` | This cell's height in rows. `quilted` only. |
 | `bar(bar)` | `ImageBar` | The caption strip. |
-| `to(target)` | `NavigationTarget` | Makes the cell a link, as a stretched link. |
+| `to(target)` | `NavigationTarget` | Makes the cell a link, as a stretched link on the picture. |
 
 ### `ImageBar`
 
 | Method | Type | Description |
 |---|---|---|
-| `new(title)` | `OptionLabel` | The caption. Sibling content, not a label for the image. |
-| `subtitle(subtitle)` | `OptionLabel` | A second, dimmer line. |
-| `action(action)` | `Element` | A control at the end of the bar. |
+| `new(content)` | `Element` | The strip's content - anything. A flex row is all the bar adds. |
 | `position(position)` | `BarPosition` | `bottom`, `top` or `below`, overriding the theme's per cell. |
+| `scrim(on)` | `bool` | The gradient behind an overlay bar, and the light text color with it. On by default. |
 
 `ImageItem` holds `Element`s, so `ImageListProps` never compares equal and the
 list re-renders whenever its parent does. That is `Table`'s rows and
@@ -192,7 +247,6 @@ list re-renders whenever its parent does. That is `Table`'s rows and
 | `bar_background` | `&'static str` | a black-to-transparent gradient | The scrim behind a `bottom` bar. |
 | `bar_background_top` | `&'static str` | the same, reversed | The scrim behind a `top` bar. |
 | `bar_color` | `&'static str` | `"#fff"` | Bar text, on either scrim. |
-| `bar_subtitle_opacity` | `&'static str` | `"0.72"` | How far the subtitle is dimmed. |
 | `bar_padding` | `Size` | `Size::Sm` | The bar's inset. |
 
 There is no `ratio` field: the aspect ratio is [AspectRatio](aspect-ratio.md)'s
@@ -206,10 +260,10 @@ that match.
 | `--lsx-image-list-bar-background` | The `bottom` scrim. Declared on `:root` from the theme. |
 | `--lsx-image-list-bar-background-top` | The `top` scrim. Declared on `:root` from the theme. |
 | `--lsx-image-list-bar-color` | Bar text color. Declared on `:root` from the theme. |
-| `--lsx-image-list-bar-subtitle-opacity` | Subtitle opacity. Declared on `:root` from the theme. |
 | `--lsx-image-list-bar-padding` | The bar's inset, resolved from a spacing step. |
 | `--lsx-image-list-radius` | The cell's corner radius, picked on the cell from its own `radius-*` token. |
-| `--lsx-aspect-ratio-override` | The list's `ratio`, over `AspectRatio`'s own pair. |
+| `--lsx-aspect-ratio-override` | The cell's `ratio`, over `AspectRatio`'s own pair. Per cell under `quilted`, once on the list otherwise. |
+| `--lsx-grid-item-row-span` | `GridItem`'s, published from `ImageItem::rows` under `quilted`. |
 | `--lsx-grid-zone-gap` | `GridZone`'s, published from `gap`. |
 
 ## Data attributes
@@ -217,7 +271,10 @@ that match.
 | Element | Token | Condition |
 |---|---|---|
 | `<ul>` | `masonry` | `variant` is `masonry` - `GridZone`'s own token. |
+| `<ul>` | `variant-<variant>` | The `variant` in effect. `woven`'s rules key off it. |
 | `<li>` | `grid-item`, `span-<span>` | `GridItem`'s own tokens; the span is the cell's. |
+| `<li>` | `rows` | The cell has an `ImageItem::rows` under `quilted`. |
 | `<li>` | `radius-<size>` | The `radius` in effect. |
-| media | `variant-standard` / `variant-masonry` | The `variant` in effect. |
+| media | `variant-<variant>`, `ratio-box` | The `variant` in effect; `ratio-box` on every variant but `masonry`. |
 | bar | `bar-bottom` / `bar-top` / `bar-below` | That cell's bar position. |
+| bar | `bar-scrim-bottom` / `bar-scrim-top` | An overlay bar that kept its scrim. |

@@ -13,7 +13,15 @@ pub const GRID_ZONE_AREA_VAR: CssVar = CssVar::new("--lsx-grid-zone-area");
 /// The zone's `@container` name, so an item can key a span off its zone's
 /// width. `none` when the zone has no area to name it after.
 pub const GRID_ZONE_CONTAINER_VAR: CssVar = CssVar::new("--lsx-grid-zone-container");
+/// The masonry engine's row span, computed from a measured height. Written by
+/// `GridItem` and read by the **zone's** rule, gated on `measured`.
 pub const GRID_ITEM_ROWS_VAR: CssVar = CssVar::new("--lsx-grid-item-rows");
+/// A caller's own row span, from `GridItem { rows }`. Deliberately **not** the
+/// same variable as the masonry engine's: one property, one writer. The two
+/// never coexist on an element - `rows` is dropped with a warn inside a masonry
+/// zone - and if that guard were ever lost, the zone's rule outranks the item's
+/// on specificity anyway.
+pub const GRID_ITEM_ROW_SPAN_VAR: CssVar = CssVar::new("--lsx-grid-item-row-span");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct GridDefaults {

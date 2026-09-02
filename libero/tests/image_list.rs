@@ -13,8 +13,10 @@ use libero::{
 
 fn items() -> Vec<ImageItem> {
     vec![
-        ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } })
-            .bar(ImageBar::new("Breakfast").subtitle("@rgbagirl")),
+        ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } }).bar(ImageBar::new(rsx! {
+            div { "Breakfast" }
+            div { "@rgbagirl" }
+        })),
         ImageItem::new(rsx! { Image { src: "/b.svg", alt: "B" } }),
         ImageItem::new(rsx! { Image { src: "/c.svg", alt: "C" } }).span(GridSpan::Full),
     ]
@@ -110,16 +112,148 @@ fn both_variants_render_the_same_tags() {
     );
 }
 
+fn woven_app() -> Element {
+    rsx! {
+        LiberoProvider { ImageList { variant: "woven", items: items() } }
+    }
+}
+
+/// `woven` is `standard` with every second cell shortened, so the rule is
+/// about a cell's *neighbours* and has to live on the list rather than on a
+/// cell's own class - which is the only reason the variant token reaches the
+/// `<ul>` at all.
+#[test]
+fn woven_shortens_every_second_cell_from_the_list() {
+    let html = render(woven_app);
+    let body = body(&html);
+    let css = html.replace(char::is_whitespace, "");
+
+    assert!(
+        attributes_of(&body, "ul")
+            .get("data-state")
+            .is_some_and(|state| state.contains("variant-woven")),
+        "the variant must reach the list:\n{body}"
+    );
+    assert!(
+        css.contains("li:nth-of-type(even)") && css.contains("height:70%"),
+        "no woven rule in the emitted sheet"
+    );
+    // The cells still take the list's ratio - woven is standard with a crop,
+    // not a second mechanism.
+    assert!(
+        body.contains("ratio-box"),
+        "a woven cell is still a ratio box:\n{body}"
+    );
+}
+
+fn quilted_app() -> Element {
+    rsx! {
+        LiberoProvider {
+            ImageList {
+                variant: "quilted",
+                cols: 4u8,
+                items: vec![
+                    // Twice as wide and twice as tall: the same shape, so the
+                    // same ratio.
+                    ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } })
+                        .span(GridSpan::Half)
+                        .rows(2),
+                    // An ordinary cell of the quilt.
+                    ImageItem::new(rsx! { Image { src: "/b.svg", alt: "B" } }),
+                    // Twice as wide over one row: twice as wide a picture.
+                    ImageItem::new(rsx! { Image { src: "/c.svg", alt: "C" } })
+                        .span(GridSpan::Half),
+                ],
+            }
+        }
+    }
+}
+
+/// `quilted` is the standard machinery with a row span, not a second engine:
+/// `grid-row: span n` from `GridItem`'s new `rows`, plus a per-cell aspect
+/// ratio scaled by how much bigger the cell is than an ordinary one. Nothing
+/// measures and no pixel height is named - which is why MUI's `rowHeight` is
+/// not needed to make the rows line up.
+#[test]
+fn a_quilted_cell_spans_rows_and_scales_its_own_ratio() {
+    let html = render(quilted_app);
+    let body = body(&html);
+    let css = html.replace(char::is_whitespace, "");
+    let tall = &body[body.find("<li").expect("a cell")..];
+
+    assert!(
+        tall.contains("--lsx-grid-item-row-span:2"),
+        "the first cell asked for two rows:\n{tall}"
+    );
+    assert!(
+        css.contains("grid-auto-rows:1fr"),
+        "the quilt's rows must stay equal:\n{}",
+        css.split('}')
+            .filter(|r| r.contains("quilted") || r.contains("woven"))
+            .collect::<Vec<_>>()
+            .join("}\n")
+    );
+    // A 2x2 cell keeps the list's ratio; a 2x1 one is twice as wide. Both
+    // ride recycled classes, so they are in the sheet rather than in `style`.
+    assert!(
+        css.contains("--lsx-aspect-ratio-override:1"),
+        "a proportional cell keeps the list's ratio"
+    );
+    assert!(
+        css.contains("--lsx-aspect-ratio-override:2"),
+        "a cell twice as wide over one row is twice as wide a picture"
+    );
+}
+
+/// The list-level ratio is suppressed under `quilted`: a variable on the media
+/// element would shadow the per-cell one the `<li>` publishes.
+#[test]
+fn a_quilted_list_publishes_no_ratio_of_its_own() {
+    let body = body(&render(quilted_app));
+
+    for media in body.split("ratio-box").skip(1) {
+        let tag = &media[..media.find('>').expect("a closed tag")];
+        assert!(
+            !tag.contains("--lsx-aspect-ratio-override"),
+            "the media must inherit the cell's ratio, not shadow it:\n{tag}"
+        );
+    }
+}
+
+/// And `rows` outside `quilted` is dropped, not silently honoured: `standard`
+/// has one row per cell by definition.
+#[test]
+fn rows_does_nothing_outside_the_quilted_variant() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ImageList {
+                    items: vec![
+                        ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } }).rows(2),
+                    ],
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(
+        !body.contains("--lsx-grid-item-row-span"),
+        "no row span outside quilted:\n{body}"
+    );
+}
+
 fn linked_app() -> Element {
     rsx! {
         LiberoProvider {
             ImageList {
                 items: vec![
                     ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A" } })
-                        .bar(
-                            ImageBar::new("Breakfast")
-                                .action(rsx! { button { r#type: "button", "Save" } }),
-                        )
+                        .bar(ImageBar::new(rsx! {
+                            span { "Breakfast" }
+                            button { r#type: "button", "Save" }
+                        }))
                         .to("/photos/1"),
                     ImageItem::new(rsx! { Image { src: "/b.svg", alt: "B" } }).to("/photos/2"),
                 ],
@@ -128,25 +262,36 @@ fn linked_app() -> Element {
     }
 }
 
-/// The review's other MAJOR, asserted rather than described. With a bar the
-/// anchor wraps **only** the title, so the action button - which cannot be
-/// inside an anchor - stays a sibling of it, and the tile is the hit target
-/// through a stretched `::after` instead.
+/// The bar holds whatever the caller rendered, so a `<button>` in it cannot be
+/// inside the anchor - which is why the anchor is the picture and the hit area
+/// is a stretched pseudo-element rather than the anchor's own box.
 #[test]
-fn a_linked_cell_keeps_its_action_outside_the_anchor() {
+fn a_linked_cell_keeps_the_bar_outside_the_anchor() {
     let html = body(&render(linked_app));
     let cell = &html[html.find("<li").expect("a cell")..];
-    let anchor = cell.find("<a").expect("an anchor");
     let close = cell.find("</a>").expect("a closed anchor");
-    let action = cell.find("<button").expect("the action");
+    let action = cell.find("<button").expect("the caller's control");
 
     assert!(
-        cell[anchor..close].contains("Breakfast"),
-        "the anchor should wrap the title:\n{cell}"
-    );
-    assert!(
         action > close,
-        "the action must not be inside the anchor:\n{cell}"
+        "a control in the bar must not be inside the anchor:\n{cell}"
+    );
+}
+
+/// And it is clickable because the bar is raised above the stretched `::after`
+/// - by a `z-index` alone, because positioning it would steal the anchor's
+/// containing block. See `nothing_inside_a_cell_is_positioned`.
+#[test]
+fn the_bar_is_raised_above_the_stretched_link() {
+    let html = render(linked_app);
+    let bar = bar_class(&body(&html));
+    let css = html.replace(char::is_whitespace, "");
+
+    assert!(
+        css.split('}')
+            .filter(|rule| rule.contains(&format!(".{bar}")))
+            .any(|rule| rule.contains("z-index:1")),
+        "the bar must sit above the hit area, or a control in it is dead"
     );
 }
 
@@ -205,22 +350,33 @@ fn a_cell_links_without_a_router() {
     assert!(html.contains(r#"href="/photos/2""#), "{html}");
 }
 
-/// With no bar there is no title to name the link, so the picture is the
-/// anchor and its `alt` is the name.
+/// The picture is the anchor in **every** linked cell, bar or no bar, so the
+/// accessible name is always the image's `alt` - and a decorative image leaves
+/// the link unnamed. There is no title element to be the anchor instead: the
+/// bar's content is the caller's.
 #[test]
-fn a_linked_cell_with_no_bar_puts_the_anchor_on_the_picture() {
+fn a_linked_cell_puts_the_anchor_on_the_picture() {
     let html = body(&render(linked_app));
-    let cell = &html[html.rfind("<li").expect("a second cell")..];
-    let anchor = cell.find("<a").expect("an anchor");
 
-    assert!(
-        cell[anchor..].contains(r#"alt="B""#),
-        "the picture should sit inside the anchor:\n{cell}"
-    );
+    for (cell, alt) in [
+        (&html[html.find("<li").expect("a cell")..], r#"alt="A""#),
+        (
+            &html[html.rfind("<li").expect("a second cell")..],
+            r#"alt="B""#,
+        ),
+    ] {
+        let anchor = cell.find("<a").expect("an anchor");
+        let close = cell.find("</a>").expect("a closed anchor");
+
+        assert!(
+            cell[anchor..close].contains(alt),
+            "the picture should sit inside the anchor:\n{cell}"
+        );
+    }
 }
 
-/// The bar is sibling content, not a label: nothing wires the title to the
-/// picture, and the picture keeps its own `alt`.
+/// The bar is sibling content, not a label: nothing wires it to the picture,
+/// and the picture keeps its own `alt`.
 #[test]
 fn a_bar_never_becomes_the_pictures_name() {
     let html = body(&render(standard_app));

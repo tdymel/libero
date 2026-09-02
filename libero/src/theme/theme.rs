@@ -974,7 +974,6 @@ impl Theme {
             bar_background: "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.36) 70%, transparent)",
             bar_background_top: "linear-gradient(to bottom, rgba(0,0,0,0.72), rgba(0,0,0,0.36) 70%, transparent)",
             bar_color: "#fff",
-            bar_subtitle_opacity: "0.72",
             bar_padding: Size::Sm,
         },
         avatar: AvatarDefaults {

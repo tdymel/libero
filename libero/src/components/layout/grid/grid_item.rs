@@ -7,14 +7,21 @@ use crate::{
         layout::use_box,
     },
     sx::{StaticSx, sx},
-    theme::GRID_ITEM_ROWS_VAR,
+    theme::{GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR},
     utils::warn,
 };
 
 use super::{GRID_ITEM_STATE, GridSpan, GridZoneContext, SpanValue, ZoneState, container_name};
 
 static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
-    let base = sx().min_width("0");
+    let base = sx().min_width("0").when(
+        ROWS_STATE,
+        // (0,2,0), against the zone's (0,3,0) masonry rule on the same
+        // property. The token is never emitted inside a masonry zone, so the
+        // two do not meet - the specificity is the second guard, not the
+        // first.
+        sx().grid_row(format!("span {}", GRID_ITEM_ROW_SPAN_VAR.value_or("1"))),
+    );
 
     GridSpan::ALL.iter().fold(base, |base, span| {
         base.when(
@@ -23,6 +30,9 @@ static GRID_ITEM_SX: StaticSx = StaticSx::new(|| {
         )
     })
 });
+
+/// Set when the caller named `rows` **and** the zone is not a masonry one.
+const ROWS_STATE: &str = "rows";
 
 /// Row units an item of `height_px` spans, counting the gap that follows it.
 /// `unit_px` is clamped to 1 by the zone that hands it over.
@@ -38,6 +48,14 @@ base_props! {
         /// that changes with the *zone's* width.
         #[props(default, into)]
         span: Input<SpanValue>,
+        /// Height, in rows of the zone's implicit grid.
+        ///
+        /// **Ignored in a masonry zone**, with a warn: there the row span is
+        /// derived from the item's measured height, and honouring a manual one
+        /// would leave the item overlapping its neighbours. One property, one
+        /// writer.
+        #[props(default, into)]
+        rows: Input<u8>,
         #[props(default, into)]
         component: Input<HtmlTag>,
     }
@@ -81,8 +99,27 @@ pub fn GridItem(props: GridItemProps) -> Element {
     });
 
     let measured = rows.read().filter(|_| masonry);
+
+    // A caller's own span, which the masonry engine takes precedence over by
+    // simply not letting it exist: the two never write `grid-row` at once.
+    if masonry && props.rows.as_ref().is_some() {
+        warn(
+            "GridItem: rows is ignored in a masonry zone, which derives the row span from the measured height.",
+        );
+    }
+    let row_span = props
+        .rows
+        .as_ref()
+        .copied()
+        .filter(|_| !masonry)
+        .map(|rows| rows.max(1));
+
     let variables: Input<Variables> = variables()
         .with(GRID_ITEM_ROWS_VAR, measured.map(|rows| rows.to_string()))
+        .with(
+            GRID_ITEM_ROW_SPAN_VAR,
+            row_span.map(|rows| rows.to_string()),
+        )
         .into();
 
     let span = props.span.unwrap_or_default();
@@ -92,6 +129,7 @@ pub fn GridItem(props: GridItemProps) -> Element {
         .with(GRID_ITEM_STATE, true)
         .with(span.base_span().state_name(), true)
         .with("measured", measured.is_some())
+        .with(ROWS_STATE, row_span.is_some())
         .into();
 
     // The base span rides the recycled framework class; only the breakpoints

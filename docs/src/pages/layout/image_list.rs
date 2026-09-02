@@ -1,8 +1,10 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
-    components::{ActionIcon, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, Input, Text},
+    components::{
+        ActionIcon, Box, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, Input, Text,
+    },
     sx::sx,
     use_theme,
 };
@@ -29,37 +31,39 @@ const AUTHORS: [&str; 6] = [
     "@arwinneil",
 ];
 
-/// What the `bar` control really changes: not a prop on `ImageList` - there is
-/// none - but the `ImageBar` each `ImageItem` carries. A control whose effect
-/// the code block cannot honestly write as `bar: "below"` has to write the
-/// thing it actually does: the block has to be what a caller would type.
-fn items_code(bar: &str) -> String {
-    let bar = match bar {
-        "none" => String::new(),
-        "bottom" => "\n            .bar(ImageBar::new(p.title).subtitle(p.author))".to_string(),
-        position => format!(
-            "\n            .bar(\n                ImageBar::new(p.title)\n                    \
-             .subtitle(p.author)\n                    .position(BarPosition::{}),\n            )",
-            match position {
-                "top" => "Top",
-                _ => "Below",
-            }
-        ),
-    };
-
-    format!(
-        "items: photos\n    .iter()\n    .map(|p| {{\n        ImageItem::new(rsx! {{\n            \
-         Image {{ src: p.url.clone(), alt: p.alt.clone(), fit: \"cover\" }}\n        }}){bar}\n    }})\n    \
-         .collect()"
-    )
-}
-
-/// Real pages, so the Linking section's cells navigate rather than 404.
-const LINK_TARGETS: [&str; 3] = [
+/// Real pages, so a linked cell navigates rather than 404s.
+const LINK_TARGETS: [&str; 6] = [
+    "/layout/grid",
+    "/layout/aspect-ratio",
+    "/data-display/image",
     "/layout/grid",
     "/layout/aspect-ratio",
     "/data-display/image",
 ];
+
+/// Which cells the `span` switch widens, and which the `rows` switch heightens.
+/// Two of six each, so the demo shows the *mix* - a gallery of equal cells is
+/// what hid a whole class of defect from the first browser pass.
+const WIDE: [usize; 2] = [0, 3];
+const TALL: [usize; 2] = [0, 3];
+
+/// Twice the width `cols` gives an ordinary cell, so the `span` control
+/// actually changes something at every column count.
+///
+/// `GridSpan::Half` looked like the obvious choice and is a **no-op at the
+/// default `cols: 2`**, where an ordinary cell is already half the zone -
+/// caught in a browser, because the demo looked identical with the control on.
+/// A span demo has to be relative to the count it sits in.
+fn wide_span(cols: u8) -> Option<GridSpan> {
+    match cols {
+        2 => Some(GridSpan::Full),
+        3 => Some(GridSpan::TwoThirds),
+        4 => Some(GridSpan::Half),
+        6 => Some(GridSpan::Third),
+        // One column is already the whole zone; there is nothing wider.
+        _ => None,
+    }
+}
 
 fn picture(index: usize) -> Element {
     rsx! {
@@ -71,32 +75,122 @@ fn picture(index: usize) -> Element {
     }
 }
 
-fn items(bar: &str) -> Vec<ImageItem> {
+/// The bar holds an `Element`, so this is a *caller's* caption rather than the
+/// component's: two lines and a control, laid out here.
+///
+/// Three things worth copying. The text block takes `flex: 1 1 auto` and
+/// `min-width: 0`, or a long title pushes the control out of the strip. Every
+/// line clips with an ellipsis for the same reason. And the `ActionIcon` is
+/// told `color: inherit` - a `<button>` inherits none, and an overlay bar's
+/// colour comes from the scrim.
+fn caption(index: usize) -> Element {
+    let line = sx()
+        .overflow("hidden")
+        .text_overflow("ellipsis")
+        .white_space("nowrap");
+
+    rsx! {
+        Box { sx: sx().flex("1 1 auto").min_width("0"),
+            Box { sx: line.clone().font_weight("500"), "{TITLES[index]}" }
+            Box { sx: line.font_size("0.75rem").opacity("0.72"), "{AUTHORS[index]}" }
+        }
+        ActionIcon {
+            variant: "standard",
+            sx: sx().color("inherit").flex("0 0 auto"),
+            size: "sm",
+            aria_label: format!("Select {}", TITLES[index]),
+            CheckmarkIcon {}
+        }
+    }
+}
+
+fn items(values: &DemoValues) -> Vec<ImageItem> {
+    let bar = values.str("bar");
+    let scrim = values.str("scrim") == "true";
+    let cols = values.str("cols").parse::<u8>().unwrap_or(2);
+    let span = values.str("span") == "true";
+    let link = values.str("link") == "true";
+    let rows = values.str("rows") == "true" && values.str("variant") == "quilted";
+
     (0..GALLERY.len())
         .map(|index| {
-            let item = ImageItem::new(picture(index));
-            match bar {
-                "none" => item,
-                position => item.bar(
-                    ImageBar::new(TITLES[index])
-                        .subtitle(AUTHORS[index])
-                        .action(rsx! {
-                            ActionIcon {
-                                // A `<button>` inherits no colour of its own, so an
-                                // action on the bar's scrim has to be told - the
-                                // `MultiSelect` precedent.
-                                variant: "standard",
-                                sx: sx().color("inherit"),
-                                size: "sm",
-                                aria_label: format!("Select {}", TITLES[index]),
-                                CheckmarkIcon {}
-                            }
-                        })
-                        .position(position.into()),
-                ),
+            let mut item = ImageItem::new(picture(index));
+            if bar != "none" {
+                item = item.bar(
+                    ImageBar::new(caption(index))
+                        .position(bar.as_str().into())
+                        .scrim(scrim),
+                );
             }
+            if span
+                && WIDE.contains(&index)
+                && let Some(wide) = wide_span(cols)
+            {
+                item = item.span(wide);
+            }
+            if rows && TALL.contains(&index) {
+                item = item.rows(2);
+            }
+            if link {
+                item = item.to(LINK_TARGETS[index]);
+            }
+            item
         })
         .collect()
+}
+
+/// The `items` block, written out the way a caller would type it.
+///
+/// Five controls feed it and none of them is a prop on `ImageList` - they are
+/// builder calls on each `ImageItem`. A control whose effect the block cannot
+/// honestly print as `bar: "below"` has to print the thing it actually does.
+fn items_code(values: &DemoValues) -> String {
+    let mut chain = String::new();
+
+    match values.str("bar").as_str() {
+        "none" => {}
+        position => {
+            let mut bar = "ImageBar::new(caption(p))".to_string();
+            if position != "bottom" {
+                bar.push_str(&format!(
+                    ".position(BarPosition::{})",
+                    match position {
+                        "top" => "Top",
+                        _ => "Below",
+                    }
+                ));
+            }
+            if values.str("scrim") != "true" {
+                bar.push_str(".scrim(false)");
+            }
+            chain.push_str(&format!("\n            .bar({bar})"));
+        }
+    }
+    if values.str("span") == "true"
+        && let Some(wide) = wide_span(values.str("cols").parse::<u8>().unwrap_or(2))
+    {
+        chain.push_str(&format!(
+            "\n            // Two of the six, twice the width `cols` gives the rest.\n            .span(GridSpan::{})",
+            match wide {
+                GridSpan::Full => "Full",
+                GridSpan::TwoThirds => "TwoThirds",
+                GridSpan::Half => "Half",
+                _ => "Third",
+            }
+        ));
+    }
+    if values.str("rows") == "true" && values.str("variant") == "quilted" {
+        chain.push_str("\n            .rows(2)");
+    }
+    if values.str("link") == "true" {
+        chain.push_str("\n            .to(Route::Photo { id: p.id })");
+    }
+
+    format!(
+        "items: photos\n    .iter()\n    .map(|p| {{\n        ImageItem::new(rsx! {{\n            \
+         Image {{ src: p.url.clone(), alt: p.alt.clone(), fit: \"cover\" }}\n        }}){chain}\n    }})\n    \
+         .collect()"
+    )
 }
 
 #[component]
@@ -117,7 +211,7 @@ pub fn ImageListPage() -> Element {
                         .doc("Columns. Snapped to a divisor of twelve - 1, 2, 3, 4, 6 or 12 - because a cell is a span of a `GridZone`'s twelve tracks. One value, not one per breakpoint: use `sx().breakpoint(..)` until per-breakpoint props land."),
                     prop("variant", "ImageListVariant")
                         .default(defaults.variant.as_str())
-                        .doc("`standard` gives every cell the same height; `masonry` keeps each picture's own and packs them with no dead space."),
+                        .doc("`standard` gives every cell the same height; `masonry` keeps each picture's own and packs them with no dead space; `quilted` lets a cell take more than one row; `woven` shortens every second cell to 70%."),
                     prop("gap", "Size")
                         .default(defaults.gap.as_str())
                         .doc("Between cells."),
@@ -126,19 +220,23 @@ pub fn ImageListPage() -> Element {
                         .doc("Each cell's corner radius."),
                     prop("ratio", "f32")
                         .default("1.0, from theme.aspect_ratio")
-                        .doc("Cell aspect ratio, e.g. `16.0 / 9.0`. Ignored by `masonry`, where the picture's own height is the point."),
+                        .doc("Cell aspect ratio, e.g. `16.0 / 9.0`. Ignored by `masonry`, where the picture's own height is the point. Under `quilted` it is the ratio of *one* cell of the quilt, and a taller or wider cell scales from it."),
                 ]),
                 props("ImageItem", vec![
                     prop("new(content)", "Element").doc("The cell's content - an `Image` with `fit: \"cover\"`, usually."),
-                    prop("span(span)", "GridSpan").doc("This cell's width, overriding the one `cols` derives. The same twelfths a `GridItem` takes."),
+                    prop("span(span)", "GridSpan").doc("This cell's width, overriding the one `cols` derives. The same twelfths a `GridItem` takes, so a span means here exactly what it means there."),
+                    prop("rows(rows)", "u8").doc("This cell's height, in rows - `quilted`'s whole vocabulary. Ignored by every other variant: `standard` has one row per cell by definition and `masonry` derives the span from the measured height."),
                     prop("bar(bar)", "ImageBar").doc("The caption strip."),
-                    prop("to(target)", "NavigationTarget").doc("Makes the cell a link. The anchor wraps the bar's title, or the picture when there is no bar, and a stretched `::after` extends the hit area over the tile."),
+                    prop("to(target)", "NavigationTarget").doc("Makes the cell a link. The anchor is the picture and a stretched `::after` extends the hit area over the tile, so the accessible name is the image's `alt` - a decorative image (`alt: \"\"`) leaves the link unnamed. The bar sits above the hit area, so a control in it still works."),
                 ]),
                 props("ImageBar", vec![
-                    prop("new(title)", "OptionLabel").doc("The caption. Sibling content, not a label for the image."),
-                    prop("subtitle(subtitle)", "OptionLabel").doc("A second, dimmer line."),
-                    prop("action(action)", "Element").doc("A control at the end of the bar. Stays clickable on a cell with a `to`, because it is a sibling of the anchor."),
-                    prop("position(position)", "BarPosition").doc("`bottom`, `top` or `below` - overriding the theme's, per cell."),
+                    prop("new(content)", "Element").doc("The strip's content - anything. A flex row is all `ImageBar` adds, so a text block wants `flex: 1 1 auto; min-width: 0` and a `<button>` wants `color: inherit`. Sibling content, never a label for the image."),
+                    prop("position(position)", "BarPosition")
+                        .default(defaults.bar_position.as_str())
+                        .doc("`bottom`, `top` or `below` - overriding the theme's, per cell. Where the strip sits is the cell's own layout, so it stays a prop."),
+                    prop("scrim(on)", "bool")
+                        .default("true")
+                        .doc("The gradient behind an overlay bar, and the light text colour with it. Off hands you a bare transparent strip. Mind the contrast: white on the default scrim is 9.3:1 at the strip's bottom edge but 1.8:1 near its top, so a second line over a bright picture is the case that fails - a `text-shadow` is the cheap fix."),
                 ]),
             ],
             lead: rsx! {
@@ -153,17 +251,22 @@ pub fn ImageListPage() -> Element {
                     Code { source: "GridZone" }
                     ", so "
                     Code { source: "cols" }
-                    " is a span of the library's own twelve tracks rather than a second "
+                    " and "
+                    Code { source: "ImageItem::span" }
+                    " are spans of the library's own twelve tracks rather than a second "
                     "grid with its own track count."
                 }
                 Text {
-                    Code { source: "masonry" }
-                    " is that zone's measuring engine, not a CSS multi-column - so the "
-                    "reading order and the visual order agree, which is where MUI's own "
-                    "masonry parts company with its DOM. Each picture's accessible name is "
-                    "its own "
+                    "Three things the controls below show but cannot say. "
+                    Code { source: "ImageItem::to" }
+                    " makes the picture the anchor and stretches its hit area over the "
+                    "whole tile, so the link's accessible name is the image's "
                     Code { source: "alt" }
-                    "; the bar is sibling content and never becomes one."
+                    " - a decorative image leaves it unnamed. The bar sits above that "
+                    "hit area, so a control you put in it still works. And the scrim is "
+                    "a gradient, so white text on it runs from 9.3:1 at the strip's "
+                    "bottom edge to 1.8:1 near its top: a second line over a bright "
+                    "picture is the case to check."
                 }
             },
             Demo {
@@ -180,7 +283,7 @@ pub fn ImageListPage() -> Element {
                                 false => vec![format!("cols: {value}u8")],
                             }
                         }),
-                    Control::toggle("variant", ["standard", "masonry"])
+                    Control::toggle("variant", ["standard", "masonry", "quilted", "woven"])
                         .default(defaults.variant.as_str()),
                     Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(defaults.gap.as_str()),
@@ -195,9 +298,29 @@ pub fn ImageListPage() -> Element {
                             "16:9" => vec!["ratio: 16.0 / 9.0".to_string()],
                             _ => vec![],
                         }),
+                    // Everything from here down is an `ImageItem` builder call
+                    // rather than a prop, so `bar` prints the whole `items`
+                    // block for all of them and the rest print nothing.
+                    // Nothing is wider than a one-column cell, so the control
+                    // would be a no-op there.
+                    Control::switch("span")
+                        .hidden_when(|values| values.str("cols") == "1")
+                        .code(|_, _| vec![]),
+                    // `rows` is quilted's vocabulary and nothing else's.
+                    Control::switch("rows")
+                        .default("true")
+                        .hidden_when(|values| values.str("variant") != "quilted")
+                        .code(|_, _| vec![]),
+                    Control::switch("link").code(|_, _| vec![]),
                     Control::toggle("bar", ["none", "bottom", "top", "below"])
                         .default(defaults.bar_position.as_str())
-                        .code(|_, values| vec![items_code(&values.str("bar"))]),
+                        .code(|_, values| vec![items_code(values)]),
+                    Control::switch("scrim")
+                        .default("true")
+                        .hidden_when(|values| {
+                            matches!(values.str("bar").as_str(), "none" | "below")
+                        })
+                        .code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ImageList {
@@ -217,85 +340,9 @@ pub fn ImageListPage() -> Element {
                             (_, "16:9") => Input::Value(16.0 / 9.0),
                             _ => Input::None,
                         },
-                        items: items(&values.str("bar")),
+                        items: items(&values),
                     }
                 },
-            }
-            DocSection {
-                title: "Spans",
-                Text {
-                    "A cell's width is a per-item value, so no control can drive it: "
-                    Code { source: "ImageItem::span" }
-                    " takes the same twelfths a "
-                    Code { source: "GridItem" }
-                    " does, and overrides whatever "
-                    Code { source: "cols" }
-                    " derived. The first picture below is "
-                    Code { source: "GridSpan::Half" }
-                    " in a four-column list."
-                }
-                ImageList {
-                    cols: 4u8,
-                    items: (0..GALLERY.len())
-                        .map(|index| {
-                            let item = ImageItem::new(picture(index))
-                                .bar(ImageBar::new(TITLES[index]));
-                            match index {
-                                0 => item.span(GridSpan::Half),
-                                _ => item,
-                            }
-                        })
-                        .collect::<Vec<_>>(),
-                }
-            }
-            DocSection {
-                title: "Linking a cell",
-                Text {
-                    Code { source: "ImageItem::to" }
-                    " makes the whole tile a hit target. The anchor wraps the bar's title - "
-                    "or the picture, when there is no bar - and a stretched "
-                    Code { source: "::after {{ inset: 0 }}" }
-                    " extends the hit area over the cell. The bar's "
-                    Code { source: "action" }
-                    " stays clickable because it is a sibling of the anchor rather than "
-                    "inside it: a "
-                    Code { source: "<button>" }
-                    " inside an "
-                    Code { source: "<a>" }
-                    " is invalid HTML. So the accessible name is the title's text, or the "
-                    "picture's "
-                    Code { source: "alt" }
-                    " - the first two cells below have a bar and the third does not."
-                }
-                ImageList {
-                    cols: 3u8,
-                    items: LINK_TARGETS
-                        .iter()
-                        .enumerate()
-                        .map(|(index, target)| {
-                            let item = ImageItem::new(picture(index)).to(*target);
-                            match index {
-                                2 => item,
-                                _ => item.bar(
-                                    ImageBar::new(TITLES[index])
-                                        .subtitle(AUTHORS[index])
-                                        .action(rsx! {
-                                            ActionIcon {
-                                                // A `<button>` inherits no colour of its own, so an
-                                                // action on the bar's scrim has to be told - the
-                                                // `MultiSelect` precedent.
-                                                variant: "standard",
-                                                sx: sx().color("inherit"),
-                                                size: "sm",
-                                                aria_label: format!("Select {}", TITLES[index]),
-                                                CheckmarkIcon {}
-                                            }
-                                        }),
-                                ),
-                            }
-                        })
-                        .collect::<Vec<_>>(),
-                }
             }
         }
     }
