@@ -88,11 +88,16 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         // `neutral`. The text colour reads on it by construction, so the ring
         // takes that. `currentColor` rather than an unset var for a literal
         // colour: an unset var here would not fall back, it would erase the
-        // ring (`paper.md`).
+        // ring (`paper.md`). Only on the children: the alert's own ring sits
+        // outside it, on the page, where the text colour is often white on
+        // white.
         let chrome = match variant {
-            ButtonVariant::Filled => chrome.var(
-                CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
-                ALERT_CONTRAST_VAR.value_or("currentColor"),
+            ButtonVariant::Filled => chrome.selector(
+                "& > *",
+                sx().var(
+                    CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+                    ALERT_CONTRAST_VAR.value_or("currentColor"),
+                ),
             ),
             _ => chrome,
         };

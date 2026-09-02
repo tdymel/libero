@@ -181,11 +181,13 @@ fn the_variant_chrome_has_no_hover() {
 }
 
 /// `paper_sx()` publishes a black ring, which reads on the tint and on the
-/// page but not on a solid `filled` ground. There the ring takes the text
-/// colour, and a literal colour - which has no `-contrast` twin - falls back to
-/// `currentColor` rather than to an unset var, which would erase the ring.
+/// page but not on a solid `filled` ground. There a child's ring takes the
+/// text colour, and a literal colour - which has no `-contrast` twin - falls
+/// back to `currentColor` rather than to an unset var, which would erase the
+/// ring. The alert's own ring keeps the black: it is drawn outside, on the
+/// page, where a white text colour measured 1:1.
 #[test]
-fn a_filled_alert_rings_in_its_text_colour() {
+fn a_filled_alert_rings_its_children_in_its_text_colour() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Alert { variant: "filled", "Saved." } }
@@ -194,10 +196,12 @@ fn a_filled_alert_rings_in_its_text_colour() {
 
     let html = render(app);
     let class = alert_class(&html);
-    let filled = rule(&html, &format!(".{class}[data-state~=\"filled\"]"));
+    let children = rule(&html, &format!(".{class}[data-state~=\"filled\"] > *"));
+    let own = rule(&html, &format!(".{class}[data-state~=\"filled\"]"));
 
     assert!(
-        filled.contains("--lsx-focus-contrast:var(--lsx-alert-contrast, currentColor)"),
-        "{filled}"
+        children.contains("--lsx-focus-contrast:var(--lsx-alert-contrast, currentColor)"),
+        "{children}"
     );
+    assert!(!own.contains("--lsx-focus-contrast:"), "{own}");
 }

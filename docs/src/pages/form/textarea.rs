@@ -64,7 +64,13 @@ pub fn TextareaPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
-                    Control::slider("rows", ["2", "3", "5", "8"]).default("3"),
+                    // A `u32`, so it prints unquoted.
+                    Control::slider("rows", ["2", "3", "5", "8"]).default("3").code(
+                        |control, values| match values.str("rows") {
+                            rows if rows == control.default => vec![],
+                            rows => vec![format!("rows: {rows}")],
+                        },
+                    ),
                     Control::toggle("status", ["valid", "warning", "error"])
                         .default("valid")
                         .code(|_, values| match values.str("status").as_str() {

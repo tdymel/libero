@@ -135,12 +135,30 @@ pub fn ColorPickerPage() -> Element {
             Demo {
                 component: "ColorPicker",
                 children_text: "",
+                // `value` is required, so the snippet needs it even though no
+                // control sets it.
+                fixed: vec![
+                    "value: color()".to_string(),
+                    "oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value())"
+                        .to_string(),
+                ],
                 controls: vec![
                     Control::slider("size", SIZES).default("md"),
                     Control::slider("radius", SIZES).default("xxl"),
                     Control::switch("with_alpha"),
                     Control::switch("swatches").code(|_, values| match is_on(values, "swatches") {
-                        true => vec!["swatches: SWATCHES".to_string()],
+                        // The whole list, seven to a line, so the snippet
+                        // needs no constant of ours.
+                        true => {
+                            let rows = SWATCHES
+                                .chunks(7)
+                                .map(|row| {
+                                    let row: Vec<String> = row.iter().map(|c| format!("{c:?}")).collect();
+                                    format!("    {}", row.join(", "))
+                                })
+                                .collect::<Vec<_>>();
+                            vec![format!("swatches: [\n{},\n]", rows.join(",\n"))]
+                        }
                         false => vec![],
                     }),
                     Control::switch("with_picker").default("true").code(|_, values| {
