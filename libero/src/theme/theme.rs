@@ -11,16 +11,17 @@ use super::{
     DrawerDefaults, FieldDefaults, FieldSizeLevel, FieldsetDefaults, FileFieldDefaults,
     FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults, FormDefaults, GridDefaults,
     HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, ImageListDefaults,
-    ImageListVariant, KbdDefaults, ListDefaults, MarkDefaults, NativeSelectDefaults,
-    NavLinkDefaults, NumberFieldDefaults, OverlayDefaults, PaginationDefaults, PaginationLabels,
-    PaperDefaults, PhoneFieldDefaults, PinFieldDefaults, PinKind, Placement, PopoverDefaults,
-    ProgressBarDefaults, QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults,
-    ScrollAxis, ScrollbarSize, ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes,
-    SliderDefaults, SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
-    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel,
-    TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
-    TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults, TitleDefaults,
-    TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
+    ImageListVariant, KbdDefaults, ListDefaults, LoaderDefaults, LoaderVariant, MarkDefaults,
+    NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults,
+    PaginationDefaults, PaginationLabels, PaperDefaults, PhoneFieldDefaults, PinFieldDefaults,
+    PinKind, Placement, PopoverDefaults, ProgressBarDefaults, QrCodeDefaults, QrRobustness,
+    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
+    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT,
+    TableDefaults, TabsDefaults, TabsSizeLevel, TagsFieldDefaults, TextDefaults, TextFieldDefaults,
+    TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant, TimelineAlign,
+    TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
+    ZIndexDefaults,
 };
 use crate::components::ButtonVariant;
 
@@ -94,6 +95,7 @@ pub struct Theme {
     pub color_swatch: ColorSwatchDefaults,
     pub slider: SliderDefaults,
     pub list: ListDefaults,
+    pub loader: LoaderDefaults,
     pub data_list: DataListDefaults,
     pub table: TableDefaults,
     pub timeline: TimelineDefaults,
@@ -790,6 +792,14 @@ impl Theme {
             size: Size::Md,
             gap: Sizes::new(4, 8, 12, 16, 20, 24),
             indent: Sizes::new(8, 12, 16, 20, 24, 28),
+        },
+        loader: LoaderDefaults {
+            variant: LoaderVariant::Oval,
+            size: Size::Md,
+            color: Color::Primary,
+            // `xs`..`xl` are Mantine's; `xxl` continues the ramp at the same
+            // step, since our scale has a sixth level and theirs does not.
+            sizes: Sizes::new("18px", "22px", "36px", "44px", "58px", "72px"),
         },
         table: TableDefaults {
             padding_x: 12,

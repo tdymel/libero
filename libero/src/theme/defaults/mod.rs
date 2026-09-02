@@ -38,6 +38,7 @@ mod image;
 mod image_list;
 mod kbd;
 mod list;
+mod loader;
 mod mark;
 mod native_select;
 mod nav_link;
@@ -171,6 +172,9 @@ pub use image_list::{
 };
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
+pub use loader::{
+    LOADER_COLOR, LOADER_KEYFRAMES, LOADER_SIZE, LOADER_SIZE_SCALE, LoaderDefaults, LoaderVariant,
+};
 pub use mark::MarkDefaults;
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;

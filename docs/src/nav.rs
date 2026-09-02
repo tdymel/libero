@@ -129,6 +129,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             "Feedback",
             vec![
                 page(Route::AlertPage {}, "Alert"),
+                page(Route::LoaderPage {}, "Loader"),
                 page(Route::ProgressBarPage {}, "ProgressBar"),
             ],
         ),

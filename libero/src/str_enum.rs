@@ -139,7 +139,9 @@ mod tests {
         AnchorUnderline, ButtonVariant, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition,
         ImageFit, LabelPosition, Orientation, PinKind, SidebarSide,
     };
-    use crate::theme::{Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
+    use crate::theme::{
+        LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+    };
 
     /// Add every new `str_enum!` here - the checks below iterate this list.
     macro_rules! for_every_str_enum {
@@ -152,6 +154,7 @@ mod tests {
             $check!(HeaderPosition);
             $check!(ImageFit);
             $check!(LabelPosition);
+            $check!(LoaderVariant);
             $check!(Orientation);
             $check!(PinKind);
             $check!(Placement);

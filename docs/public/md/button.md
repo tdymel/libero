@@ -73,6 +73,14 @@ with a `:focus-visible` ring, so pointer clicks do not draw it. `selected` on a
 link keeps the selected look but not `aria-pressed`, and the library warns
 about that pairing.
 
+`loading` keeps the button focusable - a busy control is still one a keyboard
+reader can find - so it renders `aria-busy="true"` and `aria-disabled="true"`
+rather than native `disabled`, and swallows the click with `preventDefault`, so
+a busy `type="submit"` does not submit its form either. The label stays in the
+tree at `opacity: 0`: it is the accessible name, and it holds the width. The
+[`Loader`](loader.md) over it is `aria-hidden`, since the button already has a
+name.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -84,6 +92,7 @@ about that pairing.
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |
 | `selected` | `bool` | - | Turns the button into a toggle, rendering `aria-pressed` and the selected look. Omit to keep it a plain action. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the button. |
+| `loading` | `bool` | `false` | Overlays a `Loader` on the label and swallows clicks, but keeps the button focusable. Renders `aria-busy` and `aria-disabled`. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
 | `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute, when `to` is set. |
@@ -131,5 +140,6 @@ State tokens on the root's `data-state`, space separated.
 | `radius-<size>` | The `radius` in effect. |
 | `checked` | `selected` is `Some(true)`. |
 | `disabled` | `disabled` is set. |
+| `loading` | `loading` is set, on a `<button>`. |
 | `full-width` | `full_width` is set. |
 | `ripple-a` / `ripple-b` | A click ripple is playing; the two alternate so the animation restarts. |

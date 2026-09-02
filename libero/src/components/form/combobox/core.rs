@@ -46,6 +46,10 @@ base_props! {
         id: String,
         #[props(default)]
         empty: Option<Element>,
+        /// `Some(label)` while the options are being fetched: the dropdown
+        /// shows a labelled `Loader` in place of the rows and `empty`.
+        #[props(default)]
+        loading: Option<String>,
         /// Above the rows, inside the dropdown and outside its scroll - a
         /// search box. It survives an empty list, which is the whole point:
         /// a query that matches nothing is exactly when the box has to still
@@ -125,7 +129,10 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     use_context_provider(|| context);
 
     let opened = props.opened;
-    let count = props.rows.len();
+    let loading = props.loading.is_some();
+    // The rows belong to the previous query while a fetch runs, so they are
+    // neither drawn nor reachable by the arrows.
+    let count = if loading { 0 } else { props.rows.len() };
     let active_row = props
         .active
         .filter(|_| count > 0)
@@ -253,7 +260,8 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // otherwise force callers to derive `opened` from the option count.
     // A `header` keeps the box open through a list of nothing: a search that
     // matches no row must not close the thing holding the search.
-    let showing = opened && (count > 0 || props.empty.is_some() || props.header.is_some());
+    let showing =
+        opened && (loading || count > 0 || props.empty.is_some() || props.header.is_some());
     // Portaled rather than nested, so no `overflow: hidden` ancestor can clip
     // it and it can flip above the trigger when the page runs out of room.
     popover.show(showing.then(|| {
@@ -272,6 +280,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
             // what lets a search box inside the list answer the arrows. The
             // closure captures only `Copy` values, so it is `Copy` too.
             .event("onkeydown", onkeydown)
+            .attr("aria-busy", loading.then_some("true"))
             .render(
                 HtmlTag::Div,
                 props.attributes,
@@ -283,6 +292,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                         max_height: theme.combobox.max_dropdown_height,
                         scroll_y,
                         empty: props.empty,
+                        loading: props.loading,
                         header: props.header,
                         multiselectable: props.multiselectable,
                         context,

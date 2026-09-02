@@ -47,6 +47,9 @@ pub fn FileFieldPage() -> Element {
                     prop("clearable", "bool")
                         .default("true")
                         .doc("Shows an x that empties the field."),
+                    prop("loading", "bool")
+                        .default("false")
+                        .doc("An upload is in flight: a `Loader` beside the selection, or in place of the dropzone's icon, and `aria-busy` on the control. It blocks nothing - `disabled` does that."),
                     prop("selection", "Callback<SelectionArgs<FileData>, Element>")
                         .default("a Chip, or the filename")
                         .doc("Draws one picked file. A caller who overrides it draws the whole thing, remove control included - `args.remove` is the wiring."),
@@ -153,6 +156,7 @@ pub fn FileFieldPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    Control::switch("loading"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     FileFieldDemo { values }
@@ -196,6 +200,7 @@ fn FileFieldDemo(values: DemoValues) -> Element {
                 },
                 required: is_on(&values, "required").then_some(true),
                 disabled: is_on(&values, "disabled").then_some(true),
+                loading: is_on(&values, "loading").then_some(true),
                 onchange: move |picked: Files| files.set(picked),
                 "Drop files here, or click to pick"
             }

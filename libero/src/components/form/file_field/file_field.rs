@@ -6,6 +6,7 @@ use crate::{
     components::{
         ActionIcon, Chip, HtmlTag, Input, States,
         common::{field_props, focus_ring_sx, input_from_str},
+        feedback::Loader,
         form::{
             SelectionArgs, field_control_sx,
             glyphs::{CloseIcon, UploadIcon},
@@ -221,6 +222,15 @@ field_props! {
         /// Shows an x that empties the field.
         #[props(default)]
         clearable: Option<bool>,
+        /// An upload is in flight. Draws a `Loader` in the control - beside
+        /// the selection in the `Input` variant, in place of the icon on a
+        /// dropzone, on the card once a single-file dropzone has put its
+        /// surface away - and marks that control `aria-busy`.
+        ///
+        /// It blocks nothing: a `multiple` field can take more files while
+        /// the first ones upload. `disabled` is the switch for that.
+        #[props(default)]
+        loading: Option<bool>,
         /// Which control to draw: a one-line input, or a drop surface.
         #[props(default, into)]
         variant: Input<FileFieldVariant>,
@@ -278,6 +288,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let clearable = props.clearable.unwrap_or(theme.file_field.clearable);
     let required = props.required.unwrap_or(false);
     let multiple = props.multiple;
+    let loading = props.loading.unwrap_or(false);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let interactive = (props.onchange.is_some() || bound.is_bound()) && !disabled;
@@ -379,8 +390,16 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
     let has_files = !value.is_empty();
+    // Chips ride inside the control, so they sit one step down the field's
+    // own scale - `xs` has nowhere lower to go. The loader takes the same
+    // step, for the same reason.
+    let chip_size = Size::ALL[size.index().saturating_sub(1)];
+    // Silent: it sits inside a control that the field's label already names,
+    // and `aria-busy` on that control is what says it is waiting.
+    let spinner = loading.then(|| rsx! { Loader { size: chip_size } });
     let clear = (clearable && has_files && interactive).then(|| {
         rsx! {
+            {spinner.clone()}
             ActionIcon {
                 aria_label: "Clear",
                 size: icon_size.clone(),
@@ -394,10 +413,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
             }
         }
     });
-
-    // Chips ride inside the control, so they sit one step down the field's
-    // own scale - `xs` has nowhere lower to go.
-    let chip_size = Size::ALL[size.index().saturating_sub(1)];
+    // The frame's trailing slot: the clear button, with the loader ahead of
+    // it - or the loader alone when there is nothing to clear.
+    let trailing = clear.or_else(|| spinner.clone());
     let chip_class = use_css(Some(&FILE_CHIP_SX), CssLayer::Framework);
     let card_class = use_css(Some(&FILE_CARD_SX), CssLayer::Framework);
 
@@ -488,6 +506,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
                         remove,
                         icon_size.clone(),
                         interactive,
+                        // Only once the surface is gone: otherwise the loader
+                        // is on the surface, and one is enough.
+                        (loading && !surface).then_some(chip_size),
                         format!("{}-remove-{index}", field.id()),
                     ),
                     false => default_chip(&file, remove, chip_size, multiple, interactive),
@@ -525,6 +546,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
                         "aria-labelledby",
                         (!surface).then(|| labelledby.clone()).flatten(),
                     )
+                    .attr("aria-busy", (loading && !surface).then_some("true"))
                     .element(&list_element)
                     .render(HtmlTag::Ul, Vec::new(), rsx! { {drawn.into_iter()} })
             }),
@@ -659,6 +681,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
             .attr("aria-invalid", invalid.then_some("true"))
             .attr("aria-required", required.then_some("true"))
             .attr("aria-disabled", !interactive)
+            .attr("aria-busy", loading.then_some("true"))
             .attr(
                 "aria-activedescendant",
                 chip_cursor.map(|index| format!("{id_prefix}-{index}")),
@@ -686,7 +709,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     match variant {
         FileFieldVariant::Input => {
             let frame = use_field_frame()
-                .trailing(&clear)
+                .trailing(&trailing)
                 .states(field.states())
                 .prepare();
             // The frame draws the ring, so the control must not draw a second.
@@ -715,7 +738,11 @@ pub fn FileField(props: FileFieldProps) -> Element {
                 control(
                     style,
                     rsx! {
-                        UploadIcon {}
+                        if loading {
+                            Loader { size }
+                        } else {
+                            UploadIcon {}
+                        }
                         {prompt}
                         {hint}
                     },
@@ -796,6 +823,7 @@ fn default_card(
     remove: Callback<()>,
     icon_size: Input<ThemeAwareValue>,
     interactive: bool,
+    loading: Option<Size>,
     id: String,
 ) -> Element {
     let name = file.name();
@@ -803,6 +831,9 @@ fn default_card(
     rsx! {
         span { "data-slot": "name", "{name}" }
         span { "data-slot": "size", "{size}" }
+        if let Some(size) = loading {
+            Loader { size }
+        }
         if interactive {
             span { "data-slot": "remove",
                 ActionIcon {

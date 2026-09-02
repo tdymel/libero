@@ -30,6 +30,9 @@ pub fn ButtonPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables interaction and dims the button."),
+                prop("loading", "bool")
+                    .default("false")
+                    .doc("Overlays a `Loader` on the label and swallows clicks, but keeps the button focusable. The label stays in the tree as the accessible name and holds the width; the button renders `aria-busy` and `aria-disabled`. Ignored on a link."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler; not called when the button renders as a link."),
                 prop("to", "NavigationTarget")
@@ -69,6 +72,7 @@ pub fn ButtonPage() -> Element {
                     Control::switch("full_width"),
                     Control::switch("selected"),
                     Control::switch("disabled"),
+                    Control::switch("loading"),
                     // A `GlobalAttributes` pass-through rather than a
                     // prop, so it prints as the raw identifier.
                     Control::toggle("type", ["button", "submit", "reset"]).code(
@@ -92,6 +96,7 @@ pub fn ButtonPage() -> Element {
                             _ => None,
                         },
                         disabled: values.str("disabled") == "true",
+                        loading: values.str("loading") == "true",
                         r#type: values.str("type"),
                         "Save changes"
                     }

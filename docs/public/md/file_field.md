@@ -170,6 +170,15 @@ one tab stop; the chips' own x buttons are not in the tab order.
 The `Dropzone` variant has no chips. Its cards sit outside the control, so each
 card's remove button is a tab stop of its own and needs no cursor.
 
+**Uploading.** `loading` draws a [`Loader`](loader.md) inside the control - in
+the trailing slot ahead of the clear button, or in place of the dropzone's icon -
+and sets `aria-busy="true"` on it. The loader is `aria-hidden`: the control is
+already named by the field's label, and `aria-busy` is what says it is waiting.
+Once a single-file dropzone has put its surface away, the loader moves onto the
+card and the card list carries `aria-busy`. `loading` does not block picking;
+pass `disabled` for that. It is not a `status`: that slot is validation, and an
+upload in flight is neither valid nor invalid.
+
 A filename is one unbreakable word, so every place one is shown - the chip, the
 card, the single-file control - clips it with an ellipsis rather than letting it
 widen the field.
@@ -187,6 +196,7 @@ widen the field.
 | `capture` | `String` | - | Asks a phone for a fresh capture - `user` or `environment`. |
 | `placeholder` | `String` | - | Shown while nothing is picked. In the `Dropzone` variant it is the prompt, when `children` is empty. |
 | `clearable` | `bool` | `true` | Shows an x that empties the field. |
+| `loading` | `bool` | `false` | An upload is in flight: a `Loader` in the control and `aria-busy` on it. Blocks nothing. |
 | `selection` | `Callback<SelectionArgs<FileData>, Element>` | a `Chip`, or the filename | Draws one picked file, remove control included. |
 | `name` | `String` | - | The hidden input's name, so the files post with a form. Its list is kept equal to `value`. |
 | `onchange` | `EventHandler<Files>` | - | Fires with the files the field should hold next - a pick, a drop, a removal or a clear. |

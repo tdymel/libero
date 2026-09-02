@@ -1,12 +1,58 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use std::time::Duration;
+
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Options, Text, TextField,
-        use_combobox,
+        Button, Code, CodeBlock, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Options, Text,
+        TextField, use_combobox,
     },
+    platform::{TimerSubscription, timer},
     sx::sx,
 };
+
+/// A fetch per keystroke. `loading` is what keeps `empty` from flashing
+/// between the keystroke and the answer.
+const FETCHING: &str = r#"let suggestions = use_combobox();
+let mut text = use_signal(String::new);
+let mut results = use_signal(Vec::<Fruit>::new);
+let mut loading = use_signal(|| false);
+
+rsx! {
+    Combobox {
+        state: suggestions,
+        options: results(),
+        loading: loading(),
+        loading_label: "Searching fruit",
+        empty: rsx! { Text { size: "sm", "No fruit matches" } },
+        option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+            ComboboxOption {
+                onpick: move |_| {
+                    text.set(o.value.label());
+                    suggestions.close();
+                },
+                "{o.value.label()}"
+            }
+        },
+        TextField {
+            value: text(),
+            attributes: suggestions.a11y_attributes(),
+            oninput: move |next: String| {
+                text.set(next.clone());
+                suggestions.open();
+                loading.set(true);
+                spawn(async move {
+                    results.set(search(&next).await);
+                    loading.set(false);
+                });
+            },
+        }
+    }
+}"#;
+
+/// How long the fake search takes - long enough to see, short enough to type
+/// through.
+const LATENCY: Duration = Duration::from_millis(700);
 
 /// The enum is the option list, so every snippet has to show it.
 const FRUIT_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -255,6 +301,72 @@ fn SelectDemo(values: DemoValues) -> Element {
     }
 }
 
+/// The fruit whose label contains `query`, case-insensitively.
+fn matching(query: &str) -> Vec<Fruit> {
+    let query = query.to_lowercase();
+    Fruit::options()
+        .iter()
+        .copied()
+        .filter(|fruit| fruit.label().to_lowercase().contains(&query))
+        .collect()
+}
+
+/// Every keystroke starts a fake search that answers after [`LATENCY`], and a
+/// newer keystroke cancels the older one by dropping its timer.
+#[component]
+fn FetchingDemo() -> Element {
+    let suggestions = use_combobox();
+    let mut text = use_signal(String::new);
+    let mut results = use_signal(Vec::<Fruit>::new);
+    let mut loading = use_signal(|| false);
+    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+    use_drop(move || pending.set(None));
+
+    // The dropdown matches its wrapper's width, and a bare wrapper in a
+    // column is as wide as the page.
+    rsx! {
+        Flex { direction: "column", align: "flex-start",
+        Combobox {
+            state: suggestions,
+            options: results(),
+            loading: loading(),
+            loading_label: "Searching fruit",
+            empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } },
+            option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+                ComboboxOption {
+                    onpick: move |_| {
+                        text.set(o.value.label());
+                        suggestions.close();
+                    },
+                    "{o.value.label()}"
+                }
+            },
+            TextField {
+                sx: sx().width("280px"),
+                placeholder: "Type a fruit",
+                value: text(),
+                attributes: suggestions.a11y_attributes(),
+                oninput: move |next: String| {
+                    text.set(next.clone());
+                    suggestions.open();
+                    loading.set(true);
+                    let answer = timer().map(|timer| {
+                        timer.after(
+                            LATENCY,
+                            Box::new(move || {
+                                results.set(matching(&next));
+                                loading.set(false);
+                            }),
+                        )
+                    });
+                    pending.set(answer);
+                },
+            }
+        }
+        }
+    }
+}
+
 /// Typing filters the list; picking a suggestion fills the field.
 #[component]
 fn SuggestionsDemo(values: DemoValues) -> Element {
@@ -325,6 +437,12 @@ pub fn ComboboxPage() -> Element {
                         .doc("The trigger, and anything else that belongs with it - a hidden input, say."),
                     prop("empty", "Element")
                         .doc("Shown in place of the list when `options` is empty."),
+                    prop("loading", "bool")
+                        .default("false")
+                        .doc("The options are being fetched. Replaces the rows and `empty` with a labelled `Loader` and marks the dropdown `aria-busy`. It wins over `empty`, so an async list does not flash \"no results\" on every keystroke."),
+                    prop("loading_label", "String")
+                        .default("\"Loading\"")
+                        .doc("What the loader announces while `loading`."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),
@@ -382,6 +500,31 @@ pub fn ComboboxPage() -> Element {
                     "suggestions" => rsx! { SuggestionsDemo { values } },
                     _ => rsx! { SelectDemo { values } },
                 },
+            }
+            DocSection {
+                title: "Fetching options",
+                Text {
+                    "When the options come from a request, set "
+                    Code { source: "loading" }
+                    " while it runs. The dropdown then shows a "
+                    Code { source: "Loader" }
+                    " in place of the rows and of "
+                    Code { source: "empty" }
+                    " - an async list's "
+                    Code { source: "options" }
+                    " is empty between a keystroke and its answer, and without "
+                    Code { source: "loading" }
+                    " every keystroke would flash \"No fruit matches\" first. The loader is "
+                    "the only content of the dropdown, so it is the one that announces: "
+                    Code { source: "role=\"status\"" }
+                    " with "
+                    Code { source: "loading_label" }
+                    ", inside a dropdown marked "
+                    Code { source: "aria-busy" }
+                    ". This one answers after 700ms."
+                }
+                FetchingDemo {}
+                CodeBlock { source: FETCHING, language: "rust" }
             }
         }
     }

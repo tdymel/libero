@@ -178,11 +178,55 @@ That also covers a filter on something other than the label - an option shown by
 name but searched by email is a different closure in the same `filter` call, not
 a prop.
 
+## Fetching options
+
+When the options come from a request, set `loading` while it runs. The dropdown
+then shows a [`Loader`](loader.md) in place of the rows **and of `empty`** - an
+async list's `options` is empty between a keystroke and its answer, and without
+`loading` every keystroke would flash the `empty` content first. The rows are
+replaced too: they belong to the previous query, and the arrows and Enter skip
+them.
+
+```rust
+let suggestions = use_combobox();
+let mut text = use_signal(String::new);
+let mut results = use_signal(Vec::<Fruit>::new);
+let mut loading = use_signal(|| false);
+
+rsx! {
+    Combobox {
+        state: suggestions,
+        options: results(),
+        loading: loading(),
+        loading_label: "Searching fruit",
+        empty: rsx! { Text { size: "sm", "No fruit matches" } },
+        option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
+            ComboboxOption {
+                onpick: move |_| { text.set(o.value.label()); suggestions.close(); },
+                "{o.value.label()}"
+            }
+        },
+        TextField {
+            value: text(),
+            attributes: suggestions.a11y_attributes(),
+            oninput: move |next: String| {
+                text.set(next.clone());
+                suggestions.open();
+                loading.set(true);
+                spawn(async move {
+                    results.set(search(&next).await);
+                    loading.set(false);
+                });
+            },
+        }
+    }
+}
+```
+
 ## What it does not do yet
 
 Multi-selection is nothing but a longer list of `selected` rows, so it needs no
-support here, but there is no creatable mode, no option groups, and no
-async/`loading` list. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet. The dropdown is
+support here, but there is no creatable mode and no option groups. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet. The dropdown is
 positioned with plain absolute placement below the wrapper - it is not portaled
 and it does not flip when it runs out of room below.
 
@@ -222,6 +266,10 @@ Keyboard, from anywhere inside the wrapper: ArrowDown opens and moves down,
 ArrowUp moves up, Home and End jump to the ends, Enter picks the active row and
 closes, Escape and Tab close. `disabled` blocks all of it.
 
+While `loading`, the loader is the only content of the dropdown, so it is the
+one that speaks: it renders `role="status"` with `loading_label` as a visually
+hidden text node, and the dropdown carries `aria-busy="true"`.
+
 ## Props
 
 ### `Combobox`
@@ -233,6 +281,8 @@ closes, Escape and Tab close. `disabled` blocks all of it.
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | - | Draws one row. Required. |
 | `children` | `Element` | - | The trigger, and anything else that belongs with it. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
+| `loading` | `bool` | `false` | The options are being fetched: a labelled `Loader` replaces the rows and `empty`, and the dropdown is `aria-busy`. |
+| `loading_label` | `String` | `"Loading"` | What the loader announces while `loading`. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Blocks the arrow keys. |

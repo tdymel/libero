@@ -1,6 +1,10 @@
 use dioxus::prelude::*;
 
-use crate::{components::layout::ScrollArea, sx::sx};
+use crate::{
+    components::{feedback::Loader, layout::ScrollArea},
+    sx::sx,
+    theme::Size,
+};
 
 use super::option::{ComboboxContext, ComboboxRowContext};
 
@@ -28,6 +32,8 @@ pub(super) fn ComboboxDropdown(
     max_height: String,
     scroll_y: Option<f64>,
     empty: Option<Element>,
+    /// `Some(label)` while the options are being fetched.
+    loading: Option<String>,
     /// Above the rows and outside the scroll, so it stays put while the list
     /// under it changes - or empties.
     header: Option<Element>,
@@ -44,9 +50,16 @@ pub(super) fn ComboboxDropdown(
     // No rows and no `empty` draws nothing at all - an empty bordered box is
     // not a state worth showing. A `header` is the exception: it is drawn
     // either way, because a search that matched nothing still needs its box.
-    let list = match rows.is_empty() {
-        true => empty.unwrap_or_else(|| rsx! {}),
-        false => rsx! {
+    //
+    // Loading wins over both. The loader is then the only content of the
+    // region, so it is the one that speaks: labelled, which makes it
+    // `role="status"`, while the dropdown around it says `aria-busy`.
+    let list = match (loading, rows.is_empty()) {
+        (Some(label), _) => rsx! {
+            Loader { size: Size::Sm, label, sx: sx().align_self("center") }
+        },
+        (None, true) => empty.unwrap_or_else(|| rsx! {}),
+        (None, false) => rsx! {
             ScrollArea {
                 sx: sx().max_height(max_height),
                 scroll_position_y: scroll_y,

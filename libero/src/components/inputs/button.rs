@@ -7,13 +7,14 @@ use crate::{
             base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
             hover_color, input_from_str, selected_color, shade_color, variables,
         },
+        feedback::Loader,
         layout::use_box,
         navigation::InternalAnchor,
     },
     hooks::{ripple_sx, use_cache, use_ripple, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{ButtonDefaults, ColorShade, CssVar, Size, SizeCss},
+    theme::{BUTTON_HEIGHT, ButtonDefaults, ColorShade, CssVar, LOADER_SIZE, Size, SizeCss},
     utils::warn,
 };
 
@@ -248,9 +249,49 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
                 .pointer_events("none"),
         )
         .when("full-width", sx().width("100%"))
+        .when("loading", loading_sx())
         // The base outline is suppressed above and re-added only here.
         .focus_visible(focus_ring_sx())
 });
+
+/// While `loading`, the button holds exactly two children: the caller's own,
+/// wrapped, and the loader.
+///
+/// The children stay in the tree at `opacity: 0` rather than being swapped for
+/// the loader: they are the button's accessible name, and they hold its width,
+/// so the button neither goes nameless nor jumps when the wait starts. The
+/// loader sits on top, centred, at half the active size's height - each step
+/// gets its own rule, since the button republishes no unsuffixed height to
+/// read.
+fn loading_sx() -> Sx {
+    let base = sx()
+        .cursor("progress")
+        .selector(
+            "& > span:first-child",
+            sx().display("inline-flex")
+                .align_items("center")
+                .justify_content("center")
+                .gap("inherit")
+                .opacity("0"),
+        )
+        .selector(
+            "& > span:last-child",
+            sx().position("absolute").inset("0").margin("auto"),
+        );
+
+    Size::ALL.into_iter().fold(base, |base, size| {
+        base.when(
+            size.state_name(),
+            sx().selector(
+                "& > span:last-child",
+                sx().var(
+                    LOADER_SIZE,
+                    format!("calc({} / 2)", BUTTON_HEIGHT.value(size)),
+                ),
+            ),
+        )
+    })
+}
 
 /// The colour half of the `style` attribute, already rendered. Depends on
 /// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
@@ -296,6 +337,12 @@ base_props! {
         selected: Option<bool>,
         #[props(default)]
         disabled: Option<bool>,
+        /// Overlays a `Loader` on the label and swallows clicks, while leaving
+        /// the button focusable - a busy control is still one the reader can
+        /// find. Renders `aria-busy` and `aria-disabled` rather than native
+        /// `disabled`, which would drop focus mid-wait. Ignored in link mode.
+        #[props(default)]
+        loading: Option<bool>,
         /// `Option`, not a bare `EventHandler`: a defaulted one allocates a
         /// `GenerationalBox` on every render of every button - ~300 ns - even
         /// where no caller ever passes a handler.
@@ -320,8 +367,14 @@ pub fn Button(props: ButtonProps) -> Element {
     let full_width = props.full_width.unwrap_or(false);
     let selectable = props.selected.is_some();
     let selected = props.selected.unwrap_or(false);
+    let is_link = props.to.as_ref().is_some();
+    let loading = props.loading.unwrap_or(false) && !is_link;
 
-    if selectable && props.to.as_ref().is_some() {
+    if is_link && props.loading == Some(true) {
+        warn("Button: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
+    }
+
+    if selectable && is_link {
         warn(
             "Button: a link keeps the `selected` look but not `aria-pressed`, which `<a>` has no use for.",
         );
@@ -348,9 +401,10 @@ pub fn Button(props: ButtonProps) -> Element {
     // Built in one allocation rather than through `.with()`, which is a
     // `retain` scan and a possible regrow per state. The caller's own states,
     // which are usually absent, keep the merging path.
-    let mut own = Vec::with_capacity(7);
+    let mut own = Vec::with_capacity(8);
     own.extend([
         ("disabled", disabled),
+        ("loading", loading),
         ("full-width", full_width),
         ("checked", selected),
         (variant.state_name(), true),
@@ -372,6 +426,13 @@ pub fn Button(props: ButtonProps) -> Element {
     };
 
     let handle_click = move |event: Event<MouseData>| {
+        // `prevent_default` as well as returning: a busy `type="submit"`
+        // would otherwise still submit its form, by click or by Enter in a
+        // field, since implicit submission is a synthetic click here.
+        if loading {
+            event.prevent_default();
+            return;
+        }
         ripple.press(&event);
         if let Some(onclick) = &props.onclick {
             onclick.call(event);
@@ -417,18 +478,31 @@ pub fn Button(props: ButtonProps) -> Element {
         };
     }
 
+    // The loader is `aria-hidden` - the button already has a name, and
+    // `aria-busy` on it is what says it is waiting.
+    let children = if loading {
+        rsx! {
+            span { {props.children} }
+            Loader { size, color: "currentColor" }
+        }
+    } else {
+        props.children
+    };
+
     // `<button>` defaults to `submit`, which submits an enclosing form; a
     // `Button` defaults to `button`. `attr_default`, so a caller asking for
     // `submit` or `reset` still gets it.
     boxed
         .event("onclick", handle_click)
         .attr("disabled", disabled)
+        .attr("aria-busy", loading.then_some("true"))
+        .attr("aria-disabled", loading.then_some("true"))
         .attr_default("type", "button")
         .attr_default(
             "aria-pressed",
             selectable.then_some(if selected { "true" } else { "false" }),
         )
-        .render(HtmlTag::Button, props.attributes, props.children)
+        .render(HtmlTag::Button, props.attributes, children)
 }
 
 #[cfg(test)]
