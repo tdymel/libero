@@ -475,7 +475,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             onactive: move |row| state.set_active(Some(row)),
             opened,
             onopened: open,
-            id: state.id(),
+            state,
             size,
             radius,
             disabled,

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{ClassList, Input, States},
+    hooks::use_theme,
     sx::Sx,
     theme::Size,
 };
@@ -34,9 +35,10 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// too, which belong to the previous query.
     #[props(default)]
     loading: Option<bool>,
-    /// What the loader announces while `loading`.
-    #[props(default = "Loading".to_string(), into)]
-    loading_label: String,
+    /// What the loader announces while `loading`. Unset, the theme's
+    /// [`ComboboxLabels`](crate::theme::ComboboxLabels) says it.
+    #[props(default, into)]
+    loading_label: Option<String>,
     /// A row's height and font size.
     #[props(default, into)]
     size: Input<Size>,
@@ -70,6 +72,7 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
 /// everything below compiles once.
 #[component]
 pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Element {
+    let theme = use_theme();
     let count = props.options.len();
     let state = props.state;
 
@@ -112,9 +115,13 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             onactive: move |row| state.set_active(Some(row)),
             opened: state.opened(),
             onopened: move |opened| state.set_opened(opened),
-            id: state.id(),
+            state,
             empty: props.empty,
-            loading: props.loading.unwrap_or(false).then_some(props.loading_label),
+            loading: props.loading.unwrap_or(false).then(|| {
+                props
+                    .loading_label
+                    .unwrap_or_else(|| theme.combobox.labels.loading.to_string())
+            }),
             size: props.size,
             radius: props.radius,
             disabled: props.disabled.unwrap_or(false),

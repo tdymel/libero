@@ -264,7 +264,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             onactive: move |row| state.set_active(Some(row)),
             opened: state.opened() && !disabled,
             onopened: move |opened| state.set_opened(opened),
-            id: state.id(),
+            state,
             empty: props.empty,
             size,
             radius,

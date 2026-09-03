@@ -441,8 +441,8 @@ pub fn ComboboxPage() -> Element {
                         .default("false")
                         .doc("The options are being fetched. Replaces the rows and `empty` with a labelled `Loader` and marks the dropdown `aria-busy`. It wins over `empty`, so an async list does not flash \"no results\" on every keystroke."),
                     prop("loading_label", "String")
-                        .default("\"Loading\"")
-                        .doc("What the loader announces while `loading`."),
+                        .default("theme")
+                        .doc("What the loader announces while `loading`. Unset, `theme.combobox.labels.loading` - \"Loading\" in `ComboboxLabels::ENGLISH`."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),

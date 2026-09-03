@@ -750,6 +750,7 @@ impl Theme {
                     padding_x: "18px",
                 },
             ),
+            labels: crate::theme::ComboboxLabels::ENGLISH,
         },
         slider: SliderDefaults {
             size: Size::Md,

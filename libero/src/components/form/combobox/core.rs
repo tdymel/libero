@@ -8,7 +8,7 @@ use crate::{
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
-use super::{dropdown::ComboboxDropdown, option::ComboboxContext};
+use super::{dropdown::ComboboxDropdown, option::ComboboxContext, state::ComboboxState};
 
 // The dropdown is a surface, so its background, border and corner come from
 // `paper_sx()`: the `bordered` and `radius-{step}` tokens below are the ones
@@ -42,8 +42,9 @@ base_props! {
         onactive: EventHandler<usize>,
         opened: bool,
         onopened: EventHandler<bool>,
-        /// The `ComboboxState`'s id, which the aria wiring is built from.
-        id: String,
+        /// The caller's state: its id is what the aria wiring is built from,
+        /// and it is told how many rows are drawn.
+        state: ComboboxState,
         #[props(default)]
         empty: Option<Element>,
         /// `Some(label)` while the options are being fetched: the dropdown
@@ -102,7 +103,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // and are *not* descendants of this component - a signal created here would
     // be read from outside the scope that owns it, which dioxus warns about and
     // which really can drop the value while a row still holds it.
-    let id = use_hook(|| Signal::new_in_scope(props.id.clone(), ScopeId::ROOT));
+    let id = use_hook(|| Signal::new_in_scope(props.state.id(), ScopeId::ROOT));
     let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
     if *shared_size.peek() != size {
         shared_size.set(size);
@@ -133,6 +134,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // The rows belong to the previous query while a fetch runs, so they are
     // neither drawn nor reachable by the arrows.
     let count = if loading { 0 } else { props.rows.len() };
+    props.state.set_rows(count);
     let active_row = props
         .active
         .filter(|_| count > 0)

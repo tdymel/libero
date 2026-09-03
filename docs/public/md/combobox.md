@@ -282,7 +282,7 @@ hidden text node, and the dropdown carries `aria-busy="true"`.
 | `children` | `Element` | - | The trigger, and anything else that belongs with it. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
 | `loading` | `bool` | `false` | The options are being fetched: a labelled `Loader` replaces the rows and `empty`, and the dropdown is `aria-busy`. |
-| `loading_label` | `String` | `"Loading"` | What the loader announces while `loading`. |
+| `loading_label` | `String` | theme | What the loader announces while `loading`. Unset, `theme.combobox.labels.loading` - "Loading" in `ComboboxLabels::ENGLISH`. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Blocks the arrow keys. |

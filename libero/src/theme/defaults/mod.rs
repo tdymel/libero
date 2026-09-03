@@ -132,7 +132,7 @@ pub use color_swatch::{
 };
 pub use combobox::{
     COMBOBOX_FONT_SIZE, COMBOBOX_PADDING, COMBOBOX_PADDING_X, COMBOBOX_ROW_HEIGHT,
-    ComboboxDefaults, ComboboxSizeLevel,
+    ComboboxDefaults, ComboboxLabels, ComboboxSizeLevel,
 };
 pub use container::{CONTAINER_GUTTERS, CONTAINER_SIZE, ContainerDefaults};
 pub use data_list::{DATA_LIST_GAP, DataListDefaults};

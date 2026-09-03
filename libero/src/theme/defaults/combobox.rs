@@ -18,12 +18,25 @@ pub struct ComboboxSizeLevel {
     pub padding_x: &'static str,
 }
 
+/// Every string a `Combobox` says to a reader. Swapped whole for a locale -
+/// the [`BurgerLabels`](crate::theme::BurgerLabels) shape.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct ComboboxLabels {
+    /// What the loader announces while the options are being fetched.
+    pub loading: &'static str,
+}
+
+impl ComboboxLabels {
+    pub const ENGLISH: Self = Self { loading: "Loading" };
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ComboboxDefaults {
     pub size: Size,
     pub radius: Size,
     pub max_dropdown_height: &'static str,
     pub sizes: Sizes<ComboboxSizeLevel>,
+    pub labels: ComboboxLabels,
 }
 
 impl ComboboxDefaults {

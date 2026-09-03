@@ -400,7 +400,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
                         let _ = picker_element.focus();
                     }
                 },
-                id: state.id(),
+                state,
                 size,
                 radius,
                 disabled,

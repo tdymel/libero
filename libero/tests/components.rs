@@ -2530,6 +2530,9 @@ mod combobox_highlight {
         let mut dom = VirtualDom::new(App);
         dom.rebuild_in_place();
 
+        // Mount takes one extra pass to settle: the list reports its row count
+        // to the state, which re-renders the trigger's scope.
+        render_pass(&mut dom);
         let html = render_pass(&mut dom);
         assert!(row_of(&html, 0).contains("active"));
         assert!(!row_of(&html, 2).contains("active"));

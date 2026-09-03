@@ -17,6 +17,10 @@ pub struct ComboboxState {
     id: Signal<String>,
     opened: Signal<bool>,
     active: Signal<Option<usize>>,
+    /// How many rows the open list draws, written by the list itself - none
+    /// while it is loading. The trigger must never point at a row that is not
+    /// in the DOM, and only the list knows what it drew.
+    rows: Signal<usize>,
 }
 
 /// One `Combobox`'s state. Positional, like every hook.
@@ -25,6 +29,7 @@ pub fn use_combobox() -> ComboboxState {
         id: use_id(),
         opened: use_signal(|| false),
         active: use_signal(|| None),
+        rows: use_signal(|| 0),
     }
 }
 
@@ -67,8 +72,17 @@ impl ComboboxState {
         active.set(row);
     }
 
+    /// Written by `ComboboxCore` on render, with a peek-compare so an
+    /// unchanged count does not re-render the caller.
+    pub(crate) fn set_rows(&self, count: usize) {
+        let mut rows = self.rows;
+        if *rows.peek() != count {
+            rows.set(count);
+        }
+    }
+
     /// `role`, `aria-haspopup`, `aria-expanded`, `aria-controls` and, while the
-    /// list is open, `aria-activedescendant`. Spread it on whatever control
+    /// list is open and has a row to point at, `aria-activedescendant`. Spread it on whatever control
     /// sits inside the `Combobox`:
     ///
     /// ```ignore
@@ -76,6 +90,13 @@ impl ComboboxState {
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
         let opened = self.opened();
-        trigger_aria(&self.id(), opened, opened.then(|| self.active()).flatten())
+        // Clamped the way the list clamps its highlight, so the id named here
+        // is the row drawn as active.
+        let rows = (self.rows)();
+        let active = self
+            .active()
+            .filter(|_| opened && rows > 0)
+            .map(|row| row.min(rows - 1));
+        trigger_aria(&self.id(), opened, active)
     }
 }
