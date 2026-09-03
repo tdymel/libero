@@ -32,9 +32,11 @@ mode-fork:
     @just _target-dir fork
 
 # Per-mode target dir, so `cargo` picks it up too - not just these recipes.
+# Host builds (tests, native) link with mold: linking the test binaries is most
+# of an incremental rebuild. wasm keeps rust-lld, since the flag is host-only.
 _target-dir mode:
     mkdir -p {{root}}/.cargo
-    printf '# Written by `just mode-main` / `just mode-fork` - do not edit.\n[build]\ntarget-dir = "target/%s"\n' {{mode}} > {{root}}/.cargo/config.toml
+    printf '# Written by `just mode-main` / `just mode-fork` - do not edit.\n[build]\ntarget-dir = "target/%s"\n\n[target.x86_64-unknown-linux-gnu]\nrustflags = ["-C", "link-arg=-fuse-ld=mold"]\n' {{mode}} > {{root}}/.cargo/config.toml
     @echo "mode: {{mode}}"
 
 # Which tree is active, and does the feature flag follow it.
