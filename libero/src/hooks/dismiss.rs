@@ -18,11 +18,6 @@
 //! spread `anchor_events()` too, or the surface cannot be dismissed from the
 //! keyboard at all.
 
-// The hook lands ahead of its first consumer: `Menu`, `Menubar` and
-// `HoverCard` are what it exists for, and none of them is written yet, while
-// `Modal` uses only the layer stack. Drop this once D2 lands.
-#![allow(dead_code)]
-
 use std::cell::RefCell;
 use std::rc::Rc;
 
@@ -270,7 +265,6 @@ pub(crate) struct DismissHandle {
     open: bool,
     onclose: Option<Callback<()>>,
     focus_return: FocusReturn,
-    layer: DismissLayer,
     escape: bool,
     outside: bool,
     return_focus: bool,
@@ -609,7 +603,6 @@ pub(crate) fn use_dismiss(
         open,
         onclose,
         focus_return,
-        layer,
         escape: options.escape,
         outside: options.outside,
         return_focus: options.return_focus,

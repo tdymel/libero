@@ -173,6 +173,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         scroll_area: _,
         tree: _,
         mark: _,
+        hover_card: _,
         nav_link: _,
         loader,
         indicator,

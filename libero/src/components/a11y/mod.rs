@@ -1,6 +1,7 @@
 mod focus_trap;
 mod visually_hidden;
 
+pub(crate) use focus_trap::FOCUSABLE_SELECTOR;
 pub use focus_trap::{FocusTrap, FocusTrapInitialFocus, FocusTrapProps};
 pub(crate) use visually_hidden::VISUALLY_HIDDEN_SX;
 pub use visually_hidden::{VisuallyHidden, VisuallyHiddenProps};

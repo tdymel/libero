@@ -23,14 +23,15 @@ use pages::{
     ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage,
     DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
     FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
-    HeaderPage, IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage, ListPage, LoaderPage,
-    MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
-    NumberFieldPage, OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage,
-    PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage,
-    RangeSliderPage, ScrollAreaPage, ScrollerPage, SegmentedControlPage, SelectPage, SidebarPage,
-    SkeletonPage, SliderPage, SplitterPage, StepperPage, StylingPage, SwitchPage, TablePage,
-    TabsPage, TagsFieldPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage,
-    TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    HeaderPage, HoverCardPage, IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage,
+    ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage,
+    NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
+    PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage,
+    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, ScrollerPage,
+    SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage, SplitterPage,
+    StepperPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage,
+    TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage,
+    VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -212,6 +213,8 @@ pub(crate) enum Route {
 
     #[route("/overlay/drawer")]
     DrawerPage {},
+    #[route("/overlay/hover-card")]
+    HoverCardPage {},
     #[route("/overlay/modal")]
     ModalPage {},
     #[route("/overlay/overlay")]

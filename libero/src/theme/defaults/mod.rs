@@ -34,6 +34,7 @@ mod float;
 mod form;
 mod grid;
 mod header;
+mod hover_card;
 mod icon;
 mod image;
 mod image_list;
@@ -177,6 +178,7 @@ pub use grid::{
     GRID_ROW_UNIT, GRID_ZONE_AREA_VAR, GRID_ZONE_CONTAINER_VAR, GRID_ZONE_GAP, GridDefaults,
 };
 pub use header::{HEADER_HEIGHT, HeaderDefaults};
+pub use hover_card::HoverCardDefaults;
 pub use icon::{ICON_SIZE, IconDefaults};
 pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
 pub use image_list::{

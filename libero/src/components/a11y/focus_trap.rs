@@ -13,7 +13,7 @@ use crate::{
 /// it, Tab strands focus on something invisible. Deliberately still matched:
 /// a visually-hidden-but-focusable element, which is what
 /// [`FocusTrapInitialFocus`] is.
-const FOCUSABLE_SELECTOR: &str = concat!(
+pub(crate) const FOCUSABLE_SELECTOR: &str = concat!(
     ":is(a[href], button:not([disabled]), textarea:not([disabled]), ",
     "input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex=\"-1\"]))",
     ":not([hidden], [inert], [aria-hidden=\"true\"], ",
