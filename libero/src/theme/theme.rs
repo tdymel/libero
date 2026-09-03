@@ -11,17 +11,17 @@ use super::{
     DrawerDefaults, FieldDefaults, FieldSizeLevel, FieldsetDefaults, FileFieldDefaults,
     FileFieldVariant, FlexAxisDefaults, FlexDefaults, FloatDefaults, FormDefaults, GridDefaults,
     HeaderDefaults, HexColor, IconDefaults, ImageDefaults, ImageFit, ImageListDefaults,
-    ImageListVariant, KbdDefaults, ListDefaults, LoaderDefaults, LoaderVariant, MarkDefaults,
-    NativeSelectDefaults, NavLinkDefaults, NumberFieldDefaults, OverlayDefaults,
-    PaginationDefaults, PaginationLabels, PaperDefaults, PhoneFieldDefaults, PinFieldDefaults,
-    PinKind, Placement, PopoverDefaults, ProgressBarDefaults, QrCodeDefaults, QrRobustness,
-    RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
-    SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults, SliderSizeLevel,
-    SplitterDefaults, SwitchDefaults, SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT,
-    TableDefaults, TabsDefaults, TabsSizeLevel, TagsFieldDefaults, TextDefaults, TextFieldDefaults,
-    TextSize, TextareaDefaults, TimePickerDefaults, TimePickerVariant, TimelineAlign,
-    TimelineDefaults, TitleDefaults, TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults,
-    ZIndexDefaults,
+    ImageListVariant, IndicatorDefaults, IndicatorSizeLevel, KbdDefaults, ListDefaults,
+    LoaderDefaults, LoaderVariant, MarkDefaults, NativeSelectDefaults, NavLinkDefaults,
+    NumberFieldDefaults, OverlayDefaults, PaginationDefaults, PaginationLabels, PaperDefaults,
+    PhoneFieldDefaults, PinFieldDefaults, PinKind, Placement, PopoverDefaults, ProgressBarDefaults,
+    QrCodeDefaults, QrRobustness, RadioDefaults, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
+    ScrollbarVisibility, SelectDefaults, SidebarDefaults, Size, Sizes, SliderDefaults,
+    SliderSizeLevel, SplitterDefaults, SwitchDefaults, SwitchSizeLevel,
+    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel,
+    TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
+    TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults, TitleDefaults,
+    TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
 use crate::components::ButtonVariant;
 
@@ -96,6 +96,7 @@ pub struct Theme {
     pub slider: SliderDefaults,
     pub list: ListDefaults,
     pub loader: LoaderDefaults,
+    pub indicator: IndicatorDefaults,
     pub data_list: DataListDefaults,
     pub table: TableDefaults,
     pub timeline: TimelineDefaults,
@@ -801,6 +802,40 @@ impl Theme {
             // `xs`..`xl` are Mantine's; `xxl` continues the ramp at the same
             // step, since our scale has a sixth level and theirs does not.
             sizes: Sizes::new("18px", "22px", "36px", "44px", "58px", "72px"),
+        },
+        indicator: IndicatorDefaults {
+            size: Size::Md,
+            color: Color::Error,
+            radius: "9999px",
+            max: 99,
+            border_width: "2px",
+            processing_duration: "1000ms",
+            sizes: Sizes::new(
+                IndicatorSizeLevel {
+                    size: "6px",
+                    font_size: "8px",
+                },
+                IndicatorSizeLevel {
+                    size: "8px",
+                    font_size: "9px",
+                },
+                IndicatorSizeLevel {
+                    size: "10px",
+                    font_size: "10px",
+                },
+                IndicatorSizeLevel {
+                    size: "14px",
+                    font_size: "11px",
+                },
+                IndicatorSizeLevel {
+                    size: "18px",
+                    font_size: "12px",
+                },
+                IndicatorSizeLevel {
+                    size: "22px",
+                    font_size: "14px",
+                },
+            ),
         },
         table: TableDefaults {
             padding_x: 12,

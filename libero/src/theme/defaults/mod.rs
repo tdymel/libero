@@ -36,6 +36,7 @@ mod header;
 mod icon;
 mod image;
 mod image_list;
+mod indicator;
 mod kbd;
 mod list;
 mod loader;
@@ -169,6 +170,11 @@ pub use image::{IMAGE_RADIUS, ImageDefaults, ImageFit};
 pub use image_list::{
     BarPosition, IMAGE_LIST_BAR_BACKGROUND, IMAGE_LIST_BAR_BACKGROUND_TOP, IMAGE_LIST_BAR_COLOR,
     IMAGE_LIST_BAR_PADDING, IMAGE_LIST_RADIUS, ImageListDefaults, ImageListVariant,
+};
+pub use indicator::{
+    INDICATOR_BORDER_WIDTH, INDICATOR_BOX, INDICATOR_FONT, INDICATOR_FONT_SIZE,
+    INDICATOR_KEYFRAMES, INDICATOR_PROCESSING_DURATION, INDICATOR_RADIUS, INDICATOR_SIZE,
+    IndicatorDefaults, IndicatorSizeLevel,
 };
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};

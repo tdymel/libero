@@ -23,10 +23,10 @@ use pages::{
     ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage, DatePickerPage,
     DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage,
     FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage,
-    IconPage, ImageListPage, ImagePage, KbdPage, ListPage, LoaderPage, MarkPage, ModalPage,
-    MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage,
-    PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage,
-    ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage,
+    IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage, ListPage, LoaderPage, MarkPage,
+    ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage,
+    PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage,
+    PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage,
     SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage,
     SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage, TextPage, TextareaPage,
     ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
@@ -74,6 +74,8 @@ pub(crate) enum Route {
     IconPage {},
     #[route("/data-display/image")]
     ImagePage {},
+    #[route("/data-display/indicator")]
+    IndicatorPage {},
     #[route("/data-display/table")]
     TablePage {},
     #[route("/data-display/timeline")]

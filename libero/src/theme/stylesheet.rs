@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
-    Color, ColorShade, ColorValue, HexColor, LOADER_KEYFRAMES, NamedColorCss,
+    Color, ColorShade, ColorValue, HexColor, INDICATOR_KEYFRAMES, LOADER_KEYFRAMES, NamedColorCss,
     PROGRESS_BAR_KEYFRAMES, RIPPLE_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE,
     TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme,
 };
@@ -27,6 +27,7 @@ impl From<&Theme> for Stylesheet {
         css.push_str(RIPPLE_KEYFRAMES);
         css.push_str(PROGRESS_BAR_KEYFRAMES);
         css.push_str(LOADER_KEYFRAMES);
+        css.push_str(INDICATOR_KEYFRAMES);
         Stylesheet::from(css)
     }
 }
@@ -167,6 +168,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         mark: _,
         nav_link: _,
         loader,
+        indicator,
         // Emitted by global_reset_scopes, not as a `:root` var.
         font_smoothing: _,
     } = theme;
@@ -201,6 +203,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(badge.to_css_declarations());
     declarations.extend(alert.to_css_declarations());
     declarations.extend(loader.to_css_declarations());
+    declarations.extend(indicator.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(checkbox.to_css_declarations());
     declarations.extend(radio.to_css_declarations());

@@ -28,6 +28,7 @@ fetch only the file you need.
 - [DataList](data_list.md): A `<dl>` of term/description pairs, where one term can carry several descriptions.
 - [Icon](icon.md): A sized, colored badge around an svg child, whose `currentColor` fill inherits the badge's color.
 - [Image](image.md): An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.
+- [Indicator](indicator.md): A dot or a small capped count pinned to something else with a Float - presentational only, and never announced itself.
 - [List](list.md): An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
