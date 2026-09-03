@@ -65,6 +65,23 @@ fn Demo() -> Element {
 }
 ```
 
+## Fixed to the viewport
+
+`fixed: true` swaps `position: absolute` for `position: fixed`, so the float stays
+put while the page scrolls - an action bar, a notification stack, a floating
+window. Everything else is unchanged: the same `placement`, the same offsets, the
+same `float` z-index layer, which sits below overlays and modals.
+
+A `transform`, `filter`, `contain` or `container-type` on an ancestor makes that
+ancestor the containing block of a fixed element, and it then scrolls and clips
+with it. Render through `use_portal` when the ancestors are not yours.
+
+The docs page has an action bar built this way. It stays mounted and CSS drives
+the show and hide: an `open`/`closed` state fades it and flips `visibility` to
+`hidden` once the fade ends, which removes it from the tab order and the
+accessibility tree. Reduced motion drops the animation. `use_presence(open,
+"opacity")` is the way to unmount it instead.
+
 ## Props
 
 | Prop | Type | Default | Description |
@@ -73,6 +90,7 @@ fn Demo() -> Element {
 | `offset_x` | `ThemeAwareValue` | `0px` | Shift along the horizontal axis - a size token from the spacing scale (`"md"`, or `"-md"` for the other direction), or any CSS length. |
 | `offset_y` | `ThemeAwareValue` | `0px` | Shift along the vertical axis. |
 | `z_index` | `ThemeAwareValue` | `200` | Stacking order. |
+| `fixed` | `bool` | `false` | Place against the viewport (`position: fixed`) instead of the nearest positioned ancestor. `placement` and the offsets are measured from the viewport's edges. |
 | `children` | `Element` | required | The anchored content. |
 
 Like every component, `Float` also takes the shared props `sx`, `class`,

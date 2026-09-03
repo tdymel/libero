@@ -43,6 +43,10 @@ static FLOAT_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().left("50%").var(FLOAT_TRANSLATE_X_VAR, "-50%"),
         )
         .when("horizontal-end", sx().right("0"))
+        // Against the viewport rather than the nearest positioned ancestor.
+        // A state rather than a second static sheet, so `fixed` changes one
+        // declaration and the placement rules above serve both arms.
+        .when("fixed", sx().position("fixed"))
 });
 
 fn float_variables(props: &FloatProps) -> Variables {
@@ -73,12 +77,24 @@ base_props! {
         offset_y: Input<ThemeAwareValue>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
+        /// Place against the viewport (`position: fixed`) instead of the
+        /// nearest `position: relative` ancestor, so it stays put while the
+        /// page scrolls. `placement` and the offsets mean the same thing,
+        /// measured from the viewport's edges.
+        #[props(default)]
+        fixed: bool,
         children: Element,
     }
 }
 
 /// Anchors `children` to a corner/edge of the nearest `position: relative`
 /// ancestor. The parent must set `position: relative` itself.
+///
+/// With `fixed`, the corner/edge is the viewport's instead - an action bar, a
+/// notification stack, a floating window. **An ancestor with a `transform`,
+/// `filter`, `contain` or `container-type` becomes the containing block of a
+/// fixed element**, which then scrolls and clips with that ancestor. Where the
+/// ancestors are not yours to control, render it through `use_portal`.
 #[component]
 pub fn Float(props: FloatProps) -> Element {
     let theme = use_theme();
@@ -88,6 +104,7 @@ pub fn Float(props: FloatProps) -> Element {
     let states: Input<States> = props
         .states
         .unwrap_or_default()
+        .with("fixed", props.fixed)
         .with(
             "vertical-top",
             matches!(
@@ -157,6 +174,7 @@ mod tests {
             offset_x,
             offset_y: Input::None,
             z_index: Input::None,
+            fixed: false,
             children: rsx! {},
         }
     }
