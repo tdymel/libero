@@ -39,9 +39,9 @@ const CONTENT: &str = r#"content: move |s: Stage| match s {
 }"#;
 
 const DESCRIPTION: &str = r#"description: |s: Stage| match s {
-    Stage::Account => "Who you are".into(),
-    Stage::Shipping => "Where it goes".into(),
-    Stage::Review => "Check and pay".into(),
+    Stage::Account => "Who you are".to_string(),
+    Stage::Shipping => "Where it goes".to_string(),
+    Stage::Review => "Check and pay".to_string(),
 }"#;
 
 const ERROR: &str = r#"state: |s: Stage| (s == Stage::Shipping).then_some(StepState::Error)"#;
