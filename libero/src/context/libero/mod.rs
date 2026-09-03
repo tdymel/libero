@@ -6,7 +6,7 @@ use stylesheet_registry::StylesheetRegistry;
 
 pub(crate) use stylesheet_registry::StylesheetKey;
 
-use super::{ModalHost, PortalHost, PortalOutlet};
+use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
 use crate::{css::Stylesheet, theme::Theme};
 
 mod css_layer;
@@ -75,6 +75,16 @@ pub fn LiberoProvider(
 
     let modal_z_index = use_signal(|| theme.z_index.modal);
     use_context_provider(|| ModalHost::new(modal_z_index, theme.z_index.modal_step));
+
+    let window_stack = use_signal(Vec::new);
+    use_context_provider(|| {
+        WindowHost::new(
+            window_stack,
+            theme.z_index.window,
+            theme.z_index.window_step,
+            theme.z_index.overlay,
+        )
+    });
 
     rsx! {
         style {

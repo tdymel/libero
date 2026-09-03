@@ -25,9 +25,9 @@ use pages::{
     CascaderPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage,
     ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage,
     DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
-    FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
-    HeaderPage, HoverCardPage, IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage,
-    ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage,
+    FloatPage, FloatingWindowPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted,
+    GridPage, HeaderPage, HoverCardPage, IconPage, ImageListPage, ImagePage, IndicatorPage,
+    KbdPage, ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage,
     NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
     PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage,
     QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, ScrollerPage,
@@ -216,6 +216,8 @@ pub(crate) enum Route {
 
     #[route("/overlay/drawer")]
     DrawerPage {},
+    #[route("/overlay/floating-window")]
+    FloatingWindowPage {},
     #[route("/overlay/hover-card")]
     HoverCardPage {},
     #[route("/overlay/modal")]

@@ -3,6 +3,7 @@ use crate::theme::CssVar;
 
 pub const Z_INDEX_HEADER: CssVar = CssVar::new("--lsx-z-index-header");
 pub const Z_INDEX_FLOAT: CssVar = CssVar::new("--lsx-z-index-float");
+pub const Z_INDEX_WINDOW: CssVar = CssVar::new("--lsx-z-index-window");
 pub const Z_INDEX_OVERLAY: CssVar = CssVar::new("--lsx-z-index-overlay");
 pub const Z_INDEX_MODAL: CssVar = CssVar::new("--lsx-z-index-modal");
 pub const Z_INDEX_POPOVER: CssVar = CssVar::new("--lsx-z-index-popover");
@@ -16,6 +17,10 @@ pub const Z_INDEX_POPOVER: CssVar = CssVar::new("--lsx-z-index-popover");
 pub struct ZIndexDefaults {
     pub header: i32,
     pub float: i32,
+    /// The lowest floating window; each window raised above it adds
+    /// `window_step`, capped below `overlay`.
+    pub window: i32,
+    pub window_step: i32,
     pub overlay: i32,
     /// The first modal's z-index; each one above adds `modal_step`.
     pub modal: i32,
@@ -31,6 +36,7 @@ impl ToCssDeclarations for ZIndexDefaults {
         vec![
             Z_INDEX_HEADER.declare(self.header.to_string()),
             Z_INDEX_FLOAT.declare(self.float.to_string()),
+            Z_INDEX_WINDOW.declare(self.window.to_string()),
             Z_INDEX_OVERLAY.declare(self.overlay.to_string()),
             Z_INDEX_MODAL.declare(self.modal.to_string()),
             Z_INDEX_POPOVER.declare(self.popover.to_string()),
@@ -47,8 +53,12 @@ mod tests {
         let z = Theme::DEFAULT.z_index;
         assert!(z.header < z.float, "a dropdown must clear the header");
         assert!(
-            z.float < z.overlay,
-            "a dimming overlay must cover dropdowns"
+            z.float < z.window,
+            "a floating window must clear the dropdowns on the page"
+        );
+        assert!(
+            z.window < z.overlay,
+            "a dimming overlay, and the modal above it, must cover a window"
         );
         assert!(z.overlay < z.modal, "a modal must sit above a bare overlay");
         assert!(

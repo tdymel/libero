@@ -31,6 +31,7 @@ mod field;
 mod file_field;
 mod flex;
 mod float;
+mod floating_window;
 mod form;
 mod grid;
 mod header;
@@ -173,6 +174,7 @@ pub use flex::{
     FLEX_WRAP_VAR, FlexAxisDefaults, FlexDefaults,
 };
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
+pub use floating_window::FloatingWindowDefaults;
 pub use form::{FIELDSET_GAP, FORM_GAP, FieldsetDefaults, FormDefaults};
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,
@@ -291,5 +293,6 @@ pub use tooltip::{
 };
 pub use tree::TreeDefaults;
 pub use z_index::{
-    Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, Z_INDEX_POPOVER, ZIndexDefaults,
+    Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, Z_INDEX_POPOVER, Z_INDEX_WINDOW,
+    ZIndexDefaults,
 };

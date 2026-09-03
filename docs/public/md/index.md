@@ -112,6 +112,7 @@ fetch only the file you need.
 ## Overlay
 
 - [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
+- [Floating window](floating-window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
 - [HoverCard](hover-card.md): An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
 - [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 - [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.

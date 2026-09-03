@@ -4,6 +4,7 @@ mod dismiss;
 mod drag;
 mod drawer;
 mod element;
+mod floating_window;
 mod focus_return;
 mod id;
 mod local_state;
@@ -27,6 +28,7 @@ pub(crate) use dismiss::{DismissHandle, DismissOptions, use_dismiss, use_dismiss
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub use drawer::{DrawerOptions, use_drawer};
 pub use element::{ElementHandle, use_element};
+pub use floating_window::{FloatingWindowHandle, use_floating_window};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub use id::{use_id, use_root_id};
 pub(crate) use local_state::{LocalState, use_local_state};
