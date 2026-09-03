@@ -77,6 +77,24 @@ macro_rules! shapes {
     };
 }
 
+/// An open floating window. The window itself is crate-private, so the row
+/// goes through the hook, opened on mount. `children` so the host re-renders
+/// with its parent every round, which re-registers the portal entry and
+/// re-renders the window through `PortalOutlet`.
+#[component]
+fn CostWindow(title: String, children: Element) -> Element {
+    let window = libero::hooks::use_floating_window(
+        FloatingWindowOptions {
+            title: Some(title),
+            resizable: true,
+            ..Default::default()
+        },
+        move |_| children.clone(),
+    );
+    use_hook(|| window.open());
+    rsx! {}
+}
+
 /// One realistic three-level tree, built per instance the way a caller's would
 /// be - the erasure is part of what a `Cascader` costs.
 fn cost_tree() -> Vec<TreeNode<&'static str>> {
@@ -282,6 +300,13 @@ fn render_cost_per_component() {
         "Tree" { Tree { aria_label: "a", data: vec![TreeNode::new("a", "Alpha".to_string())] } }
         "TreeItem" { TreeItem { "x" } }
 
+        // Resting: an open window re-rendered with an unchanged title.
+        "FloatingWindow" { CostWindow { title: "w", "x" } }
+        // A drag frame writes the window's own position signal, which
+        // re-renders the whole window, children included. Flipping a prop
+        // prices the same full window render; the drag itself cannot be
+        // driven here.
+        "FloatingWindow drag" { CostWindow { title: if flip() { "a" } else { "b" }, "x" } }
         "Overlay" { Overlay {} }
         "Paper" { Paper { "x" } }
         "Dialog" { Dialog { "x" } }
