@@ -24,7 +24,7 @@ use pages::{
     DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
     FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
     HeaderPage, IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage, ListPage, LoaderPage,
-    MarkPage, MarqueePage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
+    MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
     NumberFieldPage, OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage,
     PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage,
     RangeSliderPage, ScrollAreaPage, ScrollerPage, SegmentedControlPage, SelectPage, SidebarPage,
@@ -205,6 +205,8 @@ pub(crate) enum Route {
     StepperPage {},
     #[route("/navigation/tabs")]
     TabsPage {},
+    #[route("/navigation/menu")]
+    MenuPage {},
     #[route("/navigation/tree")]
     TreePage {},
 

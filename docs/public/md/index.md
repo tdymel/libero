@@ -106,6 +106,7 @@ fetch only the file you need.
 - [Pagination](pagination.md): A row of page controls in a named nav landmark, with an ellipsis range that never reflows as you click through it.
 - [Stepper](stepper.md): The stages of a process over an enum, horizontal or vertical, with the current step's content.
 - [Tabs](tabs.md): One strip of tabs over an enum, with only the selected tab's panel built.
+- [Menu](menu.md): A list of commands that drops from a caller-supplied trigger - the WAI-ARIA menu button, with groups, separators and submenus.
 - [Tree](tree.md): A data-driven, keyboard-navigable tree view over your own node type.
 
 ## Overlay

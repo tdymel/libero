@@ -14,6 +14,7 @@ mod presence;
 mod ripple;
 mod stylesheet;
 mod theme;
+mod typeahead;
 
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
@@ -40,3 +41,4 @@ pub(crate) use ripple::{ripple_sx, use_ripple};
 pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::use_theme;
+pub(crate) use typeahead::{TYPEAHEAD_RESET, typeahead_match, use_typeahead};

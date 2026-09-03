@@ -20,7 +20,9 @@ pub(crate) use color_variant::{
     base_color, contrast_color, contrast_shade_color, hover_color, selected_color, shade_color,
 };
 pub(crate) use field_props::field_props;
-pub(crate) use icons::{CheckIcon, ChevronDownIcon, CloseIcon, PauseIcon, PlayIcon};
+pub(crate) use icons::{
+    CheckIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, PauseIcon, PlayIcon,
+};
 pub use input::Input;
 pub(crate) use input::input_from_str;
 pub use number_value::NumberValue;

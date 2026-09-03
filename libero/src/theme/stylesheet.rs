@@ -136,6 +136,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         avatar,
         avatar_group,
         kbd,
+        menu,
         pagination,
         pagination_labels: _,
         anchor,
@@ -245,6 +246,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(action_icon.to_css_declarations());
     declarations.extend(qr_code.to_css_declarations());
     declarations.extend(kbd.to_css_declarations());
+    declarations.extend(menu.to_css_declarations());
     declarations.extend(pagination.to_css_declarations());
     declarations.extend(image.to_css_declarations());
     declarations.extend(image_list.to_css_declarations());

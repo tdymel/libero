@@ -31,8 +31,8 @@ pub use layout::{
     SplitterPage,
 };
 pub use navigation::{
-    AccordionPage, AnchorPage, BurgerPage, CarouselPage, NavLinkPage, PaginationPage, StepperPage,
-    TabsPage, TreePage,
+    AccordionPage, AnchorPage, BurgerPage, CarouselPage, MenuPage, NavLinkPage, PaginationPage,
+    StepperPage, TabsPage, TreePage,
 };
 pub use overlay::{DrawerPage, ModalPage, OverlayPage, PopoverPage, TooltipPage};
 pub use surface::{DialogPage, PaperPage};

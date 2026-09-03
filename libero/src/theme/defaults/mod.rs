@@ -43,6 +43,7 @@ mod list;
 mod loader;
 mod mark;
 mod marquee;
+mod menu;
 mod native_select;
 mod nav_link;
 mod number_field;
@@ -196,6 +197,11 @@ pub use mark::MarkDefaults;
 pub use marquee::{
     MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_KEYFRAMES,
     MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, MarqueeDefaults,
+};
+pub use menu::{
+    MENU_FONT_SIZE, MENU_ITEM_FONT, MENU_ITEM_HEIGHT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X,
+    MENU_ITEM_RADIUS, MENU_LABEL_FONT, MENU_LABEL_FONT_SIZE, MENU_MAX_HEIGHT, MENU_PADDING,
+    MENU_PADDING_X, MenuDefaults, MenuSizeLevel,
 };
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;

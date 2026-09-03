@@ -100,3 +100,21 @@ pub(crate) fn CheckIcon() -> Element {
         }
     }
 }
+
+/// Points at a submenu, which opens to the right. A menu that flips its
+/// submenu to the left keeps it pointing right, as native menus do.
+#[component]
+pub(crate) fn ChevronRightIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M9 6l6 6-6 6" }
+        }
+    }
+}
