@@ -140,7 +140,7 @@ mod tests {
         ImageFit, LabelPosition, Orientation, PinKind, SidebarSide,
     };
     use crate::theme::{
-        LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+        ChoiceVariant, LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
     };
 
     /// Add every new `str_enum!` here - the checks below iterate this list.
@@ -148,6 +148,7 @@ mod tests {
         ($check:ident) => {
             $check!(AnchorUnderline);
             $check!(ButtonVariant);
+            $check!(ChoiceVariant);
             $check!(DrawerAnchor);
             $check!(FlexDirection);
             $check!(FlexWrap);

@@ -98,6 +98,34 @@ group it for assistive tech. Prefer `RadioGroup`.
 `onselect` reports a pick and never an unpick: a radio is turned off by another
 one being turned on.
 
+## Cards
+
+`variant: "card"` draws every option as a bordered surface, and a click
+anywhere on it picks the option. Give each one a line of its own with
+`option_description` - a card without one is only a border:
+
+```rust
+RadioGroup {
+    variant: "card",
+    orientation: "horizontal",
+    label: "Plan",
+    value: plan(),
+    onchange: move |next| plan.set(Some(next)),
+    option_description: move |plan: Plan| match plan {
+        Plan::Free => "Three projects, community support.",
+        Plan::Pro => "Unlimited projects, email support.",
+        Plan::Team => "Five seats and shared billing.",
+    }
+    .to_string(),
+}
+```
+
+In a row the cards stretch to one height. The keyboard, the single tab stop and
+the aria wiring are the plain group's; the focus ring moves from the circle to
+the card. The selected card is marked by its filled circle, not by its border,
+which is decoration. A label or description must hold nothing interactive: a
+click on a link inside the card would pick the option too.
+
 ## Props
 
 ### `RadioGroup`
@@ -108,6 +136,8 @@ one being turned on.
 | `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. |
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes them here. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. |
+| `option_description` | `Callback<T, String>` | - | A line under each option's label; an empty string renders none. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface that is its own hit area. |
 | `orientation` | `Orientation` | `vertical` | A row instead of a column. |
 | `color` | `ThemeAwareValue` | `primary` | The ring and dot color of the selected option. |
 | `size` | `Size` | `md` | Every circle, and the labels beside them. |
@@ -127,6 +157,7 @@ one being turned on.
 | `name` | `String` | - | Shared by every radio in one group. `RadioGroup` sets it. |
 | `tabindex` | `String` | - | Which radio is the group's tab stop. `RadioGroup` sets it. |
 | `aria_label` | `String` | - | Names the radio when it has no `label`. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws the radio as a bordered surface that is its own hit area. |
 
 Both also take the field props - `label`, `description`, `helper`, `status`,
 `size`, `disabled`, `required` - and the shared `sx`, `class`, `style`,
@@ -153,4 +184,4 @@ every size, which is what tells it apart from a checkbox at a glance.
 The group's wrapper carries `size-*`, plus `disabled`, `required` and the status
 token when they apply; the `role="radiogroup"` element adds `horizontal` when
 the orientation is a row. Each radio's control carries `checked` when it is the
-selected one.
+selected one. A card option's wrapper and control both carry `card`.

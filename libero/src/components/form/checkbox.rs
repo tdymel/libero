@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, CssVar},
+    theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, ChoiceVariant, CssVar},
     utils::warn,
 };
 
@@ -32,6 +32,11 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The box is the whole control, so the ring hugs it rather than the
         // row - `:has`, because there is no `:focus-visible-within`.
         .selector("&:has(> input:focus-visible)", focus_ring_sx())
+        // A card rings itself; a second ring here would sit at another offset.
+        .when(
+            "card",
+            sx().selector("&:has(> input:focus-visible)", sx().outline("none")),
+        )
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
@@ -107,6 +112,12 @@ field_props! {
         name: crate::components::FieldName<bool>,
         #[props(default, into)]
         aria_label: Option<String>,
+        /// `Card` draws the checkbox as a bordered surface and makes all of
+        /// it the hit area - pair it with a `description`. The label and
+        /// captions must not hold anything interactive of their own: a click
+        /// on it would reach the card too.
+        #[props(default, into)]
+        variant: Input<ChoiceVariant>,
     }
 }
 
@@ -129,6 +140,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let disabled = bound.disabled(props.disabled);
     let checked = bound.value().or(props.checked).unwrap_or(false);
     let indeterminate = props.indeterminate.unwrap_or(false);
+    let card = props.variant.copied_or_default() == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Checkbox: `checked` without `onchange` can never change.");
@@ -149,6 +161,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
 
     let field = use_field()
         .inline()
+        .card(card)
         .activates(use_element(), toggle.clone())
         .label(&props.label)
         .description(&props.description)
@@ -208,7 +221,8 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     // The box is decoration: the input owns the name, the state and the
     // keyboard. It carries the click because a visually hidden input has no
     // hit area, and a second `<label for>` around it would compete with the
-    // field's own label for the accessible name.
+    // field's own label for the accessible name. A card takes the click
+    // itself, so the box leaves it to the card rather than toggling twice.
     let mark = rsx! {
         svg {
             width: "65%",
@@ -230,7 +244,11 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         span {
             class: box_class,
             "aria-hidden": "true",
-            onclick: move |_| toggle(),
+            onclick: move |_| {
+                if !card {
+                    toggle();
+                }
+            },
             {mark}
         }
     };

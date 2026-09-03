@@ -1,4 +1,5 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
@@ -10,6 +11,17 @@ pub const FIELD_PADDING_Y: SizeCss = SizeCss::new("--lsx-field-padding-y-");
 pub const FIELD_PADDING_X: SizeCss = SizeCss::new("--lsx-field-padding-x-");
 pub const FIELD_GAP: CssVar = CssVar::new("--lsx-field-gap");
 pub const FIELD_FRAME_GAP: CssVar = CssVar::new("--lsx-field-frame-gap");
+pub const FIELD_CARD_PADDING: SizeCss = SizeCss::new("--lsx-field-card-padding-");
+
+str_enum! {
+    /// How a checkable field draws its wrapper. `Card` makes the whole field
+    /// a bordered surface and its hit area; the control itself is unchanged.
+    pub enum ChoiceVariant {
+        #[default]
+        Plain = "plain",
+        Card = "card",
+    }
+}
 
 /// One size step of a field: the slots stacked around the control, and the
 /// frame the control sits in.
@@ -39,6 +51,8 @@ pub struct FieldDefaults {
     /// Horizontal gap between the frame's leading, control and trailing.
     pub frame_gap: &'static str,
     pub sizes: Sizes<FieldSizeLevel>,
+    /// Inner padding of a field drawn as a card, per size step.
+    pub card_padding: Sizes<&'static str>,
 }
 
 impl FieldDefaults {
@@ -95,6 +109,7 @@ impl ToCssDeclarations for FieldDefaults {
             declarations.push(FIELD_HEIGHT.declare(size, level.height));
             declarations.push(FIELD_PADDING_Y.declare(size, level.padding_y));
             declarations.push(FIELD_PADDING_X.declare(size, level.padding_x));
+            declarations.push(FIELD_CARD_PADDING.declare(size, self.card_padding.get(size)));
         }
         declarations
     }

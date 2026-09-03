@@ -10,7 +10,7 @@ use crate::{
     hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{FIELD_GAP, Size},
+    theme::{ChoiceVariant, FIELD_GAP, Size},
     utils::warn,
 };
 
@@ -70,6 +70,14 @@ field_props! {
         /// locale from context.
         #[props(default)]
         option_label: Option<Callback<T, String>>,
+        /// A line under each option's label. Empty text renders none. What
+        /// makes a `Card` option worth its surface.
+        #[props(default)]
+        option_description: Option<Callback<T, String>>,
+        /// `Card` draws every option as a bordered surface that is its own
+        /// hit area. A row of cards stretches them to one height.
+        #[props(default, into)]
+        variant: Input<ChoiceVariant>,
         /// Lays the options out in a row instead of a column. A form stacks;
         /// a row is for two or three short options.
         #[props(default, into)]
@@ -190,6 +198,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let describedby = field.describedby();
     let invalid = field.invalid();
     let option_label = props.option_label;
+    let option_description = props.option_description;
+    let variant = props.variant.copied_or_default();
     let name = bound
         .name()
         .map(str::to_string)
@@ -201,13 +211,19 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             Some(format) => format.call(option.clone()),
             None => option.label(),
         };
+        let description = option_description
+            .as_ref()
+            .map(|describe| describe.call(option.clone()))
+            .filter(|description| !description.is_empty());
         rsx! {
             GroupRadio {
                 key: "{index}",
                 index,
                 label,
+                description,
                 name: name.clone(),
                 size,
+                variant,
                 color: color.clone(),
                 checked: selected == Some(index),
                 disabled,
@@ -242,8 +258,10 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 struct GroupRadioProps {
     index: usize,
     label: String,
+    description: Option<String>,
     name: String,
     size: Size,
+    variant: ChoiceVariant,
     color: Input<ThemeAwareValue>,
     checked: bool,
     disabled: bool,
@@ -256,8 +274,10 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
     let GroupRadioProps {
         index,
         label,
+        description,
         name,
         size,
+        variant,
         color,
         checked,
         disabled,
@@ -267,8 +287,10 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
     rsx! {
         Radio {
             label,
+            description,
             name,
             size,
+            variant,
             color,
             checked,
             disabled,

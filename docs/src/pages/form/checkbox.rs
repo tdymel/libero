@@ -2,6 +2,10 @@ use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Checkbox, Code, FieldStatus, Text};
 
+fn describes(values: &DemoValues) -> bool {
+    values.str("description") == "true" || values.str("variant") == "card"
+}
+
 #[component]
 pub fn CheckboxPage() -> Element {
     rsx! {
@@ -42,6 +46,9 @@ pub fn CheckboxPage() -> Element {
                         .doc("Disables interaction and dims the checkbox."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
+                    prop("variant", "ChoiceVariant")
+                        .default("plain")
+                        .doc("`card` draws the checkbox as a bordered surface and makes all of it the hit area. Pair it with a `description`; the label and captions must hold nothing interactive of their own."),
                 ]),
             ],
             lead: rsx! {
@@ -62,6 +69,12 @@ pub fn CheckboxPage() -> Element {
                 component: "Checkbox",
                 children_text: "",
                 controls: vec![
+                    Control::toggle("variant", ["plain", "card"])
+                        .default("plain")
+                        .code(|_, values| match values.str("variant").as_str() {
+                            "card" => vec![r#"variant: "card""#.to_string()],
+                            _ => vec![],
+                        }),
                     Control::color(
                         "color",
                         ["primary", "secondary", "success", "error", "warning", "info"],
@@ -97,12 +110,14 @@ pub fn CheckboxPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    // A card only reads as one with a description under
+                    // the label, so the card shows one either way.
                     Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec![
+                        match describes(values) {
+                            true => vec![
                                 "description: \"The licence and the privacy policy.\"".to_string(),
                             ],
-                            _ => vec![],
+                            false => vec![],
                         }
                     }),
                     Control::switch("helper").code(|_, values| {
@@ -116,6 +131,7 @@ pub fn CheckboxPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Checkbox {
+                        variant: values.str("variant"),
                         color: values.str("color"),
                         size: values.str("size"),
                         radius: values.str("radius"),
@@ -128,7 +144,7 @@ pub fn CheckboxPage() -> Element {
                         indeterminate: (values.str("indeterminate") == "true").then_some(true),
                         label: (values.str("label") == "true")
                             .then(|| "Accept the terms".to_string()),
-                        description: (values.str("description") == "true")
+                        description: describes(&values)
                             .then(|| "The licence and the privacy policy.".to_string()),
                         helper: (values.str("helper") == "true")
                             .then(|| "You can withdraw consent at any time.".to_string()),

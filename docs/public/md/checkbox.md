@@ -73,6 +73,28 @@ The control sits in column one, the label in column two, and the description,
 helper and status stack under the label rather than under the box. That is
 `use_field`'s inline layout, shared by every field with no frame.
 
+## Card
+
+`variant: "card"` draws the whole field as a bordered surface - Paper's
+background, border colour and radius - and a click anywhere on it toggles the
+checkbox. Pair it with a `description`; the card is what makes room for one:
+
+```rust
+Checkbox {
+    variant: "card",
+    label: "Priority support",
+    description: "Answers within four hours, around the clock.",
+    checked: support(),
+    onchange: move |next| support.set(next),
+}
+```
+
+Nothing else changes: the same hidden input, one tab stop, Space to toggle.
+The focus ring moves from the box to the card. The checked state is shown by
+the box, not by the card's border, which is decoration. The label and captions
+must hold nothing interactive: a click on a link inside the card would toggle
+it too.
+
 ## Accessibility
 
 A visually hidden `<input type="checkbox">` owns the name, the state, the focus
@@ -102,6 +124,7 @@ join `aria-describedby`; an error `status` sets `aria-invalid`; `required` sets
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the checkbox. |
 | `aria_label` | `String` | - | Names the checkbox when it has no `label`. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws the checkbox as a bordered surface that is its own hit area. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes - `name` and `value` among them, since
@@ -110,13 +133,16 @@ the props extend `input`'s own.
 ## Theme defaults
 
 `CheckboxDefaults`: `size`, `radius`, and one square per size step (`14px` to
-`24px`), published as `--lsx-checkbox-box-size-*`. The label and caption
+`24px`), published as `--lsx-checkbox-box-size-*`. A card's padding is
+`FieldDefaults::card_padding`, `8px` to `18px`, published as
+`--lsx-field-card-padding-*`. The label and caption
 typography comes from `FieldDefaults`, so a checkbox and a
 [TextField](text_field.md) in one form read at the same scale.
 
 ## Data attributes
 
-`data-state` on the wrapper carries `size-*`, `radius-*`, `inline`, and
+`data-state` on the wrapper carries `size-*`, `radius-*`, `inline`, `card` for
+the card variant, and
 `disabled`, `required` and the status token when they apply. The control
 carries those plus `checked` or `mixed`. The caption slots are addressed as
 `data-slot="description" | "helper" | "status"`.

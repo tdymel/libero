@@ -590,6 +590,7 @@ impl Theme {
                     padding_x: "18px",
                 },
             ),
+            card_padding: Sizes::new("8px", "10px", "12px", "14px", "16px", "18px"),
         },
         native_select: NativeSelectDefaults {
             size: Size::Md,

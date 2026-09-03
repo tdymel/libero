@@ -153,7 +153,7 @@ pub use dialog::{DIALOG_SIZE, DialogDefaults};
 pub use divider::{DIVIDER_LINE, DIVIDER_SPACING, DIVIDER_THICKNESS, DividerDefaults};
 pub use drawer::{DRAWER_SIZE, DrawerDefaults};
 pub use field::{
-    FIELD_CAPTION_FONT_SIZE, FIELD_FONT_SIZE, FIELD_FRAME_GAP, FIELD_GAP, FIELD_HEIGHT,
+    ChoiceVariant, FIELD_CARD_PADDING, FIELD_CAPTION_FONT_SIZE, FIELD_FONT_SIZE, FIELD_FRAME_GAP, FIELD_GAP, FIELD_HEIGHT,
     FIELD_LABEL_FONT_SIZE, FIELD_PADDING_X, FIELD_PADDING_Y, FieldDefaults, FieldSizeLevel,
 };
 pub use file_field::{

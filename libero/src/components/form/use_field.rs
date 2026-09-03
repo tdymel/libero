@@ -8,14 +8,26 @@ use dioxus::{
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
+        common::{focus_ring_sx, input_from_str},
         form::{Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, worst},
         layout::{BoxStyle, use_box},
     },
     hooks::{ElementHandle, use_root_id},
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
-    theme::{FIELD_FRAME_GAP, FieldDefaults, Size},
+    theme::{
+        ChoiceVariant, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults, PAPER_BACKGROUND,
+        PAPER_BORDER_COLOR, PAPER_RADIUS, Size,
+    },
 };
+
+input_from_str!(ChoiceVariant);
+
+impl From<ChoiceVariant> for Input<ChoiceVariant> {
+    fn from(value: ChoiceVariant) -> Self {
+        Input::Value(value)
+    }
+}
 
 /// The wrapper owns the look of all four text slots, addressed by tag and by
 /// `data-slot`. Giving each caption its own `use_box` would cost four more
@@ -44,6 +56,25 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
                 .align_items("center")
                 .column_gap(FIELD_FRAME_GAP.value())
                 .selector("& > label, & > [data-slot]", sx().grid_column("2")),
+        )
+        // A card is the inline layout drawn as a surface, and the whole of it
+        // is the hit area. Paper's tokens, not a paint of its own. No
+        // `--lsx-focus-contrast`: the only ring is the card's own, and it sits
+        // outside the card, on whatever the card sits on.
+        .when(
+            "card",
+            sx().background(PAPER_BACKGROUND.value())
+                .border(format!("1px solid {}", PAPER_BORDER_COLOR.value()))
+                .border_radius(PAPER_RADIUS.value())
+                .cursor("pointer")
+                // A card stretched by its row keeps its content at the top
+                // rather than spreading the rows over the extra height.
+                .align_content("start")
+                .per_size(|size| sx().padding(FIELD_CARD_PADDING.value(size)))
+                // The ring moves from the control to the card; the control
+                // drops its own under `card`.
+                .selector("&:has(input:focus-visible)", focus_ring_sx())
+                .when("disabled", sx().cursor("not-allowed")),
         )
         // Not `opacity`: the control dims itself, and two stacked opacities
         // multiply.
@@ -88,6 +119,7 @@ pub(crate) struct FieldBuilder<'a> {
     required: bool,
     disabled: bool,
     inline: bool,
+    card: bool,
     labelled_by: bool,
     activation: Option<Activation>,
     size: Size,
@@ -112,6 +144,7 @@ impl Default for FieldBuilder<'_> {
             required: false,
             disabled: false,
             inline: false,
+            card: false,
             labelled_by: false,
             activation: None,
             size: Size::Md,
@@ -191,6 +224,16 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn inline(mut self) -> Self {
         self.inline = true;
+        self
+    }
+
+    /// Draws the inline layout as a card: a bordered surface whose every
+    /// click activates the control. Needs [`inline`](Self::inline) and
+    /// [`activates`](Self::activates); without an activation the card is
+    /// only drawn.
+    #[inline]
+    pub fn card(mut self, card: bool) -> Self {
+        self.card = card;
         self
     }
 
@@ -333,7 +376,8 @@ impl<'a> FieldBuilder<'a> {
             .with(self.radius.radius_state_name(), true)
             .with("disabled", self.disabled)
             .with("required", self.required)
-            .with("inline", self.inline);
+            .with("inline", self.inline)
+            .with("card", self.card);
         if let Some(state) = status_state {
             states = states.active(state);
         }
@@ -362,6 +406,15 @@ impl<'a> FieldBuilder<'a> {
             wrapper = wrapper.sx(sx);
         }
         let mut wrapper = wrapper.prepare();
+        let activation = self.activation.map(|mut activation| {
+            activation.card = self.card;
+            activation
+        });
+        // The card's own click. The label's and the input's stop at
+        // themselves under `card`, so each click activates once.
+        if let Some(activation) = activation.as_ref().filter(|_| self.card) {
+            wrapper = wrapper.event("onclick", activation.card_click());
+        }
         // `focusout` bubbles, so one listener on the wrapper sees the control
         // lose focus whatever it is - and leaves a caller's own `onblur` alone.
         if validated || scope.is_some() {
@@ -382,7 +435,7 @@ impl<'a> FieldBuilder<'a> {
                 label,
                 self.required,
                 self.labelled_by,
-                self.activation.clone(),
+                activation.clone(),
             ),
             labelled_by: self.labelled_by && !label.is_none(),
             description: slot_node("description", &id_value, description),
@@ -393,7 +446,7 @@ impl<'a> FieldBuilder<'a> {
             invalid: matches!(status, Some(FieldStatus::Error(_))),
             required: self.required,
             inline: self.inline,
-            activation: self.activation,
+            activation,
             states,
             wrapper,
         }
@@ -646,6 +699,9 @@ pub(crate) struct Activation {
     element: ElementHandle,
     activate: Rc<dyn Fn()>,
     enter: bool,
+    /// Inside a card, whose own click activates too: the label's and the
+    /// input's clicks stop where they are, or they would activate twice.
+    card: bool,
 }
 
 impl Activation {
@@ -654,6 +710,7 @@ impl Activation {
             element,
             activate: Rc::new(activate),
             enter: false,
+            card: false,
         }
     }
 
@@ -665,6 +722,20 @@ impl Activation {
         let activation = self.clone();
         move |event| {
             event.prevent_default();
+            if activation.card {
+                event.stop_propagation();
+            }
+            (activation.activate)();
+            let _ = activation.element.focus();
+        }
+    }
+
+    /// A card's half: a click anywhere on the card that neither the label nor
+    /// the input took. Not cancelled - a card is a `div` and has no default
+    /// action of its own to cancel.
+    fn card_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
+        let activation = self.clone();
+        move |_| {
             (activation.activate)();
             let _ = activation.element.focus();
         }
@@ -675,6 +746,7 @@ impl Activation {
     pub(crate) fn wire(&self, control: BoxStyle) -> BoxStyle {
         let (keydown, keyup) = (self.clone(), self.enter);
         let (click, input) = (self.activate.clone(), self.activate.clone());
+        let card = self.card;
         control
             .element(&self.element)
             // What still reaches the input as a click - assistive tech's
@@ -683,6 +755,9 @@ impl Activation {
             // does not change, clobbered when it does.
             .event("onclick", move |event: Event<MouseData>| {
                 event.prevent_default();
+                if card {
+                    event.stop_propagation();
+                }
                 click();
             })
             // Blitz forwards a `<label>` click to its input as a default

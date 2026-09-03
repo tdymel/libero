@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, RADIO_CIRCLE, RadioDefaults},
+    theme::{ChoiceVariant, CssVar, RADIO_CIRCLE, RadioDefaults},
     utils::warn,
 };
 
@@ -30,6 +30,11 @@ static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // escapes to the nearest positioned ancestor.
         .position("relative")
         .selector("&:has(> input:focus-visible)", focus_ring_sx())
+        // A card rings itself; a second ring here would sit at another offset.
+        .when(
+            "card",
+            sx().selector("&:has(> input:focus-visible)", sx().outline("none")),
+        )
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
@@ -94,6 +99,11 @@ field_props! {
         /// Names the radio when it has no `label`.
         #[props(default, into)]
         aria_label: Option<String>,
+        /// `Card` draws the radio as a bordered surface and makes all of it
+        /// the hit area. The label and captions must not hold anything
+        /// interactive of their own: a click on it would reach the card too.
+        #[props(default, into)]
+        variant: Input<ChoiceVariant>,
     }
 }
 
@@ -112,6 +122,7 @@ pub fn Radio(props: RadioProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let checked = props.checked.unwrap_or(false);
+    let card = props.variant.copied_or_default() == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onselect.is_none() {
         warn("Radio: `checked` without `onselect` can never change.");
@@ -131,6 +142,7 @@ pub fn Radio(props: RadioProps) -> Element {
 
     let field = use_field()
         .inline()
+        .card(card)
         .activates(use_element(), select)
         .label(&props.label)
         .description(&props.description)
@@ -185,12 +197,16 @@ pub fn Radio(props: RadioProps) -> Element {
     // The circle is decoration: the input owns the name, the state and the
     // keyboard. It carries the click because a visually hidden input has no
     // hit area, and a `<label>` around it would compete with the field's own
-    // label for the accessible name.
+    // label for the accessible name. A card takes the click itself.
     let circle = rsx! {
         span {
             class: circle_class,
             "aria-hidden": "true",
-            onclick: move |_| select(),
+            onclick: move |_| {
+                if !card {
+                    select();
+                }
+            },
             span { class: dot_class }
         }
     };
