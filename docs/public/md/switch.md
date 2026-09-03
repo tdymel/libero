@@ -36,8 +36,9 @@ fn Demo() -> Element {
 
 ## Controlled, always
 
-`checked` in, `onchange` out, with no uncontrolled mode. The click is cancelled
-(`prevent_default`), so the switch only moves when its state does - the
+`checked` in, `onchange` out, with no uncontrolled mode. The browser never
+toggles the input itself: a click on the label is cancelled, and Space and Enter
+are answered on `keydown`, so the switch only moves when its state does - the
 browser's own flip never gets to disagree with Rust. `checked` without
 `onchange` can never change, and `onchange` without `checked` can never appear
 on; the library warns about either alone.

@@ -75,7 +75,7 @@ pub use text_field::{TextField, TextFieldProps};
 pub use textarea::{Textarea, TextareaProps};
 #[cfg(test)]
 pub(crate) use use_field::Setter;
-pub(crate) use use_field::{use_bound, use_field};
+pub(crate) use use_field::{Activation, use_bound, use_field};
 pub(crate) use use_field_frame::{FIELD_CONTROL_SX, field_control_sx, use_field_frame};
 pub(crate) use validation::{
     Binding, Disabled, FieldEntry, FormScope, Source, SummaryItem, issues_of,

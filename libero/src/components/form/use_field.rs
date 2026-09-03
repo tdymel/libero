@@ -11,7 +11,8 @@ use crate::{
         form::{Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, worst},
         layout::{BoxStyle, use_box},
     },
-    hooks::use_root_id,
+    hooks::{ElementHandle, use_root_id},
+    platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{FIELD_FRAME_GAP, FieldDefaults, Size},
 };
@@ -88,6 +89,7 @@ pub(crate) struct FieldBuilder<'a> {
     disabled: bool,
     inline: bool,
     labelled_by: bool,
+    activation: Option<Activation>,
     size: Size,
     radius: Size,
     class: Option<&'a Input<ClassList>>,
@@ -111,6 +113,7 @@ impl Default for FieldBuilder<'_> {
             disabled: false,
             inline: false,
             labelled_by: false,
+            activation: None,
             size: Size::Md,
             radius: Size::Sm,
             class: None,
@@ -198,6 +201,29 @@ impl<'a> FieldBuilder<'a> {
     #[inline]
     pub fn labelled_by(mut self) -> Self {
         self.labelled_by = true;
+        self
+    }
+
+    /// Makes the field's control a checkbox or a radio whose checked state
+    /// Rust owns: `activate` is what a click on the label, Space and a
+    /// cancelled click on the input all do. [`PreparedField::aria`] wires the
+    /// input's side and attaches `element` to it; the label focuses it.
+    ///
+    /// No activation reaches the native control, so nothing restores its
+    /// `checked` - see [`Activation`] for why that is the whole fix.
+    #[inline]
+    pub fn activates(mut self, element: ElementHandle, activate: impl Fn() + 'static) -> Self {
+        self.activation = Some(Activation::new(element, activate));
+        self
+    }
+
+    /// Enter activates as well as Space, for a `role="switch"`. A bare
+    /// checkbox or radio takes Space alone, on every platform.
+    #[inline]
+    pub fn enter_activates(mut self) -> Self {
+        if let Some(activation) = &mut self.activation {
+            activation.enter = true;
+        }
         self
     }
 
@@ -351,7 +377,13 @@ impl<'a> FieldBuilder<'a> {
         }
 
         PreparedField {
-            label: label_node(&id_value, label, self.required, self.labelled_by),
+            label: label_node(
+                &id_value,
+                label,
+                self.required,
+                self.labelled_by,
+                self.activation.clone(),
+            ),
             labelled_by: self.labelled_by && !label.is_none(),
             description: slot_node("description", &id_value, description),
             helper: slot_node("helper", &id_value, helper),
@@ -361,6 +393,7 @@ impl<'a> FieldBuilder<'a> {
             invalid: matches!(status, Some(FieldStatus::Error(_))),
             required: self.required,
             inline: self.inline,
+            activation: self.activation,
             states,
             wrapper,
         }
@@ -520,6 +553,7 @@ pub(crate) struct PreparedField {
     required: bool,
     inline: bool,
     labelled_by: bool,
+    activation: Option<Activation>,
     wrapper: BoxStyle,
     /// `None` rather than an empty `rsx! {}`: a slot nothing filled costs no
     /// node at all, which is most slots on most fields.
@@ -559,13 +593,18 @@ impl PreparedField {
         self.invalid
     }
 
-    /// The a11y wiring, onto the control's already-prepared styling.
+    /// The a11y wiring, onto the control's already-prepared styling - and,
+    /// under [`FieldBuilder::activates`], the input's activation.
     pub fn aria(&self, control: BoxStyle) -> BoxStyle {
-        control
+        let control = control
             .attr("id", self.id.clone())
             .attr("aria-describedby", self.describedby.clone())
             .attr("aria-invalid", self.invalid.then_some("true"))
-            .attr("aria-required", self.required.then_some("true"))
+            .attr("aria-required", self.required.then_some("true"));
+        match &self.activation {
+            Some(activation) => activation.wire(control),
+            None => control,
+        }
     }
 
     /// Label, description, control, helper, status - in that order, inside the
@@ -586,6 +625,94 @@ impl PreparedField {
         children.extend(self.status);
 
         self.wrapper.render(HtmlTag::Div, Vec::new(), children)
+    }
+}
+
+/// A checkable control's activation, taken off the browser.
+///
+/// The browser flips `checked` before a click is dispatched, and when the
+/// click is cancelled it restores the old value at the *end* of the dispatch.
+/// dioxus re-renders synchronously inside that dispatch, so a caller that
+/// honours `onchange` has its new `checked` written and then overwritten, and
+/// the next render sees nothing to write: the look moves, the property,
+/// `:checked`, AT and the form post do not. So nothing is left to activate the
+/// input natively: the label's click is cancelled, and Space - and Enter, for
+/// a switch - is answered on `keydown`, which stops the activation outright.
+///
+/// A field gets it through [`FieldBuilder::activates`]; a control whose label
+/// is its own - `Chip` - wires both halves itself.
+#[derive(Clone)]
+pub(crate) struct Activation {
+    element: ElementHandle,
+    activate: Rc<dyn Fn()>,
+    enter: bool,
+}
+
+impl Activation {
+    pub(crate) fn new(element: ElementHandle, activate: impl Fn() + 'static) -> Self {
+        Self {
+            element,
+            activate: Rc::new(activate),
+            enter: false,
+        }
+    }
+
+    /// The label's half. Cancelling the label's click cancels its activation
+    /// behaviour, which is the whole of "forward this click to the control":
+    /// the input gets no click at all. The focus the forwarding gave it goes
+    /// too, so it is given back by hand.
+    pub(crate) fn label_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
+        let activation = self.clone();
+        move |event| {
+            event.prevent_default();
+            (activation.activate)();
+            let _ = activation.element.focus();
+        }
+    }
+
+    /// The input's half: attaches the element, and takes Space - and Enter,
+    /// for a switch - and whatever click still reaches it.
+    pub(crate) fn wire(&self, control: BoxStyle) -> BoxStyle {
+        let (keydown, keyup) = (self.clone(), self.enter);
+        let (click, input) = (self.activate.clone(), self.activate.clone());
+        control
+            .element(&self.element)
+            // What still reaches the input as a click - assistive tech's
+            // default action, a script's `click()` - is cancelled and taken
+            // in Rust, which is the old half-fix: correct while `checked`
+            // does not change, clobbered when it does.
+            .event("onclick", move |event: Event<MouseData>| {
+                event.prevent_default();
+                click();
+            })
+            // Blitz forwards a `<label>` click to its input as a default
+            // action that emits `input`, never `click`. On the web nothing
+            // activates the input any more, so this never fires there; both
+            // compute the same next value, so firing twice is a no-op.
+            .event("oninput", move |_: FormEvent| input())
+            .event("onkeydown", move |event: Event<KeyboardData>| {
+                if activates(&event, keydown.enter) {
+                    event.prevent_default();
+                    if !event.is_auto_repeating() {
+                        (keydown.activate)();
+                    }
+                }
+            })
+            // A browser that clicks on `keyup` rather than checking the
+            // cancelled `keydown` would otherwise activate a second time.
+            .event("onkeyup", move |event: Event<KeyboardData>| {
+                if activates(&event, keyup) {
+                    event.prevent_default();
+                }
+            })
+    }
+}
+
+fn activates(event: &KeyboardData, enter: bool) -> bool {
+    match event.key() {
+        Key::Character(ref c) => c == " ",
+        Key::Enter => enter,
+        _ => false,
     }
 }
 
@@ -636,7 +763,13 @@ fn caption_content(caption: &Caption) -> Element {
     }
 }
 
-fn label_node(id: &str, label: &Caption, required: bool, labelled_by: bool) -> Option<Element> {
+fn label_node(
+    id: &str,
+    label: &Caption,
+    required: bool,
+    labelled_by: bool,
+    activation: Option<Activation>,
+) -> Option<Element> {
     if label.is_none() {
         return None;
     }
@@ -649,14 +782,30 @@ fn label_node(id: &str, label: &Caption, required: bool, labelled_by: bool) -> O
         false => (None, Some(id.to_string())),
     };
     let content = caption_content(label);
-    Some(rsx! {
-        label { id: named, r#for: points_at,
-            {content}
-            // `aria-required` already tells AT; the asterisk is decoration.
-            if required {
-                span { "aria-hidden": "true", "data-slot": "required", "*" }
-            }
+    // `aria-required` already tells AT; the asterisk is decoration.
+    let asterisk = required.then(|| {
+        rsx! {
+            span { "aria-hidden": "true", "data-slot": "required", "*" }
         }
+    });
+    // Two arms, because a listener cannot be optional and most labels need
+    // none.
+    Some(match activation {
+        Some(activation) => rsx! {
+            label {
+                id: named,
+                r#for: points_at,
+                onclick: activation.label_click(),
+                {content}
+                {asterisk}
+            }
+        },
+        None => rsx! {
+            label { id: named, r#for: points_at,
+                {content}
+                {asterisk}
+            }
+        },
     })
 }
 

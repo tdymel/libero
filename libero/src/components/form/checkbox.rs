@@ -9,7 +9,7 @@ use crate::{
         form::{use_bound, use_field},
         layout::use_box,
     },
-    hooks::{use_cache, use_css, use_theme},
+    hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHECKBOX_BOX, CHECKBOX_RADIUS, CheckboxDefaults, CssVar},
     utils::warn,
@@ -113,9 +113,10 @@ field_props! {
 /// A checkbox, with its label beside the box and the description, helper text
 /// and validation message under both.
 ///
-/// Strictly controlled: pass `checked` and handle `onchange`. The click is
-/// cancelled and the DOM re-rendered from Rust, so the property, `:checked`,
-/// assistive tech and form submission never drift apart.
+/// Strictly controlled: pass `checked` and handle `onchange`. The browser
+/// never toggles the input itself - a label click and Space are taken in Rust
+/// - so the property, `:checked`, assistive tech and form submission never
+/// drift apart.
 #[component]
 pub fn Checkbox(props: CheckboxProps) -> Element {
     let theme = use_theme();
@@ -136,8 +137,19 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         warn("Checkbox: `onchange` without `checked` can never appear checked.");
     }
 
+    let onchange = bound.emit(props.onchange);
+    let next = !(checked || indeterminate);
+    let toggle = move || {
+        if let Some(onchange) = &onchange
+            && !disabled
+        {
+            onchange(next);
+        }
+    };
+
     let field = use_field()
         .inline()
+        .activates(use_element(), toggle.clone())
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -180,14 +192,6 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .prepare();
     let box_class = use_css(Some(&CHECKBOX_BOX_SX), CssLayer::Framework);
 
-    let onchange = bound.emit(props.onchange);
-    let next = !(checked || indeterminate);
-    let toggle = move || {
-        if let Some(onchange) = &onchange {
-            onchange(next);
-        }
-    };
-
     let input = field
         .aria(input)
         .attr("type", "checkbox")
@@ -198,23 +202,6 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("aria-label", props.aria_label)
-        // `onclick`, not `onchange`: cancelling the click reverts the
-        // browser's own flip, so Rust state stays the only source of truth.
-        .event("onclick", {
-            let toggle = toggle.clone();
-            move |event: Event<MouseData>| {
-                event.prevent_default();
-                toggle();
-            }
-        })
-        // Blitz forwards a `<label>` click to its input as a default action
-        // that emits `input`, never `click`, so `onclick` alone leaves the
-        // checkbox dead there. On the web a cancelled click suppresses
-        // `input`, and both handlers compute the same value anyway.
-        .event("oninput", {
-            let toggle = toggle.clone();
-            move |_: FormEvent| toggle()
-        })
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
@@ -243,11 +230,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         span {
             class: box_class,
             "aria-hidden": "true",
-            onclick: move |_| {
-                if !disabled {
-                    toggle();
-                }
-            },
+            onclick: move |_| toggle(),
             {mark}
         }
     };

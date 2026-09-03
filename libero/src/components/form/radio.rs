@@ -9,7 +9,7 @@ use crate::{
         form::use_field,
         layout::use_box,
     },
-    hooks::{use_cache, use_css, use_theme},
+    hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, RADIO_CIRCLE, RadioDefaults},
     utils::warn,
@@ -117,8 +117,21 @@ pub fn Radio(props: RadioProps) -> Element {
         warn("Radio: `checked` without `onselect` can never change.");
     }
 
+    let onselect = props.onselect;
+    // Picking the checked radio again is not a change - and there is no way to
+    // unpick one, so a second click reports nothing.
+    let select = move || {
+        if let Some(onselect) = &onselect
+            && !checked
+            && !disabled
+        {
+            onselect.call(());
+        }
+    };
+
     let field = use_field()
         .inline()
+        .activates(use_element(), select)
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -156,17 +169,6 @@ pub fn Radio(props: RadioProps) -> Element {
     let circle_class = use_css(Some(&RADIO_CIRCLE_SX), CssLayer::Framework);
     let dot_class = use_css(Some(&RADIO_DOT_SX), CssLayer::Framework);
 
-    let onselect = props.onselect;
-    // Picking the checked radio again is not a change - and there is no way to
-    // unpick one, so a second click reports nothing.
-    let select = move || {
-        if let Some(onselect) = &onselect
-            && !checked
-        {
-            onselect.call(());
-        }
-    };
-
     let input = field
         .aria(input)
         .attr("type", "radio")
@@ -177,16 +179,6 @@ pub fn Radio(props: RadioProps) -> Element {
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("aria-label", props.aria_label)
-        // `onclick`, not `onchange`: cancelling the click reverts the
-        // browser's own flip, so Rust state stays the only source of truth.
-        .event("onclick", move |event: Event<MouseData>| {
-            event.prevent_default();
-            select();
-        })
-        // Blitz forwards a `<label>` click to its input as a default action
-        // that emits `input`, never `click`, so `onclick` alone leaves the
-        // radio dead there.
-        .event("oninput", move |_: FormEvent| select())
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
@@ -198,11 +190,7 @@ pub fn Radio(props: RadioProps) -> Element {
         span {
             class: circle_class,
             "aria-hidden": "true",
-            onclick: move |_| {
-                if !disabled {
-                    select();
-                }
-            },
+            onclick: move |_| select(),
             span { class: dot_class }
         }
     };

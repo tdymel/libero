@@ -8,11 +8,12 @@ use crate::{
             base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
             shade_color, variables,
         },
+        form::Activation,
         inputs::{ButtonVariant, VariantColors, VariantVars, button_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
     },
-    hooks::{use_cache, use_id, use_theme},
+    hooks::{use_cache, use_element, use_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChipDefaults, ColorShade, CssVar, Size, SizeCss},
     utils::warn,
@@ -196,6 +197,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .into();
 
     let id = use_id();
+    let element = use_element();
 
     // Every hook above the branch, `prepare()` included - it is the hook, so a
     // chain built inside an `if` is a conditional hook. The unused ones are
@@ -256,31 +258,27 @@ pub fn Chip(props: ChipProps) -> Element {
     }
 
     let onchange = props.onchange;
-    let input = input
+    // The label is the chip's own, so it wires the label's half of the
+    // activation too - the same fix `use_field` gives `Checkbox`.
+    let activation = Activation::new(element, move || {
+        if let Some(onchange) = &onchange
+            && !disabled
+        {
+            onchange.call(!checked);
+        }
+    });
+    let input = activation
+        .wire(input)
         .attr("type", "checkbox")
         .attr("id", id())
         .attr("checked", checked)
         .attr("disabled", disabled)
-        // `onclick`, not `onchange`: cancelling the click reverts the
-        // browser's own flip, so Rust state stays the only source of truth.
-        .event("onclick", move |event: Event<MouseData>| {
-            event.prevent_default();
-            if let Some(onchange) = &onchange {
-                onchange.call(!checked);
-            }
-        })
-        // Blitz forwards a `<label>` click to its input as a default action
-        // that emits `input`, never `click` - see `Switch`, same shape.
-        .event("oninput", move |_: FormEvent| {
-            if let Some(onchange) = &onchange {
-                onchange.call(!checked);
-            }
-        })
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, Vec::new(), ());
 
     let label = label
         .attr("for", id())
+        .event("onclick", activation.label_click())
         .render(HtmlTag::Label, Vec::new(), props.children);
 
     root.attr("aria-disabled", disabled)

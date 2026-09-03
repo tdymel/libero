@@ -33,9 +33,11 @@ fn Demo() -> Element {
 
 ## Controlled, always
 
-`checked` in, `onchange` out, with no uncontrolled mode. The click is
-cancelled and the DOM is re-rendered from Rust, so the box, the `checked` DOM
-property, `:checked`, assistive tech and form submission cannot drift apart.
+`checked` in, `onchange` out, with no uncontrolled mode. The browser never
+toggles the input itself - a click on the label is cancelled and Space is
+answered on `keydown` - and the DOM is re-rendered from Rust, so the box, the
+`checked` DOM property, `:checked`, assistive tech and form submission cannot
+drift apart.
 A caller that ignores `onchange` gets a checkbox that does not move - which is
 the honest outcome, not a bug.
 
@@ -62,7 +64,7 @@ convention.
 
 It is deliberately **not** the native `indeterminate` DOM property. That
 property has no HTML attribute, so nothing can write it through a render, and
-chasing it from Rust is the same desync the click-cancel above exists to
+chasing it from Rust is the same desync the paragraph above exists to
 prevent. The state is ours; ARIA carries it to assistive tech.
 
 ## Layout

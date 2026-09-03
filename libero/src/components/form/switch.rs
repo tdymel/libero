@@ -9,7 +9,7 @@ use crate::{
         form::{use_bound, use_field},
         layout::use_box,
     },
-    hooks::{use_cache, use_css, use_theme},
+    hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W, SwitchDefaults},
     utils::warn,
@@ -121,9 +121,10 @@ field_props! {
 /// A checkbox styled as a track and thumb, with its label beside it and the
 /// description, helper text and validation message under both.
 ///
-/// Strictly controlled: pass `checked` and handle `onchange`. The click is
-/// cancelled and the DOM re-rendered from Rust, so the track, the DOM
-/// property, assistive tech and form submission never drift apart.
+/// Strictly controlled: pass `checked` and handle `onchange`. The browser
+/// never toggles the input itself - a label click, Space and Enter are taken
+/// in Rust - so the track, the DOM property, assistive tech and form
+/// submission never drift apart.
 #[component]
 pub fn Switch(props: SwitchProps) -> Element {
     let theme = use_theme();
@@ -143,8 +144,22 @@ pub fn Switch(props: SwitchProps) -> Element {
         warn("Switch: `onchange` without `checked` can never appear on.");
     }
 
+    let onchange = bound.emit(props.onchange);
+    let toggle = move || {
+        if let Some(onchange) = &onchange
+            && !disabled
+        {
+            onchange(!checked);
+        }
+    };
+
+    // `role="switch"` is a button-like control, and ARIA's pattern for it
+    // takes Enter as well as Space. A bare checkbox does not, on any
+    // platform, so the key is handled here rather than left to the UA.
     let field = use_field()
         .inline()
+        .activates(use_element(), toggle.clone())
+        .enter_activates()
         .label(&props.label)
         .description(&props.description)
         .helper(&props.helper)
@@ -185,13 +200,6 @@ pub fn Switch(props: SwitchProps) -> Element {
     let track_class = use_css(Some(&SWITCH_TRACK_SX), CssLayer::Framework);
     let thumb_class = use_css(Some(&SWITCH_THUMB_SX), CssLayer::Framework);
 
-    let onchange = bound.emit(props.onchange);
-    let toggle = move || {
-        if let Some(onchange) = &onchange {
-            onchange(!checked);
-        }
-    };
-
     let input = field
         .aria(input)
         .attr("type", "checkbox")
@@ -202,37 +210,6 @@ pub fn Switch(props: SwitchProps) -> Element {
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("aria-label", props.aria_label)
-        // `onclick`, not `onchange`: cancelling the click reverts the
-        // browser's own flip, so Rust state stays the only source of truth.
-        .event("onclick", {
-            let toggle = toggle.clone();
-            move |event: Event<MouseData>| {
-                event.prevent_default();
-                toggle();
-            }
-        })
-        // Blitz forwards a `<label>` click to its input as a default action
-        // that emits `input`, never `click`, so `onclick` alone leaves the
-        // switch dead there. On the web a cancelled click suppresses `input`,
-        // and both handlers compute the same `!checked` anyway, so firing
-        // twice is a no-op rather than a double toggle.
-        .event("oninput", {
-            let toggle = toggle.clone();
-            move |_: FormEvent| toggle()
-        })
-        // `role="switch"` is a button-like control, and ARIA's pattern for it
-        // takes Enter as well as Space. A bare checkbox does not, on any
-        // platform, so the key has to be handled here rather than left to the
-        // UA. Space still arrives as a click and is not touched.
-        .event("onkeydown", {
-            let toggle = toggle.clone();
-            move |event: Event<KeyboardData>| {
-                if event.key() == Key::Enter && !disabled {
-                    event.prevent_default();
-                    toggle();
-                }
-            }
-        })
         // Void element - `()` costs no dynamic node.
         .render(HtmlTag::Input, props.attributes, ());
 
@@ -244,11 +221,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         span {
             class: track_class,
             "aria-hidden": "true",
-            onclick: move |_| {
-                if !disabled {
-                    toggle();
-                }
-            },
+            onclick: move |_| toggle(),
             span { class: thumb_class }
         }
     };
