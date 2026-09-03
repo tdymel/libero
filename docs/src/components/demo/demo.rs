@@ -37,11 +37,23 @@ fn label(name: &str) -> String {
     }
 }
 
-/// The current value of every control, keyed by prop name.
+/// The current value of every control, keyed by prop name - plus, in what
+/// `render` receives, the way back into the controls.
 #[derive(Clone, PartialEq)]
-pub struct DemoValues(Vec<(&'static str, String)>);
+pub struct DemoValues(Vec<(&'static str, String)>, Option<Signal<DemoValues>>);
 
 impl DemoValues {
+    /// Writes a control's value from the preview, for a component whose own
+    /// `onchange` should move the control that drives it.
+    pub fn set(&self, name: &str, value: impl Into<String>) {
+        let Some(mut values) = self.1 else {
+            return;
+        };
+        if let Some(entry) = values.write().0.iter_mut().find(|(key, _)| *key == name) {
+            entry.1 = value.into();
+        }
+    }
+
     pub fn str(&self, name: &str) -> String {
         self.0
             .iter()
@@ -147,6 +159,7 @@ pub fn Demo(
                 .iter()
                 .map(|control| (control.name, control.default.clone()))
                 .collect(),
+            None,
         )
     });
 
@@ -198,7 +211,7 @@ pub fn Demo(
                         // being cut off; `safe` keeps its start reachable.
                         .justify_content("safe center")
                         .overflow_x("auto"),
-                    {render.call(values())}
+                    {render.call(DemoValues(values().0, Some(values)))}
                 }
                 // No props, no panel - the preview and the code block are
                 // the whole demo then.

@@ -13,7 +13,7 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     hooks::{ElementHandle, use_root_id},
-    platform::ElementApi,
+    platform::{ElementApi, next_task},
     sx::{StaticSx, Sx, sx},
     theme::{
         ChoiceVariant, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults, PAPER_BACKGROUND,
@@ -693,10 +693,14 @@ impl PreparedField {
 /// a switch - is answered on `keydown`, which stops the activation outright.
 ///
 /// A field gets it through [`FieldBuilder::activates`]; a control whose label
-/// is its own - `Chip` - wires both halves itself.
+/// is its own - `Chip` - wires both halves itself, and one that renders its
+/// inputs by hand - `SegmentedControl` - takes the input's handlers one by one.
 #[derive(Clone)]
 pub(crate) struct Activation {
-    element: ElementHandle,
+    /// Attached to the input by [`wire`](Self::wire), and focused by the label.
+    element: Option<ElementHandle>,
+    /// Focuses the input instead, for a control with no handle per input.
+    focus: Option<Rc<dyn Fn()>>,
     activate: Rc<dyn Fn()>,
     enter: bool,
     /// Inside a card, whose own click activates too: the label's and the
@@ -707,10 +711,39 @@ pub(crate) struct Activation {
 impl Activation {
     pub(crate) fn new(element: ElementHandle, activate: impl Fn() + 'static) -> Self {
         Self {
-            element,
+            element: Some(element),
+            focus: None,
             activate: Rc::new(activate),
             enter: false,
             card: false,
+        }
+    }
+
+    /// For inputs rendered in a loop, which cannot each take a handle: the
+    /// label calls `focus` where it would focus the handle.
+    pub(crate) fn focusing(focus: impl Fn() + 'static, activate: impl Fn() + 'static) -> Self {
+        Self {
+            element: None,
+            focus: Some(Rc::new(focus)),
+            activate: Rc::new(activate),
+            enter: false,
+            card: false,
+        }
+    }
+
+    /// Enter activates as well as Space - see [`FieldBuilder::enter_activates`].
+    pub(crate) fn enter_activates(mut self) -> Self {
+        self.enter = true;
+        self
+    }
+
+    fn focus(&self) {
+        match (&self.focus, &self.element) {
+            (Some(focus), _) => focus(),
+            (None, Some(element)) => {
+                let _ = element.focus();
+            }
+            (None, None) => {}
         }
     }
 
@@ -726,7 +759,7 @@ impl Activation {
                 event.stop_propagation();
             }
             (activation.activate)();
-            let _ = activation.element.focus();
+            activation.focus();
         }
     }
 
@@ -737,49 +770,79 @@ impl Activation {
         let activation = self.clone();
         move |_| {
             (activation.activate)();
-            let _ = activation.element.focus();
+            activation.focus();
         }
     }
 
     /// The input's half: attaches the element, and takes Space - and Enter,
     /// for a switch - and whatever click still reaches it.
     pub(crate) fn wire(&self, control: BoxStyle) -> BoxStyle {
-        let (keydown, keyup) = (self.clone(), self.enter);
-        let (click, input) = (self.activate.clone(), self.activate.clone());
-        let card = self.card;
+        let keydown = self.clone();
+        let control = match &self.element {
+            Some(element) => control.element(element),
+            None => control,
+        };
         control
-            .element(&self.element)
-            // What still reaches the input as a click - assistive tech's
-            // default action, a script's `click()` - is cancelled and taken
-            // in Rust, which is the old half-fix: correct while `checked`
-            // does not change, clobbered when it does.
-            .event("onclick", move |event: Event<MouseData>| {
-                event.prevent_default();
-                if card {
-                    event.stop_propagation();
-                }
-                click();
-            })
-            // Blitz forwards a `<label>` click to its input as a default
-            // action that emits `input`, never `click`. On the web nothing
-            // activates the input any more, so this never fires there; both
-            // compute the same next value, so firing twice is a no-op.
-            .event("oninput", move |_: FormEvent| input())
+            .event("onclick", self.input_click())
+            .event("oninput", self.input_input())
             .event("onkeydown", move |event: Event<KeyboardData>| {
-                if activates(&event, keydown.enter) {
-                    event.prevent_default();
-                    if !event.is_auto_repeating() {
-                        (keydown.activate)();
-                    }
-                }
+                keydown.keydown(&event);
             })
-            // A browser that clicks on `keyup` rather than checking the
-            // cancelled `keydown` would otherwise activate a second time.
-            .event("onkeyup", move |event: Event<KeyboardData>| {
-                if activates(&event, keyup) {
-                    event.prevent_default();
-                }
-            })
+            .event("onkeyup", self.input_keyup())
+    }
+
+    /// What still reaches the input as a click - assistive tech's default
+    /// action, a click on the input itself - is cancelled, and taken in Rust
+    /// only once the dispatch is over. The cancelled activation restores the
+    /// old `checked` at the end of the dispatch, so a re-render inside it
+    /// would be overwritten; after it, the new `checked` is the last write.
+    pub(crate) fn input_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
+        let (activate, card) = (self.activate.clone(), self.card);
+        move |event| {
+            event.prevent_default();
+            if card {
+                event.stop_propagation();
+            }
+            let activate = activate.clone();
+            spawn(async move {
+                next_task().await;
+                activate();
+            });
+        }
+    }
+
+    /// Blitz forwards a `<label>` click to its input as a default action that
+    /// emits `input`, never `click`. On the web nothing activates the input
+    /// any more, so this never fires there; both compute the same next value,
+    /// so firing twice is a no-op.
+    pub(crate) fn input_input(&self) -> impl FnMut(FormEvent) + 'static {
+        let activate = self.activate.clone();
+        move |_| activate()
+    }
+
+    /// Space - and Enter, for a switch - answered on `keydown`, which stops
+    /// the activation outright. `true` when the key was one of those, so a
+    /// control with keys of its own knows it is handled.
+    pub(crate) fn keydown(&self, event: &Event<KeyboardData>) -> bool {
+        if !activates(event, self.enter) {
+            return false;
+        }
+        event.prevent_default();
+        if !event.is_auto_repeating() {
+            (self.activate)();
+        }
+        true
+    }
+
+    /// A browser that clicks on `keyup` rather than checking the cancelled
+    /// `keydown` would otherwise activate a second time.
+    pub(crate) fn input_keyup(&self) -> impl FnMut(Event<KeyboardData>) + 'static {
+        let enter = self.enter;
+        move |event| {
+            if activates(&event, enter) {
+                event.prevent_default();
+            }
+        }
     }
 }
 

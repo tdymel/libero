@@ -75,15 +75,14 @@ pub fn SwitchPage() -> Element {
                             _ => vec![],
                         }),
                     // Controlled state is `checked` + `onchange`; the
-                    // library warns about one without the other.
-                    Control::switch("checked").default("true").code(|_, values| {
-                        match values.str("checked").as_str() {
-                            "true" => vec![
-                                "checked: true".to_string(),
-                                "onchange: move |_| {}".to_string(),
-                            ],
-                            _ => vec!["onchange: move |_| {}".to_string()],
-                        }
+                    // library warns about one without the other. The preview
+                    // writes `onchange` back into this control, so the
+                    // snippet shows the pair a caller writes.
+                    Control::switch("checked").default("true").code(|_, _| {
+                        vec![
+                            "checked: enabled()".to_string(),
+                            "onchange: move |next| enabled.set(next)".to_string(),
+                        ]
                     }),
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
@@ -116,7 +115,10 @@ pub fn SwitchPage() -> Element {
                             "true" => Some(true),
                             _ => Some(false),
                         },
-                        onchange: EventHandler::new(move |_: bool| {}),
+                        onchange: {
+                            let values = values.clone();
+                            EventHandler::new(move |next: bool| values.set("checked", next.to_string()))
+                        },
                         label: (values.str("label") == "true")
                             .then(|| "Notifications".to_string()),
                         description: (values.str("description") == "true")

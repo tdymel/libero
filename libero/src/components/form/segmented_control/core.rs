@@ -4,6 +4,7 @@ use crate::{
     components::{
         HtmlTag, States,
         common::{Orientation, focus_ring_sx},
+        form::Activation,
         inputs::{
             BUTTON_COLOR_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, ButtonVariant,
             button_selected_sx, button_variant_sx,
@@ -266,6 +267,89 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
     // per segment.
     let segment_states = format!("{} {}", size.state_name(), radius.radius_state_name());
 
+    let items = segments.iter().enumerate().map(|(index, segment)| {
+        // The label's click, Space, Enter and a click on the radio itself all
+        // go through `Activation` - see it for why none of them may activate
+        // the radio natively (todo 66). A control that is not focusable wants
+        // no focus from its label: inside a dropdown that keeps focus on its
+        // field, focusing here would blur the field and close it.
+        let disabled = segment.disabled;
+        let activation = {
+            let root = root.clone();
+            Activation::focusing(
+                move || {
+                    if focusable && !disabled {
+                        focus_segment(&element, &root, index);
+                    }
+                },
+                move || {
+                    if !disabled {
+                        onselect.call(index);
+                    }
+                },
+            )
+            .enter_activates()
+        };
+        // This is one control to its user, not a row of radios, so it answers
+        // Enter as well as Space - the same call `Switch` makes. The arrows
+        // move *and* select, which is what a native radio group does and what
+        // Blitz, which does neither, now gets too.
+        let keydown = {
+            let activation = activation.clone();
+            let disabled_segments = disabled_segments.clone();
+            let root = root.clone();
+            move |event: Event<KeyboardData>| {
+                if disabled || activation.keydown(&event) {
+                    return;
+                }
+                let step = match event.key() {
+                    Key::ArrowDown | Key::ArrowRight => 1,
+                    Key::ArrowUp | Key::ArrowLeft => -1,
+                    _ => return,
+                };
+                event.prevent_default();
+                if let Some(next) = neighbour(&disabled_segments, index, step) {
+                    onselect.call(next);
+                    focus_segment(&element, &root, next);
+                }
+            }
+        };
+        rsx! {
+            // The radio sits *beside* its label, not inside it, so the focus
+            // ring can be `input:focus-visible + label`. Nesting it would need
+            // `label:has(> input:focus-visible)`, and `:has()` is not
+            // universally supported - Blitz's stylo rejects it at parse time.
+            // `for` binds the two, which is what forwards a label click to the
+            // radio everywhere.
+            input {
+                key: "{index}",
+                id: "{root}-segment-{index}",
+                r#type: "radio",
+                name: "{name}",
+                value: "{index}",
+                // The label's text is not the name when the label is an icon,
+                // so the radio carries it.
+                "aria-label": segment.name.clone(),
+                checked: selected == Some(index),
+                // `Some(true)` or nothing: dioxus-native writes a `false` bool
+                // as the string "false", and Blitz reads `disabled` by
+                // presence - so `false` would disable every segment.
+                disabled: segment.disabled.then_some(true),
+                tabindex: (!focusable).then_some("-1"),
+                onclick: activation.input_click(),
+                oninput: activation.input_input(),
+                onkeydown: keydown,
+                onkeyup: activation.input_keyup(),
+            }
+            label {
+                r#for: "{root}-segment-{index}",
+                "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
+                onclick: activation.label_click(),
+                {segment.content.clone()}
+            }
+        }
+    });
+
     use_box()
         .framework_sx(&SEGMENTED_CONTROL_SX)
         .states(&states)
@@ -281,123 +365,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
             HtmlTag::Div,
             attributes,
             rsx! {
-                for (index, segment) in segments.iter().enumerate() {
-                    // The radio sits *beside* its label, not inside it, so the
-                    // focus ring can be `input:focus-visible + label`. Nesting
-                    // it would need `label:has(> input:focus-visible)`, and
-                    // `:has()` is not universally supported - Blitz's stylo
-                    // rejects it at parse time. `for` binds the two, which is
-                    // what forwards a label click to the radio everywhere.
-                    input {
-                        key: "{index}",
-                        id: "{root}-segment-{index}",
-                        r#type: "radio",
-                        name: "{name}",
-                        value: "{index}",
-                        // The label's text is not the name when the
-                        // label is an icon, so the radio carries it.
-                        "aria-label": segment.name.clone(),
-                        checked: selected == Some(index),
-                        // `Some(true)` or nothing: dioxus-native writes a
-                        // `false` bool as the string "false", and Blitz
-                        // reads `disabled` by presence - so `false` would
-                        // disable every segment.
-                        disabled: segment.disabled.then_some(true),
-                        tabindex: (!focusable).then_some("-1"),
-                        // Nothing here cancels a *click*. A cancelled click
-                        // runs the HTML cancelled-activation steps at the end
-                        // of the dispatch, and dioxus flushes its re-render
-                        // during it - so the restore overwrites the `checked`
-                        // dioxus just wrote, and the property never follows
-                        // the selection (todo 66, measured). The label below
-                        // cancels its own click instead, which stops the
-                        // activation from ever reaching this input; every
-                        // other route in is answered before it can activate.
-                        //
-                        // Blitz forwards a `<label>` click to its input as a
-                        // default action that emits `input`, never `click` -
-                        // see `Switch`, same shape. It and the label's own
-                        // handler select the same index, so the two firing
-                        // together is a no-op rather than a fight.
-                        oninput: {
-                            let disabled = segment.disabled;
-                            move |_: FormEvent| {
-                                if !disabled {
-                                    onselect.call(index);
-                                }
-                            }
-                        },
-                        // Cancelled on `keydown`, not on the `click` the
-                        // browser would raise from it: that stops the
-                        // activation outright while leaving focus where it
-                        // is. A radio takes only Space, on every platform.
-                        // This is one control to its user, not a row of
-                        // radios, and a control answers Enter - the same call
-                        // `Switch` makes. The arrows move *and* select, which
-                        // is what a native radio group does and what Blitz,
-                        // which does neither, now gets too.
-                        onkeydown: {
-                            let disabled = segment.disabled;
-                            let disabled_segments = disabled_segments.clone();
-                            let root = root.clone();
-                            move |event: Event<KeyboardData>| {
-                                if disabled {
-                                    return;
-                                }
-                                let step = match event.key() {
-                                    Key::Enter => {
-                                        event.prevent_default();
-                                        onselect.call(index);
-                                        return;
-                                    }
-                                    Key::Character(ref c) if c == " " => {
-                                        event.prevent_default();
-                                        onselect.call(index);
-                                        return;
-                                    }
-                                    Key::ArrowDown | Key::ArrowRight => 1,
-                                    Key::ArrowUp | Key::ArrowLeft => -1,
-                                    _ => return,
-                                };
-                                event.prevent_default();
-                                if let Some(next) = neighbour(&disabled_segments, index, step) {
-                                    onselect.call(next);
-                                    focus_segment(&element, &root, next);
-                                }
-                            }
-                        },
-                    }
-                    label {
-                        r#for: "{root}-segment-{index}",
-                        "data-state": segment_state(&segment_states, segment.disabled, selected == Some(index)),
-                        // The label cancels its own click, which cancels its
-                        // activation behaviour - the whole of "forward this
-                        // click to the labelled control". So the radio is
-                        // never activated, nothing restores its checkedness,
-                        // and dioxus's write is the last word on it.
-                        //
-                        // That also takes away the focus the forwarding would
-                        // have given it, so a focusable control focuses the
-                        // radio by hand. One that is not focusable wants
-                        // exactly that: inside a dropdown that keeps focus on
-                        // its field, focusing here would blur the field and
-                        // close it.
-                        onclick: {
-                            let disabled = segment.disabled;
-                            let root = root.clone();
-                            move |event: Event<MouseData>| {
-                                event.prevent_default();
-                                if !disabled {
-                                    onselect.call(index);
-                                    if focusable {
-                                        focus_segment(&element, &root, index);
-                                    }
-                                }
-                            }
-                        },
-                        {segment.content.clone()}
-                    }
-                }
+                {items}
             },
         )
 }
