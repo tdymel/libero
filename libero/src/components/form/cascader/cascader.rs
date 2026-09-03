@@ -96,8 +96,10 @@ field_props! {
         /// Draws one row's content. Defaults to `TreeLabel::tree_label`.
         #[props(default)]
         node: Option<Callback<CascaderNodeArgs<T>, Element>>,
-        /// One column's width. Defaults to the theme's; `"max-content"` is
-        /// how a column takes the width of its longest row.
+        /// One column's width, and its minimum: when the trigger is wider
+        /// than the open columns, they share the rest. Defaults to the
+        /// theme's; `"max-content"` is how a column takes the width of its
+        /// longest row.
         #[props(default)]
         column_width: Option<String>,
         /// Shows an x that clears the selection, which is what makes

@@ -115,7 +115,7 @@ pub fn CascaderPage() -> Element {
                         .doc("Draws one row's content. The row itself - its highlight, its `aria-selected`, its chevron, its click - stays the component's."),
                     prop("column_width", "String")
                         .default("220px")
-                        .doc("One column's width. `\"max-content\"` is how a column takes the width of its longest row."),
+                        .doc("One column's width, and its minimum: when the trigger is wider than the open columns, they share the rest. `\"max-content\"` is how a column takes the width of its longest row."),
                     prop("validate", "Validators<Vec<String>>")
                         .doc("Rules over the path, shown once the field loses focus or its form is submitted."),
                     prop("name", "FieldName<Vec<String>>")

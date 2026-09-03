@@ -145,9 +145,12 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
         .display("flex")
         .align_items("stretch")
         .gap("4px")
+        // A column never shrinks below `column_width`, and grows into the
+        // room a trigger wider than the open columns leaves - or the rows,
+        // and the chevrons at their ends, stop short of the dropdown's edge.
         .selector(
             "& > [data-slot='column']",
-            sx().flex("0 0 auto")
+            sx().flex("1 0 auto")
                 .min_width("0")
                 .display("flex")
                 .flex_direction("column"),
@@ -963,5 +966,24 @@ fn active_descendant(
             let (last, parents) = cursor.split_last()?;
             Some(option_id(parents.len(), *last))
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// The dropdown is at least as wide as the trigger, so one 220px column
+    /// in a wider field leaves a gap to its right, and every row's chevron
+    /// ends short of the dropdown's edge. The columns grow into that space
+    /// and never shrink below `column_width`. The dropdown only exists in a
+    /// browser, so this reads the rule rather than a layout.
+    #[test]
+    fn the_columns_fill_the_dropdown() {
+        let css = Stylesheet::from(&*CASCADER_COLUMNS_SX);
+        let css = css.as_str();
+
+        assert!(css.contains("flex:1 0 auto;"), "{css}");
     }
 }

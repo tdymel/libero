@@ -153,7 +153,7 @@ Everything `field_props!` gives every field - `label`, `description`, `helper`,
 | `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row |
 | `format_value` | `Callback<Vec<T>, String>` | - | Overrides the joined labels in the trigger |
 | `node` | `Callback<CascaderNodeArgs<T>, Element>` | `tree_label()` | Draws one row's content |
-| `column_width` | `String` | `"220px"` | One column's width. `"max-content"` fits the longest row |
+| `column_width` | `String` | `"220px"` | One column's width, and its minimum: when the trigger is wider than the open columns, they share the rest. `"max-content"` fits the longest row |
 | `clearable` | `bool` | `false` | An x in place of the chevron while a path is selected |
 | `placeholder` | `String` | - | Shown while nothing is selected |
 | `search_placeholder` | `String` | - | What the search box says while empty |
