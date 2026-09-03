@@ -97,6 +97,7 @@ fetch only the file you need.
 ## Navigation
 
 - [Burger](burger.md): Three bars that morph into an X - an `ActionIcon` carrying the glyph and the three ARIA facts a nav toggle needs.
+- [Accordion](accordion.md): Sections over an enum, each a heading whose button expands its panel; one or many open.
 - [Anchor](anchor.md): A real link styled and sized like `Text`, router-aware through `to`.
 - [Carousel](carousel.md): A scroll-snap strip of slides that knows which one it is on, with controls, indicators, optional autoplay and no JavaScript carousel library underneath.
 - [NavLink](nav_link.md): A navigation list item - a link with a themed active/hover background and `aria-current`, for a sidebar or nav bar.

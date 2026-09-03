@@ -38,3 +38,21 @@ pub(crate) fn CloseIcon() -> Element {
         }
     }
 }
+
+/// Points down while its disclosure is closed. The rotation that turns it is
+/// the caller's, on the element around it.
+#[component]
+pub(crate) fn ChevronDownIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M6 9l6 6 6-6" }
+        }
+    }
+}

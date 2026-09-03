@@ -1,3 +1,4 @@
+mod accordion;
 mod action_icon;
 mod alert;
 mod anchor;
@@ -73,6 +74,11 @@ mod tooltip;
 mod tree;
 mod z_index;
 
+pub use accordion::{
+    ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
+    ACCORDION_FONT_SIZE, ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, ACCORDION_PADDING_X,
+    ACCORDION_PADDING_Y, AccordionDefaults, AccordionSizeLevel,
+};
 pub use action_icon::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, ActionIconDefaults};
 pub use alert::{
     ALERT_BODY_GAP, ALERT_GAP, ALERT_ICON_SIZE, ALERT_PADDING, ALERT_RADIUS, AlertDefaults,

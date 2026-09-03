@@ -17,19 +17,20 @@ mod pages;
 
 use nav::DocsNav;
 use pages::{
-    ActionIconPage, AlertPage, AnchorPage, AspectRatioPage, AutocompletePage, AvatarPage,
-    BadgePage, BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage, CascaderPage,
-    CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage, ColorFieldPage,
-    ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage, DatePickerPage,
-    DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage, FloatPage,
-    FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage, HeaderPage,
-    IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage, ListPage, LoaderPage, MarkPage,
-    ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage,
-    PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage,
-    PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage,
-    SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage, SplitterPage,
-    StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage, TextPage,
-    TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    AccordionPage, ActionIconPage, AlertPage, AnchorPage, AspectRatioPage, AutocompletePage,
+    AvatarPage, BadgePage, BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage,
+    CascaderPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage,
+    ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage,
+    DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
+    FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
+    HeaderPage, IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage, ListPage, LoaderPage,
+    MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage,
+    OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage,
+    PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage,
+    ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage,
+    SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage,
+    TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage,
+    VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -194,6 +195,8 @@ pub(crate) enum Route {
     NavLinkPage {},
     #[route("/navigation/pagination")]
     PaginationPage {},
+    #[route("/navigation/accordion")]
+    AccordionPage {},
     #[route("/navigation/tabs")]
     TabsPage {},
     #[route("/navigation/tree")]

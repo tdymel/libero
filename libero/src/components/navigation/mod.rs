@@ -1,3 +1,4 @@
+mod accordion;
 mod anchor;
 mod burger;
 mod carousel;
@@ -7,6 +8,7 @@ mod pagination;
 mod tabs;
 mod tree;
 
+pub use accordion::{Accordion, AccordionOpen, AccordionProps};
 pub use anchor::{Anchor, AnchorUnderline};
 pub use burger::{Burger, BurgerProps};
 pub use carousel::{Carousel, CarouselAlign, CarouselProps};

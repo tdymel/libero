@@ -267,6 +267,8 @@ fn render_cost_per_component() {
         "TimeField" { TimeField { value: NaiveTime::from_hms_opt(9, 30, 0), onchange: move |_| {} } }
         "SegmentedControl" { SegmentedControl { value: CostPane::One, onchange: move |_| {} } }
         "Tabs" { Tabs { value: CostPane::One, onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
+        "Accordion" { Accordion { open: AccordionOpen::One(Some(CostPane::One)), onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
+        "Accordion toggle" { Accordion { open: AccordionOpen::One(Some(if flip() { CostPane::Two } else { CostPane::One })), onchange: move |_| {}, panel: |_: CostPane| rsx! { "x" } } }
 
         "Icon" { Icon { "x" } }
         "Image" { Image { src: "/x.png" } }

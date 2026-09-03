@@ -1,3 +1,4 @@
+mod accordion;
 mod anchor;
 mod burger;
 mod carousel;
@@ -6,6 +7,7 @@ mod pagination;
 mod tabs;
 mod tree;
 
+pub use accordion::AccordionPage;
 pub use anchor::AnchorPage;
 pub use burger::BurgerPage;
 pub use carousel::CarouselPage;
