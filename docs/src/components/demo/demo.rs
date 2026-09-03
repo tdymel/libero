@@ -103,7 +103,11 @@ fn swatch(control: &Control, option: &str) -> (String, String) {
             "black".to_string(),
         ),
         // The palette's own contrast color, so the tick reads on every swatch.
-        color => (color.to_string(), format!("{color}-contrast")),
+        // A shade keeps its step: `grey.1` pairs with `grey-contrast.1`.
+        color => match color.split_once('.') {
+            Some((name, shade)) => (color.to_string(), format!("{name}-contrast.{shade}")),
+            None => (color.to_string(), format!("{color}-contrast")),
+        },
     }
 }
 

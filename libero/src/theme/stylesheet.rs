@@ -88,6 +88,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         flex,
         grid,
         carousel,
+        scroller,
         center,
         container,
         aspect_ratio,
@@ -191,6 +192,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(flex.to_css_declarations());
     declarations.extend(grid.to_css_declarations());
     declarations.extend(carousel.to_css_declarations());
+    declarations.extend(scroller.to_css_declarations());
     declarations.extend(center.to_css_declarations());
     declarations.extend(container.to_css_declarations());
     declarations.extend(aspect_ratio.to_css_declarations());

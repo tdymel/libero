@@ -92,6 +92,7 @@ fetch only the file you need.
 - [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
 - [ImageList](image-list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
 - [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
+- [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end that shows while there is more content that way.
 - [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
 - [Splitter](splitter.md): Two panes divided by a draggable, keyboard-resizable divider; nest another `Splitter` in a pane for more than two.
 

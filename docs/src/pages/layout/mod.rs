@@ -10,6 +10,7 @@ mod grid;
 mod header;
 mod image_list;
 mod scroll_area;
+mod scroller;
 mod sidebar;
 mod splitter;
 
@@ -25,5 +26,6 @@ pub use grid::GridPage;
 pub use header::HeaderPage;
 pub use image_list::ImageListPage;
 pub use scroll_area::ScrollAreaPage;
+pub use scroller::ScrollerPage;
 pub use sidebar::SidebarPage;
 pub use splitter::SplitterPage;

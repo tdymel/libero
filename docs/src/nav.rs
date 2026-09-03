@@ -198,6 +198,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::HeaderPage {}, "Header"),
                 page(Route::ImageListPage {}, "ImageList"),
                 page(Route::ScrollAreaPage {}, "ScrollArea"),
+                page(Route::ScrollerPage {}, "Scroller"),
                 page(Route::SidebarPage {}, "Sidebar"),
                 page(Route::SplitterPage {}, "Splitter"),
             ],
