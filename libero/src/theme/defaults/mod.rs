@@ -48,6 +48,7 @@ mod marquee;
 mod menu;
 mod native_select;
 mod nav_link;
+mod notification;
 mod number_field;
 mod overlay;
 mod pagination;
@@ -210,6 +211,10 @@ pub use menu::{
 };
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;
+pub use notification::{
+    AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_KEYFRAMES, NOTIFICATION_OFFSET,
+    NOTIFICATION_OUT, NOTIFICATION_TRANSITION, NOTIFICATION_WIDTH, NotificationDefaults,
+};
 pub use number_field::NumberFieldDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
 pub use pagination::{
@@ -293,6 +298,6 @@ pub use tooltip::{
 };
 pub use tree::TreeDefaults;
 pub use z_index::{
-    Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_OVERLAY, Z_INDEX_POPOVER, Z_INDEX_WINDOW,
-    ZIndexDefaults,
+    Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_NOTIFICATION, Z_INDEX_OVERLAY,
+    Z_INDEX_POPOVER, Z_INDEX_WINDOW, ZIndexDefaults,
 };

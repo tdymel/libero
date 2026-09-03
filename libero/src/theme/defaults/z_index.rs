@@ -7,6 +7,7 @@ pub const Z_INDEX_WINDOW: CssVar = CssVar::new("--lsx-z-index-window");
 pub const Z_INDEX_OVERLAY: CssVar = CssVar::new("--lsx-z-index-overlay");
 pub const Z_INDEX_MODAL: CssVar = CssVar::new("--lsx-z-index-modal");
 pub const Z_INDEX_POPOVER: CssVar = CssVar::new("--lsx-z-index-popover");
+pub const Z_INDEX_NOTIFICATION: CssVar = CssVar::new("--lsx-z-index-notification");
 
 /// The library's stacking order in one place, so two components can't tie.
 /// Gaps of 100 leave room to slot a layer in without renumbering.
@@ -29,6 +30,9 @@ pub struct ZIndexDefaults {
     /// document root, so a dropdown opened *inside* a modal no longer inherits
     /// its stacking context and would otherwise fall behind it.
     pub popover: i32,
+    /// Above everything: a notification raised while a modal is open, or
+    /// while a dropdown in it is, still has to be read.
+    pub notification: i32,
 }
 
 impl ToCssDeclarations for ZIndexDefaults {
@@ -40,6 +44,7 @@ impl ToCssDeclarations for ZIndexDefaults {
             Z_INDEX_OVERLAY.declare(self.overlay.to_string()),
             Z_INDEX_MODAL.declare(self.modal.to_string()),
             Z_INDEX_POPOVER.declare(self.popover.to_string()),
+            Z_INDEX_NOTIFICATION.declare(self.notification.to_string()),
         ]
     }
 }
@@ -64,6 +69,10 @@ mod tests {
         assert!(
             z.modal < z.popover,
             "a dropdown opened inside a modal must clear it"
+        );
+        assert!(
+            z.popover < z.notification,
+            "a notification must clear an open modal and its dropdowns"
         );
     }
 }

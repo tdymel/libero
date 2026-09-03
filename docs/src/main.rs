@@ -6,8 +6,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Burger, Button, Container, Flex, Header, Image, Kbd, ScrollArea, SpotlightOptions, Title,
-        spotlight_filter, use_spotlight,
+        Burger, Button, Container, Flex, Header, Image, Kbd, Notifications, ScrollArea,
+        SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
     sx::sx,
     theme::{HEADER_HEIGHT, Size},
@@ -28,9 +28,9 @@ use pages::{
     FloatPage, FloatingWindowPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted,
     GridPage, HeaderPage, HoverCardPage, IconPage, ImageListPage, ImagePage, IndicatorPage,
     KbdPage, ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage,
-    NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage, PaginationPage, PaperPage,
-    PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage,
-    QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, ScrollerPage,
+    NativeSelectPage, NavLinkPage, NotificationsPage, NumberFieldPage, OverlayPage, PaginationPage,
+    PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage,
+    ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, ScrollerPage,
     SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage, SplitterPage,
     SpotlightPage, StepperPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage,
     TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
@@ -96,6 +96,8 @@ pub(crate) enum Route {
     AlertPage {},
     #[route("/feedback/loader")]
     LoaderPage {},
+    #[route("/feedback/notifications")]
+    NotificationsPage {},
     #[route("/feedback/progress-bar")]
     ProgressBarPage {},
     #[route("/feedback/skeleton")]
@@ -259,6 +261,7 @@ fn App() -> Element {
         document::Link { rel: "icon", href: LOGO }
         LiberoProvider {
             Router::<Route> {}
+            Notifications {}
         }
     }
 }

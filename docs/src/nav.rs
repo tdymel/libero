@@ -160,6 +160,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
             vec![
                 page(Route::AlertPage {}, "Alert"),
                 page(Route::LoaderPage {}, "Loader"),
+                page(Route::NotificationsPage {}, "Notifications"),
                 page(Route::ProgressBarPage {}, "ProgressBar"),
                 page(Route::SkeletonPage {}, "Skeleton"),
             ],

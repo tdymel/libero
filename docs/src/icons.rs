@@ -157,3 +157,18 @@ pub fn AlignRightIcon() -> Element {
         }
     }
 }
+
+#[component]
+pub fn DismissIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M18 6L6 18M6 6l12 12" }
+        }
+    }
+}

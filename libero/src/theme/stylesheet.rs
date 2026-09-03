@@ -2,9 +2,9 @@ use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
     Color, ColorShade, ColorValue, HexColor, INDICATOR_KEYFRAMES, LOADER_KEYFRAMES,
-    MARQUEE_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES, RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES,
-    Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING,
-    TEXT_LINE_HEIGHT, Theme,
+    MARQUEE_KEYFRAMES, NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES,
+    RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE,
+    TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -31,6 +31,7 @@ impl From<&Theme> for Stylesheet {
         css.push_str(INDICATOR_KEYFRAMES);
         css.push_str(SKELETON_KEYFRAMES);
         css.push_str(MARQUEE_KEYFRAMES);
+        css.push_str(NOTIFICATION_KEYFRAMES);
         Stylesheet::from(css)
     }
 }
@@ -181,6 +182,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         skeleton,
         spotlight,
         marquee,
+        notification,
         // Emitted by global_reset_scopes, not as a `:root` var.
         font_smoothing: _,
     } = theme;
@@ -221,6 +223,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(skeleton.to_css_declarations());
     declarations.extend(spotlight.to_css_declarations());
     declarations.extend(marquee.to_css_declarations());
+    declarations.extend(notification.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(checkbox.to_css_declarations());
     declarations.extend(radio.to_css_declarations());
