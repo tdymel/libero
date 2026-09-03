@@ -8,7 +8,7 @@ use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Box, Button, Dialog, Options, SegmentedControl, Tabs},
+    components::{ActionIcon, Box, Button, Dialog, Marquee, Options, SegmentedControl, Tabs},
     hooks::{ModalScope, use_modal},
 };
 use std::rc::Rc;
@@ -459,4 +459,79 @@ fn global_attributes_carry_event_listeners_through_the_spread() {
             listeners.0
         );
     }
+}
+
+/// Clicks the only listener `app` registers - `Marquee`'s pause toggle - and
+/// returns the markup before and after.
+fn click_the_pause_toggle(app: fn() -> Element) -> (String, String) {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let toggle = find.click.expect("registered no click listener");
+    let before = dioxus_ssr::render(&dom);
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), toggle);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    (before, dioxus_ssr::render(&dom))
+}
+
+fn marquee_paused(html: &str) -> (bool, bool) {
+    (
+        data_state(html).split(' ').any(|token| token == "paused"),
+        html.contains(r#"aria-pressed="true""#),
+    )
+}
+
+/// Controlled: the toggle only reports, and the strip follows the caller.
+#[test]
+fn a_controlled_marquee_follows_the_caller() {
+    fn app() -> Element {
+        let mut paused = use_signal(|| false);
+        rsx! {
+            LiberoProvider {
+                Marquee { paused: paused(), onpausechange: move |next| paused.set(next), "x" }
+            }
+        }
+    }
+
+    let (before, after) = click_the_pause_toggle(app);
+    assert_eq!(marquee_paused(&before), (false, false), "{before}");
+    assert_eq!(marquee_paused(&after), (true, true), "{after}");
+}
+
+/// A caller who holds `paused` and ignores the report keeps it running: the
+/// toggle has no state of its own to flip.
+#[test]
+fn a_controlled_marquee_ignores_its_own_toggle() {
+    static CALLS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Marquee {
+                    paused: false,
+                    onpausechange: move |next: bool| {
+                        assert!(next, "asked for the opposite of false");
+                        CALLS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                    },
+                    "x"
+                }
+            }
+        }
+    }
+
+    let (_, after) = click_the_pause_toggle(app);
+    assert_eq!(CALLS.load(std::sync::atomic::Ordering::SeqCst), 1);
+    assert_eq!(marquee_paused(&after), (false, false), "{after}");
+}
+
+/// Uncontrolled: the toggle holds the state itself.
+#[test]
+fn an_uncontrolled_marquee_pauses_on_its_toggle() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Marquee { "x" } } }
+    }
+
+    let (_, after) = click_the_pause_toggle(app);
+    assert_eq!(marquee_paused(&after), (true, true), "{after}");
 }
