@@ -92,77 +92,53 @@ pub fn FloatingWindowPage() -> Element {
                     Code { source: "close" }
                     " or "
                     Code { source: "toggle" }
-                    " it; the window owns where it is and how big. The page stays usable "
-                    "underneath - no overlay, no focus trap."
+                    " it; the window owns where it is and how big. No overlay, no focus trap."
+                }
+                Text {
+                    Code { source: "placement" }
+                    " is where it first appears; once dragged it stays put, clamped into the "
+                    "viewport. Size limits are "
+                    Code { source: "min_width" }
+                    "/"
+                    Code { source: "max_width" }
+                    " in "
+                    Code { source: "sx" }
+                    ", and "
+                    Code { source: "onmove" }
+                    "/"
+                    Code { source: "onresize" }
+                    " report a "
+                    Code { source: "WindowRect" }
+                    " to persist. A drag re-renders the whole window, so keep its body shallow."
+                }
+                Text {
+                    "It is a "
+                    Code { source: "role=\"dialog\"" }
+                    " without "
+                    Code { source: "aria-modal" }
+                    ", focused on open; Escape or the close button returns focus to the trigger. "
+                    "The title bar is a tab stop: Arrow moves 10px, Shift+Arrow 1px. The corner "
+                    "handle resizes with Arrow, and Home/End ask for the smallest and largest size "
+                    "allowed. Open both windows below: the one you click comes to the front, and a "
+                    "modal opened from Notes covers every window."
                 }
             },
             DocSection {
                 title: "Try it",
                 Flex { direction: "row", gap: "sm", align: "center",
                     Button { onclick: move |_| inspector.toggle(), "Inspector" }
+                    Button { onclick: move |_| notes.toggle(), "Notes" }
                     Text {
                         match last() {
                             Some(rect) => format!(
                                 "Last reported: {:.0}, {:.0} - {:.0} x {:.0}",
                                 rect.x, rect.y, rect.width, rect.height
                             ),
-                            None => "Move or resize it to see onmove/onresize.".to_string(),
+                            None => "Move or resize Inspector to see onmove/onresize.".to_string(),
                         }
                     }
                 }
                 CodeBlock { source: EXAMPLE, language: "rust" }
-            }
-            DocSection {
-                title: "Several windows",
-                Text {
-                    "Open both: the one you click or focus comes to the front. Windows stack "
-                    "above the page's dropdowns and below any overlay, so a modal opened from a "
-                    "window covers it."
-                }
-                Flex { direction: "row", gap: "sm",
-                    Button { onclick: move |_| inspector.toggle(), "Inspector" }
-                    Button { onclick: move |_| notes.toggle(), "Notes" }
-                }
-            }
-            DocSection {
-                title: "Placement, size and geometry",
-                Text {
-                    Code { source: "placement" }
-                    " is where it first appears. Once dragged it stays where it was put, clamped "
-                    "into the viewport by CSS - it re-clamps when the window resizes. Size "
-                    "limits are ordinary "
-                    Code { source: "min_width" }
-                    "/"
-                    Code { source: "max_width" }
-                    " in "
-                    Code { source: "sx" }
-                    ": the resize handle asks for a size and they clamp it. "
-                    Code { source: "onmove" }
-                    " and "
-                    Code { source: "onresize" }
-                    " hand you a "
-                    Code { source: "WindowRect" }
-                    " to persist. A drag re-renders the whole window, so keep its body shallow."
-                }
-            }
-            DocSection {
-                title: "Keyboard and accessibility",
-                Text {
-                    "The window is a "
-                    Code { source: "role=\"dialog\"" }
-                    " named by its title, without "
-                    Code { source: "aria-modal" }
-                    ". It takes focus when it opens, and closing it - Escape, the close button or "
-                    Code { source: "close()" }
-                    " - returns focus to whatever opened it. The title bar is a tab stop named "
-                    "\"Move window\": Arrow keys move the window by 10px, Shift+Arrow by 1px. The "
-                    "resize handle is a "
-                    Code { source: "role=\"separator\"" }
-                    ": Arrow and Shift+Arrow resize it, Home and End ask for the smallest and "
-                    "largest size your constraints allow. "
-                    Code { source: "pinned: true" }
-                    " turns moving off."
-                }
             }
         }
     }
