@@ -1,10 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        ActionIcon, Button, Chip, Code, CodeBlock, FieldStatus, Fields, Flex, Form, SelectionArgs,
-        TagsField, Text,
-    },
+    components::{ActionIcon, Chip, Code, FieldStatus, SelectionArgs, TagsField, Text},
     sx::sx,
 };
 
@@ -26,103 +23,14 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     }
 }"##;
 
-const SUGGESTIONS_CODE: &str = r#"TagsField {
-    label: "Topics",
-    description: "Type your own, or pick one.",
-    suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()],
-    value: topics(),
-    onchange: move |next| topics.set(next),
-}"#;
+const SUGGESTIONS: &str =
+    r#"suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()]"#;
 
-const RULES_CODE: &str = r#"TagsField {
-    label: "Topics",
-    // One tag at a time, before it joins the list. Silent: a refused tag
-    // simply does not appear.
-    tag_rules: move |tag: String| tag.len() >= 3,
-    onrefuse: move |tag: String| refused.set(Some(tag)),
-    // The ordinary field line, over the whole list.
-    validate: (|tags: &Vec<String>| !tags.is_empty()).error("Add at least one topic."),
-    value: topics(),
-    onchange: move |next| topics.set(next),
-}"#;
-
-const FORM_CODE: &str = r#"#[derive(Clone, PartialEq, Default, Fields)]
-struct Article {
-    topics: Vec<String>,
-}
-
-let article = use_store(Article::default);
-
-rsx! {
-    Form {
-        value: article,
-        onsubmit: move |event: FormEvent| {
-            // One entry per tag, all named "topics" - the visible input holds
-            // the draft, so it has no name and contributes none. `get` keeps
-            // the ones under that name; `FormValue` is an enum, so the text
-            // comes out of it by match and not by an accessor.
-            posted.set(
-                event
-                    .get("topics")
-                    .into_iter()
-                    .filter_map(|value| match value {
-                        FormValue::Text(tag) => Some(tag),
-                        FormValue::File(_) => None,
-                    })
-                    .collect(),
-            );
-        },
-        // No `onchange`: a path binds the list to the form's own value.
-        TagsField { label: "Topics", name: Article::FIELDS.topics() }
-        Button { r#type: "submit", "Save" }
-    }
-}"#;
-
-#[derive(Clone, PartialEq, Default, Fields)]
-pub struct Article {
-    pub topics: Vec<String>,
-}
-
-/// A bound field with no handler of its own, so the form's value is the only
-/// place the list lives - and the submit shows what the browser would send.
-#[component]
-fn TopicsForm() -> Element {
-    let article = use_store(Article::default);
-    let mut posted = use_signal(Vec::<String>::new);
-
-    rsx! {
-        Form {
-            sx: sx().width("320px"),
-            value: article,
-            onsubmit: move |event: FormEvent| {
-                // One entry per tag, all named "topics" - the draft input has
-                // no name, so it contributes none. `FormValue` is an enum, so
-                // the text comes out of it by match and not by an accessor.
-                posted
-                    .set(
-                        event
-                            .get("topics")
-                            .into_iter()
-                            .filter_map(|value| match value {
-                                FormValue::Text(tag) => Some(tag),
-                                FormValue::File(_) => None,
-                            })
-                            .collect(),
-                    );
-            },
-            TagsField {
-                label: "Topics",
-                description: "Comma or Enter adds one.",
-                placeholder: "Add a topic",
-                name: Article::FIELDS.topics(),
-            }
-            Button { r#type: "submit", "Save" }
-            if !posted().is_empty() {
-                Text { "Posted as \"topics\": {posted().join(\", \")}." }
-            }
-        }
-    }
-}
+/// One tag at a time, before it joins the list. The refusal itself is silent,
+/// so the helper is how the caller says something anyway.
+const TAG_RULES: &str = r#"tag_rules: |tag: String| tag.chars().count() >= 3,
+onrefuse: move |tag: String| refused.set(Some(tag)),
+helper: refused().map(|tag| format!("\"{tag}\" was refused."))"#;
 
 fn topic_tag(t: SelectionArgs<String>) -> Element {
     let label = t.value.clone();
@@ -150,8 +58,6 @@ fn max_tags(values: &DemoValues) -> Option<usize> {
 #[component]
 pub fn TagsFieldPage() -> Element {
     let mut value = use_signal(Vec::<String>::new);
-    let mut suggested = use_signal(Vec::<String>::new);
-    let mut ruled = use_signal(Vec::<String>::new);
     let mut refused = use_signal(|| None::<String>);
 
     rsx! {
@@ -238,6 +144,14 @@ pub fn TagsFieldPage() -> Element {
                             "error" => vec!["status: \"Add at least one topic.\"".to_string()],
                             _ => vec![],
                         }),
+                    // Its own `code`, so the snippet prints `max_tags: 5` and
+                    // not `max_tags: "5"`.
+                    Control::toggle("max_tags", ["unset", "3", "5"])
+                        .default("unset")
+                        .code(|_, values| match max_tags(values) {
+                            Some(max) => vec![format!("max_tags: {max}")],
+                            None => vec![],
+                        }),
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Topics\"".to_string()],
@@ -256,14 +170,20 @@ pub fn TagsFieldPage() -> Element {
                             _ => vec![],
                         }
                     }),
-                    // Its own `code`, so the snippet prints `max_tags: 5` and
-                    // not `max_tags: "5"`.
-                    Control::toggle("max_tags", ["unset", "3", "5"])
-                        .default("unset")
-                        .code(|_, values| match max_tags(values) {
-                            Some(max) => vec![format!("max_tags: {max}")],
-                            None => vec![],
-                        }),
+                    Control::switch("suggestions").code(|_, values| {
+                        match values.str("suggestions").as_str() {
+                            "true" => vec![SUGGESTIONS.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    // Rules over one tag, not the list; the switch stands for
+                    // the rule, its refusal handler and the helper that shows it.
+                    Control::switch("tag_rules").code(|_, values| {
+                        match values.str("tag_rules").as_str() {
+                            "true" => vec![TAG_RULES.to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     // Draws the whole chip, remove control included.
                     Control::switch("tag").code(|_, values| match values.str("tag").as_str() {
                         "true" => vec![CUSTOM_TAG.to_string()],
@@ -274,114 +194,49 @@ pub fn TagsFieldPage() -> Element {
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    TagsField {
-                        sx: sx().width("320px"),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        label: (values.str("label") == "true").then(|| "Topics".to_string()),
-                        description: (values.str("description") == "true")
-                            .then(|| "Comma or Enter adds one.".to_string()),
-                        placeholder: (values.str("placeholder") == "true")
-                            .then(|| "Add a topic".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("Two of these are rarely read.".to_string()),
-                            "error" => FieldStatus::Error("Add at least one topic.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        tag: (values.str("tag") == "true").then(|| Callback::new(topic_tag)),
-                        max_tags: max_tags(&values),
-                        allow_duplicates: (values.str("allow_duplicates") == "true").then_some(true),
-                        clearable: (values.str("clearable") == "true").then_some(true),
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
-                        value: value(),
-                        onchange: move |next| value.set(next),
+                render: move |values: DemoValues| {
+                    let ruled = values.str("tag_rules") == "true";
+                    rsx! {
+                        TagsField {
+                            sx: sx().width("320px"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            label: (values.str("label") == "true").then(|| "Topics".to_string()),
+                            description: (values.str("description") == "true")
+                                .then(|| "Comma or Enter adds one.".to_string()),
+                            placeholder: (values.str("placeholder") == "true")
+                                .then(|| "Add a topic".to_string()),
+                            status: match values.str("status").as_str() {
+                                "warning" => FieldStatus::Warning("Two of these are rarely read.".to_string()),
+                                "error" => FieldStatus::Error("Add at least one topic.".to_string()),
+                                _ => FieldStatus::Valid,
+                            },
+                            suggestions: (values.str("suggestions") == "true").then(|| {
+                                ["rust", "dioxus", "wasm", "css"].map(String::from).to_vec()
+                            }),
+                            tag_rules: ruled
+                                .then(|| Callback::new(|tag: String| tag.chars().count() >= 3)),
+                            // Only the rule's refusals: with the switch off, a
+                            // duplicate is refused too and nothing prints it.
+                            onrefuse: move |tag: String| {
+                                if ruled {
+                                    refused.set(Some(tag));
+                                }
+                            },
+                            helper: refused()
+                                .filter(|_| ruled)
+                                .map(|tag| format!("\"{tag}\" was refused.")),
+                            tag: (values.str("tag") == "true").then(|| Callback::new(topic_tag)),
+                            max_tags: max_tags(&values),
+                            allow_duplicates: (values.str("allow_duplicates") == "true").then_some(true),
+                            clearable: (values.str("clearable") == "true").then_some(true),
+                            required: (values.str("required") == "true").then_some(true),
+                            disabled: (values.str("disabled") == "true").then_some(true),
+                            value: value(),
+                            onchange: move |next| value.set(next),
+                        }
                     }
                 },
-            }
-            DocSection {
-                title: "Suggestions",
-                Text {
-                    "Without "
-                    Code { source: "suggestions" }
-                    " the field renders no listbox and no portal at all - it is a frame with "
-                    "chips and an input. With them it is a combobox: the arrows move a "
-                    "highlight, Enter picks the highlighted row, and anything already held "
-                    "drops out of the list. A picked suggestion becomes exactly the tag a typed "
-                    "one does, which is why the value stays a "
-                    Code { source: "Vec<String>" }
-                    " either way. The list stays open after a pick - the row it just took has "
-                    "left it, and the next one is one key away."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    TagsField {
-                        sx: sx().width("320px"),
-                        label: "Topics",
-                        description: "Type your own, or pick one.",
-                        placeholder: "Add a topic",
-                        suggestions: vec![
-                            "rust".to_string(),
-                            "dioxus".to_string(),
-                            "wasm".to_string(),
-                            "css".to_string(),
-                        ],
-                        value: suggested(),
-                        onchange: move |next| suggested.set(next),
-                    }
-                    CodeBlock { language: "rust", source: SUGGESTIONS_CODE }
-                }
-            }
-            DocSection {
-                title: "Validating one tag",
-                Text {
-                    Code { source: "validate" }
-                    " is the ordinary field line and rules over the whole list; "
-                    Code { source: "tag_rules" }
-                    " runs over a single tag before it is added, and it never shows a message. "
-                    "A refusal is silent on purpose - \"you already added that\" is heavier as an "
-                    "error under the field than the mistake it describes - and "
-                    Code { source: "onrefuse" }
-                    " is there for a caller who wants to say something anyway."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    TagsField {
-                        sx: sx().width("320px"),
-                        label: "Topics",
-                        helper: match refused() {
-                            Some(tag) => format!("\"{tag}\" was refused - three characters or more."),
-                            None => "Tags shorter than three characters are refused.".to_string(),
-                        },
-                        placeholder: "Add a topic",
-                        tag_rules: move |tag: String| tag.chars().count() >= 3,
-                        onrefuse: move |tag: String| refused.set(Some(tag)),
-                        value: ruled(),
-                        onchange: move |next| ruled.set(next),
-                    }
-                    CodeBlock { language: "rust", source: RULES_CODE }
-                }
-            }
-            DocSection {
-                title: "Inside a Form",
-                Text {
-                    "The visible input holds the draft, not the value, so it carries no "
-                    Code { source: "name" }
-                    " - the list posts through one hidden input of that name per tag, the same "
-                    "shape a native "
-                    Code { source: "<select multiple>" }
-                    " sends and the one "
-                    Code { source: "MultiSelect" }
-                    " already uses. A "
-                    Code { source: "FieldName" }
-                    " built from a path also binds the list to the surrounding form's value, so "
-                    "a bound field needs no "
-                    Code { source: "onchange" }
-                    " of its own."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    TopicsForm {}
-                    CodeBlock { language: "rust", source: FORM_CODE }
-                }
             }
             DocSection {
                 title: "Accessibility",

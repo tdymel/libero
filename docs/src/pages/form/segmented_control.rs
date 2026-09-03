@@ -329,25 +329,6 @@ pub fn SegmentedControlPage() -> Element {
                     Code { source: "aria_label" }
                     " where its purpose is not obvious from the segments themselves."
                 }
-                SegmentedControl {
-                    aria_label: "Text alignment",
-                    value: alignment(),
-                    onchange: move |next| alignment.set(next),
-                }
-            }
-            DocSection {
-                title: "Independent toggles are a different component",
-                Text {
-                    "Bold, italic and underline are three booleans, not one selection - so they "
-                    "are not segments. A row of "
-                    Code { source: "Button" }
-                    "s with "
-                    Code { source: "selected" }
-                    " set is the right shape there, and it takes separators and dropdowns "
-                    "between them, which a strip built from "
-                    Code { source: "T::options()" }
-                    " cannot."
-                }
             }
         }
     }

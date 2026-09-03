@@ -240,35 +240,6 @@ description, helper and status describe it. Without a visible label, name the
 control with an `aria_label` where its purpose is not obvious from the segments
 themselves.
 
-```rust
-use dioxus::prelude::*;
-use libero::components::{Options, SegmentedControl};
-
-#[derive(Clone, Copy, PartialEq, Options)]
-enum Alignment {
-    Left,
-    Center,
-    Right,
-}
-
-#[component]
-fn Demo() -> Element {
-    let mut alignment = use_signal(|| Alignment::Left);
-
-    rsx! {
-        SegmentedControl {
-            aria_label: "Text alignment",
-            value: alignment(),
-            onchange: move |next| alignment.set(next),
-        }
-    }
-}
-```
-
-For a row of *independent* toggles - bold, italic, underline - this is the wrong
-component: those are separate booleans, not one selection. Use a
-[Flex](flex.md) of [Button](button.md)s with `selected` set.
-
 ## Props
 
 ### SegmentedControl

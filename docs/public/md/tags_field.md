@@ -24,6 +24,7 @@ use libero::components::TagsField;
 #[component]
 fn Demo() -> Element {
     let mut topics = use_signal(Vec::<String>::new);
+    let mut refused = use_signal(|| None::<String>);
 
     rsx! {
         TagsField {
@@ -31,6 +32,10 @@ fn Demo() -> Element {
             description: "Comma or Enter adds one.",
             placeholder: "Add a topic",
             max_tags: 5,
+            suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()],
+            tag_rules: |tag: String| tag.chars().count() >= 3,
+            onrefuse: move |tag: String| refused.set(Some(tag)),
+            helper: refused().map(|tag| format!("\"{tag}\" was refused.")),
             value: topics(),
             onchange: move |next| topics.set(next),
         }
@@ -40,6 +45,20 @@ fn Demo() -> Element {
 
 Strictly controlled: `value` is the list, `onchange` hands back the whole list
 the caller should hold next.
+
+Without `suggestions` the field renders no listbox and no portal at all - it is
+a frame with chips and an input. With them it is a combobox: the arrows move a
+highlight, Enter picks the highlighted row, and anything already held drops out
+of the list. A picked suggestion becomes exactly the tag a typed one does. The
+list stays open after a pick - the row it just took has left it, and the next
+one is one key away.
+
+`tag_rules` runs over a single tag before it joins the list and answers a plain
+`bool`. A refusal shows no message: "you already added that" is heavier as an
+error under the field than the mistake it describes. `onrefuse` is there for a
+caller who wants to say something anyway - here through `helper` - and it is the
+only thing `onchange` cannot report. `validate` is the ordinary field line and
+rules over the whole list.
 
 ## Committing a tag
 
@@ -61,89 +80,6 @@ A tag is trimmed before it is added. Duplicates are compared trimmed and
 lowercased unless `allow_duplicates` is on. Everything past `max_tags` is
 refused **one tag at a time**, so a paste of five into a field with room for two
 adds those two rather than being rejected whole.
-
-## A refused tag is silent
-
-`tag_rules` runs over a single tag before it joins the list and answers a plain
-`bool`. It shows no message: "you already added that" is heavier as an error
-under the field than the mistake it describes. `onrefuse` is there for a caller
-who wants to say something anyway - it is the only thing `onchange` cannot
-report, and the only callback beside it.
-
-`validate` is the ordinary field line and rules over the whole list.
-
-```rust
-TagsField {
-    label: "Topics",
-    tag_rules: move |tag: String| tag.chars().count() >= 3,
-    onrefuse: move |tag: String| refused.set(Some(tag)),
-    validate: (|tags: &Vec<String>| !tags.is_empty()).error("Add at least one topic."),
-    value: topics(),
-    onchange: move |next| topics.set(next),
-}
-```
-
-## Suggestions
-
-Without `suggestions` the field renders no listbox and no portal at all - it is
-a frame with chips and an input. With them it is a combobox: the arrows move a
-highlight, Enter picks the highlighted row, and anything already held drops out
-of the list. A picked suggestion becomes exactly the tag a typed one does. The
-list stays open after a pick - the row it just took has left it, and the next
-one is one key away.
-
-```rust
-TagsField {
-    label: "Topics",
-    suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into()],
-    value: topics(),
-    onchange: move |next| topics.set(next),
-}
-```
-
-## Inside a Form
-
-The visible input holds the *draft*, not the value, so it carries no `name`. The
-list posts through **one hidden input of that name per tag** - the same shape a
-native `<select multiple>` sends, and the one [MultiSelect](multi_select.md)
-already uses.
-
-```rust
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Article {
-    topics: Vec<String>,
-}
-
-let article = use_store(Article::default);
-
-rsx! {
-    Form {
-        value: article,
-        onsubmit: move |event: FormEvent| {
-            // One entry per tag, all named "topics" - the draft input has no
-            // name, so it contributes none. `FormValue` is an enum, so the
-            // text comes out of it by match and not by an accessor.
-            posted.set(
-                event
-                    .get("topics")
-                    .into_iter()
-                    .filter_map(|value| match value {
-                        FormValue::Text(tag) => Some(tag),
-                        FormValue::File(_) => None,
-                    })
-                    .collect::<Vec<String>>(),
-            );
-        },
-        // No `onchange`: the path binds the list to the form's own value.
-        TagsField { label: "Topics", name: Article::FIELDS.topics() }
-        Button { r#type: "submit", "Save" }
-    }
-}
-```
-
-A `FieldName` built from a path also binds the list to the surrounding form's
-value, so a bound field needs no `onchange` of its own - the form's value is
-then the only place the list lives.
 
 ## Props
 

@@ -1,15 +1,14 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{
-        Button, Cascader, CascaderPick, Code, CodeBlock, FieldStatus, Fields, Flex, Form, Text,
-        TreeNode,
-    },
+    components::{Cascader, CascaderPick, Code, FieldStatus, Flex, Text, TreeNode},
     sx::sx,
 };
 
-/// The tree the whole page renders, printed once so the preview and the
-/// snippet cannot drift - `data` is deliberately not a control.
+/// The tree the preview renders, printed above the snippet so the two cannot
+/// drift - `data` is deliberately not a control.
 const DATA_CODE: &str = r#"fn categories() -> Vec<TreeNode<&'static str>> {
     vec![
         TreeNode::new("food", "Food").children(vec![
@@ -36,40 +35,8 @@ const DATA_CODE: &str = r#"fn categories() -> Vec<TreeNode<&'static str>> {
     ]
 }"#;
 
-const PICK_CODE: &str = r#"Cascader {
-    label: "Category",
-    data: categories(),
-    value: chosen(),
-    clearable: true,
-    onchange: move |pick: CascaderPick<&'static str>| {
-        // The path is what posts and what `value` takes back; the nodes are
-        // the same walk already resolved, so "the label of the second level"
-        // is a field access rather than a second lookup.
-        labels.set(pick.nodes.clone());
-        chosen.set(pick.path);
-    },
-}"#;
-
-const FORM_CODE: &str = r#"#[derive(Clone, PartialEq, Default, Fields)]
-struct Listing {
-    category: Vec<String>,
-}
-
-let listing = use_store(Listing::default);
-
-rsx! {
-    Form {
-        value: listing,
-        onsubmit: move |event: FormEvent| {
-            // One entry per level, all named "category" - the same ordered
-            // shape MultiSelect posts.
-            posted.set(Some(event.values().iter().filter(|(name, _)| name == "category").count()));
-        },
-        // No `onchange`: a path binds the selection to the form's own value.
-        Cascader { label: "Category", name: Listing::FIELDS.category() }
-        Button { r#type: "submit", "Save" }
-    }
-}"#;
+/// What a value looks like: the ids from the root to the picked node.
+const CHOSEN: &str = r#"let mut chosen = use_signal(|| vec!["drink".to_string(), "hot".to_string(), "tea".to_string()]);"#;
 
 fn categories() -> Vec<TreeNode<&'static str>> {
     vec![
@@ -97,48 +64,17 @@ fn categories() -> Vec<TreeNode<&'static str>> {
     ]
 }
 
-#[derive(Clone, PartialEq, Default, Fields)]
-pub struct Listing {
-    pub category: Vec<String>,
-}
-
-/// A bound field with no handler of its own, so the form's value is the only
-/// place the path lives - and the submit shows what the browser would send.
-#[component]
-fn ListingForm() -> Element {
-    let listing = use_store(Listing::default);
-    let mut posted = use_signal(|| None::<usize>);
-
-    rsx! {
-        Form {
-            sx: sx().width("320px"),
-            value: listing,
-            onsubmit: move |event: FormEvent| {
-                posted.set(Some(event.values().iter().filter(|(name, _)| name == "category").count()));
-            },
-            Cascader {
-                label: "Category",
-                description: "One hidden input per level.",
-                placeholder: "Pick a category",
-                data: categories(),
-                name: Listing::FIELDS.category(),
-            }
-            Button { r#type: "submit", "Save" }
-            if let Some(count) = posted() {
-                Text {
-                    "Posted {count} entries named \"category\", and the form's own value holds a "
-                    "path {listing().category.len()} deep."
-                }
-            }
-        }
-    }
+/// The tree, the value's declaration, and the value printed under the field.
+fn wrap_value(_: &DemoValues, code: &str) -> String {
+    format!(
+        "{DATA_CODE}\n\n{CHOSEN}\n\nFlex {{\n    direction: \"column\",\n    gap: \"sm\",\n    align: \"flex-start\",\n{}    Text {{ size: \"sm\", \"value: {{chosen():?}}\" }}\n}}",
+        indent(code)
+    )
 }
 
 #[component]
 pub fn CascaderPage() -> Element {
-    let mut value = use_signal(Vec::<String>::new);
-    let mut chosen = use_signal(Vec::<String>::new);
-    let mut chosen_labels = use_signal(Vec::<&'static str>::new);
+    let mut chosen = use_signal(|| vec!["drink".to_string(), "hot".to_string(), "tea".to_string()]);
 
     rsx! {
         DocPage {
@@ -263,112 +199,37 @@ pub fn CascaderPage() -> Element {
                     Control::switch("required"),
                     Control::switch("disabled"),
                 ],
+                wrap: Wrap(wrap_value),
                 render: move |values: DemoValues| rsx! {
-                    Cascader {
-                        sx: sx().width("320px"),
-                        size: values.str("size"),
-                        radius: values.str("radius"),
-                        layout: values.str("layout"),
-                        label: (values.str("label") == "true").then(|| "Category".to_string()),
-                        description: (values.str("description") == "true")
-                            .then(|| "Down to a leaf.".to_string()),
-                        placeholder: (values.str("placeholder") == "true")
-                            .then(|| "Pick a category".to_string()),
-                        status: match values.str("status").as_str() {
-                            "warning" => FieldStatus::Warning("That aisle is being retired.".to_string()),
-                            "error" => FieldStatus::Error("Pick a category.".to_string()),
-                            _ => FieldStatus::Valid,
-                        },
-                        searchable: (values.str("searchable") == "true").then_some(true),
-                        any_level: (values.str("any_level") == "true").then_some(true),
-                        allow_deselect: Some(values.str("allow_deselect") == "true"),
-                        clearable: (values.str("clearable") == "true").then_some(true),
-                        required: (values.str("required") == "true").then_some(true),
-                        disabled: (values.str("disabled") == "true").then_some(true),
-                        data: categories(),
-                        value: value(),
-                        onchange: move |pick: CascaderPick<&'static str>| value.set(pick.path),
+                    Flex { direction: "column", gap: "sm", align: "flex-start",
+                        Cascader {
+                            sx: sx().width("320px"),
+                            size: values.str("size"),
+                            radius: values.str("radius"),
+                            layout: values.str("layout"),
+                            label: (values.str("label") == "true").then(|| "Category".to_string()),
+                            description: (values.str("description") == "true")
+                                .then(|| "Down to a leaf.".to_string()),
+                            placeholder: (values.str("placeholder") == "true")
+                                .then(|| "Pick a category".to_string()),
+                            status: match values.str("status").as_str() {
+                                "warning" => FieldStatus::Warning("That aisle is being retired.".to_string()),
+                                "error" => FieldStatus::Error("Pick a category.".to_string()),
+                                _ => FieldStatus::Valid,
+                            },
+                            searchable: (values.str("searchable") == "true").then_some(true),
+                            any_level: (values.str("any_level") == "true").then_some(true),
+                            allow_deselect: Some(values.str("allow_deselect") == "true"),
+                            clearable: (values.str("clearable") == "true").then_some(true),
+                            required: (values.str("required") == "true").then_some(true),
+                            disabled: (values.str("disabled") == "true").then_some(true),
+                            data: categories(),
+                            value: chosen(),
+                            onchange: move |pick: CascaderPick<&'static str>| chosen.set(pick.path),
+                        }
+                        Text { size: "sm", "value: {chosen():?}" }
                     }
                 },
-            }
-            DocSection {
-                title: "The tree on this page",
-                Text {
-                    Code { source: "data" }
-                    " is not a control, so the snippet above prints exactly the tree the preview "
-                    "renders. "
-                    Code { source: "Quince" }
-                    " is disabled, and so is "
-                    Code { source: "Household" }
-                    " - which makes "
-                    Code { source: "Soap" }
-                    " unreachable too, because a node under a disabled ancestor inherits it."
-                }
-                CodeBlock { language: "rust", source: DATA_CODE }
-            }
-            DocSection {
-                title: "Reading the pick",
-                Text {
-                    Code { source: "CascaderPick" }
-                    " carries both halves of the same answer: "
-                    Code { source: "path" }
-                    " is the ids, root to leaf - what posts, and what "
-                    Code { source: "value" }
-                    " takes back - and "
-                    Code { source: "nodes" }
-                    " is the "
-                    Code { source: "T" }
-                    " of each node on it, already resolved. An empty "
-                    Code { source: "path" }
-                    " is the cleared selection, which is what the x and "
-                    Code { source: "allow_deselect" }
-                    " both produce."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    Cascader {
-                        sx: sx().width("320px"),
-                        label: "Category",
-                        placeholder: "Pick a category",
-                        clearable: true,
-                        data: categories(),
-                        value: chosen(),
-                        onchange: move |pick: CascaderPick<&'static str>| {
-                            chosen_labels.set(pick.nodes.clone());
-                            chosen.set(pick.path);
-                        },
-                    }
-                    Text {
-                        if chosen().is_empty() {
-                            "Nothing picked."
-                        } else {
-                            "path: {chosen().join(\" > \")} - nodes: {chosen_labels().join(\" > \")}"
-                        }
-                    }
-                    CodeBlock { language: "rust", source: PICK_CODE }
-                }
-            }
-            DocSection {
-                title: "Inside a Form",
-                Text {
-                    "The trigger is a "
-                    Code { source: "div" }
-                    " and cannot carry a name, so the path posts through one hidden input per "
-                    "level, all sharing it - a repeated name is an ordered list on the wire, "
-                    "which is the shape "
-                    Code { source: "MultiSelect" }
-                    " and "
-                    Code { source: "TagsField" }
-                    " already send. A "
-                    Code { source: "FieldName" }
-                    " built from a path also binds the selection to the surrounding form's "
-                    "value, so a bound field needs no "
-                    Code { source: "onchange" }
-                    " of its own."
-                }
-                Flex { direction: "column", gap: "md", align: "flex-start",
-                    ListingForm {}
-                    CodeBlock { language: "rust", source: FORM_CODE }
-                }
             }
             DocSection {
                 title: "Accessibility",

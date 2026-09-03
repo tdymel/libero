@@ -22,7 +22,7 @@ It takes `Tree`'s own `TreeNode<T>`, so the same data drives both.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Cascader, CascaderPick, TreeNode};
+use libero::components::{Cascader, CascaderPick, Flex, Text, TreeNode};
 
 fn categories() -> Vec<TreeNode<&'static str>> {
     vec![
@@ -39,16 +39,21 @@ fn categories() -> Vec<TreeNode<&'static str>> {
 
 #[component]
 fn Demo() -> Element {
-    let mut chosen = use_signal(Vec::<String>::new);
+    // The value is the ids from the root to the picked node.
+    let mut chosen = use_signal(|| vec!["drink".to_string(), "tea".to_string()]);
 
     rsx! {
-        Cascader {
-            label: "Category",
-            placeholder: "Pick a category",
-            data: categories(),
-            searchable: true,
-            value: chosen(),
-            onchange: move |pick: CascaderPick<&'static str>| chosen.set(pick.path),
+        Flex { direction: "column", gap: "sm", align: "flex-start",
+            Cascader {
+                label: "Category",
+                placeholder: "Pick a category",
+                data: categories(),
+                searchable: true,
+                value: chosen(),
+                onchange: move |pick: CascaderPick<&'static str>| chosen.set(pick.path),
+            }
+            // Prints `value: ["drink", "tea"]`.
+            Text { size: "sm", "value: {chosen():?}" }
         }
     }
 }
@@ -57,8 +62,6 @@ fn Demo() -> Element {
 Strictly controlled: `value` is the path of ids, `onchange` hands back the path
 the caller should hold next. An empty `path` is the cleared selection - what the
 `clearable` x and `allow_deselect` both produce.
-
-## Reading the pick
 
 `CascaderPick<T>` carries both halves of one answer:
 
@@ -110,30 +113,6 @@ cannot be picked.
 
 In `"paths"` - and so while searching - `ArrowLeft` and `ArrowRight` are left
 alone, so they move the search box's caret.
-
-## Inside a form
-
-The trigger is a `div` and cannot carry a `name`, so the path posts through one
-hidden `<input>` of that name per level. A repeated name is an ordered list on
-the wire, which is the shape [MultiSelect](multi_select.md) and
-[TagsField](tags_field.md) already send.
-
-```rust
-#[derive(Clone, PartialEq, Default, Fields)]
-struct Listing {
-    category: Vec<String>,
-}
-
-// No `onchange`: a path binds the selection to the form's own value.
-rsx! {
-    Form {
-        value: listing,
-        Cascader { label: "Category", data: categories(), name: Listing::FIELDS.category() }
-    }
-}
-```
-
-`validate` takes `Validators<Vec<String>>` and rules over the whole path.
 
 ## Accessibility
 
