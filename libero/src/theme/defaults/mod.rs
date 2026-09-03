@@ -42,6 +42,7 @@ mod kbd;
 mod list;
 mod loader;
 mod mark;
+mod marquee;
 mod native_select;
 mod nav_link;
 mod number_field;
@@ -190,6 +191,10 @@ pub use loader::{
     LOADER_COLOR, LOADER_KEYFRAMES, LOADER_SIZE, LOADER_SIZE_SCALE, LoaderDefaults, LoaderVariant,
 };
 pub use mark::MarkDefaults;
+pub use marquee::{
+    MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_KEYFRAMES,
+    MARQUEE_MIN_REPEAT, MARQUEE_REPEAT, MARQUEE_SHIFT, MarqueeDefaults,
+};
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;
 pub use number_field::NumberFieldDefaults;

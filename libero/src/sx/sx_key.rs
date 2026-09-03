@@ -159,6 +159,8 @@ properties! {
     OverscrollBehaviorY => "overscroll-behavior-y", overscroll_behavior_y;
     Transform => "transform", transform;
     Animation => "animation", animation;
+    AnimationDirection => "animation-direction", animation_direction;
+    AnimationPlayState => "animation-play-state", animation_play_state;
     Visibility => "visibility", visibility;
     BorderCollapse => "border-collapse", border_collapse;
     VerticalAlign => "vertical-align", vertical_align;

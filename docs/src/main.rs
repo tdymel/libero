@@ -24,13 +24,13 @@ use pages::{
     DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
     FloatPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted, GridPage,
     HeaderPage, IconPage, ImageListPage, ImagePage, IndicatorPage, KbdPage, ListPage, LoaderPage,
-    MarkPage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage,
-    OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage,
-    PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage,
-    ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage,
-    SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage,
-    TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage,
-    VisuallyHiddenPage,
+    MarkPage, MarqueePage, ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage,
+    NumberFieldPage, OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage,
+    PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage,
+    RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage,
+    SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage,
+    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
+    TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -83,6 +83,8 @@ pub(crate) enum Route {
     TimelinePage {},
     #[route("/data-display/list")]
     ListPage {},
+    #[route("/data-display/marquee")]
+    MarqueePage {},
     #[route("/data-display/qr-code")]
     QrCodePage {},
 

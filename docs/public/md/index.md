@@ -30,6 +30,7 @@ fetch only the file you need.
 - [Image](image.md): An img with a fallback source on load error, rounded corners, and an optional click-to-zoom overlay.
 - [Indicator](indicator.md): A dot or a small capped count pinned to something else with a Float - presentational only, and never announced itself.
 - [List](list.md): An unstyled `<ul>`/`<li>` pair with themed gaps and nested indent.
+- [Marquee](marquee.md): Content that scrolls on its own in an endless loop, measured by nothing, with a pause toggle and a reduced-motion fallback.
 - [QrCode](qr_code.md): Encodes a string as a scalable QR code, rendered as an inline SVG.
 - [Table](table.md): A sortable data table built from a row type and a list of column definitions.
 - [Timeline](timeline.md): An ordered list of events drawn against a rail, with an `active` index colouring the bullets and connectors up to the current one.

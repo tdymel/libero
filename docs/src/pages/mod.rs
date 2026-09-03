@@ -13,8 +13,8 @@ mod typography;
 pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
 pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
 pub use data_display::{
-    AvatarPage, BadgePage, DataListPage, IconPage, ImagePage, IndicatorPage, ListPage, QrCodePage,
-    TablePage, TimelinePage,
+    AvatarPage, BadgePage, DataListPage, IconPage, ImagePage, IndicatorPage, ListPage, MarqueePage,
+    QrCodePage, TablePage, TimelinePage,
 };
 pub use feedback::{AlertPage, LoaderPage, ProgressBarPage, SkeletonPage};
 pub use form::{
