@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, Input, ProgressBar, Text};
 
@@ -49,7 +49,11 @@ pub fn ProgressBarPage() -> Element {
                     Code { source: "aria_label" }
                     ", which lands on the root. The fill eases to each new value; with "
                     Code { source: "value: None" }
-                    " it sweeps instead, for the time before the total is known."
+                    " it sweeps instead, for the time before the total is known. The bar is "
+                    "not a live region: one that ticks inside "
+                    Code { source: "role=\"status\"" }
+                    " floods the screen reader's queue. If progress has to be announced, "
+                    "update a separate status line at milestones, not on every tick."
                 }
             },
             Demo {
@@ -103,52 +107,6 @@ pub fn ProgressBarPage() -> Element {
                         radius: values.str("radius"),
                     }
                 },
-            }
-            DocSection {
-                title: "A range that is not 0-100",
-                Text {
-                    "A download is bytes of a total, so "
-                    Code { source: "max" }
-                    " is the total and "
-                    Code { source: "value" }
-                    " the bytes so far - no percentage maths at the call site. The "
-                    "attributes carry those raw numbers. On their own a screen reader would "
-                    "announce the rounded percentage; "
-                    Code { source: "aria_valuetext" }
-                    " replaces it with the units a person actually thinks in."
-                }
-                Demo {
-                    component: "ProgressBar",
-                    children_text: "",
-                    fixed: vec![
-                        r#"aria_label: "Downloading update""#.to_string(),
-                        "value: 4.2".to_string(),
-                        "max: 12.0".to_string(),
-                        r#"aria_valuetext: "4.2 MB of 12 MB""#.to_string(),
-                        r#"color: "success""#.to_string(),
-                    ],
-                    controls: vec![],
-                    render: move |_: DemoValues| rsx! {
-                        ProgressBar {
-                            aria_label: "Downloading update",
-                            value: 4.2,
-                            max: 12.0,
-                            aria_valuetext: "4.2 MB of 12 MB",
-                            color: "success",
-                        }
-                    },
-                }
-            }
-            DocSection {
-                title: "Announcing progress",
-                Text {
-                    "The bar is not a live region. One that ticks sixty times a second inside "
-                    Code { source: "role=\"status\"" }
-                    " floods the screen reader's queue until it is announcing numbers from "
-                    "a minute ago. A reader who wants to know checks the bar. If progress has "
-                    "to be announced, put a separate status line next to it and update it at "
-                    "milestones - a quarter done, half done, finished - not on every tick."
-                }
             }
         }
     }

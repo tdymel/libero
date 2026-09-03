@@ -39,34 +39,6 @@ fn Demo() -> Element {
 ProgressBar { aria_label: "Connecting", value: None }
 ```
 
-## A range that is not 0-100
-
-A download is bytes of a total, so `max` is the total and `value` the bytes so
-far - no percentage maths at the call site. The attributes carry those raw
-numbers. On their own a screen reader would announce the rounded percentage;
-`aria_valuetext` replaces it with the units a person actually thinks in.
-
-```rust
-use dioxus::prelude::*;
-use libero::components::ProgressBar;
-
-#[component]
-fn Demo() -> Element {
-    rsx! {
-        ProgressBar {
-            aria_label: "Downloading update",
-            value: 4.2,
-            max: 12.0,
-            aria_valuetext: "4.2 MB of 12 MB",
-            color: "success",
-        }
-    }
-}
-```
-
-Renders `aria-valuemin="0" aria-valuemax="12" aria-valuenow="4.2"
-aria-valuetext="4.2 MB of 12 MB"`. Whole bounds print without a decimal tail.
-
 ## Announcing progress
 
 The bar is not a live region. One that ticks sixty times a second inside

@@ -1,6 +1,6 @@
 //! `Skeleton`'s rendered contract: covered content leaves the accessibility
 //! tree and the tab order while visible, `circle` derives its width from
-//! `height`, and the theme's colour and duration reach the CSS.
+//! `height` or else its children, and the theme's colour and duration reach the CSS.
 
 mod common;
 
@@ -97,9 +97,40 @@ fn circle_takes_its_width_from_height_and_drops_the_radius_token() {
     assert_eq!(attributes["data-state"], "visible animate circle");
     assert!(
         html.contains(&format!(
-            r#".{class}[data-state~="circle"]{{--lsx-skeleton-radius:1000px;}}"#
+            r#".{class}[data-state~="circle"]{{--lsx-skeleton-radius:1000px;"#
         )),
         "{html}"
+    );
+}
+
+/// A circle wrapping content, with no `height`: the width must not fall back
+/// to the shape's `100%`, or an avatar placeholder spans the whole row.
+#[test]
+fn a_circle_without_height_is_as_wide_as_its_children() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Skeleton { circle: true, Button { "A" } } }
+        }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&body(&html), "div");
+    let class = skeleton_class(&html);
+
+    assert!(
+        !attributes
+            .get("style")
+            .is_some_and(|style| style.contains("--lsx-skeleton-width")),
+        "{attributes:?}"
+    );
+    let rule = html
+        .split(&format!(r#".{class}[data-state~="circle"]{{"#))
+        .nth(1)
+        .and_then(|rest| rest.split('}').next())
+        .expect("a circle rule");
+    assert!(
+        rule.contains("width:var(--lsx-skeleton-width, fit-content);"),
+        "{rule}"
     );
 }
 

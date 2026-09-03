@@ -34,7 +34,13 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
         // Its own compositing layer, so the pulse on `::after` does not
         // repaint the subtree underneath.
         .transform("translateZ(0)")
-        .when(CIRCLE_STATE, sx().var(SKELETON_RADIUS, "1000px"))
+        // A circle with no `height` has no width to copy either: it wraps
+        // its children, so it shrinks to them instead of spanning the row.
+        .when(
+            CIRCLE_STATE,
+            sx().var(SKELETON_RADIUS, "1000px")
+                .width(SKELETON_WIDTH.value_or("fit-content")),
+        )
         .when(
             VISIBLE_STATE,
             // The children are hidden, not covered: every descendant inherits
@@ -74,7 +80,8 @@ static SKELETON_BASE_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// `circle` makes the width the height, so one number draws a round avatar
-/// placeholder.
+/// placeholder. Without a height the width stays unset, and the circle is as
+/// wide as its children.
 fn skeleton_variables(height: Option<String>, width: Option<String>, circle: bool) -> Variables {
     let width = if circle { height.clone() } else { width };
     variables()
@@ -94,7 +101,8 @@ base_props! {
         /// A CSS length. Unset, `100%`. Ignored when `circle`.
         #[props(default, into)]
         width: Input<ThemeAwareValue>,
-        /// Width equals `height`, corners fully round.
+        /// Width equals `height`, corners fully round. Without `height`, as wide
+        /// as the children.
         #[props(default)]
         circle: bool,
         /// Corner. Ignored when `circle`.

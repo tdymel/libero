@@ -1,50 +1,13 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
-    components::{Alert, Button, Code, CodeBlock, Fields, Form, Rule, Text, TextField, not_empty},
+    components::{Alert, Code, Text},
     use_theme,
 };
 
 const TITLE: &str = "Card expiring";
 const MESSAGE: &str = "Your card ends 09/26. Update it before the next invoice.";
-
-const ICON_CODE: &str = r#"Alert {
-    color: "success",
-    title: "Saved",
-    icon: rsx! { CheckmarkIcon {} },
-    "Your changes are live."
-}"#;
-
-const FORM_CODE: &str = r#"Form {
-    value: contact,
-    summary_title: "Please fix these first:",
-    TextField { label: "Name", name: Contact::FIELDS.name(), validate: not_empty.error("Enter your name.") }
-    Button { r#type: "submit", "Send" }
-}"#;
-
-#[derive(Clone, PartialEq, Default, Fields)]
-pub struct Contact {
-    pub name: String,
-}
-
-#[component]
-fn ContactForm() -> Element {
-    let contact = use_store(Contact::default);
-
-    rsx! {
-        Form {
-            value: contact,
-            summary_title: "Please fix these first:",
-            TextField {
-                label: "Name",
-                name: Contact::FIELDS.name(),
-                validate: not_empty.error("Enter your name."),
-            }
-            Button { r#type: "submit", "Send" }
-        }
-    }
-}
 
 #[component]
 pub fn AlertPage() -> Element {
@@ -84,7 +47,16 @@ pub fn AlertPage() -> Element {
                     Code { source: "role" }
                     " replaces - a message that should wait its turn takes "
                     Code { source: "role: \"status\"" }
-                    ". It takes no focus and does not close on Escape: it is not an overlay."
+                    ". It takes no focus and does not close on Escape: it is not an overlay. "
+                    "The icon is "
+                    Code { source: "aria-hidden" }
+                    ": it repeats what the title already says. "
+                    Code { source: "Form" }
+                    "'s error summary is an "
+                    Code { source: "Alert" }
+                    " with "
+                    Code { source: "color: \"error\"" }
+                    "."
                 }
             },
             Demo {
@@ -110,6 +82,12 @@ pub fn AlertPage() -> Element {
                             _ => vec![],
                         }
                     }),
+                    Control::switch("icon").code(|_, values| {
+                        match values.str("icon").as_str() {
+                            "true" => vec!["icon: rsx! { CheckmarkIcon {} }".to_string()],
+                            _ => vec![],
+                        }
+                    }),
                     // A closure is not a value a control can hold, so this
                     // prints the honest minimum.
                     Control::switch("onclose").code(|_, values| {
@@ -125,38 +103,12 @@ pub fn AlertPage() -> Element {
                         color: values.str("color"),
                         radius: values.str("radius"),
                         title: (values.str("title") == "true").then(|| TITLE.to_string()),
+                        icon: (values.str("icon") == "true").then(|| rsx! { CheckmarkIcon {} }),
                         onclose: (values.str("onclose") == "true")
                             .then(|| EventHandler::new(|_| {})),
                         {MESSAGE}
                     }
                 },
-            }
-            DocSection { title: "With an icon",
-                Text {
-                    "The icon slot is "
-                    Code { source: "aria-hidden" }
-                    ": the glyph repeats what the title already says."
-                }
-                Alert {
-                    color: "success",
-                    title: "Saved",
-                    icon: rsx! { CheckmarkIcon {} },
-                    "Your changes are live."
-                }
-                CodeBlock { source: ICON_CODE, language: "rust" }
-            }
-            DocSection { title: "In a form",
-                Text {
-                    "A blocked submit shows "
-                    Code { source: "Form" }
-                    "'s error summary, which is an "
-                    Code { source: "Alert" }
-                    " with "
-                    Code { source: "color: \"error\"" }
-                    ". The form moves focus to it, and each line focuses its field. Submit this one empty."
-                }
-                ContactForm {}
-                CodeBlock { source: FORM_CODE, language: "rust" }
             }
         }
     }

@@ -58,6 +58,10 @@ fn Placeholder() -> Element {
 A standalone shape needs a `height`: with no children and no height it is zero
 pixels tall.
 
+A `circle` copies its `height` into its width. Without a `height` it wraps its
+children and is as wide as they are - round around a square child such as an
+`Avatar`, a pill around a wider one.
+
 ## Announcing it
 
 A skeleton says nothing to a screen reader, on purpose. While it covers, its
@@ -110,7 +114,7 @@ in and shows through the skeleton. Do not put one under a visible skeleton.
 | `visible` | `bool` | `true` | Cover the children, or draw the standalone shape. `false` shows the children as they are. |
 | `height` | `ThemeAwareValue` | - | A CSS length. Unset, the height of the children. |
 | `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored when `circle`. |
-| `circle` | `bool` | `false` | Width equals `height`, corners fully round. |
+| `circle` | `bool` | `false` | Width equals `height`, corners fully round. Without `height`, as wide as the children. |
 | `radius` | `Size` | `sm` | Corner. Ignored when `circle`. |
 | `animate` | `bool` | `true` | Run the pulse. |
 | `children` | `Element` | - | The real content, when the skeleton wraps it. |

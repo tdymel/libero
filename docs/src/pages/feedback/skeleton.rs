@@ -1,6 +1,7 @@
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, CodeBlock, Flex, Input, Skeleton, Text};
+use libero::components::{Box, Button, Code, Flex, Input, Skeleton, Text};
+use libero::sx::sx;
 
 /// What the wrapper covers. A button in it, so the preview shows that covered
 /// content is out of the tab order, not only out of sight.
@@ -9,18 +10,22 @@ const CONTENT: &str = r#"Flex { direction: "row", gap: "sm", align: "center",
     Button { size: "xs", "Follow" }
 }"#;
 
-/// The region is the caller's: it carries `aria-busy`, the same rule as the
-/// `Loader` page.
-const REGION: &str = r#"let profile = use_resource(load_profile);
+fn busy_region(values: &DemoValues) -> bool {
+    values.str("busy_region") == "true"
+}
 
-rsx! {
-    Box {
-        "aria-busy": profile.read().is_none(),
-        Skeleton { visible: profile.read().is_none(),
-            ProfileCard { profile: profile.read().clone().unwrap_or_default() }
-        }
+/// The region is the caller's: it carries `aria-busy` while the skeleton
+/// covers, the same rule as the `Loader` page.
+fn wrap_region(values: &DemoValues, code: &str) -> String {
+    match busy_region(values) {
+        true => format!(
+            "Box {{ \"aria-busy\": \"{}\",\n{}}}",
+            values.str("visible"),
+            indent(code)
+        ),
+        false => code.to_string(),
     }
-}"#;
+}
 
 fn with_content(values: &DemoValues) -> bool {
     values.str("children") == "true"
@@ -73,7 +78,7 @@ pub fn SkeletonPage() -> Element {
                     .doc("A CSS length. Ignored when `circle`."),
                 prop("circle", "bool")
                     .default("false")
-                    .doc("Width equals `height`, corners fully round."),
+                    .doc("Width equals `height`, corners fully round. Without `height`, as wide as the children."),
                 prop("radius", "Size")
                     .default("sm")
                     .doc("Corner. Ignored when `circle`."),
@@ -105,6 +110,17 @@ pub fn SkeletonPage() -> Element {
                     Code { source: "visibility: visible" }
                     " on itself would show through."
                 }
+                Text {
+                    "A skeleton says nothing to a screen reader, on purpose: "
+                    Code { source: "aria-busy" }
+                    " on hidden content would reach nobody. Mark the region you are filling "
+                    Code { source: "aria-busy" }
+                    " while it waits - switch on "
+                    Code { source: "Busy region" }
+                    ", the same rule as "
+                    Code { source: "Loader" }
+                    "."
+                }
             },
             Demo {
                 component: "Skeleton",
@@ -117,6 +133,8 @@ pub fn SkeletonPage() -> Element {
                     Control::switch("visible").default("true"),
                     Control::switch("animate").default("true"),
                     Control::switch("circle"),
+                    // Not a prop: the caller's region around the skeleton.
+                    Control::switch("busy_region").code(|_, _| vec![]),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm")
                         .hidden_when(|values| values.str("circle") == "true"),
@@ -132,6 +150,7 @@ pub fn SkeletonPage() -> Element {
                     Control::toggle("width", ["100%", "180px", "60%"])
                         .hidden_when(|values| values.str("circle") == "true"),
                 ],
+                wrap: Wrap(wrap_region),
                 render: move |values: DemoValues| {
                     let content = with_content(&values);
                     let height = match content {
@@ -139,9 +158,10 @@ pub fn SkeletonPage() -> Element {
                         false => length(values.str("shape_height"), ""),
                     };
                     let circle = values.str("circle") == "true";
-                    rsx! {
+                    let visible = values.str("visible") == "true";
+                    let skeleton = rsx! {
                         Skeleton {
-                            visible: values.str("visible") == "true",
+                            visible,
                             animate: values.str("animate") == "true",
                             circle,
                             radius: values.str("radius"),
@@ -154,23 +174,21 @@ pub fn SkeletonPage() -> Element {
                                 }
                             }
                         }
+                    };
+                    match busy_region(&values) {
+                        true => rsx! {
+                            // Full width in the preview's flex row, as it
+                            // is in a block flow; a shrunk region would
+                            // shrink the `100%` skeleton with it.
+                            Box {
+                                "aria-busy": if visible { "true" } else { "false" },
+                                sx: sx().width("100%"),
+                                {skeleton}
+                            }
+                        },
+                        false => skeleton,
                     }
                 },
-            }
-            DocSection {
-                title: "Announcing it",
-                Text {
-                    "A skeleton says nothing to a screen reader, on purpose: while it covers, "
-                    "its content is hidden, and "
-                    Code { source: "aria-busy" }
-                    " on a hidden element would reach nobody. Mark the region you are "
-                    "filling "
-                    Code { source: "aria-busy" }
-                    " while it waits - the same rule as "
-                    Code { source: "Loader" }
-                    "."
-                }
-                CodeBlock { source: REGION, language: "rust" }
             }
         }
     }

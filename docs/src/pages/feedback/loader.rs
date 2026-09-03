@@ -1,26 +1,32 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, CodeBlock, Input, Loader, Text};
-
-/// The region is the caller's: it carries `aria-busy`, and the loader inside it
-/// is the only content, so the loader is the one that speaks.
-const REGION: &str = r#"let results = use_resource(search);
-
-rsx! {
-    Box {
-        "aria-busy": results.read().is_none(),
-        match &*results.read() {
-            None => rsx! { Loader { label: "Loading results" } },
-            Some(rows) => rsx! { ResultList { rows: rows.clone() } },
-        }
-    }
-}"#;
+use libero::components::{Box, Code, Flex, Input, Loader, Text};
 
 /// Beside its own text, the text is the message and the loader stays silent.
-const BESIDE_TEXT: &str = r#"Flex { direction: "row", align: "center", gap: "sm",
-    Loader { variant: "dots", size: "sm" }
-    Text { "Uploading…" }
-}"#;
+/// With a `label` it is the sole content of a region, which carries
+/// `aria-busy`.
+fn wrap_context(values: &DemoValues, code: &str) -> String {
+    if beside_text(values) {
+        format!(
+            "Flex {{ direction: \"row\", align: \"center\", gap: \"sm\",\n{}    Text {{ \"Uploading…\" }}\n}}",
+            indent(code)
+        )
+    } else if labelled(values) {
+        format!("Box {{ \"aria-busy\": \"true\",\n{}}}", indent(code))
+    } else {
+        code.to_string()
+    }
+}
+
+fn beside_text(values: &DemoValues) -> bool {
+    values.str("beside_text") == "true"
+}
+
+/// A loader beside its own text never takes a label: that would announce the
+/// same state twice.
+fn labelled(values: &DemoValues) -> bool {
+    values.str("label") == "true" && !beside_text(values)
+}
 
 #[component]
 pub fn LoaderPage() -> Element {
@@ -40,7 +46,7 @@ pub fn LoaderPage() -> Element {
                     .default("primary")
                     .doc("The ink; a theme color name or a literal CSS color."),
                 prop("label", "Option<String>")
-                    .doc("Makes the loader a `role=\"status\"` live region that announces this text. Pass it only when the loader is the sole content of the area that is loading - see \"Announcing it\"."),
+                    .doc("Makes the loader a `role=\"status\"` live region that announces this text. Pass it only when the loader is the sole content of the area that is loading; mark that area `aria-busy` while it waits."),
             ])],
             lead: rsx! {
                 Text {
@@ -56,6 +62,29 @@ pub fn LoaderPage() -> Element {
                     " all three shapes stop and stay visible: a still ring with its gap, three "
                     "full-height bars, three dots."
                 }
+                Text {
+                    "Who announces the wait depends on where the loader sits. Beside its own "
+                    "visible text, the text is the message; inside a named control - a "
+                    Code { source: "Button" }
+                    " with "
+                    Code { source: "loading" }
+                    " - the control's name plus "
+                    Code { source: "aria-busy" }
+                    " carries it. Leave "
+                    Code { source: "label" }
+                    " unset in both. Only as the sole content of a region does the loader "
+                    "speak: with a "
+                    Code { source: "label" }
+                    " it renders "
+                    Code { source: "role=\"status\"" }
+                    " and the label as a visually hidden text node, and the region is marked "
+                    Code { source: "aria-busy" }
+                    ". Switch "
+                    Code { source: "Beside text" }
+                    " and "
+                    Code { source: "Label" }
+                    " to see both."
+                }
             },
             Demo {
                 component: "Loader",
@@ -70,56 +99,45 @@ pub fn LoaderPage() -> Element {
                         "color",
                         ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
                     ),
-                    Control::switch("label").code(|_, values| {
-                        if values.str("label") == "true" {
-                            vec![r#"label: "Loading""#.to_string()]
-                        } else {
-                            vec![]
-                        }
-                    }),
+                    // Not a prop: it puts the loader beside its own text,
+                    // where `label` does not belong.
+                    Control::switch("beside_text").code(|_, _| vec![]),
+                    Control::switch("label")
+                        .code(|_, values| {
+                            if labelled(values) {
+                                vec![r#"label: "Loading""#.to_string()]
+                            } else {
+                                vec![]
+                            }
+                        })
+                        .hidden_when(beside_text),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Loader {
-                        variant: values.str("variant"),
-                        size: values.str("size"),
-                        color: match values.str("color").as_str() {
-                            "primary" => Input::None,
-                            color => Input::from(color),
+                wrap: Wrap(wrap_context),
+                render: move |values: DemoValues| {
+                    let loader = rsx! {
+                        Loader {
+                            variant: values.str("variant"),
+                            size: values.str("size"),
+                            color: match values.str("color").as_str() {
+                                "primary" => Input::None,
+                                color => Input::from(color),
+                            },
+                            label: labelled(&values).then(|| "Loading".to_string()),
+                        }
+                    };
+                    match (beside_text(&values), labelled(&values)) {
+                        (true, _) => rsx! {
+                            Flex { direction: "row", align: "center", gap: "sm",
+                                {loader}
+                                Text { "Uploading…" }
+                            }
                         },
-                        label: (values.str("label") == "true").then(|| "Loading".to_string()),
+                        (false, true) => rsx! {
+                            Box { "aria-busy": "true", {loader} }
+                        },
+                        (false, false) => loader,
                     }
                 },
-            }
-            DocSection {
-                title: "Announcing it",
-                Text {
-                    "Who announces the wait depends on where the loader sits. Beside its own "
-                    "visible text, the text is the message. Inside a control that already has "
-                    "a name - a "
-                    Code { source: "Button" }
-                    " with "
-                    Code { source: "loading" }
-                    " - the control's name plus "
-                    Code { source: "aria-busy" }
-                    " carries it. In both cases leave "
-                    Code { source: "label" }
-                    " unset: a second announcement of the same state is noise."
-                }
-                CodeBlock { source: BESIDE_TEXT, language: "rust" }
-                Text {
-                    "Only when the loader is the sole content of a region does it speak. Give "
-                    "it a "
-                    Code { source: "label" }
-                    " and it renders "
-                    Code { source: "role=\"status\"" }
-                    " with the label as a visually hidden text node - a live region announces "
-                    "its content, so an "
-                    Code { source: "aria-label" }
-                    " would announce nothing. Mark the region itself "
-                    Code { source: "aria-busy" }
-                    " while it waits."
-                }
-                CodeBlock { source: REGION, language: "rust" }
             }
         }
     }
