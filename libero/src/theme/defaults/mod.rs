@@ -57,6 +57,7 @@ mod ripple;
 mod scroll_area;
 mod select;
 mod sidebar;
+mod skeleton;
 mod slider;
 mod splitter;
 mod switch;
@@ -207,6 +208,10 @@ pub use ripple::{RIPPLE_ANIMATION, RIPPLE_KEYFRAMES, RIPPLE_STATE};
 pub use scroll_area::{ScrollAreaDefaults, ScrollAxis, ScrollbarSize, ScrollbarVisibility};
 pub use select::SelectDefaults;
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
+pub use skeleton::{
+    SKELETON_ANIMATION, SKELETON_COLOR, SKELETON_DURATION, SKELETON_HEIGHT, SKELETON_KEYFRAMES,
+    SKELETON_RADIUS, SKELETON_WIDTH, SkeletonDefaults,
+};
 pub use slider::{
     SLIDER_FONT_SIZE, SLIDER_THUMB, SLIDER_THUMB_SIZE, SLIDER_TRACK, SLIDER_TRACK_SIZE,
     SliderDefaults, SliderSizeLevel,

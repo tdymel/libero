@@ -170,6 +170,9 @@ fn render_cost_per_component() {
         "Container" { Container { "x" } }
         "AspectRatio" { AspectRatio { "x" } }
         "Divider" { Divider {} }
+        // `children: Element`, so it can never compare equal and always
+        // re-renders with its parent - inherent to the wrapper design.
+        "Skeleton" { Skeleton { "x" } }
         "Float" { Float { "x" } }
         "Header" { Header { "x" } }
         "ScrollArea" { ScrollArea { "x" } }

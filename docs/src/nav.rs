@@ -132,6 +132,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::AlertPage {}, "Alert"),
                 page(Route::LoaderPage {}, "Loader"),
                 page(Route::ProgressBarPage {}, "ProgressBar"),
+                page(Route::SkeletonPage {}, "Skeleton"),
             ],
         ),
         // Fields built on `use_field`. A component moves here when it is

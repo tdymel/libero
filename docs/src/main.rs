@@ -27,9 +27,9 @@ use pages::{
     ModalPage, MultiSelectPage, NativeSelectPage, NavLinkPage, NumberFieldPage, OverlayPage,
     PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage,
     PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage,
-    SegmentedControlPage, SelectPage, SidebarPage, SliderPage, SplitterPage, StylingPage,
-    SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage, TextPage, TextareaPage,
-    ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
+    SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage, SplitterPage,
+    StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage, TextPage,
+    TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -91,6 +91,8 @@ pub(crate) enum Route {
     LoaderPage {},
     #[route("/feedback/progress-bar")]
     ProgressBarPage {},
+    #[route("/feedback/skeleton")]
+    SkeletonPage {},
 
     #[route("/form/getting-started")]
     FormGettingStartedPage {},

@@ -4,7 +4,9 @@
 mod alert;
 mod loader;
 mod progress_bar;
+mod skeleton;
 
 pub use alert::{Alert, AlertProps};
 pub use loader::*;
 pub use progress_bar::{ProgressBar, ProgressBarProps};
+pub use skeleton::{Skeleton, SkeletonProps};
