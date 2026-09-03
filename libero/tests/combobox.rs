@@ -15,16 +15,20 @@ use libero::{
     },
     theme::{ComboboxDefaults, ComboboxLabels, Theme},
 };
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 
 thread_local! {
     static STATE: RefCell<Option<ComboboxState>> = const { RefCell::new(None) };
     static OPTIONS: RefCell<Option<Signal<Vec<&'static str>>>> = const { RefCell::new(None) };
     static LOADING: RefCell<Option<Signal<bool>>> = const { RefCell::new(None) };
+    /// How many times `App` - the trigger's scope - has rendered on this
+    /// test's thread.
+    static RENDERS: Cell<usize> = const { Cell::new(0) };
 }
 
 #[component]
 fn App() -> Element {
+    RENDERS.set(RENDERS.get() + 1);
     let fruit = use_combobox();
     let options = use_signal(|| vec!["apple", "banana", "grape"]);
     let loading = use_signal(|| false);
@@ -98,6 +102,33 @@ fn an_empty_list_names_no_row() {
     let mut dom = mount();
     dom.in_runtime(|| get(&OPTIONS).set(Vec::new()));
     assert_eq!(descendant(&mut dom), None);
+}
+
+/// The list reports its row count by writing the state during render, which
+/// re-renders the trigger's scope once per change of count - and then stops.
+#[test]
+fn reporting_the_row_count_costs_one_render_and_settles() {
+    fn renders_after(dom: &mut VirtualDom) -> usize {
+        let start = RENDERS.get();
+        for _ in 0..5 {
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        RENDERS.get() - start
+    }
+
+    let mut dom = mount();
+    // Mount: the open effect, and the count going from 0 to 3.
+    assert!(renders_after(&mut dom) <= 2);
+    assert_eq!(renders_after(&mut dom), 0, "still rendering after mount");
+
+    // A shorter list: one render for the new options, one for the new count.
+    dom.in_runtime(|| get(&OPTIONS).set(vec!["apple"]));
+    assert_eq!(renders_after(&mut dom), 2);
+    assert_eq!(renders_after(&mut dom), 0, "still rendering after a filter");
+
+    // Same length, different rows: the count is unchanged, so no extra render.
+    dom.in_runtime(|| get(&OPTIONS).set(vec!["grape"]));
+    assert_eq!(renders_after(&mut dom), 1);
 }
 
 /// A shorter list leaves the highlight past its end. The list draws the last
