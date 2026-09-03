@@ -69,8 +69,10 @@ pub struct CarouselDefaults {
     pub slide_label: &'static str,
     /// What the live region reads when the slide settles.
     pub status_label: &'static str,
+    /// The autoplay button's name. It stays the same whether the slideshow
+    /// runs or not: `aria-pressed` carries the state, so it never reads
+    /// "Play, pressed".
     pub pause_label: &'static str,
-    pub play_label: &'static str,
 }
 
 impl ToCssDeclarations for CarouselDefaults {

@@ -204,7 +204,6 @@ impl Theme {
             slide_label: "{n} of {m}",
             status_label: "Slide {n} of {m}",
             pause_label: "Pause slideshow",
-            play_label: "Play slideshow",
         },
         center: CenterDefaults { inline: false },
         container: ContainerDefaults {

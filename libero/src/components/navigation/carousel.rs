@@ -1142,10 +1142,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
                     component: "button",
                     r#type: "button",
                     framework_sx: &CAROUSEL_PAUSE_SX,
-                    aria_label: match paused() {
-                        true => theme.carousel.play_label,
-                        false => theme.carousel.pause_label,
-                    },
+                    aria_label: theme.carousel.pause_label,
                     aria_pressed: paused().to_string(),
                     onclick: move |_| paused.toggle(),
                     {pause_icon(paused())}

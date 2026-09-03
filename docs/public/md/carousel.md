@@ -203,7 +203,7 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `indicator_label` | `&'static str` | `Go to slide {n}` | An indicator's name. |
 | `slide_label` | `&'static str` | `{n} of {m}` | A slide group's name. |
 | `status_label` | `&'static str` | `Slide {n} of {m}` | What the live region reads. |
-| `pause_label` / `play_label` | `&'static str` | `Pause slideshow` / `Play slideshow` | The autoplay control's name. |
+| `pause_label` | `&'static str` | `Pause slideshow` | The autoplay control's name. It does not change when paused: `aria-pressed` carries the state. |
 
 The label fields are English literals on the theme, the same as `DateDefaults`.
 The library has no i18n mechanism yet, so overriding them on the theme - or
