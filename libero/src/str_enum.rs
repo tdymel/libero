@@ -140,7 +140,8 @@ mod tests {
         ImageFit, LabelPosition, Orientation, PinKind, SidebarSide,
     };
     use crate::theme::{
-        ChoiceVariant, LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize, ScrollbarVisibility,
+        ChoiceVariant, LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize,
+        ScrollbarVisibility,
     };
 
     /// Add every new `str_enum!` here - the checks below iterate this list.
