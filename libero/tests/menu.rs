@@ -166,7 +166,11 @@ fn a_submenu_item_announces_a_closed_menu() {
 }
 
 #[test]
-fn a_disabled_menu_draws_nothing_even_when_open() {
+fn a_disabled_menu_is_closed_not_hidden() {
     let html = rendered(true, true);
     assert!(!html.contains(r#"role="menu""#));
+    // The trigger must not announce a menu nobody can see.
+    let trigger = attributes_of(&html, "button");
+    assert_eq!(trigger["aria-expanded"], "false");
+    assert!(!trigger.contains_key("aria-controls"));
 }

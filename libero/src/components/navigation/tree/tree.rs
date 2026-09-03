@@ -7,7 +7,9 @@ use crate::{
         Input, List,
         common::{base_props, css_string},
     },
-    hooks::{ElementHandle, use_element, use_theme},
+    hooks::{
+        ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
+    },
     platform::ElementApi,
     theme::Size,
 };
@@ -68,17 +70,17 @@ fn sibling_id(order: &[VisibleNode], current: &str, offset: isize) -> Option<Str
     order.get(target as usize).map(|node| node.id.to_string())
 }
 
-fn typeahead_match(order: &[VisibleNode], current: &str, ch: char) -> Option<String> {
-    let current_index = order.iter().position(|node| node.id == current)?;
-    let ch = ch.to_ascii_lowercase();
-    let len = order.len();
-    (1..=len).find_map(|offset| {
-        let index = (current_index + offset) % len;
+/// The row a typed `query` lands on, through the library's one typeahead
+/// ([`typeahead_match`]): one character cycles from the row after `current`,
+/// a longer query narrows and stays on a row that still matches. Disabled rows
+/// are skipped.
+fn typeahead_target(order: &[VisibleNode], current: &str, query: &str) -> Option<String> {
+    let current = order.iter().position(|node| node.id == current)?;
+    typeahead_match(order.len(), Some(current), query, |index| {
         let node = &order[index];
-        // First char only, so no lowercased copy of every label per keystroke.
-        let first = node.label.chars().next().map(|c| c.to_ascii_lowercase());
-        (!node.disabled && first == Some(ch)).then(|| node.id.to_string())
+        (!node.disabled).then_some(node.label)
     })
+    .map(|index| order[index].id.to_string())
 }
 
 // The one state mutation `Tree` makes on its own behalf, shared between a
@@ -250,6 +252,8 @@ fn TreeCore(props: TreeCoreProps) -> Element {
     let mut active_id_for_keydown = active_id;
     let resolved_active_for_keydown = resolved_active.clone();
 
+    let typeahead = use_typeahead(TYPEAHEAD_RESET);
+
     let onkeydown = move |event: Event<KeyboardData>| {
         let Some(current) = resolved_active_for_keydown.clone() else {
             return;
@@ -315,6 +319,13 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 }
             }
             Key::Character(ref c) if c == " " && has_shortcut_modifier(&event) => {}
+            // A space mid-query is part of "new folder", not an activation.
+            Key::Character(ref c) if c == " " && typeahead.is_typing() => {
+                event.prevent_default();
+                if let Some(target) = typeahead_target(&order, &current, &typeahead.push(' ')) {
+                    go_to(Some(target));
+                }
+            }
             Key::Character(ref c) if c == " " => {
                 if !node.disabled {
                     event.prevent_default();
@@ -329,7 +340,7 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 if let Some(target) = c
                     .chars()
                     .next()
-                    .and_then(|ch| typeahead_match(&order, &current, ch))
+                    .and_then(|ch| typeahead_target(&order, &current, &typeahead.push(ch)))
                 {
                     event.prevent_default();
                     go_to(Some(target));
@@ -366,5 +377,56 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn node<'a>(id: &'a str, label: &'a str, disabled: bool) -> VisibleNode<'a> {
+        VisibleNode {
+            id,
+            parent_id: None,
+            has_children: false,
+            disabled,
+            label,
+        }
+    }
+
+    fn order() -> Vec<VisibleNode<'static>> {
+        vec![
+            node("a", "Src", false),
+            node("b", "Styles", false),
+            node("c", "Scripts", true),
+            node("d", "Docs", false),
+            node("e", "Setup", false),
+        ]
+    }
+
+    /// What `Tree` did before the shared buffer: one character, from the row
+    /// after the current one, wrapping, skipping disabled rows.
+    #[test]
+    fn one_character_behaves_as_it_always_did() {
+        let order = order();
+        assert_eq!(typeahead_target(&order, "a", "s").as_deref(), Some("b"));
+        // "Scripts" is disabled.
+        assert_eq!(typeahead_target(&order, "b", "s").as_deref(), Some("e"));
+        assert_eq!(typeahead_target(&order, "e", "s").as_deref(), Some("a"));
+        assert_eq!(typeahead_target(&order, "a", "D").as_deref(), Some("d"));
+        assert_eq!(typeahead_target(&order, "a", "x"), None);
+    }
+
+    #[test]
+    fn a_longer_query_narrows() {
+        let order = order();
+        assert_eq!(typeahead_target(&order, "a", "se").as_deref(), Some("e"));
+        assert_eq!(typeahead_target(&order, "b", "st").as_deref(), Some("b"));
+        assert_eq!(typeahead_target(&order, "a", "sc"), None);
+    }
+
+    #[test]
+    fn an_unknown_current_row_matches_nothing() {
+        assert_eq!(typeahead_target(&order(), "zzz", "s"), None);
     }
 }

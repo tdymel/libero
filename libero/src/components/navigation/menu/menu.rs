@@ -144,7 +144,7 @@ base_props! {
         /// tightened by the menu's padding.
         #[props(default, into)]
         radius: Input<Size>,
-        /// The trigger opens nothing.
+        /// The trigger opens nothing, and an open menu closes.
         #[props(default)]
         disabled: bool,
         /// The trigger - usually a `Button` carrying `state.a11y_attributes()`.
@@ -173,7 +173,17 @@ pub fn Menu(props: MenuProps) -> Element {
     let wrapper = use_element();
     let wrapper_box = use_box().prepare();
 
-    let open = state.opened() && !disabled;
+    let opened = state.opened();
+    let open = opened && !disabled;
+    // A disabled menu is a closed one, not an open one that happens to be
+    // hidden: otherwise the trigger's `aria-expanded` claims a menu nobody can
+    // see, and re-enabling it would pop the menu back up unasked. Covers both
+    // disabling an open menu and a programmatic `open()` while disabled.
+    use_effect(use_reactive!(|(disabled, opened)| {
+        if disabled && opened {
+            state.close();
+        }
+    }));
 
     let onclose = use_callback(move |()| state.close());
 
