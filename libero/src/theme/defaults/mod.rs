@@ -62,6 +62,7 @@ mod sidebar;
 mod skeleton;
 mod slider;
 mod splitter;
+mod stepper;
 mod switch;
 mod table;
 mod tabs;
@@ -229,6 +230,13 @@ pub use slider::{
     SliderDefaults, SliderSizeLevel,
 };
 pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
+pub use stepper::{
+    STEPPER_COLOR, STEPPER_COLOR_CONTRAST, STEPPER_CONNECTOR_COLOR, STEPPER_CONTENT_PADDING,
+    STEPPER_DESCRIPTION_COLOR, STEPPER_DESCRIPTION_FONT_SIZE, STEPPER_DESCRIPTION_SIZE,
+    STEPPER_ERROR, STEPPER_ERROR_CONTRAST, STEPPER_FONT_SIZE, STEPPER_GAP, STEPPER_GAP_SIZE,
+    STEPPER_LINE_WIDTH, STEPPER_MARKER, STEPPER_MARKER_SIZE, STEPPER_PENDING, STEPPER_SPACING,
+    STEPPER_SPACING_SIZE, StepLabelPosition, StepperDefaults, StepperSizeLevel,
+};
 pub use switch::{
     SWITCH_RADIUS, SWITCH_THUMB, SWITCH_THUMB_SIZE, SWITCH_TRACK_H, SWITCH_TRACK_HEIGHT,
     SWITCH_TRACK_W, SWITCH_TRACK_WIDTH, SwitchDefaults, SwitchSizeLevel,

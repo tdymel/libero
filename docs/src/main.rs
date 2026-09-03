@@ -28,9 +28,9 @@ use pages::{
     NumberFieldPage, OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage,
     PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage,
     RangeSliderPage, ScrollAreaPage, SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage,
-    SliderPage, SplitterPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage,
-    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
-    TreePage, VisuallyHiddenPage,
+    SliderPage, SplitterPage, StepperPage, StylingPage, SwitchPage, TablePage, TabsPage,
+    TagsFieldPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage,
+    TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -199,6 +199,8 @@ pub(crate) enum Route {
     PaginationPage {},
     #[route("/navigation/accordion")]
     AccordionPage {},
+    #[route("/navigation/stepper")]
+    StepperPage {},
     #[route("/navigation/tabs")]
     TabsPage {},
     #[route("/navigation/tree")]

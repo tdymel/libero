@@ -83,3 +83,20 @@ pub(crate) fn PlayIcon() -> Element {
         }
     }
 }
+
+/// A done mark: a completed step's marker.
+#[component]
+pub(crate) fn CheckIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            path { d: "M5 12l5 5 9-10" }
+        }
+    }
+}

@@ -5,6 +5,7 @@ mod carousel;
 mod internal_anchor;
 mod nav_link;
 mod pagination;
+mod stepper;
 mod tabs;
 mod tree;
 
@@ -17,6 +18,7 @@ pub use nav_link::NavLink;
 pub use pagination::{
     Pagination, PaginationItem, PaginationLabel, PaginationProps, pagination_range,
 };
+pub use stepper::{StepLabelPosition, StepState, Stepper, StepperProps};
 pub use tabs::{Tabs, TabsProps};
 pub use tree::{
     Tree, TreeItem, TreeItemProps, TreeLabel, TreeNode, TreeNodeRenderArgs, TreeProps, TreeValue,

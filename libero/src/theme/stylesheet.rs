@@ -120,6 +120,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         table,
         timeline,
         tabs,
+        stepper,
         titles,
         texts,
         tooltip,
@@ -231,6 +232,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(table.to_css_declarations());
     declarations.extend(timeline.to_css_declarations());
     declarations.extend(tabs.to_css_declarations());
+    declarations.extend(stepper.to_css_declarations());
     declarations.extend(titles.to_css_declarations());
     declarations.extend(texts.to_css_declarations());
     declarations.extend(tooltip.to_css_declarations());
