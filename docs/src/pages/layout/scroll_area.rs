@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use libero::{
     components::{
         Box, Button, Code, CodeBlock, Flex, Input, List, ListItem, ScrollArea, ScrollPositionEvent,
-        Text, Virtualize,
+        Text, Virtualize, use_scroll_area,
     },
     sx::sx,
     use_theme,
@@ -46,12 +46,13 @@ const CONTENT: &str = r#"Box {
 }"#;
 
 /// The scroll position is read *and* written from the page, so all four wiring
-/// props are the demo's fixture rather than anything a control varies.
+/// props are the demo's fixture rather than anything a control varies. `area`
+/// is `let area = use_scroll_area();`.
 const FIXED: [&str; 4] = [
-    "scroll_position_y: jump()",
+    "handle: area",
     "on_scroll: move |event: ScrollPositionEvent| position.set(event)",
-    r#"on_top_reached: move |_| { edge.set("top"); jump.set(None) }"#,
-    r#"on_bottom_reached: move |_| { edge.set("bottom"); jump.set(None) }"#,
+    r#"on_top_reached: move |_| edge.set("top")"#,
+    r#"on_bottom_reached: move |_| edge.set("bottom")"#,
 ];
 
 /// A raw `{event:?}` prints an unrounded `f64` and reflows the row on every
@@ -66,11 +67,11 @@ fn readout(event: ScrollPositionEvent) -> String {
 }
 
 /// A scroll area fills its parent, so the preview has to give it one - and the
-/// readout and the two jump buttons are the other half of the wiring above,
+/// readout and the three jump buttons are the other half of the wiring above,
 /// so they belong in the preview too. The code block prints all of it.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n    Box {{\n        sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-grey-3)\"),\n{}    }}\n    Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n    Flex {{\n        gap: \"sm\",\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| jump.set(Some(0.0)), \"Scroll to top\" }}\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| jump.set(Some(100.0)), \"Scroll to bottom\" }}\n    }}\n}}",
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n    Box {{\n        sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-grey-3)\"),\n{}    }}\n    Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n    Flex {{\n        gap: \"sm\",\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n    }}\n}}",
         indent(&indent(code))
     )
 }
@@ -80,7 +81,7 @@ pub fn ScrollAreaPage() -> Element {
     let theme = use_theme();
     let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
     let mut edge = use_signal(|| "none");
-    let mut jump = use_signal(|| None::<f64>);
+    let area = use_scroll_area();
 
     rsx! {
         DocPage {
@@ -103,6 +104,8 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount."),
                 prop("scroll_position_y", "f64")
                     .doc("Percent (0-100) along the vertical axis - see `scroll_position_x`."),
+                prop("handle", "ScrollAreaHandle")
+                    .doc("From use_scroll_area(). Its scroll_to_percent(x, y) and px scroll_to(x, y) scroll the area from any handler, and every call scrolls - unlike the two props above, which only re-apply when their value changes."),
                 prop("focusable", "bool")
                     .default("false")
                     .doc("Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed."),
@@ -138,7 +141,9 @@ pub fn ScrollAreaPage() -> Element {
                     Code { source: "scroll_position_x" }
                     "/"
                     Code { source: "scroll_position_y" }
-                    " scroll it to a percent. Each edge has its own event; the demo wires "
+                    " scroll it to a percent, re-applied only when the value changes. The buttons use "
+                    Code { source: "let area = use_scroll_area();" }
+                    " instead, a handle whose every call scrolls, in percent or in px. Each edge has its own event; the demo wires "
                     Code { source: "on_top_reached" }
                     " and "
                     Code { source: "on_bottom_reached" }
@@ -191,18 +196,12 @@ pub fn ScrollAreaPage() -> Element {
                                     UNSET => Input::None,
                                     color => Input::from(color),
                                 },
-                                scroll_position_y: jump(),
+                                handle: area,
                                 on_scroll: move |event: ScrollPositionEvent| {
                                     position.set(event)
                                 },
-                                on_top_reached: move |_| {
-                                    edge.set("top");
-                                    jump.set(None)
-                                },
-                                on_bottom_reached: move |_| {
-                                    edge.set("bottom");
-                                    jump.set(None)
-                                },
+                                on_top_reached: move |_| edge.set("top"),
+                                on_bottom_reached: move |_| edge.set("bottom"),
                                 Box {
                                     sx: sx().width("150%").padding("md"),
                                     for i in 0..20 {
@@ -217,14 +216,20 @@ pub fn ScrollAreaPage() -> Element {
                             Button {
                                 size: "sm",
                                 variant: "outlined",
-                                onclick: move |_| jump.set(Some(0.0)),
+                                onclick: move |_| area.scroll_to_percent(None, Some(0.0)),
                                 "Scroll to top"
                             }
                             Button {
                                 size: "sm",
                                 variant: "outlined",
-                                onclick: move |_| jump.set(Some(100.0)),
+                                onclick: move |_| area.scroll_to_percent(None, Some(100.0)),
                                 "Scroll to bottom"
+                            }
+                            Button {
+                                size: "sm",
+                                variant: "outlined",
+                                onclick: move |_| area.scroll_to(0.0, 120.0),
+                                "Scroll to 120px"
                             }
                         }
                     }

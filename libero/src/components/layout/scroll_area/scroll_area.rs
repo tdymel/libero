@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use super::viewport::{ContentOffsets, ScrollGeometry, ScrollViewport};
+use super::{
+    handle::{ScrollAreaHandle, scroll_to_percent},
+    viewport::{ContentOffsets, ScrollGeometry, ScrollViewport},
+};
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
@@ -157,6 +160,11 @@ base_props! {
         /// its own, so both go through `attributes` as usual.
         #[props(default)]
         focusable: bool,
+        /// From [`use_scroll_area`](super::use_scroll_area), to scroll the
+        /// area from an event handler. Unlike `scroll_position_x`/`_y`, each
+        /// call scrolls, including one that asks for the same position again.
+        #[props(default)]
+        handle: Option<ScrollAreaHandle>,
         #[props(default)]
         on_scroll: Option<EventHandler<ScrollPositionEvent>>,
         #[props(default)]
@@ -193,7 +201,11 @@ fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
 #[component]
 pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let theme = use_theme();
-    let root = use_element();
+    // Always called, so the hook order does not depend on the prop. A caller's
+    // handle takes over the element when there is one; the area's own is
+    // then simply never mounted.
+    let own = use_element();
+    let root = props.handle.map_or(own, |handle| handle.element);
 
     let scrollbars = props.scrollbars.copied_or(theme.scroll_area.scrollbars);
     let visibility = props
@@ -292,30 +304,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let scroll_position_x = props.scroll_position_x;
     let scroll_position_y = props.scroll_position_y;
     use_effect(use_reactive!(|scroll_position_x, scroll_position_y| {
-        if scroll_position_x.is_none() && scroll_position_y.is_none() {
-            return;
-        }
-        // Started here, awaited in the task: a read resolves where it is
-        // called (see `ElementApi::dimensions`). Off the web each is a
-        // round-trip, so the awaiting has to happen in a task rather than
-        // inline.
-        let (content, viewport_size, offset) =
-            (root.scroll_size(), root.dimensions(), root.scroll_offset());
-        spawn(async move {
-            let (Ok(scroll_size), Ok(viewport), Ok((current_x, current_y))) =
-                (content.await, viewport_size.await, offset.await)
-            else {
-                return;
-            };
-            let max_x = (scroll_size.width - viewport.width).max(0.0);
-            let max_y = (scroll_size.height - viewport.height).max(0.0);
-
-            let x =
-                scroll_position_x.map_or(current_x, |pct| max_x * pct.clamp(0.0, 100.0) / 100.0);
-            let y =
-                scroll_position_y.map_or(current_y, |pct| max_y * pct.clamp(0.0, 100.0) / 100.0);
-            let _ = root.scroll_to(x, y);
-        });
+        scroll_to_percent(root, scroll_position_x, scroll_position_y);
     }));
 
     let states: Input<States> = props

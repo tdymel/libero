@@ -18,12 +18,12 @@ a box that shrink-wraps its content there is nothing to scroll.
 ## Usage
 
 The frame around it is the example: the area fills its parent, the readout and
-the two jump buttons are the other half of the wiring.
+the three jump buttons are the other half of the wiring.
 
 ```rust
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Flex, ScrollArea, ScrollPositionEvent, Text},
+    components::{Box, Button, Flex, ScrollArea, ScrollPositionEvent, Text, use_scroll_area},
     sx::sx,
 };
 
@@ -40,7 +40,7 @@ fn readout(event: ScrollPositionEvent) -> String {
 fn Demo() -> Element {
     let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
     let mut edge = use_signal(|| "none");
-    let mut jump = use_signal(|| None::<f64>);
+    let area = use_scroll_area();
 
     rsx! {
         Flex {
@@ -50,10 +50,10 @@ fn Demo() -> Element {
             Box {
                 sx: sx().height("160px").width("100%").border("1px solid var(--lsx-grey-3)"),
                 ScrollArea {
-                    scroll_position_y: jump(),
+                    handle: area,
                     on_scroll: move |event: ScrollPositionEvent| position.set(event),
-                    on_top_reached: move |_| { edge.set("top"); jump.set(None) },
-                    on_bottom_reached: move |_| { edge.set("bottom"); jump.set(None) },
+                    on_top_reached: move |_| edge.set("top"),
+                    on_bottom_reached: move |_| edge.set("bottom"),
                     Box {
                         sx: sx().width("150%").padding("md"),
                         for i in 0..20 {
@@ -65,18 +65,25 @@ fn Demo() -> Element {
             Text { size: "sm", "{readout(position())} - last edge: {edge()}" }
             Flex {
                 gap: "sm",
-                Button { size: "sm", variant: "outlined", onclick: move |_| jump.set(Some(0.0)), "Scroll to top" }
-                Button { size: "sm", variant: "outlined", onclick: move |_| jump.set(Some(100.0)), "Scroll to bottom" }
+                Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), "Scroll to top" }
+                Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), "Scroll to bottom" }
+                Button { size: "sm", variant: "outlined", onclick: move |_| area.scroll_to(0.0, 120.0), "Scroll to 120px" }
             }
         }
     }
 }
 ```
 
-`scroll_position_x`/`scroll_position_y` are percents (0-100). Bound to a signal
-they re-apply on every change, so clearing the signal back to `None` in the
-matching `on_*_reached` is what lets the same button be pressed twice; a literal
-applies once, at mount.
+`use_scroll_area()` returns a `Copy` handle. Pass it as `handle`, and
+`scroll_to_percent(x, y)` (0-100, `None` keeps that axis) or `scroll_to(x, y)`
+in px scrolls the area from any handler. Every call scrolls, including one that
+asks for the position it asked for last time after the reader has scrolled
+away. A call before the area mounts does nothing.
+
+`scroll_position_x`/`scroll_position_y` are the declarative form, in percent.
+Bound to a signal they re-apply only when its value *changes*, so asking for
+the same position twice does nothing unless the signal went through `None` in
+between; a literal applies once, at mount. Use the handle for buttons.
 
 ## Virtualization
 
@@ -165,6 +172,7 @@ unreachable, so use it only when something else provides the scrolling.
 | `scrollbar_color` | `ThemeAwareValue` | - | Scrollbar thumb color - the track stays transparent. Unset it is `grey.5`. |
 | `scroll_position_x` | `f64` | - | Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount. |
 | `scroll_position_y` | `f64` | - | Percent (0-100) along the vertical axis - see `scroll_position_x`. |
+| `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Scrolls the area from a handler, in percent or px, on every call. |
 | `focusable` | `bool` | `false` | Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed. |
 | `on_scroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
 | `on_top_reached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |

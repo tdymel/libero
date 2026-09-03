@@ -30,7 +30,9 @@ pub use grid::{
 };
 pub use header::{Header, HeaderPosition};
 pub use image_list::{ImageBar, ImageItem, ImageList, ImageListProps};
-pub use scroll_area::{ScrollArea, ScrollPositionEvent, Virtualize};
+pub use scroll_area::{
+    ScrollArea, ScrollAreaHandle, ScrollPositionEvent, Virtualize, use_scroll_area,
+};
 pub use scroller::{Scroller, ScrollerControls, ScrollerEdges, ScrollerProps};
 pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
 pub use splitter::{Splitter, SplitterResizeEvent};
