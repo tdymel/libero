@@ -445,18 +445,9 @@ fn carousel_variables(
             CAROUSEL_GAP.override_var(),
             gap.map(|gap| SizeCss::SPACING.value(gap)),
         )
-        // Always declared, never omitted: a `Variables` set that shrinks
-        // between renders leaves the dropped property on the element with its
-        // last value (todo 68, `Burger`'s `d643225`). Without the `auto` arm a
-        // carousel switched from vertical back to horizontal kept the vertical
-        // `height` - measured 300px on a horizontal strip whose prop was unset.
         .with(
             CAROUSEL_HEIGHT,
-            Some(
-                height
-                    .and_then(|height| height.resolve(Some(SizeCss::SPACING)))
-                    .unwrap_or_else(|| "auto".to_string()),
-            ),
+            height.and_then(|height| height.resolve(Some(SizeCss::SPACING))),
         )
 }
 
@@ -1392,20 +1383,6 @@ mod tests {
         let css = Stylesheet::from(&CAROUSEL_ROOT_SX);
 
         assert!(css.as_str().contains("width:100%"), "{}", css.as_str());
-    }
-
-    /// Todo 68: a `Variables` set that shrinks between renders leaves the
-    /// dropped property on the element with its last value. `height` is unset
-    /// on every horizontal carousel, so a strip switched from vertical back to
-    /// horizontal kept the vertical height - 300px, measured on the docs page.
-    /// The var is declared either way and carries `auto` when nothing is set.
-    #[test]
-    fn the_height_var_is_declared_even_when_no_height_is_set() {
-        let unset = carousel_variables(1.0, None, None).to_string();
-        let set = carousel_variables(1.0, None, Some(&ThemeAwareValue::from("300px"))).to_string();
-
-        assert!(unset.contains("--lsx-carousel-height:auto;"), "{unset}");
-        assert!(set.contains("--lsx-carousel-height:300px;"), "{set}");
     }
 
     /// Chrome and Safari keep smooth scrolling under reduced motion, so the

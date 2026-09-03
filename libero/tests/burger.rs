@@ -198,11 +198,11 @@ fn the_opened_state_lands_on_the_glyph() {
     );
 }
 
-/// Both vars are declared on every render, never conditionally: a `Variables`
-/// set that shrinks leaves the dropped custom property behind on the element,
-/// so an unset `color` would keep whatever the last one was.
+/// An unset `color` or `size` declares nothing, so the stylesheet's
+/// fallbacks apply. Clearing one later is `Box`'s job (todo 68), not a
+/// default declared here.
 #[test]
-fn the_glyph_declares_both_of_its_vars_even_when_nothing_is_set() {
+fn the_glyph_declares_only_the_vars_that_are_set() {
     fn bare() -> Element {
         rsx! { LiberoProvider { Burger {} } }
     }
@@ -214,17 +214,11 @@ fn the_glyph_declares_both_of_its_vars_even_when_nothing_is_set() {
         attributes_of(&body(&render(app)), "span")
             .get("style")
             .cloned()
-            .expect("the glyph's inline vars")
     };
 
-    let bare = style(bare);
-    assert!(bare.contains("--lsx-burger-color:currentColor"), "{bare}");
-    assert!(
-        bare.contains("--lsx-burger-size-override:var(--lsx-burger-size)"),
-        "{bare}"
-    );
+    assert_eq!(style(bare), None);
 
-    let coloured = style(coloured);
+    let coloured = style(coloured).expect("the glyph's inline vars");
     assert!(
         coloured.contains("--lsx-burger-color:var(--lsx-primary-6)"),
         "{coloured}"

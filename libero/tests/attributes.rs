@@ -71,10 +71,13 @@ fn header_app() -> Element {
     rsx! { LiberoProvider { Header { color: COLOR(), "x" } } }
 }
 
-/// The per-instance CSS variables ride the `style` attribute, which is dropped
-/// entirely once nothing sets one - so the same clearing rule applies.
+/// The per-instance CSS variables ride the `style` attribute. Dropping the
+/// attribute is not enough: the dioxus interpreter puts back every style
+/// property the new value omits, so the header stayed blue in the browser.
+/// Each var it ever set is written again as `revert-layer`, which computes to
+/// what an absent var would.
 #[test]
-fn a_colored_header_that_becomes_unset_clears_its_variables() {
+fn a_colored_header_that_becomes_unset_reverts_its_variables() {
     let mut dom = VirtualDom::new(header_app);
     dom.rebuild_in_place();
 
@@ -90,7 +93,7 @@ fn a_colored_header_that_becomes_unset_clears_its_variables() {
 
     assert_eq!(
         style,
-        Some("None"),
+        Some("Text(\"--lsx-header-background:revert-layer;--lsx-header-color:revert-layer;\")"),
         "the header kept its old color variables: {:?}",
         writes.0
     );

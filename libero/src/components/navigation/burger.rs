@@ -165,24 +165,9 @@ pub fn Burger(props: BurgerProps) -> Element {
     let glyph_size = props.size.resolve(Some(BURGER_SIZES));
     let button_size = button_size(glyph_size.as_ref());
 
-    // Both vars are declared on every render, never conditionally: a
-    // `Variables` set that *shrinks* leaves the dropped custom property behind
-    // on the element, so a caller who clears `color` would keep the old bars.
-    // Defaulting instead of omitting costs one declaration and cannot rot.
-    // `currentColor` here is the same value the stylesheet falls back to, so
-    // `sx().color(..)` on the button still reaches the bars.
     let glyph_variables: Input<Variables> = variables()
-        .with(
-            BURGER_SIZE.override_var(),
-            glyph_size.clone().unwrap_or_else(|| BURGER_SIZE.value()),
-        )
-        .with(
-            BURGER_COLOR,
-            props
-                .color
-                .resolve(None)
-                .unwrap_or_else(|| "currentColor".to_string()),
-        )
+        .with(BURGER_SIZE.override_var(), glyph_size)
+        .with(BURGER_COLOR, props.color.resolve(None))
         .into();
     let glyph_states: Input<States> = States::default().with("opened", opened).into();
 
