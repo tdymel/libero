@@ -3,8 +3,8 @@ use std::collections::HashSet;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Flex, NavLink, Sidebar, States, Tree, TreeLabel, TreeNode, TreeNodeRenderArgs,
-        default_tree_render,
+        Flex, NavLink, Sidebar, SpotlightAction, States, Tree, TreeLabel, TreeNode,
+        TreeNodeRenderArgs, default_tree_render,
     },
     sx::{Sx, sx},
     theme::{ColorCss, ColorShade, HEADER_HEIGHT, SIDEBAR_SIZE, Size},
@@ -87,6 +87,34 @@ fn group(
     children: Vec<TreeNode<NavEntry>>,
 ) -> TreeNode<NavEntry> {
     TreeNode::new(format!("group:{id}"), NavEntry { label }).children(children)
+}
+
+/// One palette action per page, grouped under its sidebar section - what the
+/// docs search opens on until a real search index exists.
+pub fn page_actions() -> Vec<SpotlightAction> {
+    fn walk(
+        nodes: Vec<TreeNode<NavEntry>>,
+        group: Option<&'static str>,
+        out: &mut Vec<SpotlightAction>,
+    ) {
+        for node in nodes {
+            if node.children.is_empty() {
+                let path = node.id;
+                let mut action = SpotlightAction::new(node.data.label).onclick(move |_| {
+                    if let Ok(route) = path.parse::<Route>() {
+                        navigator().push(route);
+                    }
+                });
+                action.group = group.map(str::to_string);
+                out.push(action);
+            } else {
+                walk(node.children, Some(node.data.label), out);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(nav_tree(), None, &mut out);
+    out
 }
 
 fn nav_tree() -> Vec<TreeNode<NavEntry>> {
@@ -228,6 +256,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::ModalPage {}, "Modal"),
                 page(Route::OverlayPage {}, "Overlay"),
                 page(Route::PopoverPage {}, "Popover"),
+                page(Route::SpotlightPage {}, "Spotlight"),
                 page(Route::TooltipPage {}, "Tooltip"),
             ],
         ),

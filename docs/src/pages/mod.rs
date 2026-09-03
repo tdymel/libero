@@ -34,7 +34,9 @@ pub use navigation::{
     AccordionPage, AnchorPage, BurgerPage, CarouselPage, MenuPage, NavLinkPage, PaginationPage,
     StepperPage, TabsPage, TreePage,
 };
-pub use overlay::{DrawerPage, HoverCardPage, ModalPage, OverlayPage, PopoverPage, TooltipPage};
+pub use overlay::{
+    DrawerPage, HoverCardPage, ModalPage, OverlayPage, PopoverPage, SpotlightPage, TooltipPage,
+};
 pub use surface::{DialogPage, PaperPage};
 pub use typography::{
     BlockquotePage, CodeBlockPage, CodePage, KbdPage, MarkPage, TextPage, TitlePage,

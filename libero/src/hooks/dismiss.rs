@@ -124,6 +124,13 @@ impl DismissLayer {
     pub(crate) fn is_top(&self) -> bool {
         self.stack.open.peek().last() == Some(&self.id)
     }
+
+    /// Whether any dismissible layer is open - a surface already sits above
+    /// the page. `Spotlight` asks it before its hotkey opens a palette over
+    /// one. `peek`, for the same reason as [`is_top`](Self::is_top).
+    pub(crate) fn any_open(&self) -> bool {
+        !self.stack.open.peek().is_empty()
+    }
 }
 
 /// On the stack until dropped.

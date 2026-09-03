@@ -5,7 +5,10 @@
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Burger, Container, Flex, Header, Image, ScrollArea, Title},
+    components::{
+        Burger, Button, Container, Flex, Header, Image, Kbd, ScrollArea, SpotlightOptions, Title,
+        spotlight_filter, use_spotlight,
+    },
     sx::sx,
     theme::{HEADER_HEIGHT, Size},
 };
@@ -29,9 +32,9 @@ use pages::{
     PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage, ProgressBarPage,
     QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, ScrollerPage,
     SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage, SplitterPage,
-    StepperPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage, TextFieldPage,
-    TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage, TreePage,
-    VisuallyHiddenPage,
+    SpotlightPage, StepperPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage,
+    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
+    TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -221,6 +224,8 @@ pub(crate) enum Route {
     OverlayPage {},
     #[route("/overlay/popover")]
     PopoverPage {},
+    #[route("/overlay/spotlight")]
+    SpotlightPage {},
     #[route("/overlay/tooltip")]
     TooltipPage {},
 
@@ -259,6 +264,15 @@ fn App() -> Element {
 #[component]
 fn AppShell() -> Element {
     let mut open = use_signal(|| false);
+    // The docs search: every page, Ctrl/Cmd+K from anywhere.
+    let pages = use_hook(nav::page_actions);
+    let search = use_spotlight(SpotlightOptions {
+        placeholder: Some("Search the docs...".into()),
+        actions: Some(Callback::new(move |query: String| {
+            spotlight_filter(&query, &pages)
+        })),
+        ..Default::default()
+    });
 
     rsx! {
         Flex {
@@ -303,6 +317,17 @@ fn AppShell() -> Element {
                     sx: sx().gap("md"),
                     Image { src: LOGO, sx: sx().width("auto").height("28px") }
                     Title { size: "lg", component: "span", "Libero" }
+                }
+                Button {
+                    variant: "outlined",
+                    sx: sx()
+                        .margin_left("auto")
+                        .color("white")
+                        .border_color("rgba(255, 255, 255, 0.6)")
+                        .gap("sm"),
+                    onclick: move |_| search.open(),
+                    "Search"
+                    Kbd { "Ctrl K" }
                 }
             }
             // This row itself never scrolls - the nav scrolls its own

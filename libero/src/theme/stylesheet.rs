@@ -178,6 +178,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         loader,
         indicator,
         skeleton,
+        spotlight,
         marquee,
         // Emitted by global_reset_scopes, not as a `:root` var.
         font_smoothing: _,
@@ -217,6 +218,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(loader.to_css_declarations());
     declarations.extend(indicator.to_css_declarations());
     declarations.extend(skeleton.to_css_declarations());
+    declarations.extend(spotlight.to_css_declarations());
     declarations.extend(marquee.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(checkbox.to_css_declarations());

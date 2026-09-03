@@ -19,10 +19,10 @@ use super::{
     PinKind, Placement, PopoverDefaults, ProgressBarDefaults, QrCodeDefaults, QrRobustness,
     RadioDefaults, SCROLLER_FADE_DEFAULT, ScrollAreaDefaults, ScrollAxis, ScrollbarSize,
     ScrollbarVisibility, ScrollerControls, ScrollerDefaults, SelectDefaults, SidebarDefaults, Size,
-    Sizes, SkeletonDefaults, SliderDefaults, SliderSizeLevel, SplitterDefaults, StepLabelPosition,
-    StepperDefaults, StepperSizeLevel, SwitchDefaults, SwitchSizeLevel,
-    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel,
-    TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
+    Sizes, SkeletonDefaults, SliderDefaults, SliderSizeLevel, SplitterDefaults, SpotlightDefaults,
+    SpotlightLabels, StepLabelPosition, StepperDefaults, StepperSizeLevel, SwitchDefaults,
+    SwitchSizeLevel, TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults,
+    TabsSizeLevel, TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
     TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults, TitleDefaults,
     TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
 };
@@ -103,6 +103,7 @@ pub struct Theme {
     pub loader: LoaderDefaults,
     pub indicator: IndicatorDefaults,
     pub skeleton: SkeletonDefaults,
+    pub spotlight: SpotlightDefaults,
     pub marquee: MarqueeDefaults,
     pub data_list: DataListDefaults,
     pub table: TableDefaults,
@@ -906,6 +907,19 @@ impl Theme {
             radius: Size::Sm,
             color: ColorValue::Shade(Color::Grey, ColorShade::S3),
             duration: "1500ms",
+        },
+        spotlight: SpotlightDefaults {
+            width: "600px",
+            top_offset: "80px",
+            max_list_height: "400px",
+            radius: Size::Md,
+            padding: "4px",
+            search_font_size: "1.125rem",
+            // Shade 7, not Mantine's dimmed 6: grey.6 on white is below 4.5:1
+            // for text this small.
+            group_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
+            description_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
+            labels: SpotlightLabels::ENGLISH,
         },
         marquee: MarqueeDefaults {
             duration: 40_000,

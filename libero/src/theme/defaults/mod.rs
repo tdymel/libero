@@ -65,6 +65,7 @@ mod sidebar;
 mod skeleton;
 mod slider;
 mod splitter;
+mod spotlight;
 mod stepper;
 mod switch;
 mod table;
@@ -243,6 +244,11 @@ pub use slider::{
     SliderDefaults, SliderSizeLevel,
 };
 pub use splitter::{SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, SplitterDefaults};
+pub use spotlight::{
+    SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
+    SPOTLIGHT_PADDING, SPOTLIGHT_SEARCH_FONT_SIZE, SPOTLIGHT_TOP_OFFSET, SPOTLIGHT_WIDTH,
+    SpotlightDefaults, SpotlightLabels,
+};
 pub use stepper::{
     STEPPER_COLOR, STEPPER_COLOR_CONTRAST, STEPPER_CONNECTOR_COLOR, STEPPER_CONTENT_PADDING,
     STEPPER_DESCRIPTION_COLOR, STEPPER_DESCRIPTION_FONT_SIZE, STEPPER_DESCRIPTION_SIZE,
