@@ -36,10 +36,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Container` is layout only and renders a `<div>` by default, so it adds no
-semantics. Use `component: "main"` or `"section"` when the wrapped region is a
-landmark; a `<section>` wants an accessible name (`aria-label` or
-`aria-labelledby`) to be listed as one.
+Use `component: "main"` or `"section"` when the wrapped region is a landmark; a
+`<section>` wants an accessible name (`aria-label` or `aria-labelledby`) to be
+listed as one.
 
 ## Props
 

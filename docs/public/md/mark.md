@@ -30,13 +30,6 @@ fn Demo() -> Element {
 A bare theme color name is tinted to a light shade; an explicit shade
 (`"error.4"`) or a literal CSS color (`"gold"`) passes through untouched.
 
-## Accessibility
-
-It is a real `<mark>`, which carries the highlight semantics rather than only the
-look - so the emphasis survives for a screen reader that announces it. The base
-style sets `color: inherit`, because the UA stylesheet forces `<mark>` to black
-text, which is illegible over a dark background a caller supplied.
-
 ## Props
 
 | Prop | Type | Default | Description |

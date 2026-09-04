@@ -233,25 +233,10 @@ pub fn StepperPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The steps are an ordered list, "
-                    Code { source: "role=\"list\"" }
-                    " spelled out because Safari drops list semantics from an unstyled one. The "
-                    "current step carries "
-                    Code { source: "aria-current=\"step\"" }
-                    " on its own button (or label), so tabbing to it says so. A completed or "
-                    "errored step adds its status in words after the label; the check and the "
-                    "cross are drawing only."
-                }
-                Text {
                     "With "
                     Code { source: "onstepclick" }
-                    " each clickable step is a real button and a tab stop, in document order. "
-                    "There are no arrow keys, deliberately: arrows belong to composite widgets "
-                    "such as a tab list, and a list of individually tabbable buttons must not "
-                    "swallow them. The content is a "
-                    Code { source: "role=\"region\"" }
-                    " named by its step. When the step moves on while focus is inside its "
-                    "content, focus goes to the step that is now current."
+                    " each clickable step is a button and a tab stop, in document order; "
+                    "Enter and Space activate. There are no arrow keys."
                 }
             }
         }

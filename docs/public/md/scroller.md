@@ -108,29 +108,10 @@ A call before the strip has mounted does nothing.
 
 ## Accessibility
 
-- **The strip is a named region and a tab stop** (`role="region"`,
-  `tabindex="0"`, the required `aria_label`). A strip of plain text or images
-  has no other keyboard path.
-- **`←`/`→` on the focused strip are the browser's own scrolling** - 40px per
-  press in Chromium. Nothing here adds key handling, so `Home`/`End` do not
-  scroll a horizontal strip.
-- **The controls are `<button type="button">`** named from the theme,
-  "Scroll backward" and "Scroll forward" (not "left"/"right"), each with
-  `aria-controls` pointing at the strip.
-- **A control at its own end is `aria-disabled="true"` and `tabindex="-1"`**,
-  not `disabled`: a focused button that becomes `disabled` drops focus to the
-  page. Pressing `Enter` until the end keeps focus on the control. Under
-  `controls: "auto"` it then disappears once focus leaves it, not before.
-- **Focus rings**: the strip's is outset, the controls' inset. Both read
-  `--lsx-focus-contrast` from the surface around them; the gradient publishes
-  none of its own.
-- **Smooth stepping stops under `prefers-reduced-motion: reduce`.** Chrome and
-  Safari do not do that for `scroll-behavior: smooth` themselves.
-- **Drag** (`draggable`) is mouse only and never sets `touch-action: none`, so
-  touch keeps its native scroll. A press becomes a drag only after 5px of
-  travel, so a plain click still reaches the item under it; after a real drag
-  the click lands on the strip, not the item. While draggable, a mouse press
-  does not start a text selection and does not move focus.
+- **`aria_label` is required**: the strip is a named region and a tab stop, the
+  keyboard path for a strip of plain text or images.
+- **`←`/`→` on the focused strip are the browser's own scrolling.** Nothing adds
+  key handling, so `Home`/`End` do not scroll a horizontal strip.
 
 ## Props
 

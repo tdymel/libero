@@ -53,16 +53,7 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The active link carries `aria-current="page"`, so a screen reader announces
-which item in the list is the current one. A `disabled` link renders an `<a>`
-with `aria-disabled="true"` and `tabindex="-1"` and drops out of the tab order;
-`pointer-events: none` stops the click. Hover is neutral grey rather than the
-accent color on purpose - hovering must not look like a selection. Wrap a list
-of them in a `<nav>` and they are a navigation landmark.
-
-`scroll_into_view` scrolls the active link into view when it becomes active,
-acting on whatever scrollable ancestor exists - useful for a long sidebar, and
-off by default because it is wrong everywhere else.
+Wrap a list of them in a `<nav>` and they are a navigation landmark.
 
 ## Props
 

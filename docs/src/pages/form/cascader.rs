@@ -239,28 +239,6 @@ pub fn CascaderPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Focus never leaves the trigger. Each column is its own "
-                    Code { source: "role=\"listbox\"" }
-                    " whose rows are never focused, and the trigger names the row the arrows are "
-                    "on with "
-                    Code { source: "aria-activedescendant" }
-                    " - the pattern "
-                    Code { source: "Select" }
-                    " and "
-                    Code { source: "Combobox" }
-                    " already use, one cursor over several lists instead of one. A column past "
-                    "the first is named by the row it hangs off, so nothing has to invent a "
-                    "label for \"level 2\"."
-                }
-                Text {
-                    Code { source: "aria-selected" }
-                    " follows the cursor's own chain rather than the selected option, so the row "
-                    Code { source: "aria-activedescendant" }
-                    " points at always carries it - with several columns open those are "
-                    "routinely different rows. The selected option keeps a mark of its own, in "
-                    "weight rather than in ARIA."
-                }
-                Text {
                     "Closed, the trigger opens on ArrowDown, ArrowUp, ArrowRight, Enter or "
                     "Space. Open, ArrowDown and ArrowUp move inside the cursor's column and skip "
                     "disabled rows, ArrowRight expands into the children, ArrowLeft goes back up "

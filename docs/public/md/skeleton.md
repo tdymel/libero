@@ -87,15 +87,6 @@ fn Card() -> Element {
 }
 ```
 
-## Accessibility
-
-- **While `visible`, the root is `aria-hidden="true"` and `inert`.** Covered
-  content is not announced, and a covered button or link is not reachable with
-  Tab. `aria-hidden` alone would leave it focusable with no name. When `visible`
-  turns `false`, both attributes are removed.
-- **Not focusable itself, no keyboard contract.**
-- **Reduced motion**: the pulse stops at opacity `0.7`, between its two ends.
-
 ## How it hides the content
 
 While `visible`, the root is `visibility: hidden` and only its `::after` - the

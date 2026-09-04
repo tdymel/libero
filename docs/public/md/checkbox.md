@@ -98,13 +98,7 @@ link inside it toggles the card.
 
 ## Accessibility
 
-A visually hidden `<input type="checkbox">` owns the name, the state, the focus
-ring and the keyboard - Space toggles it, as it would natively. The visible box
-is `aria-hidden` decoration that forwards its clicks.
-
-Without a `label`, give it an `aria_label`. The caption slots that are filled
-join `aria-describedby`; an error `status` sets `aria-invalid`; `required` sets
-`required` and `aria-required` and marks the label with an asterisk.
+Space toggles it. Without a `label`, give it an `aria_label`.
 
 ## Props
 

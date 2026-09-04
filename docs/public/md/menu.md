@@ -77,15 +77,8 @@ item stays in the arrow order but cannot be chosen.
 
 ## Accessibility
 
-- Trigger: `id`, `aria-haspopup="menu"`, `aria-expanded`, and `aria-controls`
-  while open, all from `MenuState::a11y_attributes()`.
-- Menu box: `role="menu"`, `tabindex="-1"`, `aria-labelledby` the trigger (a
-  submenu: its item).
-- Items: `<button role="menuitem">` with a roving `tabindex`; disabled items
-  carry `aria-disabled="true"`, not `disabled`, so they stay reachable.
-  A submenu item has `aria-haspopup="menu"` and `aria-expanded`.
-- Groups: `role="group"` labelled by their visible name. Separators:
-  `role="separator"`.
+- Spread `menu.a11y_attributes()` on the trigger; it ties the trigger to the
+  menu.
 - `leading` and `trailing` sit inside the item's button: never put anything
   interactive there.
 

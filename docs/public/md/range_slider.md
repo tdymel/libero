@@ -124,19 +124,13 @@ form.getAll("price") // ["20", "80"]
 
 ## Accessibility
 
-Each thumb is its own `role="slider"`, with `aria-valuenow` for its own end and
-`aria-valuemin`/`aria-valuemax` bounded by the *other* thumb - so a screen
-reader announces how far this thumb can actually travel, not how wide the track
-is. `format` sets each one's `aria-valuetext`.
-
-A `label` names both through `aria-labelledby`, which cannot tell them apart, so
-each also carries an `aria-label`: "Minimum" and "Maximum" by default, and
-`aria_label_from`/`aria_label_to` replace them.
-
-Keyboard: the focused thumb is the one the keys move. Arrows move one `step`,
+The focused thumb is the one the keys move. Arrows move one `step`,
 Shift+arrow, PageUp and PageDown move `big_step` of them, and Home and End jump
-that thumb to `min` or `max` - stopping at its neighbour like any other move. A
-click on the track grabs whichever thumb is nearer and focuses it.
+that thumb to `min` or `max` - stopping at its neighbour like any other move.
+
+A `label` names both thumbs, so each also carries its own name: "Minimum" and
+"Maximum" by default. Pass `aria_label_from` and `aria_label_to` where those
+words do not fit, and `format` where a bare number does not say the unit.
 
 ## Props
 

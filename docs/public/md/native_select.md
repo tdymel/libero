@@ -177,42 +177,10 @@ option needs a listbox rather than a native `<select>`.
 
 ## Accessibility
 
-Focus lands on the `<select>`, but the focus ring is drawn by the frame around
-it, keyed off `:has(:focus-visible)` - so a keyboard focus rings the whole field
-and a mouse click does not ring anything.
-
-The label is a real `<label for>` paired with the select's `id`. It was a
-wrapping `<label>` before the field port; the pair replaced it because a wrapping
-label swallows clicks on anything else inside the field. A caller-supplied `id`
-takes over the generated one, and every slot follows it.
-
-Whichever of the description, helper and status slots are filled are joined into
-the select's `aria-describedby`, in reading order. A caller who passes their own
-`aria-describedby` wins outright: theirs is used and the generated list is
-dropped.
-
-`required` sets the native attribute and `aria-required`, and adds an asterisk to
-the label. The asterisk is `aria-hidden` - `aria-required` already carries it to
-assistive technology.
-
 Leave `label` unset only when something else already names the select; a bare
-`<select>` with no accessible name is a defect. `disabled` sets the native
-`disabled` attribute, so the browser handles the focus and interaction semantics.
-
-The chevron is the browser's own: drawing ours would mean `appearance: none`, and
-with it the native picker affordance on every platform.
-
-The selection is written as `selected` on each `<option>`, not as `value` on the
-`<select>`. The property lands on the option itself, so it does not depend on
-the parent's children already existing - which is what the old `value` path got
-wrong on the creating render, and it means server-rendered HTML carries the
-right selection instead of none.
-
-One gap remains, and it is the same class as any controlled native input: if a
-caller ignores an `onchange`, the vdom is unchanged, the differ writes nothing,
-and the DOM keeps the user's pick. A `<select>`'s change is not activation
-behaviour, so the cancel-the-click trick that fixes checkboxes and radios does
-not apply here.
+`<select>` with no accessible name is a defect. A caller-supplied
+`aria-describedby` replaces the one built from the caption slots, rather than
+joining it.
 
 ## Props
 
@@ -223,7 +191,7 @@ not apply here.
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `radius` | `Size` | `sm` | Corner radius, independent of `size`. |
 | `value` | `Option<T>` | - | The selected option; strictly controlled. `None` shows `placeholder` and selects nothing. |
-| `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked. |
+| `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. Never fires for the placeholder, which cannot be picked. A handler that ignores the pick leaves it in the DOM: a `<select>`'s change cannot be cancelled. |
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. Returns a `String`, not an `OptionLabel`: an `<option>` holds text and nothing else. |
 | `placeholder` | `String` | - | Shown while `value` is `None`, as an unpickable first entry. |

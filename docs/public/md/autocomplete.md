@@ -102,23 +102,10 @@ Autocomplete {
 
 ## Accessibility
 
-The control is a real `<input>` with `role="combobox"`,
-`aria-autocomplete="list"`, `aria-expanded` and `aria-controls`; while the list
-is open, `aria-activedescendant` names the highlighted row, so focus never
-leaves the input and typing keeps working. `autocomplete="off"` keeps the
-browser's own dropdown from covering ours.
-
-Keys: typing opens the list, ArrowDown opens it too; the arrows, Home and End
-move the highlight; Enter picks the highlighted row; Escape and Tab close.
-**Nothing is highlighted until the user arrows onto a row**, so Enter on text
-that matches no suggestion is not swallowed and a form still submits.
-
-Clicking elsewhere closes the list - the input closes on blur, and the list
-cancels `mousedown` so a click on a row never takes focus away first.
-
-The list is portaled to the document root through `use_popover`, so no
-`overflow: hidden` ancestor clips it and it flips above the field near the
-bottom of the viewport.
+Typing opens the list, and so does ArrowDown; the arrows, Home and End move the
+highlight; Enter picks the highlighted row; Escape and Tab close. Nothing is
+highlighted until the user arrows onto a row, so Enter on text that matches no
+suggestion still submits the form.
 
 ## Props
 

@@ -85,15 +85,8 @@ its loading status this way.
 
 ## Accessibility
 
-- **Always silent**: `aria-hidden="true"`, not `role="presentation"` - a
-  `<span>` has no implicit role for `presentation` to strip.
-- **No `label` prop.** A loader that is its own status region mounts together
-  with its text, which some screen readers do not announce. Use the
-  always-mounted status region above.
-- **Not focusable, no keyboard contract.**
-- **Reduced motion**: every animation stops, and each shape rests on its
-  visible end - a bar's keyframes start at `opacity: 0`, so its arm restores
-  `transform: scale(1)` and `opacity: 1` rather than only cancelling.
+A loader is always silent and has no `label` prop. Announce what is loading
+with the always-mounted status region above.
 
 ## Props
 

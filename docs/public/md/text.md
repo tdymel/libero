@@ -28,10 +28,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Text` renders a paragraph by default, so it is read as one block. `component:
-"span"` or `"div"` drops that grouping - use `span` for text inside a sentence
-and keep `p` for standalone copy. Size is styling only; it never changes the
-element, so it cannot be used to imply a heading.
+`Text` renders a paragraph by default. Use `component: "span"` for text inside a
+sentence and keep `p` for standalone copy. Size is styling only, so it cannot
+imply a heading.
 
 ## Props
 

@@ -55,11 +55,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Box` renders exactly the tag `component` names and adds no roles of its own, so
-the semantics are whatever that tag carries: a `div` is a generic box, a
-`button` is focusable and Enter/Space activated, an `a` with `href` is a link.
-Picking a `div` for something clickable therefore loses the keyboard behaviour a
-`button` would have given for free.
+`Box` adds no roles, so the semantics are whatever tag `component` names.
+Picking a `div` for something clickable loses the keyboard behaviour a `button`
+would have given for free.
 
 ## Props
 

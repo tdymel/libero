@@ -77,10 +77,7 @@ fn Demo() -> Element {
 
 Escape does not dismiss it, and an ancestor with `overflow: hidden` - a scroll
 container, a card - clips it. Both need measurement and state; reach for a
-popover there. The bubble keeps pointer events and its `gap` is transparent
-padding rather than a real gap, so a pointer can reach the bubble itself
-(WCAG 2.1 SC 1.4.13). Focus opens it only on `:focus-visible`, so a mouse
-click on the trigger does not leave the bubble up.
+popover there.
 
 ## Props
 

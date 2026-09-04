@@ -73,11 +73,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The root is a real `<a>` with an `href`, so keyboard activation, focus, the
-context menu and open-in-new-tab all come from the browser. The link text is the
-accessible name - keep it descriptive rather than "here". A `target: "_blank"`
-link opens a new context, which is worth saying in the label or a
-`Tooltip` for anyone who cannot see it happen.
+The link text is the accessible name - keep it descriptive rather than "here".
+A `target: "_blank"` link opens a new context, which is worth saying in the
+label or a `Tooltip` for anyone who cannot see it happen.
 
 ## Props
 

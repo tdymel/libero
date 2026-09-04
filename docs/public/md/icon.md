@@ -65,12 +65,10 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Icon` is decorative chrome and adds no semantics of its own - it is a `<span>`
-(or whatever `component` says) with no role and no accessible name. Give the svg
-a `<title>`, or the wrapper an `aria_label`, when the icon carries meaning on its
-own; mark it `aria_hidden: "true"` when it merely repeats adjacent text. For a
-clickable icon use [`ActionIcon`](action_icon.md), which is a real `<button>`
-with a required `aria_label`.
+`Icon` has no accessible name. Give the svg a `<title>`, or the wrapper an
+`aria_label`, when the icon carries meaning on its own; mark it
+`aria_hidden: "true"` when it merely repeats adjacent text. For a clickable icon
+use [`ActionIcon`](action_icon.md), which requires an `aria_label`.
 
 ## Props
 

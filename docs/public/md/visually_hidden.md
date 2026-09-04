@@ -36,10 +36,8 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-This is the clip-rect technique, not `display: none` or `visibility: hidden` -
-both of those remove the content from the accessibility tree as well, which is
-the opposite of the point. The element stays in the DOM and in reading order, so
-place it where it should be *read*: inside the link, not next to it.
+The content stays in reading order, so place it where it should be *read*:
+inside the link, not next to it.
 
 Use it for text that is genuinely missing for a non-sighted reader - a link's
 target, a table column header, a live-region announcement. Do not use it to hide

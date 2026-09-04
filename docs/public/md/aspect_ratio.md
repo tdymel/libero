@@ -40,10 +40,9 @@ setting its own height.
 
 ## Accessibility
 
-`AspectRatio` is layout only - always a `<div>`, no semantics, no focus
-behaviour. Because it crops, make sure nothing meaningful lives at the edges of
-the child; an image whose subject is cut off still needs `alt` text describing
-what the reader can see.
+Because it crops, make sure nothing meaningful lives at the edges of the child;
+an image whose subject is cut off still needs `alt` text describing what the
+reader can see.
 
 ## Props
 

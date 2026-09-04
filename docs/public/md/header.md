@@ -54,10 +54,10 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-It is always a `<header>` element, which is the `banner` landmark when it is not
+It is always a `<header>`, which is the `banner` landmark only when it is not
 nested inside `article`, `aside`, `main`, `nav` or `section` - so keep it at the
-top level of the page. It hosts nav and actions rather than scoping them: put a
-`nav` inside it for the navigation landmark. One banner per page.
+top level of the page. Put a `nav` inside it for the navigation landmark. One
+banner per page.
 
 ## Props
 

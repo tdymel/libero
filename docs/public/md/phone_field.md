@@ -120,20 +120,10 @@ Form {
 
 ## Accessibility
 
-The `<input type="tel">` is the labelled control: a `<label for>`/`id` pair, the
-filled caption slots joined into `aria-describedby`, `aria-invalid` on an error
-status, and the focus ring drawn by the frame.
-
-The picker is a second tab stop, and should be - it is a real `<button>` and the
-only way to reach what it does. Enter, Space and ArrowDown open the list, the
-arrows move the highlight, Enter picks and Escape closes, and both hand the
-focus back to the button. The open list carries a search box, because 240
-countries are not a list anyone scrolls: while it is open that box owns
-`role="combobox"` and `aria-activedescendant`, and the button keeps only
-`aria-haspopup="listbox"` and `aria-expanded`.
-
-Nothing in the text input is intercepted - digits, Backspace and the arrow keys
-are all native.
+The country picker is a second tab stop. Enter, Space and ArrowDown open the
+list, typing filters it, the arrows move the highlight, Enter picks and Escape
+closes; both hand focus back to the picker. Everything in the text input is
+native.
 
 ## Props
 

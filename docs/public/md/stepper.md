@@ -97,24 +97,9 @@ The root is a `div` holding the `<ol>` and, horizontally, the content region.
 
 ## Accessibility
 
-- An `<ol role="list">`; the explicit role keeps list semantics in Safari with
-  VoiceOver.
-- The current step's own element - its button, or its label when not clickable -
-  has `aria-current="step"`, so tabbing to it announces it.
-- A completed or errored step appends its status in words (`theme.stepper.
-  completed_label`, `error_label`); the marker's number, check and cross are
-  `aria-hidden`.
-- With `onstepclick`, completed steps and the current one are native
-  `<button>`s, and pending ones too with `allow_next_steps`. Each is a tab stop in
-  document order; Enter and Space activate. There are **no arrow keys**: arrows
-  belong to composite widgets, and a list of individually tabbable buttons must
-  not swallow them.
-- Content is `role="region"` with `aria-labelledby` pointing at its step, ids
-  `{id}-step-{i}` and `{id}-content-{i}`.
-- When `active` moves while focus is inside the step's content (a "Continue"
-  button), focus goes to the step that is now current, or back to the closed
-  step's header when every step is finished. A non-clickable header takes it
-  through `tabindex="-1"`, which is not a tab stop.
+With `onstepclick`, completed steps and the current one are buttons, and
+pending ones too with `allow_next_steps`. Each is a tab stop in document order;
+Enter and Space activate. There are no arrow keys.
 
 ## Theme
 

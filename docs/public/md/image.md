@@ -66,22 +66,12 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A plain `Image` is an `<img>` carrying your `alt`. Leave `alt` empty for a purely
-decorative image and it also gets `role="presentation"`, so a screen reader skips
-it instead of announcing a filename.
+Leave `alt` empty only for a purely decorative image. A `zoomable` image takes
+its names from `alt` - "Zoom in: <alt>" on the button, and the enlarged
+picture's - so give it one.
 
-A `zoomable` image is a real `<button>` with `type="button"` and
-`aria-pressed` tracking the zoom state, so Tab reaches it and Space or Enter
-zooms. Its accessible name is derived from `alt`: `Zoom in: <alt>` closed,
-`Zoom out: <alt>` open, falling back to plain `Zoom in`/`Zoom out` when `alt` is
-empty. The inner `<img>` is then `alt=""`/`role="presentation"`, since the button
-already carries the name.
-
-The overlay is opened with `use_lightbox`, so Escape, the backdrop and the
-dialog's own **Close** button close it, and focus is trapped inside while it is
-open. Focus lands on **Close** and returns to the inline image on close. The
-dialog is named from `alt`, and the enlarged picture keeps `alt` too: it is the
-pan surface, a tab stop of its own, and no longer the close button.
+A `zoomable` image is a tab stop: Space or Enter zooms, and Escape, the backdrop
+or the dialog's **Close** button close the overlay again.
 
 ## Props
 

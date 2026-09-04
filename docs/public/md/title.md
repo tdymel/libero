@@ -63,11 +63,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The rendered element is a real heading, so it lands in the document outline and
-in a screen reader's heading list. One `h1` per page, and no skipped levels -
-which is exactly what `component` is for, since the level a layout wants and the
-size a design wants often disagree. `Title` will not stop you from emitting a
-broken order; it only makes fixing one a one-prop change.
+One `h1` per page, and no skipped levels - which is what `component` is for,
+since the level a layout wants and the size a design wants often disagree.
+`Title` will not stop you from emitting a broken order.
 
 ## Props
 

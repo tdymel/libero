@@ -73,21 +73,13 @@ Plus `class`, `sx`, `states` and any global attribute (`id` seeds the ids below)
 
 ## Accessibility
 
-- Each trigger is a native `<button>` inside the `heading` element, with
-  `aria-expanded` and `aria-controls` pointing at its panel. The panel is
-  `role="region"` with `aria-labelledby` pointing back.
 - Every trigger is a tab stop. Enter and Space toggle. Up and Down move focus to
   the next or previous trigger (wrapping, skipping disabled ones); Home and End
   jump to the ends. Arrows never toggle.
-- A disabled section gets `aria-disabled="true"`, not `disabled`, so it stays
-  reachable and announced.
-- When a panel closes while focus is inside it - a "Continue" button that opens
-  the next step - focus returns to that panel's own trigger instead of falling
-  to the page.
 - Heading level: decide the level the page outline needs first, then the size.
   `h3` assumes a section title above the accordion.
-- Every panel is a region landmark. A screen reader lists each open one, so a
-  `Many` accordion with a dozen open sections produces a long landmark list.
+- Every open panel is a region landmark, so a `Many` accordion with a dozen
+  open sections produces a long landmark list.
 
 ## Theme
 

@@ -112,26 +112,6 @@ cannot be picked.
 In `"paths"` - and so while searching - `ArrowLeft` and `ArrowRight` are left
 alone, so they move the search box's caret.
 
-## Accessibility
-
-Focus never leaves the trigger. Each column is its own `role="listbox"` whose
-rows are never focused, and the trigger names the row the arrows are on with
-`aria-activedescendant` - the same pattern [Select](select.md) and
-[Combobox](combobox.md) use, one cursor over several lists instead of one. A
-column past the first is named by the row it hangs off, so nothing has to invent
-a label for "level 2".
-
-`aria-selected` follows the **cursor's own chain** rather than the selected
-option. With several columns open those are routinely different rows, and
-marking only the selected one would leave the `aria-activedescendant` target
-with no `aria-selected` at all. The selected option keeps a mark of its own, in
-weight rather than in ARIA.
-
-While `searchable` and open, the search box owns `role="combobox"`,
-`aria-controls` and `aria-activedescendant`; the trigger keeps only
-`aria-haspopup` and `aria-expanded`, because two elements cannot both be the
-combobox.
-
 ## Props
 
 Everything `field_props!` gives every field - `label`, `description`, `helper`,

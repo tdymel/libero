@@ -51,13 +51,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-The root is a `div` with `role="separator"`, plus `aria-orientation="vertical"`
-when vertical (horizontal is the role's own default, so it is left off). The
-label is a `span` inside the rule, which is why it is announced as the
-separator's own text rather than as content on either side of it.
-
 ## Props
 
 | Prop | Type | Default | Description |

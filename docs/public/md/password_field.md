@@ -74,14 +74,7 @@ The button is disabled with the field, so a disabled password cannot be read.
 
 ## Accessibility
 
-Everything [TextField](text_field.md) does: a `<label for>`/`id` pair, the
-filled caption slots joined into `aria-describedby`, `aria-invalid` on an error
-status, `required` plus `aria-required`, and the focus ring drawn by the frame
-around the control.
-
-The reveal button is a real `<button>` inside the frame, which is why no field
-in the library uses a wrapping `<label>` - one would swallow its clicks. The
-icons are `aria-hidden`; the button's `aria-label` carries the meaning.
+Leave `label` unset only when something else already names the field.
 
 ## Props
 

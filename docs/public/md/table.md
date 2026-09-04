@@ -128,15 +128,8 @@ one column should not follow its type.
 
 ## Accessibility
 
-The root is a real `<table>` with a `<thead>`/`<tbody>` and `scope="col"` on
-every header cell, so a screen reader announces column headers with each cell.
 Give it an accessible name with `aria_label` when the surrounding text doesn't
-already provide one - it passes straight through to the `<table>`.
-
-A sortable header is a `<button>` inside its `th`, so it is reachable by Tab and
-activated with Space or Enter. Only sortable headers carry `aria-sort`
-(`none`/`ascending`/`descending`), which is both the announced sort state and
-what fades and flips the arrow. The arrow itself is `aria-hidden`.
+already provide one. A sortable header is a tab stop; Space or Enter sorts.
 
 ## Props
 

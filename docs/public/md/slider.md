@@ -141,24 +141,12 @@ to `/form/slider` with the component.
 
 ## Accessibility
 
-The thumb, not the root, is the `role="slider"` element: it carries
-`aria-orientation`, `aria-valuemin`, `aria-valuemax`, `aria-valuenow` and, when
-`format` is set, `aria-valuetext` (a bare value is already in `aria-valuenow`).
+Arrow keys move one `step`, Shift+arrow, PageUp and PageDown move `big_step` of
+them, Home and End jump to `min` and `max`.
 
-A `label` names it through `aria-labelledby`: `for` names only a labelable
-element, and the thumb is a span with a role. The filled caption slots join the
-thumb's `aria-describedby`, an error `status` sets `aria-invalid` and `required`
-sets `aria-required` - all on the thumb, for the same reason. Without a `label`,
-name it with `aria_label`; an `aria_label` passed through `attributes` would
-land on the field wrapper instead.
-
-Keyboard: arrow keys move one `step` (the theme's `step` when no `step` prop is
-set), Shift+arrow, PageUp and PageDown move `big_step` of them, Home and End
-jump to `min` and `max`. Every key press calls `prevent_default`, so the page
-does not scroll under the thumb. `disabled` sets `aria-disabled` and drops the
-pointer and keyboard handlers.
-
-`name` renders a hidden `<input>` alongside, so the value posts with a form.
+Without a `label`, name it with the `aria_label` prop; an `aria_label` passed
+through `attributes` lands on the field wrapper instead of the thumb. Pass
+`format` where a bare number does not say the unit.
 
 ## Props
 

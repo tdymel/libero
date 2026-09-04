@@ -232,14 +232,10 @@ and it does not flip when it runs out of room below.
 
 ## Accessibility
 
-Focus never moves. It stays wherever you put it - in a text field, on a button -
-and the arrows move a *highlight* instead, which is what lets you keep typing
-while arrowing through the suggestions. That is the `aria-activedescendant`
-pattern, and it is the whole reason the state is a handle rather than a pile of
-props: the attribute belongs on the focused trigger, and the trigger is the one
-element `Combobox` does not render.
-
-`state.a11y_attributes()` is that wiring, ready to spread:
+Focus stays on your trigger - a text field, a button - and the arrows move a
+highlight, so typing keeps working. The trigger is the one element `Combobox`
+does not render, so spread `state.a11y_attributes()` on it. Without that the
+list is not tied to the trigger for a screen reader:
 
 ```rust
 TextField {
@@ -249,29 +245,12 @@ TextField {
 }
 ```
 
-It sets `role="combobox"`, `aria-haspopup="listbox"`, `aria-expanded`,
-`aria-controls`, and `aria-activedescendant` while the list is open. The ids
-come from the handle, so nothing has to line up by hand:
-
-| Element | `id` | Set by |
-|---|---|---|
-| The list | `<state id>-listbox` | `Combobox` |
-| A row | `<state id>-option-<index>` | `ComboboxOption` |
-
-The list is `role="listbox"` and rows are `role="option"`, with `aria-selected`
-only on rows that pass `selected` - a suggestion list has no selection to
-announce.
+Pass `selected` only on rows that really are selected; a plain suggestion list
+has no selection to announce.
 
 Keyboard, from anywhere inside the wrapper: ArrowDown opens and moves down,
 ArrowUp moves up, Home and End jump to the ends, Enter picks the active row and
-closes, Escape and Tab close. `disabled` blocks all of it.
-
-While `loading`, the dropdown shows a silent `Loader` and carries
-`aria-busy="true"`. What is said comes from a visually hidden `role="status"`
-region beside the trigger, outside the dropdown: it holds `loading_label` while
-an open list loads, and is empty otherwise. It stays mounted either way,
-because a screen reader announces a change to a region that is already there,
-and some hold back what changes inside a busy subtree until it is done.
+closes, Escape and Tab close.
 
 ## Props
 

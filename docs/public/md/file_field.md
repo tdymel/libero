@@ -151,37 +151,12 @@ FileField {
 
 ## Accessibility
 
-The control is a `div` with `role="button"` rather than a `<button>`: the chips
-carry their own remove buttons, and an interactive descendant of a button is
-invalid. It answers Enter and Space itself, because only a real `<button>` gets
-that from the browser.
+Enter and Space open the picker. In the `Input` variant the control is one tab
+stop: Left and Right move a cursor over the chips, and Backspace or Delete
+removes the file under the cursor - the last one when there is no cursor. In
+the `Dropzone` variant each card's remove button is a tab stop of its own.
 
-A `label` names it through `aria-labelledby` - `for` names only a labelable
-element. The filled caption slots join its `aria-describedby`, an error `status`
-sets `aria-invalid`, and `required` sets `aria-required`. The hidden input is
-`aria-hidden` and out of the tab order: it is plumbing, not the control.
-
-**Keyboard.** Enter and Space open the picker. In the `Input` variant the chips
-answer the arrows the way `MultiSelect`'s do: Left and Right move a cursor over
-them, `aria-activedescendant` follows it, and Backspace or Delete removes the
-file under the cursor - the last one when there is no cursor. The control stays
-one tab stop; the chips' own x buttons are not in the tab order.
-
-The `Dropzone` variant has no chips. Its cards sit outside the control, so each
-card's remove button is a tab stop of its own and needs no cursor.
-
-**Uploading.** `loading` draws a [`Loader`](loader.md) inside the control - in
-the trailing slot ahead of the clear button, or in place of the dropzone's icon -
-and sets `aria-busy="true"` on it. The loader is `aria-hidden`: the control is
-already named by the field's label, and `aria-busy` is what says it is waiting.
-Once a single-file dropzone has put its surface away, the loader moves onto the
-card and the card list carries `aria-busy`. `loading` does not block picking;
-pass `disabled` for that. It is not a `status`: that slot is validation, and an
-upload in flight is neither valid nor invalid.
-
-A filename is one unbreakable word, so every place one is shown - the chip, the
-card, the single-file control - clips it with an ellipsis rather than letting it
-widen the field.
+`loading` does not block picking; pass `disabled` for that.
 
 ## Props
 

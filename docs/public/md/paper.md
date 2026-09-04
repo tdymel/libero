@@ -59,13 +59,8 @@ definition of what a surface is. Chaining works because `Paper` emits a
 
 ## Accessibility
 
-`Paper` renders no `role` and no ARIA, ever. A surface is presentational, and
-the contents are what a reader interacts with. A `Paper` rendered as a
-`section` or `aside` becomes a landmark, and the caller owns the `aria-label`
-that names it - the same rule the rest of the library follows for elements it
-does not name itself. Nothing in a `Paper` is focusable unless the caller makes
-it so; as an `<a href>` it is focusable and carries the library's shared
-`:focus-visible` ring.
+A `Paper` rendered as a `section` or `aside` becomes a landmark, and the caller
+owns the `aria-label` that names it.
 
 ## Props
 

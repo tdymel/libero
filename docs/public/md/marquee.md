@@ -82,22 +82,11 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-- **One copy is announced.** Copies `2..repeat` carry `aria-hidden="true"` and
-  `inert`: `aria-hidden` alone would leave a link inside them tabbable.
-- **The pause toggle** is an `ActionIcon` `<button type="button">` in the tab
-  order, pinned to the end of the strip. `Enter`/`Space` toggles it. The name
-  is fixed (`MarqueeDefaults::pause_label`, `"Pause"`) and `aria-pressed` is
-  the state, so it is never read as "Play, pressed". It is the WCAG 2.2.2
-  mechanism; `pause_on_hover` is not one, since neither a keyboard nor a touch
-  screen can hover.
+- **The pause toggle** is the WCAG 2.2.2 mechanism, a tab stop that `Enter` or
+  `Space` toggles. `pause_on_hover` is not one, since neither a keyboard nor a
+  touch screen can hover.
 - **`paused` is strictly controlled when set.** The toggle then only reports
   through `onpausechange`; without the handler it does nothing.
-- **Reduced motion** is pure CSS, from the same DOM: the animation stops,
-  copies after the first are `display: none`, the fade and the toggle go, and
-  the root becomes `overflow: auto`. Chromium makes a scrollable region with no
-  focusable content a tab stop of its own, so the strip stays keyboard
-  scrollable.
-- The track itself is not focusable and has no role.
 
 ## Props
 

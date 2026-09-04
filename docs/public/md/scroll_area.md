@@ -134,17 +134,10 @@ row too.
 
 ## Accessibility
 
-The root is a `<div>` with `tabindex="-1"`: Chromium makes an overflowing
-`overflow: auto` region an implicit tab stop, which would add a stop that
-announces nothing, and the content carries its own focusable elements. Keyboard
-scrolling still works once something inside has focus, and
-`scrollbar_visibility: "hover"` also reveals the bar on `:focus-within` so a
-keyboard user is not left without one.
-
-`focusable: true` is for the case that assumption does not hold - a strip of
-images, a block of plain text, anything whose content has nothing to focus. It
-makes the viewport a tab stop (`tabindex="0"`) and the browser's own arrow-key
-scrolling comes with it, so the content can be read without a mouse.
+A scroll area is not a tab stop: its content usually carries its own focusable
+elements. `focusable: true` is for content that has nothing to focus - a strip
+of images, a block of plain text. It makes the viewport a tab stop, and the
+browser's own arrow-key scrolling comes with it.
 
 Name it as well as focusing it. APG's scrollable-region pattern wants a `role`
 and an accessible name on a focusable region, and `ScrollArea` sets no `role` of

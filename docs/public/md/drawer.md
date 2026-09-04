@@ -85,15 +85,13 @@ last part is why the panel carries the dialog role for free.
 
 ## Accessibility
 
-The panel is a `Dialog`, so it is a modal dialog: focus is trapped inside while
-it is open, Escape closes it, and focus returns to whatever opened it - the hook
-records the trigger itself. Escape and a backdrop click settle the `Opening`
-with `None`, so a handler written for an answer never runs on a dismissal.
+Escape and a backdrop click close it, settling the `Opening` with `None`, so a
+handler written for an answer never runs on a dismissal.
 
 Give the panel an accessible name where its content does not already provide
 one, with `Dialog`'s `title` or `aria_label` inside the closure. Unlike a plain
 `Dialog`, the drawer panel renders no header close button - a drawer's content
-usually owns its own dismissal.
+owns its own dismissal.
 
 ## API
 

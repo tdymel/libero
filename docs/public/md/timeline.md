@@ -141,24 +141,8 @@ rather than something this component can answer.
 
 ## Accessibility
 
-It is an `<ol>` with an explicit `role="list"`. The role is not redundant:
-Safari with VoiceOver drops list semantics from a `list-style: none` list, and
-the rail is exactly the visual affordance a list role replaces for someone who
-cannot see it.
-
-Only the current event carries `aria-current="step"` - a role token, so it
-needs no translation. Completed events carry nothing: they read as complete
-visually, and hidden text on every prior item is noise.
-
-Bullets are `aria-hidden="true"`. They are the rail's drawing; the title is the
-text, and a custom bullet holding an icon does not change that. It stays hidden
-rather than becoming conditional on there being a child, because unhiding a
-caller's icon would announce the title twice. The corollary is that a focusable
-element inside a bullet is a tab stop with no accessible name - see "Events".
-
-`Timeline` is not interactive. It has no keyboard contract, takes no focus and
-sets no `tabindex`. Focusable content inside an event keeps document order,
-which is also the visual order.
+Bullets are `aria-hidden`, so a focusable element inside a bullet is a tab stop
+with no accessible name - see "Events".
 
 ## Props
 

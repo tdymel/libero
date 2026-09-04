@@ -62,33 +62,21 @@ a static sidebar must not steal focus.
 
 ## Accessibility
 
-The root is a real `<button type="button">`, so it is in the tab order and
-activates on Enter and on Space; `ActionIcon` draws the `:focus-visible` ring.
-The three facts `Burger` adds on top are the ones a hand-rolled burger misses.
-
-**`aria-expanded` follows `opened`, and is absent when `opened` is.** `true`
-and `false` both emit it, which is what makes the button a disclosure. Leave
-`opened` unset and the attribute is not emitted at all - not `"false"`. A modal
-is not expanded by its trigger; it replaces the page, so claiming otherwise is
-worse than saying nothing. The glyph then stays three bars, which is honest:
-nothing has opened in place.
+**Leave `opened` unset when the burger opens a modal.** `opened` makes the
+button a disclosure with `aria-expanded`; a modal is not expanded by its
+trigger, it replaces the page.
 
 ```rust
 // No `opened`: nothing is expanded, so nothing announces a state.
 Burger { onclick: move |_| modal.open() }
 ```
 
-**`aria-controls` is not a prop.** It rides `GlobalAttributes` like every other
-attribute, so spread it - and do spread it whenever `opened` is set, or
-`Burger` warns: a disclosure that controls nothing is almost always an
-oversight. Nothing sets it internally, so the caller's is the only one, and it
-has to name a real element - without it the state is announced but the thing in
-that state is not.
+**Spread `aria-controls` whenever `opened` is set**, naming the element that
+opens, or `Burger` warns. Nothing sets it internally.
 
-**The accessible name is the theme's, not the caller's**, so every burger in a
-project announces itself the same way, and it changes with `opened`.
-`BurgerLabels` holds the two words apart from the geometry, so a translation
-replaces two strings without restating a pixel scale.
+**The accessible name is the theme's**, and it changes with `opened`. Translate
+it once in `BurgerLabels`, or per burger with `label` when the locale is only
+known at runtime:
 
 ```rust
 Theme {

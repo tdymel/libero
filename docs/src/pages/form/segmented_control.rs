@@ -301,28 +301,8 @@ pub fn SegmentedControlPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The root is a "
-                    Code { source: "role=\"radiogroup\"" }
-                    " and every segment is a "
-                    Code { source: "label" }
-                    " for a visually hidden "
-                    Code { source: "input type=\"radio\"" }
-                    ". That is what a segmented control is: exactly one of a set, never none "
-                    "and never two - so a screen reader announces \"1 of 3\", and arrow keys "
-                    "move the selection while Tab enters and leaves the whole control. All of "
-                    "it is the browser's own, so there is no roving tabindex to maintain."
-                }
-                Text {
-                    "The radio's click is cancelled and the selection written from "
-                    Code { source: "value" }
-                    " instead, so the DOM property, "
-                    Code { source: ":checked" }
-                    " and the accessibility tree can never disagree with Rust. The "
-                    Code { source: "label" }
-                    " names the group through "
-                    Code { source: "aria-labelledby" }
-                    ", and the description, helper and status describe it. Without a visible "
-                    "label, name it with an "
+                    "Arrow keys move the selection; Tab enters and leaves the whole control. "
+                    "Without a visible label, name it with an "
                     Code { source: "aria_label" }
                     " where its purpose is not obvious from the segments themselves."
                 }

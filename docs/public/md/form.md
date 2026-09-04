@@ -118,11 +118,6 @@ fn CheckButton() -> Element {
 
 ## Accessibility
 
-The status joins the field's `aria-describedby`, and an error sets
-`aria-invalid`. Checking while someone types stays visual. The announcement
-happens on submit: the summary is an [`Alert`](alert.md) with `role="alert"`
-that takes focus, reads every problem at once, and links each one to its field.
-
 A form becomes a `form` landmark only once it has a name. Name it when the page
 holds more than one form, or when the form is the page's main task, like a
 checkout: pass `aria-labelledby` pointing at a visible heading, or

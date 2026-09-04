@@ -80,10 +80,6 @@ fn Demo() -> Element {
 ## Accessibility
 
 `aria_label` is a required prop, because the button's only content is an `svg`.
-As a button it renders a real `<button type="button">`, so Enter and Space
-activate it, and `disabled` renders the native attribute. As a link it is an
-`<a>`, which has no native `disabled`: a disabled link therefore drops `to` and
-gets `aria-disabled="true"` plus `tabindex="-1"` so it leaves the tab order.
 
 ## Props
 

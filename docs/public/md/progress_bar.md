@@ -49,22 +49,10 @@ be announced, put a separate status line next to it and update it at milestones
 
 ## Accessibility
 
-- One `div` with `role="progressbar"`; the fill inside it is `aria-hidden`. The
-  role sits on the root, which always has size, rather than on the fill, which
-  is zero wide at zero.
-- `aria-valuemin`/`aria-valuemax` are the raw bounds. `aria-valuenow` is the
-  value clamped into them, exactly as the fill is drawn.
-- `aria-valuetext` defaults to the rounded percentage (`"42%"`). The prop
-  replaces it; so does an `aria-valuetext` attribute spread by the caller, since
-  the percentage is only a default.
-- Indeterminate (`value: None`) omits `aria-valuenow` and `aria-valuetext`
-  entirely, which is how ARIA says "busy, amount unknown".
 - No accessible name is invented. Pass `aria_label`, or `aria_labelledby`
   pointing at a visible caption.
-- Not focusable, no keyboard interaction.
-- Reduced motion: the fill's transition is dropped, and the indeterminate sweep
-  becomes a dimmed full-width fill that stands still, so it cannot be misread
-  as a 25% bar.
+- `aria-valuetext` defaults to the rounded percentage (`"42%"`). Pass
+  `aria_valuetext` where the amount reads better in other words.
 
 ## Props
 

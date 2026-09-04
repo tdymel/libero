@@ -101,27 +101,10 @@ announce a working field as broken.
 
 ## Accessibility
 
-Focus lands on the `<input>`, but the focus ring is drawn by the frame around
-it, keyed off `:has(:focus-visible)` - so a keyboard focus rings the whole
-field and a mouse click does not ring anything.
-
-The label is a real `<label for>` paired with the input's `id`, never a wrapping
-`<label>` - a wrapping label swallows clicks on anything else inside the field,
-and every field ([NativeSelect](native_select.md) included) uses the pair for that reason.
-A caller-supplied `id` takes over the generated one, and every slot follows it.
-
-Whichever of the description, helper and status slots are filled are joined into
-the input's `aria-describedby`, in reading order. A caller who passes their own
-`aria-describedby` wins outright: theirs is used and the generated list is
-dropped, leaving the caption props purely visual.
-
-`required` sets the native attribute and `aria-required`, and adds an asterisk
-to the label. The asterisk is `aria-hidden` - `aria-required` already carries it
-to assistive technology.
-
 Leave `label` unset only when something else already names the field; a bare
-input with no accessible name is a defect. `disabled` sets the native attribute,
-so the browser handles focus and interaction semantics.
+input with no accessible name is a defect. A caller-supplied
+`aria-describedby` replaces the one built from the caption slots, leaving them
+purely visual.
 
 ## What it does not do yet
 

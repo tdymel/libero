@@ -113,7 +113,7 @@ pub fn FieldsetPage() -> Element {
                 prop("value", "Store<V>")
                     .doc("The group's own value, for a fieldset outside a `Form`. Inside one, the value is the form's at `path`."),
                 prop("validate", "Validators<V>")
-                    .doc("Composite rules over `value` - one rule, or an array. With `.on(..)` a status lands on the named fields; without, under the fields."),
+                    .doc("Composite rules over `value` - one rule, or an array. With `.on(..)` a status lands on the named fields; without, under the fields, once any field in the group was touched."),
                 prop("path", "FieldName<V>")
                     .doc("Where the group sits inside a `Form`'s value, e.g. `Order::FIELDS.address()`. The names of the fields inside and the paths of `validate` are relative to it."),
                 prop("disabled", "bool")
@@ -160,16 +160,6 @@ pub fn FieldsetPage() -> Element {
                     " store instead."
                 }
                 CodeBlock { source: IN_FORM_CODE, language: "rust" }
-            }
-            DocSection { title: "Accessibility",
-                Text {
-                    "The label names the group, so a screen reader announces "
-                    "\"Delivery address\" as focus enters it. The description, helper and status join "
-                    "the fieldset's "
-                    Code { source: "aria-describedby" }
-                    ". A rule that names no field shows in the group's status slot once any field "
-                    "in the group was touched."
-                }
             }
         }
     }

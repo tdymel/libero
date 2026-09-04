@@ -62,18 +62,8 @@ same size.
 
 ## Accessibility
 
-The real control is an `<input type="checkbox" role="switch">`, so state is
-announced and Space toggles it. Enter is handled in Rust, because ARIA's switch
-pattern takes it and a bare checkbox does not.
-
-The label is wired to the input by `for`/`id`; the track is `aria-hidden`
-decoration that forwards its clicks. Without a `label`, pass `aria_label` - an
-`aria-label` in `attributes` lands on the input, which is where it belongs, but
-a visible label is better.
-
-The filled caption slots join `aria-describedby`; an error `status` sets
-`aria-invalid`; `required` sets `required` and `aria-required` and marks the
-label. The focus ring is drawn around the track rather than the whole row.
+Space and Enter toggle it. Without a `label`, pass `aria_label` - but a visible
+label is better.
 
 ## Props
 

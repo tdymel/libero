@@ -226,19 +226,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The root is a `role="radiogroup"` and every segment is a `<label>` around a
-visually hidden `<input type="radio">`. That is what a segmented control is:
-exactly one of a set, never none and never two - so a screen reader announces
-"1 of 3", and arrow keys move the selection while Tab enters and leaves the
-whole control. All of it is the browser's own, so there is no roving tabindex to
-maintain.
-
-The radio's click is cancelled and the selection written from `value` instead,
-so the DOM property, `:checked` and the accessibility tree can never disagree
-with Rust. The `label` names the group through `aria-labelledby`, and the
-description, helper and status describe it. Without a visible label, name the
-control with an `aria_label` where its purpose is not obvious from the segments
-themselves.
+Arrow keys move the selection; Tab enters and leaves the whole control. Without
+a visible `label`, name the control with an `aria_label` where its purpose is
+not obvious from the segments themselves.
 
 ## Props
 

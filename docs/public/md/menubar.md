@@ -55,12 +55,7 @@ leaves the bar. Everything else is `Menu`'s.
 
 ## Accessibility
 
-- Bar: `role="menubar"`, `aria-orientation="horizontal"`, `aria-label`.
-- Triggers: `<button role="menuitem">` with `aria-haspopup="menu"`,
-  `aria-expanded`, `aria-controls` while open; exactly one has `tabindex="0"` -
-  the open menu's, else the last focused, else the first enabled. A disabled
-  trigger has `aria-disabled="true"`.
-- Each menu: `Menu`'s markup, labelled by its trigger.
+`aria_label` is required: it names the bar.
 
 ## Props
 

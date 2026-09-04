@@ -52,12 +52,10 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The root is a plain `div` with no role: it is decoration plus a click target, and
-the thing it covers is what carries the semantics. It does not trap focus or hide
-the content behind it from a screen reader, so an overlay used as a modal
-backdrop belongs with a `Dialog` in a modal (which owns the `aria-modal` and focus
-trap) rather than on its own. `onclick` is the backdrop-click case; a keyboard
-user needs an Escape handler on the dialog, since a `div` takes no focus.
+An `Overlay` does not trap focus or hide the content behind it from a screen
+reader, so a modal backdrop belongs with a `Dialog` in a modal rather than on
+its own. `onclick` covers the backdrop click; a keyboard user needs an Escape
+handler on the dialog.
 
 ## Props
 

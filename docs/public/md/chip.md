@@ -89,11 +89,8 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A selectable chip is a native checkbox, so checked state is announced and Space
-toggles it. A link or button chip focuses its own root. `disabled` sets
-`aria-disabled`; on a link it also drops `to`, since `<a>` has no native
-`disabled`. Keep `children` to text and `Icon` - a `<label>` hijacks clicks on
-any nested control.
+Space toggles a selectable chip. Keep `children` to text and `Icon` - a
+`<label>` hijacks clicks on any nested control.
 
 ## Props
 

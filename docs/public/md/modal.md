@@ -155,15 +155,9 @@ fn CancelButton() -> Element {
 
 ## Accessibility
 
-The layer traps focus for as long as it is mounted, locks the page behind it
-(`data-lsx-scroll-lock`), and Escape or a backdrop click dismisses it - settling
-the `Opening` with `None`, so a handler written for an answer never runs on a
-dismissal. `Dialog` supplies `role="dialog"`, `aria-modal="true"` and its
-accessible name from `title`. Focus returns to whatever the user acted on to
-open it - `open_with` runs inside that element's own event handler, so the modal
-records it without being told. Stacked modals each take their own z-index -
-`z_index.modal + n * z_index.modal_step` - so a modal opened from a modal sits
-above it.
+Escape or a backdrop click dismisses the modal, settling the `Opening` with
+`None`, so a handler written for an answer never runs on a dismissal. Name the
+`Dialog` inside with its `title`, or `aria_label`.
 
 ## API
 

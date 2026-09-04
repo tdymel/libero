@@ -49,8 +49,7 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`<kbd>` is the semantic element for user input, so a screen reader can announce it
-as such. Spell the key the way the platform labels it and put the separator in the
+Spell the key the way the platform labels it and put the separator in the
 surrounding text - a screen reader reads `Kbd { "Ctrl" } " + " Kbd { "S" }` as
 "Ctrl plus S", where one `Kbd { "Ctrl+S" }` reads as a single opaque token.
 

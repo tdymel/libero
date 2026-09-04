@@ -72,21 +72,12 @@ One tab stop for the whole group:
 | Arrow up / left | Previous option, selected as focus lands |
 | Tab | Leaves the group entirely |
 
-Selection follows focus, which is the native behaviour and what WAI-ARIA
-specifies. The arrow keys are handled in Rust and the browser's own handling is
-cancelled, so there is exactly one code path - and `dioxus-native`, which
-implements none of it, behaves the same.
+Selection follows focus, as it does natively.
 
 ## Accessibility
 
-The group is a `<div role="radiogroup">` named by `aria-labelledby`, because
-`for` names only a labelable element. The filled caption slots join the group's
-`aria-describedby`, an error `status` sets `aria-invalid`, and `required` sets
-`aria-required`.
-
-Each option is a visually hidden `<input type="radio">` that owns its own name,
-state and focus ring, beside an `aria-hidden` circle that forwards clicks. Every
-input shares the group's `name`.
+Give it a `label`: an option's label names one option, and only the group's
+label says what the question is.
 
 ## Standalone `Radio`
 

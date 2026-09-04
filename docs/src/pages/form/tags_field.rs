@@ -241,28 +241,8 @@ pub fn TagsFieldPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The "
-                    Code { source: "<input>" }
-                    " is the labelled control, so the label names it with a plain "
-                    Code { source: "for" }
-                    " and the captions reach it through "
-                    Code { source: "aria-describedby" }
-                    ". With "
-                    Code { source: "suggestions" }
-                    " it is also the combobox: focus never leaves it, and "
-                    Code { source: "aria-activedescendant" }
-                    " is what moves over the rows."
-                }
-                Text {
-                    "The whole field is one tab stop: each chip's x is "
-                    Code { source: "tabindex=\"-1\"" }
-                    ", the shape "
-                    Code { source: "MultiSelect" }
-                    "'s chips have, so Tab moves past the field rather than through it and "
-                    "removing a chip never takes the focus with it. Backspace on an empty "
-                    "input is how a keyboard takes a tag back. There is no chip cursor: the "
-                    "arrows belong to the text, and the platform cannot report a caret, so "
-                    "\"ArrowLeft only at caret 0\" is not implementable."
+                    "The whole field is one tab stop. Backspace on an empty input removes the "
+                    "last tag; the arrows belong to the text, so there is no chip cursor."
                 }
             }
         }

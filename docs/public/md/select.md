@@ -149,24 +149,9 @@ A disabled select posts nothing: the hidden input is disabled with the field.
 
 ## Accessibility
 
-The trigger is a focusable element with `role="combobox"`, `aria-haspopup="listbox"`,
-`aria-expanded` and `aria-controls`; while the list is open,
-`aria-activedescendant` names the highlighted row, so focus never leaves the
-trigger. The label names it through `aria-labelledby` - `<label for>` cannot name
-an element that is not a form control. Description, helper and status join
-`aria-describedby` exactly as on every other field.
-
-Keys: Enter, Space and ArrowDown open the list on the selected row; the arrows,
-Home and End move the highlight; Enter picks; Escape and Tab close. Clicking
-elsewhere closes it too - the trigger closes on blur, and the list cancels
-`mousedown` so a click on a row never takes focus away first.
-
-Rows carry `aria-selected`. Typeahead - jumping to a row by its first letter - is
-not implemented yet.
-
-The list is portaled to the document root through `use_popover`, so no
-`overflow: hidden` ancestor clips it and it flips above the trigger near the
-bottom of the viewport.
+Enter, Space and ArrowDown open the list on the selected row; the arrows, Home
+and End move the highlight; Enter picks; Escape and Tab close. Typeahead -
+jumping to a row by its first letter - is not implemented yet.
 
 ## Props
 

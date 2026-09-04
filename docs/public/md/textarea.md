@@ -57,10 +57,7 @@ server-side rendering only.
 
 ## Accessibility
 
-Everything [TextField](text_field.md) does: a `<label for>`/`id` pair, the
-filled caption slots joined into `aria-describedby`, `aria-invalid` on an error
-status, `required` plus `aria-required`, and the focus ring drawn by the frame
-around the control rather than by the control itself.
+Leave `label` unset only when something else already names the field.
 
 ## Props
 

@@ -148,16 +148,11 @@ pub fn DrawerPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The panel is a "
-                    Code { source: "Dialog" }
-                    ", so it carries the dialog role and "
-                    Code { source: "aria-modal" }
-                    "; give it a name with "
+                    "Escape and a backdrop click close it. Give the panel a name with "
                     Code { source: "title" }
                     " or "
                     Code { source: "aria_label" }
-                    ". Focus is trapped while it is open and returns to whatever opened it. "
-                    "Unlike a plain "
+                    ". Unlike a plain "
                     Code { source: "Dialog" }
                     ", the panel renders no header close button - a drawer's content usually "
                     "owns its own dismissal."

@@ -82,11 +82,10 @@ means height - so the parent wants `direction: "column"`.
 
 ## Accessibility
 
-The root is a plain `<div>` with no landmark role of its own, deliberately: what
-the panel *is* depends on what you put in it. Wrap navigation content in a `<nav>`
-(or pass `role`/`aria-label` through the attributes) so it is announced as a
-landmark; a settings or inspector panel is better named with `aria-label` on a
-`region`. The inner `ScrollArea` keeps the panel keyboard-scrollable.
+The root has no landmark role of its own: what the panel *is* depends on what
+you put in it. Wrap navigation content in a `<nav>` (or pass `role`/`aria-label`
+through the attributes) so it is announced as a landmark; a settings or
+inspector panel is better named with `aria-label` on a `region`.
 
 ## Props
 

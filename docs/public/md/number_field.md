@@ -122,14 +122,8 @@ field's height.
 
 ## Accessibility
 
-`min` and `max` mean nothing on a text input, so the control carries
-`role="spinbutton"` with `aria-valuenow`, `aria-valuemin` and `aria-valuemax` -
-which is what tells assistive technology the range, and what makes the arrow
-keys expected behaviour rather than a surprise.
-
-The rest is [TextField](text_field.md)'s: a `<label for>`/`id` pair, the filled
-caption slots joined into `aria-describedby`, `aria-invalid` on an error status,
-and the focus ring drawn by the frame around the control.
+The arrow keys step the value, as on any spinbutton. Leave `label` unset only
+when something else already names the field.
 
 ## Props
 

@@ -50,21 +50,10 @@ own - remove it and the children sit exactly where they sat.
 
 ## Accessibility
 
-`FocusTrap` handles `onkeydown`: on Tab it moves focus to the next focusable
-descendant and calls `prevent_default`, on Shift+Tab the previous one, wrapping
-at both ends. When there is nothing focusable inside, it does *not* swallow the
-key - Tab falls through to the browser rather than stranding focus.
-
-Its focusable set deliberately excludes what a browser would never focus:
-`hidden`, `inert` and `aria-hidden="true"` elements, and their descendants. A
-visually hidden but focusable element still counts, which is what
-`FocusTrapInitialFocus` relies on.
-
 On mount the trap focuses the element marked `data-autofocus`, or its first
 focusable descendant otherwise. To land initial focus on nothing visible - so a
 dialog does not open with its first button looking pressed - render
-`FocusTrapInitialFocus` as the first child: it is a visually hidden placeholder
-that takes focus once and then drops out of the tab order on blur.
+`FocusTrapInitialFocus` as the first child.
 
 ```rust
 use dioxus::prelude::*;

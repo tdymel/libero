@@ -68,25 +68,15 @@ its field. See [Form](form.md).
 ## Accessibility
 
 - **`role="alert"` is a default, not an override.** A message that should wait
-  its turn passes `role: "status"`, and the alert renders that one role.
-  `Form`'s summary passes its own `role` and `tabindex="-1"` the same way.
-- **The title is the accessible name**, through `aria-labelledby`, and the
-  message is the description, through `aria-describedby`. Each is set only when
-  its part is there, so an alert without a title is not named after nothing.
-- **`title` is a `String`, not markup.** Markup in a name is dropped from the
-  name.
-- **The icon is `aria-hidden`.** It repeats what the text already says, so
-  severity has to be in the title or the message too.
-- **The close button is a native `<button>`** with `close_label` as its name.
-  `Tab` reaches it and `Enter` or `Space` press it. `Escape` does not close an
-  alert.
-- **An alert never takes focus on its own.** `Form` focuses its summary from
-  outside.
-- **On `filled` the close button's focus ring takes the text colour**, which the
-  palette picks to read on the fill. Where that pick is weak the ring is too:
-  white on `info` is about 2.8:1, the same number [Badge](badge.md) records.
-- **`outlined` carries no tint.** Its only colour is the border, which is quiet
-  for an error. Prefer `tonal` or `filled` where the severity must be seen.
+  its turn passes `role: "status"`.
+- **The icon is `aria-hidden`**, so the severity has to be in the title or the
+  message too.
+- **An alert never takes focus on its own.** Focus it from outside where that
+  matters, as `Form` does with its summary. `Escape` does not close it.
+- **`outlined` carries no tint**, only a border, which is quiet for an error.
+  Prefer `tonal` or `filled` where the severity must be seen. On `filled` the
+  close button's focus ring takes the text colour: white on `info` is about
+  2.8:1.
 
 ## Props
 

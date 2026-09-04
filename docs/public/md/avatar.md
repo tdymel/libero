@@ -105,17 +105,8 @@ Barbara Liskov, Margaret Hamilton".
 
 ## Accessibility
 
-- The root is `role="img"` with `aria-label={name}`, so the subtree is
-  presentational: the inner `<img>` is `alt=""` and initials are never spelled
-  out letter by letter.
-- `alt: ""` renders `role="presentation"` and no label. Use it wherever the
-  person's name is already visible beside the avatar, or it is announced twice.
-- Both go through the component's attribute *defaults*, so a caller spreading
-  their own `role` or `aria-label` wins.
-- Neither component is focusable or interactive, and there is no keyboard
-  contract - with one exception: the group's `+N` chip carries `tabindex="0"`,
-  so the names it hides are reachable without a pointer. That is one tab stop
-  per group.
+`name` is the avatar's accessible name. Pass `alt: ""` wherever the person's
+name is already visible beside the avatar, or it is announced twice.
 
 ## Props
 

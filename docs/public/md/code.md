@@ -54,13 +54,6 @@ The grammars are hand-ported from [Prism](https://prismjs.com), as is the
 tokenizer that runs them. These 30 are where we started, not a closed set - if
 you need one Prism has and we do not, it can be ported the same way.
 
-## Accessibility
-
-`Code` renders a real `<code>` element, so assistive technology announces the
-content as code. Highlighting adds only `<span>`s with color classes, which
-carry no semantics of their own, so a highlighted and an unhighlighted snippet
-read the same.
-
 ## Props
 
 | Prop | Type | Default | Description |

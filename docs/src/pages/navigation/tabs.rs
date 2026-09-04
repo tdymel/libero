@@ -158,24 +158,9 @@ pub fn TabsPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The strip is a "
-                    Code { source: "role=\"tablist\"" }
-                    " of buttons, each pointing at its panel through "
-                    Code { source: "aria-controls" }
-                    ", and the panel points back with "
-                    Code { source: "aria-labelledby" }
-                    ". Only the selected tab is in the tab order; Left and Right move between "
-                    "tabs and select as they go, Home and End jump to the ends."
-                }
-                Text {
-                    "A tab named in "
-                    Code { source: "disabled" }
-                    " gets "
-                    Code { source: "aria-disabled" }
-                    " rather than the "
-                    Code { source: "disabled" }
-                    " attribute, so it still reads to a screen reader and the arrow keys simply "
-                    "step over it."
+                    "Only the selected tab is in the tab order. Left and Right move between "
+                    "tabs and select as they go, stepping over disabled ones; Home and End "
+                    "jump to the ends."
                 }
             }
         }

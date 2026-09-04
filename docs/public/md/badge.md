@@ -74,25 +74,13 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-- **No role, no ARIA.** The label is visible text and is its own accessible
-  name. A `role="status"` would make every badge announce itself on mount; when
-  a badge really does report a change, put the caller's own `role="status"`
-  region around it and spread it through `attributes`.
-- **Not focusable and not interactive**, so there is no keyboard contract. A
-  caller who spreads `tabindex: "0"` gets the library's shared focus ring.
-- **Contrast is the palette's, not the component's.** `filled` pairs the
-  accent with its own `-contrast` twin, and `tonal` with the twin of its tint.
-  At shade 6 some roles do not clear 4.5:1 for text this size - measured in
-  Chromium at `md` (11px/700): `filled` is 3.56:1 primary, 3.28:1 error,
-  2.79:1 info, against 4.95:1 secondary, 8.90:1 success, 11.28:1 warning,
-  11.46:1 neutral; `tonal` is 15.9-18.4:1 for every role; `elevated`,
-  `outlined` and `standard` put the accent on the page, which is 1.86:1 for
-  warning up to 11.46:1 for neutral. `Button` and `Chip` sit on the same
-  numbers. Pick `tonal`, or `neutral`, where the label has to be read rather
-  than noticed.
-- **The label is clipped, not ellipsised**, when it is wider than what holds
-  it: one element has no inner span for `text-overflow` to act on. Badges are
-  for short labels.
+- **A badge announces nothing on its own.** When one really does report a
+  change, put your own `role="status"` region around it.
+- **Contrast is the palette's.** At shade 6 some roles stay under 4.5:1 for
+  text this size - `filled` is 3.56:1 primary, 3.28:1 error and 2.79:1 info,
+  and `elevated`, `outlined` and `standard` put a warning accent on the page at
+  1.86:1. `tonal` is 15.9:1 or better for every role. Pick `tonal`, or
+  `neutral`, where the label has to be read rather than noticed.
 
 ## Props
 

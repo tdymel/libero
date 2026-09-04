@@ -59,23 +59,14 @@ fn Demo(unread: u32) -> Element {
 
 ## Accessibility
 
-- **`aria-hidden="true"` by default, dot or count.** A bare dot is an empty
-  node. A count is a truncation (`99+` where the truth is 128) and names
-  nothing, so read on its own it says "ninety-nine plus" and not what is
-  counted.
-- **The meaning belongs on what the indicator marks.** The avatar or button
-  carries the count in its own name - `alt: "Ada Lovelace, 128 unread"`,
-  `aria_label: "Messages, 128 unread"`. The noun is the caller's vocabulary.
-- `aria-hidden` goes on through `attr_default`, so a caller who wants the
-  indicator itself read out can pass `aria_hidden: "false"` plus a
-  `role="status"` of their own.
-- **Not focusable and not interactive**, so there is no keyboard contract.
-- `processing` stops under `prefers-reduced-motion: reduce`: the ping's
-  animation is cancelled and the copy behind the dot stays hidden under it.
-- **Contrast is the palette's.** The label is the fill's `-contrast` twin; at
-  shade 6 the default `error` fill measures 3.28:1 with white, as `Badge`'s
-  filled arm does. The count is decorative - its meaning is on the target - but
-  pick a darker `color` shade where it has to be read.
+- **The meaning belongs on what the indicator marks**, because the indicator is
+  never read out. The avatar or button carries the count in its own name -
+  `alt: "Ada Lovelace, 128 unread"`, `aria_label: "Messages, 128 unread"`. The
+  noun is the caller's vocabulary.
+- To have the indicator itself read out, pass `aria_hidden: "false"` plus a
+  `role="status"` of your own.
+- **Contrast is the palette's.** At shade 6 the default `error` fill measures
+  3.28:1 with white; pick a darker `color` shade where the count has to be read.
 
 ## Props
 

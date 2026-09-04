@@ -107,35 +107,14 @@ An empty selection posts an empty value, and a disabled field posts nothing.
 
 ## Accessibility
 
-The trigger is a focusable element with `role="combobox"`, `aria-haspopup="listbox"`,
-`aria-expanded` and `aria-controls`; while the list is open,
-`aria-activedescendant` names the highlighted row, so focus never leaves the
-trigger. The label names it through `aria-labelledby` - `<label for>` cannot name
-an element that is not a form control. Description, helper and status join
-`aria-describedby` exactly as on every other field.
+Enter, Space and ArrowDown open the list on the selected row; the arrows, Home
+and End move the highlight; Enter toggles the highlighted row and keeps the
+list open; Escape and Tab close. Typeahead is not implemented yet.
 
-Keys: Enter, Space and ArrowDown open the list on the selected row; the arrows,
-Home and End move the highlight; Enter picks; Escape and Tab close. Clicking
-elsewhere closes it too - the trigger closes on blur, and the list cancels
-`mousedown` so a click on a row never takes focus away first.
-
-Rows carry `aria-selected`. Typeahead - jumping to a row by its first letter - is
-not implemented yet.
-
-The chips answer the keyboard too, and the trigger keeps the focus for that as
-well. ArrowLeft and ArrowRight move a cursor over the chips - from no cursor,
-ArrowLeft lands on the last one - and Backspace or Delete removes the chip under
-it, or the last chip when there is none. While the cursor is on a chip and the
-list is closed, `aria-activedescendant` names that chip; an open list takes the
-attribute back, so the two never claim it at once. The remove buttons are
-`tabindex="-1"`: the control is one tab stop, and the keys are how a keyboard
-removes a chip. Inside the search box Backspace only ever edits the query.
-
-The list is portaled to the document root through `use_popover`, so no
-`overflow: hidden` ancestor clips it and it flips above the trigger near the
-bottom of the viewport.
-The listbox carries `aria-multiselectable="true"`, and Enter toggles the
-highlighted row without closing the list.
+The control is one tab stop. ArrowLeft and ArrowRight move a cursor over the
+chips - from no cursor, ArrowLeft lands on the last one - and Backspace or
+Delete removes the chip under it, or the last chip when there is none. Inside
+the search box Backspace only edits the query.
 
 ## Searching
 

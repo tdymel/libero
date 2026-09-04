@@ -98,19 +98,16 @@ example, not something the component provides.
 
 ## Accessibility
 
-The root is `role="tree"` and needs `aria_label` - WAI-ARIA's tree pattern
-requires a name. Each row is a `role="treeitem"` with `aria-expanded` when it has
-children (a leaf gets none at all) and `aria-disabled` when disabled.
+`aria_label` is required - WAI-ARIA's tree pattern needs a name.
 
-Fully keyboard-navigable: arrow keys move between visible rows, `Left`/`Right`
-collapse/expand (or jump to the parent/first child), `Home`/`End` jump to the
-first/last row, and typing a letter jumps to the next row whose `tree_label`
-matches. The tree is one roving tab stop, so any interactive element
-`render_node` renders must take `args.tabindex` or arrow keys will skip a second
-stop it never moves to. `TreeItem` does that for you.
+Arrow keys move between visible rows, `Left`/`Right` collapse/expand (or jump
+to the parent/first child), `Home`/`End` jump to the first/last row, and typing
+a letter jumps to the next row whose `tree_label` matches. A disabled node is
+skipped by activation but still reachable by the arrows.
 
-A disabled node is skipped by activation but stays visible and reachable by arrow
-keys.
+The tree is one roving tab stop, so any interactive element `render_node`
+renders must take `args.tabindex`, or it becomes a second stop the arrow keys
+never move to. `TreeItem` does that for you.
 
 ## Props
 

@@ -104,17 +104,9 @@ that runs them; these 30 are where we started, not a closed set.
 
 ## Accessibility
 
-The code sits in a `<pre>`, so whitespace and line structure survive for a screen
-reader as well as for the eye. The header names the language in text - or
-"Unrecognized language" when the grammar is not compiled in - rather than relying
-on color, and the copy button is a real button reachable by keyboard. With
-`header: false` it floats in the top-right corner instead.
-
-In `diff` mode the `+`/`-` marker is stripped from the rendered row, so added and
-removed lines are told apart by their tint alone - worth a caption or surrounding
-prose when the distinction has to survive without color. Long lines scroll
-horizontally inside the block regardless of `max_lines`, which keeps the page
-itself from scrolling sideways.
+In `diff` mode added and removed lines are told apart by their tint alone - add
+a caption or surrounding prose when the distinction has to survive without
+color.
 
 ## Props
 

@@ -32,11 +32,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Accessibility
-
-`Center` is layout only - always a `<div>`, no semantics, no focus behaviour.
-It adds nothing to the accessibility tree.
-
 ## Props
 
 | Prop | Type | Default | Description |

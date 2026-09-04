@@ -127,17 +127,8 @@ component's own arithmetic rather than a theme key.
 
 ## Accessibility
 
-The `<input>` is the labelled control, named by a plain `<label for>`, and the
-captions reach it through `aria-describedby`. With `suggestions` it is also the
-combobox: focus never leaves it, and `aria-activedescendant` moves over the
-rows.
-
-The whole field is **one tab stop**: each chip's x is `tabindex="-1"`, the shape
-`MultiSelect`'s chips have, so Tab moves past the field rather than through it
-and removing a chip never takes the focus with it. Backspace on an empty input
-is how a keyboard takes a tag back. There is no chip cursor: the arrows belong
-to the text, and the platform cannot report a caret, so "ArrowLeft only at caret
-0" is not implementable.
+The whole field is one tab stop. Backspace on an empty input removes the last
+tag; the arrows belong to the text, so there is no chip cursor.
 
 ## Data attributes
 

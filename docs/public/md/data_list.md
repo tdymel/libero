@@ -49,12 +49,8 @@ term's second `<dd>` cannot flow back into the term column.
 
 ## Accessibility
 
-`DataList` is a real `<dl>`, `label` a real `<dt>` and each description a real
-`<dd>`, so the term/description relationship is in the accessibility tree
-rather than implied by layout. Keep `<dt>`/`<dd>` content directly inside the
-list - an intervening wrapper element breaks the pairing. `sx`, `class` and
-`states` on a `DataListItem` decorate the `<dt>` only; nothing wraps a term
-together with its descriptions, which is what keeps the markup valid.
+Keep the `DataListItem`s directly inside the `DataList` - an intervening wrapper
+element breaks the term/description pairing.
 
 ## Props
 

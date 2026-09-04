@@ -41,12 +41,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-The root is always `role="dialog"`. Inside a modal it also gets
-`aria-modal="true"` - detected from the modal's context, not from a prop. Give
-it a name: `title` (rendered as the heading and pointed at by
-`aria-labelledby`), or `aria_label`, which overrides it. The focus trap and the
-escape/backdrop dismissal come from the modal layer; `Dialog` has none of that
-on its own.
+Give it a name: `title`, or `aria_label`, which overrides it. The focus trap
+and Escape/backdrop dismissal come from the modal layer; a `Dialog` on its own
+has none of that.
 
 ## Props
 

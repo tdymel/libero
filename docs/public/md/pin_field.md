@@ -102,20 +102,9 @@ one place a field should look like every other field.
 
 ## Accessibility
 
-The cells sit in a `role="group"` named by the label through `aria-labelledby` -
-a `div` is not labelable, so `<label for>` cannot name it. The filled caption
-slots join into the group's `aria-describedby`, an error status sets
-`aria-invalid`, and `required` sets `aria-required`.
-
-The cells carry no individual `aria-label`: the group's name is what a screen
-reader announces on entry, and a per-cell label would repeat the same words once
-per character.
-
-Each cell is a tab stop, which is deliberate - the arrows move within the field,
-and Tab leaves it the way Tab leaves any group of inputs.
-
-The group is `dir="ltr"` even in an RTL locale: the first cell is the first
-character either way.
+Each cell is a tab stop; the arrows move within the field, and Tab leaves it
+the way it leaves any group of inputs. Give it a `label`: it names the whole
+group, and the cells carry no names of their own.
 
 ## Props
 

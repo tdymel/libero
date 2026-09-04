@@ -69,16 +69,9 @@ a scroll is.
 
 ## Accessibility
 
-The divider's hit target is `role="separator"` with `tabindex="0"`, plus
-`aria-orientation` and `aria-valuenow`/`aria-valuemin`/`aria-valuemax` in
-percent - so it is a focusable, announced separator, not a decorative line. The
-visible line is thin (1px at `sm`); the invisible hit target is much thicker
-(10px at `sm`) and fixed regardless of `divider_size`, so it stays grabbable.
-
-Keyboard, once the divider has focus: Arrow keys move by `SplitterDefaults::step`
-(1%), Shift+Arrow by `big_step` (10%), Home and End jump to the `min_size` floor
-and its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal
-one. `min_size` is capped at 50, so a pane can never be squeezed out entirely.
+Once the divider has focus, Arrow keys move by `SplitterDefaults::step` (1%),
+Shift+Arrow by `big_step` (10%), Home and End jump to the `min_size` floor and
+its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 
 ## Props
 

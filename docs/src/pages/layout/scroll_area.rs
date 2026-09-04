@@ -255,12 +255,8 @@ pub fn ScrollAreaPage() -> Element {
             DocSection {
                 title: "Keyboard access",
                 Text {
-                    "A scroll area is not a tab stop. Its content usually carries its own "
-                    "focusable elements, and tabbing to those scrolls them into view, so a "
-                    "stop on the viewport would be one more press on the way to anything "
-                    "useful - Chromium adds one to every overflowing region, and "
-                    Code { source: "ScrollArea" }
-                    " opts out of it."
+                    "A scroll area is not a tab stop: its content usually carries its own "
+                    "focusable elements, and tabbing to those scrolls them into view."
                 }
                 Text {
                     "Content that has nothing to focus is the other case: a strip of images, "

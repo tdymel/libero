@@ -59,21 +59,6 @@ literal CSS color (`"gold"`) is used as-is for both the background and the bar,
 and the text color is left to inherit, because no contrast color can be derived
 from a literal.
 
-## Accessibility
-
-Not interactive: no role, no `tabindex`, no ARIA, and nothing to press. The
-semantics are the elements' own - a screen reader announces the `<blockquote>` as
-a quote and the `<figcaption>` as the figure's caption. A link or button inside
-the quote is an ordinary tab stop and the component does nothing to it.
-
-The `<figure>` is always the root, with or without a caption, so `sx`, `class`
-and spread attributes land on the same element either way. Both `<figure>` and
-`<blockquote>` have their 40px user-agent margin reset.
-
-The `<blockquote>` publishes `--lsx-focus-contrast` alongside its tint, so a
-focusable child draws its focus ring against the tint rather than against the
-page background.
-
 ## Props
 
 | Prop | Type | Default | Description |

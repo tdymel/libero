@@ -39,11 +39,8 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`List` is a real `<ul>` and `ListItem` a real `<li>`, so screen readers
-announce the list and its item count even though the markers are styled away.
 Keep the children of a `List` to `ListItem`s - a stray element between them
-breaks that pairing. A `ListItem` is `display: block`, so a nested `List`
-stacks below its text rather than beside it.
+breaks the list and its item count for a screen reader.
 
 ## Props
 

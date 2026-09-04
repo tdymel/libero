@@ -140,19 +140,12 @@ tabs that render but cannot be picked.
 
 ## Accessibility
 
-The strip is a `role="tablist"` of buttons, each pointing at its panel through
-`aria-controls`, and the panel points back with `aria-labelledby`. Only the
-selected tab is in the tab order; Left and Right move between tabs and select as
-they go, Home and End jump to the ends. Focus follows the selection, so the strip
-behaves like one control rather than a row of buttons.
+Only the selected tab is in the tab order. Left and Right move between tabs and
+select as they go, stepping over disabled ones; Home and End jump to the ends.
 
-A tab named in `disabled` gets `aria-disabled` rather than the `disabled`
-attribute, so it still reads to a screen reader and the arrow keys simply step
-over it.
-
-`OptionLabel::rich` takes the accessible name as its first argument for the same
-reason: the rsx it draws is what a screen reader cannot use, and that name
-becomes the tab's `aria-label`.
+`OptionLabel::rich` takes the accessible name as its first argument: the rsx it
+draws is what a screen reader cannot use, and that name becomes the tab's
+`aria-label`.
 
 ## Props
 

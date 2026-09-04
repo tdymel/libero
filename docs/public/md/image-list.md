@@ -163,20 +163,11 @@ compound `ImageList { ImageListItem {} }` children API.
 
 ## Accessibility
 
-- The list is a `<ul role="list">` of `<li>`s, so it is announced with a count.
-  The explicit `role` is not redundant: Safari with VoiceOver drops list
-  semantics from a `list-style: none` list.
-- Each picture's accessible name is its own `alt`. `ImageList` never invents one.
-- **The bar is not a label for the image.** It is sibling content, so there is no
-  `aria-labelledby` wiring - its text may repeat the `alt`, and that is the
-  caller's call.
+- Each picture's accessible name is its own `alt`. `ImageList` never invents
+  one, and the bar is not a label for the image: its text may repeat the `alt`,
+  and that is the caller's call.
 - **A cell with `to` puts the anchor on the picture**, so a decorative image
-  there leaves the link with no accessible name. This is true with a bar as well
-  as without one: the bar's content is yours, so nothing in it can be picked as
-  the link's name.
-- No keyboard contract of its own: a gallery is not a composite widget, so there
-  is no roving focus and no arrow keys. A cell's `to` and any control you put in
-  its bar contribute native tab stops in document order.
+  there leaves the link with no accessible name, with a bar or without one.
 
 ### Contrast on an overlay bar
 
@@ -188,10 +179,9 @@ the same points are 15.5, 10.7 and 7.8:1.
 
 So the common case is comfortable and the failure is specific: the upper part of
 a bar over a bright picture, which the *second line* of a two-line caption
-reaches. You own the bar's content now, so this is yours to handle: use
-`position: "below"` (no scrim, page text color, always legible), add a
-`text-shadow` through `sx`, or raise the scrim's opacity through the theme - at
-the cost of it reading as a solid bar rather than a fade.
+reaches. Use `position: "below"` (no scrim, page text color, always legible),
+add a `text-shadow` through `sx`, or raise the scrim's opacity through the
+theme - at the cost of it reading as a solid bar rather than a fade.
 
 ## Props
 

@@ -183,19 +183,10 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-`Collapse` renders no `role`, no ARIA state and no keyboard handling. It never
-sees the trigger, and a disclosure's semantics live on the trigger: give that
-button `aria-expanded` and an `aria-controls` pointing at an `id` you set on the
-`Collapse` root, which is in the DOM whether the panel is open, closed, or
-unmounted.
-
-Closed content is removed from the focus order and the accessibility tree by
-`visibility: hidden`, so it is never a phantom tab stop. Focus that was inside a
-closing panel is not returned - see "Returning focus when it closes" above for
-the pattern, which is the caller's to apply.
-
-Motion is guarded: under `prefers-reduced-motion: reduce` every transition is
-`none`, and the panel opens and closes instantly.
+A disclosure's semantics live on the trigger, which `Collapse` never sees: give
+that button `aria-expanded` and an `aria-controls` pointing at an `id` you set
+on the `Collapse` root. Returning focus when the panel closes is yours too - see
+"Returning focus when it closes" above.
 
 ## Props
 

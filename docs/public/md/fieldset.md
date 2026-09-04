@@ -73,11 +73,6 @@ Form {
 }
 ```
 
-## Accessibility
-
-The label names the group, so a screen reader announces it as focus enters.
-The description, helper and status join the fieldset's `aria-describedby`.
-
 ## Known limits
 
 - A fieldset with no `value`, `path` or rules writes
@@ -94,7 +89,7 @@ The description, helper and status join the fieldset's `aria-describedby`.
 | `helper` | `Caption` | - | Under the fields. |
 | `status` | `FieldStatus` | `Valid` | The group's own status, under the fields. A bare `&str` is an error. |
 | `value` | `Store<V>` | - | The group's own value, for a fieldset outside a `Form`. Inside one the value is the form's, at `path`. |
-| `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. |
+| `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. Without `.on(..)` a status shows under the fields once any field in the group was touched. |
 | `path` | `FieldName<V>` | - | Where the group sits in a `Form`'s value, e.g. `Order::FIELDS.address()`. Field names and rule paths inside are relative to it. |
 | `disabled` | `bool` | `false` | Disables every field inside, nested fieldsets included - their look, their own controls such as a `Select` trigger, and every native control. A field's own `disabled: false` cannot re-enable it. |
 | `children` | `Element` | - | The fields. |

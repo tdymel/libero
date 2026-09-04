@@ -64,22 +64,9 @@ fn Demo() -> Element {
 
 ## Accessibility
 
-A default `Button` is a native `<button>`, so Enter and Space activate it and
-it is focusable. `selected: Some(..)` makes it a toggle button and emits
-`aria-pressed="true"` / `"false"` - `None` emits neither, which is why an
-unset `selected` and `Some(false)` are not the same. `disabled` sets the native
-`disabled` attribute on a button and `aria-disabled` on a link. Focus is shown
-with a `:focus-visible` ring, so pointer clicks do not draw it. `selected` on a
-link keeps the selected look but not `aria-pressed`, and the library warns
-about that pairing.
-
-`loading` keeps the button focusable - a busy control is still one a keyboard
-reader can find - so it renders `aria-busy="true"` and `aria-disabled="true"`
-rather than native `disabled`, and swallows the click with `preventDefault`, so
-a busy `type="submit"` does not submit its form either. The label stays in the
-tree at `opacity: 0`: it is the accessible name, and it holds the width. The
-[`Loader`](loader.md) over it is `aria-hidden`, since the button already has a
-name.
+`selected: Some(..)` makes it a toggle button, announced as pressed or not.
+`None` announces no state, so an unset `selected` and `Some(false)` are not the
+same. On a link `selected` keeps only the look.
 
 ## Props
 

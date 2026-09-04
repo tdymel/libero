@@ -83,11 +83,6 @@ fn Demo() -> Element {
 
 ## Accessible names
 
-The current page is named `Page 4` and every other `Go to page 4`.
-`aria-current="page"` already says "current", so repeating "go to" on the page
-you are on would be a lie. It is never `aria-current="true"`. The ellipsis is
-`aria-hidden` and not focusable: it is a gap, not a control.
-
 Every string lives in `theme.pagination_labels`, which is English by default and
 swapped whole for a locale. That struct assumes the number goes last, which is
 wrong in plenty of languages, so `label` is the escape hatch. It sees the five
@@ -128,10 +123,6 @@ fn Demo() -> Element {
 | `Tab` / `Shift+Tab` | Move between controls. Every control is a real tab stop |
 | `Enter` | Activate |
 | `Space` | Activate |
-
-No roving tabindex, deliberately. `Tree` and `Tabs` rove because each is one
-composite widget; this is a short row of independent buttons, and roving would
-make Tab skip past the whole strip.
 
 ## Target size
 

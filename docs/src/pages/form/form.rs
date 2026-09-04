@@ -207,16 +207,6 @@ pub fn FormPage() -> Element {
             }
             DocSection { title: "Accessibility",
                 Text {
-                    "A status joins the field's "
-                    Code { source: "aria-describedby" }
-                    ", and an error sets "
-                    Code { source: "aria-invalid" }
-                    ". Checking while someone types stays visual; the announcement happens on submit, "
-                    "where the summary - a "
-                    Code { source: "role=\"alert\"" }
-                    " that takes focus - reads every problem at once, each linked to its field."
-                }
-                Text {
                     "A form becomes a "
                     Code { source: "form" }
                     " landmark only once it has a name. Name it when the page holds more than one "

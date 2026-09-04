@@ -61,12 +61,10 @@ renders nothing rather than a broken code.
 
 ## Accessibility
 
-The root is `role="img"` with the `aria_label` you pass as its accessible name,
-so the code is announced as a single image instead of an unlabelled SVG blob.
-Say where the code leads or what it contains, not that it is a QR code - a
-screen reader user cannot scan it, so the label is the only route to the
-payload. Where the code is decorative next to a real link, the link is the
-better answer.
+The `aria_label` you pass is the code's accessible name. Say where the code
+leads or what it contains, not that it is a QR code - a screen reader user
+cannot scan it, so the label is the only route to the payload. Where the code is
+decorative next to a real link, the link is the better answer.
 
 ## Props
 

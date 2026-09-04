@@ -216,21 +216,17 @@ pub fn ModalPage() -> Element {
                     "."
                 }
                 Text {
-                    "The layer traps focus and locks the page behind it. Escape and a backdrop "
-                    "click dismiss it, settling the "
+                    "Escape and a backdrop click dismiss it, settling the "
                     Code { source: "Opening" }
                     " with "
                     Code { source: "None" }
-                    ", so a handler written for an answer never runs on a dismissal. "
+                    ", so a handler written for an answer never runs on a dismissal. Name the "
                     Code { source: "Dialog" }
-                    " supplies the role, "
-                    Code { source: "aria-modal" }
-                    " and its name from "
+                    " with its "
                     Code { source: "title" }
-                    ". Focus returns to whatever the user acted on to open it - "
-                    Code { source: "open_with" }
-                    " runs inside that element's own event handler, so the modal records it "
-                    "without being told. Stacked modals each take their own z-index."
+                    ", or "
+                    Code { source: "aria_label" }
+                    "."
                 }
             }
         }
