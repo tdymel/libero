@@ -480,3 +480,27 @@ fn a_contained_host_draws_what_is_raised_below_it_in_its_own_box() {
     );
     assert_eq!(html.matches("Outside.").count(), 1, "{html}");
 }
+
+#[test]
+fn the_data_picks_the_alert_variant() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_hook(|| {
+            notify.show(NotificationData {
+                message: "Filled.".into(),
+                variant: "filled".into(),
+                ..Default::default()
+            })
+        });
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let html = body(&render(app));
+    let shown = items(&html);
+
+    assert_eq!(shown.len(), 1, "{html}");
+    assert!(shown[0].contains(r#"role="group""#), "{}", shown[0]);
+    assert!(shown[0].contains(r#"data-state="filled""#), "{}", shown[0]);
+}

@@ -5,14 +5,19 @@ use crate::icons::DismissIcon;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Box, Button, Code, CodeBlock, Flex, Input, NotificationData, NotificationLive,
-        NotificationOptions, NotificationScope, Notifications, Paper, ProgressBar, Text,
-        use_notifications, use_notifications_with,
+        ActionIcon, Box, Button, ButtonVariant, Code, CodeBlock, Flex, Input, NotificationData,
+        NotificationLive, NotificationOptions, NotificationScope, Notifications, Paper,
+        ProgressBar, Text, use_notifications, use_notifications_with,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
-    theme::AutoClose,
+    theme::{AutoClose, Theme},
 };
+
+/// What the variant control starts on, and prints nothing for.
+fn default_variant() -> &'static str {
+    Theme::DEFAULT.alert.variant.as_str()
+}
 
 const SETUP_EXAMPLE: &str = r#"// Once, near the root - the one outlet for every handle.
 LiberoProvider {
@@ -197,12 +202,26 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     } else {
         "use_notifications()"
     };
-    let color = values.str("color");
-    let data = if template || color == UNSET {
+    let mut fields = Vec::new();
+    if !template {
+        let color = values.str("color");
+        if color != UNSET {
+            fields.push(format!("color: {color:?}.into()"));
+        }
+        let variant = values.str("variant");
+        if variant != default_variant() {
+            fields.push(format!("variant: {variant:?}.into()"));
+        }
+    }
+    let data = if fields.is_empty() {
         "\"Saved.\"".to_string()
     } else {
+        let fields: String = fields
+            .iter()
+            .map(|field| format!("        {field},\n"))
+            .collect();
         format!(
-            "NotificationData {{\n        message: \"Saved.\".into(),\n        color: {color:?}.into(),\n        ..Default::default()\n    }}"
+            "NotificationData {{\n        message: \"Saved.\".into(),\n{fields}        ..Default::default()\n    }}"
         )
     };
     let show = if values.str("closable") == "true" {
@@ -234,7 +253,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
 /// component of its own: `Demo` calls `render` in its own scope, where the
 /// hooks would be invisible.
 #[component]
-fn Examples(color: String, closable: bool, template: bool) -> Element {
+fn Examples(color: String, variant: String, closable: bool, template: bool) -> Element {
     let notify = if template {
         use_notifications_with(card_notification)
     } else {
@@ -252,9 +271,13 @@ fn Examples(color: String, closable: bool, template: bool) -> Element {
         UNSET => Input::None,
         color => Input::from(color),
     };
+    // Every `Alert` the buttons raise takes the variant; only the plain ones
+    // take the colour, since the others name their own.
+    let variant = Input::<ButtonVariant>::from(variant.as_str()).copied_or(ButtonVariant::Tonal);
     let plain = move |message: &str| NotificationData {
         message: message.into(),
         color: color.clone(),
+        variant: Input::Value(variant),
         ..Default::default()
     };
     let options = move |options: NotificationOptions| NotificationOptions {
@@ -328,6 +351,7 @@ fn Examples(color: String, closable: bool, template: bool) -> Element {
                                 title: Some("Published".into()),
                                 message: "Your post is live.".into(),
                                 color: "success".into(),
+                                variant: Input::Value(variant),
                                 ..Default::default()
                             },
                             options(Default::default()),
@@ -344,6 +368,7 @@ fn Examples(color: String, closable: bool, template: bool) -> Element {
                                 title: Some("Upload failed".into()),
                                 message: "archive.zip is over the 10 MB limit.".into(),
                                 color: "error".into(),
+                                variant: Input::Value(variant),
                                 ..Default::default()
                             },
                             options(NotificationOptions {
@@ -460,8 +485,16 @@ pub fn NotificationsPage() -> Element {
                     Control::toggle("auto_close", ["2000", "4000", "never"])
                         .labels(["2s", "4s", "Never"])
                         .default("4000"),
-                    // The plain buttons' colour. Your own template draws no
-                    // colour, so the control goes with it.
+                    // The `Alert`'s kind. Your own template draws no `Alert`,
+                    // so both controls go with it.
+                    Control::toggle(
+                        "variant",
+                        ["filled", "tonal", "elevated", "outlined", "standard"],
+                    )
+                    .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
+                    .default(default_variant())
+                    .hidden_when(|values| values.str("template") == "true"),
+                    // The plain buttons' colour; the others name their own.
                     Control::color("color")
                         .with_unset()
                         .hidden_when(|values| values.str("template") == "true"),
@@ -477,6 +510,7 @@ pub fn NotificationsPage() -> Element {
                             auto_close: auto_close_of(&values.str("auto_close")),
                             Examples {
                                 color: values.str("color"),
+                                variant: values.str("variant"),
                                 closable: values.str("closable") == "true",
                                 template: values.str("template") == "true",
                             }
