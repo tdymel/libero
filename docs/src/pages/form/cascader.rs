@@ -3,64 +3,67 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Cascader, CascaderPick, Code, FieldStatus, Flex, Text, TreeNode},
+    components::{Cascader, CascaderOption, Code, FieldStatus, Flex, Text},
     sx::sx,
 };
 
 /// The tree the preview renders, printed above the snippet so the two cannot
 /// drift - `data` is deliberately not a control.
-const DATA_CODE: &str = r#"fn categories() -> Vec<TreeNode<&'static str>> {
+const DATA_CODE: &str = r#"fn categories() -> Vec<CascaderOption<String>> {
     vec![
-        TreeNode::new("food", "Food").children(vec![
-            TreeNode::new("fruit", "Fruit").children(vec![
-                TreeNode::new("apple", "Apple"),
-                TreeNode::new("pear", "Pear"),
-                TreeNode::new("quince", "Quince").disabled(true),
+        CascaderOption::new("food", "Food").children(vec![
+            CascaderOption::new("fruit", "Fruit").children(vec![
+                CascaderOption::new("apple", "Apple"),
+                CascaderOption::new("pear", "Pear"),
+                CascaderOption::new("quince", "Quince").disabled(true),
             ]),
-            TreeNode::new("veg", "Veg").children(vec![
-                TreeNode::new("leek", "Leek"),
-                TreeNode::new("kale", "Kale"),
+            CascaderOption::new("veg", "Veg").children(vec![
+                CascaderOption::new("leek", "Leek"),
+                CascaderOption::new("kale", "Kale"),
             ]),
         ]),
-        TreeNode::new("drink", "Drink").children(vec![
-            TreeNode::new("hot", "Hot").children(vec![
-                TreeNode::new("tea", "Tea"),
-                TreeNode::new("coffee", "Coffee"),
+        CascaderOption::new("drink", "Drink").children(vec![
+            CascaderOption::new("hot", "Hot").children(vec![
+                CascaderOption::new("tea", "Tea"),
+                CascaderOption::new("coffee", "Coffee"),
             ]),
-            TreeNode::new("cold", "Cold").children(vec![TreeNode::new("juice", "Juice")]),
+            CascaderOption::new("cold", "Cold")
+                .children(vec![CascaderOption::new("juice", "Juice")]),
         ]),
-        TreeNode::new("household", "Household").disabled(true).children(vec![
-            TreeNode::new("soap", "Soap"),
-        ]),
+        CascaderOption::new("household", "Household")
+            .disabled(true)
+            .children(vec![CascaderOption::new("soap", "Soap")]),
     ]
 }"#;
 
-/// What a value looks like: the ids from the root to the picked node.
-const CHOSEN: &str = r#"let mut chosen = use_signal(|| vec!["drink".to_string(), "hot".to_string(), "tea".to_string()]);"#;
+/// What a value looks like: one option's value. The path to it is the
+/// cascader's to find.
+const CHOSEN: &str = r#"let mut chosen = use_signal(|| Some("tea".to_string()));"#;
 
-fn categories() -> Vec<TreeNode<&'static str>> {
+fn categories() -> Vec<CascaderOption<String>> {
     vec![
-        TreeNode::new("food", "Food").children(vec![
-            TreeNode::new("fruit", "Fruit").children(vec![
-                TreeNode::new("apple", "Apple"),
-                TreeNode::new("pear", "Pear"),
-                TreeNode::new("quince", "Quince").disabled(true),
+        CascaderOption::new("food", "Food").children(vec![
+            CascaderOption::new("fruit", "Fruit").children(vec![
+                CascaderOption::new("apple", "Apple"),
+                CascaderOption::new("pear", "Pear"),
+                CascaderOption::new("quince", "Quince").disabled(true),
             ]),
-            TreeNode::new("veg", "Veg").children(vec![
-                TreeNode::new("leek", "Leek"),
-                TreeNode::new("kale", "Kale"),
+            CascaderOption::new("veg", "Veg").children(vec![
+                CascaderOption::new("leek", "Leek"),
+                CascaderOption::new("kale", "Kale"),
             ]),
         ]),
-        TreeNode::new("drink", "Drink").children(vec![
-            TreeNode::new("hot", "Hot").children(vec![
-                TreeNode::new("tea", "Tea"),
-                TreeNode::new("coffee", "Coffee"),
+        CascaderOption::new("drink", "Drink").children(vec![
+            CascaderOption::new("hot", "Hot").children(vec![
+                CascaderOption::new("tea", "Tea"),
+                CascaderOption::new("coffee", "Coffee"),
             ]),
-            TreeNode::new("cold", "Cold").children(vec![TreeNode::new("juice", "Juice")]),
+            CascaderOption::new("cold", "Cold")
+                .children(vec![CascaderOption::new("juice", "Juice")]),
         ]),
-        TreeNode::new("household", "Household")
+        CascaderOption::new("household", "Household")
             .disabled(true)
-            .children(vec![TreeNode::new("soap", "Soap")]),
+            .children(vec![CascaderOption::new("soap", "Soap")]),
     ]
 }
 
@@ -74,7 +77,7 @@ fn wrap_value(_: &DemoValues, code: &str) -> String {
 
 #[component]
 pub fn CascaderPage() -> Element {
-    let mut chosen = use_signal(|| vec!["drink".to_string(), "hot".to_string(), "tea".to_string()]);
+    let mut chosen = use_signal(|| Some("tea".to_string()));
 
     rsx! {
         DocPage {
@@ -85,18 +88,18 @@ pub fn CascaderPage() -> Element {
                 props("Cascader", vec![
                     prop("size", "Size").default("md").doc("Controls height, padding and font size, of the frame and of the rows alike."),
                     prop("radius", "Size").default("sm").doc("Corner radius of the frame and the list, independent of size."),
-                    prop("data", "Vec<TreeNode<T>>")
-                        .doc("The tree to walk - `Tree`'s own node type, so a caller who already has one drops it straight in. Ids are unique across the whole tree, not just among siblings."),
-                    prop("value", "Vec<String>")
-                        .doc("The selected path's ids, root to leaf; strictly controlled. A path that is not in `data` selects nothing."),
-                    prop("onchange", "EventHandler<CascaderPick<T>>")
-                        .doc("Called with the path to select next and the nodes on it. An empty `path` means the selection was cleared."),
+                    prop("data", "Vec<CascaderOption<T>>")
+                        .doc("The tree to walk: `CascaderOption::new(value, label)`, with `.children(..)` and `.disabled(..)`. `T` is any `Options` type, as for `Select`. Values are unique across the whole tree, not just among siblings."),
+                    prop("value", "Option<T>")
+                        .doc("The selected option's value; strictly controlled. The cascader finds the path to it in `data`. A value no option holds selects nothing."),
+                    prop("onchange", "EventHandler<Option<T>>")
+                        .doc("Called with the value to select next, or `None` when the selection was cleared."),
                     prop("any_level", "bool")
                         .default("false")
-                        .doc("Lets a branch be picked as well as expanded. Off, only a leaf commits."),
+                        .doc("Lets a branch be picked as well as expanded, as its own value. Off, only a leaf commits."),
                     prop("allow_deselect", "bool")
                         .default("true")
-                        .doc("Picking the committed path again clears it."),
+                        .doc("Picking the selected option again clears it."),
                     prop("layout", "CascaderLayout")
                         .default("columns")
                         .doc("`\"columns\"` draws one listbox per level; `\"paths\"` draws one row per full path. A search renders `\"paths\"` whatever this says."),
@@ -108,23 +111,23 @@ pub fn CascaderPage() -> Element {
                     prop("separator", "String")
                         .default("\" / \"")
                         .doc("Between labels, in the trigger and in a `\"paths\"` row."),
-                    prop("format_value", "Callback<Vec<T>, String>")
-                        .doc("Overrides the joined labels in the trigger. A `String` and not a node, because the value slot clips for an ellipsis."),
+                    prop("format_value", "Callback<Vec<String>, String>")
+                        .doc("Overrides the joined labels in the trigger; takes the labels root to option. A `String` and not a node, because the value slot clips for an ellipsis."),
                     prop("node", "Callback<CascaderNodeArgs<T>, Element>")
-                        .default("tree_label()")
+                        .default("label")
                         .doc("Draws one row's content. The row itself - its highlight, its `aria-selected`, its chevron, its click - stays the component's."),
                     prop("column_width", "String")
                         .default("220px")
                         .doc("One column's width, and its minimum: when the trigger is wider than the open columns, they share the rest. `\"max-content\"` is how a column takes the width of its longest row."),
-                    prop("validate", "Validators<Vec<String>>")
-                        .doc("Rules over the path, shown once the field loses focus or its form is submitted."),
-                    prop("name", "FieldName<Vec<String>>")
-                        .doc("Emits one hidden input of that name per level. A path also binds the selection to the surrounding `Form`'s value."),
+                    prop("validate", "Validators<Option<T>>")
+                        .doc("Rules over the selected value, shown once the field loses focus or its form is submitted."),
+                    prop("name", "FieldName<Option<T>>")
+                        .doc("Emits a hidden input of that name carrying the selected value's `Options::value()`. A path also binds the selection to the surrounding `Form`'s value."),
                     prop("placeholder", "String").doc("Shown while nothing is selected."),
                     prop("search_placeholder", "String").doc("What the search box says while empty."),
                     prop("clearable", "bool")
                         .default("false")
-                        .doc("Shows an x in place of the chevron while a path is selected."),
+                        .doc("Shows an x in place of the chevron while a value is selected."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control: what to enter."),
                     prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),
@@ -137,19 +140,21 @@ pub fn CascaderPage() -> Element {
             ],
             lead: rsx! {
                 Text {
-                    "A field for choosing one branch of a tree, level by level. Its value is the "
-                    Code { source: "Vec<String>" }
-                    " path from the root to the picked node, which is what makes it neither a "
-                    Code { source: "Select" }
-                    " - whose value is one "
+                    "A field for choosing one option from a tree, level by level. Its value is one "
+                    "option's "
+                    Code { source: "value" }
+                    " - any "
                     Code { source: "T" }
-                    " - nor a "
+                    " a "
+                    Code { source: "Select" }
+                    " could hold. The cascader finds the path to that value itself and shows it in the "
+                    "trigger. The tree is built from "
+                    Code { source: "CascaderOption<T>" }
+                    ", not from "
                     Code { source: "Tree" }
-                    ", which expands and activates rather than selecting. It takes "
+                    "'s nodes: a "
                     Code { source: "Tree" }
-                    "'s own "
-                    Code { source: "TreeNode<T>" }
-                    ", so the same data drives both."
+                    " expands and activates rather than selecting."
                 }
             },
             Demo {
@@ -159,7 +164,7 @@ pub fn CascaderPage() -> Element {
                     "sx: sx().width(\"320px\")".to_string(),
                     "data: categories()".to_string(),
                     "value: chosen()".to_string(),
-                    "onchange: move |pick: CascaderPick<&'static str>| chosen.set(pick.path)".to_string(),
+                    "onchange: move |next: Option<String>| chosen.set(next)".to_string(),
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
@@ -225,7 +230,7 @@ pub fn CascaderPage() -> Element {
                             disabled: (values.str("disabled") == "true").then_some(true),
                             data: categories(),
                             value: chosen(),
-                            onchange: move |pick: CascaderPick<&'static str>| chosen.set(pick.path),
+                            onchange: move |next: Option<String>| chosen.set(next),
                         }
                         Text { size: "sm", "value: {chosen():?}" }
                     }
@@ -249,10 +254,10 @@ pub fn CascaderPage() -> Element {
                 }
                 Text {
                     Code { source: "aria-selected" }
-                    " follows the cursor's own chain rather than the committed path, so the row "
+                    " follows the cursor's own chain rather than the selected option, so the row "
                     Code { source: "aria-activedescendant" }
                     " points at always carries it - with several columns open those are "
-                    "routinely different rows. The committed path keeps a mark of its own, in "
+                    "routinely different rows. The selected option keeps a mark of its own, in "
                     "weight rather than in ARIA."
                 }
                 Text {

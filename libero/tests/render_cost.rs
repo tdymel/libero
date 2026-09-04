@@ -116,14 +116,14 @@ fn CostWindow(title: String, children: Element) -> Element {
 }
 
 /// One realistic three-level tree, built per instance the way a caller's would
-/// be - the erasure is part of what a `Cascader` costs.
-fn cost_tree() -> Vec<TreeNode<&'static str>> {
+/// be - building it is part of what a `Cascader` costs.
+fn cost_tree() -> Vec<CascaderOption<String>> {
     vec![
-        TreeNode::new("a", "A").children(vec![
-            TreeNode::new("a1", "A1").children(vec![TreeNode::new("a1x", "A1x")]),
-            TreeNode::new("a2", "A2"),
+        CascaderOption::new("a", "A").children(vec![
+            CascaderOption::new("a1", "A1").children(vec![CascaderOption::new("a1x", "A1x")]),
+            CascaderOption::new("a2", "A2"),
         ]),
-        TreeNode::new("b", "B").children(vec![TreeNode::new("b1", "B1")]),
+        CascaderOption::new("b", "B").children(vec![CascaderOption::new("b1", "B1")]),
     ]
 }
 
@@ -363,7 +363,7 @@ fn render_cost_per_component() {
         // Closed: the columns are not rendered until it opens, and nothing can
         // open one from a prop. The price of an *open* cascader is a browser
         // measurement, not this table's.
-        "Cascader" { Cascader { data: cost_tree(), onchange: move |_: CascaderPick<&'static str>| {} } }
+        "Cascader" { Cascader { data: cost_tree(), onchange: move |_: Option<String>| {} } }
         "Checkbox" { Checkbox { checked: true, onchange: move |_| {} } }
         "Checkbox+label" { Checkbox { checked: true, onchange: move |_| {}, label: "l" } }
         "Radio" { Radio { checked: true, onselect: move |_| {} } }

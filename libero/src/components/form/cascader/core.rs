@@ -1,4 +1,4 @@
-use std::{any::Any, rc::Rc};
+use std::rc::Rc;
 
 use dioxus::prelude::*;
 
@@ -13,7 +13,6 @@ use crate::{
             use_combobox, use_field, use_field_frame,
         },
         layout::{ScrollArea, use_box},
-        navigation::TreeNodeErased,
     },
     hooks::{PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
     platform::ElementApi,
@@ -21,17 +20,20 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
 };
 
-use super::nodes::{
-    FlatPath, children_at, disabled_at, first_enabled, flatten_paths, ids_at, indices_for_ids,
-    join_labels, last_enabled, node_at, step,
+use super::{
+    nodes::{
+        FlatPath, children_at, disabled_at, first_enabled, flatten_paths, join_labels,
+        last_enabled, node_at, step,
+    },
+    option::CascaderNode,
 };
 
 str_enum! {
     /// How an open `Cascader` draws its tree.
     #[state_prefix = "layout"]
     pub enum CascaderLayout {
-        /// One listbox per level, side by side - the column walk the value's
-        /// shape is named after.
+        /// One listbox per level, side by side - the column walk the
+        /// component is named after.
         #[default]
         Columns = "columns",
         /// One row per full path, joined by `separator`. Also what a search
@@ -48,31 +50,47 @@ impl From<CascaderLayout> for Input<CascaderLayout> {
     }
 }
 
-/// Type-erased mirror of `CascaderNodeArgs<T>`. `Cascader<T>` wraps the typed
-/// callback in one that downcasts `data` back to `T`, so a downcast is the
-/// only per-`T` cost of a custom row.
-pub(super) struct CascaderNodeArgsErased {
-    pub data: Rc<dyn Any>,
-    pub level: usize,
+/// The option tree without its values, compared by `Rc` pointer. `Cascader`
+/// erases its `data` into a fresh one every render, so `CascaderCoreProps`
+/// never compares equal - see `CascaderCoreProps::options`.
+#[derive(Clone)]
+pub(super) struct CascaderTree(pub Rc<Vec<CascaderNode>>);
+
+impl PartialEq for CascaderTree {
+    fn eq(&self, other: &Self) -> bool {
+        Rc::ptr_eq(&self.0, &other.0)
+    }
+}
+
+/// One row as the engine knows it: where it is, not what it holds.
+/// `Cascader<T>` looks the option up by `indices` for the caller's `node`.
+pub(super) struct CascaderRowArgs {
+    pub indices: Vec<usize>,
     pub expanded: bool,
     pub selected: bool,
 }
 
 /// `Rc<dyn Fn>` wrapper, so `CascaderCoreProps` derives `Clone`/`PartialEq`
 /// without being generic over `T`. Always equal, like `Tree`'s
-/// `ErasedRenderNode`: the closure instance does not change a row's output for
-/// given args, and what keeps a *stale* one from surviving is `nodes` - see
-/// the note on `CascaderCoreProps::nodes`.
+/// `ErasedRenderNode`; what keeps a *stale* one from surviving is `options`.
 #[derive(Clone)]
-pub(super) struct CascaderRender(Rc<dyn Fn(CascaderNodeArgsErased) -> Element>);
+pub(super) struct CascaderRender(pub Rc<dyn Fn(CascaderRowArgs) -> Element>);
 
-impl CascaderRender {
-    pub(super) fn new(f: impl Fn(CascaderNodeArgsErased) -> Element + 'static) -> Self {
-        Self(Rc::new(f))
+impl PartialEq for CascaderRender {
+    fn eq(&self, _other: &Self) -> bool {
+        true
     }
 }
 
-impl PartialEq for CascaderRender {
+/// The query, a path's index path and its joined label in; whether the path
+/// survives out.
+type MatchFn = dyn Fn(&str, &[usize], String) -> bool;
+
+/// A caller's `filter`, erased the same way as `CascaderRender`.
+#[derive(Clone)]
+pub(super) struct CascaderMatch(pub Rc<MatchFn>);
+
+impl PartialEq for CascaderMatch {
     fn eq(&self, _other: &Self) -> bool {
         true
     }
@@ -184,20 +202,20 @@ static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
 
 field_props! {
     pub(crate) struct CascaderCoreProps {
-        /// The erased tree, **re-erased on every render on purpose**.
-        /// `TreeNodeErased` compares its payload by `Rc` pointer, so a fresh
-        /// erasure never compares equal - which is what stops this component
-        /// memoizing and taking a stale `node` callback with it
-        /// ([[codebase/components/combobox]], the memoization bug). `Tree`
-        /// caches its erasure because it has no callback prop that can go
-        /// stale.
-        nodes: Vec<TreeNodeErased>,
-        /// The committed path's ids, root to leaf. Empty is no selection.
-        value: Vec<String>,
-        /// The path to commit next - empty to clear.
-        onpick: EventHandler<Vec<String>>,
-        /// Draws one row's content.
-        node: CascaderRender,
+        /// The tree, **wrapped fresh on every render on purpose**.
+        /// `CascaderTree` compares by `Rc` pointer, so these props never
+        /// compare equal - which is what stops this component memoizing and
+        /// keeping a stale `node` or `filter`, both of which always compare
+        /// equal ([[codebase/dioxus-memoization-traps]]). It also spares a
+        /// deep comparison of the tree.
+        options: CascaderTree,
+        /// The committed option's index path. `None` is no selection.
+        committed: Option<Vec<usize>>,
+        /// The option to commit next, by index path - `None` to clear.
+        onpick: EventHandler<Option<Vec<usize>>>,
+        /// Draws one row's content. `None` draws the label.
+        #[props(default)]
+        node: Option<CascaderRender>,
         /// The trigger's text. Empty shows `placeholder`.
         display: String,
         separator: String,
@@ -214,27 +232,31 @@ field_props! {
         placeholder: Option<String>,
         #[props(default)]
         search_placeholder: Option<String>,
-        /// Shows an x in place of the chevron while a path is committed.
+        /// Shows an x in place of the chevron while a value is committed.
         #[props(default)]
         clearable: bool,
-        /// One hidden input of that name per level, so the path posts with a
-        /// native form - the shape `MultiSelect` sends. The trigger is a `div`
-        /// and cannot carry a `name` itself.
+        /// A hidden input of that name carrying `form_value`, so the field
+        /// posts with a native form. The trigger is a `div` and cannot carry
+        /// a `name` itself.
         #[props(default)]
         name: Option<String>,
-        /// What the skin's `validate` rules say; `T` never reaches here.
+        /// What the hidden input posts - the value's `Options::value()`.
+        /// `None` posts nothing.
+        #[props(default)]
+        form_value: Option<String>,
+        /// What the skin's `validate` rules say.
         #[props(default)]
         rules: Option<crate::components::FieldStatus>,
-        /// Which flattened paths survive the query, one `bool` per entry of
-        /// `flatten_paths(nodes, any_level)`. `None` is the default filter,
-        /// which the core runs itself over the joined labels it already has.
+        /// Narrows the paths while searching. `None` is a case-insensitive
+        /// `contains` over the joined labels.
         #[props(default)]
-        matches: Option<Callback<String, Vec<bool>>>,
+        filter: Option<CascaderMatch>,
     }
 }
 
-/// The engine under `Cascader`. It never sees `T`: the skin hands it an erased
-/// tree and a row renderer, and takes a path of ids back.
+/// The engine under `Cascader`. It never sees `T`: the skin hands it the tree
+/// without its values, the committed option as an index path, and erased
+/// callbacks, and takes an index path back.
 ///
 /// Focus stays on the trigger the whole time - the rows and the list cancel
 /// `mousedown` - so losing it is what closes the list on an outside click,
@@ -261,12 +283,12 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let trigger_element = use_element();
     let mut was_open = use_signal(|| false);
 
-    let nodes = Rc::new(props.nodes.clone());
+    let nodes = props.options.0.clone();
     let separator = props.separator.clone();
     let any_level = props.any_level;
     let allow_deselect = props.allow_deselect;
 
-    let committed = indices_for_ids(&nodes, &props.value);
+    let committed = props.committed.clone();
     let searching = searchable && opened && !query().is_empty();
     let layout = match searching {
         true => CascaderLayout::Paths,
@@ -277,27 +299,19 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     // leaves. `Columns` never reads it, and building it costs one walk of a
     // tree the component is holding anyway.
     let all_paths = flatten_paths(&nodes, any_level);
-    let visible: Rc<Vec<FlatPath>> = Rc::new(match (searching, props.matches.as_ref()) {
-        (false, _) => all_paths,
-        (true, Some(matches)) => {
-            let mask = matches.call(query());
-            all_paths
-                .into_iter()
-                .enumerate()
-                .filter(|(index, _)| mask.get(*index).copied().unwrap_or(false))
-                .map(|(_, path)| path)
-                .collect()
-        }
-        // The default filter needs nothing from `T` - the labels are already
-        // on the erased nodes, so the skin is never asked for a callback.
-        (true, None) => {
-            let needle = query().to_lowercase();
+    let visible: Rc<Vec<FlatPath>> = Rc::new(match searching {
+        false => all_paths,
+        true => {
+            let query = query();
+            let needle = query.to_lowercase();
             all_paths
                 .into_iter()
                 .filter(|path| {
-                    join_labels(&path.labels, &separator)
-                        .to_lowercase()
-                        .contains(&needle)
+                    let label = join_labels(&path.labels, &separator);
+                    match &props.filter {
+                        Some(filter) => (filter.0)(&query, &path.indices, label),
+                        None => label.to_lowercase().contains(&needle),
+                    }
                 })
                 .collect()
         }
@@ -333,17 +347,17 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         })
     };
 
-    // The one place a path is committed, shared by the keyboard and the mouse.
-    // `allow_deselect` turns a re-pick into a clear, which is the same edit the
-    // x makes. `close` is false for the one commit that is not the end of the
+    // The one place a value is committed, shared by the keyboard and the
+    // mouse. `allow_deselect` turns a re-pick into a clear, which is the same
+    // edit the x makes. `close` is false for the one commit that is not the end of the
     // interaction: an `any_level` branch, which is picked *and* drilled into.
     let onpick = props.onpick;
-    let commit: Rc<dyn Fn(Vec<String>, bool)> = {
-        let picked = props.value.clone();
-        Rc::new(move |ids: Vec<String>, close: bool| {
-            let next = match allow_deselect && ids == picked {
-                true => Vec::new(),
-                false => ids,
+    let commit: Rc<dyn Fn(Vec<usize>, bool)> = {
+        let picked = committed.clone();
+        Rc::new(move |indices: Vec<usize>, close: bool| {
+            let next = match allow_deselect && picked.as_ref() == Some(&indices) {
+                true => None,
+                false => Some(indices),
             };
             onpick.call(next);
             if close {
@@ -390,13 +404,13 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .prepare();
 
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
-    let clear = (props.clearable && !props.value.is_empty() && !disabled).then(|| {
+    let clear = (props.clearable && committed.is_some() && !disabled).then(|| {
         rsx! {
             ActionIcon {
                 aria_label: "Clear",
                 size: icon_size,
                 onclick: move |_| {
-                    onpick.call(Vec::new());
+                    onpick.call(None);
                     state.close();
                 },
                 CloseIcon {}
@@ -504,7 +518,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                     if !path.disabled {
                         // A `Paths` row is a whole path, so there is nothing
                         // left to drill into - every pick here is the end.
-                        commit(path.ids.clone(), true);
+                        commit(path.indices.clone(), true);
                     }
                 }
                 Key::ArrowDown | Key::ArrowUp | Key::Home | Key::End => {
@@ -556,13 +570,13 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                     event.prevent_default();
                     let children = children_at(&nodes, &here);
                     if children.is_empty() {
-                        commit(ids_at(&nodes, &here), true);
+                        commit(here, true);
                         return;
                     }
                     // A branch expands. With `any_level` it is picked on the
                     // way, and the list stays open so the walk can go on.
                     if any_level {
-                        commit(ids_at(&nodes, &here), false);
+                        commit(here.clone(), false);
                     }
                     if let Some(index) = first_enabled(children) {
                         let mut next = here;
@@ -580,14 +594,14 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     // One node, through the skin's renderer. A `Paths` row is several of these
     // with the separator between them, so the caller's `node` still draws
     // every level rather than being skipped for the flat layout.
-    let draw_node = |prefix: &[usize]| match node_at(&nodes, prefix) {
-        Some(node) => (props.node.0)(CascaderNodeArgsErased {
-            data: node.data.clone(),
-            level: prefix.len().saturating_sub(1),
+    let draw_node = |prefix: &[usize]| match (node_at(&nodes, prefix), &props.node) {
+        (Some(_), Some(draw)) => (draw.0)(CascaderRowArgs {
+            indices: prefix.to_vec(),
             expanded: cursor_now.starts_with(prefix) && cursor_now.len() > prefix.len(),
             selected: committed_now.as_slice() == prefix,
         }),
-        None => rsx! {},
+        (Some(node), None) => rsx! { "{node.label}" },
+        (None, _) => rsx! {},
     };
 
     let draw_row = |indices: Vec<usize>, level: usize, index: usize, whole_path: bool| {
@@ -619,7 +633,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                 }
             }
         };
-        let ids = ids_at(&nodes, &indices);
+        let picked = indices.clone();
         // Clicking a branch puts the cursor on its first child, not on the
         // branch itself - the deepest highlighted node is never expanded, so
         // stopping on the branch would show no children at all.
@@ -648,8 +662,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                     }
                     cursor.set(next_cursor.clone());
                     match has_children {
-                        false => commit(ids.clone(), true),
-                        true if any_level => commit(ids.clone(), false),
+                        false => commit(picked.clone(), true),
+                        true if any_level => commit(picked.clone(), false),
                         true => {}
                     }
                 },
@@ -922,16 +936,16 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         );
 
     // A hidden input is the only way a control that is not a form element can
-    // post - the shape `Slider` and `PinField` use. One per level, all sharing
-    // the field's name: a repeated name is an ordered list on the wire, which
-    // is what `MultiSelect` has posted since 2026-09-14.
+    // post - the shape `Select` and `Slider` use. The value alone: the path is
+    // derived from it, so the server needs nothing else. Nothing selected
+    // posts nothing, as a `Select` does.
     let hidden = props.name.clone().map(|name| {
         rsx! {
-            for step in props.value.iter().cloned() {
+            for value in props.form_value.iter().cloned() {
                 input {
                     r#type: "hidden",
                     name: name.clone(),
-                    value: step,
+                    value,
                     disabled: disabled.then_some(true),
                 }
             }

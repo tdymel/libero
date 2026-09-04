@@ -1,6 +1,6 @@
 //! `Cascader`'s rendered contract while it is closed: the trigger is a `div`
-//! with a listbox's wiring, the value it shows is the joined path, and the
-//! value it *posts* is one hidden input per level.
+//! with a listbox's wiring, the value it shows is the joined path to its
+//! value, and what it *posts* is that one value.
 //!
 //! The open list cannot be reached from here. It is portaled by `use_popover`
 //! and only exists after a click, and the columns are placed by measurements
@@ -14,24 +14,25 @@ use common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Cascader, CascaderPick, TreeNode},
+    components::{Cascader, CascaderOption, Fields, Form, Options},
 };
 
-fn categories() -> Vec<TreeNode<&'static str>> {
+fn categories() -> Vec<CascaderOption<String>> {
     vec![
-        TreeNode::new("food", "Food").children(vec![
-            TreeNode::new("fruit", "Fruit").children(vec![
-                TreeNode::new("apple", "Apple"),
-                TreeNode::new("pear", "Pear"),
+        CascaderOption::new("food", "Food").children(vec![
+            CascaderOption::new("fruit", "Fruit").children(vec![
+                CascaderOption::new("apple", "Apple"),
+                CascaderOption::new("pear", "Pear"),
             ]),
-            TreeNode::new("veg", "Veg").children(vec![TreeNode::new("leek", "Leek")]),
+            CascaderOption::new("veg", "Veg").children(vec![CascaderOption::new("leek", "Leek")]),
         ]),
-        TreeNode::new("drink", "Drink").children(vec![TreeNode::new("tea", "Tea")]),
+        CascaderOption::new("drink", "Drink").children(vec![CascaderOption::new("tea", "Tea")]),
     ]
 }
 
-fn picked() -> Vec<String> {
-    vec!["food".to_string(), "fruit".to_string(), "apple".to_string()]
+/// A leaf's value, three levels down: the path to it is the cascader's to find.
+fn picked() -> Option<String> {
+    Some("apple".to_string())
 }
 
 fn chosen() -> Element {
@@ -42,7 +43,7 @@ fn chosen() -> Element {
                 placeholder: "Pick a category",
                 data: categories(),
                 value: picked(),
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -55,7 +56,7 @@ fn empty() -> Element {
                 label: "Category",
                 placeholder: "Pick a category",
                 data: categories(),
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -69,7 +70,7 @@ fn dashed() -> Element {
                 data: categories(),
                 value: picked(),
                 separator: " - ",
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -82,8 +83,8 @@ fn formatted() -> Element {
                 label: "Category",
                 data: categories(),
                 value: picked(),
-                format_value: move |nodes: Vec<&'static str>| nodes.last().copied().unwrap_or("").to_string(),
-                onchange: move |_: CascaderPick<&'static str>| {},
+                format_value: move |labels: Vec<String>| labels.last().cloned().unwrap_or_default(),
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -97,7 +98,7 @@ fn posting() -> Element {
                 name: "category",
                 data: categories(),
                 value: picked(),
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -112,7 +113,7 @@ fn off() -> Element {
                 data: categories(),
                 value: picked(),
                 disabled: true,
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -125,10 +126,25 @@ fn stale() -> Element {
                 label: "Category",
                 placeholder: "Pick a category",
                 data: categories(),
-                // `apple` exists, but not as a root - a path is a path, not a
-                // bag of ids.
-                value: vec!["apple".to_string()],
-                onchange: move |_: CascaderPick<&'static str>| {},
+                // No option holds this value.
+                value: "banana".to_string(),
+                onchange: move |_: Option<String>| {},
+            }
+        }
+    }
+}
+
+fn branch() -> Element {
+    rsx! {
+        LiberoProvider {
+            Cascader {
+                label: "Category",
+                name: "category",
+                data: categories(),
+                // A branch's own value - what `any_level` commits.
+                value: "fruit".to_string(),
+                any_level: true,
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -142,7 +158,7 @@ fn clearable() -> Element {
                 data: categories(),
                 value: picked(),
                 clearable: true,
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -155,7 +171,7 @@ fn clearable_empty() -> Element {
                 label: "Category",
                 data: categories(),
                 clearable: true,
-                onchange: move |_: CascaderPick<&'static str>| {},
+                onchange: move |_: Option<String>| {},
             }
         }
     }
@@ -207,8 +223,9 @@ fn the_trigger_points_at_one_list() {
     assert!(!trigger.contains("aria-activedescendant"), "{trigger}");
 }
 
-/// The value slot shows the whole path, not the leaf - that is the difference
-/// between this and a `Select` over the leaves.
+/// The value is one leaf's, but the value slot shows the whole path to it,
+/// found in `data` - that is the difference between this and a `Select` over
+/// the leaves.
 #[test]
 fn the_trigger_shows_the_joined_path() {
     assert!(
@@ -229,40 +246,47 @@ fn the_trigger_shows_the_joined_path() {
     );
 }
 
-/// The placeholder is what an empty value shows, and an unresolvable one is
-/// empty: `value` is a *path*, so an id that exists deeper in the tree is not
-/// a root and selects nothing.
+/// The placeholder is what an empty value shows, and so is a value no option
+/// holds.
 #[test]
-fn a_value_that_is_not_a_path_selects_nothing() {
+fn a_value_that_is_not_in_the_tree_selects_nothing() {
     assert!(body(&render(empty)).contains("Pick a category"));
     assert!(body(&render(stale)).contains("Pick a category"));
-    assert!(!body(&render(stale)).contains("Apple"));
+    assert!(!body(&render(stale)).contains("banana"));
     assert!(!body(&render(chosen)).contains("Pick a category"));
 }
 
-/// A `div` cannot carry a `name`. One hidden input per level, all sharing it -
-/// a repeated name is an ordered list on the wire, which is the shape
-/// `MultiSelect` and `TagsField` already post.
+/// A `div` cannot carry a `name`, so one hidden input does - carrying the
+/// value alone, not the path to it. Nothing selected posts nothing.
 #[test]
-fn the_path_posts_one_hidden_input_per_level() {
+fn the_value_posts_as_one_hidden_input() {
     let html = body(&render(posting));
 
     assert_eq!(
         html.matches("type=\"hidden\"").count(),
-        3,
-        "one per level of the path:\n{html}"
+        1,
+        "one input, not one per level:\n{html}"
     );
-    assert_eq!(
-        html.matches("name=\"category\"").count(),
-        3,
-        "all of them share the field's name:\n{html}"
+    assert!(html.contains("name=\"category\""), "{html}");
+    assert!(
+        html.contains("value=\"apple\""),
+        "the value posts, not the label or the path:\n{html}"
     );
-    for id in ["food", "fruit", "apple"] {
-        assert!(
-            html.contains(&format!("value=\"{id}\"")),
-            "the ids post, not the labels:\n{html}"
-        );
-    }
+    assert!(!html.contains("value=\"food\""), "{html}");
+    assert!(
+        !body(&render(empty)).contains("type=\"hidden\""),
+        "nothing selected posts nothing"
+    );
+}
+
+/// With `any_level` a branch is a value like any other: it posts its own
+/// value, and the trigger shows the path down to it and no further.
+#[test]
+fn a_branch_value_shows_the_path_to_the_branch() {
+    let html = body(&render(branch));
+
+    assert!(html.contains("Food / Fruit<"), "{html}");
+    assert!(html.contains("value=\"fruit\""), "{html}");
 }
 
 /// A disabled field sends nothing and is not a tab stop, the way a native
@@ -276,13 +300,13 @@ fn a_disabled_cascader_neither_focuses_nor_posts() {
     assert!(trigger.contains("aria-disabled=\"true\""), "{trigger}");
     assert_eq!(
         html.matches("type=\"hidden\"").count(),
-        3,
-        "the inputs are still there, disabled:\n{html}"
+        1,
+        "the input is still there, disabled:\n{html}"
     );
     assert_eq!(
         html.matches("disabled=true").count(),
-        3,
-        "and every one of them carries it:\n{html}"
+        1,
+        "and it carries it:\n{html}"
     );
 }
 
@@ -298,4 +322,80 @@ fn the_clear_button_appears_only_with_a_selection() {
         !body(&render(clearable_empty)).contains("aria-label=\"Clear\""),
         "an empty one has nothing to clear"
     );
+}
+
+#[derive(Clone, PartialEq, Default, Fields)]
+struct Listing {
+    category: Option<String>,
+}
+
+fn bound() -> Element {
+    let listing = use_store(|| Listing {
+        category: Some("leek".to_string()),
+    });
+    rsx! {
+        LiberoProvider {
+            Form {
+                value: listing,
+                Cascader { label: "Category", data: categories(), name: Listing::FIELDS.category() }
+            }
+        }
+    }
+}
+
+/// Bound by `name`, the form's field holds one `Option<String>` - the value,
+/// not the path - and the cascader finds the path to it for the trigger.
+#[test]
+fn a_form_field_holds_the_value_and_the_trigger_shows_its_path() {
+    let html = body(&render(bound));
+
+    assert!(html.contains("Food / Veg / Leek"), "{html}");
+    assert!(html.contains("name=\"category\""), "{html}");
+    assert!(html.contains("value=\"leek\""), "{html}");
+}
+
+/// A value that is not a `String` - anything a `Select` could hold.
+#[derive(Clone, PartialEq, Debug)]
+struct Aisle {
+    id: u32,
+}
+
+impl Options for Aisle {
+    fn label(&self) -> String {
+        format!("Aisle {}", self.id)
+    }
+
+    fn value(&self) -> String {
+        self.id.to_string()
+    }
+}
+
+fn aisles() -> Element {
+    rsx! {
+        LiberoProvider {
+            Cascader {
+                label: "Aisle",
+                name: "aisle",
+                data: vec![
+                    CascaderOption::new(Aisle { id: 1 }, "Food").children(vec![
+                        CascaderOption::new(Aisle { id: 7 }, "Fruit"),
+                    ]),
+                ],
+                value: Aisle { id: 7 },
+                onchange: move |_: Option<Aisle>| {},
+            }
+        }
+    }
+}
+
+/// The value can be any `T: Options`. The path to it is found by `==`, the
+/// trigger shows the options' own labels, and what posts is
+/// `Options::value()` - the `Select` contract.
+#[test]
+fn a_complex_value_finds_its_path_and_posts_its_options_value() {
+    let html = body(&render(aisles));
+
+    assert!(html.contains("Food / Fruit<"), "{html}");
+    assert!(html.contains("name=\"aisle\""), "{html}");
+    assert!(html.contains("value=\"7\""), "{html}");
 }

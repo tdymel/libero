@@ -4,43 +4,41 @@ Crate: `libero`
 Import: `use libero::components::Cascader;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/cascader/cascader.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A field for choosing one branch of a tree level by level, whose value is the `Vec<String>` path from the root to the picked node.
+Description: A field for choosing one option of a tree level by level. Its value is the picked option's `value`, any `T: Options`; the cascader finds the path to it itself.
 
-A field for choosing one branch of a tree, level by level, with the five slots
-every field shares. Its value is the path - the ids from the root down to the
-picked node - and `onchange` hands back the nodes on that path beside it.
+A field for choosing one option of a tree, level by level, with the five slots
+every field shares. Its value is the picked option's `value`: any `T` a
+[Select](select.md) could hold (`T: Options`), a `String` or a type of your own. The cascader finds the path to that value in `data`
+itself, joins the labels on it in the trigger, and opens the columns on it.
 
-That value is what it is for. [Select](select.md) holds one `T`,
-[MultiSelect](multi_select.md) a `Vec<T>` whose order means nothing, and
-[Tree](tree.md) holds expansion state and *activates* a node rather than
-selecting one. A cascader is the only one of them whose answer is "which
-branch".
-
-It takes `Tree`'s own `TreeNode<T>`, so the same data drives both.
+What it adds over a `Select` is the walk: the options are a tree, reached one
+level at a time. [Tree](tree.md) holds expansion state and *activates* a node
+rather than selecting one, and the two share no data types - a cascader's tree
+is built from its own `CascaderOption<T>`, Mantine's shape.
 
 ## Usage
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Cascader, CascaderPick, Flex, Text, TreeNode};
+use libero::components::{Cascader, CascaderOption, Flex, Text};
 
-fn categories() -> Vec<TreeNode<&'static str>> {
+fn categories() -> Vec<CascaderOption<String>> {
     vec![
-        TreeNode::new("food", "Food").children(vec![
-            TreeNode::new("fruit", "Fruit").children(vec![
-                TreeNode::new("apple", "Apple"),
-                TreeNode::new("pear", "Pear"),
+        CascaderOption::new("food", "Food").children(vec![
+            CascaderOption::new("fruit", "Fruit").children(vec![
+                CascaderOption::new("apple", "Apple"),
+                CascaderOption::new("pear", "Pear").disabled(true),
             ]),
-            TreeNode::new("veg", "Veg").children(vec![TreeNode::new("leek", "Leek")]),
+            CascaderOption::new("veg", "Veg").children(vec![CascaderOption::new("leek", "Leek")]),
         ]),
-        TreeNode::new("drink", "Drink").children(vec![TreeNode::new("tea", "Tea")]),
+        CascaderOption::new("drink", "Drink").children(vec![CascaderOption::new("tea", "Tea")]),
     ]
 }
 
 #[component]
 fn Demo() -> Element {
-    // The value is the ids from the root to the picked node.
-    let mut chosen = use_signal(|| vec!["drink".to_string(), "tea".to_string()]);
+    // The value is one option's value; the path to it is the cascader's to find.
+    let mut chosen = use_signal(|| Some("tea".to_string()));
 
     rsx! {
         Flex { direction: "column", gap: "sm", align: "flex-start",
@@ -50,32 +48,32 @@ fn Demo() -> Element {
                 data: categories(),
                 searchable: true,
                 value: chosen(),
-                onchange: move |pick: CascaderPick<&'static str>| chosen.set(pick.path),
+                onchange: move |next: Option<String>| chosen.set(next),
             }
-            // Prints `value: ["drink", "tea"]`.
+            // The trigger shows `Drink / Tea`; this prints `value: Some("tea")`.
             Text { size: "sm", "value: {chosen():?}" }
         }
     }
 }
 ```
 
-Strictly controlled: `value` is the path of ids, `onchange` hands back the path
-the caller should hold next. An empty `path` is the cleared selection - what the
-`clearable` x and `allow_deselect` both produce.
+Strictly controlled: `value` is the selected option's value, `onchange` hands
+back the value the caller should hold next. `None` is the cleared selection -
+what the `clearable` x and `allow_deselect` both produce.
 
-`CascaderPick<T>` carries both halves of one answer:
+`CascaderOption<T> { value: T, label: String, children, disabled }` is built
+with `CascaderOption::new(value, label)`, `.children(vec![..])` and
+`.disabled(true)`; `new` takes `impl Into<T>`, so a `CascaderOption<String>`
+takes a `&str`. A disabled option disables everything under it.
 
-| Field | Type | What it is |
-|---|---|---|
-| `path` | `Vec<String>` | The node ids, root to leaf. What posts, and what `value` takes back |
-| `nodes` | `Vec<T>` | The `data` of each node on that path, already resolved |
+The path to the value is found with `==`, the trigger shows the options'
+own `label`s, and the hidden input posts `Options::value()` - what a `Select`
+posts. Only a thin shell is generic over `T`; the engine walks the tree by
+index path, so a second `T` does not compile a second engine.
 
-`nodes` exists so that "the label of the second level" is a field access rather
-than a second walk of the tree.
-
-Ids are unique across the **whole** tree, not just among siblings - the value is
-a path of them, and a `value` that is not a path through `data` selects nothing
-and warns.
+Values are unique across the **whole** tree, not just among siblings: the
+cascader finds its value by searching the tree, and a `value` no option holds
+selects nothing and warns.
 
 ## Two layouts
 
@@ -87,11 +85,11 @@ and warns.
 `searchable` renders `"paths"` whatever `layout` says: a search box sits at the
 top of the list and narrows it to the paths that match, case-insensitively over
 the joined path. `filter` replaces that rule and is handed the query, the joined
-label, the ids and the resolved nodes.
+label, and the path's values root to option.
 
 Without `any_level` only a leaf can be committed, and `"paths"` lists only leaf
 paths - so the list never offers a row `Enter` would refuse. With `any_level` a
-branch commits as well as expanding, and every node gets a row.
+branch commits its own value as well as expanding, and every option gets a row.
 
 A node under a disabled ancestor is disabled too; the arrows skip it and it
 cannot be picked.
@@ -105,7 +103,7 @@ cannot be picked.
 | `Home` / `End` | open | The first/last enabled row of that column |
 | `ArrowRight` | open, `"columns"` | Expands the cursor's node, cursor onto its first enabled child |
 | `ArrowLeft` | open, `"columns"` | Up one level. At the root, nothing |
-| `Enter` | open, leaf | Commits the path and closes |
+| `Enter` | open, leaf | Commits its value and closes |
 | `Enter` | open, branch | Expands. Commits too, with `any_level` |
 | `Escape` | open | Closes and keeps the value |
 | `Tab` | open | Closes and moves on |
@@ -123,11 +121,11 @@ rows are never focused, and the trigger names the row the arrows are on with
 column past the first is named by the row it hangs off, so nothing has to invent
 a label for "level 2".
 
-`aria-selected` follows the **cursor's own chain** rather than the committed
-path. With several columns open those are routinely different rows, and marking
-only the committed one would leave the `aria-activedescendant` target with no
-`aria-selected` at all. The committed path keeps a mark of its own, in weight
-rather than in ARIA.
+`aria-selected` follows the **cursor's own chain** rather than the selected
+option. With several columns open those are routinely different rows, and
+marking only the selected one would leave the `aria-activedescendant` target
+with no `aria-selected` at all. The selected option keeps a mark of its own, in
+weight rather than in ARIA.
 
 While `searchable` and open, the search box owns `role="combobox"`,
 `aria-controls` and `aria-activedescendant`; the trigger keeps only
@@ -142,26 +140,26 @@ Everything `field_props!` gives every field - `label`, `description`, `helper`,
 
 | Prop | Type | Default | What it does |
 |---|---|---|---|
-| `data` | `Vec<TreeNode<T>>` | - | The tree. Ids unique across the whole tree |
-| `value` | `Vec<String>` | `[]` | The selected path, root to leaf. Controlled |
-| `onchange` | `EventHandler<CascaderPick<T>>` | - | The path to select next, and the nodes on it |
-| `any_level` | `bool` | `false` | A branch commits as well as expanding |
-| `allow_deselect` | `bool` | `true` | Picking the committed path again clears it |
+| `data` | `Vec<CascaderOption<T>>` | - | The tree. Values unique across the whole tree |
+| `value` | `Option<T>` | `None` | The selected option's value. Controlled |
+| `onchange` | `EventHandler<Option<T>>` | - | The value to select next; `None` clears |
+| `any_level` | `bool` | `false` | A branch commits its own value as well as expanding |
+| `allow_deselect` | `bool` | `true` | Picking the selected option again clears it |
 | `layout` | `CascaderLayout` | `"columns"` | `"columns"` or `"paths"` |
 | `searchable` | `bool` | `false` | A search box at the top of the list |
 | `filter` | `Callback<CascaderFilterArgs<T>, bool>` | - | Defaults to case-insensitive `contains` over the joined path |
 | `separator` | `String` | `" / "` | Between labels, in the trigger and in a `"paths"` row |
-| `format_value` | `Callback<Vec<T>, String>` | - | Overrides the joined labels in the trigger |
-| `node` | `Callback<CascaderNodeArgs<T>, Element>` | `tree_label()` | Draws one row's content |
+| `format_value` | `Callback<Vec<String>, String>` | - | Overrides the joined labels in the trigger; takes the labels root to option |
+| `node` | `Callback<CascaderNodeArgs<T>, Element>` | the label | Draws one row's content |
 | `column_width` | `String` | `"220px"` | One column's width, and its minimum: when the trigger is wider than the open columns, they share the rest. `"max-content"` fits the longest row |
-| `clearable` | `bool` | `false` | An x in place of the chevron while a path is selected |
+| `clearable` | `bool` | `false` | An x in place of the chevron while a value is selected |
 | `placeholder` | `String` | - | Shown while nothing is selected |
 | `search_placeholder` | `String` | - | What the search box says while empty |
-| `name` | `FieldName<Vec<String>>` | - | Posts one hidden input per level, and binds |
-| `validate` | `Validators<Vec<String>>` | empty | Rules over the path |
+| `name` | `FieldName<Option<T>>` | - | Posts one hidden input with `Options::value()`, and binds |
+| `validate` | `Validators<Option<T>>` | empty | Rules over the selected value |
 
-`CascaderNodeArgs<T>` is `{ data, level, expanded, selected }`;
-`CascaderFilterArgs<T>` is `{ query, label, path, nodes }`.
+`CascaderNodeArgs<T>` is `{ value: T, label, level, expanded, selected }`;
+`CascaderFilterArgs<T>` is `{ query, label, path: Vec<T> }`.
 
 ## Theme
 

@@ -34,7 +34,7 @@ pub use autocomplete::{
 };
 pub use caption::Caption;
 pub use cascader::{
-    Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderPick, CascaderProps,
+    Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderOption, CascaderProps,
 };
 pub use checkbox::{Checkbox, CheckboxProps};
 pub use color::{
