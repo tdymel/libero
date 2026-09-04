@@ -52,6 +52,17 @@ pub struct ScrollerDefaults {
 }
 
 impl ScrollerDefaults {
+    pub const DEFAULT: Self = Self {
+        controls: ScrollerControls::Auto,
+        scroll_amount: 200,
+        control_size: Size::Md,
+        control_sizes: Sizes::new(24, 32, 40, 48, 56, 64),
+        fade_color: SCROLLER_FADE_DEFAULT,
+        draggable: false,
+        scroll_start_label: "Scroll backward",
+        scroll_end_label: "Scroll forward",
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().var(SCROLLER_CONTROL, SCROLLER_CONTROL_SIZE.value(size))
     }

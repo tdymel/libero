@@ -24,6 +24,14 @@ pub struct QrCodeDefaults {
     pub robustness: QrRobustness,
 }
 
+impl QrCodeDefaults {
+    pub const DEFAULT: Self = Self {
+        background: "#FFFFFF",
+        foreground: "#000000",
+        robustness: QrRobustness::Medium,
+    };
+}
+
 impl ToCssDeclarations for QrCodeDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

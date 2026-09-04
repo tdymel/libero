@@ -1,3 +1,4 @@
+use super::MONO_FONT_FAMILY;
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::theme::CssVar;
 
@@ -26,6 +27,22 @@ pub struct CodeDefaults {
     pub tok_tag: &'static str,
     pub tok_attribute: &'static str,
     pub tok_heading: &'static str,
+}
+
+impl CodeDefaults {
+    pub const DEFAULT: Self = Self {
+        font_family: MONO_FONT_FAMILY,
+        tok_keyword: "#cf222e",
+        tok_string: "#0a3069",
+        tok_comment: "#6e7781",
+        tok_number: "#0550ae",
+        tok_constant: "#0550ae",
+        tok_function: "#8250df",
+        tok_type: "#953800",
+        tok_tag: "#116329",
+        tok_attribute: "#0969da",
+        tok_heading: "#cf222e",
+    };
 }
 
 impl ToCssDeclarations for CodeDefaults {

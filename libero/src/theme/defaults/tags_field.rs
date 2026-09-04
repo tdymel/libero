@@ -10,3 +10,10 @@ pub struct TagsFieldDefaults {
     pub size: Size,
     pub radius: Size,
 }
+
+impl TagsFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}

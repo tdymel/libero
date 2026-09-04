@@ -43,6 +43,51 @@ pub struct MenuDefaults {
 }
 
 impl MenuDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        max_height: "340px",
+        sizes: Sizes::new(
+            MenuSizeLevel {
+                font_size: "0.75rem",
+                item_height: 28.0,
+                padding_x: "8px",
+                label_font_size: "0.6875rem",
+            },
+            MenuSizeLevel {
+                font_size: "0.8125rem",
+                item_height: 32.0,
+                padding_x: "10px",
+                label_font_size: "0.75rem",
+            },
+            MenuSizeLevel {
+                font_size: "0.875rem",
+                item_height: 36.0,
+                padding_x: "12px",
+                label_font_size: "0.75rem",
+            },
+            MenuSizeLevel {
+                font_size: "0.9375rem",
+                item_height: 40.0,
+                padding_x: "14px",
+                label_font_size: "0.8125rem",
+            },
+            MenuSizeLevel {
+                font_size: "1rem",
+                item_height: 44.0,
+                padding_x: "16px",
+                label_font_size: "0.875rem",
+            },
+            MenuSizeLevel {
+                font_size: "1.0625rem",
+                item_height: 48.0,
+                padding_x: "18px",
+                label_font_size: "0.9375rem",
+            },
+        ),
+        submenu_delay: 150,
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(MENU_ITEM_FONT, MENU_FONT_SIZE.value(size))
             .var(MENU_ITEM_MIN_HEIGHT, MENU_ITEM_HEIGHT.value(size))

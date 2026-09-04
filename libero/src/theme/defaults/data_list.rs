@@ -11,6 +11,11 @@ pub struct DataListDefaults {
 }
 
 impl DataListDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        gap: Sizes::new(6, 8, 12, 16, 20, 24),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().gap(DATA_LIST_GAP.value(size))
     }

@@ -8,3 +8,10 @@ pub struct SelectDefaults {
     pub size: Size,
     pub radius: Size,
 }
+
+impl SelectDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}

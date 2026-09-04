@@ -2,7 +2,7 @@ use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
 
-use crate::theme::{ColorValue, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
 
 pub const TIMELINE_COLOR: CssVar = CssVar::new("--lsx-timeline-color");
 pub const TIMELINE_LINE_COLOR: CssVar = CssVar::new("--lsx-timeline-line-color");
@@ -92,6 +92,19 @@ pub struct TimelineDefaults {
 }
 
 impl TimelineDefaults {
+    pub const DEFAULT: Self = Self {
+        align: TimelineAlign::Left,
+        color: ColorValue::Shade(Color::Primary, ColorShade::S6),
+        line_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        bullet_background: TIMELINE_BULLET_BACKGROUND_DEFAULT,
+        radius: Size::Xl,
+        bullet_size: Size::Md,
+        bullet_sizes: Sizes::new(12, 16, 20, 24, 28, 32),
+        line_width: 2,
+        gap: Size::Xl,
+        gaps: Sizes::new(12, 16, 24, 32, 40, 48),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().var(TIMELINE_BULLET, TIMELINE_BULLET_SIZE.value(size))
     }

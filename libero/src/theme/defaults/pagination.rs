@@ -36,6 +36,19 @@ pub struct PaginationDefaults {
 }
 
 impl PaginationDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        color: Color::Primary,
+        siblings: 1,
+        boundaries: 1,
+        gap: Size::Xs,
+        // Mantine's control scale, plus an `xxl` continuing its steps.
+        control_size: Sizes::new(22, 26, 32, 38, 44, 52),
+        font_size: Sizes::new(11, 12, 14, 16, 18, 20),
+        border: ColorValue::Shade(Color::Grey, ColorShade::S4),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().min_width(PAGINATION_CONTROL_SIZE.value(size))
             .height(PAGINATION_CONTROL_SIZE.value(size))

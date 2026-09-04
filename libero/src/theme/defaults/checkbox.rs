@@ -23,6 +23,12 @@ pub struct CheckboxDefaults {
 }
 
 impl CheckboxDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().var(CHECKBOX_BOX, CHECKBOX_BOX_SIZE.value(size))
     }

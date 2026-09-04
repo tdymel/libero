@@ -40,6 +40,45 @@ pub struct ComboboxDefaults {
 }
 
 impl ComboboxDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        max_dropdown_height: "260px",
+        sizes: Sizes::new(
+            ComboboxSizeLevel {
+                font_size: "0.75rem",
+                row_height: 28.0,
+                padding_x: "8px",
+            },
+            ComboboxSizeLevel {
+                font_size: "0.8125rem",
+                row_height: 32.0,
+                padding_x: "10px",
+            },
+            ComboboxSizeLevel {
+                font_size: "0.875rem",
+                row_height: 36.0,
+                padding_x: "12px",
+            },
+            ComboboxSizeLevel {
+                font_size: "0.9375rem",
+                row_height: 40.0,
+                padding_x: "14px",
+            },
+            ComboboxSizeLevel {
+                font_size: "1rem",
+                row_height: 44.0,
+                padding_x: "16px",
+            },
+            ComboboxSizeLevel {
+                font_size: "1.0625rem",
+                row_height: 48.0,
+                padding_x: "18px",
+            },
+        ),
+        labels: ComboboxLabels::ENGLISH,
+    };
+
     pub fn row_sx(size: Size) -> Sx {
         sx().font_size(COMBOBOX_FONT_SIZE.value(size))
             // `min-height`, not `height`: a rich row is taller than the

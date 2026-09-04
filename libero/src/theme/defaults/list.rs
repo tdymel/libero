@@ -13,6 +13,12 @@ pub struct ListDefaults {
 }
 
 impl ListDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        gap: Sizes::new(4, 8, 12, 16, 20, 24),
+        indent: Sizes::new(8, 12, 16, 20, 24, 28),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().gap(LIST_GAP.value(size))
             .selector("& ul", sx().padding_left(LIST_INDENT.value(size)))

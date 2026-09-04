@@ -18,3 +18,16 @@ pub struct FloatingWindowDefaults {
     pub resize_label: &'static str,
     pub close_label: &'static str,
 }
+
+impl FloatingWindowDefaults {
+    pub const DEFAULT: Self = Self {
+        placement: Placement::CenterCenter,
+        radius: Size::Md,
+        shadow: Size::Xl,
+        move_step: 10,
+        resize_step: 10,
+        move_label: "Move window",
+        resize_label: "Resize window",
+        close_label: "Close",
+    };
+}

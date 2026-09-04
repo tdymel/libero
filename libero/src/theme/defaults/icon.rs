@@ -8,6 +8,12 @@ pub struct IconDefaults {
     pub size: Sizes<u16>,
 }
 
+impl IconDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Sizes::new(16, 20, 24, 32, 40, 48),
+    };
+}
+
 impl ToCssDeclarations for IconDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         self.size.to_css_declarations(ICON_SIZE, "px")

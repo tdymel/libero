@@ -69,6 +69,18 @@ pub struct ImageListDefaults {
 }
 
 impl ImageListDefaults {
+    pub const DEFAULT: Self = Self {
+        cols: 2,
+        variant: ImageListVariant::Standard,
+        gap: Size::Xs,
+        radius: Size::Sm,
+        bar_position: BarPosition::Bottom,
+        bar_background: "linear-gradient(to top, rgba(0,0,0,0.72), rgba(0,0,0,0.36) 70%, transparent)",
+        bar_background_top: "linear-gradient(to bottom, rgba(0,0,0,0.72), rgba(0,0,0,0.36) 70%, transparent)",
+        bar_color: "#fff",
+        bar_padding: Size::Sm,
+    };
+
     fn radius_sx(radius: Size) -> Sx {
         sx().var(IMAGE_LIST_RADIUS, SizeCss::RADIUS.value(radius))
     }

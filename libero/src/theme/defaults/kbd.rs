@@ -1,3 +1,4 @@
+use super::MONO_FONT_FAMILY;
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
@@ -19,6 +20,14 @@ pub struct KbdDefaults {
 }
 
 impl KbdDefaults {
+    pub const DEFAULT: Self = Self {
+        font_size: Sizes::new(10, 12, 14, 16, 20, 24),
+        font_family: MONO_FONT_FAMILY,
+        background: "#f6f8fa",
+        border: "#d0d7de",
+        color: "#57606a",
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().font_size(KBD_FONT_SIZE.value(size))
     }

@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorValue, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
 
 pub const STEPPER_MARKER_SIZE: SizeCss = SizeCss::new("--lsx-stepper-marker-");
 pub const STEPPER_FONT_SIZE: SizeCss = SizeCss::new("--lsx-stepper-font-size-");
@@ -85,6 +85,64 @@ pub(crate) fn contrast_of(color: ColorValue) -> ColorValue {
 }
 
 impl StepperDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        sizes: Sizes::new(
+            StepperSizeLevel {
+                marker: "24px",
+                font_size: "12px",
+                description_font_size: "11px",
+                gap: "6px",
+                spacing: "8px",
+            },
+            StepperSizeLevel {
+                marker: "28px",
+                font_size: "13px",
+                description_font_size: "12px",
+                gap: "8px",
+                spacing: "12px",
+            },
+            StepperSizeLevel {
+                marker: "32px",
+                font_size: "14px",
+                description_font_size: "12px",
+                gap: "10px",
+                spacing: "16px",
+            },
+            StepperSizeLevel {
+                marker: "36px",
+                font_size: "16px",
+                description_font_size: "14px",
+                gap: "12px",
+                spacing: "20px",
+            },
+            StepperSizeLevel {
+                marker: "40px",
+                font_size: "18px",
+                description_font_size: "16px",
+                gap: "14px",
+                spacing: "24px",
+            },
+            StepperSizeLevel {
+                marker: "48px",
+                font_size: "20px",
+                description_font_size: "18px",
+                gap: "16px",
+                spacing: "28px",
+            },
+        ),
+        label_position: StepLabelPosition::Side,
+        color: ColorValue::Shade(Color::Primary, ColorShade::S6),
+        pending_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        error_color: ColorValue::Shade(Color::Error, ColorShade::S6),
+        connector_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        description_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
+        line_width: 2,
+        content_padding: Size::Md,
+        completed_label: "Completed",
+        error_label: "Error",
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(STEPPER_FONT_SIZE.value(size))
             .var(STEPPER_MARKER, STEPPER_MARKER_SIZE.value(size))

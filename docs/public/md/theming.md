@@ -83,8 +83,8 @@ than borrowing the spacing scale.
 
 Every component's unset props come from its own struct on the theme, so "our
 buttons are always pill-shaped" is a theme change, not a prop repeated at every
-call site. Nested struct update works the same way, seeded from that field of the
-default.
+call site. Nested struct update works the same way, seeded from the component's own
+`DEFAULT`.
 
 ```rust
 static THEME: Theme = Theme {
@@ -92,7 +92,7 @@ static THEME: Theme = Theme {
     mark: MarkDefaults { color: Color::Info },
     button: ButtonDefaults {
         radius: Size::Xl,
-        ..Theme::DEFAULT.button
+        ..ButtonDefaults::DEFAULT
     },
     ..Theme::DEFAULT
 };

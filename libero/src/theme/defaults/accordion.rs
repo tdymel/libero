@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorValue, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
 
 pub const ACCORDION_FONT_SIZE: SizeCss = SizeCss::new("--lsx-accordion-font-size-");
 pub const ACCORDION_PADDING_X: SizeCss = SizeCss::new("--lsx-accordion-padding-x-");
@@ -39,6 +39,51 @@ pub struct AccordionDefaults {
 }
 
 impl AccordionDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        sizes: Sizes::new(
+            AccordionSizeLevel {
+                font_size: "12px",
+                padding_x: "8px",
+                padding_y: "6px",
+                chevron: "14px",
+            },
+            AccordionSizeLevel {
+                font_size: "14px",
+                padding_x: "12px",
+                padding_y: "8px",
+                chevron: "16px",
+            },
+            AccordionSizeLevel {
+                font_size: "16px",
+                padding_x: "16px",
+                padding_y: "12px",
+                chevron: "18px",
+            },
+            AccordionSizeLevel {
+                font_size: "18px",
+                padding_x: "20px",
+                padding_y: "14px",
+                chevron: "20px",
+            },
+            AccordionSizeLevel {
+                font_size: "20px",
+                padding_x: "24px",
+                padding_y: "16px",
+                chevron: "22px",
+            },
+            AccordionSizeLevel {
+                font_size: "24px",
+                padding_x: "28px",
+                padding_y: "20px",
+                chevron: "24px",
+            },
+        ),
+        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        chevron_duration: 150,
+    };
+
     // Resolved on the root so every trigger and panel body inherits them.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(ACCORDION_FONT_SIZE.value(size))

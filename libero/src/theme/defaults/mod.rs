@@ -84,6 +84,10 @@ mod tooltip;
 mod tree;
 mod z_index;
 
+// The font stacks the typography defaults share.
+const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
+const MONO_FONT_FAMILY: &str = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
+
 pub use accordion::{
     ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
     ACCORDION_FONT_SIZE, ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, ACCORDION_PADDING_X,

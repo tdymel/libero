@@ -49,6 +49,19 @@ pub struct MarqueeDefaults {
     pub pause_label: &'static str,
 }
 
+impl MarqueeDefaults {
+    pub const DEFAULT: Self = Self {
+        duration: 40_000,
+        repeat: 4,
+        gap: Size::Md,
+        pause_on_hover: false,
+        pause_control: true,
+        fade_edges: false,
+        fade_size: "5%",
+        pause_label: "Pause",
+    };
+}
+
 impl ToCssDeclarations for MarqueeDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

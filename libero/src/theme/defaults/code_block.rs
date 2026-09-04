@@ -22,6 +22,17 @@ pub struct CodeBlockDefaults {
     pub copy_hover_text: &'static str,
 }
 
+impl CodeBlockDefaults {
+    pub const DEFAULT: Self = Self {
+        background: "#f6f8fa",
+        border: "#d0d7de",
+        muted_text: "#57606a",
+        line_number: "#8c959f",
+        copy_hover_background: "rgba(31, 35, 40, 0.08)",
+        copy_hover_text: "#1f2328",
+    };
+}
+
 impl ToCssDeclarations for CodeBlockDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

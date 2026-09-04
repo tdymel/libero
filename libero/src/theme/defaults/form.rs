@@ -13,6 +13,8 @@ pub struct FormDefaults {
 }
 
 impl FormDefaults {
+    pub const DEFAULT: Self = Self { gap: "16px" };
+
     pub fn theme_vars() -> Sx {
         sx().gap(FORM_GAP.value())
     }
@@ -33,6 +35,8 @@ pub struct FieldsetDefaults {
 }
 
 impl FieldsetDefaults {
+    pub const DEFAULT: Self = Self { gap: "12px" };
+
     pub fn theme_vars() -> Sx {
         sx().gap(FIELDSET_GAP.value())
     }

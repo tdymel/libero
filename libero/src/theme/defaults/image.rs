@@ -26,6 +26,11 @@ pub struct ImageDefaults {
 }
 
 impl ImageDefaults {
+    pub const DEFAULT: Self = Self {
+        fit: ImageFit::Cover,
+        radius: "0",
+    };
+
     pub fn theme_vars() -> Sx {
         sx().border_radius(IMAGE_RADIUS.overridable())
     }

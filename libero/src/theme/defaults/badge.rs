@@ -43,6 +43,52 @@ pub struct BadgeDefaults {
 }
 
 impl BadgeDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        // Off the 2..64px radius scale on purpose: a badge is a pill at
+        // every height, which no fixed step gives.
+        radius: "9999px",
+        text_transform: "uppercase",
+        letter_spacing: "0.25px",
+        font_weight: "700",
+        // `xs`..`xl` are Mantine's own numbers; `xxl` continues the ramp,
+        // since our scale has a sixth step and theirs does not. Font sizes
+        // are rem so they follow a reader's own text size, the way
+        // `Button` and `Chip` already do; the boxes around them are px.
+        sizes: Sizes::new(
+            BadgeSizeLevel {
+                font_size: "0.5625rem",
+                height: "16px",
+                padding_x: "6px",
+            },
+            BadgeSizeLevel {
+                font_size: "0.625rem",
+                height: "18px",
+                padding_x: "8px",
+            },
+            BadgeSizeLevel {
+                font_size: "0.6875rem",
+                height: "20px",
+                padding_x: "10px",
+            },
+            BadgeSizeLevel {
+                font_size: "0.8125rem",
+                height: "26px",
+                padding_x: "12px",
+            },
+            BadgeSizeLevel {
+                font_size: "1rem",
+                height: "32px",
+                padding_x: "16px",
+            },
+            BadgeSizeLevel {
+                font_size: "1.125rem",
+                height: "38px",
+                padding_x: "20px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(BADGE_FONT, BADGE_FONT_SIZE.value(size))
             .var(BADGE_BOX, BADGE_HEIGHT.value(size))

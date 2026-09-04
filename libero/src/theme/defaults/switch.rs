@@ -29,6 +29,43 @@ pub struct SwitchDefaults {
 }
 
 impl SwitchDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Xl,
+        sizes: Sizes::new(
+            SwitchSizeLevel {
+                track_width: "30px",
+                track_height: "16px",
+                thumb_size: "12px",
+            },
+            SwitchSizeLevel {
+                track_width: "34px",
+                track_height: "18px",
+                thumb_size: "14px",
+            },
+            SwitchSizeLevel {
+                track_width: "42px",
+                track_height: "22px",
+                thumb_size: "18px",
+            },
+            SwitchSizeLevel {
+                track_width: "50px",
+                track_height: "26px",
+                thumb_size: "22px",
+            },
+            SwitchSizeLevel {
+                track_width: "58px",
+                track_height: "30px",
+                thumb_size: "26px",
+            },
+            SwitchSizeLevel {
+                track_width: "66px",
+                track_height: "34px",
+                thumb_size: "30px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(SWITCH_TRACK_W, SWITCH_TRACK_WIDTH.value(size))
             .var(SWITCH_TRACK_H, SWITCH_TRACK_HEIGHT.value(size))

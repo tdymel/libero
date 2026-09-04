@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorValue, CssVar, NamedColorCss, Size, SizeCss};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, NamedColorCss, Size, SizeCss};
 
 /// The library's one definition of a surface colour. Anything that paints
 /// itself as a sheet of paper - `Paper`, `Dialog`, and every skeleton or
@@ -38,6 +38,14 @@ pub struct PaperDefaults {
 }
 
 impl PaperDefaults {
+    pub const DEFAULT: Self = Self {
+        radius: Size::Md,
+        shadow: Size::Sm,
+        background: "#fff",
+        contrast: ColorValue::Shade(Color::Black, ColorShade::S1),
+        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+    };
+
     fn radius_sx(radius: Size) -> Sx {
         sx().border_radius(SizeCss::RADIUS.value(radius))
     }

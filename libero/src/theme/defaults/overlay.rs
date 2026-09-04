@@ -12,6 +12,13 @@ pub struct OverlayDefaults {
     pub blur: &'static str,
 }
 
+impl OverlayDefaults {
+    pub const DEFAULT: Self = Self {
+        opacity: 0.6,
+        blur: "none",
+    };
+}
+
 impl ToCssDeclarations for OverlayDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

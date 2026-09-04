@@ -16,6 +16,12 @@ pub struct ColorSwatchDefaults {
 }
 
 impl ColorSwatchDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Xxl,
+        sizes: Sizes::new("16px", "20px", "28px", "36px", "44px", "52px"),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE_SIZE.value(size))
     }

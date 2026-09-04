@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorValue, CssVar, Size, SizeCss};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss};
 
 // Per instance, written from props by `skeleton_variables`. Read with
 // `value_or`: unset means "the size of the content", which is the wrapper case.
@@ -33,6 +33,12 @@ pub struct SkeletonDefaults {
 }
 
 impl SkeletonDefaults {
+    pub const DEFAULT: Self = Self {
+        radius: Size::Sm,
+        color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        duration: "1500ms",
+    };
+
     pub fn radius_sx(radius: Size) -> Sx {
         sx().var(SKELETON_RADIUS, SizeCss::RADIUS.value(radius))
     }

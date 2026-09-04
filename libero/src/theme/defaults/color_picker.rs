@@ -69,6 +69,63 @@ pub struct ColorPickerDefaults {
 }
 
 impl ColorPickerDefaults {
+    // Mantine's scale, with a `xxl` step continued from it.
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        swatches_per_row: None,
+        radius: Size::Xxl,
+        sizes: Sizes::new(
+            ColorPickerSizeLevel {
+                width: "180px",
+                saturation_height: "100px",
+                thumb_size: "8px",
+                preview_size: "26px",
+                spacing: "4px",
+                swatch_size: "20px",
+            },
+            ColorPickerSizeLevel {
+                width: "200px",
+                saturation_height: "110px",
+                thumb_size: "12px",
+                preview_size: "34px",
+                spacing: "6px",
+                swatch_size: "22px",
+            },
+            ColorPickerSizeLevel {
+                width: "240px",
+                saturation_height: "120px",
+                thumb_size: "16px",
+                preview_size: "42px",
+                spacing: "8px",
+                swatch_size: "26px",
+            },
+            ColorPickerSizeLevel {
+                width: "280px",
+                saturation_height: "140px",
+                thumb_size: "20px",
+                preview_size: "50px",
+                spacing: "10px",
+                swatch_size: "30px",
+            },
+            ColorPickerSizeLevel {
+                width: "320px",
+                saturation_height: "160px",
+                thumb_size: "22px",
+                preview_size: "54px",
+                spacing: "12px",
+                swatch_size: "34px",
+            },
+            ColorPickerSizeLevel {
+                width: "360px",
+                saturation_height: "180px",
+                thumb_size: "26px",
+                preview_size: "62px",
+                spacing: "14px",
+                swatch_size: "38px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(COLOR_PICKER_WIDTH, COLOR_PICKER_WIDTH_SIZE.value(size))
             .var(

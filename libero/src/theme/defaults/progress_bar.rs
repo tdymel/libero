@@ -64,6 +64,17 @@ pub struct ProgressBarDefaults {
 }
 
 impl ProgressBarDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Xl,
+        track_shade: ColorShade::S2,
+        transition: "100ms",
+        // Track heights. A bar is a full pill once the radius reaches half
+        // of these, which is why most of the radius scale is inert here -
+        // see `ProgressBarDefaults::radius`.
+        sizes: Sizes::new("3px", "5px", "8px", "12px", "16px", "20px"),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(PROGRESS_BAR_SIZE, PROGRESS_BAR_THICKNESS.value(size))
     }

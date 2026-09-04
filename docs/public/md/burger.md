@@ -82,7 +82,7 @@ known at runtime:
 Theme {
     burger: BurgerDefaults {
         labels: BurgerLabels { open: "Menü öffnen", close: "Menü schließen" },
-        ..Theme::DEFAULT.burger
+        ..BurgerDefaults::DEFAULT
     },
     ..Theme::DEFAULT
 }

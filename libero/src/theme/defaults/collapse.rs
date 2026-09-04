@@ -23,6 +23,14 @@ pub struct CollapseDefaults {
     pub animate_opacity: bool,
 }
 
+impl CollapseDefaults {
+    pub const DEFAULT: Self = Self {
+        duration: 200,
+        easing: "ease",
+        animate_opacity: true,
+    };
+}
+
 impl ToCssDeclarations for CollapseDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

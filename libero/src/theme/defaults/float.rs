@@ -29,6 +29,14 @@ pub struct FloatDefaults {
     pub placement: Placement,
 }
 
+impl FloatDefaults {
+    pub const DEFAULT: Self = Self {
+        offset_x: "0px",
+        offset_y: "0px",
+        placement: Placement::CenterCenter,
+    };
+}
+
 impl ToCssDeclarations for FloatDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

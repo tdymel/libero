@@ -18,3 +18,11 @@ pub struct PhoneFieldDefaults {
     /// the table rather than panicking.
     pub country: &'static str,
 }
+
+impl PhoneFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        country: "US",
+    };
+}

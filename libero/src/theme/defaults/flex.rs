@@ -33,6 +33,21 @@ pub struct FlexDefaults {
 }
 
 impl FlexDefaults {
+    pub const DEFAULT: Self = Self {
+        column: FlexAxisDefaults {
+            align: "stretch",
+            justify: "flex-start",
+            spacing: Size::Md,
+            wrap: false,
+        },
+        row: FlexAxisDefaults {
+            align: "center",
+            justify: "flex-start",
+            spacing: Size::Md,
+            wrap: false,
+        },
+    };
+
     pub fn default_sx(is_row: bool) -> Sx {
         let direction = if is_row { "row" } else { "column" };
         let align = if is_row {

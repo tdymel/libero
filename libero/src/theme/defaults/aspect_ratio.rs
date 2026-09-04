@@ -9,6 +9,10 @@ pub struct AspectRatioDefaults {
     pub ratio: f32,
 }
 
+impl AspectRatioDefaults {
+    pub const DEFAULT: Self = Self { ratio: 1.0 };
+}
+
 impl ToCssDeclarations for AspectRatioDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![ASPECT_RATIO.declare(self.ratio.to_string())]

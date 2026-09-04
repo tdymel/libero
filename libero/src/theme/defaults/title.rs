@@ -1,6 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
+use super::SANS_FONT_FAMILY;
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const TITLE_FONT_FAMILY: CssVar = CssVar::new("--lsx-title-font-family");
@@ -25,6 +26,48 @@ pub struct TitleDefaults {
 }
 
 impl TitleDefaults {
+    pub const DEFAULT: Self = Self {
+        font_family: SANS_FONT_FAMILY,
+        sizes: Sizes::new(
+            TitleSize {
+                font_weight: "400",
+                font_size: "0.75rem",
+                letter_spacing: "0em",
+                line_height: "1.5",
+            }, // xs (h6)
+            TitleSize {
+                font_weight: "400",
+                font_size: "0.875rem",
+                letter_spacing: "0em",
+                line_height: "1.5",
+            }, // sm (h5)
+            TitleSize {
+                font_weight: "400",
+                font_size: "1rem",
+                letter_spacing: "0em",
+                line_height: "1.45",
+            }, // md (h4)
+            TitleSize {
+                font_weight: "400",
+                font_size: "1.375rem",
+                letter_spacing: "0em",
+                line_height: "1.4",
+            }, // lg (h3)
+            TitleSize {
+                font_weight: "400",
+                font_size: "1.625rem",
+                letter_spacing: "-0.005em",
+                line_height: "1.35",
+            }, // xl (h2)
+            TitleSize {
+                font_weight: "400",
+                font_size: "2.125rem",
+                letter_spacing: "-0.01em",
+                line_height: "1.3",
+            }, // xxl (h1, default)
+        ),
+    };
+
     /// Everything about a `Title` that varies by size. Font-family doesn't,
     /// hence `TITLE_FONT_FAMILY`.
     pub fn size_sx(size: Size) -> Sx {

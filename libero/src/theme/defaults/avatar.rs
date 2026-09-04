@@ -27,6 +27,16 @@ pub struct AvatarDefaults {
 }
 
 impl AvatarDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        // A circle. Not `Size::Xl` (64px), which is a rounded square on
+        // the two largest avatars and a circle on the two smallest.
+        radius: "9999px",
+        // Mantine's scale, plus an `xxl` continuing its steps.
+        size_scale: Sizes::new(20, 28, 38, 56, 84, 120),
+        font_size: Sizes::new(8, 11, 15, 22, 34, 48),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().width(AVATAR_SIZE.value(size))
             // `min-width` as well: a flex parent squashes a width-only square
@@ -60,6 +70,13 @@ pub struct AvatarGroupDefaults {
     /// Width of the ring in the page colour that separates two overlapping
     /// members. Without it the overlap is unreadable.
     pub ring: &'static str,
+}
+
+impl AvatarGroupDefaults {
+    pub const DEFAULT: Self = Self {
+        spacing: Size::Sm,
+        ring: "2px",
+    };
 }
 
 impl ToCssDeclarations for AvatarGroupDefaults {

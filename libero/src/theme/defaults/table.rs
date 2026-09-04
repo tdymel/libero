@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorValue, CssVar};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar};
 
 pub const TABLE_PADDING_X: CssVar = CssVar::new("--lsx-table-padding-x");
 pub const TABLE_PADDING_Y: CssVar = CssVar::new("--lsx-table-padding-y");
@@ -20,6 +20,14 @@ pub struct TableDefaults {
 }
 
 impl TableDefaults {
+    pub const DEFAULT: Self = Self {
+        padding_x: 12,
+        padding_y: 10,
+        font_size: 14,
+        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+    };
+
     fn border() -> String {
         format!("1px solid {}", TABLE_BORDER_COLOR.value())
     }

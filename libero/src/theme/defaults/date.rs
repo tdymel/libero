@@ -164,6 +164,14 @@ pub struct TimePickerDefaults {
     pub step: u8,
 }
 
+impl TimePickerDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        variant: TimePickerVariant::Analog,
+        step: 5,
+    };
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DatePickerSizeLevel {
     /// One day cell, square.
@@ -182,6 +190,38 @@ pub struct DatePickerDefaults {
 }
 
 impl DatePickerDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        calendar: CalendarVariant::Full,
+        days: 7,
+        sizes: Sizes::new(
+            DatePickerSizeLevel {
+                day_size: "28px",
+                font_size: "12px",
+            },
+            DatePickerSizeLevel {
+                day_size: "32px",
+                font_size: "13px",
+            },
+            DatePickerSizeLevel {
+                day_size: "36px",
+                font_size: "14px",
+            },
+            DatePickerSizeLevel {
+                day_size: "40px",
+                font_size: "16px",
+            },
+            DatePickerSizeLevel {
+                day_size: "44px",
+                font_size: "18px",
+            },
+            DatePickerSizeLevel {
+                day_size: "48px",
+                font_size: "20px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(DATE_PICKER_DAY, DATE_PICKER_DAY_SIZE_SIZE.value(size))
             .var(
@@ -216,4 +256,12 @@ pub struct DateFieldDefaults {
     pub radius: Size,
     /// Picking a day in the dropdown closes it.
     pub close_on_change: bool,
+}
+
+impl DateFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        close_on_change: true,
+    };
 }

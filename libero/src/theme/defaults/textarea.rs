@@ -8,3 +8,10 @@ pub struct TextareaDefaults {
     pub size: Size,
     pub radius: Size,
 }
+
+impl TextareaDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}

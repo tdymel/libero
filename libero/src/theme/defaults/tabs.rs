@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{ColorValue, CssVar, Size, SizeCss, Sizes};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss, Sizes};
 
 pub const TABS_FONT_SIZE: SizeCss = SizeCss::new("--lsx-tabs-font-size-");
 pub const TABS_PADDING_X: SizeCss = SizeCss::new("--lsx-tabs-padding-x-");
@@ -39,6 +39,56 @@ pub struct TabsDefaults {
 }
 
 impl TabsDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        sizes: Sizes::new(
+            TabsSizeLevel {
+                font_size: "12px",
+                padding_x: "10px",
+                padding_y: "6px",
+                indicator: "2px",
+                icon_gap: "6px",
+            },
+            TabsSizeLevel {
+                font_size: "13px",
+                padding_x: "12px",
+                padding_y: "8px",
+                indicator: "2px",
+                icon_gap: "6px",
+            },
+            TabsSizeLevel {
+                font_size: "14px",
+                padding_x: "16px",
+                padding_y: "10px",
+                indicator: "2px",
+                icon_gap: "8px",
+            },
+            TabsSizeLevel {
+                font_size: "16px",
+                padding_x: "20px",
+                padding_y: "12px",
+                indicator: "3px",
+                icon_gap: "10px",
+            },
+            TabsSizeLevel {
+                font_size: "18px",
+                padding_x: "24px",
+                padding_y: "14px",
+                indicator: "3px",
+                icon_gap: "12px",
+            },
+            TabsSizeLevel {
+                font_size: "20px",
+                padding_x: "28px",
+                padding_y: "16px",
+                indicator: "4px",
+                icon_gap: "14px",
+            },
+        ),
+        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+    };
+
     // Resolved on the tab list so each tab button inherits them.
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(TABS_FONT_SIZE.value(size))

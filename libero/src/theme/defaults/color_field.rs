@@ -16,3 +16,14 @@ pub struct ColorFieldDefaults {
     /// Picking a swatch closes the dropdown.
     pub close_on_swatch_click: bool,
 }
+
+impl ColorFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        with_preview: true,
+        with_eye_dropper: true,
+        fix_on_blur: true,
+        close_on_swatch_click: false,
+    };
+}

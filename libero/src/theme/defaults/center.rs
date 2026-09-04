@@ -9,6 +9,10 @@ pub struct CenterDefaults {
     pub inline: bool,
 }
 
+impl CenterDefaults {
+    pub const DEFAULT: Self = Self { inline: false };
+}
+
 impl ToCssDeclarations for CenterDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![CENTER_DISPLAY.declare(if self.inline { "inline-flex" } else { "flex" })]

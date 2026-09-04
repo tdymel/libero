@@ -9,3 +9,10 @@ pub struct TextFieldDefaults {
     pub size: Size,
     pub radius: Size,
 }
+
+impl TextFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}

@@ -9,3 +9,10 @@ pub struct AutocompleteDefaults {
     pub size: Size,
     pub radius: Size,
 }
+
+impl AutocompleteDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}

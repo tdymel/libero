@@ -31,6 +31,44 @@ pub struct SliderDefaults {
 }
 
 impl SliderDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        sizes: Sizes::new(
+            SliderSizeLevel {
+                track_size: "2px",
+                thumb_size: "12px",
+                font_size: "0.6875rem",
+            },
+            SliderSizeLevel {
+                track_size: "3px",
+                thumb_size: "14px",
+                font_size: "0.75rem",
+            },
+            SliderSizeLevel {
+                track_size: "4px",
+                thumb_size: "16px",
+                font_size: "0.8125rem",
+            },
+            SliderSizeLevel {
+                track_size: "6px",
+                thumb_size: "20px",
+                font_size: "0.875rem",
+            },
+            SliderSizeLevel {
+                track_size: "8px",
+                thumb_size: "24px",
+                font_size: "0.9375rem",
+            },
+            SliderSizeLevel {
+                track_size: "10px",
+                thumb_size: "28px",
+                font_size: "1rem",
+            },
+        ),
+        step: 1.0,
+        big_step: 10.0,
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(SLIDER_TRACK, SLIDER_TRACK_SIZE.value(size))
             .var(SLIDER_THUMB, SLIDER_THUMB_SIZE.value(size))

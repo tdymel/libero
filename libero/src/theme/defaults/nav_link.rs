@@ -4,3 +4,9 @@ use crate::theme::Color;
 pub struct NavLinkDefaults {
     pub color: Color,
 }
+
+impl NavLinkDefaults {
+    pub const DEFAULT: Self = Self {
+        color: Color::Primary,
+    };
+}

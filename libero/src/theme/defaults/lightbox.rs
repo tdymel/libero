@@ -40,6 +40,21 @@ pub struct LightboxDefaults {
     pub thumbnail_label: &'static str,
 }
 
+impl LightboxDefaults {
+    pub const DEFAULT: Self = Self {
+        width: "90vw",
+        stage_height: "70vh",
+        thumbnail_size: "64px",
+        thumbnails_per_view: 7.0,
+        thumbnails_gap: Size::Xs,
+        max_zoom: 3.0,
+        label: "Gallery",
+        close_label: "Close",
+        thumbnails_label: "Thumbnails",
+        thumbnail_label: "Go to slide {n}",
+    };
+}
+
 impl ToCssDeclarations for LightboxDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

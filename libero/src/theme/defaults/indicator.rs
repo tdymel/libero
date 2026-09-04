@@ -53,6 +53,41 @@ pub struct IndicatorDefaults {
 }
 
 impl IndicatorDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        color: Color::Error,
+        radius: "9999px",
+        max: 99,
+        border_width: "2px",
+        processing_duration: "1000ms",
+        sizes: Sizes::new(
+            IndicatorSizeLevel {
+                size: "6px",
+                font_size: "8px",
+            },
+            IndicatorSizeLevel {
+                size: "8px",
+                font_size: "9px",
+            },
+            IndicatorSizeLevel {
+                size: "10px",
+                font_size: "10px",
+            },
+            IndicatorSizeLevel {
+                size: "14px",
+                font_size: "11px",
+            },
+            IndicatorSizeLevel {
+                size: "18px",
+                font_size: "12px",
+            },
+            IndicatorSizeLevel {
+                size: "22px",
+                font_size: "14px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(INDICATOR_BOX, INDICATOR_SIZE.value(size))
             .var(INDICATOR_FONT, INDICATOR_FONT_SIZE.value(size))

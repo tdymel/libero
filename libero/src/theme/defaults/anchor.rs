@@ -24,6 +24,12 @@ pub struct AnchorDefaults {
 }
 
 impl AnchorDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        underline: AnchorUnderline::Hover,
+        color: Color::Primary,
+    };
+
     /// Text's own sizing (an `Anchor` is a `Text` that happens to link),
     /// plus the link color.
     pub fn theme_vars() -> Sx {

@@ -39,6 +39,16 @@ pub struct FileFieldDefaults {
 }
 
 impl FileFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        variant: FileFieldVariant::Input,
+        clearable: true,
+        // Three or four lines of prompt at each step, and always taller
+        // than the one-line control it replaces.
+        dropzone_heights: Sizes::new("72px", "88px", "104px", "124px", "148px", "176px"),
+    };
+
     /// The surface's own scale. Padding and font come from the field's scale,
     /// so a dropzone and a text field at the same `size` read as one family.
     pub fn size_sx(size: Size) -> Sx {

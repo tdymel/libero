@@ -42,3 +42,12 @@ pub struct ScrollAreaDefaults {
     /// Rows a `Virtualize` keeps beyond each edge of the viewport.
     pub overscan: usize,
 }
+
+impl ScrollAreaDefaults {
+    pub const DEFAULT: Self = Self {
+        scrollbars: ScrollAxis::Vertical,
+        visibility: ScrollbarVisibility::Always,
+        size: ScrollbarSize::Thin,
+        overscan: 4,
+    };
+}

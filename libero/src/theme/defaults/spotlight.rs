@@ -1,5 +1,5 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
-use crate::theme::{ColorValue, CssVar, Size};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size};
 
 pub const SPOTLIGHT_WIDTH: CssVar = CssVar::new("--lsx-spotlight-width");
 pub const SPOTLIGHT_TOP_OFFSET: CssVar = CssVar::new("--lsx-spotlight-top-offset");
@@ -46,6 +46,22 @@ pub struct SpotlightDefaults {
     pub group_color: ColorValue,
     pub description_color: ColorValue,
     pub labels: SpotlightLabels,
+}
+
+impl SpotlightDefaults {
+    pub const DEFAULT: Self = Self {
+        width: "600px",
+        top_offset: "80px",
+        max_list_height: "400px",
+        radius: Size::Md,
+        padding: "4px",
+        search_font_size: "1.125rem",
+        // Shade 7, not Mantine's dimmed 6: grey.6 on white is below 4.5:1
+        // for text this small.
+        group_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
+        description_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
+        labels: SpotlightLabels::ENGLISH,
+    };
 }
 
 impl ToCssDeclarations for SpotlightDefaults {

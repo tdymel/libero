@@ -19,6 +19,17 @@ pub struct SplitterDefaults {
     pub big_step: f64,
 }
 
+impl SplitterDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Sm,
+        divider_size: Sizes::new(1, 1, 2, 3, 4, 6),
+        hit_size: Sizes::new(10, 10, 12, 14, 16, 20),
+        min_size: 10.0,
+        step: 1.0,
+        big_step: 10.0,
+    };
+}
+
 impl ToCssDeclarations for SplitterDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = self

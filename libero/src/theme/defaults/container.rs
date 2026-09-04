@@ -13,6 +13,11 @@ pub struct ContainerDefaults {
 }
 
 impl ContainerDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Lg,
+        gutters: Size::Md,
+    };
+
     pub fn default_sx() -> Sx {
         sx().max_width(CONTAINER_SIZE.value())
             .padding_left(CONTAINER_GUTTERS.value())

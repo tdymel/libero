@@ -34,6 +34,14 @@ pub struct GridDefaults {
     pub row_unit: u32,
 }
 
+impl GridDefaults {
+    pub const DEFAULT: Self = Self {
+        gap: Size::Md,
+        zone_gap: Size::Md,
+        row_unit: 2,
+    };
+}
+
 impl ToCssDeclarations for GridDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

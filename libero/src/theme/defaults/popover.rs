@@ -16,6 +16,13 @@ pub struct PopoverDefaults {
     pub padding: f64,
 }
 
+impl PopoverDefaults {
+    pub const DEFAULT: Self = Self {
+        gap: 4.0,
+        padding: 8.0,
+    };
+}
+
 impl ToCssDeclarations for PopoverDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

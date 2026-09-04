@@ -1,6 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
+use super::SANS_FONT_FAMILY;
 use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const TEXT_FONT_FAMILY: CssVar = CssVar::new("--lsx-text-font-family");
@@ -25,6 +26,48 @@ pub struct TextDefaults {
 }
 
 impl TextDefaults {
+    pub const DEFAULT: Self = Self {
+        font_family: SANS_FONT_FAMILY,
+        sizes: Sizes::new(
+            TextSize {
+                font_weight: "400",
+                font_size: "0.75rem",
+                letter_spacing: "0em",
+                line_height: "1.4",
+            }, // xs
+            TextSize {
+                font_weight: "400",
+                font_size: "0.875rem",
+                letter_spacing: "0em",
+                line_height: "1.45",
+            }, // sm
+            TextSize {
+                font_weight: "400",
+                font_size: "1rem",
+                letter_spacing: "0em",
+                line_height: "1.5",
+            }, // md (default)
+            TextSize {
+                font_weight: "400",
+                font_size: "1.125rem",
+                letter_spacing: "0em",
+                line_height: "1.55",
+            }, // lg
+            TextSize {
+                font_weight: "400",
+                font_size: "1.25rem",
+                letter_spacing: "0em",
+                line_height: "1.6",
+            }, // xl
+            TextSize {
+                font_weight: "400",
+                font_size: "1.375rem",
+                letter_spacing: "0em",
+                line_height: "1.65",
+            }, // xxl
+        ),
+    };
+
     /// Everything about a `Text` that varies by size. Font-family doesn't,
     /// hence `TEXT_FONT_FAMILY`.
     pub fn size_sx(size: Size) -> Sx {

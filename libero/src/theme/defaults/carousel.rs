@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
-use crate::theme::{ColorValue, CssVar, Size, SizeCss};
+use crate::theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss};
 
 pub const CAROUSEL_GAP: CssVar = CssVar::new("--lsx-carousel-gap");
 pub const CAROUSEL_PER_VIEW: CssVar = CssVar::new("--lsx-carousel-per-view");
@@ -95,6 +95,31 @@ impl ToCssDeclarations for CarouselDefaults {
 }
 
 impl CarouselDefaults {
+    pub const DEFAULT: Self = Self {
+        per_view: 1.0,
+        gap: Size::Md,
+        align: CarouselAlign::Start,
+        radius: Size::Sm,
+        controls: true,
+        indicators: false,
+        control_size: "28px",
+        controls_offset: Size::Sm,
+        indicator_length: "24px",
+        indicator_current_length: "40px",
+        indicator_thickness: "5px",
+        indicators_gap: "8px",
+        indicator_color: ColorValue::Shade(Color::Grey, ColorShade::S6),
+        indicator_current_color: ColorValue::Shade(Color::Primary, ColorShade::S6),
+        autoplay_delay: 4000,
+        label: "Carousel",
+        previous_label: "Previous slide",
+        next_label: "Next slide",
+        indicator_label: "Go to slide {n}",
+        slide_label: "{n} of {m}",
+        status_label: "Slide {n} of {m}",
+        pause_label: "Pause slideshow",
+    };
+
     /// `"{n} of {m}"` with both holes filled. One-based, because it is read
     /// aloud.
     pub(crate) fn format_label(template: &str, index: usize, count: usize) -> String {

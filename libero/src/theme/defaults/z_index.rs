@@ -35,6 +35,20 @@ pub struct ZIndexDefaults {
     pub notification: i32,
 }
 
+impl ZIndexDefaults {
+    pub const DEFAULT: Self = Self {
+        header: 100,
+        float: 200,
+        window: 250,
+        window_step: 1,
+        overlay: 300,
+        modal: 1000,
+        modal_step: 10,
+        popover: 2000,
+        notification: 2100,
+    };
+}
+
 impl ToCssDeclarations for ZIndexDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

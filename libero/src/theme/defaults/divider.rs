@@ -14,6 +14,11 @@ pub struct DividerDefaults {
 }
 
 impl DividerDefaults {
+    pub const DEFAULT: Self = Self {
+        spacing: None,
+        thickness: Sizes::new(1, 2, 3, 4, 5, 6),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(DIVIDER_LINE, DIVIDER_THICKNESS.value(size))
     }

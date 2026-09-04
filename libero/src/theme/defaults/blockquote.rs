@@ -36,6 +36,45 @@ pub struct BlockquoteDefaults {
 }
 
 impl BlockquoteDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        color: Color::Primary,
+        cite_opacity: "0.65",
+        sizes: Sizes::new(
+            BlockquoteSizeLevel {
+                padding_y: "0.5rem",
+                padding_x: "0.75rem",
+                border_width: "2px",
+            },
+            BlockquoteSizeLevel {
+                padding_y: "0.75rem",
+                padding_x: "1rem",
+                border_width: "2px",
+            },
+            BlockquoteSizeLevel {
+                padding_y: "1rem",
+                padding_x: "1.5rem",
+                border_width: "3px",
+            },
+            BlockquoteSizeLevel {
+                padding_y: "1.25rem",
+                padding_x: "2rem",
+                border_width: "3px",
+            },
+            BlockquoteSizeLevel {
+                padding_y: "1.5rem",
+                padding_x: "2.5rem",
+                border_width: "4px",
+            },
+            BlockquoteSizeLevel {
+                padding_y: "2rem",
+                padding_x: "3rem",
+                border_width: "5px",
+            },
+        ),
+    };
+
     /// The font scale is `TextDefaults`', not one of our own: "scales the
     /// text" should mean the same scale everywhere, and a caller who retunes
     /// `theme.texts` gets quotes that still match their prose.

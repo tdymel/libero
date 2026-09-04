@@ -38,6 +38,18 @@ pub struct TooltipDefaults {
 }
 
 impl TooltipDefaults {
+    pub const DEFAULT: Self = Self {
+        placement: TooltipPlacement::Top,
+        gap: Size::Xs,
+        size: Size::Sm,
+        open_delay: 0,
+        close_delay: 0,
+        duration: 150,
+        font_size: Sizes::new(10, 12, 13, 14, 16, 18),
+        background: "#1f2328",
+        color: "#ffffff",
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().font_size(TOOLTIP_FONT_SIZE.value(size))
     }

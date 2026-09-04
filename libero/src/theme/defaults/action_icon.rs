@@ -10,6 +10,13 @@ pub struct ActionIconDefaults {
     pub radius: Size,
 }
 
+impl ActionIconDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}
+
 impl ToCssDeclarations for ActionIconDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

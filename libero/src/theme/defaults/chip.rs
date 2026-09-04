@@ -21,6 +21,43 @@ pub struct ChipDefaults {
 }
 
 impl ChipDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Xl,
+        sizes: Sizes::new(
+            ChipSizeLevel {
+                font_size: "0.6875rem",
+                height: "20px",
+                padding_x: "8px",
+            },
+            ChipSizeLevel {
+                font_size: "0.75rem",
+                height: "24px",
+                padding_x: "10px",
+            },
+            ChipSizeLevel {
+                font_size: "0.8125rem",
+                height: "28px",
+                padding_x: "12px",
+            },
+            ChipSizeLevel {
+                font_size: "0.875rem",
+                height: "32px",
+                padding_x: "14px",
+            },
+            ChipSizeLevel {
+                font_size: "0.9375rem",
+                height: "36px",
+                padding_x: "16px",
+            },
+            ChipSizeLevel {
+                font_size: "1rem",
+                height: "40px",
+                padding_x: "18px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(CHIP_FONT_SIZE.value(size))
             .height(CHIP_HEIGHT.value(size))

@@ -56,6 +56,62 @@ pub struct FieldDefaults {
 }
 
 impl FieldDefaults {
+    pub const DEFAULT: Self = Self {
+        gap: "4px",
+        frame_gap: "8px",
+        sizes: Sizes::new(
+            FieldSizeLevel {
+                label_font_size: "0.6875rem",
+                caption_font_size: "0.6875rem",
+                font_size: "0.75rem",
+                height: "28px",
+                padding_y: "4px",
+                padding_x: "8px",
+            },
+            FieldSizeLevel {
+                label_font_size: "0.75rem",
+                caption_font_size: "0.75rem",
+                font_size: "0.8125rem",
+                height: "32px",
+                padding_y: "5px",
+                padding_x: "10px",
+            },
+            FieldSizeLevel {
+                label_font_size: "0.8125rem",
+                caption_font_size: "0.75rem",
+                font_size: "0.875rem",
+                height: "36px",
+                padding_y: "6px",
+                padding_x: "12px",
+            },
+            FieldSizeLevel {
+                label_font_size: "0.875rem",
+                caption_font_size: "0.8125rem",
+                font_size: "0.9375rem",
+                height: "40px",
+                padding_y: "7px",
+                padding_x: "14px",
+            },
+            FieldSizeLevel {
+                label_font_size: "0.9375rem",
+                caption_font_size: "0.875rem",
+                font_size: "1rem",
+                height: "44px",
+                padding_y: "8px",
+                padding_x: "16px",
+            },
+            FieldSizeLevel {
+                label_font_size: "1rem",
+                caption_font_size: "0.9375rem",
+                font_size: "1.0625rem",
+                height: "48px",
+                padding_y: "9px",
+                padding_x: "18px",
+            },
+        ),
+        card_padding: Sizes::new("8px", "10px", "12px", "14px", "16px", "18px"),
+    };
+
     /// Per-slot typography for one size step. The slots are addressed from the
     /// wrapper rather than each carrying its own class - four captions with
     /// four `use_box` chains would cost four stylesheet registrations per

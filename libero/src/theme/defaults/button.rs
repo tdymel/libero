@@ -22,6 +22,43 @@ pub struct ButtonDefaults {
 }
 
 impl ButtonDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Md,
+        sizes: Sizes::new(
+            ButtonSizeLevel {
+                font_size: "0.75rem",
+                height: "30px",
+                padding_x: "10px",
+            },
+            ButtonSizeLevel {
+                font_size: "0.875rem",
+                height: "36px",
+                padding_x: "14px",
+            },
+            ButtonSizeLevel {
+                font_size: "1rem",
+                height: "42px",
+                padding_x: "18px",
+            },
+            ButtonSizeLevel {
+                font_size: "1.125rem",
+                height: "50px",
+                padding_x: "22px",
+            },
+            ButtonSizeLevel {
+                font_size: "1.25rem",
+                height: "60px",
+                padding_x: "28px",
+            },
+            ButtonSizeLevel {
+                font_size: "1.375rem",
+                height: "72px",
+                padding_x: "34px",
+            },
+        ),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().font_size(BUTTON_FONT_SIZE.value(size))
             .height(BUTTON_HEIGHT.value(size))

@@ -42,6 +42,20 @@ pub struct AlertDefaults {
 }
 
 impl AlertDefaults {
+    pub const DEFAULT: Self = Self {
+        variant: Variant::Tonal,
+        // Not the primary colour: severity is the caller's to state, and
+        // the brand colour on an alert reads as decoration.
+        color: "info",
+        // The same step as `paper.radius` - an alert is a surface.
+        radius: Size::Md,
+        padding: Size::Md,
+        gap: Size::Md,
+        body_gap: Size::Xs,
+        icon_size: "20px",
+        close_label: "Close",
+    };
+
     pub fn theme_vars() -> Sx {
         sx().border_radius(ALERT_RADIUS.overridable())
             .padding(ALERT_PADDING.value())

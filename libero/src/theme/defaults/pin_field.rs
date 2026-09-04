@@ -44,6 +44,14 @@ pub struct PinFieldDefaults {
 }
 
 impl PinFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        length: 4,
+        size: Size::Md,
+        radius: Size::Sm,
+        kind: PinKind::Numeric,
+        gap: "8px",
+    };
+
     pub fn theme_vars() -> Sx {
         sx().gap(PIN_FIELD_GAP.value())
     }

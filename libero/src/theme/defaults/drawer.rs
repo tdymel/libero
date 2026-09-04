@@ -8,6 +8,12 @@ pub struct DrawerDefaults {
     pub size: Sizes<u16>,
 }
 
+impl DrawerDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Sizes::new(200, 240, 280, 320, 400, 480),
+    };
+}
+
 impl ToCssDeclarations for DrawerDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         self.size.to_css_declarations(DRAWER_SIZE, "px")

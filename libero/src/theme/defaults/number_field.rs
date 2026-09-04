@@ -8,3 +8,10 @@ pub struct NumberFieldDefaults {
     pub size: Size,
     pub radius: Size,
 }
+
+impl NumberFieldDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+    };
+}

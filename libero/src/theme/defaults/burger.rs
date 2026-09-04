@@ -57,6 +57,18 @@ pub struct BurgerDefaults {
     pub labels: BurgerLabels,
 }
 
+impl BurgerDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        // `xs`..`xl` are Mantine's own five, adopted exactly. `xxl`
+        // continues the ramp past the widest step it offers.
+        sizes: Sizes::new(12, 18, 24, 34, 42, 52),
+        transition_duration: "300ms",
+        transition_timing: "ease",
+        labels: BurgerLabels::ENGLISH,
+    };
+}
+
 impl ToCssDeclarations for BurgerDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = self.sizes.to_css_declarations(BURGER_SIZES, "px");

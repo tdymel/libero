@@ -13,3 +13,14 @@ pub struct HoverCardDefaults {
     pub radius: Size,
     pub shadow: Size,
 }
+
+impl HoverCardDefaults {
+    // Mantine's values: a card opens at once and lingers long enough for
+    // the pointer to cross the gap into it.
+    pub const DEFAULT: Self = Self {
+        open_delay: 0,
+        close_delay: 150,
+        radius: Size::Sm,
+        shadow: Size::Md,
+    };
+}

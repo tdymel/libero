@@ -4,3 +4,9 @@ use crate::theme::Color;
 pub struct MarkDefaults {
     pub color: Color,
 }
+
+impl MarkDefaults {
+    pub const DEFAULT: Self = Self {
+        color: Color::Warning,
+    };
+}

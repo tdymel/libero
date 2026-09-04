@@ -60,6 +60,21 @@ pub struct NotificationDefaults {
     pub close_label: &'static str,
 }
 
+impl NotificationDefaults {
+    pub const DEFAULT: Self = Self {
+        // Mantine's default corner, and the one least likely to cover a
+        // page's own header and primary actions.
+        position: Placement::BottomEnd,
+        auto_close: AutoClose::After(4000),
+        limit: 5,
+        width: "360px",
+        gap: Size::Sm,
+        offset: Size::Md,
+        transition_duration: 200,
+        close_label: "Close",
+    };
+}
+
 impl ToCssDeclarations for NotificationDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![

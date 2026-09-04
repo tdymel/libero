@@ -60,6 +60,15 @@ pub struct LoaderDefaults {
 }
 
 impl LoaderDefaults {
+    pub const DEFAULT: Self = Self {
+        variant: LoaderVariant::Oval,
+        size: Size::Md,
+        color: Color::Primary,
+        // `xs`..`xl` are Mantine's; `xxl` continues the ramp at the same
+        // step, since our scale has a sixth level and theirs does not.
+        sizes: Sizes::new("18px", "22px", "36px", "44px", "58px", "72px"),
+    };
+
     pub fn size_sx(size: Size) -> Sx {
         sx().var(LOADER_SIZE, LOADER_SIZE_SCALE.value(size))
     }

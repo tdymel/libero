@@ -21,6 +21,11 @@ pub struct RadioDefaults {
 }
 
 impl RadioDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().var(RADIO_CIRCLE, RADIO_CIRCLE_SIZE.value(size))
     }

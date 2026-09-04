@@ -16,3 +16,11 @@ pub struct CascaderDefaults {
     pub radius: Size,
     pub column_width: &'static str,
 }
+
+impl CascaderDefaults {
+    pub const DEFAULT: Self = Self {
+        size: Size::Md,
+        radius: Size::Sm,
+        column_width: "220px",
+    };
+}
