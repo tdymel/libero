@@ -12,9 +12,9 @@ use crate::{
             glyphs::{CloseIcon, UploadIcon},
             use_bound, use_field, use_field_frame,
         },
-        layout::use_box,
+        layout::{BoxStyle, use_box},
     },
-    hooks::{use_css, use_element, use_local_state, use_theme},
+    hooks::{ElementHandle, LocalState, use_css, use_element, use_local_state, use_theme},
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -277,10 +277,10 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let surface_element = use_element();
     let list_element = use_element();
     // What the input itself holds, and *which* input held it. A pick fills
-    // the list; every other edit happens in Rust, and the effect below writes
-    // the difference back. A `Signal` rather than a `use_local_state`, which
-    // needs `Copy`.
-    let mut mirrored = use_signal(|| (None::<usize>, Files::default()));
+    // the list; every other edit happens in Rust, and `use_input_mirror`
+    // writes the difference back. A `Signal` rather than a `use_local_state`,
+    // which needs `Copy`.
+    let mirrored = use_signal(|| (None::<usize>, Files::default()));
 
     let size = props.size.copied_or(theme.file_field.size);
     let radius = props.radius.copied_or(theme.file_field.radius);
@@ -324,51 +324,16 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let mut owed = use_signal(|| None::<FocusDebt>);
 
     let take = use_callback(move |files: Vec<FileData>| {
-        let picked = files.len();
-        let kept: Files = files
-            .into_iter()
-            .filter(|file| accepts(&accept, &file.name(), file.content_type().as_deref()))
-            .collect::<Files>()
-            .truncated(multiple);
-        if kept.len() < picked {
-            warn("FileField: dropped files that `accept` or `multiple` excludes.");
-        }
+        let kept = keep_accepted(files, &accept, multiple);
         if !kept.is_empty() {
             owed.set(Some(FocusDebt::Took));
             emit.call(kept);
         }
     });
 
-    // The input's `FileList` is the only thing a form posts, and it cannot be
-    // edited - so whenever the caller's value and the input disagree (a
-    // removal, a clear, a drop), the list is written back.
-    let synced = value.clone();
-    // The token, not merely `is_mounted`: switching `variant` unmounts the
-    // input and mounts a fresh one, whose `FileList` starts empty. Without
-    // this the mirror still claimed the old list and nothing rewrote it, so a
-    // field holding a file posted nothing.
-    let mount = input_element.mount_token();
-    use_effect(use_reactive!(|(synced, mount)| {
-        let (mirrored_mount, mirrored_files) = mirrored.peek().clone();
-        if mirrored_mount == mount && mirrored_files == synced {
-            return;
-        }
-        if input_element.set_files(&synced).is_ok() {
-            mirrored.set((mount, synced));
-        }
-    }));
+    use_input_mirror(input_element, mirrored, value.clone());
 
-    // The wrapper needs a **definite** width, not merely `min-width: 0`: a
-    // stretched flex item is floored at its own min-content width, and a long
-    // filename is one unbreakable word. Measured in the browser against every
-    // other candidate - `min-width: 0` up the chain, `overflow: hidden`,
-    // `contain: inline-size`, a breakable filename - and this is the only one
-    // that keeps the frame inside its parent.
-    let field_sx: Input<Sx> = match props.sx.as_ref() {
-        // The caller's own declarations come second, so they still win.
-        Some(caller) => sx().width("100%").and(caller.clone()).into(),
-        None => sx().width("100%").into(),
-    };
+    let field_sx = full_width(&props.sx);
 
     let field = use_field()
         .labelled_by()
@@ -388,41 +353,24 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
     let has_files = !value.is_empty();
     // Chips ride inside the control, so they sit one step down the field's
     // own scale. The loader takes the same step, for the same reason.
     let chip_size = size.step_down();
-    // Silent: it sits inside a control that the field's label already names,
-    // and `aria-busy` on that control is what says it is waiting.
-    let spinner = loading.then(|| rsx! { Loader { size: chip_size } });
-    let clear = clear_button(
+    let trailing = trailing_slot(
+        loading.then_some(chip_size),
         clearable && has_files && interactive,
         size,
         surface_element,
-        move |event: MouseEvent| {
-            // Clearing is not a click on the control, which would open the
-            // picker straight after emptying the field.
-            event.stop_propagation();
-            emit.call(Files::default());
-        },
-    )
-    .map(|button| {
-        rsx! {
-            {spinner.clone()}
-            {button}
-        }
-    });
-    // The frame's trailing slot: the clear button, with the loader ahead of
-    // it - or the loader alone when there is nothing to clear.
-    let trailing = clear.or_else(|| spinner.clone());
+        emit,
+    );
     let chip_class = use_css(Some(&FILE_CHIP_SX), CssLayer::Framework);
     let card_class = use_css(Some(&FILE_CARD_SX), CssLayer::Framework);
 
     // Which chip the keyboard is on. Only the `Input` variant has one: the
     // dropzone's cards sit outside the control, so their remove buttons are
     // ordinary tab stops and need no cursor at all.
-    let mut cursor = use_signal(|| None::<usize>);
+    let cursor = use_signal(|| None::<usize>);
     let count = value.len();
     // Removing the chip under the cursor leaves the index pointing at the one
     // that took its place, and past the end it clamps.
@@ -439,14 +387,284 @@ pub fn FileField(props: FileFieldProps) -> Element {
         .states(field.states())
         .prepare();
 
-    // Removing a row destroys the button the keyboard was on, and focus would
-    // otherwise fall to the body. It moves to the row that took this one's
-    // place, to the new last row when the removed one was last, and to the
-    // surface when the list is empty - which is also the only control left
-    // there.
-    let remaining = value.len();
-    let focus_prefix = format!("{}-remove", field.id());
-    let surface_survives = surface;
+    use_focus_debt(
+        owed,
+        value.len(),
+        surface,
+        list_element,
+        surface_element,
+        format!("{}-remove", field.id()),
+    );
+
+    // Read off the field before the closures below, which outlive the borrow
+    // they would otherwise hold while `field.render` consumes it.
+    let (labelledby, describedby, invalid) =
+        (field.label_id(), field.describedby(), field.invalid());
+
+    let files = value.clone();
+    let remove_at = use_callback(move |index: usize| {
+        owed.set(Some(FocusDebt::Removed(index)));
+        emit.call(files.without(index));
+    });
+
+    let rows = FileRows {
+        draw: props.selection,
+        remove_at,
+        cards,
+        multiple,
+        interactive,
+        icon_size: ThemeAwareValue::Size(size).into(),
+        chip_size,
+        // Only once the surface is gone: otherwise the loader is on the
+        // surface, and one is enough.
+        card_loader: (loading && !surface).then_some(chip_size),
+        field_id: field.id().to_string(),
+        id_prefix: id_prefix.clone(),
+        chip_cursor,
+        chip_class,
+        card_class,
+    };
+    let drawn = rows.all(&value);
+
+    let input = file_input(
+        use_box().framework_sx(&FILE_INPUT_SX).prepare(),
+        input_element,
+        &props,
+        bound.name().map(str::to_string),
+        interactive,
+        take,
+    );
+
+    let states: Input<States> = field
+        .states()
+        .as_ref()
+        .cloned()
+        .unwrap_or_default()
+        .with("multiple", multiple)
+        .with("dragging", dragging.get())
+        .into();
+
+    let control = Surface {
+        element: surface_element,
+        labelledby: labelledby.clone(),
+        describedby,
+        invalid,
+        required,
+        interactive,
+        loading,
+        active_descendant: chip_cursor.map(|index| format!("{id_prefix}-{index}")),
+        keys: SurfaceKeys {
+            input: input_element,
+            interactive,
+            // A dropzone has no chips - its cards are ordinary tab stops
+            // outside the control - so it only ever opens.
+            chips: !cards && interactive,
+            count,
+            chip_cursor,
+            cursor,
+            remove_at,
+        },
+        take,
+        dragging,
+        attributes: props.attributes.clone(),
+    };
+
+    match variant {
+        FileFieldVariant::Input => {
+            let frame = use_field_frame()
+                .trailing(&trailing)
+                .states(field.states())
+                .prepare();
+            // The frame draws the ring, so the control must not draw a second.
+            let style = use_box()
+                .framework_sx(&FILE_CONTROL_SX)
+                .focus_ring(false)
+                .states(&states)
+                .prepare();
+            // The input's files are the control's own contents.
+            let placeholder = props.placeholder.clone().unwrap_or_default();
+            let value_slot = chip_slot(drawn, &placeholder);
+            field.render(frame.render(control.render(
+                style,
+                rsx! {
+                    {value_slot}
+                    {input}
+                },
+            )))
+        }
+        FileFieldVariant::Dropzone => {
+            let style = use_box()
+                .framework_sx(&FILE_DROPZONE_SX)
+                .states(&states)
+                .prepare();
+            let prompt = dropzone_prompt(&props, loading.then_some(size));
+            // The cards sit under the surface, not in it: a dropzone that
+            // grows with its own contents stops being a target to aim at.
+            // The input stays mounted either way - it is what posts.
+            let drop_target = surface.then(|| control.render(style, prompt));
+            let card_list = has_files.then(|| {
+                card_list(
+                    card_list_style,
+                    list_element,
+                    labelledby,
+                    surface,
+                    loading,
+                    drawn,
+                )
+            });
+            field.render(rsx! {
+                {drop_target}
+                {card_list}
+                {input}
+            })
+        }
+    }
+}
+
+/// The files a pick or a drop leaves once `accept` and `multiple` have had
+/// their say. A drop bypasses the picker, which is the only place `accept`
+/// applies by itself - so the component applies it, and says so rather than
+/// dropping files in silence.
+fn keep_accepted(files: Vec<FileData>, accept: &str, multiple: bool) -> Files {
+    let picked = files.len();
+    let kept: Files = files
+        .into_iter()
+        .filter(|file| accepts(accept, &file.name(), file.content_type().as_deref()))
+        .collect::<Files>()
+        .truncated(multiple);
+    if kept.len() < picked {
+        warn("FileField: dropped files that `accept` or `multiple` excludes.");
+    }
+    kept
+}
+
+/// The caller's `sx` behind a full width. The wrapper needs a **definite**
+/// width, not merely `min-width: 0`: a stretched flex item is floored at its
+/// own min-content width, and a long filename is one unbreakable word.
+/// Measured in the browser against every other candidate - `min-width: 0` up
+/// the chain, `overflow: hidden`, `contain: inline-size`, a breakable filename
+/// - and this is the only one that keeps the frame inside its parent.
+fn full_width(caller: &Input<Sx>) -> Input<Sx> {
+    match caller.as_ref() {
+        // The caller's own declarations come second, so they still win.
+        Some(caller) => sx().width("100%").and(caller.clone()).into(),
+        None => sx().width("100%").into(),
+    }
+}
+
+/// The frame's trailing slot: the clear button, with the loader ahead of it -
+/// or the loader alone when there is nothing to clear. The loader is silent:
+/// it sits inside a control that the field's label already names, and
+/// `aria-busy` on that control is what says it is waiting.
+fn trailing_slot(
+    loader: Option<Size>,
+    clearable: bool,
+    size: Size,
+    surface_element: ElementHandle,
+    emit: Callback<Files>,
+) -> Option<Element> {
+    let spinner = loader.map(|size| rsx! { Loader { size } });
+    let clear = clear_button(
+        clearable,
+        size,
+        surface_element,
+        move |event: MouseEvent| {
+            // Clearing is not a click on the control, which would open the picker
+            // straight after emptying the field.
+            event.stop_propagation();
+            emit.call(Files::default());
+        },
+    )
+    .map(|button| {
+        rsx! {
+            {spinner.clone()}
+            {button}
+        }
+    });
+    clear.or(spinner)
+}
+
+/// The dropzone's cards, a list under the surface.
+fn card_list(
+    style: BoxStyle,
+    list_element: ElementHandle,
+    labelledby: Option<String>,
+    surface: bool,
+    loading: bool,
+    drawn: Vec<Element>,
+) -> Element {
+    style
+        // With no surface left, the list is what the field's label names.
+        .attr(
+            "aria-labelledby",
+            (!surface).then_some(labelledby).flatten(),
+        )
+        .attr("aria-busy", (loading && !surface).then_some("true"))
+        .element(&list_element)
+        .render(HtmlTag::Ul, Vec::new(), rsx! { {drawn.into_iter()} })
+}
+
+/// The real `input[type="file"]`: the picker, and what a form posts.
+fn file_input(
+    style: BoxStyle,
+    element: ElementHandle,
+    props: &FileFieldProps,
+    name: Option<String>,
+    interactive: bool,
+    take: Callback<Vec<FileData>>,
+) -> Element {
+    style
+        .attr_default("type", "file")
+        .attr("multiple", props.multiple)
+        .attr("accept", props.accept.clone())
+        .attr("capture", props.capture.clone())
+        .attr("name", name)
+        .attr("disabled", !interactive)
+        // It is the control that is focusable and named; this is plumbing.
+        .attr("tabindex", "-1")
+        .attr("aria-hidden", "true")
+        .element(&element)
+        .event("onchange", move |event: FormEvent| take.call(event.files()))
+        .render(HtmlTag::Input, Vec::new(), ())
+}
+
+/// The input's `FileList` is the only thing a form posts, and it cannot be
+/// edited - so whenever the caller's value and the input disagree (a removal,
+/// a clear, a drop), the list is written back.
+fn use_input_mirror(
+    input_element: ElementHandle,
+    mut mirrored: Signal<(Option<usize>, Files)>,
+    synced: Files,
+) {
+    // The token, not merely `is_mounted`: switching `variant` unmounts the
+    // input and mounts a fresh one, whose `FileList` starts empty. Without
+    // this the mirror still claimed the old list and nothing rewrote it, so a
+    // field holding a file posted nothing.
+    let mount = input_element.mount_token();
+    use_effect(use_reactive!(|(synced, mount)| {
+        let (mirrored_mount, mirrored_files) = mirrored.peek().clone();
+        if mirrored_mount == mount && mirrored_files == synced {
+            return;
+        }
+        if input_element.set_files(&synced).is_ok() {
+            mirrored.set((mount, synced));
+        }
+    }));
+}
+
+/// Removing a row destroys the button the keyboard was on, and focus would
+/// otherwise fall to the body. It moves to the row that took this one's
+/// place, to the new last row when the removed one was last, and to the
+/// surface when the list is empty - which is also the only control left
+/// there. `focus_prefix` plus a row index is that row's remove button's id.
+fn use_focus_debt(
+    mut owed: Signal<Option<FocusDebt>>,
+    remaining: usize,
+    surface_survives: bool,
+    list_element: ElementHandle,
+    surface_element: ElementHandle,
+    focus_prefix: String,
+) {
     use_effect(use_reactive!(|remaining| {
         let Some(debt) = *owed.peek() else {
             return;
@@ -475,100 +693,104 @@ pub fn FileField(props: FileFieldProps) -> Element {
             }
         }
     }));
+}
 
-    // Read off the field before the closures below, which outlive the borrow
-    // they would otherwise hold while `field.render` consumes it.
-    let (labelledby, describedby, invalid) =
-        (field.label_id(), field.describedby(), field.invalid());
+/// Draws the picked files, for one render: chips in the `Input` variant,
+/// cards under a dropzone, or the caller's `selection`.
+struct FileRows {
+    draw: Option<Callback<SelectionArgs<FileData>, Element>>,
+    remove_at: Callback<usize>,
+    cards: bool,
+    multiple: bool,
+    interactive: bool,
+    icon_size: Input<ThemeAwareValue>,
+    chip_size: Size,
+    /// The loader a card carries, once no surface is left to carry it.
+    card_loader: Option<Size>,
+    field_id: String,
+    id_prefix: String,
+    chip_cursor: Option<usize>,
+    chip_class: Option<String>,
+    card_class: Option<String>,
+}
 
-    let draw = props.selection;
-    let files = value.clone();
-    let remove_at = use_callback(move |index: usize| {
-        owed.set(Some(FocusDebt::Removed(index)));
-        emit.call(files.without(index));
-    });
+impl FileRows {
+    fn all(&self, files: &Files) -> Vec<Element> {
+        files
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(index, file)| self.row(index, file))
+            .collect()
+    }
 
-    let drawn_files = value.clone();
-    let drawn = drawn_files
-        .iter()
-        .cloned()
-        .enumerate()
-        .map(|(index, file)| {
-            let remove = Callback::new(move |_: ()| remove_at.call(index));
-            let content = match &draw {
-                Some(draw) => draw.call(SelectionArgs {
-                    value: file.clone(),
+    fn row(&self, index: usize, file: FileData) -> Element {
+        let remove_at = self.remove_at;
+        let remove = Callback::new(move |_: ()| remove_at.call(index));
+        let content = match &self.draw {
+            Some(draw) => draw.call(SelectionArgs {
+                value: file.clone(),
+                remove,
+            }),
+            None => match self.cards {
+                true => default_card(
+                    &file,
                     remove,
-                }),
-                None => match cards {
-                    true => default_card(
-                        &file,
-                        remove,
-                        icon_size.clone(),
-                        interactive,
-                        // Only once the surface is gone: otherwise the loader
-                        // is on the surface, and one is enough.
-                        (loading && !surface).then_some(chip_size),
-                        format!("{}-remove-{index}", field.id()),
-                    ),
-                    false => default_chip(&file, remove, chip_size, multiple, interactive),
-                },
-            };
-            match cards {
-                true => rsx! {
-                    li { key: "{index}", class: card_class.clone(), {content} }
-                },
-                false => rsx! {
+                    self.icon_size.clone(),
+                    self.interactive,
+                    self.card_loader,
+                    format!("{}-remove-{index}", self.field_id),
+                ),
+                false => default_chip(
+                    &file,
+                    remove,
+                    self.chip_size,
+                    self.multiple,
+                    self.interactive,
+                ),
+            },
+        };
+        match self.cards {
+            true => rsx! {
+                li { key: "{index}", class: self.card_class.clone(), {content} }
+            },
+            false => {
+                let id_prefix = &self.id_prefix;
+                rsx! {
                     span {
                         key: "{index}",
-                        class: chip_class.clone(),
+                        class: self.chip_class.clone(),
                         "data-slot": "chip",
                         id: "{id_prefix}-{index}",
-                        "data-cursor": (chip_cursor == Some(index)).then_some("true"),
+                        "data-cursor": (self.chip_cursor == Some(index)).then_some("true"),
                         {content}
                     }
-                },
+                }
             }
-        })
-        .collect::<Vec<_>>();
+        }
+    }
+}
 
-    let placeholder = props.placeholder.clone().unwrap_or_default();
-    // The dropzone's files are a list under the surface; the input's are the
-    // control's own contents.
-    let (value_slot, card_list) = match cards {
-        true => (
-            rsx! {},
-            has_files.then(|| {
-                card_list_style
-                    // With no surface left, the list is what the field's
-                    // label names.
-                    .attr(
-                        "aria-labelledby",
-                        (!surface).then(|| labelledby.clone()).flatten(),
-                    )
-                    .attr("aria-busy", (loading && !surface).then_some("true"))
-                    .element(&list_element)
-                    .render(HtmlTag::Ul, Vec::new(), rsx! { {drawn.into_iter()} })
-            }),
-        ),
-        false => (
-            match has_files {
-                true => rsx! {
-                    span { "data-slot": "value", {drawn.into_iter()} }
-                },
-                false => rsx! {
-                    span { "data-slot": "value",
-                        span { "data-placeholder": "true", "{placeholder}" }
-                    }
-                },
-            },
-            None,
-        ),
-    };
+/// The `Input` variant's contents: the chips, or the placeholder.
+fn chip_slot(drawn: Vec<Element>, placeholder: &str) -> Element {
+    match drawn.is_empty() {
+        false => rsx! {
+            span { "data-slot": "value", {drawn.into_iter()} }
+        },
+        true => rsx! {
+            span { "data-slot": "value",
+                span { "data-placeholder": "true", "{placeholder}" }
+            }
+        },
+    }
+}
 
-    // What the surface says, when the caller supplies no prompt of its own.
-    // `children` when the caller wrote one, `placeholder` next, and an
-    // English default last - the shape `Dialog`'s `close_label` set.
+/// What the surface holds: an icon, or `loader` while an upload is in flight,
+/// then the prompt. `children` when the caller wrote one, `placeholder` next,
+/// and an English default last - the shape `Dialog`'s `close_label` set. Then
+/// a hint read off `accept` rather than written beside it, so the prompt
+/// cannot claim something the picker would refuse.
+fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
     let written = props
         .children
         .as_ref()
@@ -577,58 +799,54 @@ pub fn FileField(props: FileFieldProps) -> Element {
         (true, _) => rsx! { {props.children.clone()} },
         (false, Some(placeholder)) => rsx! { span { "{placeholder}" } },
         (false, None) => {
-            let text = match multiple {
+            let text = match props.multiple {
                 true => "Drop files here, or click to pick",
                 false => "Drop a file here, or click to pick",
             };
             rsx! { span { "{text}" } }
         }
     };
-    // Read off `accept` rather than written beside it, so the prompt cannot
-    // claim something the picker would refuse.
-    let hint = accept_hint(&props.accept.clone().unwrap_or_default()).map(|hint| {
+    let hint = accept_hint(props.accept.as_deref().unwrap_or_default()).map(|hint| {
         rsx! {
             span { "data-slot": "hint", "{hint}" }
         }
     });
-
-    let name = bound.name().map(str::to_string);
-    let input = use_box()
-        .framework_sx(&FILE_INPUT_SX)
-        .prepare()
-        .attr_default("type", "file")
-        .attr("multiple", multiple)
-        .attr("accept", props.accept.clone())
-        .attr("capture", props.capture.clone())
-        .attr("name", name)
-        .attr("disabled", !interactive)
-        // It is the control that is focusable and named; this is plumbing.
-        .attr("tabindex", "-1")
-        .attr("aria-hidden", "true")
-        .element(&input_element)
-        .event("onchange", move |event: FormEvent| take.call(event.files()))
-        .render(HtmlTag::Input, Vec::new(), ());
-
-    let states: Input<States> = field
-        .states()
-        .as_ref()
-        .cloned()
-        .unwrap_or_default()
-        .with("multiple", multiple)
-        .with("dragging", dragging.get())
-        .into();
-
-    let open = move |_: MouseEvent| {
-        if interactive {
-            let _ = input_element.click();
+    rsx! {
+        if let Some(size) = loader {
+            Loader { size }
+        } else {
+            UploadIcon {}
         }
-    };
-    // Two keyboards on one element, the way `MultiSelect`'s trigger has them:
-    // the chips answer Left, Right, Backspace and Delete, and everything else
-    // opens the picker. A dropzone has no chips - its cards are ordinary tab
-    // stops outside the control - so it only ever opens.
-    let chips = !cards && interactive;
-    let on_key = move |event: Event<KeyboardData>| {
+        {prompt}
+        {hint}
+    }
+}
+
+/// The control's keyboard. Two keyboards on one element, the way
+/// `MultiSelect`'s trigger has them: the chips answer Left, Right, Backspace
+/// and Delete, and everything else opens the picker.
+#[derive(Clone, Copy)]
+struct SurfaceKeys {
+    input: ElementHandle,
+    interactive: bool,
+    chips: bool,
+    count: usize,
+    chip_cursor: Option<usize>,
+    cursor: Signal<Option<usize>>,
+    remove_at: Callback<usize>,
+}
+
+impl SurfaceKeys {
+    fn handle(self, event: KeyboardEvent) {
+        let SurfaceKeys {
+            input,
+            interactive,
+            chips,
+            count,
+            chip_cursor,
+            mut cursor,
+            remove_at,
+        } = self;
         if !interactive {
             return;
         }
@@ -658,36 +876,64 @@ pub fn FileField(props: FileFieldProps) -> Element {
             // does that only for a real `<button>`, which the chips rule out.
             Key::Enter => {
                 event.prevent_default();
-                let _ = input_element.click();
+                let _ = input.click();
             }
             Key::Character(ref character) if character == " " => {
                 event.prevent_default();
-                let _ = input_element.click();
+                let _ = input.click();
             }
             _ => {}
         }
-    };
+    }
+}
 
-    let dragging_over = dragging.clone();
-    let dragging_off = dragging.clone();
-    let dragging_drop = dragging.clone();
-    let control = move |style: crate::components::layout::BoxStyle, children: Element| {
+/// The focusable control both variants draw: the one-line input, or the drop
+/// surface. A click or Enter opens the picker; a drop takes the files.
+struct Surface {
+    element: ElementHandle,
+    labelledby: Option<String>,
+    describedby: Option<String>,
+    invalid: bool,
+    required: bool,
+    interactive: bool,
+    loading: bool,
+    active_descendant: Option<String>,
+    keys: SurfaceKeys,
+    take: Callback<Vec<FileData>>,
+    dragging: LocalState<bool>,
+    attributes: Vec<Attribute>,
+}
+
+impl Surface {
+    fn render(self, style: BoxStyle, children: Element) -> Element {
+        let Surface {
+            element,
+            interactive,
+            keys,
+            take,
+            dragging,
+            ..
+        } = self;
+        let input = keys.input;
+        let dragging_over = dragging.clone();
+        let dragging_off = dragging.clone();
         style
-            .element(&surface_element)
+            .element(&element)
             .attr("role", "button")
             .attr("tabindex", if interactive { "0" } else { "-1" })
-            .attr("aria-labelledby", labelledby)
-            .attr("aria-describedby", describedby)
-            .attr("aria-invalid", invalid.then_some("true"))
-            .attr("aria-required", required.then_some("true"))
+            .attr("aria-labelledby", self.labelledby)
+            .attr("aria-describedby", self.describedby)
+            .attr("aria-invalid", self.invalid.then_some("true"))
+            .attr("aria-required", self.required.then_some("true"))
             .attr("aria-disabled", !interactive)
-            .attr("aria-busy", loading.then_some("true"))
-            .attr(
-                "aria-activedescendant",
-                chip_cursor.map(|index| format!("{id_prefix}-{index}")),
-            )
-            .event("onclick", open)
-            .event("onkeydown", on_key)
+            .attr("aria-busy", self.loading.then_some("true"))
+            .attr("aria-activedescendant", self.active_descendant)
+            .event("onclick", move |_: MouseEvent| {
+                if interactive {
+                    let _ = input.click();
+                }
+            })
+            .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
             .event("ondragover", move |event: DragEvent| {
                 if interactive {
                     // Without this the browser opens the file instead.
@@ -698,62 +944,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
             .event("ondragleave", move |_: DragEvent| dragging_off.set(false))
             .event("ondrop", move |event: DragEvent| {
                 event.prevent_default();
-                dragging_drop.set(false);
+                dragging.set(false);
                 if interactive {
                     take.call(event.files());
                 }
             })
-            .render(HtmlTag::Div, props.attributes.clone(), children)
-    };
-
-    match variant {
-        FileFieldVariant::Input => {
-            let frame = use_field_frame()
-                .trailing(&trailing)
-                .states(field.states())
-                .prepare();
-            // The frame draws the ring, so the control must not draw a second.
-            let style = use_box()
-                .framework_sx(&FILE_CONTROL_SX)
-                .focus_ring(false)
-                .states(&states)
-                .prepare();
-            field.render(frame.render(control(
-                style,
-                rsx! {
-                    {value_slot}
-                    {input}
-                },
-            )))
-        }
-        FileFieldVariant::Dropzone => {
-            let style = use_box()
-                .framework_sx(&FILE_DROPZONE_SX)
-                .states(&states)
-                .prepare();
-            // The cards sit under the surface, not in it: a dropzone that
-            // grows with its own contents stops being a target to aim at.
-            // The input stays mounted either way - it is what posts.
-            let drop_target = surface.then(|| {
-                control(
-                    style,
-                    rsx! {
-                        if loading {
-                            Loader { size }
-                        } else {
-                            UploadIcon {}
-                        }
-                        {prompt}
-                        {hint}
-                    },
-                )
-            });
-            field.render(rsx! {
-                {drop_target}
-                {card_list}
-                {input}
-            })
-        }
+            .render(HtmlTag::Div, self.attributes, children)
     }
 }
 
