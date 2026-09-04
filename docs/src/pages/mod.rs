@@ -10,35 +10,15 @@ mod overlay;
 mod surface;
 mod typography;
 
-pub use a11y::{FocusTrapPage, VisuallyHiddenPage};
-pub use about::{GettingStarted, PerformancePage, StylingPage, ThemingPage};
-pub use data_display::{
-    AvatarPage, BadgePage, DataListPage, IconPage, ImagePage, IndicatorPage, ListPage, MarqueePage,
-    QrCodePage, TablePage, TimelinePage,
-};
-pub use feedback::{AlertPage, LoaderPage, NotificationsPage, ProgressBarPage, SkeletonPage};
-pub use form::{
-    AutocompletePage, CascaderPage, CheckboxPage, ColorFieldPage, ColorPickerPage, ComboboxPage,
-    DateFieldPage, DatePickerPage, FieldsetPage, FileFieldPage, FormGettingStartedPage, FormPage,
-    MultiSelectPage, NativeSelectPage, NumberFieldPage, PasswordFieldPage, PhoneFieldPage,
-    PinFieldPage, RadioGroupPage, RangeSliderPage, SegmentedControlPage, SelectPage, SliderPage,
-    SwitchPage, TagsFieldPage, TextFieldPage, TextareaPage,
-};
-pub use inputs::{ActionIconPage, ButtonPage, ChipPage};
-pub use layout::{
-    AspectRatioPage, BoxPage, CenterPage, CollapsePage, ContainerPage, DividerPage, FlexPage,
-    FloatPage, GridPage, HeaderPage, ImageListPage, ScrollAreaPage, ScrollerPage, SidebarPage,
-    SplitterPage,
-};
-pub use navigation::{
-    AccordionPage, AnchorPage, BurgerPage, CarouselPage, MenuPage, NavLinkPage, PaginationPage,
-    StepperPage, TabsPage, TreePage,
-};
-pub use overlay::{
-    DrawerPage, FloatingWindowPage, HoverCardPage, LightboxPage, ModalPage, OverlayPage,
-    PopoverPage, SpotlightPage, TooltipPage,
-};
-pub use surface::{DialogPage, PaperPage};
-pub use typography::{
-    BlockquotePage, CodeBlockPage, CodePage, KbdPage, MarkPage, TextPage, TitlePage,
-};
+// One glob per category, so a new page touches only its own category `mod.rs`.
+pub use a11y::*;
+pub use about::*;
+pub use data_display::*;
+pub use feedback::*;
+pub use form::*;
+pub use inputs::*;
+pub use layout::*;
+pub use navigation::*;
+pub use overlay::*;
+pub use surface::*;
+pub use typography::*;

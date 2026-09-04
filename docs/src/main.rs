@@ -19,23 +19,8 @@ mod nav;
 mod pages;
 
 use nav::DocsNav;
-use pages::{
-    AccordionPage, ActionIconPage, AlertPage, AnchorPage, AspectRatioPage, AutocompletePage,
-    AvatarPage, BadgePage, BlockquotePage, BoxPage, BurgerPage, ButtonPage, CarouselPage,
-    CascaderPage, CenterPage, CheckboxPage, ChipPage, CodeBlockPage, CodePage, CollapsePage,
-    ColorFieldPage, ColorPickerPage, ComboboxPage, ContainerPage, DataListPage, DateFieldPage,
-    DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
-    FloatPage, FloatingWindowPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted,
-    GridPage, HeaderPage, HoverCardPage, IconPage, ImageListPage, ImagePage, IndicatorPage,
-    KbdPage, LightboxPage, ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage,
-    MultiSelectPage, NativeSelectPage, NavLinkPage, NotificationsPage, NumberFieldPage,
-    OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage,
-    PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage,
-    ScrollAreaPage, ScrollerPage, SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage,
-    SliderPage, SplitterPage, SpotlightPage, StepperPage, StylingPage, SwitchPage, TablePage,
-    TabsPage, TagsFieldPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage,
-    TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
-};
+// A glob, so a new page never edits this file's import list.
+use pages::*;
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
 /// A 16:9 landscape, for docs examples where the logo's square shape hides

@@ -1,32 +1,6 @@
-use super::{
-    AccordionDefaults, AccordionSizeLevel, ActionIconDefaults, AlertDefaults, AnchorDefaults,
-    AnchorUnderline, AspectRatioDefaults, AutoClose, AutocompleteDefaults, AvatarDefaults,
-    AvatarGroupDefaults, BadgeDefaults, BadgeSizeLevel, BarPosition, BlockquoteDefaults,
-    BlockquoteSizeLevel, BurgerDefaults, BurgerLabels, ButtonDefaults, ButtonSizeLevel,
-    CalendarVariant, CarouselAlign, CarouselDefaults, CascaderDefaults, CenterDefaults,
-    CheckboxDefaults, ChipDefaults, ChipSizeLevel, CodeBlockDefaults, CodeDefaults,
-    CollapseDefaults, Color, ColorFieldDefaults, ColorPickerDefaults, ColorPickerSizeLevel,
-    ColorShade, ColorSwatchDefaults, ColorValue, ComboboxDefaults, ComboboxSizeLevel,
-    ContainerDefaults, DataListDefaults, DateDefaults, DateFieldDefaults, DatePickerDefaults,
-    DatePickerSizeLevel, DialogDefaults, DividerDefaults, DrawerDefaults, FieldDefaults,
-    FieldSizeLevel, FieldsetDefaults, FileFieldDefaults, FileFieldVariant, FlexAxisDefaults,
-    FlexDefaults, FloatDefaults, FloatingWindowDefaults, FormDefaults, GridDefaults,
-    HeaderDefaults, HexColor, HoverCardDefaults, IconDefaults, ImageDefaults, ImageFit,
-    ImageListDefaults, ImageListVariant, IndicatorDefaults, IndicatorSizeLevel, KbdDefaults,
-    LightboxDefaults, ListDefaults, LoaderDefaults, LoaderVariant, MarkDefaults, MarqueeDefaults,
-    MenuDefaults, MenuSizeLevel, NativeSelectDefaults, NavLinkDefaults, NotificationDefaults,
-    NumberFieldDefaults, OverlayDefaults, PaginationDefaults, PaginationLabels, PaperDefaults,
-    PhoneFieldDefaults, PinFieldDefaults, PinKind, Placement, PopoverDefaults, ProgressBarDefaults,
-    QrCodeDefaults, QrRobustness, RadioDefaults, SCROLLER_FADE_DEFAULT, ScrollAreaDefaults,
-    ScrollAxis, ScrollbarSize, ScrollbarVisibility, ScrollerControls, ScrollerDefaults,
-    SelectDefaults, SidebarDefaults, Size, Sizes, SkeletonDefaults, SliderDefaults,
-    SliderSizeLevel, SplitterDefaults, SpotlightDefaults, SpotlightLabels, StepLabelPosition,
-    StepperDefaults, StepperSizeLevel, SwitchDefaults, SwitchSizeLevel,
-    TIMELINE_BULLET_BACKGROUND_DEFAULT, TableDefaults, TabsDefaults, TabsSizeLevel,
-    TagsFieldDefaults, TextDefaults, TextFieldDefaults, TextSize, TextareaDefaults,
-    TimePickerDefaults, TimePickerVariant, TimelineAlign, TimelineDefaults, TitleDefaults,
-    TitleSize, TooltipDefaults, TooltipPlacement, TreeDefaults, ZIndexDefaults,
-};
+// A glob over `theme`'s exports, so a new component's defaults never edit
+// this import list.
+use super::*;
 use crate::components::ButtonVariant;
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
