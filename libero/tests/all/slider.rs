@@ -1,0 +1,263 @@
+use crate::common::{attributes_of, body, render};
+
+use dioxus::prelude::*;
+use libero::{
+    LiberoProvider,
+    components::{RangeSlider, Slider, SliderMark, SliderValue},
+};
+
+#[test]
+fn slider_renders_a_thumb_with_the_value_and_its_marks() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: 25.0,
+                    aria_label: "Volume",
+                    marks: vec![SliderMark::labeled(50.0, "half")],
+                    format: Callback::new(|value: f64| format!("{value}%")),
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    // The first div is the field wrapper; the slider's own root is the second.
+    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+
+    assert_eq!(root["data-state"], "size-md marks-labeled");
+    assert!(root["style"].contains("--lsx-slider-filled:0.25;"));
+
+    // The thumb carries the a11y contract; the mark carries its position.
+    assert!(html.contains(r#"role="slider""#));
+    assert!(html.contains(r#"aria-label="Volume""#));
+    assert!(html.contains("aria-valuenow=25"));
+    assert!(html.contains("--lsx-slider-mark-at:0.5"));
+    assert!(body(&html).contains(">half<"));
+    // The value bubble is a `Tooltip`.
+    assert!(html.contains(r#"role="tooltip""#));
+    assert!(body(&html).contains(">25%<"));
+}
+
+/// Filled is a state, not a var set only on filled marks: a raw `style` that
+/// drops a declaration between renders keeps its last value in the browser.
+#[test]
+fn a_slider_mark_says_filled_with_a_state_and_keeps_its_style_shape() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: 25.0,
+                    aria_label: "Volume",
+                    marks: vec![SliderMark::new(0.0), SliderMark::new(50.0)],
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains(r#"data-state="filled" style="--lsx-slider-mark-at:0;""#));
+    assert!(html.contains(r#"style="--lsx-slider-mark-at:0.5;""#));
+    assert!(!html.contains("--lsx-slider-mark-fill"));
+}
+
+#[test]
+fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                RangeSlider {
+                    label: "Price",
+                    value: (20.0, 80.0),
+                    min_range: 10.0,
+                    name: "price",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+
+    // The bar spans between the thumbs rather than from the track's start.
+    assert!(
+        root["style"].contains("--lsx-slider-filled-from:0.2;"),
+        "{root:?}"
+    );
+    assert!(
+        root["style"].contains("--lsx-slider-filled-span:0.6"),
+        "{root:?}"
+    );
+
+    assert_eq!(html.matches(r#"role="slider""#).count(), 2);
+    assert!(html.contains("--lsx-slider-thumb-at:0.2"));
+    assert!(html.contains("--lsx-slider-thumb-at:0.8"));
+    assert!(html.contains(r#"aria-label="Minimum""#));
+    assert!(html.contains(r#"aria-label="Maximum""#));
+
+    // Each thumb is bounded by its neighbour, `min_range` short of it.
+    assert!(html.contains("aria-valuenow=20"));
+    assert!(html.contains("aria-valuemax=70"));
+    assert!(html.contains("aria-valuenow=80"));
+    assert!(html.contains("aria-valuemin=30"));
+
+    // Both ends post under one name, in track order.
+    let inputs: Vec<_> = html.match_indices(r#"type="hidden""#).collect();
+    assert_eq!(inputs.len(), 2, "{html}");
+    assert_eq!(html.matches(r#"name="price""#).count(), 2, "{html}");
+    let first = html.find(r#"value="20""#).expect("the lower value");
+    let second = html.find(r#"value="80""#).expect("the upper value");
+    assert!(first < second, "{html}");
+}
+
+/// A hand-written `SliderValue`, which is what a caller with a foreign enum
+/// writes - and what covers the trait's default `position`/`at`.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Tier {
+    Free,
+    Pro,
+    Team,
+    Enterprise,
+}
+
+impl SliderValue for Tier {
+    type Step = usize;
+
+    fn options() -> Option<&'static [Self]> {
+        Some(&[Self::Free, Self::Pro, Self::Team, Self::Enterprise])
+    }
+
+    fn label(&self) -> String {
+        format!("{self:?}")
+    }
+}
+
+/// An ordered enum makes the slider discrete: range, step grid, marks and
+/// every caption come from `SliderValue::options`.
+#[test]
+fn a_discrete_slider_derives_its_scale_from_the_value_type() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Tier::Pro,
+                    aria_label: "Tier",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+
+    // `Pro` is the second of four options, so the scale is 0..=3.
+    assert!(root["style"].contains("--lsx-slider-filled:0.3333333333333333;"));
+    assert!(html.contains("aria-valuenow=1"));
+    assert!(html.contains("aria-valuemax=3"));
+    assert!(html.contains(r#"aria-valuetext="Pro""#));
+    assert!(root["data-state"].contains("marks-labeled"));
+    for tier in ["Free", "Pro", "Team", "Enterprise"] {
+        assert!(body(&html).contains(&format!(">{tier}<")));
+    }
+}
+
+/// `min`/`max` are written in the value's own type, and `step` is a stride
+/// over the options - `step: 1.5` on a `Tier` slider does not compile.
+#[test]
+fn a_discrete_sliders_bounds_are_typed_and_its_step_counts_options() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Tier::Team,
+                    min: Tier::Pro,
+                    max: Tier::Enterprise,
+                    step: 2,
+                    aria_label: "Tier",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("aria-valuemin=1"));
+    assert!(html.contains("aria-valuemax=3"));
+    // Marks at `Pro` and `Enterprise` only - every second option from `min`.
+    assert!(body(&html).contains(">Pro<"));
+    assert!(body(&html).contains(">Enterprise<"));
+    assert!(!body(&html).contains(">Free<"));
+    assert!(!body(&html).contains(">Team<"));
+}
+
+/// `#[derive(SliderValue)]` is the whole discrete impl: variants in
+/// declaration order are the options, their names are the labels.
+#[derive(Clone, Copy, Debug, PartialEq, SliderValue)]
+enum Quality {
+    Low,
+    #[slider(label = "Med")]
+    Medium,
+    High,
+}
+
+#[test]
+fn a_derived_slider_value_names_and_orders_its_own_options() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Quality::Medium,
+                    aria_label: "Quality",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("aria-valuemax=2"));
+    assert!(html.contains("aria-valuenow=1"));
+    // The overridden label reaches both the bubble and `aria-valuetext`.
+    assert!(html.contains(r#"aria-valuetext="Med""#));
+    for label in [">Low<", ">Med<", ">High<"] {
+        assert!(body(&html).contains(label));
+    }
+}
+
+#[derive(Clone, PartialEq, SliderValue)]
+enum Grade {
+    Low,
+    High,
+}
+
+#[test]
+fn a_sliders_format_prop_renames_its_mark_captions_too() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: Grade::Low,
+                    oninput: move |_| {},
+                    format: |grade: Grade| match grade {
+                        Grade::Low => "Niedrig".to_string(),
+                        Grade::High => "Hoch".to_string(),
+                    },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    // The bubble, `aria-valuetext` and both captions speak one language.
+    assert!(body.contains("Niedrig"));
+    assert!(body.contains("Hoch"));
+    assert!(!body.contains("Low"));
+    assert!(!body.contains("High"));
+}

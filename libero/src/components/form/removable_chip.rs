@@ -78,7 +78,7 @@ pub(crate) fn removable_chip(
                 // be removed: a focused one would take the focus down with it,
                 // to the body ([[principles/focus-after-removal]]). With this,
                 // no mouse removal moves focus at all, which is why neither
-                // field repairs it. Tested in `tests/events.rs`.
+                // field repairs it. Tested in `tests/all/events.rs`.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
                 // A remove is not a click on the field, which would open the
                 // list under the chip that just went away.

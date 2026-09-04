@@ -30,7 +30,7 @@
 //! one `offset()`: three different measurements were being carried by one
 //! name, and the name is what got copied without its origin.
 //!
-//! `libero/tests/timeline.rs` asserts the emitted values, so the geometry is
+//! `libero/tests/all/timeline.rs` asserts the emitted values, so the geometry is
 //! pinned by what it renders rather than by which formula was quoted.
 
 use crate::sx::{Sx, sx};

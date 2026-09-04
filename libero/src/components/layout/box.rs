@@ -223,7 +223,7 @@ where
 /// The attribute, unless its value renders nothing: a `false` boolean or a
 /// `None` costs ~135 ns to diff and produces no markup either way. Dropping it
 /// is safe - a shrinking attribute list still clears what went away, which
-/// `tests/attributes.rs` pins down.
+/// `tests/all/attributes.rs` pins down.
 fn meaningful<T>(name: &'static str, value: impl IntoAttributeValue<T>) -> Option<Attribute> {
     let attribute = attr(name, value);
     match attribute.value {
@@ -258,7 +258,7 @@ impl BoxStyle {
     /// either way, but an attribute in the list still costs ~135 ns to diff.
     /// Dropping it is safe - when the list shrinks, dioxus emits a `None` for
     /// the attribute that went away, so a `disabled` button that becomes
-    /// enabled still loses the attribute in the DOM (`tests/attributes.rs`).
+    /// enabled still loses the attribute in the DOM (`tests/all/attributes.rs`).
     pub fn attr<T>(mut self, name: &'static str, value: impl IntoAttributeValue<T>) -> Self {
         if let Some(attribute) = meaningful(name, value) {
             self.own.push(attribute);

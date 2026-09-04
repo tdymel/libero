@@ -39,7 +39,7 @@ const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 /// would be 0-1-0 against their 0-2-0 and the motion would still play. If a
 /// transition is ever moved to the base level, its guard moves with it - the
 /// invariant is the pairing, not the nesting. See `docs/public/md/styling.md`,
-/// and `libero/tests/collapse.rs`, which asserts the emitted CSS text rather
+/// and `libero/tests/all/collapse.rs`, which asserts the emitted CSS text rather
 /// than trusting the builder.
 static COLLAPSE_BASE_SX: StaticSx = StaticSx::new(|| {
     let transition = format!(
