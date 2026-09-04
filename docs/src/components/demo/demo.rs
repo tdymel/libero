@@ -129,6 +129,10 @@ pub fn Demo(
     /// Overrides `children_text` per control state, for a child a control turns
     /// on and off.
     child: Option<Child>,
+    /// Keeps the controls below the preview at every width, for a preview
+    /// that needs the card's whole width - a notification host.
+    #[props(default)]
+    wide_preview: bool,
 ) -> Element {
     let mut values = use_signal(|| {
         DemoValues(
@@ -203,30 +207,40 @@ pub fn Demo(
                         gap: "lg",
                         // Wrapped, the controls sit below the preview, so the
                         // divider has to move with them.
-                        sx: sx()
-                            .width("100%")
-                            .flex_shrink("0")
-                            .padding("24px")
-                            .border_top(border())
-                            // The same 752px the flex row wraps at, plus slack
-                            // so a subpixel rounding at the boundary can't put
-                            // the wrap and the query on opposite sides.
-                            .container_query(
-                                DEMO_CARD,
-                                "(min-width: 768px)",
-                                sx()
-                                    // 464px of controls plus the padding either
-                                    // side - `box-sizing` is border-box here.
-                                    // Sized for the widest control we have: a
-                                    // five-option segmented group whose longest
-                                    // label is `Elevated` (`Button`'s
-                                    // `variant`). Its segments are `flex: 1 1 0`,
-                                    // so every one is as wide as that longest
-                                    // label needs - ~93px at `sm`, times five.
-                                    .width("512px")
-                                    .border_top("none")
-                                    .border_left(border()),
-                            ),
+                        sx: {
+                            let panel = sx()
+                                .width("100%")
+                                .flex_shrink("0")
+                                .padding("24px")
+                                .border_top(border());
+                            if wide_preview {
+                                // Below the preview at every width, so the
+                                // preview gets the card's whole width.
+                                panel
+                            } else {
+                                // The same 752px the flex row wraps at, plus
+                                // slack so a subpixel rounding at the boundary
+                                // can't put the wrap and the query on opposite
+                                // sides.
+                                panel.container_query(
+                                    DEMO_CARD,
+                                    "(min-width: 768px)",
+                                    sx()
+                                        // 464px of controls plus the padding
+                                        // either side - `box-sizing` is
+                                        // border-box here. Sized for the widest
+                                        // control we have: a five-option
+                                        // segmented group whose longest label is
+                                        // `Elevated` (`Button`'s `variant`). Its
+                                        // segments are `flex: 1 1 0`, so every
+                                        // one is as wide as that longest label
+                                        // needs - ~93px at `sm`, times five.
+                                        .width("512px")
+                                        .border_top("none")
+                                        .border_left(border()),
+                                )
+                            }
+                        },
                         // A hidden control is one the current mode does not
                         // have at all, so it is gone rather than greyed: the
                         // control that swaps the set sits above them and stays

@@ -321,10 +321,12 @@ fn Examples(color: String, variant: String, closable: bool, template: bool) -> E
     };
 
     rsx! {
+        // At the top: the stacks default to the bottom edge, so on a phone the
+        // wrapped buttons leave them room.
         Flex {
             direction: "column",
             align: "center",
-            justify: "center",
+            justify: "start",
             gap: "sm",
             sx: sx().height("420px"),
             Flex {
@@ -518,6 +520,7 @@ pub fn NotificationsPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_demo),
+                wide_preview: true,
             }
             DocSection {
                 title: "In an app",
