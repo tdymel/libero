@@ -70,13 +70,30 @@ pub trait NumberValue:
 }
 
 /// One line per primitive: everything but the step unit comes from the trait's
-/// default bodies.
+/// default bodies. An integer also saturates when it steps, so a press at the
+/// edge of its type stays there instead of overflowing - a panic in a debug
+/// build, a wrap-around in release.
 macro_rules! number_value {
-    ($($type:ty => $one:expr),+ $(,)?) => {
+    (float: $($float:ty),+; int: $($int:ty),+ $(,)?) => {
         $(
-            impl NumberValue for $type {
+            impl NumberValue for $float {
                 fn default_step() -> Self {
-                    $one
+                    1.0
+                }
+            }
+        )+
+        $(
+            impl NumberValue for $int {
+                fn default_step() -> Self {
+                    1
+                }
+
+                fn step_up(self, by: Self) -> Self {
+                    self.saturating_add(by)
+                }
+
+                fn step_down(self, by: Self) -> Self {
+                    self.saturating_sub(by)
                 }
             }
         )+
@@ -84,18 +101,6 @@ macro_rules! number_value {
 }
 
 number_value! {
-    f32 => 1.0,
-    f64 => 1.0,
-    i8 => 1,
-    i16 => 1,
-    i32 => 1,
-    i64 => 1,
-    i128 => 1,
-    isize => 1,
-    u8 => 1,
-    u16 => 1,
-    u32 => 1,
-    u64 => 1,
-    u128 => 1,
-    usize => 1,
+    float: f32, f64;
+    int: i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize,
 }

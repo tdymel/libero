@@ -134,6 +134,100 @@ fn days_outside_min_and_max_are_disabled() {
     assert!(cell("2026-09-21").contains("disabled"));
 }
 
+/// The one `tabindex="0"` day in `html`.
+fn day_stop(html: &str) -> &str {
+    let stops = tags_with(html, &["data-slot=\"day\"", "tabindex=\"0\""]);
+    assert_eq!(stops.len(), 1, "{stops:?}");
+    stops[0]
+}
+
+/// A disabled day cannot take focus, so it never holds the grid's tab stop.
+#[test]
+fn the_tab_stop_skips_disabled_days() {
+    fn min_after_the_first() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: None,
+                    min: NaiveDate::from_ymd_opt(2026, 9, 10),
+                    today: NaiveDate::from_ymd_opt(2026, 9, 1),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    fn weekend_today() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: None,
+                    // A Saturday.
+                    today: NaiveDate::from_ymd_opt(2026, 9, 19),
+                    exclude_date: move |day: NaiveDate| day.weekday().num_days_from_monday() >= 5,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    fn weekend_at_the_month_end() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: None,
+                    // A Saturday; the Monday after is in June.
+                    today: NaiveDate::from_ymd_opt(2026, 5, 30),
+                    exclude_date: move |day: NaiveDate| day.weekday().num_days_from_monday() >= 5,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    fn mini_weekend() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayPicker {
+                    value: NaiveDate::from_ymd_opt(2026, 9, 19),
+                    exclude_date: move |day: NaiveDate| day.weekday().num_days_from_monday() >= 5,
+                    calendar: "mini",
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = body(&render(min_after_the_first));
+    assert!(day_stop(&html).contains("data-date=\"2026-09-10\""));
+    let html = body(&render(weekend_today));
+    assert!(day_stop(&html).contains("data-date=\"2026-09-21\""));
+    // Not onto a day of the next month: back to the Friday.
+    let html = body(&render(weekend_at_the_month_end));
+    assert!(day_stop(&html).contains("data-date=\"2026-05-29\""));
+    let html = body(&render(mini_weekend));
+    assert!(day_stop(&html).contains("data-date=\"2026-09-21\""));
+}
+
+/// The month and year views disable only the cells past `min` and `max`.
+#[test]
+fn a_month_picker_keeps_its_tab_stop_inside_its_limits() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                MonthPicker {
+                    value: None,
+                    today: NaiveDate::from_ymd_opt(2026, 1, 15),
+                    min: NaiveDate::from_ymd_opt(2026, 4, 10),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    let stops = tags_with(&html, &["data-slot=\"cell\"", "tabindex=\"0\""]);
+    assert_eq!(stops.len(), 1);
+    assert!(stops[0].contains("data-date=\"2026-04-01\""));
+}
+
 #[test]
 fn a_field_shows_its_format_and_posts_iso() {
     fn app() -> Element {

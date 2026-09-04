@@ -514,6 +514,28 @@ fn a_custom_number_value_formats_itself() {
     assert_eq!(attributes_of(&body, "input")["value"], "12.34");
 }
 
+/// A step at either end of an integer type stays there. Unchecked, `0u32 - 1`
+/// panics in a debug build and wraps to `u32::MAX` in release.
+#[test]
+fn an_integer_step_saturates_at_the_ends_of_its_type() {
+    assert_eq!(0u8.step_down(1), 0);
+    assert_eq!(u8::MAX.step_up(1), u8::MAX);
+    assert_eq!(250u8.step_up(10), u8::MAX);
+    assert_eq!(0u32.step_down(1), 0);
+    assert_eq!(u32::MAX.step_up(1), u32::MAX);
+    assert_eq!(i32::MIN.step_down(1), i32::MIN);
+    assert_eq!(i32::MAX.step_up(1), i32::MAX);
+    assert_eq!((-1i32).step_up(1), 0);
+}
+
+/// A saturated step still lands inside the caller's range.
+#[test]
+fn a_saturated_step_is_then_clamped_to_min_and_max() {
+    assert_eq!(0u8.step_down(1).clamp_to(Some(5), Some(10)), 5);
+    assert_eq!(u8::MAX.step_up(1).clamp_to(Some(5), Some(10)), 10);
+    assert_eq!(i32::MIN.step_down(1).clamp_to(Some(-3), None), -3);
+}
+
 /// The steppers are opt-in: a number is usually typed, and two buttons are the
 /// most expensive thing a field can carry.
 #[test]

@@ -275,6 +275,8 @@ pub enum DateLevel {
 enum Focus {
     Date(NaiveDate),
     Title,
+    /// The day or cell that holds the tab stop, wherever it moved to.
+    Stop,
 }
 
 /// `exclude_date` as a calendar holds it. Two `Callback`s built on different
@@ -367,6 +369,7 @@ fn use_focus_request(root: ElementHandle, focusable: bool) -> FocusRequest {
         request.set(None);
         let selector = match target {
             Focus::Title => "[data-slot='title']".to_string(),
+            Focus::Stop => ":is([role='grid'], [data-slot='cells']) [tabindex='0']".to_string(),
             Focus::Date(day) => format!("[data-date='{day}']:not([data-outside])"),
         };
         let _ = root
@@ -418,6 +421,56 @@ impl View {
             || self.exclude_date.is_some_and(|exclude| exclude.call(day))
     }
 
+    /// `day` pulled inside `min`/`max`.
+    fn clamp_day(self, day: NaiveDate) -> NaiveDate {
+        let mut day = day;
+        if let Some(min) = self.min {
+            day = day.max(min);
+        }
+        if let Some(max) = self.max {
+            day = day.min(max);
+        }
+        day
+    }
+
+    /// The first day a pick can land on, from `from` on, `step` days at a
+    /// time. `None` once a step leaves `min`/`max`, or after a year of steps
+    /// that `exclude_date` all refuses.
+    fn seek(self, from: NaiveDate, step: i64) -> Option<NaiveDate> {
+        let mut day = from;
+        for _ in 0..366 {
+            if self.clamp_day(day) != day {
+                return None;
+            }
+            if !self.day_disabled(day) {
+                return Some(day);
+            }
+            let next = add_days(day, step);
+            if next == day {
+                return None;
+            }
+            day = next;
+        }
+        None
+    }
+
+    /// [`View::seek`] from `from` pulled inside `min`/`max`, in the direction
+    /// of `step`, then back the other way.
+    fn nearest(self, from: NaiveDate, step: i64) -> Option<NaiveDate> {
+        let from = self.clamp_day(from);
+        self.seek(from, step).or_else(|| self.seek(from, -step))
+    }
+
+    /// The day a tab stop moves to when `from` is disabled: the next one
+    /// that is not, else the previous one, as long as it is `shown`.
+    fn nearest_in(self, from: NaiveDate, shown: impl Fn(NaiveDate) -> bool) -> Option<NaiveDate> {
+        let from = self.clamp_day(from);
+        [1, -1]
+            .into_iter()
+            .filter_map(|step| self.seek(from, step))
+            .find(|day| shown(*day))
+    }
+
     fn nav(self, label: &'static str, disabled: bool, target: NaiveDate, forward: bool) -> Element {
         let View {
             size,
@@ -433,18 +486,24 @@ impl View {
     /// The day grid's keys, from `tab_stop` in weekday column `column`.
     fn day_keydown(self, event: KeyboardEvent, tab_stop: NaiveDate, column: i64) {
         let years = if event.modifiers().shift() { 12 } else { 1 };
+        // Disabled days are skipped: `focus()` on one does nothing, and the
+        // grid would lose its only tab stop. An arrow with nothing left to
+        // land on stays put.
         let next = match event.key() {
-            Key::ArrowLeft => add_days(tab_stop, -1),
-            Key::ArrowRight => add_days(tab_stop, 1),
-            Key::ArrowUp => add_days(tab_stop, -7),
-            Key::ArrowDown => add_days(tab_stop, 7),
-            Key::Home => add_days(tab_stop, -column),
-            Key::End => add_days(tab_stop, 6 - column),
-            Key::PageUp => add_months(tab_stop, -years),
-            Key::PageDown => add_months(tab_stop, years),
+            Key::ArrowLeft => self.seek(add_days(tab_stop, -1), -1),
+            Key::ArrowRight => self.seek(add_days(tab_stop, 1), 1),
+            Key::ArrowUp => self.seek(add_days(tab_stop, -7), -7),
+            Key::ArrowDown => self.seek(add_days(tab_stop, 7), 7),
+            Key::Home => self.nearest(add_days(tab_stop, -column), 1),
+            Key::End => self.nearest(add_days(tab_stop, 6 - column), -1),
+            Key::PageUp => self.nearest(add_months(tab_stop, -years), -1),
+            Key::PageDown => self.nearest(add_months(tab_stop, years), 1),
             _ => return,
         };
         event.prevent_default();
+        let Some(next) = next else {
+            return;
+        };
         let (mut paged, mut active) = (self.paged, self.active);
         let month = first_of_month(next);
         if month < self.first {
@@ -460,18 +519,14 @@ impl View {
     /// month or a year.
     fn cell_stop(self) -> NaiveDate {
         let level = (self.level)();
-        let cell_of = |day: NaiveDate| match level {
-            DateLevel::Year => NaiveDate::from_ymd_opt(day.year(), 1, 1).unwrap_or(day),
-            _ => first_of_month(day),
-        };
         let in_view = |cell: NaiveDate| match level {
             DateLevel::Year => (self.decade..self.decade + 10).contains(&cell.year()),
             _ => cell.year() == self.first.year(),
         };
-        [(self.active)(), self.selection.anchor(), self.today]
+        let stop = [(self.active)(), self.selection.anchor(), self.today]
             .into_iter()
             .flatten()
-            .map(cell_of)
+            .map(|day| self.cell_of(day))
             .find(|cell| in_view(*cell))
             .unwrap_or_else(|| {
                 let year = if level == DateLevel::Year {
@@ -480,7 +535,32 @@ impl View {
                     self.first.year()
                 };
                 NaiveDate::from_ymd_opt(year, 1, 1).unwrap_or(self.first)
-            })
+            });
+        // Onto the nearest cell that is not disabled, while one is in view.
+        Some(self.clamp_cell(stop))
+            .filter(|cell| in_view(*cell))
+            .unwrap_or(stop)
+    }
+
+    /// A month or year cell pulled inside the cells of `min` and `max`: the
+    /// only ones these views disable, and always at the ends.
+    fn clamp_cell(self, cell: NaiveDate) -> NaiveDate {
+        let mut cell = cell;
+        if let Some(min) = self.min {
+            cell = cell.max(self.cell_of(min));
+        }
+        if let Some(max) = self.max {
+            cell = cell.min(self.cell_of(max));
+        }
+        cell
+    }
+
+    /// The month or year cell `day` falls in.
+    fn cell_of(self, day: NaiveDate) -> NaiveDate {
+        match (self.level)() {
+            DateLevel::Year => NaiveDate::from_ymd_opt(day.year(), 1, 1).unwrap_or(day),
+            _ => first_of_month(day),
+        }
     }
 
     /// A step off the shown year or decade pages it.
@@ -507,7 +587,7 @@ impl View {
         };
         event.prevent_default();
         let (mut paged, mut active) = (self.paged, self.active);
-        let next = add_months(cell_stop, cells * months_per_cell);
+        let next = self.clamp_cell(add_months(cell_stop, cells * months_per_cell));
         paged.set(Some(next));
         active.set(Some(next));
         self.focus.to(Focus::Date(next));
@@ -628,7 +708,8 @@ impl View {
                             paged.set(Some(month));
                             level.set(DateLevel::Day);
                             active.set(Some(month));
-                            focus.to(Focus::Date(month));
+                            // The 1st may be disabled; the tab stop is not.
+                            focus.to(Focus::Stop);
                         }
                     },
                     {names.months_short[index as usize]}
@@ -645,7 +726,9 @@ impl View {
                     tabindex: self.tabindex(true),
                     onclick: move |_| {
                         level.set(DateLevel::Year);
-                        focus.to(Focus::Title);
+                        // The decade's title is disabled: there is no level
+                        // above it. Focus goes to the year the view stands on.
+                        focus.to(Focus::Stop);
                     },
                     "{year}"
                 }
@@ -708,7 +791,7 @@ impl View {
                             paged.set(Some(start));
                             level.set(DateLevel::Month);
                             active.set(Some(start));
-                            focus.to(Focus::Date(start));
+                            focus.to(Focus::Stop);
                         }
                     },
                     "{shown_year}"
@@ -760,6 +843,7 @@ impl Strip {
             .flatten()
             .find(|day| in_strip(*day))
             .unwrap_or(start);
+        let stop = view.nearest_in(stop, in_strip).unwrap_or(stop);
         Self {
             start,
             end,
@@ -770,15 +854,18 @@ impl Strip {
 
     fn keydown(self, view: View, event: KeyboardEvent) {
         let next = match event.key() {
-            Key::ArrowLeft => add_days(self.stop, -1),
-            Key::ArrowRight => add_days(self.stop, 1),
-            Key::Home => self.start,
-            Key::End => self.end,
-            Key::PageUp => add_days(self.stop, -self.days),
-            Key::PageDown => add_days(self.stop, self.days),
+            Key::ArrowLeft => view.seek(add_days(self.stop, -1), -1),
+            Key::ArrowRight => view.seek(add_days(self.stop, 1), 1),
+            Key::Home => view.nearest(self.start, 1),
+            Key::End => view.nearest(self.end, -1),
+            Key::PageUp => view.nearest(add_days(self.stop, -self.days), -1),
+            Key::PageDown => view.nearest(add_days(self.stop, self.days), 1),
             _ => return,
         };
         event.prevent_default();
+        let Some(next) = next else {
+            return;
+        };
         // A step off an end moves the row as far: an arrow a day, a page a
         // page.
         let start = match (self.start..=self.end).contains(&next) {
@@ -850,6 +937,9 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         .or(selection.anchor().filter(|day| shown(*day)))
         .or(today.filter(|day| shown(*day)))
         .unwrap_or(first);
+    // A disabled day cannot take focus, so the stop moves to the nearest one
+    // that can, while one is shown.
+    let tab_stop = view.nearest_in(tab_stop, shown).unwrap_or(tab_stop);
 
     let first_weekday = names.first_weekday.num_days_from_monday() as usize;
     let column = move |day: NaiveDate| {
