@@ -18,7 +18,7 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
-        DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
+        DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DateDefaults, DatePickerDefaults, Size, SizeCss,
         TimePickerVariant,
     },
 };
@@ -201,39 +201,455 @@ struct Choice {
     disabled: bool,
 }
 
+fn at(hour: u32, minute: u32, second: u32) -> NaiveTime {
+    NaiveTime::from_hms_opt(hour, minute, second).expect("in range")
+}
+
+/// A selector to focus after the next render, inside `root`.
+fn use_focus_request(root: ElementHandle) -> Signal<Option<String>> {
+    let mut focus_request = use_signal(|| None::<String>);
+    use_effect(move || {
+        let Some(selector) = focus_request() else {
+            return;
+        };
+        focus_request.set(None);
+        let _ = root
+            .query_selector(&selector)
+            .and_then(|element| element.focus());
+    });
+    focus_request
+}
+
+/// What both variants read, for one render.
+#[derive(Clone, Copy)]
+struct ClockView {
+    names: &'static DateDefaults,
+    value: Option<NaiveTime>,
+    min: Option<NaiveTime>,
+    max: Option<NaiveTime>,
+    onchange: Option<EventHandler<Option<NaiveTime>>>,
+    /// What a part picked with no value yet starts from.
+    base: NaiveTime,
+    pm: bool,
+    twelve: bool,
+    with_seconds: bool,
+    step: u8,
+    focusable: bool,
+    hand: Signal<Hand>,
+}
+
+impl ClockView {
+    fn tabindex(self) -> &'static str {
+        if self.focusable { "0" } else { "-1" }
+    }
+
+    fn within(self, from: NaiveTime, to: NaiveTime) -> bool {
+        !(self.min.is_some_and(|min| to < min) || self.max.is_some_and(|max| from > max))
+    }
+
+    /// The hour a 12-hour label stands for, in the half of the day `base` is in.
+    fn hour_of(self, label: u32) -> u32 {
+        match self.twelve {
+            true => label % 12 + if self.pm { 12 } else { 0 },
+            false => label,
+        }
+    }
+
+    /// The hour label at an index of the hours column.
+    fn hour_label(self, index: usize) -> u32 {
+        match (self.twelve, index) {
+            (true, 0) => 12,
+            (_, index) => index as u32,
+        }
+    }
+
+    fn emit(self, next: NaiveTime) {
+        if let Some(onchange) = &self.onchange {
+            onchange.call(Some(next));
+        }
+    }
+
+    /// A digital option picked by its column and index.
+    fn pick(self, column: Column, index: usize) {
+        let base = self.base;
+        let (hour, minute, second) = (base.hour(), base.minute(), base.second());
+        self.emit(match column {
+            Column::Hours => at(self.hour_of(self.hour_label(index)), minute, second),
+            Column::Minutes => at(hour, index as u32 * u32::from(self.step), second),
+            Column::Seconds => at(hour, minute, index as u32),
+            Column::Meridiem => at(hour % 12 + if index == 1 { 12 } else { 0 }, minute, second),
+        });
+    }
+
+    /// A mark on the analog face: an hour moves the hand on to the minutes.
+    fn pick_mark(self, shown: Hand, inner: bool, index: u32) {
+        let mut hand = self.hand;
+        match shown {
+            Hand::Hour => {
+                let hour = match (inner, index) {
+                    (false, 0) => self.hour_of(12),
+                    (false, index) => self.hour_of(index),
+                    (true, 0) => 0,
+                    (true, index) => index + 12,
+                };
+                self.emit(at(hour, self.base.minute(), 0));
+                hand.set(Hand::Minute);
+            }
+            Hand::Minute => self.emit(at(self.base.hour(), index * 5, 0)),
+        }
+    }
+
+    /// `handles` are the hours, minutes, seconds and meridiem columns.
+    fn digital_view(
+        self,
+        handles: [ElementHandle; 4],
+        active: Signal<Option<(Column, usize)>>,
+        focus_request: Signal<Option<String>>,
+        pick: Callback<(Column, usize)>,
+    ) -> Element {
+        let ClockView {
+            names,
+            value,
+            base,
+            pm,
+            twelve,
+            with_seconds,
+            step,
+            focusable,
+            ..
+        } = self;
+        let [
+            hours_column,
+            minutes_column,
+            seconds_column,
+            meridiem_column,
+        ] = handles;
+        let column = move |column: Column,
+                           label: Option<&'static str>,
+                           handle: ElementHandle,
+                           choices: Vec<Choice>| {
+            rsx! {
+                ClockColumn {
+                    column,
+                    label,
+                    handle,
+                    choices,
+                    focusable,
+                    active,
+                    focus_request,
+                    onpick: pick,
+                }
+            }
+        };
+        let hours = (0..if twelve { 12 } else { 24 })
+            .map(|index| {
+                let label = self.hour_label(index);
+                let hour = self.hour_of(label);
+                Choice {
+                    key: label.to_string(),
+                    label: format!("{label:02}"),
+                    selected: value.is_some_and(|value| value.hour() == hour),
+                    disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
+                }
+            })
+            .collect();
+        let minutes = (0..60u32)
+            .step_by(step as usize)
+            .map(|minute| Choice {
+                key: minute.to_string(),
+                label: format!("{minute:02}"),
+                selected: value.is_some_and(|value| value.minute() == minute),
+                disabled: !self.within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
+            })
+            .collect();
+        let seconds = with_seconds.then(|| {
+            let choices = (0..60u32)
+                .map(|second| {
+                    let time = at(base.hour(), base.minute(), second);
+                    Choice {
+                        key: second.to_string(),
+                        label: format!("{second:02}"),
+                        selected: value.is_some_and(|value| value.second() == second),
+                        disabled: !self.within(time, time),
+                    }
+                })
+                .collect();
+            column(
+                Column::Seconds,
+                Some(names.seconds_label),
+                seconds_column,
+                choices,
+            )
+        });
+        let meridiem = twelve.then(|| {
+            let choices = vec![
+                Choice {
+                    key: "am".into(),
+                    label: names.am.into(),
+                    selected: value.is_some() && !pm,
+                    disabled: false,
+                },
+                Choice {
+                    key: "pm".into(),
+                    label: names.pm.into(),
+                    selected: value.is_some() && pm,
+                    disabled: false,
+                },
+            ];
+            column(Column::Meridiem, None, meridiem_column, choices)
+        });
+        rsx! {
+            div { "data-slot": "columns",
+                {column(Column::Hours, Some(names.hours_label), hours_column, hours)}
+                {column(Column::Minutes, Some(names.minutes_label), minutes_column, minutes)}
+                {seconds}
+                {meridiem}
+            }
+        }
+    }
+
+    /// The marks the analog face shows for its hand.
+    fn marks(self) -> Vec<Mark> {
+        let ClockView {
+            value,
+            base,
+            twelve,
+            step,
+            hand,
+            ..
+        } = self;
+        match hand() {
+            Hand::Hour => {
+                let outer = (0..12u32).map(|index| {
+                    let label = if index == 0 { 12 } else { index };
+                    let hour = self.hour_of(label);
+                    Mark {
+                        index,
+                        inner: false,
+                        label: label.to_string(),
+                        selected: value.is_some_and(|value| value.hour() == hour),
+                        disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
+                    }
+                });
+                // A 24-hour face rings 13 to 00 inside 1 to 12.
+                let inner = (0..12u32).filter(|_| !twelve).map(|index| {
+                    let hour = if index == 0 { 0 } else { index + 12 };
+                    Mark {
+                        index,
+                        inner: true,
+                        label: format!("{hour:02}"),
+                        selected: value.is_some_and(|value| value.hour() == hour),
+                        disabled: !self.within(at(hour, 0, 0), at(hour, 59, 59)),
+                    }
+                });
+                outer.chain(inner).collect()
+            }
+            Hand::Minute => (0..12u32)
+                .map(|index| {
+                    let minute = index * 5;
+                    Mark {
+                        index,
+                        inner: false,
+                        label: format!("{minute:02}"),
+                        selected: value.is_some_and(|value| value.minute() == minute),
+                        disabled: minute % u32::from(step) != 0
+                            || !self
+                                .within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
+                    }
+                })
+                .collect(),
+        }
+    }
+
+    /// The face is a slider over the hand it shows: the arrows step an hour,
+    /// or `step` minutes, past what `min` and `max` rule out; Enter moves from
+    /// the hour to the minute.
+    fn face_keydown(self, event: KeyboardEvent) {
+        let mut hand = self.hand;
+        let delta: i64 = match event.key() {
+            Key::ArrowUp | Key::ArrowRight => 1,
+            Key::ArrowDown | Key::ArrowLeft => -1,
+            Key::Enter => {
+                event.prevent_default();
+                if hand() == Hand::Hour {
+                    hand.set(Hand::Minute);
+                }
+                return;
+            }
+            _ => return,
+        };
+        event.prevent_default();
+        let step = i64::from(self.step);
+        let mut next = self.base;
+        for _ in 0..60 {
+            let (candidate, open) = match hand() {
+                Hand::Hour => {
+                    let hour = (i64::from(next.hour()) + delta).rem_euclid(24) as u32;
+                    (
+                        at(hour, next.minute(), 0),
+                        self.within(at(hour, 0, 0), at(hour, 59, 59)),
+                    )
+                }
+                Hand::Minute => {
+                    let minute = i64::from(next.minute());
+                    // Off the step, the first press lands on it.
+                    let snapped = match delta > 0 {
+                        true => (minute / step + 1) * step,
+                        false => (minute + step - 1) / step * step - step,
+                    };
+                    let minute = snapped.rem_euclid(60) as u32;
+                    (
+                        at(next.hour(), minute, 0),
+                        self.within(at(next.hour(), minute, 0), at(next.hour(), minute, 59)),
+                    )
+                }
+            };
+            next = candidate;
+            if open {
+                self.emit(next);
+                return;
+            }
+        }
+    }
+
+    fn analog_view(self, pick_mark: Callback<(Hand, bool, u32)>) -> Element {
+        let ClockView {
+            names,
+            value,
+            base,
+            pm,
+            twelve,
+            mut hand,
+            ..
+        } = self;
+        let tabindex = self.tabindex();
+        let marks = self.marks();
+        let pointer = value.map(|value| {
+            let (degrees, radius) = match hand() {
+                Hand::Hour => {
+                    let inner = !twelve && !(1..=12).contains(&value.hour());
+                    (
+                        f64::from(value.hour() % 12) * 30.0,
+                        if inner { 26.0 } else { 40.0 },
+                    )
+                }
+                Hand::Minute => (f64::from(value.minute()) * 6.0, 40.0),
+            };
+            let style = format!(
+                "left: 50%; top: 50%; width: 2px; height: {radius}%; transform-origin: 50% 100%; transform: translate(-50%, -100%) rotate({degrees}deg)"
+            );
+            rsx! {
+                div { "data-slot": "hand", style }
+            }
+        });
+        let hour_text = value
+            .map(|value| {
+                let hour = match twelve {
+                    true => (value.hour() + 11) % 12 + 1,
+                    false => value.hour(),
+                };
+                format!("{hour:02}")
+            })
+            .unwrap_or_else(|| "--".into());
+        let minute_text = value
+            .map(|value| format!("{:02}", value.minute()))
+            .unwrap_or_else(|| "--".into());
+        let halves = twelve.then(|| {
+            rsx! {
+                button {
+                    r#type: "button",
+                    "data-active": (value.is_some() && !pm).then_some("true"),
+                    tabindex,
+                    onclick: move |_| self.emit(at(base.hour() % 12, base.minute(), base.second())),
+                    {names.am}
+                }
+                button {
+                    r#type: "button",
+                    "data-active": (value.is_some() && pm).then_some("true"),
+                    tabindex,
+                    onclick: move |_| self.emit(at(base.hour() % 12 + 12, base.minute(), base.second())),
+                    {names.pm}
+                }
+            }
+        });
+        let (face_label, face_text, face_now, face_max) = match hand() {
+            Hand::Hour => (
+                names.hours_label,
+                hour_text.clone(),
+                value.map(|value| value.hour()),
+                23,
+            ),
+            Hand::Minute => (
+                names.minutes_label,
+                minute_text.clone(),
+                value.map(|value| value.minute()),
+                59,
+            ),
+        };
+        rsx! {
+            div { "data-slot": "readout",
+                button {
+                    r#type: "button",
+                    "aria-label": names.hours_label,
+                    "data-active": (hand() == Hand::Hour).then_some("true"),
+                    tabindex,
+                    onclick: move |_| hand.set(Hand::Hour),
+                    "{hour_text}"
+                }
+                span { ":" }
+                button {
+                    r#type: "button",
+                    "aria-label": names.minutes_label,
+                    "data-active": (hand() == Hand::Minute).then_some("true"),
+                    tabindex,
+                    onclick: move |_| hand.set(Hand::Minute),
+                    "{minute_text}"
+                }
+                {halves}
+            }
+            div {
+                "data-slot": "face",
+                role: "slider",
+                tabindex,
+                "aria-label": face_label,
+                "aria-valuetext": face_text,
+                "aria-valuenow": face_now,
+                "aria-valuemin": 0,
+                "aria-valuemax": face_max,
+                onkeydown: move |event| self.face_keydown(event),
+                {pointer}
+                div {
+                    "data-slot": "pivot",
+                    style: "left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%)",
+                }
+                ClockMarks { hand: hand(), marks, onpick: pick_mark }
+            }
+        }
+    }
+}
+
 #[component]
 pub(super) fn Clock(props: ClockProps) -> Element {
     let theme = use_theme();
-    let names = &theme.date;
     let size = props.size.copied_or(theme.time_picker.size);
-    let variant = props.variant;
-    let with_seconds = props.with_seconds;
-    let step = props.step.unwrap_or(theme.time_picker.step).clamp(1, 30);
-    let twelve = props.twelve_hour;
-    let focusable = props.focusable;
-    let tabindex = if focusable { "0" } else { "-1" };
-    let (value, min, max, onchange) = (props.value, props.min, props.max, props.onchange);
+    let value = props.value;
+    let base = value.or(props.min).unwrap_or(MIDNIGHT);
 
-    let base = value.or(min).unwrap_or(MIDNIGHT);
-    let pm = base.hour() >= 12;
-    let within = move |from: NaiveTime, to: NaiveTime| {
-        !(min.is_some_and(|min| to < min) || max.is_some_and(|max| from > max))
+    let hand = use_signal(|| Hand::Hour);
+    let clock = ClockView {
+        names: &theme.date,
+        value,
+        min: props.min,
+        max: props.max,
+        onchange: props.onchange,
+        base,
+        pm: base.hour() >= 12,
+        twelve: props.twelve_hour,
+        with_seconds: props.with_seconds,
+        step: props.step.unwrap_or(theme.time_picker.step).clamp(1, 30),
+        focusable: props.focusable,
+        hand,
     };
-    let at = |hour: u32, minute: u32, second: u32| {
-        NaiveTime::from_hms_opt(hour, minute, second).expect("in range")
-    };
-    // The hour a 12-hour label stands for, in the half of the day `base` is in.
-    let hour_of = move |label: u32| match twelve {
-        true => label % 12 + if pm { 12 } else { 0 },
-        false => label,
-    };
-    let emit = move |next: NaiveTime| {
-        if let Some(onchange) = &onchange {
-            onchange.call(Some(next));
-        }
-    };
-
-    let mut hand = use_signal(|| Hand::Hour);
     let root = use_element();
     let hours_column = use_element();
     let minutes_column = use_element();
@@ -245,333 +661,31 @@ pub(super) fn Clock(props: ClockProps) -> Element {
             scroll_picked_into_view(column);
         }
     });
-    // The digital option the keyboard is on, and a selector to focus after the
-    // next render.
+    // The digital option the keyboard is on.
     let active = use_signal(|| None::<(Column, usize)>);
-    let mut focus_request = use_signal(|| None::<String>);
-    use_effect(move || {
-        let Some(selector) = focus_request() else {
-            return;
-        };
-        focus_request.set(None);
-        let _ = root
-            .query_selector(&selector)
-            .and_then(|element| element.focus());
-    });
+    let focus_request = use_focus_request(root);
 
-    // The hour label at an index of the hours column.
-    let hour_label = move |index: usize| match (twelve, index) {
-        (true, 0) => 12,
-        (_, index) => index as u32,
-    };
     // One identity across renders, so the columns' props compare equal and a
     // pick in one column skips the others.
-    let pick = use_callback(move |(column, index): (Column, usize)| {
-        let (hour, minute, second) = (base.hour(), base.minute(), base.second());
-        emit(match column {
-            Column::Hours => at(hour_of(hour_label(index)), minute, second),
-            Column::Minutes => at(hour, index as u32 * u32::from(step), second),
-            Column::Seconds => at(hour, minute, index as u32),
-            Column::Meridiem => at(hour % 12 + if index == 1 { 12 } else { 0 }, minute, second),
-        });
-    });
-
-    // The same for a mark on the analog face: an hour moves the hand on to
-    // the minutes.
+    let pick = use_callback(move |(column, index): (Column, usize)| clock.pick(column, index));
+    // The same for a mark on the analog face.
     let pick_mark = use_callback(move |(shown, inner, index): (Hand, bool, u32)| {
-        let mut hand = hand;
-        match shown {
-            Hand::Hour => {
-                let hour = match (inner, index) {
-                    (false, 0) => hour_of(12),
-                    (false, index) => hour_of(index),
-                    (true, 0) => 0,
-                    (true, index) => index + 12,
-                };
-                emit(at(hour, base.minute(), 0));
-                hand.set(Hand::Minute);
-            }
-            Hand::Minute => emit(at(base.hour(), index * 5, 0)),
-        }
+        clock.pick_mark(shown, inner, index)
     });
 
-    let body = match variant {
-        TimePickerVariant::Digital => {
-            let column = move |column: Column,
-                               label: Option<&'static str>,
-                               handle: ElementHandle,
-                               choices: Vec<Choice>| {
-                rsx! {
-                    ClockColumn {
-                        column,
-                        label,
-                        handle,
-                        choices,
-                        focusable,
-                        active,
-                        focus_request,
-                        onpick: pick,
-                    }
-                }
-            };
-            let hours = (0..if twelve { 12 } else { 24 })
-                .map(|index| {
-                    let label = hour_label(index);
-                    let hour = hour_of(label);
-                    Choice {
-                        key: label.to_string(),
-                        label: format!("{label:02}"),
-                        selected: value.is_some_and(|value| value.hour() == hour),
-                        disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
-                    }
-                })
-                .collect();
-            let minutes = (0..60u32)
-                .step_by(step as usize)
-                .map(|minute| Choice {
-                    key: minute.to_string(),
-                    label: format!("{minute:02}"),
-                    selected: value.is_some_and(|value| value.minute() == minute),
-                    disabled: !within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
-                })
-                .collect();
-            let seconds = with_seconds.then(|| {
-                let choices = (0..60u32)
-                    .map(|second| {
-                        let time = at(base.hour(), base.minute(), second);
-                        Choice {
-                            key: second.to_string(),
-                            label: format!("{second:02}"),
-                            selected: value.is_some_and(|value| value.second() == second),
-                            disabled: !within(time, time),
-                        }
-                    })
-                    .collect();
-                column(
-                    Column::Seconds,
-                    Some(names.seconds_label),
-                    seconds_column,
-                    choices,
-                )
-            });
-            let meridiem = twelve.then(|| {
-                let choices = vec![
-                    Choice {
-                        key: "am".into(),
-                        label: names.am.into(),
-                        selected: value.is_some() && !pm,
-                        disabled: false,
-                    },
-                    Choice {
-                        key: "pm".into(),
-                        label: names.pm.into(),
-                        selected: value.is_some() && pm,
-                        disabled: false,
-                    },
-                ];
-                column(Column::Meridiem, None, meridiem_column, choices)
-            });
-            rsx! {
-                div { "data-slot": "columns",
-                    {column(Column::Hours, Some(names.hours_label), hours_column, hours)}
-                    {column(Column::Minutes, Some(names.minutes_label), minutes_column, minutes)}
-                    {seconds}
-                    {meridiem}
-                }
-            }
-        }
-        TimePickerVariant::Analog => {
-            let marks: Vec<Mark> = match hand() {
-                Hand::Hour => {
-                    let outer = (0..12u32).map(|index| {
-                        let label = if index == 0 { 12 } else { index };
-                        let hour = hour_of(label);
-                        Mark {
-                            index,
-                            inner: false,
-                            label: label.to_string(),
-                            selected: value.is_some_and(|value| value.hour() == hour),
-                            disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
-                        }
-                    });
-                    // A 24-hour face rings 13 to 00 inside 1 to 12.
-                    let inner = (0..12u32).filter(|_| !twelve).map(|index| {
-                        let hour = if index == 0 { 0 } else { index + 12 };
-                        Mark {
-                            index,
-                            inner: true,
-                            label: format!("{hour:02}"),
-                            selected: value.is_some_and(|value| value.hour() == hour),
-                            disabled: !within(at(hour, 0, 0), at(hour, 59, 59)),
-                        }
-                    });
-                    outer.chain(inner).collect()
-                }
-                Hand::Minute => (0..12u32)
-                    .map(|index| {
-                        let minute = index * 5;
-                        Mark {
-                            index,
-                            inner: false,
-                            label: format!("{minute:02}"),
-                            selected: value.is_some_and(|value| value.minute() == minute),
-                            disabled: minute % u32::from(step) != 0
-                                || !within(at(base.hour(), minute, 0), at(base.hour(), minute, 59)),
-                        }
-                    })
-                    .collect(),
-            };
-            let pointer = value.map(|value| {
-                let (degrees, radius) = match hand() {
-                    Hand::Hour => {
-                        let inner = !twelve && !(1..=12).contains(&value.hour());
-                        (
-                            f64::from(value.hour() % 12) * 30.0,
-                            if inner { 26.0 } else { 40.0 },
-                        )
-                    }
-                    Hand::Minute => (f64::from(value.minute()) * 6.0, 40.0),
-                };
-                let style = format!(
-                    "left: 50%; top: 50%; width: 2px; height: {radius}%; transform-origin: 50% 100%; transform: translate(-50%, -100%) rotate({degrees}deg)"
-                );
-                rsx! {
-                    div { "data-slot": "hand", style }
-                }
-            });
-            let hour_text = value
-                .map(|value| {
-                    let hour = match twelve {
-                        true => (value.hour() + 11) % 12 + 1,
-                        false => value.hour(),
-                    };
-                    format!("{hour:02}")
-                })
-                .unwrap_or_else(|| "--".into());
-            let minute_text = value
-                .map(|value| format!("{:02}", value.minute()))
-                .unwrap_or_else(|| "--".into());
-            let halves = twelve.then(|| {
-                rsx! {
-                    button {
-                        r#type: "button",
-                        "data-active": (value.is_some() && !pm).then_some("true"),
-                        tabindex,
-                        onclick: move |_| emit(at(base.hour() % 12, base.minute(), base.second())),
-                        {names.am}
-                    }
-                    button {
-                        r#type: "button",
-                        "data-active": (value.is_some() && pm).then_some("true"),
-                        tabindex,
-                        onclick: move |_| emit(at(base.hour() % 12 + 12, base.minute(), base.second())),
-                        {names.pm}
-                    }
-                }
-            });
-            // The face is a slider over the hand it shows: the arrows step an
-            // hour, or `step` minutes, past what `min` and `max` rule out; Enter
-            // moves from the hour to the minute.
-            let face_keydown = move |event: KeyboardEvent| {
-                let delta: i64 = match event.key() {
-                    Key::ArrowUp | Key::ArrowRight => 1,
-                    Key::ArrowDown | Key::ArrowLeft => -1,
-                    Key::Enter => {
-                        event.prevent_default();
-                        if hand() == Hand::Hour {
-                            hand.set(Hand::Minute);
-                        }
-                        return;
-                    }
-                    _ => return,
-                };
-                event.prevent_default();
-                let step = i64::from(step);
-                let mut next = base;
-                for _ in 0..60 {
-                    let (candidate, open) = match hand() {
-                        Hand::Hour => {
-                            let hour = (i64::from(next.hour()) + delta).rem_euclid(24) as u32;
-                            (
-                                at(hour, next.minute(), 0),
-                                within(at(hour, 0, 0), at(hour, 59, 59)),
-                            )
-                        }
-                        Hand::Minute => {
-                            let minute = i64::from(next.minute());
-                            // Off the step, the first press lands on it.
-                            let snapped = match delta > 0 {
-                                true => (minute / step + 1) * step,
-                                false => (minute + step - 1) / step * step - step,
-                            };
-                            let minute = snapped.rem_euclid(60) as u32;
-                            (
-                                at(next.hour(), minute, 0),
-                                within(at(next.hour(), minute, 0), at(next.hour(), minute, 59)),
-                            )
-                        }
-                    };
-                    next = candidate;
-                    if open {
-                        emit(next);
-                        return;
-                    }
-                }
-            };
-            let (face_label, face_text, face_now, face_max) = match hand() {
-                Hand::Hour => (
-                    names.hours_label,
-                    hour_text.clone(),
-                    value.map(|value| value.hour()),
-                    23,
-                ),
-                Hand::Minute => (
-                    names.minutes_label,
-                    minute_text.clone(),
-                    value.map(|value| value.minute()),
-                    59,
-                ),
-            };
-            rsx! {
-                div { "data-slot": "readout",
-                    button {
-                        r#type: "button",
-                        "aria-label": names.hours_label,
-                        "data-active": (hand() == Hand::Hour).then_some("true"),
-                        tabindex,
-                        onclick: move |_| hand.set(Hand::Hour),
-                        "{hour_text}"
-                    }
-                    span { ":" }
-                    button {
-                        r#type: "button",
-                        "aria-label": names.minutes_label,
-                        "data-active": (hand() == Hand::Minute).then_some("true"),
-                        tabindex,
-                        onclick: move |_| hand.set(Hand::Minute),
-                        "{minute_text}"
-                    }
-                    {halves}
-                }
-                div {
-                    "data-slot": "face",
-                    role: "slider",
-                    tabindex,
-                    "aria-label": face_label,
-                    "aria-valuetext": face_text,
-                    "aria-valuenow": face_now,
-                    "aria-valuemin": 0,
-                    "aria-valuemax": face_max,
-                    onkeydown: face_keydown,
-                    {pointer}
-                    div {
-                        "data-slot": "pivot",
-                        style: "left: 50%; top: 50%; width: 6px; height: 6px; border-radius: 50%; transform: translate(-50%, -50%)",
-                    }
-                    ClockMarks { hand: hand(), marks, onpick: pick_mark }
-                }
-            }
-        }
+    let body = match props.variant {
+        TimePickerVariant::Digital => clock.digital_view(
+            [
+                hours_column,
+                minutes_column,
+                seconds_column,
+                meridiem_column,
+            ],
+            active,
+            focus_request,
+            pick,
+        ),
+        TimePickerVariant::Analog => clock.analog_view(pick_mark),
     };
 
     let states: Input<States> = props

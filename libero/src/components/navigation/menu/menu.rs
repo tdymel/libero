@@ -11,7 +11,8 @@ use crate::{
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, Side, TYPEAHEAD_RESET,
-        typeahead_match, use_dismiss, use_element, use_popover, use_theme, use_typeahead,
+        Typeahead, typeahead_match, use_dismiss, use_element, use_popover, use_theme,
+        use_typeahead,
     },
     platform::{ElementApi, TimerSubscription, timer},
     sx::{StaticSx, sx},
@@ -368,6 +369,196 @@ impl Level {
             self.close_all.call(true);
         }
     }
+
+    /// The keys on item `index`. `opens` says it has a submenu that is enabled.
+    fn item_keydown(
+        self,
+        event: KeyboardEvent,
+        index: usize,
+        opens: bool,
+        typeahead: &Typeahead,
+        labels: &[Option<String>],
+        hover: &HoverDelay,
+    ) {
+        match event.key() {
+            Key::ArrowDown => {
+                event.prevent_default();
+                self.step(index, true);
+            }
+            Key::ArrowUp => {
+                event.prevent_default();
+                self.step(index, false);
+            }
+            Key::Home => {
+                event.prevent_default();
+                self.focus(0);
+            }
+            Key::End => {
+                event.prevent_default();
+                self.focus(self.len - 1);
+            }
+            Key::ArrowRight if opens => {
+                event.prevent_default();
+                hover.cancel();
+                self.enter_submenu(index);
+            }
+            // Closes this submenu only, and focus goes back to the item that
+            // opened it. On the root it is the menubar's.
+            Key::ArrowLeft if self.depth > 0 => {
+                event.prevent_default();
+                self.dismiss.dismiss();
+            }
+            // Nothing here answers these, so they go up - at any depth for
+            // ArrowRight, the root only for ArrowLeft.
+            Key::ArrowLeft | Key::ArrowRight if self.on_edge.is_some() => {
+                event.prevent_default();
+                if let Some(on_edge) = self.on_edge {
+                    on_edge.call(match event.key() {
+                        Key::ArrowLeft => MenuEdge::Previous,
+                        _ => MenuEdge::Next,
+                    });
+                }
+            }
+            Key::Tab => self.tab_out(),
+            Key::Character(ref text) if !has_shortcut_modifier(&event) => {
+                let Some(ch) = text.chars().next() else {
+                    return;
+                };
+                // A space mid-query is part of "save as". Otherwise it is left
+                // alone, and the button turns it into a click.
+                if ch == ' ' && !typeahead.is_typing() {
+                    return;
+                }
+                let query = typeahead.push(ch);
+                let found = typeahead_match(labels.len(), Some(index), &query, |row| {
+                    labels[row].as_deref()
+                });
+                if ch == ' ' || found.is_some() {
+                    event.prevent_default();
+                }
+                if let Some(row) = found {
+                    self.focus(row);
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// Remembers where focus returns to, and focuses the requested item.
+fn use_level_focus(level: Level, open: bool, placed: bool, request: u64, initial: MenuFocus) {
+    let (floating, dismiss, len) = (level.floating, level.dismiss, level.len);
+    // Remembered on the opening edge, before anything has moved focus: focus
+    // only enters the box once it is placed, which is a measurement later.
+    // For the root that is the trigger; for a submenu, its item in the parent.
+    use_effect(use_reactive!(|(open,)| {
+        let (mut active, mut open_child) = (level.active, level.open_child);
+        match open {
+            true => dismiss.focus_return().remember_active(),
+            false => {
+                active.set(None);
+                open_child.set(None);
+            }
+        }
+    }));
+
+    // Focuses the requested item once the box is placed - `focus()` on the
+    // pre-placement `visibility: hidden` box answers `Ok` and moves nothing.
+    // A request only counts while it is newer than the last one handled, so a
+    // submenu the pointer opened does not steal focus from its parent item.
+    let mut seen = use_signal(|| request);
+    use_effect(use_reactive!(|(open, placed, request, len)| {
+        // Read first, branch second: this subscribes the effect to a remount.
+        let mounted = floating.mount_token().is_some();
+        if !open || !placed || !mounted || len == 0 || request <= *seen.peek() {
+            return;
+        }
+        seen.set(request);
+        let index = match initial {
+            MenuFocus::First => 0,
+            MenuFocus::Last => len - 1,
+        };
+        // Out of this dispatch: the click that opened the menu ends by
+        // focusing the trigger.
+        spawn(async move { level.focus(index) });
+    }));
+}
+
+/// The pointer resting on an item. The timer's callback runs outside every
+/// scope - and on the web with no runtime at all - so it only records what to
+/// do, in a root-owned signal, and an effect does it
+/// ([[codebase/platform-timer]]).
+#[derive(Clone)]
+struct HoverDelay {
+    fire: Signal<Option<HoverAction>>,
+    timer: Rc<RefCell<Option<Box<dyn TimerSubscription>>>>,
+    delay: Duration,
+}
+
+impl HoverDelay {
+    fn schedule(&self, action: HoverAction) {
+        let fire = self.fire;
+        // Replacing the subscription drops the old one, which cancels it.
+        *self.timer.borrow_mut() = timer().map(|timer| {
+            timer.after(
+                self.delay,
+                Box::new(move || {
+                    let mut fire = fire;
+                    fire.set(Some(action));
+                }),
+            )
+        });
+    }
+
+    fn cancel(&self) {
+        self.timer.borrow_mut().take();
+    }
+
+    /// The pointer entered item `index`, which opens submenu `opens`.
+    fn enter(&self, level: Level, index: usize, opens: Option<usize>) {
+        self.cancel();
+        let expanded = *level.open_child.peek();
+        match expanded {
+            // Another item's submenu is open: wait, so a pointer crossing this
+            // item on its way into that submenu does not close it.
+            Some(open) if open != index => self.schedule(HoverAction {
+                focus: index,
+                open: opens,
+            }),
+            open => {
+                level.focus(index);
+                if opens.is_some() && open != opens {
+                    self.schedule(HoverAction {
+                        focus: index,
+                        open: opens,
+                    });
+                }
+            }
+        }
+    }
+}
+
+fn use_hover_delay(level: Level, delay: Duration) -> HoverDelay {
+    let fire = use_hook(|| Signal::new_in_scope(None::<HoverAction>, ScopeId::ROOT));
+    let timer: Rc<RefCell<Option<Box<dyn TimerSubscription>>>> =
+        use_hook(|| Rc::new(RefCell::new(None)));
+    use_drop({
+        let timer = timer.clone();
+        move || {
+            timer.borrow_mut().take();
+            fire.manually_drop();
+        }
+    });
+    use_effect(move || {
+        let Some(action) = fire() else {
+            return;
+        };
+        let (mut fire, mut open_child) = (fire, level.open_child);
+        fire.set(None);
+        level.focus(action.focus);
+        open_child.set(action.open);
+    });
+    HoverDelay { fire, timer, delay }
 }
 
 // Every prop is a value or a stable handle; a submenu's `items` never compares
@@ -484,92 +675,14 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         close_on_select: props.close_on_select,
     };
 
-    // Remembered on the opening edge, before anything has moved focus: focus
-    // only enters the box once it is placed, which is a measurement later.
-    // For the root that is the trigger; for a submenu, its item in the parent.
-    use_effect(use_reactive!(|(open,)| {
-        let (mut active, mut open_child) = (active, open_child);
-        match open {
-            true => dismiss.focus_return().remember_active(),
-            false => {
-                active.set(None);
-                open_child.set(None);
-            }
-        }
-    }));
-
-    // Focuses the requested item once the box is placed - `focus()` on the
-    // pre-placement `visibility: hidden` box answers `Ok` and moves nothing.
-    // A request only counts while it is newer than the last one handled, so a
-    // submenu the pointer opened does not steal focus from its parent item.
-    let mut seen = use_signal(|| props.request);
-    let request = props.request;
-    let initial = props.initial;
-    use_effect(use_reactive!(|(open, placed, request, len)| {
-        // Read first, branch second: this subscribes the effect to a remount.
-        let mounted = floating.mount_token().is_some();
-        if !open || !placed || !mounted || len == 0 || request <= *seen.peek() {
-            return;
-        }
-        seen.set(request);
-        let index = match initial {
-            MenuFocus::First => 0,
-            MenuFocus::Last => len - 1,
-        };
-        // Out of this dispatch: the click that opened the menu ends by
-        // focusing the trigger.
-        spawn(async move { level.focus(index) });
-    }));
-
-    // The pointer resting on an item. The timer's callback runs outside every
-    // scope - and on the web with no runtime at all - so it only records what
-    // to do, in a root-owned signal, and the effect below does it
-    // ([[codebase/platform-timer]]).
-    let hover_fire = use_hook(|| Signal::new_in_scope(None::<HoverAction>, ScopeId::ROOT));
-    let hover_timer: Rc<RefCell<Option<Box<dyn TimerSubscription>>>> =
-        use_hook(|| Rc::new(RefCell::new(None)));
-    use_drop({
-        let hover_timer = hover_timer.clone();
-        move || {
-            hover_timer.borrow_mut().take();
-            hover_fire.manually_drop();
-        }
-    });
-    use_effect(move || {
-        let Some(action) = hover_fire() else {
-            return;
-        };
-        let mut hover_fire = hover_fire;
-        hover_fire.set(None);
-        level.focus(action.focus);
-        open_child.set(action.open);
-    });
-
-    let delay = Duration::from_millis(theme.menu.submenu_delay.into());
-    let schedule = {
-        let hover_timer = hover_timer.clone();
-        move |action: HoverAction| {
-            // Replacing the subscription drops the old one, which cancels it.
-            *hover_timer.borrow_mut() = timer().map(|timer| {
-                timer.after(
-                    delay,
-                    Box::new(move || {
-                        let mut hover_fire = hover_fire;
-                        hover_fire.set(Some(action));
-                    }),
-                )
-            });
-        }
-    };
-    let cancel = {
-        let hover_timer = hover_timer.clone();
-        move || {
-            hover_timer.borrow_mut().take();
-        }
-    };
+    use_level_focus(level, open, placed, props.request, props.initial);
+    let hover = use_hover_delay(
+        level,
+        Duration::from_millis(theme.menu.submenu_delay.into()),
+    );
     let cancel_callback = use_callback({
-        let cancel = cancel.clone();
-        move |()| cancel()
+        let hover = hover.clone();
+        move |()| hover.cancel()
     });
 
     // Labels for typeahead, `None` for an item it must skip.
@@ -613,112 +726,25 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
             submenus.push((index, items, anchor));
         }
         let is_expanded = has_submenu && expanded == Some(index);
+        let opens = (has_submenu && !disabled).then_some(index);
 
         let onkeydown = {
-            let typeahead = typeahead.clone();
-            let labels = labels.clone();
-            let cancel = cancel.clone();
+            let (typeahead, labels, hover) = (typeahead.clone(), labels.clone(), hover.clone());
             move |event: KeyboardEvent| {
-                match event.key() {
-                    Key::ArrowDown => {
-                        event.prevent_default();
-                        level.step(index, true);
-                    }
-                    Key::ArrowUp => {
-                        event.prevent_default();
-                        level.step(index, false);
-                    }
-                    Key::Home => {
-                        event.prevent_default();
-                        level.focus(0);
-                    }
-                    Key::End => {
-                        event.prevent_default();
-                        level.focus(level.len - 1);
-                    }
-                    Key::ArrowRight if has_submenu && !disabled => {
-                        event.prevent_default();
-                        cancel();
-                        level.enter_submenu(index);
-                    }
-                    // Closes this submenu only, and focus goes back to the
-                    // item that opened it. On the root it is the menubar's.
-                    Key::ArrowLeft if level.depth > 0 => {
-                        event.prevent_default();
-                        level.dismiss.dismiss();
-                    }
-                    // Nothing here answers these, so they go up - at any
-                    // depth for ArrowRight, the root only for ArrowLeft.
-                    Key::ArrowLeft | Key::ArrowRight if level.on_edge.is_some() => {
-                        event.prevent_default();
-                        if let Some(on_edge) = level.on_edge {
-                            on_edge.call(match event.key() {
-                                Key::ArrowLeft => MenuEdge::Previous,
-                                _ => MenuEdge::Next,
-                            });
-                        }
-                    }
-                    Key::Tab => level.tab_out(),
-                    Key::Character(ref text) if !has_shortcut_modifier(&event) => {
-                        let Some(ch) = text.chars().next() else {
-                            return;
-                        };
-                        // A space mid-query is part of "save as". Otherwise it
-                        // is left alone, and the button turns it into a click.
-                        if ch == ' ' && !typeahead.is_typing() {
-                            return;
-                        }
-                        let query = typeahead.push(ch);
-                        let found = typeahead_match(labels.len(), Some(index), &query, |row| {
-                            labels[row].as_deref()
-                        });
-                        if ch == ' ' || found.is_some() {
-                            event.prevent_default();
-                        }
-                        if let Some(row) = found {
-                            level.focus(row);
-                        }
-                    }
-                    _ => {}
-                }
+                level.item_keydown(event, index, opens.is_some(), &typeahead, &labels, &hover)
             }
         };
-
         let onmouseenter = {
-            let schedule = schedule.clone();
-            let cancel = cancel.clone();
-            move |_: MouseEvent| {
-                cancel();
-                let opens = (has_submenu && !disabled).then_some(index);
-                let expanded = *open_child.peek();
-                match expanded {
-                    // Another item's submenu is open: wait, so a pointer
-                    // crossing this item on its way into that submenu does not
-                    // close it.
-                    Some(open) if open != index => schedule(HoverAction {
-                        focus: index,
-                        open: opens,
-                    }),
-                    open => {
-                        level.focus(index);
-                        if opens.is_some() && open != opens {
-                            schedule(HoverAction {
-                                focus: index,
-                                open: opens,
-                            });
-                        }
-                    }
-                }
-            }
+            let hover = hover.clone();
+            move |_: MouseEvent| hover.enter(level, index, opens)
         };
-
         let onclick = {
-            let cancel = cancel.clone();
+            let hover = hover.clone();
             move |_: MouseEvent| {
                 if disabled {
                     return;
                 }
-                cancel();
+                hover.cancel();
                 level.choose(index, on_select, has_submenu);
             }
         };
@@ -757,47 +783,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         }
     };
 
-    fn draw(
-        entries: &[MenuEntry],
-        level_id: &str,
-        index: &mut usize,
-        group: &mut usize,
-        draw_item: &mut dyn FnMut(&MenuItem, usize) -> Element,
-    ) -> Vec<Element> {
-        let mut rows = Vec::with_capacity(entries.len());
-        for entry in entries {
-            match entry {
-                MenuEntry::Item(item) => {
-                    rows.push(draw_item(item, *index));
-                    *index += 1;
-                }
-                MenuEntry::Group { label, items } => {
-                    let label_id = format!("{level_id}-group-{group}");
-                    let key = *group;
-                    *group += 1;
-                    let inner = draw(items, level_id, index, group, draw_item);
-                    rows.push(rsx! {
-                        div {
-                            key: "group-{key}",
-                            "role": "group",
-                            "aria-labelledby": "{label_id}",
-                            div { id: "{label_id}", "data-menu-group-label": "", "{label}" }
-                            {inner.into_iter()}
-                        }
-                    });
-                }
-                MenuEntry::Separator => {
-                    let key = rows.len();
-                    rows.push(rsx! {
-                        Divider { key: "separator-{key}", spacing: "4px" }
-                    });
-                }
-            }
-        }
-        rows
-    }
-
-    let rows = draw(
+    let rows = draw_rows(
         &props.items,
         &level_id,
         &mut index,
@@ -824,7 +810,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         let mut attributes = props.attributes.clone();
         attributes.extend(dismiss.floating_events());
         let onpointerenter = props.onpointerenter;
-        let cancel = cancel.clone();
+        let hover = hover.clone();
         menu.element(&floating)
             .attr("id", level_id.clone())
             .attr("role", "menu")
@@ -836,7 +822,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                 }
             })
             // Leaving the box abandons whatever the pointer was waiting on.
-            .event("onmouseleave", move |_: MouseEvent| cancel())
+            .event("onmouseleave", move |_: MouseEvent| hover.cancel())
             .render(HtmlTag::Div, attributes, rsx! { {rows.into_iter()} })
     }));
 
@@ -877,6 +863,48 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
             }
         }
     }
+}
+
+/// A level's rows: items, groups with their labels, separators. `index` and
+/// `group` count on across the nesting.
+fn draw_rows(
+    entries: &[MenuEntry],
+    level_id: &str,
+    index: &mut usize,
+    group: &mut usize,
+    draw_item: &mut dyn FnMut(&MenuItem, usize) -> Element,
+) -> Vec<Element> {
+    let mut rows = Vec::with_capacity(entries.len());
+    for entry in entries {
+        match entry {
+            MenuEntry::Item(item) => {
+                rows.push(draw_item(item, *index));
+                *index += 1;
+            }
+            MenuEntry::Group { label, items } => {
+                let label_id = format!("{level_id}-group-{group}");
+                let key = *group;
+                *group += 1;
+                let inner = draw_rows(items, level_id, index, group, draw_item);
+                rows.push(rsx! {
+                    div {
+                        key: "group-{key}",
+                        "role": "group",
+                        "aria-labelledby": "{label_id}",
+                        div { id: "{label_id}", "data-menu-group-label": "", "{label}" }
+                        {inner.into_iter()}
+                    }
+                });
+            }
+            MenuEntry::Separator => {
+                let key = rows.len();
+                rows.push(rsx! {
+                    Divider { key: "separator-{key}", spacing: "4px" }
+                });
+            }
+        }
+    }
+    rows
 }
 
 // Shift is part of ordinary typing; the rest mark a browser or OS shortcut

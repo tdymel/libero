@@ -8,11 +8,12 @@ use crate::{
         ActionIcon, ClassList, HtmlTag, Input, States, Variant, common::focus_ring_sx,
         layout::use_box,
     },
-    hooks::{use_element, use_theme},
+    hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DatePickerDefaults, Size, SizeCss,
+        CalendarVariant, DATE_PICKER_DAY, DATE_PICKER_FONT_SIZE, DateDefaults, DatePickerDefaults,
+        Size, SizeCss,
     },
 };
 
@@ -335,56 +336,27 @@ pub(super) struct CalendarProps {
     attributes: Vec<Attribute>,
 }
 
-/// The engine every date picker draws: a header, then a day, month or year
-/// view. Non-generic - what is picked arrives as a [`Selection`] of plain
-/// values, so the props compare properly.
-#[component]
-pub(super) fn Calendar(props: CalendarProps) -> Element {
-    let theme = use_theme();
-    let names = &theme.date;
-    let selection = props.selection;
-    let onpick = props.onpick;
-    let columns = props.columns.max(1) as i64;
-    let lowest = props.lowest;
-    let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
-    let focusable = props.focusable;
-    let tabindex = move |stop: bool| if focusable && stop { "0" } else { "-1" };
+/// Where focus goes after the next render. Only moves focus that is already
+/// in the calendar: a click inside a field's dropdown leaves it on the text
+/// input.
+#[derive(Clone, Copy)]
+struct FocusRequest {
+    root: ElementHandle,
+    request: Signal<Option<Focus>>,
+    focusable: bool,
+}
 
-    let today = use_today(props.today);
-    // A new `lowest` remounts the calendar - `DateValue::picker` keys it - so
-    // the view only has to start there.
-    let mut level = use_signal(|| lowest);
-    // Only ever set by paging; until then the view follows the value.
-    let mut paged = use_signal(|| None::<NaiveDate>);
-    // The keyboard's day, and where focus goes after the next render.
-    let mut active = use_signal(|| None::<NaiveDate>);
-    let focus_request = use_signal(|| None::<Focus>);
-    let root = use_element();
-    // Only moves focus that is already in the calendar: a click inside a
-    // field's dropdown leaves it on the text input.
-    let focus_to = move |target: Focus| {
-        if focusable && root.query_selector(":focus").is_ok() {
-            let mut request = focus_request;
+impl FocusRequest {
+    fn to(self, target: Focus) {
+        if self.focusable && self.root.query_selector(":focus").is_ok() {
+            let mut request = self.request;
             request.set(Some(target));
         }
-    };
-    // The day under the mouse while a range waits for its end.
-    let mut hover = use_signal(|| None::<NaiveDate>);
+    }
+}
 
-    let first = first_of_month(
-        paged()
-            .or(selection.anchor())
-            .or(today)
-            .unwrap_or(FALLBACK_MONTH),
-    );
-    let last = add_months(first, columns - 1);
-    let shown = move |day: NaiveDate| (first..=last).contains(&first_of_month(day));
-    let tab_stop = active()
-        .filter(|day| shown(*day))
-        .or(selection.anchor().filter(|day| shown(*day)))
-        .or(today.filter(|day| shown(*day)))
-        .unwrap_or(first);
-
+fn use_focus_request(root: ElementHandle, focusable: bool) -> FocusRequest {
+    let focus_request = use_signal(|| None::<Focus>);
     // Runs after the render that drew the target, so it exists. A level change
     // replaces the heading and the cells, which would leave focus on `body`.
     use_effect(move || {
@@ -401,73 +373,125 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             .query_selector(&selector)
             .and_then(|element| element.focus());
     });
+    FocusRequest {
+        root,
+        request: focus_request,
+        focusable,
+    }
+}
 
-    let first_weekday = names.first_weekday.num_days_from_monday() as usize;
-    let column = move |day: NaiveDate| {
-        ((day.weekday().num_days_from_monday() as usize + 7 - first_weekday) % 7) as i64
-    };
-    let day_disabled = move |day: NaiveDate| {
-        min.is_some_and(|min| day < min)
-            || max.is_some_and(|max| day > max)
-            || exclude_date.is_some_and(|exclude| exclude.call(day))
-    };
+/// What the keys and the views of every level read, for one render.
+#[derive(Clone, Copy)]
+struct View {
+    names: &'static DateDefaults,
+    selection: Selection,
+    onpick: EventHandler<NaiveDate>,
+    lowest: DateLevel,
+    level: Signal<DateLevel>,
+    /// Only ever set by paging; until then the view follows the value.
+    paged: Signal<Option<NaiveDate>>,
+    /// The keyboard's day.
+    active: Signal<Option<NaiveDate>>,
+    focus: FocusRequest,
+    /// The first and last month shown.
+    first: NaiveDate,
+    last: NaiveDate,
+    columns: i64,
+    /// The first year of the decade `first` is in.
+    decade: i32,
+    today: Option<NaiveDate>,
+    min: Option<NaiveDate>,
+    max: Option<NaiveDate>,
+    exclude_date: Option<Callback<NaiveDate, bool>>,
+    size: Size,
+    focusable: bool,
+}
 
-    let onkeydown = move |event: KeyboardEvent| {
+impl View {
+    fn tabindex(self, stop: bool) -> &'static str {
+        if self.focusable && stop { "0" } else { "-1" }
+    }
+
+    fn day_disabled(self, day: NaiveDate) -> bool {
+        self.min.is_some_and(|min| day < min)
+            || self.max.is_some_and(|max| day > max)
+            || self.exclude_date.is_some_and(|exclude| exclude.call(day))
+    }
+
+    fn nav(self, label: &'static str, disabled: bool, target: NaiveDate, forward: bool) -> Element {
+        let View {
+            size,
+            focusable,
+            paged,
+            ..
+        } = self;
+        rsx! {
+            Nav { label, disabled, target, forward, size, focusable, paged }
+        }
+    }
+
+    /// The day grid's keys, from `tab_stop` in weekday column `column`.
+    fn day_keydown(self, event: KeyboardEvent, tab_stop: NaiveDate, column: i64) {
         let years = if event.modifiers().shift() { 12 } else { 1 };
         let next = match event.key() {
             Key::ArrowLeft => add_days(tab_stop, -1),
             Key::ArrowRight => add_days(tab_stop, 1),
             Key::ArrowUp => add_days(tab_stop, -7),
             Key::ArrowDown => add_days(tab_stop, 7),
-            Key::Home => add_days(tab_stop, -column(tab_stop)),
-            Key::End => add_days(tab_stop, 6 - column(tab_stop)),
+            Key::Home => add_days(tab_stop, -column),
+            Key::End => add_days(tab_stop, 6 - column),
             Key::PageUp => add_months(tab_stop, -years),
             Key::PageDown => add_months(tab_stop, years),
             _ => return,
         };
         event.prevent_default();
+        let (mut paged, mut active) = (self.paged, self.active);
         let month = first_of_month(next);
-        if month < first {
+        if month < self.first {
             paged.set(Some(month));
-        } else if month > last {
-            paged.set(Some(add_months(month, 1 - columns)));
+        } else if month > self.last {
+            paged.set(Some(add_months(month, 1 - self.columns)));
         }
         active.set(Some(next));
-        focus_to(Focus::Date(next));
-    };
+        self.focus.to(Focus::Date(next));
+    }
 
-    // The month and year views: a grid three wide, one cell a month or a
-    // year, with one tab stop. A step off the shown year or decade pages it.
-    let decade = first.year() - first.year().rem_euclid(10);
-    let cell_of = move |day: NaiveDate| match level() {
-        DateLevel::Year => NaiveDate::from_ymd_opt(day.year(), 1, 1).unwrap_or(day),
-        _ => first_of_month(day),
-    };
-    let in_view = move |cell: NaiveDate| match level() {
-        DateLevel::Year => (decade..decade + 10).contains(&cell.year()),
-        _ => cell.year() == first.year(),
-    };
-    let cell_stop = [active(), selection.anchor(), today]
-        .into_iter()
-        .flatten()
-        .map(cell_of)
-        .find(|cell| in_view(*cell))
-        .unwrap_or_else(|| {
-            let year = if level() == DateLevel::Year {
-                decade
-            } else {
-                first.year()
-            };
-            NaiveDate::from_ymd_opt(year, 1, 1).unwrap_or(first)
-        });
-    let cell_keydown = move |event: KeyboardEvent| {
-        let (months_per_cell, cells_per_page, column) = match level() {
+    /// The month and year views' one tab stop: a grid three wide, one cell a
+    /// month or a year.
+    fn cell_stop(self) -> NaiveDate {
+        let level = (self.level)();
+        let cell_of = |day: NaiveDate| match level {
+            DateLevel::Year => NaiveDate::from_ymd_opt(day.year(), 1, 1).unwrap_or(day),
+            _ => first_of_month(day),
+        };
+        let in_view = |cell: NaiveDate| match level {
+            DateLevel::Year => (self.decade..self.decade + 10).contains(&cell.year()),
+            _ => cell.year() == self.first.year(),
+        };
+        [(self.active)(), self.selection.anchor(), self.today]
+            .into_iter()
+            .flatten()
+            .map(cell_of)
+            .find(|cell| in_view(*cell))
+            .unwrap_or_else(|| {
+                let year = if level == DateLevel::Year {
+                    self.decade
+                } else {
+                    self.first.year()
+                };
+                NaiveDate::from_ymd_opt(year, 1, 1).unwrap_or(self.first)
+            })
+    }
+
+    /// A step off the shown year or decade pages it.
+    fn cell_keydown(self, event: KeyboardEvent, cell_stop: NaiveDate) {
+        let (months_per_cell, cells_per_page, column) = match (self.level)() {
             DateLevel::Day => return,
             DateLevel::Month => (1, 12, i64::from(cell_stop.month0() % 3)),
             DateLevel::Year => (
                 12,
                 10,
-                i64::from((cell_stop.year() - decade + 1).rem_euclid(3)),
+                i64::from((cell_stop.year() - self.decade + 1).rem_euclid(3)),
             ),
         };
         let cells = match event.key() {
@@ -482,11 +506,357 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
             _ => return,
         };
         event.prevent_default();
+        let (mut paged, mut active) = (self.paged, self.active);
         let next = add_months(cell_stop, cells * months_per_cell);
         paged.set(Some(next));
         active.set(Some(next));
-        focus_to(Focus::Date(next));
+        self.focus.to(Focus::Date(next));
+    }
+
+    /// The mini variant: one row of `strip.days` days from its own first day.
+    /// The buttons page it; an arrow key past an end slides it.
+    fn strip_view(self, strip: Strip) -> Element {
+        let View {
+            names,
+            selection,
+            onpick,
+            today,
+            min,
+            max,
+            mut paged,
+            mut active,
+            ..
+        } = self;
+        let Strip {
+            start,
+            end,
+            days,
+            stop,
+        } = strip;
+        let cell = move |day: NaiveDate| {
+            let (picked, _) = selection.marks(day, None);
+            rsx! {
+                div {
+                    key: "{day}",
+                    role: "gridcell",
+                    "aria-selected": picked.to_string(),
+                    button {
+                        r#type: "button",
+                        "data-slot": "day",
+                        "data-date": "{day}",
+                        "data-today": (today == Some(day)).then_some("true"),
+                        "data-selected": picked.then_some("true"),
+                        "aria-label": format_date(day, names.format, names),
+                        disabled: self.day_disabled(day),
+                        tabindex: self.tabindex(day == stop),
+                        onclick: move |_| {
+                            // Pinned, so the new value does not move the row.
+                            paged.set(Some(start));
+                            active.set(Some(day));
+                            onpick.call(day);
+                        },
+                        span { "data-slot": "month", {format_date(day, "MMM", names)} }
+                        span { "{day.day()}" }
+                    }
+                }
+            }
+        };
+        rsx! {
+            div { "data-slot": "strip",
+                {self.nav(names.previous_days, min.is_some_and(|min| add_days(start, -1) < min), add_days(start, -days), false)}
+                // The slot a field's dropdown looks for to hand focus in.
+                div { "data-slot": "months",
+                    div {
+                        role: "grid",
+                        "aria-label": format_date(start, names.month_format, names),
+                        onkeydown: move |event| strip.keydown(self, event),
+                        div { role: "row",
+                            for offset in 0..days {
+                                {cell(add_days(start, offset))}
+                            }
+                        }
+                    }
+                }
+                {self.nav(names.next_days, max.is_some_and(|max| add_days(end, 1) > max), add_days(start, days), true)}
+            }
+        }
+    }
+
+    fn month_view(self, cell_stop: NaiveDate) -> Element {
+        let View {
+            names,
+            selection,
+            onpick,
+            lowest,
+            mut level,
+            mut paged,
+            mut active,
+            focus,
+            first,
+            today,
+            min,
+            max,
+            ..
+        } = self;
+        let year = first.year();
+        let cell = move |index: u32| {
+            let Some(month) = NaiveDate::from_ymd_opt(year, index + 1, 1) else {
+                return rsx! {};
+            };
+            let month_end = add_days(add_months(month, 1), -1);
+            let disabled =
+                min.is_some_and(|min| month_end < min) || max.is_some_and(|max| month > max);
+            let picked = selection
+                .picks()
+                .into_iter()
+                .flatten()
+                .any(|day| first_of_month(day) == month);
+            rsx! {
+                button {
+                    key: "{month}",
+                    r#type: "button",
+                    "data-slot": "cell",
+                    "data-date": "{month}",
+                    "data-selected": picked.then_some("true"),
+                    "data-today": today.is_some_and(|today| first_of_month(today) == month).then_some("true"),
+                    disabled,
+                    tabindex: self.tabindex(month == cell_stop),
+                    onclick: move |_| {
+                        if lowest == DateLevel::Month {
+                            onpick.call(month);
+                        } else {
+                            paged.set(Some(month));
+                            level.set(DateLevel::Day);
+                            active.set(Some(month));
+                            focus.to(Focus::Date(month));
+                        }
+                    },
+                    {names.months_short[index as usize]}
+                }
+            }
+        };
+        rsx! {
+            div { "data-slot": "header",
+                {self.nav(names.previous_year, min.is_some_and(|min| year <= min.year()), add_months(first, -12), false)}
+                button {
+                    r#type: "button",
+                    "data-slot": "title",
+                    "aria-live": "polite",
+                    tabindex: self.tabindex(true),
+                    onclick: move |_| {
+                        level.set(DateLevel::Year);
+                        focus.to(Focus::Title);
+                    },
+                    "{year}"
+                }
+                {self.nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), true)}
+            }
+            div { "data-slot": "cells", onkeydown: move |event| self.cell_keydown(event, cell_stop),
+                for index in 0..12 {
+                    {cell(index)}
+                }
+            }
+        }
+    }
+
+    fn year_view(self, cell_stop: NaiveDate) -> Element {
+        let View {
+            names,
+            selection,
+            onpick,
+            lowest,
+            mut level,
+            mut paged,
+            mut active,
+            focus,
+            first,
+            decade,
+            today,
+            min,
+            max,
+            ..
+        } = self;
+        let cell = move |offset: i32| {
+            let Some(start) = NaiveDate::from_ymd_opt(decade + offset, first.month(), 1) else {
+                return rsx! {};
+            };
+            let shown_year = start.year();
+            let year_start = NaiveDate::from_ymd_opt(shown_year, 1, 1).expect("a real day");
+            let disabled = min.is_some_and(|min| shown_year < min.year())
+                || max.is_some_and(|max| shown_year > max.year());
+            let picked = selection
+                .picks()
+                .into_iter()
+                .flatten()
+                .any(|day| day.year() == shown_year);
+            let outside = !(0..10).contains(&offset);
+            rsx! {
+                button {
+                    key: "{shown_year}",
+                    r#type: "button",
+                    "data-slot": "cell",
+                    "data-date": "{year_start}",
+                    "data-outside": outside.then_some("true"),
+                    "data-selected": picked.then_some("true"),
+                    "data-today": today.is_some_and(|today| today.year() == shown_year).then_some("true"),
+                    disabled,
+                    tabindex: self.tabindex(year_start == cell_stop),
+                    onclick: move |_| {
+                        if lowest == DateLevel::Year {
+                            onpick.call(year_start);
+                        } else {
+                            paged.set(Some(start));
+                            level.set(DateLevel::Month);
+                            active.set(Some(start));
+                            focus.to(Focus::Date(start));
+                        }
+                    },
+                    "{shown_year}"
+                }
+            }
+        };
+        rsx! {
+            div { "data-slot": "header",
+                {self.nav(names.previous_decade, min.is_some_and(|min| decade <= min.year()), add_months(first, -120), false)}
+                button {
+                    r#type: "button",
+                    "data-slot": "title",
+                    "aria-live": "polite",
+                    disabled: true,
+                    "{decade} – {decade + 9}"
+                }
+                {self.nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), true)}
+            }
+            div { "data-slot": "cells", onkeydown: move |event| self.cell_keydown(event, cell_stop),
+                for offset in -1..11 {
+                    {cell(offset)}
+                }
+            }
+        }
+    }
+}
+
+/// The mini variant's row of days.
+#[derive(Clone, Copy)]
+struct Strip {
+    start: NaiveDate,
+    end: NaiveDate,
+    days: i64,
+    /// The row's one tab stop.
+    stop: NaiveDate,
+}
+
+impl Strip {
+    fn new(view: View, days: usize) -> Self {
+        let days = days.max(1) as i64;
+        let start = (view.paged)()
+            .or(view.selection.anchor())
+            .or(view.today)
+            .unwrap_or(FALLBACK_MONTH);
+        let end = add_days(start, days - 1);
+        let in_strip = |day: NaiveDate| (start..=end).contains(&day);
+        let stop = [(view.active)(), view.selection.anchor(), view.today]
+            .into_iter()
+            .flatten()
+            .find(|day| in_strip(*day))
+            .unwrap_or(start);
+        Self {
+            start,
+            end,
+            days,
+            stop,
+        }
+    }
+
+    fn keydown(self, view: View, event: KeyboardEvent) {
+        let next = match event.key() {
+            Key::ArrowLeft => add_days(self.stop, -1),
+            Key::ArrowRight => add_days(self.stop, 1),
+            Key::Home => self.start,
+            Key::End => self.end,
+            Key::PageUp => add_days(self.stop, -self.days),
+            Key::PageDown => add_days(self.stop, self.days),
+            _ => return,
+        };
+        event.prevent_default();
+        // A step off an end moves the row as far: an arrow a day, a page a
+        // page.
+        let start = match (self.start..=self.end).contains(&next) {
+            true => self.start,
+            false => add_days(self.start, (next - self.stop).num_days()),
+        };
+        let (mut paged, mut active) = (view.paged, view.active);
+        paged.set(Some(start));
+        active.set(Some(next));
+        view.focus.to(Focus::Date(next));
+    }
+}
+
+/// The engine every date picker draws: a header, then a day, month or year
+/// view. Non-generic - what is picked arrives as a [`Selection`] of plain
+/// values, so the props compare properly.
+#[component]
+pub(super) fn Calendar(props: CalendarProps) -> Element {
+    let theme = use_theme();
+    let names = &theme.date;
+    let selection = props.selection;
+    let onpick = props.onpick;
+    let columns = props.columns.max(1) as i64;
+    let lowest = props.lowest;
+    let (min, max, exclude_date) = (props.min, props.max, props.exclude_date.0);
+    let focusable = props.focusable;
+
+    let today = use_today(props.today);
+    // A new `lowest` remounts the calendar - `DateValue::picker` keys it - so
+    // the view only has to start there.
+    let mut level = use_signal(|| lowest);
+    let mut paged = use_signal(|| None::<NaiveDate>);
+    let active = use_signal(|| None::<NaiveDate>);
+    let root = use_element();
+    let focus = use_focus_request(root, focusable);
+    // The day under the mouse while a range waits for its end.
+    let mut hover = use_signal(|| None::<NaiveDate>);
+
+    let first = first_of_month(
+        paged()
+            .or(selection.anchor())
+            .or(today)
+            .unwrap_or(FALLBACK_MONTH),
+    );
+    let last = add_months(first, columns - 1);
+    let view = View {
+        names,
+        selection,
+        onpick,
+        lowest,
+        level,
+        paged,
+        active,
+        focus,
+        first,
+        last,
+        columns,
+        decade: first.year() - first.year().rem_euclid(10),
+        today,
+        min,
+        max,
+        exclude_date,
+        size: props.size,
+        focusable,
     };
+    let shown = move |day: NaiveDate| (first..=last).contains(&first_of_month(day));
+    let tab_stop = active()
+        .filter(|day| shown(*day))
+        .or(selection.anchor().filter(|day| shown(*day)))
+        .or(today.filter(|day| shown(*day)))
+        .unwrap_or(first);
+
+    let first_weekday = names.first_weekday.num_days_from_monday() as usize;
+    let column = move |day: NaiveDate| {
+        ((day.weekday().num_days_from_monday() as usize + 7 - first_weekday) % 7) as i64
+    };
+    let onkeydown = move |event: KeyboardEvent| view.day_keydown(event, tab_stop, column(tab_stop));
+    let cell_stop = view.cell_stop();
 
     let awaits_end = selection.awaits_end();
     // Read only while a range waits, so a plain picker never re-renders on
@@ -535,120 +905,32 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
         }
     };
 
-    let size = props.size;
-    let nav = move |label: &'static str, disabled: bool, target: NaiveDate, forward: bool| {
-        rsx! {
-            Nav { label, disabled, target, forward, size, focusable, paged }
-        }
-    };
-
-    // The mini variant: one row of `days` days from its own first day. The
-    // buttons page it; an arrow key past an end slides it.
-    let mini = props.variant == CalendarVariant::Mini;
-    let strip_days = props.days.max(1) as i64;
-    let strip_start = paged()
-        .or(selection.anchor())
-        .or(today)
-        .unwrap_or(FALLBACK_MONTH);
-    let strip_end = add_days(strip_start, strip_days - 1);
-    let in_strip = move |day: NaiveDate| (strip_start..=strip_end).contains(&day);
-    let strip_stop = [active(), selection.anchor(), today]
-        .into_iter()
-        .flatten()
-        .find(|day| in_strip(*day))
-        .unwrap_or(strip_start);
-    let strip_keydown = move |event: KeyboardEvent| {
-        let next = match event.key() {
-            Key::ArrowLeft => add_days(strip_stop, -1),
-            Key::ArrowRight => add_days(strip_stop, 1),
-            Key::Home => strip_start,
-            Key::End => strip_end,
-            Key::PageUp => add_days(strip_stop, -strip_days),
-            Key::PageDown => add_days(strip_stop, strip_days),
-            _ => return,
-        };
-        event.prevent_default();
-        // A step off an end moves the row as far: an arrow a day, a page a
-        // page.
-        let start = match in_strip(next) {
-            true => strip_start,
-            false => add_days(strip_start, (next - strip_stop).num_days()),
-        };
-        paged.set(Some(start));
-        active.set(Some(next));
-        focus_to(Focus::Date(next));
-    };
-    let strip_cell = move |day: NaiveDate| {
-        let (picked, _) = selection.marks(day, None);
-        rsx! {
-            div {
-                key: "{day}",
-                role: "gridcell",
-                "aria-selected": picked.to_string(),
-                button {
-                    r#type: "button",
-                    "data-slot": "day",
-                    "data-date": "{day}",
-                    "data-today": (today == Some(day)).then_some("true"),
-                    "data-selected": picked.then_some("true"),
-                    "aria-label": format_date(day, names.format, names),
-                    disabled: day_disabled(day),
-                    tabindex: tabindex(day == strip_stop),
-                    onclick: move |_| {
-                        // Pinned, so the new value does not move the row.
-                        paged.set(Some(strip_start));
-                        active.set(Some(day));
-                        onpick.call(day);
-                    },
-                    span { "data-slot": "month", {format_date(day, "MMM", names)} }
-                    span { "{day.day()}" }
-                }
-            }
-        }
-    };
-
     let body = match level() {
-        _ if mini => rsx! {
-            div { "data-slot": "strip",
-                {nav(names.previous_days, min.is_some_and(|min| add_days(strip_start, -1) < min), add_days(strip_start, -strip_days), false)}
-                // The slot a field's dropdown looks for to hand focus in.
-                div { "data-slot": "months",
-                    div {
-                        role: "grid",
-                        "aria-label": format_date(strip_start, names.month_format, names),
-                        onkeydown: strip_keydown,
-                        div { role: "row",
-                            for offset in 0..strip_days {
-                                {strip_cell(add_days(strip_start, offset))}
-                            }
-                        }
-                    }
-                }
-                {nav(names.next_days, max.is_some_and(|max| add_days(strip_end, 1) > max), add_days(strip_start, strip_days), true)}
-            }
-        },
+        _ if props.variant == CalendarVariant::Mini => {
+            view.strip_view(Strip::new(view, props.days))
+        }
         DateLevel::Day => {
             let months: Vec<NaiveDate> =
                 (0..columns).map(|index| add_months(first, index)).collect();
             rsx! {
                 div { "data-slot": "header",
-                    {nav(names.previous_month, min.is_some_and(|min| add_days(first, -1) < min), add_months(first, -1), false)}
+                    {view.nav(names.previous_month, min.is_some_and(|min| add_days(first, -1) < min), add_months(first, -1), false)}
                     for month in months.iter().copied() {
                         button {
                             key: "{month}",
                             r#type: "button",
                             "data-slot": "title",
                             "aria-live": "polite",
-                            tabindex: tabindex(true),
+                            tabindex: view.tabindex(true),
                             onclick: move |_| {
                                 paged.set(Some(month));
                                 level.set(DateLevel::Month);
-                                focus_to(Focus::Title);
+                                focus.to(Focus::Title);
                             },
                             {format_date(month, names.month_format, names)}
                         }
                     }
-                    {nav(names.next_month, max.is_some_and(|max| add_months(last, 1) > max), add_months(first, 1), true)}
+                    {view.nav(names.next_month, max.is_some_and(|max| add_months(last, 1) > max), add_months(first, 1), true)}
                 }
                 div {
                     "data-slot": "months",
@@ -663,126 +945,8 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
                 }
             }
         }
-        DateLevel::Month => {
-            let year = first.year();
-            let cell = move |index: u32| {
-                let Some(month) = NaiveDate::from_ymd_opt(year, index + 1, 1) else {
-                    return rsx! {};
-                };
-                let month_end = add_days(add_months(month, 1), -1);
-                let disabled =
-                    min.is_some_and(|min| month_end < min) || max.is_some_and(|max| month > max);
-                let picked = selection
-                    .picks()
-                    .into_iter()
-                    .flatten()
-                    .any(|day| first_of_month(day) == month);
-                rsx! {
-                    button {
-                        key: "{month}",
-                        r#type: "button",
-                        "data-slot": "cell",
-                        "data-date": "{month}",
-                        "data-selected": picked.then_some("true"),
-                        "data-today": today.is_some_and(|today| first_of_month(today) == month).then_some("true"),
-                        disabled,
-                        tabindex: tabindex(month == cell_stop),
-                        onclick: move |_| {
-                            if lowest == DateLevel::Month {
-                                onpick.call(month);
-                            } else {
-                                paged.set(Some(month));
-                                level.set(DateLevel::Day);
-                                active.set(Some(month));
-                                focus_to(Focus::Date(month));
-                            }
-                        },
-                        {names.months_short[index as usize]}
-                    }
-                }
-            };
-            rsx! {
-                div { "data-slot": "header",
-                    {nav(names.previous_year, min.is_some_and(|min| year <= min.year()), add_months(first, -12), false)}
-                    button {
-                        r#type: "button",
-                        "data-slot": "title",
-                        "aria-live": "polite",
-                        tabindex: tabindex(true),
-                        onclick: move |_| {
-                            level.set(DateLevel::Year);
-                            focus_to(Focus::Title);
-                        },
-                        "{year}"
-                    }
-                    {nav(names.next_year, max.is_some_and(|max| year >= max.year()), add_months(first, 12), true)}
-                }
-                div { "data-slot": "cells", onkeydown: cell_keydown,
-                    for index in 0..12 {
-                        {cell(index)}
-                    }
-                }
-            }
-        }
-        DateLevel::Year => {
-            let cell = move |offset: i32| {
-                let Some(start) = NaiveDate::from_ymd_opt(decade + offset, first.month(), 1) else {
-                    return rsx! {};
-                };
-                let shown_year = start.year();
-                let year_start = NaiveDate::from_ymd_opt(shown_year, 1, 1).expect("a real day");
-                let disabled = min.is_some_and(|min| shown_year < min.year())
-                    || max.is_some_and(|max| shown_year > max.year());
-                let picked = selection
-                    .picks()
-                    .into_iter()
-                    .flatten()
-                    .any(|day| day.year() == shown_year);
-                let outside = !(0..10).contains(&offset);
-                rsx! {
-                    button {
-                        key: "{shown_year}",
-                        r#type: "button",
-                        "data-slot": "cell",
-                        "data-date": "{year_start}",
-                        "data-outside": outside.then_some("true"),
-                        "data-selected": picked.then_some("true"),
-                        "data-today": today.is_some_and(|today| today.year() == shown_year).then_some("true"),
-                        disabled,
-                        tabindex: tabindex(year_start == cell_stop),
-                        onclick: move |_| {
-                            if lowest == DateLevel::Year {
-                                onpick.call(year_start);
-                            } else {
-                                paged.set(Some(start));
-                                level.set(DateLevel::Month);
-                                active.set(Some(start));
-                                focus_to(Focus::Date(start));
-                            }
-                        },
-                        "{shown_year}"
-                    }
-                }
-            };
-            rsx! {
-                div { "data-slot": "header",
-                    {nav(names.previous_decade, min.is_some_and(|min| decade <= min.year()), add_months(first, -120), false)}
-                    button {
-                        r#type: "button",
-                        "data-slot": "title",
-                        "aria-live": "polite",
-                        disabled: true,
-                        "{decade} – {decade + 9}"
-                    }
-                    {nav(names.next_decade, max.is_some_and(|max| decade + 9 >= max.year()), add_months(first, 120), true)}
-                }
-                div { "data-slot": "cells", onkeydown: cell_keydown,
-                    for offset in -1..11 {
-                        {cell(offset)}
-                    }
-                }
-            }
-        }
+        DateLevel::Month => view.month_view(cell_stop),
+        DateLevel::Year => view.year_view(cell_stop),
     };
 
     let states: Input<States> = props
