@@ -403,7 +403,7 @@ pub fn FormGettingStartedPage() -> Element {
                     Code { source: "name" }
                     " only posts. The path's root is checked when the field renders: one rooted at a "
                     "different type than the form's value warns in debug builds and leaves the field "
-                    "unbound. Every bound field re-renders when any part of the value changes."
+                    "unbound."
                 }
             }
         }

@@ -865,8 +865,6 @@ fn activates(event: &KeyboardData, enter: bool) -> bool {
     }
 }
 
-/// A caller's own `aria-describedby` wins outright - ours is dropped rather
-/// than merged, so the caption props become purely visual.
 fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
     attributes
         .iter()
@@ -877,6 +875,8 @@ fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
         })
 }
 
+/// A caller's own `aria-describedby` wins outright - ours is dropped rather
+/// than merged, so the caption props become purely visual.
 fn caller_names_the_description(attributes: &[Attribute]) -> bool {
     attributes
         .iter()

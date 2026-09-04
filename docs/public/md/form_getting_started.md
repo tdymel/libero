@@ -270,5 +270,4 @@ Form {
 A field with a handler of its own is controlled by that handler, as outside a
 form. A plain string `name` only posts. The path's root is checked when the
 field renders: one rooted at a different type than the form's value warns in
-debug builds and leaves the field unbound. Every bound field re-renders when
-any part of the value changes.
+debug builds and leaves the field unbound.

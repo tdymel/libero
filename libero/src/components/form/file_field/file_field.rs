@@ -391,9 +391,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
     let has_files = !value.is_empty();
     // Chips ride inside the control, so they sit one step down the field's
-    // own scale - `xs` has nowhere lower to go. The loader takes the same
-    // step, for the same reason.
-    let chip_size = Size::ALL[size.index().saturating_sub(1)];
+    // own scale. The loader takes the same step, for the same reason.
+    let chip_size = size.step_down();
     // Silent: it sits inside a control that the field's label already names,
     // and `aria-busy` on that control is what says it is waiting.
     let spinner = loading.then(|| rsx! { Loader { size: chip_size } });

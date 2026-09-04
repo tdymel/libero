@@ -397,18 +397,13 @@ mod tests {
     /// takes the `&'static StaticSx` impl, `sx` the `SxSource` one.
     #[test]
     fn a_static_reached_through_either_prop_shares_one_cache_entry() {
+        let entries = || STATIC_SX_CSS.with(|cache| cache.borrow().len());
+
         let framework: &'static StaticSx = &COLOR;
         framework.build();
+        let after_framework = entries();
         SxSource::Static(&COLOR).build();
 
-        let entries = STATIC_SX_CSS.with(|cache| {
-            cache
-                .borrow()
-                .keys()
-                .filter(|key| **key == std::ptr::from_ref::<Sx>(&COLOR) as usize)
-                .count()
-        });
-
-        assert_eq!(entries, 1);
+        assert_eq!(entries(), after_framework);
     }
 }

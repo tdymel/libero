@@ -112,10 +112,11 @@ impl BlitzElement {
 }
 
 impl ElementApi for BlitzElement {
-    // Focus and scrolling take the document mutably. Nothing holds a borrow
-    // while a handler or a spawned task runs - `DioxusDocument::poll` releases
-    // it before polling tasks, and `handle_event` before dispatching - which is
-    // why dioxus's own `NodeHandle::set_focus` borrows the same way.
+    // Focus and scrolling take the document mutably. Called from a handler
+    // that is safe: the borrow is gone by the time it runs. Called from a
+    // spawned task it may not be - Blitz's `EventDriver` holds the document
+    // while dioxus drains those tasks, which is why reads use `try_doc()`.
+    // Unverified for commands; see todo 189.
     fn focus(&self) -> Result<(), PlatformError> {
         self.anchor.doc_mut().set_focus_to(self.node_id);
         Ok(())

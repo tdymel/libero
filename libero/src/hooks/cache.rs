@@ -39,6 +39,7 @@ mod tests {
 
     thread_local! {
         static BUILDS: Cell<usize> = const { Cell::new(0) };
+        static DEP: Cell<u32> = const { Cell::new(1) };
     }
 
     #[component]
@@ -51,24 +52,31 @@ mod tests {
         rsx! { span { "{value}" } }
     }
 
+    /// Reads the dep on every render, so a test can change it between two.
     #[component]
-    fn App(dep: u32) -> Element {
-        rsx! { Cached { dep } }
+    fn App() -> Element {
+        rsx! { Cached { dep: DEP.with(Cell::get) } }
+    }
+
+    fn rerender(dom: &mut VirtualDom) {
+        dom.mark_dirty(ScopeId::APP);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
     }
 
     /// Re-rendering with the same dep must not rebuild; a changed one must.
     #[test]
     fn it_rebuilds_only_when_the_deps_change() {
-        let mut dom = VirtualDom::new_with_props(App, AppProps { dep: 1 });
+        let mut dom = VirtualDom::new(App);
         dom.rebuild_in_place();
         assert_eq!(BUILDS.with(Cell::get), 1);
         assert!(dioxus_ssr::render(&dom).contains("2"));
 
-        dom.mark_dirty(ScopeId::APP);
-        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        rerender(&mut dom);
         assert_eq!(BUILDS.with(Cell::get), 1, "same dep must not rebuild");
 
-        dom.rebuild_in_place();
-        assert!(dioxus_ssr::render(&dom).contains("2"));
+        DEP.with(|dep| dep.set(5));
+        rerender(&mut dom);
+        assert_eq!(BUILDS.with(Cell::get), 2, "a changed dep must rebuild");
+        assert!(dioxus_ssr::render(&dom).contains("10"));
     }
 }

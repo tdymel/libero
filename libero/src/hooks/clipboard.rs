@@ -18,8 +18,10 @@ impl Clipboard {
         let write = clipboard.write_text(text.into());
         let mut copied = self.copied;
         spawn(async move {
-            if write.await.is_ok() {
-                copied.set(true);
+            match write.await {
+                Ok(()) => copied.set(true),
+                // A denied permission, the common failure on the web.
+                Err(_) => crate::utils::warn("clipboard write failed"),
             }
         });
     }
