@@ -41,6 +41,7 @@ mod image;
 mod image_list;
 mod indicator;
 mod kbd;
+mod lightbox;
 mod list;
 mod loader;
 mod mark;
@@ -195,6 +196,10 @@ pub use indicator::{
     IndicatorDefaults, IndicatorSizeLevel,
 };
 pub use kbd::{KBD_BACKGROUND, KBD_BORDER, KBD_COLOR, KBD_FONT_FAMILY, KBD_FONT_SIZE, KbdDefaults};
+pub use lightbox::{
+    LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE, LIGHTBOX_THUMBNAILS_GAP, LIGHTBOX_WIDTH,
+    LightboxDefaults,
+};
 pub use list::{LIST_GAP, LIST_INDENT, ListDefaults};
 pub use loader::{
     LOADER_COLOR, LOADER_KEYFRAMES, LOADER_SIZE, LOADER_SIZE_SCALE, LoaderDefaults, LoaderVariant,

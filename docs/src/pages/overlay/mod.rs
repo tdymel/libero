@@ -1,6 +1,7 @@
 mod drawer;
 mod floating_window;
 mod hover_card;
+mod lightbox;
 mod modal;
 mod overlay_page;
 mod popover;
@@ -10,6 +11,7 @@ mod tooltip;
 pub use drawer::DrawerPage;
 pub use floating_window::FloatingWindowPage;
 pub use hover_card::HoverCardPage;
+pub use lightbox::LightboxPage;
 pub use modal::ModalPage;
 pub use overlay_page::OverlayPage;
 pub use popover::PopoverPage;

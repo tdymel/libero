@@ -134,6 +134,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         qr_code,
         image,
         image_list,
+        lightbox,
         avatar,
         avatar_group,
         kbd,
@@ -224,6 +225,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(spotlight.to_css_declarations());
     declarations.extend(marquee.to_css_declarations());
     declarations.extend(notification.to_css_declarations());
+    declarations.extend(lightbox.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(checkbox.to_css_declarations());
     declarations.extend(radio.to_css_declarations());

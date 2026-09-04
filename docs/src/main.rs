@@ -27,14 +27,14 @@ use pages::{
     DatePickerPage, DialogPage, DividerPage, DrawerPage, FieldsetPage, FileFieldPage, FlexPage,
     FloatPage, FloatingWindowPage, FocusTrapPage, FormGettingStartedPage, FormPage, GettingStarted,
     GridPage, HeaderPage, HoverCardPage, IconPage, ImageListPage, ImagePage, IndicatorPage,
-    KbdPage, ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage, MultiSelectPage,
-    NativeSelectPage, NavLinkPage, NotificationsPage, NumberFieldPage, OverlayPage, PaginationPage,
-    PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage, PinFieldPage, PopoverPage,
-    ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage, ScrollAreaPage, ScrollerPage,
-    SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage, SliderPage, SplitterPage,
-    SpotlightPage, StepperPage, StylingPage, SwitchPage, TablePage, TabsPage, TagsFieldPage,
-    TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage, TitlePage, TooltipPage,
-    TreePage, VisuallyHiddenPage,
+    KbdPage, LightboxPage, ListPage, LoaderPage, MarkPage, MarqueePage, MenuPage, ModalPage,
+    MultiSelectPage, NativeSelectPage, NavLinkPage, NotificationsPage, NumberFieldPage,
+    OverlayPage, PaginationPage, PaperPage, PasswordFieldPage, PerformancePage, PhoneFieldPage,
+    PinFieldPage, PopoverPage, ProgressBarPage, QrCodePage, RadioGroupPage, RangeSliderPage,
+    ScrollAreaPage, ScrollerPage, SegmentedControlPage, SelectPage, SidebarPage, SkeletonPage,
+    SliderPage, SplitterPage, SpotlightPage, StepperPage, StylingPage, SwitchPage, TablePage,
+    TabsPage, TagsFieldPage, TextFieldPage, TextPage, TextareaPage, ThemingPage, TimelinePage,
+    TitlePage, TooltipPage, TreePage, VisuallyHiddenPage,
 };
 
 pub(crate) static LOGO: Asset = asset!("/assets/logo.svg");
@@ -222,6 +222,8 @@ pub(crate) enum Route {
     FloatingWindowPage {},
     #[route("/overlay/hover-card")]
     HoverCardPage {},
+    #[route("/overlay/lightbox")]
+    LightboxPage {},
     #[route("/overlay/modal")]
     ModalPage {},
     #[route("/overlay/overlay")]

@@ -255,6 +255,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::DrawerPage {}, "Drawer"),
                 page(Route::FloatingWindowPage {}, "Floating window"),
                 page(Route::HoverCardPage {}, "HoverCard"),
+                page(Route::LightboxPage {}, "Lightbox"),
                 page(Route::ModalPage {}, "Modal"),
                 page(Route::OverlayPage {}, "Overlay"),
                 page(Route::PopoverPage {}, "Popover"),

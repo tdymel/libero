@@ -2,11 +2,11 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables,
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
         layout::use_box,
     },
-    hooks::{ModalHandle, ModalScope, use_modal, use_theme},
+    hooks::{LightboxItem, LightboxOptions, use_lightbox, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
 };
@@ -47,34 +47,6 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(focus_ring_sx())
 });
 
-// Only rendered while zoomed, so its cursor is a fixed "zoom-out".
-static IMAGE_ZOOM_DIALOG_SX: StaticSx = StaticSx::new(|| {
-    sx().background("transparent")
-        .width("auto")
-        .padding("0")
-        .box_shadow("none")
-});
-
-static ZOOM_OVERLAY_BUTTON_SX: StaticSx = StaticSx::new(|| {
-    sx().display("block")
-        .position("relative")
-        .padding("0")
-        .border_width("0")
-        .background("transparent")
-        .outline("none")
-        .cursor("zoom-out")
-        .focus_visible(focus_ring_sx())
-});
-
-static ZOOM_OVERLAY_IMAGE_SX: StaticSx = StaticSx::new(|| {
-    sx().display("block")
-        .width("auto")
-        .height("auto")
-        .max_width("90vw")
-        .max_height("90vh")
-        .object_fit("contain")
-});
-
 base_props! {
     pub struct ImageProps {
         #[props(into)]
@@ -103,45 +75,19 @@ fn zoom_label(alt: &str, zoomed: bool) -> String {
     }
 }
 
-/// The zoom overlay as its own modal, the way any dialog is built on
-/// [`use_modal`]: `alt` is shared by every opening, the argument is the source
-/// to show enlarged.
-fn use_zoom_modal(alt: String) -> ModalHandle<String> {
-    use_modal(move |s: ModalScope<String>| {
-        let label = zoom_label(&alt, true);
-
-        rsx! {
-            Dialog {
-                aria_label: label.clone(),
-                // The picture itself is the close button.
-                close_button: false,
-                size: "none",
-                sx: &IMAGE_ZOOM_DIALOG_SX,
-                Box {
-                    component: "button",
-                    r#type: "button",
-                    framework_sx: &ZOOM_OVERLAY_BUTTON_SX,
-                    "data-autofocus": true,
-                    aria_label: label,
-                    onclick: move |_| s.close(),
-                    Box {
-                        component: "img",
-                        framework_sx: &ZOOM_OVERLAY_IMAGE_SX,
-                        src: s.args(),
-                        alt: "",
-                        role: "presentation",
-                    }
-                }
-            }
-        }
-    })
-}
-
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
-    // Above the early return, and unconditional: hook slots are positional.
-    let zoom = use_zoom_modal(props.alt.clone());
+    // Above the early return, and unconditional: hook slots are positional. So
+    // every `Image` holds one modal registration, zoomable or not - as the
+    // bespoke zoom modal this replaced did.
+    let zoom = use_lightbox(LightboxOptions {
+        thumbnails: false,
+        captions: false,
+        controls: false,
+        aria_label: (!props.alt.is_empty()).then(|| props.alt.clone()),
+        ..LightboxOptions::default()
+    });
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
@@ -207,7 +153,10 @@ pub fn Image(props: ImageProps) -> Element {
             })
             .render(HtmlTag::Img, props.attributes, ());
     }
-    let zoomed_src = props.zoomed_src.clone().unwrap_or_else(|| src.clone());
+    let zoomed = LightboxItem::new(
+        props.zoomed_src.clone().unwrap_or_else(|| src.clone()),
+        props.alt.clone(),
+    );
     let label = zoom_label(&props.alt, zoom.is_open());
 
     let image = inner_image
@@ -223,7 +172,7 @@ pub fn Image(props: ImageProps) -> Element {
         .attr("aria-pressed", zoom.is_open().to_string())
         .attr("aria-label", label)
         .event("onclick", move |_: Event<MouseData>| {
-            zoom.open_with(zoomed_src.clone());
+            zoom.open_with(zoomed.clone());
         })
         .render(HtmlTag::Button, props.attributes, image)
 }

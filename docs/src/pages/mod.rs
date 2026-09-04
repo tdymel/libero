@@ -35,8 +35,8 @@ pub use navigation::{
     StepperPage, TabsPage, TreePage,
 };
 pub use overlay::{
-    DrawerPage, FloatingWindowPage, HoverCardPage, ModalPage, OverlayPage, PopoverPage,
-    SpotlightPage, TooltipPage,
+    DrawerPage, FloatingWindowPage, HoverCardPage, LightboxPage, ModalPage, OverlayPage,
+    PopoverPage, SpotlightPage, TooltipPage,
 };
 pub use surface::{DialogPage, PaperPage};
 pub use typography::{

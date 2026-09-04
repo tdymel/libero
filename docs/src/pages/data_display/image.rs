@@ -38,7 +38,7 @@ pub fn ImagePage() -> Element {
                     prop("alt", "String").doc("Alt text. Empty marks the image decorative."),
                     prop("zoomable", "bool")
                         .default("false")
-                        .doc("Wraps the image in a click-to-zoom overlay."),
+                        .doc("Opens the picture in a single-picture Lightbox on click."),
                 ]),
             ],
             lead: rsx! {

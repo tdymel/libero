@@ -1,0 +1,47 @@
+use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::theme::{CssVar, Size, SizeCss};
+
+pub const LIGHTBOX_WIDTH: CssVar = CssVar::new("--lsx-lightbox-width");
+pub const LIGHTBOX_STAGE_HEIGHT: CssVar = CssVar::new("--lsx-lightbox-stage-height");
+pub const LIGHTBOX_THUMBNAIL_SIZE: CssVar = CssVar::new("--lsx-lightbox-thumbnail-size");
+pub const LIGHTBOX_THUMBNAILS_GAP: CssVar = CssVar::new("--lsx-lightbox-thumbnails-gap");
+
+/// No backdrop of its own: a lightbox dims like every other modal, through
+/// `OverlayDefaults` (decided 2026-09-16, [[wont-do]]'s "Modal has no stylable
+/// knobs").
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LightboxDefaults {
+    /// The dialog's widest extent, a CSS length.
+    pub width: &'static str,
+    /// The stage's height, a CSS length. Fixed, so every slide is the same
+    /// box and a picture is fitted into it rather than sizing it.
+    pub stage_height: &'static str,
+    /// One thumbnail's edge, a CSS length. The strip is a `Carousel`, so this
+    /// caps the strip at `thumbnails_per_view` of them rather than sizing
+    /// each directly; a narrower dialog shrinks them.
+    pub thumbnail_size: &'static str,
+    /// Thumbnails visible at once before the strip scrolls.
+    pub thumbnails_per_view: f64,
+    pub thumbnails_gap: Size,
+    /// The upper scale bound, `1.0` being the picture fitted to the stage.
+    pub max_zoom: f64,
+    /// English literals, the `DateDefaults` precedent: no i18n mechanism yet
+    /// (todo 28).
+    pub label: &'static str,
+    pub close_label: &'static str,
+    /// Names the thumbnail strip, which is a region of its own.
+    pub thumbnails_label: &'static str,
+    /// `{n}` is replaced with the slide number.
+    pub thumbnail_label: &'static str,
+}
+
+impl ToCssDeclarations for LightboxDefaults {
+    fn to_css_declarations(&self) -> Vec<CssDeclaration> {
+        vec![
+            LIGHTBOX_WIDTH.declare(self.width),
+            LIGHTBOX_STAGE_HEIGHT.declare(self.stage_height),
+            LIGHTBOX_THUMBNAIL_SIZE.declare(self.thumbnail_size),
+            LIGHTBOX_THUMBNAILS_GAP.declare(SizeCss::SPACING.value(self.thumbnails_gap)),
+        ]
+    }
+}

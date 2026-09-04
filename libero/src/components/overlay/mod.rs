@@ -1,6 +1,7 @@
 mod drawer;
 mod floating_window;
 mod hover_card;
+mod lightbox;
 mod modal;
 mod overlay;
 mod spotlight;
@@ -11,6 +12,7 @@ pub use drawer::DrawerAnchor;
 pub(crate) use floating_window::FloatingWindow;
 pub use floating_window::{FloatingWindowOptions, WindowRect};
 pub use hover_card::{HoverCard, HoverCardProps};
+pub(crate) use lightbox::Lightbox;
 pub(crate) use modal::Modal;
 pub use overlay::{Overlay, OverlayProps};
 pub use spotlight::{

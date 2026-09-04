@@ -39,8 +39,10 @@ watches the `<img>`'s `onerror` and swaps the source then, so a working `src`
 never fetches the fallback.
 
 `zoomable` wraps the image in a click-to-zoom overlay. The inline image becomes a
-`<button>`, and clicking it opens the picture in a [modal](modal.md) at up to
-90vw/90vh, `object-fit: contain`. `zoomed_src` supplies a larger source for the
+`<button>`, and clicking it opens the picture in a single-picture
+[Lightbox](lightbox.md): fitted to the stage with `object-fit: contain`, then
+double-click, `z` or the wheel to zoom, and drag or the arrows to pan. No
+thumbnails, captions or arrows. `zoomed_src` supplies a larger source for the
 overlay when the inline one is a thumbnail.
 
 ```rust
@@ -75,9 +77,11 @@ zooms. Its accessible name is derived from `alt`: `Zoom in: <alt>` closed,
 empty. The inner `<img>` is then `alt=""`/`role="presentation"`, since the button
 already carries the name.
 
-The overlay is opened with `use_modal`, so Escape closes it, focus is trapped
-inside while it is open; the overlay itself is a button with `data-autofocus`, so
-focus lands there on open and returns to the inline image on close.
+The overlay is opened with `use_lightbox`, so Escape, the backdrop and the
+dialog's own **Close** button close it, and focus is trapped inside while it is
+open. Focus lands on **Close** and returns to the inline image on close. The
+dialog is named from `alt`, and the enlarged picture keeps `alt` too: it is the
+pan surface, a tab stop of its own, and no longer the close button.
 
 ## Props
 

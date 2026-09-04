@@ -400,6 +400,14 @@ fn is_clone(raw: usize, count: usize, clones: usize) -> bool {
     clones > 0 && (raw < clones || raw >= clones + count)
 }
 
+/// Whether a controlled index's scroll is the instant one after mount. Only
+/// when it moves at all: at `first` the strip is already there, no scroll
+/// settles, and a raised `seam` would never come down. A looping strip is
+/// placed by its own mount effect.
+fn instant_first_scroll(first_scroll: bool, clones: usize, index: usize, first: usize) -> bool {
+    first_scroll && clones == 0 && index != first
+}
+
 /// Scrolls the track so `index` is the snapped slide.
 ///
 /// The reads are created here and awaited in the task: off the web each is a
@@ -749,6 +757,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // the closure is rebuilt whenever any of it changes rather than capturing
     // the first render's values.
     let controlled = props.index;
+    let mut mounting = use_signal(|| true);
     use_effect(use_reactive!(|controlled, nav| {
         let Some(index) = controlled else {
             return;
@@ -763,7 +772,17 @@ pub fn Carousel(props: CarouselProps) -> Element {
             current.set(index);
             settled.set(index);
         }
-        nav.scroll_to_raw(nav.raw_for(index));
+        // The strip mounts at offset 0, so a smooth first scroll to a
+        // controlled index swept past every earlier slide (a lightbox opened
+        // on 6 of 6 took about 1.5s). `seam` is the state that switches smooth
+        // scrolling off; like the seam jump, the scroll waits for the render
+        // that puts it in the DOM - the effect that reads it - and the settle
+        // on a real slide lowers it again.
+        let first_scroll = std::mem::replace(&mut *mounting.write(), false);
+        match instant_first_scroll(first_scroll, nav.clones, index, nav.first) {
+            true => seam.set(true),
+            false => nav.scroll_to_raw(nav.raw_for(index)),
+        }
         // The caller is holding an index that cannot be shown, so say which
         // one is - here, where every such index arrives, and not only at
         // mount. Otherwise it pushes the unreachable value back on every
@@ -1519,5 +1538,17 @@ mod tests {
         assert_eq!(real_for(3, 5, 0), 3);
         assert!(!is_clone(0, 5, 0));
         assert!(!is_clone(4, 5, 0));
+    }
+
+    /// Only the first controlled scroll is instant, and only one that moves:
+    /// the settle that lowers `seam` never comes for a scroll to where the
+    /// strip already is.
+    #[test]
+    fn only_a_first_scroll_that_moves_is_instant() {
+        assert!(instant_first_scroll(true, 0, 5, 0));
+        assert!(!instant_first_scroll(false, 0, 5, 0));
+        assert!(!instant_first_scroll(true, 0, 0, 0));
+        assert!(!instant_first_scroll(true, 0, 2, 2));
+        assert!(!instant_first_scroll(true, 2, 5, 0));
     }
 }
