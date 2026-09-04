@@ -59,6 +59,10 @@ sx()
     .width("240px")               // anything else is CSS text, untouched
 ```
 
+A theme color given to `background` or `background_color` also tells the focus
+rings inside the element which color reads on it. A `var()` or any other CSS
+text tells them nothing, so they keep the surrounding one.
+
 ## States
 
 Your own variants are not a second class per variant: fold every one into the
@@ -130,7 +134,8 @@ sx().width(bp().sm("480px").lg("720px"))
 
 It carries no base value, and a second call to the same property replaces the
 first rather than adding to it - so a property that also needs a value below the
-smallest breakpoint wants the nested form for the base.
+smallest breakpoint wants the nested form for the base. The steps apply from the
+smallest up, in whatever order they are written.
 
 The six breakpoints are fixed literals rather than theme values - a `@media`
 query cannot read a CSS custom property:

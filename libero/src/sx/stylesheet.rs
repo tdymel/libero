@@ -54,12 +54,17 @@ impl From<&StaticSx> for Stylesheet {
 
 fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     let mut declarations = Vec::new();
+    let mut breakpoint_scopes = Vec::new();
 
     for entry in sx.entries() {
         match entry {
-            SxEntry::Declaration { property, value } => {
-                collect_declaration_scopes(scopes, &mut declarations, context, property, value)
-            }
+            SxEntry::Declaration { property, value } => collect_declaration_scopes(
+                &mut breakpoint_scopes,
+                &mut declarations,
+                context,
+                property,
+                value,
+            ),
             SxEntry::Nested { .. } => {}
         }
     }
@@ -70,6 +75,13 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
                 .in_at_rules(context.at_rules.clone()),
         );
     }
+
+    // Mobile-first: every `bp()` query is a `min-width`, so wherever several
+    // match the one emitted last wins. Base first, then smallest to largest,
+    // so the widest matching step applies whatever order `bp()` was written
+    // in. The sort is stable, so one step keeps its declaration order.
+    breakpoint_scopes.sort_by_key(|(size, _): &(Size, CssScope)| size.index());
+    scopes.extend(breakpoint_scopes.into_iter().map(|(_, scope)| scope));
 
     for entry in sx.entries() {
         if let SxEntry::Nested { modifier, sx } = entry {
@@ -128,7 +140,7 @@ fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext 
 }
 
 fn collect_declaration_scopes(
-    scopes: &mut Vec<CssScope>,
+    breakpoint_scopes: &mut Vec<(Size, CssScope)>,
     declarations: &mut Vec<CssDeclaration>,
     context: &CssContext,
     property: &SxPropertyKey,
@@ -137,44 +149,46 @@ fn collect_declaration_scopes(
     match value {
         ThemeAwareValue::BreakpointValue(breakpoint_value) => {
             for (size, value) in breakpoint_value.values() {
-                push_breakpoint_declaration_scope(scopes, context, property, *size, value);
+                breakpoint_scopes.push((
+                    *size,
+                    breakpoint_declaration_scope(context, property, *size, value),
+                ));
             }
         }
         _ => declarations.extend(property_declarations(property, value)),
     }
 }
 
-fn push_breakpoint_declaration_scope(
-    scopes: &mut Vec<CssScope>,
+fn breakpoint_declaration_scope(
     context: &CssContext,
     property: &SxPropertyKey,
     size: Size,
     value: &ThemeAwareValue,
-) {
-    scopes.push(
-        CssScope::new(
-            context.selectors.join(", "),
-            property_declarations(property, value),
-        )
-        .in_at_rules(context.wrapped_in(breakpoint_at_rule(size))),
-    );
+) -> CssScope {
+    CssScope::new(
+        context.selectors.join(", "),
+        property_declarations(property, value),
+    )
+    .in_at_rules(context.wrapped_in(breakpoint_at_rule(size)))
 }
 
 fn breakpoint_at_rule(size: Size) -> AtRule {
     AtRule::Media(format!("(min-width: {})", size.breakpoint_value()))
 }
 
-/// `background` also publishes `--lsx-focus-contrast`, which inherits, so a
-/// descendant's focus ring can contrast against the nearest ancestor
-/// background - see `ThemeAwareValue::focus_contrast`.
+/// `background` and `background-color` also publish `--lsx-focus-contrast`,
+/// which inherits, so a descendant's focus ring can contrast against the
+/// nearest ancestor background - see `ThemeAwareValue::focus_contrast`.
 fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> Vec<CssDeclaration> {
     let mut declarations = vec![CssDeclaration::new(
         property.as_str(),
         to_css_value(property, value),
     )];
 
-    if matches!(property, SxPropertyKey::Known(Property::Background))
-        && let Some(contrast) = value.focus_contrast()
+    if matches!(
+        property,
+        SxPropertyKey::Known(Property::Background | Property::BackgroundColor)
+    ) && let Some(contrast) = value.focus_contrast()
     {
         declarations.push(CssDeclaration::new(
             NamedColorCss::FOCUS_CONTRAST.name(),
@@ -280,6 +294,32 @@ mod tests {
         assert!(css.contains("@media (min-width: 62rem) and (min-width: 75rem){"));
         assert!(css.contains("background:var(--lsx-secondary-4);"));
         assert!(!css.contains("background:var(--lsx-secondary-2);"));
+    }
+
+    /// Every query is a `min-width`, so the widest matching one must come
+    /// last: `sm` written after `xl` used to override `xl` at every width.
+    #[test]
+    fn breakpoint_scopes_run_smallest_to_largest_whatever_the_call_order() {
+        let css = Stylesheet::from(&sx().color(bp().xl("red").sm("blue").md("green")))
+            .as_str()
+            .to_string();
+        let at = |needle: &str| {
+            css.find(needle)
+                .unwrap_or_else(|| panic!("{needle} in {css}"))
+        };
+
+        assert!(at("(min-width: 48rem){") < at("(min-width: 62rem){"));
+        assert!(at("(min-width: 62rem){") < at("(min-width: 88rem){"));
+    }
+
+    /// `padding` after a `padding-top` query would swallow it at `md`.
+    #[test]
+    fn the_base_rule_comes_before_its_breakpoint_scopes() {
+        let css = Stylesheet::from(&sx().padding_top(bp().md("8px")).padding("4px"))
+            .as_str()
+            .to_string();
+
+        assert!(css.find("padding:4px;").unwrap() < css.find("@media").unwrap());
     }
 
     #[test]
@@ -553,6 +593,33 @@ mod tests {
         assert!(plain_css.contains(&format!(
             ".{}::before{{height:1px;}}",
             plain_sx.class_name()
+        )));
+    }
+
+    #[test]
+    fn a_selector_list_inside_is_keeps_the_root_on_the_outside() {
+        let base = sx().selector(
+            "& :is([data-slot='day'], [data-slot='cell']):disabled",
+            sx().opacity("0.4"),
+        );
+        let css = Stylesheet::from(&base).as_str().to_string();
+
+        assert!(css.contains(&format!(
+            ".{} :is([data-slot='day'], [data-slot='cell']):disabled{{opacity:0.4;}}",
+            base.class_name()
+        )));
+    }
+
+    #[test]
+    fn background_color_publishes_the_same_focus_contrast_as_background() {
+        let css = Stylesheet::from(&sx().background_color("primary.6"))
+            .as_str()
+            .to_string();
+
+        assert!(css.contains("background-color:var(--lsx-primary-6);"));
+        assert!(css.contains(&format!(
+            "{}:var(--lsx-primary-contrast-6);",
+            NamedColorCss::FOCUS_CONTRAST.name()
         )));
     }
 

@@ -220,6 +220,17 @@ pub fn StylingPage() -> Element {
                     "CSS text, untouched."
                 }
                 CodeBlock { source: THEME_VALUES, language: "rust" }
+                Text {
+                    "A theme color given to "
+                    Code { source: "background" }
+                    " or "
+                    Code { source: "background_color" }
+                    " also tells the focus rings inside the element which color reads on "
+                    "it. A "
+                    Code { source: "var()" }
+                    " or any other CSS text tells them nothing, so they keep the "
+                    "surrounding one."
+                }
             }
 
             DocSection {
@@ -321,7 +332,8 @@ pub fn StylingPage() -> Element {
                     "It carries no base value, and a second call to the same property "
                     "replaces the first rather than adding to it - so a property that also "
                     "needs a value below the smallest breakpoint wants the nested form for "
-                    "the base."
+                    "the base. The steps apply from the smallest up, in whatever order they "
+                    "are written."
                 }
                 Text {
                     "The six breakpoints are fixed literals rather than theme values - a "
