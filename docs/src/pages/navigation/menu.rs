@@ -204,6 +204,9 @@ pub fn MenuPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("The trigger opens nothing. Disable the trigger too, which draws its own dimmed state."),
+                    prop("on_edge", "Option<Callback<MenuEdge>>")
+                        .default("None")
+                        .doc("Hears ← and → when no submenu answers them: ← on the top level, → on any item without a submenu. `Menubar` moves to the neighbouring menu with it."),
                 ]),
                 props("MenuItem", vec![
                     prop("new(label)", "String")

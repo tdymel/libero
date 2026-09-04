@@ -3,5 +3,6 @@ mod menu;
 mod state;
 
 pub use entry::{MenuEntry, MenuItem};
-pub use menu::{Menu, MenuProps};
+pub use menu::{Menu, MenuEdge, MenuProps};
+pub(crate) use state::MenuFocus;
 pub use state::{MenuState, use_menu};

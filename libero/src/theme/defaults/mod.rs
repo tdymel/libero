@@ -47,6 +47,7 @@ mod loader;
 mod mark;
 mod marquee;
 mod menu;
+mod menubar;
 mod native_select;
 mod nav_link;
 mod notification;
@@ -213,6 +214,11 @@ pub use menu::{
     MENU_FONT_SIZE, MENU_ITEM_FONT, MENU_ITEM_HEIGHT, MENU_ITEM_MIN_HEIGHT, MENU_ITEM_PAD_X,
     MENU_ITEM_RADIUS, MENU_LABEL_FONT, MENU_LABEL_FONT_SIZE, MENU_MAX_HEIGHT, MENU_PADDING,
     MENU_PADDING_X, MenuDefaults, MenuSizeLevel,
+};
+pub use menubar::{
+    MENUBAR_FONT_SIZE, MENUBAR_GAP, MENUBAR_PADDING_X, MENUBAR_PADDING_Y, MENUBAR_TRIGGER_FONT,
+    MENUBAR_TRIGGER_PAD_X, MENUBAR_TRIGGER_PAD_Y, MENUBAR_TRIGGER_RADIUS, MenubarDefaults,
+    MenubarSizeLevel,
 };
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;

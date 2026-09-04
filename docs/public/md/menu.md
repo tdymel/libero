@@ -103,6 +103,7 @@ item stays in the arrow order but cannot be chosen.
 | `size` | `Size` | `md` | Item height and font size. |
 | `radius` | `Size` | `sm` | Menu corner radius; items nest with it minus the padding. |
 | `disabled` | `bool` | `false` | The trigger opens nothing. |
+| `on_edge` | `Option<Callback<MenuEdge>>` | `None` | Hears ArrowLeft (top level) and ArrowRight (an item without a submenu) when no submenu answers them - `MenuEdge::Previous` / `Next`. `Menubar` uses it. |
 
 `sx`, `class`, `states` and `attributes` land on the root menu box.
 

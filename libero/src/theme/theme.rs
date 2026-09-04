@@ -106,6 +106,7 @@ pub struct Theme {
     pub mark: MarkDefaults,
     pub kbd: KbdDefaults,
     pub menu: MenuDefaults,
+    pub menubar: MenubarDefaults,
     pub pagination: PaginationDefaults,
     /// Every string `Pagination` shows a reader. Swapped whole for a locale.
     pub pagination_labels: PaginationLabels,
@@ -1293,6 +1294,43 @@ impl Theme {
                 },
             ),
             submenu_delay: 150,
+        },
+        menubar: MenubarDefaults {
+            size: Size::Md,
+            radius: Size::Sm,
+            gap: "2px",
+            sizes: Sizes::new(
+                MenubarSizeLevel {
+                    font_size: "0.75rem",
+                    padding_x: "6px",
+                    padding_y: "2px",
+                },
+                MenubarSizeLevel {
+                    font_size: "0.8125rem",
+                    padding_x: "8px",
+                    padding_y: "3px",
+                },
+                MenubarSizeLevel {
+                    font_size: "0.875rem",
+                    padding_x: "10px",
+                    padding_y: "4px",
+                },
+                MenubarSizeLevel {
+                    font_size: "0.9375rem",
+                    padding_x: "12px",
+                    padding_y: "5px",
+                },
+                MenubarSizeLevel {
+                    font_size: "1rem",
+                    padding_x: "14px",
+                    padding_y: "6px",
+                },
+                MenubarSizeLevel {
+                    font_size: "1.0625rem",
+                    padding_x: "16px",
+                    padding_y: "7px",
+                },
+            ),
         },
         pagination: PaginationDefaults {
             size: Size::Md,

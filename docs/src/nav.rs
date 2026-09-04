@@ -243,6 +243,7 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::PaginationPage {}, "Pagination"),
                 page(Route::TabsPage {}, "Tabs"),
                 page(Route::MenuPage {}, "Menu"),
+                page(Route::MenubarPage {}, "Menubar"),
                 page(Route::AccordionPage {}, "Accordion"),
                 page(Route::StepperPage {}, "Stepper"),
                 page(Route::TreePage {}, "Tree"),

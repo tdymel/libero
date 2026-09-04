@@ -147,6 +147,11 @@ base_props! {
         /// The trigger opens nothing, and an open menu closes.
         #[props(default)]
         disabled: bool,
+        /// Hears ArrowLeft and ArrowRight when the menu has no submenu of its
+        /// own to answer them with - a menubar moving to the next menu. With
+        /// `None` those keys do what they always did.
+        #[props(default)]
+        on_edge: Option<Callback<MenuEdge>>,
         /// The trigger - usually a `Button` carrying `state.a11y_attributes()`.
         /// Its clicks and keys are caught on the wrapper they bubble to.
         children: Element,
@@ -238,6 +243,7 @@ pub fn Menu(props: MenuProps) -> Element {
             initial: state.request().1,
             onclose,
             close_all: None,
+            on_edge: props.on_edge,
             parents: Parents(Vec::new()),
             onpointerenter: None,
             side: props.side,
@@ -253,6 +259,14 @@ pub fn Menu(props: MenuProps) -> Element {
             states: props.states,
         }
     }
+}
+
+/// Which neighbour of the menu ArrowLeft or ArrowRight asked for, handed to
+/// [`MenuProps::on_edge`].
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum MenuEdge {
+    Previous,
+    Next,
 }
 
 /// The dismissal handles of every menu above a submenu. Focus moving into the
@@ -286,6 +300,7 @@ struct Level {
     wrapper: ElementHandle,
     dismiss: DismissHandle,
     close_all: Callback<bool>,
+    on_edge: Option<Callback<MenuEdge>>,
     active: Signal<Option<usize>>,
     open_child: Signal<Option<usize>>,
     /// Which submenu to focus into, and a counter that makes asking twice
@@ -373,6 +388,9 @@ struct MenuLevelProps {
     /// `None` on the root, which builds it from its own dismissal. `true`
     /// hands focus back to the trigger.
     close_all: Option<Callback<bool>>,
+    /// The root's `on_edge`, handed to every level: ArrowRight on a plain item
+    /// in a submenu moves on too, APG's menubar.
+    on_edge: Option<Callback<MenuEdge>>,
     parents: Parents,
     /// The pointer entered this box - the parent cancels a pending hover, so
     /// crossing a sibling on the way in does not close this submenu.
@@ -456,6 +474,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         wrapper: props.wrapper,
         dismiss,
         close_all,
+        on_edge: props.on_edge,
         active,
         open_child,
         child_request,
@@ -623,11 +642,21 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                         level.enter_submenu(index);
                     }
                     // Closes this submenu only, and focus goes back to the
-                    // item that opened it. On the root it is a menubar's key
-                    // (D3), so it does nothing here.
+                    // item that opened it. On the root it is the menubar's.
                     Key::ArrowLeft if level.depth > 0 => {
                         event.prevent_default();
                         level.dismiss.dismiss();
+                    }
+                    // Nothing here answers these, so they go up - at any
+                    // depth for ArrowRight, the root only for ArrowLeft.
+                    Key::ArrowLeft | Key::ArrowRight if level.on_edge.is_some() => {
+                        event.prevent_default();
+                        if let Some(on_edge) = level.on_edge {
+                            on_edge.call(match event.key() {
+                                Key::ArrowLeft => MenuEdge::Previous,
+                                _ => MenuEdge::Next,
+                            });
+                        }
                     }
                     Key::Tab => level.tab_out(),
                     Key::Character(ref text) if !has_shortcut_modifier(&event) => {
@@ -835,6 +864,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                 initial: MenuFocus::First,
                 onclose: onclose_child,
                 close_all: Some(close_all),
+                on_edge: props.on_edge,
                 parents: parents.clone(),
                 onpointerenter: Some(cancel_callback),
                 side: Side::Right,

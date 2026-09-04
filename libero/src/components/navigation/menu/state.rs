@@ -36,6 +36,18 @@ pub fn use_menu() -> MenuState {
 }
 
 impl MenuState {
+    /// Not a hook: signals owned by the current scope, for a component that
+    /// holds a runtime number of menus - `Menubar`, one per menu, created on
+    /// first need and kept. `use_menu()` in a loop over a `Vec` would hand
+    /// hook slots from one menu to another as the `Vec` changes.
+    pub(crate) fn new(id: String) -> Self {
+        Self {
+            id: Signal::new(id),
+            opened: Signal::new(false),
+            request: Signal::new((0, MenuFocus::First)),
+        }
+    }
+
     /// The id every part of the wiring is built from.
     pub fn id(&self) -> String {
         (self.id)()

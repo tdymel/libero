@@ -198,6 +198,8 @@ pub(crate) enum Route {
     TabsPage {},
     #[route("/navigation/menu")]
     MenuPage {},
+    #[route("/navigation/menubar")]
+    MenubarPage {},
     #[route("/navigation/tree")]
     TreePage {},
 
