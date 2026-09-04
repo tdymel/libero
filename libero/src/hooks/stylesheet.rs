@@ -262,7 +262,12 @@ pub(crate) fn use_box_css(
     let (head, sx_slot) = slots.split_at_mut(2);
     let (focus_slot, framework_slot) = head.split_at_mut(1);
 
-    let focus_changed = register(&mut focus_slot[0], focus, CssLayer::Framework, context);
+    let focus_changed = register(
+        &mut focus_slot[0],
+        focus,
+        CssLayer::FrameworkDefault,
+        context,
+    );
     let framework_changed = register(
         &mut framework_slot[0],
         framework,

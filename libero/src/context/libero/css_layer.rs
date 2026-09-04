@@ -1,5 +1,13 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum CssLayer {
+    /// Rendered into `lsx-framework`, but sorted ahead of every other sheet
+    /// in it: `Box`'s default focus ring. A component's own `:focus-visible`
+    /// has the same specificity, so it wins only by coming later in the
+    /// layer. Without this the order inside the layer was the CSS hash's.
+    ///
+    /// Not a cascade layer of its own: across layers specificity stops
+    /// counting, so a component's plain `outline: none` would erase the ring.
+    FrameworkDefault,
     Framework,
     UserStatic,
     UserCustom,
@@ -8,9 +16,19 @@ pub enum CssLayer {
 impl CssLayer {
     pub const fn css_name(self) -> &'static str {
         match self {
-            Self::Framework => "lsx-framework",
+            Self::FrameworkDefault | Self::Framework => "lsx-framework",
             Self::UserStatic => "lsx-user-static",
             Self::UserCustom => "lsx-user-custom",
+        }
+    }
+
+    /// Prefix of a registry entry's node key. Unlike [`Self::css_name`] it
+    /// tells the two framework ranks apart, so the same CSS on both is two
+    /// keys, not one key twice.
+    pub const fn key_name(self) -> &'static str {
+        match self {
+            Self::FrameworkDefault => "lsx-framework-default",
+            layer => layer.css_name(),
         }
     }
 

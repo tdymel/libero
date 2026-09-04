@@ -38,12 +38,15 @@ static DIALOG_BASE_SX: StaticSx = StaticSx::new(|| {
 static DIALOG_HEADER_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .align_items("flex-start")
-        .justify_content("space-between")
+        // Not `space-between`: that puts a lone child at the start, so a close
+        // button without a title sat top-left.
+        .justify_content("flex-end")
         .gap("sm")
         .margin_bottom("md")
 });
 
-// Pushes a lone close button to the right, where a title would have left it.
+// Takes the free space, so the title starts at the left and the close button
+// stays at the right.
 static DIALOG_HEADER_TITLE_SX: StaticSx = StaticSx::new(|| sx().margin("0").flex("1"));
 
 fn dialog_variables(props: &DialogProps) -> Variables {

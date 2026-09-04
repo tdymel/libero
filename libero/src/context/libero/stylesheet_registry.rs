@@ -55,7 +55,7 @@ impl StylesheetRegistry {
 
         let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
             // Not a `Stylesheet`: that re-hashes text for a key we have.
-            node_key: Rc::from(format!("{}-{:x}", layer.css_name(), key.hash)),
+            node_key: Rc::from(format!("{}-{:x}", layer.key_name(), key.hash)),
             css: Rc::from(layered_css(layer, &stylesheet)),
             ref_count: 0,
         });
@@ -166,5 +166,38 @@ mod tests {
 
         assert!(node_key.starts_with("lsx-framework-"));
         assert!(css.starts_with("@layer lsx-framework{"));
+    }
+
+    /// `Box`'s ring and a component's own `:focus-visible` tie on
+    /// specificity, so the ring has to come first whatever the two hash to.
+    /// Several sheets, so some hash below the default one and some above.
+    #[test]
+    fn a_framework_default_comes_before_every_framework_sheet() {
+        let registry = StylesheetRegistry::new();
+        for color in ["red", "blue", "green", "black", "white", "gray"] {
+            registry.acquire(Stylesheet::from(&sx().color(color)), CssLayer::Framework);
+        }
+        registry.acquire(
+            Stylesheet::from(&sx().padding("lg")),
+            CssLayer::FrameworkDefault,
+        );
+
+        let (node_key, css) = registry.stylesheets().remove(0);
+
+        assert!(node_key.starts_with("lsx-framework-default-"));
+        assert!(css.starts_with("@layer lsx-framework{"));
+    }
+
+    #[test]
+    fn the_same_css_on_both_framework_ranks_is_two_node_keys() {
+        let registry = StylesheetRegistry::new();
+        let stylesheet = Stylesheet::from(&sx().padding("lg"));
+        registry.acquire(stylesheet.clone(), CssLayer::FrameworkDefault);
+        registry.acquire(stylesheet, CssLayer::Framework);
+
+        let keys = registry.stylesheets();
+
+        assert_eq!(keys.len(), 2);
+        assert_ne!(keys[0].0, keys[1].0);
     }
 }

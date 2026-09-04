@@ -35,13 +35,6 @@ const LIGHTBOX_TRANSFORM: CssVar = CssVar::new("--lsx-lightbox-transform");
 /// thumbnails and centres.
 const LIGHTBOX_THUMBNAILS_SHOWN: CssVar = CssVar::new("--lsx-lightbox-thumbnails-shown");
 
-/// `:focus-visible` on the class twice. `Box` puts its own outset ring on
-/// every element it renders, at the same specificity, and in the sheet it came
-/// after ours - so a plain `focus_visible` here lost. `use_box().focus_ring(false)`
-/// is the usual way out, but these elements are built in a loop, where a hook
-/// cannot be called.
-const FOCUS_OVER_BOX: &str = "&&:focus-visible";
-
 static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .max_width(LIGHTBOX_WIDTH.value())
@@ -64,9 +57,8 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .height("100%")
         .object_fit("contain")
-        // Beats `Box`'s own ring, which is the same specificity and lands
-        // later in the sheet (measured in Chromium); the frame draws this one.
-        .selector(FOCUS_OVER_BOX, sx().outline("none"))
+        // Replaces `Box`'s own ring: the frame draws this one.
+        .focus_visible(sx().outline("none"))
         .transform(LIGHTBOX_TRANSFORM.value_or("none"))
         .transition("transform 150ms ease")
         .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
@@ -107,7 +99,7 @@ static LIGHTBOX_THUMBNAIL_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .when("current", sx().background("primary.6"))
         // Inset: the carousel slide around it clips.
-        .selector(FOCUS_OVER_BOX, focus_ring_sx().outline_offset("-2px"))
+        .focus_visible(focus_ring_sx().outline_offset("-2px"))
 });
 
 static LIGHTBOX_THUMBNAIL_IMAGE_SX: StaticSx = StaticSx::new(|| {
