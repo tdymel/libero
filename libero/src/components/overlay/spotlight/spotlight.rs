@@ -4,16 +4,16 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Dialog, Kbd, ScrollArea,
+        Box, Dialog, Kbd, Loader, ScrollArea, VisuallyHidden,
         common::focus_ring_sx,
         form::{ComboboxState, use_combobox},
     },
     hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_modal, use_theme},
-    platform::{KeyChord, KeySubscription, keyboard},
+    platform::{KeyChord, KeySubscription, keyboard, warn_reserved_chord},
     sx::{StaticSx, sx},
     theme::{
         SPOTLIGHT_DESCRIPTION_COLOR, SPOTLIGHT_GROUP_COLOR, SPOTLIGHT_MAX_LIST_HEIGHT,
-        SPOTLIGHT_PADDING, SPOTLIGHT_SEARCH_FONT_SIZE, SPOTLIGHT_TOP_OFFSET, SPOTLIGHT_WIDTH,
+        SPOTLIGHT_PADDING, SPOTLIGHT_SEARCH_FONT_SIZE, SPOTLIGHT_TOP_OFFSET, SPOTLIGHT_WIDTH, Size,
         SizeCss,
     },
     utils::warn,
@@ -126,8 +126,17 @@ pub struct SpotlightOptions {
     pub aria_label: Option<String>,
     /// Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on
     /// the page - `'k'` by default, `None` for no hotkey. Web only: no other
-    /// renderer has a document-level key listener yet.
+    /// renderer has a document-level key listener yet. A key the browser
+    /// already uses (L, T, W, R, F, ...) warns in a debug build.
     pub shortcut: Option<char>,
+    /// The actions are still being fetched. The rows and "nothing found" give
+    /// way to a loader, and the status region says the theme's loading text,
+    /// so a search-as-you-type palette never flashes "nothing found" first.
+    pub loading: bool,
+    /// Called with the new query on every keystroke, from the input event
+    /// rather than a render - where a search-as-you-type palette sets
+    /// `loading` and starts its fetch, so the very next frame is already busy.
+    pub onquery: Option<Callback<String>>,
 }
 
 impl Default for SpotlightOptions {
@@ -141,6 +150,8 @@ impl Default for SpotlightOptions {
             clear_on_close: true,
             aria_label: None,
             shortcut: Some('k'),
+            loading: false,
+            onquery: None,
         }
     }
 }
@@ -216,6 +227,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
 
     let labels = theme.spotlight.labels;
     let close_on_action = options.close_on_action;
+    let onquery = options.onquery;
     let options_for_render = options.clone();
     let modal = use_modal(move |scope: ModalScope<()>| {
         let options = &options_for_render;
@@ -225,6 +237,13 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             .actions
             .map(|actions| actions.call(query()))
             .unwrap_or_default();
+        let loading = options.loading;
+        // The rows belong to the last query while a fetch runs, so they are
+        // neither drawn nor reachable by the arrows - `Combobox`'s rule.
+        let actions = match loading {
+            true => Vec::new(),
+            false => actions,
+        };
         let groups = group_and_limit(actions, options.limit);
         let count = groups
             .iter()
@@ -346,7 +365,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             });
         }
 
-        let empty = count == 0 && !query().trim().is_empty();
+        let empty = !loading && count == 0 && !query().trim().is_empty();
         let nothing_found = empty.then(|| {
             options
                 .nothing_found
@@ -390,6 +409,9 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                         oninput: move |event: FormEvent| {
                             let mut query = query;
                             query.set(event.value());
+                            if let Some(onquery) = onquery {
+                                onquery.call(event.value());
+                            }
                             // The `Autocomplete` rule: a new query arms nothing.
                             state.set_active(None);
                         },
@@ -402,12 +424,22 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                         "aria-label": "{aria_label}",
                         sx: sx().max_height(SPOTLIGHT_MAX_LIST_HEIGHT.value()),
                         scroll_position_y: scroll_y,
+                        "aria-busy": loading.then_some("true"),
                         {rows.into_iter()}
                     }
                     // Always present, so a screen reader hears it fill: focus
                     // never leaves the search box, and nothing else would
-                    // announce that the query matched nothing.
-                    div { "role": "status", {nothing_found} }
+                    // announce that the query matched nothing, or that a
+                    // search is running. Outside the busy listbox, which some
+                    // screen readers hold back until it is done. The loader
+                    // is silent; the hidden text is what is said.
+                    div { "role": "status",
+                        if loading {
+                            Loader { size: Size::Sm }
+                            VisuallyHidden { "{labels.loading}" }
+                        }
+                        {nothing_found}
+                    }
                 }
             }
         }
@@ -447,6 +479,12 @@ fn use_hotkey(handle: SpotlightHandle, shortcut: Option<char>) {
             tick.manually_drop();
         }
     });
+
+    use_effect(use_reactive!(|shortcut| {
+        if let Some(key) = shortcut {
+            warn_reserved_chord(&Key::Character(key.to_string()), Modifiers::CONTROL);
+        }
+    }));
 
     let open = handle.is_open();
     let listening = slot.clone();

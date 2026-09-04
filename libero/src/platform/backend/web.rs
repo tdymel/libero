@@ -10,6 +10,7 @@ use wasm_bindgen::prelude::Closure;
 use crate::platform::{
     Dimensions, DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError,
     Read, ScrollApi, ScrollSubscription, TimerApi, TimerSubscription,
+    keyboard::{takes_typing, warn_reserved_chord},
 };
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
@@ -458,9 +459,8 @@ pub(super) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
 
 struct WebKeyboard;
 
-/// Whether this event landed in something the user types into - Mantine's
-/// `tagsToIgnore`. `select` is in the list because a key press there drives the
-/// native option search.
+/// Whether this event landed in something the user types into - the rule
+/// itself is [`takes_typing`], plus `contenteditable`.
 fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
     let Some(target) = event
         .target()
@@ -469,7 +469,10 @@ fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
         return false;
     };
 
-    if matches!(target.tag_name().as_str(), "INPUT" | "TEXTAREA" | "SELECT") {
+    if takes_typing(
+        target.tag_name().as_str(),
+        target.get_attribute("type").as_deref(),
+    ) {
         return true;
     }
 
@@ -520,6 +523,7 @@ impl WebKeyboard {
                 modifiers.set(Modifiers::ALT, event.alt_key());
                 modifiers.set(Modifiers::META, event.meta_key());
 
+                let chord_key = key.clone();
                 let handled = callback(KeyChord {
                     key,
                     modifiers,
@@ -527,6 +531,12 @@ impl WebKeyboard {
                 });
                 if handled {
                     event.prevent_default();
+                    // A filtered subscription is a page's global hotkey. Said
+                    // on the first press it takes, because the callback is
+                    // opaque until then.
+                    if skip_text_entry {
+                        warn_reserved_chord(&chord_key, modifiers);
+                    }
                 }
             },
         );

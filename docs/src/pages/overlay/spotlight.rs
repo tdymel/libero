@@ -3,10 +3,14 @@ use crate::components::{
 };
 use crate::icons::{FileIcon, FolderIcon};
 use dioxus::prelude::*;
-use libero::components::{
-    Button, Code, Flex, Kbd, SpotlightAction, SpotlightOptions, Text, spotlight_filter,
-    use_spotlight,
+use libero::{
+    components::{
+        Button, Code, Flex, Kbd, SpotlightAction, SpotlightOptions, Text, spotlight_filter,
+        use_spotlight,
+    },
+    platform::{TimerSubscription, timer},
 };
+use std::time::Duration;
 
 /// Each example's actions, printed verbatim above the hook - keep every one in
 /// step with the fn below it.
@@ -106,12 +110,24 @@ fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
         .collect()
 }
 
-/// The three examples: the name of the handle and the actions fn in the
+/// The search example's extra lines: a fake fetch per keystroke. `onquery`
+/// runs from the input event, so `loading` is set before the next frame and
+/// "nothing found" never flashes between the keystroke and the answer.
+const SEARCH_CODE: &str = r#"let mut results = use_signal(Vec::<SpotlightAction>::new);
+let mut loading = use_signal(|| false);
+"#;
+
+/// How long the fake search takes - long enough to see, short enough to type
+/// through.
+const LATENCY: Duration = Duration::from_millis(700);
+
+/// The four examples: the name of the handle and the actions fn in the
 /// printed code, the actions fn's source, and the trigger's label.
-const EXAMPLES: [(&str, &str, &str, &str); 3] = [
+const EXAMPLES: [(&str, &str, &str, &str); 4] = [
     ("commands", "commands", COMMANDS_CODE, "Commands"),
     ("files", "files", FILES_CODE, "Files"),
     ("issues", "issues", ISSUES_CODE, "200 issues"),
+    ("search", "issues", ISSUES_CODE, "Slow search"),
 ];
 
 /// What the controls add to every palette's options.
@@ -142,10 +158,34 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
         .find(|(name, ..)| *name == example)
         .unwrap_or(EXAMPLES[0]);
 
-    let mut options = vec![
-        "actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &all))),"
-            .to_string(),
-    ];
+    let mut setup = format!("let all = use_hook(|| {actions}(last));\n");
+    let mut options = vec![];
+    if handle == "search" {
+        setup.push_str(SEARCH_CODE);
+        options.push(
+            "actions: Some(Callback::new(move |query: String| match query.trim().is_empty() {\n    \
+             true => vec![],\n    \
+             false => results(),\n})),"
+                .into(),
+        );
+        options.push("loading: loading(),".into());
+        options.push(
+            "// The input event, not a render: the next frame is already loading.\n\
+             onquery: Some(Callback::new(move |query: String| {\n    \
+             loading.set(true);\n    \
+             let all = all.clone();\n    \
+             spawn(async move {\n        \
+             results.set(search_on_server(&query, &all).await);\n        \
+             loading.set(false);\n    \
+             });\n})),"
+                .into(),
+        );
+    } else {
+        options.push(
+            "actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &all))),"
+                .into(),
+        );
+    }
     if handle == "files" {
         options.push(r#"placeholder: Some("Go to file...".into()),"#.into());
         options.push(r#"nothing_found: Some(rsx! { "No file by that name." }),"#.into());
@@ -164,7 +204,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
     };
     format!(
         "{actions_code}\nlet last = use_signal(|| String::from(\"nothing yet\"));\n\
-         let all = use_hook(|| {actions}(last));\n\
+         {setup}\
          let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
          rsx! {{\n    \
              Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), {label:?} }}\n\
@@ -221,13 +261,45 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         ..options("files")
     });
     let all_issues = use_hook(|| issues(last));
+    let search_all = all_issues.clone();
     let issues_actions = use_callback(move |query: String| spotlight_filter(&query, &all_issues));
     let issues = use_spotlight(SpotlightOptions {
         actions: Some(issues_actions),
         ..options("issues")
     });
 
-    let handles = [commands, files, issues];
+    // The printed `spawn` is a timer here, so a newer keystroke cancels the
+    // older search by dropping it, and a slow answer never lands late.
+    let mut results = use_signal(Vec::<SpotlightAction>::new);
+    let mut loading = use_signal(|| false);
+    let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+    use_drop(move || pending.set(None));
+    let search_actions = use_callback(move |query: String| match query.trim().is_empty() {
+        true => vec![],
+        false => results(),
+    });
+    let onquery = use_callback(move |query: String| {
+        loading.set(true);
+        let all = search_all.clone();
+        let answer = timer().map(|timer| {
+            timer.after(
+                LATENCY,
+                Box::new(move || {
+                    results.set(spotlight_filter(&query, &all));
+                    loading.set(false);
+                }),
+            )
+        });
+        pending.set(answer);
+    });
+    let search = use_spotlight(SpotlightOptions {
+        actions: Some(search_actions),
+        loading: loading(),
+        onquery: Some(onquery),
+        ..options("search")
+    });
+
+    let handles = [commands, files, issues, search];
 
     rsx! {
         Flex { direction: "column", align: "center", gap: "md",
@@ -280,7 +352,9 @@ pub fn SpotlightPage() -> Element {
                     prop("close_on_action", "bool").default("true").doc("Close after running an action."),
                     prop("clear_on_close", "bool").default("true").doc("Start every opening with an empty query."),
                     prop("aria_label", "Option<String>").default("\"Command palette\"").doc("Names the dialog."),
-                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on the page. `None` for no hotkey. Web only."),
+                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on the page. `None` for no hotkey. Web only. A key the browser already uses (L, T, W, R, F, ...) warns in a debug build."),
+                    prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows and \"nothing found\", and the status region says \"Searching\" (the theme's label)."),
+                    prop("onquery", "Option<Callback<String>>").doc("Called with the new query on every keystroke, from the input event. Set `loading` and start the search here."),
                 ]),
                 props("SpotlightAction", vec![
                     prop("label", "String").doc("The row's text, and the first thing `spotlight_filter` matches."),
@@ -325,7 +399,7 @@ pub fn SpotlightPage() -> Element {
                 children_text: "",
                 controls: vec![
                     // Set by the preview's buttons, never by the panel.
-                    Control::toggle("example", ["commands", "files", "issues"])
+                    Control::toggle("example", ["commands", "files", "issues", "search"])
                         .hidden_when(|_| true),
                     Control::toggle("shortcut", ["j", "p", "none"]),
                     Control::slider("limit", ["3", "5", "10", "none"]).default("none"),

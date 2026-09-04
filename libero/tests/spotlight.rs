@@ -17,6 +17,7 @@ use libero::{
 thread_local! {
     static QUERY: RefCell<String> = const { RefCell::new(String::new()) };
     static LIMIT: Cell<Option<usize>> = const { Cell::new(None) };
+    static LOADING: Cell<bool> = const { Cell::new(false) };
 }
 
 fn actions() -> Vec<SpotlightAction> {
@@ -40,6 +41,7 @@ fn Palette() -> Element {
             spotlight_filter(&QUERY.with(|q| q.borrow().clone()), &actions())
         })),
         limit: LIMIT.get(),
+        loading: LOADING.get(),
         ..Default::default()
     });
     use_hook(|| spotlight.open());
@@ -55,6 +57,11 @@ fn app() -> Element {
 fn rendered(query: &str, limit: Option<usize>) -> String {
     QUERY.with(|q| *q.borrow_mut() = query.to_string());
     LIMIT.set(limit);
+    LOADING.set(false);
+    render_app()
+}
+
+fn render_app() -> String {
     let mut dom = VirtualDom::new(app);
     dom.rebuild_in_place();
     // The open lands after `use_modal` read its empty slot, and the row count
@@ -149,4 +156,27 @@ fn the_limit_counts_through_groups() {
     let html = rendered("", Some(2));
     assert_eq!(tags_with(&html, r#"role="option""#).len(), 2);
     assert_eq!(tags_with(&html, r#"role="group""#).len(), 1);
+}
+
+/// While loading, the last query's rows are gone, the listbox is busy, and the
+/// region that always exists says it is searching - never "nothing found".
+#[test]
+fn loading_says_searching_in_the_status_region_instead_of_rows() {
+    QUERY.with(|q| *q.borrow_mut() = String::new());
+    LIMIT.set(None);
+    LOADING.set(true);
+    let html = render_app();
+    LOADING.set(false);
+
+    assert!(tags_with(&html, r#"role="option""#).is_empty());
+    assert!(tags_with(&html, r#"role="listbox""#)[0].contains(r#"aria-busy="true""#));
+    let input = attributes_of(&html, "input");
+    assert!(!input.contains_key("aria-activedescendant"));
+
+    let status = &html[html.find(r#"role="status""#).expect("a status region")..];
+    assert!(status.contains("Searching"), "{status}");
+    assert!(!html.contains("Nothing found"));
+    // The loader itself is silent: the region's text is what is said.
+    let loader = tags_with(status, "aria-hidden");
+    assert!(!loader.is_empty(), "{status}");
 }

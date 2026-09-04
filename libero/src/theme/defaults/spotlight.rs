@@ -18,6 +18,8 @@ pub struct SpotlightLabels {
     pub placeholder: &'static str,
     /// Shown, and announced, when a query matches nothing.
     pub nothing_found: &'static str,
+    /// Announced while `SpotlightOptions::loading` is set.
+    pub loading: &'static str,
 }
 
 impl SpotlightLabels {
@@ -25,6 +27,7 @@ impl SpotlightLabels {
         label: "Command palette",
         placeholder: "Search...",
         nothing_found: "Nothing found",
+        loading: "Searching",
     };
 }
 

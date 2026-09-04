@@ -55,9 +55,10 @@ fn Demo() -> Element {
 Call the hook in a component that outlives every trigger: the palette is
 portaled from there, like a `use_modal` dialog.
 
-The docs page's preview has three palettes: Commands (groups, descriptions,
+The docs page's preview has four palettes: Commands (groups, descriptions,
 keywords and shortcut hints), Files (a flat list with icons, a custom
-`placeholder` and `nothing_found`) and 200 issues (a long list, for `limit`).
+`placeholder` and `nothing_found`), 200 issues (a long list, for `limit`) and
+Slow search (a fake 700 ms search per keystroke, for `loading`).
 The controls set `shortcut`, `limit`, `close_on_action` and `clear_on_close`,
 and the code block prints the palette opened last. The page binds J or P, not
 K, because the docs site's own search owns Ctrl+K.
@@ -82,14 +83,43 @@ let spotlight = use_spotlight(SpotlightOptions {
 
 Ctrl + K (Cmd + K on a Mac) toggles the palette from anywhere on the page. Change
 the key with `shortcut: Some('p')`, or turn it off with `None`. The chord is
-ignored while focus is in another text field and while a dialog or popover is
-already open, and a held chord toggles once. It needs a document-level key
+ignored while focus is in a text field (a text-like `input`, a `textarea`, a
+`select` or anything `contenteditable`) and while a dialog or popover is
+already open, and a held chord toggles once. A checkbox, a radio, a switch or a
+button with focus does not block it. A key the browser already uses (A, C, V,
+X, Z, Y, F, G, L, N, T, W, Q, R) warns in a debug build. It needs a document-level key
 listener, which only the web has today; elsewhere, open the palette from a
 button. Two palettes on one page should not share a key.
 
 Results from a search index are the same prop: return a signal's contents from
 `actions` instead of calling `spotlight_filter`, and the palette redraws when
 the signal fills.
+
+For a search that takes time, start it from `onquery` and set `loading` until
+it answers. `onquery` runs from the input event, so the next frame is already
+loading and "Nothing found" never flashes before the answer. While `loading`,
+the rows and "Nothing found" give way to a loader, and the status region says
+"Searching" once:
+
+```rust
+let mut results = use_signal(Vec::<SpotlightAction>::new);
+let mut loading = use_signal(|| false);
+let spotlight = use_spotlight(SpotlightOptions {
+    actions: Some(Callback::new(move |query: String| match query.trim().is_empty() {
+        true => vec![],
+        false => results(),
+    })),
+    loading: loading(),
+    onquery: Some(Callback::new(move |query: String| {
+        loading.set(true);
+        spawn(async move {
+            results.set(search_on_server(&query).await);
+            loading.set(false);
+        });
+    })),
+    ..Default::default()
+});
+```
 
 ## Keyboard and accessibility
 
@@ -103,8 +133,10 @@ the signal fills.
 - Escape or a click outside closes; focus returns to what opened it.
 - Groups are `role="group"`, named by their visible header. No row is ever
   `aria-selected`.
-- "Nothing found" is announced through a `role="status"` region that is present
-  from the start.
+- "Nothing found", and "Searching" while `loading`, are announced through a
+  `role="status"` region that is present from the start. It sits outside the
+  listbox, which is `aria-busy` while loading, and the loader in it is
+  `aria-hidden`.
 
 ## API
 
@@ -122,7 +154,9 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `close_on_action` | `bool` | `true` | Close after running an action. |
 | `clear_on_close` | `bool` | `true` | Start each opening with an empty query. |
 | `aria_label` | `Option<String>` | theme (`"Command palette"`) | Names the dialog. |
-| `shortcut` | `Option<char>` | `Some('k')` | Ctrl/Cmd + this key toggles the palette. |
+| `shortcut` | `Option<char>` | `Some('k')` | Ctrl/Cmd + this key toggles the palette. A browser key warns in a debug build. |
+| `loading` | `bool` | `false` | Results are still coming: a loader replaces the rows and "Nothing found", and the status region says so. |
+| `onquery` | `Option<Callback<String>>` | `None` | Called with the new query on every keystroke, from the input event. Start a search here. |
 
 | `SpotlightHandle` method | Returns | Description |
 |---|---|---|
@@ -141,7 +175,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 `theme.spotlight: SpotlightDefaults` - `width` (`"600px"`), `top_offset`
 (`"80px"`), `max_list_height` (`"400px"`), `radius` (`Md`), `padding` (`"4px"`),
 `search_font_size` (`"1.125rem"`), `group_color` and `description_color`
-(`grey.7`), `labels: SpotlightLabels` (`label`, `placeholder`, `nothing_found`;
+(`grey.7`), `labels: SpotlightLabels` (`label`, `placeholder`, `nothing_found`, `loading`;
 `SpotlightLabels::ENGLISH`).
 
 ## CSS variables
