@@ -266,9 +266,12 @@ Keyboard, from anywhere inside the wrapper: ArrowDown opens and moves down,
 ArrowUp moves up, Home and End jump to the ends, Enter picks the active row and
 closes, Escape and Tab close. `disabled` blocks all of it.
 
-While `loading`, the loader is the only content of the dropdown, so it is the
-one that speaks: it renders `role="status"` with `loading_label` as a visually
-hidden text node, and the dropdown carries `aria-busy="true"`.
+While `loading`, the dropdown shows a silent `Loader` and carries
+`aria-busy="true"`. What is said comes from a visually hidden `role="status"`
+region beside the trigger, outside the dropdown: it holds `loading_label` while
+an open list loads, and is empty otherwise. It stays mounted either way,
+because a screen reader announces a change to a region that is already there,
+and some hold back what changes inside a busy subtree until it is done.
 
 ## Props
 
@@ -281,8 +284,8 @@ hidden text node, and the dropdown carries `aria-busy="true"`.
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | - | Draws one row. Required. |
 | `children` | `Element` | - | The trigger, and anything else that belongs with it. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
-| `loading` | `bool` | `false` | The options are being fetched: a labelled `Loader` replaces the rows and `empty`, and the dropdown is `aria-busy`. |
-| `loading_label` | `String` | theme | What the loader announces while `loading`. Unset, `theme.combobox.labels.loading` - "Loading" in `ComboboxLabels::ENGLISH`. |
+| `loading` | `bool` | `false` | The options are being fetched: a `Loader` replaces the rows and `empty`, the dropdown is `aria-busy`, and the status region says `loading_label`. |
+| `loading_label` | `String` | theme | What the status region says while `loading`. Unset, `theme.combobox.labels.loading` - "Loading" in `ComboboxLabels::ENGLISH`. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Blocks the arrow keys. |

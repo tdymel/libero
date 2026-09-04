@@ -26,8 +26,9 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     #[props(default)]
     empty: Option<Element>,
     /// The options are being fetched. Replaces the list - and `empty` - with
-    /// a [`Loader`](crate::components::Loader) that announces
-    /// `loading_label`, and marks the dropdown `aria-busy`.
+    /// a [`Loader`](crate::components::Loader), marks the dropdown
+    /// `aria-busy`, and puts `loading_label` in a status region beside the
+    /// trigger.
     ///
     /// It has to win over `empty`: an async combobox's `options` is empty
     /// between a keystroke and its results, so without it every keystroke
@@ -35,7 +36,7 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// too, which belong to the previous query.
     #[props(default)]
     loading: Option<bool>,
-    /// What the loader announces while `loading`. Unset, the theme's
+    /// What the status region says while `loading`. Unset, the theme's
     /// [`ComboboxLabels`](crate::theme::ComboboxLabels) says it.
     #[props(default, into)]
     loading_label: Option<String>,

@@ -439,10 +439,10 @@ pub fn ComboboxPage() -> Element {
                         .doc("Shown in place of the list when `options` is empty."),
                     prop("loading", "bool")
                         .default("false")
-                        .doc("The options are being fetched. Replaces the rows and `empty` with a labelled `Loader` and marks the dropdown `aria-busy`. It wins over `empty`, so an async list does not flash \"no results\" on every keystroke."),
+                        .doc("The options are being fetched. Replaces the rows and `empty` with a `Loader`, marks the dropdown `aria-busy`, and puts `loading_label` in a status region beside the trigger. It wins over `empty`, so an async list does not flash \"no results\" on every keystroke."),
                     prop("loading_label", "String")
                         .default("theme")
-                        .doc("What the loader announces while `loading`. Unset, `theme.combobox.labels.loading` - \"Loading\" in `ComboboxLabels::ENGLISH`."),
+                        .doc("What the status region says while `loading`. Unset, `theme.combobox.labels.loading` - \"Loading\" in `ComboboxLabels::ENGLISH`."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),
@@ -514,14 +514,14 @@ pub fn ComboboxPage() -> Element {
                     Code { source: "options" }
                     " is empty between a keystroke and its answer, and without "
                     Code { source: "loading" }
-                    " every keystroke would flash \"No fruit matches\" first. The loader is "
-                    "the only content of the dropdown, so it is the one that announces: "
-                    Code { source: "role=\"status\"" }
-                    " with "
-                    Code { source: "loading_label" }
-                    ", inside a dropdown marked "
+                    " every keystroke would flash \"No fruit matches\" first. The dropdown is marked "
                     Code { source: "aria-busy" }
-                    ". This one answers after 700ms."
+                    " and its loader is silent. "
+                    Code { source: "loading_label" }
+                    " is said by a hidden "
+                    Code { source: "role=\"status\"" }
+                    " region beside the trigger, which stays mounted, so a screen reader "
+                    "hears its text change. This one answers after 700ms."
                 }
                 FetchingDemo {}
                 CodeBlock { source: FETCHING, language: "rust" }

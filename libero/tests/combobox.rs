@@ -1,7 +1,8 @@
 //! The trigger's `aria-activedescendant` names only a row that is in the DOM:
 //! never one while the list is loading or empty, and a highlight past the end
-//! names the last row, the one drawn as active. And what the loader says comes
-//! from the theme.
+//! names the last row, the one drawn as active. What the list says while it
+//! loads comes from the theme, and it is said by a status region that is always
+//! mounted and sits outside the `aria-busy` dropdown.
 
 mod common;
 
@@ -191,7 +192,7 @@ fn the_loading_label_comes_from_the_theme() {
     }
 
     let html = loading(english);
-    assert!(html.contains(r#"role="status""#), "{html}");
+    assert_eq!(status(&html), "Loading", "{html}");
     assert!(html.contains(">Loading<"), "{html}");
 
     let html = loading(german);
@@ -214,4 +215,66 @@ fn a_loading_label_prop_beats_the_theme() {
     let html = loading(app);
     assert!(html.contains(">Searching fruit<"), "{html}");
     assert!(!html.contains(">Wird geladen<"), "{html}");
+}
+
+/// The one `role="status"` element's text. Panics if there is not exactly one.
+fn status(html: &str) -> String {
+    assert_eq!(html.matches(r#"role="status""#).count(), 1, "{html}");
+    let open = html.find(r#"role="status""#).unwrap();
+    let text = &html[open + html[open..].find('>').unwrap() + 1..];
+    text[..text.find('<').unwrap()].to_string()
+}
+
+/// The region is there before the loading starts, says the label while it
+/// runs, and empties once the results land - without ever unmounting, which a
+/// screen reader needs to announce a change at all.
+#[test]
+fn the_status_region_stays_mounted_and_its_text_changes() {
+    let mut dom = mount();
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "");
+
+    dom.in_runtime(|| get(&LOADING).set(true));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "Loading");
+
+    dom.in_runtime(|| get(&LOADING).set(false));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "");
+}
+
+/// A closed list is not loading anything the user asked for, so it says nothing.
+#[test]
+fn a_closed_list_says_nothing_while_loading() {
+    let mut dom = mount();
+    dom.in_runtime(|| {
+        get(&LOADING).set(true);
+        get(&STATE).close();
+    });
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(status(&body(&dioxus_ssr::render(&dom))), "");
+}
+
+/// The region is the trigger's sibling, not the dropdown's content: the
+/// dropdown is `aria-busy` while loading, and the loader inside it is silent.
+#[test]
+fn the_status_region_sits_outside_the_busy_dropdown() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Loading {} } }
+    }
+    let html = loading(app);
+    let after_trigger = &html[html.find("</button>").expect("the trigger") + "</button>".len()..];
+    assert!(
+        after_trigger.starts_with("<span")
+            && after_trigger[..after_trigger.find('>').unwrap()].contains(r#"role="status""#),
+        "{html}"
+    );
+
+    let busy = html.find(r#"aria-busy="true""#).expect("a busy dropdown");
+    let dropdown = &html[busy..];
+    assert!(!dropdown.contains(r#"role="status""#), "{html}");
+    assert!(
+        dropdown.contains(r#"aria-hidden="true""#),
+        "the loader is silent: {html}"
+    );
 }

@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{HtmlTag, Input, States, common::base_props, layout::use_box, surface::paper_sx},
+    components::{
+        HtmlTag, Input, States, VisuallyHidden, common::base_props, layout::use_box,
+        surface::paper_sx,
+    },
     hooks::{ElementHandle, PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
     platform::ElementApi,
     sx::StaticSx,
@@ -48,7 +51,8 @@ base_props! {
         #[props(default)]
         empty: Option<Element>,
         /// `Some(label)` while the options are being fetched: the dropdown
-        /// shows a labelled `Loader` in place of the rows and `empty`.
+        /// shows a `Loader` in place of the rows and `empty`, and the status
+        /// region says `label`.
         #[props(default)]
         loading: Option<String>,
         /// Above the rows, inside the dropdown and outside its scroll - a
@@ -131,6 +135,12 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     let opened = props.opened;
     let loading = props.loading.is_some();
+    // Said by a region outside the dropdown, not by the loader inside it. The
+    // dropdown is `aria-busy` while loading, and some screen readers hold a
+    // busy subtree's changes back until it is done - by which time the loader
+    // is gone. And a region has to be in the tree before its text changes to
+    // be announced, so it stays mounted, empty, while there is nothing to say.
+    let status = props.loading.clone().filter(|_| opened);
     // The rows belong to the previous query while a fetch runs, so they are
     // neither drawn nor reachable by the arrows.
     let count = if loading { 0 } else { props.rows.len() };
@@ -294,7 +304,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                         max_height: theme.combobox.max_dropdown_height,
                         scroll_y,
                         empty: props.empty,
-                        loading: props.loading,
+                        loading,
                         header: props.header,
                         multiselectable: props.multiselectable,
                         context,
@@ -310,5 +320,16 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         // dropdown carries the very same handler, for focus that moved inside
         // it.
         .event("onkeydown", onkeydown)
-        .render(HtmlTag::Div, Vec::new(), props.children)
+        .render(
+            HtmlTag::Div,
+            Vec::new(),
+            rsx! {
+                {props.children}
+                VisuallyHidden { role: "status",
+                    if let Some(text) = status {
+                        "{text}"
+                    }
+                }
+            },
+        )
 }
