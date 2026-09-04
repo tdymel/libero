@@ -86,8 +86,25 @@ fn Demo() -> Element {
 }
 ```
 
-There is no way to scroll the strip from outside yet, so your own *buttons*
-cannot step it. The callback is for showing the state, not for driving it.
+To drive the strip from buttons of your own, create a handle with
+`use_scroller()` and pass it as `handle`. `step_forward()` and `step_back()`
+move the strip exactly as the built-in controls do: by `scroll_amount`, from
+where the strip is now, and never past either end.
+
+```rust
+let strip = use_scroller();
+
+rsx! {
+    Scroller { aria_label: "Tags", controls: "never", handle: strip,
+        on_edge_change: move |next| edges.set(Some(next)),
+        // ...
+    }
+    Button { onclick: move |_| strip.step_back(), "Back" }
+    Button { onclick: move |_| strip.step_forward(), "Forward" }
+}
+```
+
+A call before the strip has mounted does nothing.
 
 ## Accessibility
 
@@ -126,6 +143,7 @@ cannot step it. The callback is for showing the state, not for driving it.
 | `fade_color` | `ThemeAwareValue` | paper background | What the gradient under a control fades from. Set it to the surface the strip sits on. |
 | `draggable` | `bool` | `false` | Mouse drag-to-pan. Touch and trackpad scroll natively either way. |
 | `on_edge_change` | `EventHandler<ScrollerEdges>` | - | Fires when either edge state flips, including the first measurement. `ScrollerEdges { at_start, at_end }`; both `true` means nothing overflows. |
+| `handle` | `ScrollerHandle` | - | From `use_scroller()`. `step_forward()`/`step_back()` move the strip as the controls do. |
 | `children` | `Element` | - | The strip. |
 
 Like every component, `Scroller` also takes the shared props `sx`, `class`,

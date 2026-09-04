@@ -45,6 +45,23 @@ fn visibility_token(visibility: ScrollbarVisibility) -> &'static str {
     }
 }
 
+/// The base styles of a component built on `ScrollArea`, standing in for
+/// `ScrollArea`'s own on the framework layer. Build it from
+/// [`scroll_area_base`], so it keeps everything the area needs.
+///
+/// Crate-internal: the field is `pub(crate)` and the type is not exported, so
+/// nothing outside the crate can make one. It exists so the component's CSS
+/// stays below a caller's `sx`, which passing it as `sx` would not.
+#[doc(hidden)]
+#[derive(Clone, Copy, PartialEq)]
+pub struct ScrollAreaBase(pub(crate) &'static StaticSx);
+
+/// `ScrollArea`'s own base styles with `sx` merged on top: a property `sx`
+/// declares again replaces the area's.
+pub(crate) fn scroll_area_base(sx: crate::sx::Sx) -> crate::sx::Sx {
+    SCROLL_AREA_BASE_SX.clone().and(sx)
+}
+
 static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
     let base = sx()
         .display("block")
@@ -165,6 +182,10 @@ base_props! {
         /// call scrolls, including one that asks for the same position again.
         #[props(default)]
         handle: Option<ScrollAreaHandle>,
+        /// Crate-internal, see [`ScrollAreaBase`].
+        #[doc(hidden)]
+        #[props(default)]
+        framework_sx: Option<ScrollAreaBase>,
         #[props(default)]
         on_scroll: Option<EventHandler<ScrollPositionEvent>>,
         #[props(default)]
@@ -328,7 +349,11 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .render(HtmlTag::Div, Vec::new(), props.children)?;
 
     use_box()
-        .framework_sx(&SCROLL_AREA_BASE_SX)
+        .framework_sx(
+            props
+                .framework_sx
+                .map_or(&SCROLL_AREA_BASE_SX, |base| base.0),
+        )
         .class(&props.class)
         .sx(&props.sx)
         .states(&states)

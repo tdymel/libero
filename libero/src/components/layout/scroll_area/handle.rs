@@ -24,7 +24,9 @@ use crate::{
 /// `ScrollArea` has mounted, or with none bound at all, does nothing.
 #[derive(Clone, Copy, PartialEq)]
 pub struct ScrollAreaHandle {
-    pub(super) element: ElementHandle,
+    /// Crate-wide so a component built on `ScrollArea` (`Scroller`,
+    /// `Carousel`) can read px offsets for a drag or a step.
+    pub(crate) element: ElementHandle,
 }
 
 /// A handle for one [`ScrollArea`](super::ScrollArea). Pass it as that area's

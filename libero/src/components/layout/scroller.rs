@@ -4,9 +4,12 @@ use crate::{
     components::{
         Box, HtmlTag, Input, States, Variables,
         common::{ChevronDownIcon, base_props, focus_ring_sx, input_from_str, states, variables},
-        layout::use_box,
+        layout::{
+            ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, use_box,
+            use_scroll_area,
+        },
     },
-    hooks::{DragMove, DragOptions, DragStart, use_drag, use_element, use_id, use_theme},
+    hooks::{DragMove, DragOptions, DragStart, use_drag, use_id, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
@@ -64,6 +67,73 @@ fn step_target(offset: f64, amount: f64, forward: bool, max: f64) -> f64 {
     target.clamp(0.0, max.max(0.0))
 }
 
+/// Steps a [`Scroller`] from an event handler, the way its own controls do.
+///
+/// For a strip whose buttons are the caller's own: `controls: "never"`,
+/// `on_edge_change` for their state, and a handle to move it.
+///
+/// ```ignore
+/// let strip = use_scroller();
+/// rsx! {
+///     Scroller { handle: strip, controls: "never", aria_label: "Tags", .. }
+///     Button { onclick: move |_| strip.step_back(), "Back" }
+///     Button { onclick: move |_| strip.step_forward(), "Forward" }
+/// }
+/// ```
+///
+/// `Copy`, so any number of handlers can hold it. A call before the bound
+/// `Scroller` has mounted, or with none bound at all, does nothing. Bind it
+/// from the first render: the element is attached on mount, so a handle
+/// passed to an already mounted `Scroller` stays unattached.
+#[derive(Clone, Copy, PartialEq)]
+pub struct ScrollerHandle {
+    area: ScrollAreaHandle,
+    /// The bound `Scroller`'s `scroll_amount`, written on every render. Not a
+    /// signal: nothing renders from it.
+    amount: CopyValue<f64>,
+}
+
+/// A handle for one [`Scroller`]. Pass it as that scroller's `handle`.
+pub fn use_scroller() -> ScrollerHandle {
+    ScrollerHandle {
+        area: use_scroll_area(),
+        amount: use_hook(|| CopyValue::new(0.0)),
+    }
+}
+
+impl ScrollerHandle {
+    /// One step towards the end, as the forward control does.
+    pub fn step_forward(&self) {
+        self.step(true);
+    }
+
+    /// One step towards the start, as the backward control does.
+    pub fn step_back(&self) {
+        self.step(false);
+    }
+
+    /// From where the strip is now, so a touch scroll in between is honoured.
+    fn step(&self, forward: bool) {
+        let (area, viewport, amount) = (self.area, self.area.element, *self.amount.peek());
+        if !viewport.is_mounted() {
+            return;
+        }
+        let (offset, content, size) = (
+            viewport.scroll_offset(),
+            viewport.scroll_size(),
+            viewport.dimensions(),
+        );
+        spawn(async move {
+            if let (Ok((x, _)), Ok(content), Ok(size)) = (offset.await, content.await, size.await) {
+                area.scroll_to(
+                    step_target(x, amount, forward, content.width - size.width),
+                    0.0,
+                );
+            }
+        });
+    }
+}
+
 static SCROLLER_ROOT_SX: StaticSx = StaticSx::new(|| {
     ScrollerDefaults::theme_vars()
         // The controls' containing block.
@@ -77,31 +147,35 @@ static SCROLLER_ROOT_SX: StaticSx = StaticSx::new(|| {
         .z_index("0")
 });
 
+/// Merged onto `ScrollArea`'s own, which scrolls the x axis and hides the
+/// scrollbar: the controls are the affordance, the strip still scrolls
+/// natively.
 static SCROLLER_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
-    sx().overflow_x("auto")
-        .overflow_y("hidden")
-        // The controls are the affordance; the strip still scrolls natively.
-        .scrollbar_width("none")
-        // A strip inside a scrolling page should not hand the scroll on when
-        // it reaches its own end.
-        .overscroll_behavior_x("contain")
-        .scroll_behavior("smooth")
-        // Chrome and Safari do not switch smooth scrolling off under reduced
-        // motion - only Firefox does - so the guard is explicit.
-        .media(REDUCED_MOTION, sx().scroll_behavior("auto"))
-        .when("draggable", sx().cursor("grab"))
-        // A drag is the pointer's own position: animating towards it lags.
-        // After the smooth declaration, which it has to beat at equal
-        // specificity.
-        .when(
-            "dragging",
-            sx().scroll_behavior("auto")
-                .cursor("grabbing")
-                .user_select("none"),
-        )
-        // Outset: the root does not clip, and an inset ring would run under
-        // the two controls.
-        .focus_visible(focus_ring_sx())
+    // `ScrollArea` fills its parent's height; a strip is as tall as its
+    // content.
+    scroll_area_base(
+        sx().height("auto")
+            // A strip inside a scrolling page should not hand the scroll on when
+            // it reaches its own end.
+            .overscroll_behavior_x("contain")
+            .scroll_behavior("smooth")
+            // Chrome and Safari do not switch smooth scrolling off under reduced
+            // motion - only Firefox does - so the guard is explicit.
+            .media(REDUCED_MOTION, sx().scroll_behavior("auto"))
+            .when("draggable", sx().cursor("grab"))
+            // A drag is the pointer's own position: animating towards it lags.
+            // After the smooth declaration, which it has to beat at equal
+            // specificity.
+            .when(
+                "dragging",
+                sx().scroll_behavior("auto")
+                    .cursor("grabbing")
+                    .user_select("none"),
+            )
+            // Outset: the root does not clip, and an inset ring would run under
+            // the two controls.
+            .focus_visible(focus_ring_sx()),
+    )
 });
 
 /// `max-content` so the wrapper is as wide as the strip it holds, which is
@@ -206,6 +280,10 @@ base_props! {
         /// measurement.
         #[props(default)]
         on_edge_change: Option<EventHandler<ScrollerEdges>>,
+        /// From [`use_scroller`], to step the strip from the caller's own
+        /// buttons.
+        #[props(default)]
+        handle: Option<ScrollerHandle>,
         children: Element,
     }
 }
@@ -226,12 +304,16 @@ base_props! {
 #[component]
 pub fn Scroller(props: ScrollerProps) -> Element {
     let theme = use_theme();
-    let viewport = use_element();
+    // Always called, so the hook order does not depend on the prop.
+    let own = use_scroller();
+    let handle = props.handle.unwrap_or(own);
+    let (area, viewport) = (handle.area, handle.area.element);
     let viewport_id = use_id();
 
     let controls = props.controls.copied_or(theme.scroller.controls);
     let size = props.control_size.copied_or(theme.scroller.control_size);
-    let amount = props.scroll_amount.unwrap_or(theme.scroller.scroll_amount) as f64;
+    let mut amount = handle.amount;
+    amount.set(props.scroll_amount.unwrap_or(theme.scroller.scroll_amount) as f64);
     let draggable = props.draggable.unwrap_or(theme.scroller.draggable);
 
     let mut edges = use_signal(|| ScrollerEdges::UNMEASURED);
@@ -245,10 +327,9 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         }
     };
 
-    // `ResizeObserver` delivers an initial observation, so this is also the
-    // mount-time measurement - before any scroll, nothing else says whether
-    // the strip overflows at all.
-    let measure = move |_: Event<ResizeData>| {
+    // Edges are compared in px, and `ScrollArea` reports a scroll as a percent,
+    // so every report is a fresh read.
+    let measure = move || {
         let (offset, content, size) = (
             viewport.scroll_offset(),
             viewport.scroll_size(),
@@ -261,28 +342,10 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         });
     };
 
-    let onscroll = move |event: Event<ScrollData>| {
-        let data = event.data();
-        update(ScrollerEdges::measure(
-            data.scroll_left(),
-            data.scroll_width() as f64,
-            data.client_width() as f64,
-        ));
-    };
-
-    let step = move |forward: bool| {
-        let (offset, content, size) = (
-            viewport.scroll_offset(),
-            viewport.scroll_size(),
-            viewport.dimensions(),
-        );
-        spawn(async move {
-            if let (Ok((x, _)), Ok(content), Ok(size)) = (offset.await, content.await, size.await) {
-                let target = step_target(x, amount, forward, content.width - size.width);
-                let _ = viewport.scroll_to(target, 0.0);
-            }
-        });
-    };
+    // `ResizeObserver` delivers an initial observation, so this is also the
+    // mount-time measurement - before any scroll, nothing else says whether
+    // the strip overflows at all.
+    let resized = move |_: Event<ResizeData>| measure();
 
     // Mouse drag-to-pan. Deliberately **not** given `drag_handle_sx()`: that
     // is `touch-action: none`, and it would take away the native touch scroll
@@ -300,7 +363,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
         capture: viewport,
         on_start: Callback::new(|_: DragStart| {}),
         on_move: Callback::new(move |moved: DragMove| {
-            let _ = viewport.scroll_to((origin() - moved.delta().x).max(0.0), 0.0);
+            area.scroll_to((origin() - moved.delta().x).max(0.0), 0.0);
         }),
         on_end: Callback::new(|()| {}),
     });
@@ -357,27 +420,32 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let content = use_box()
         .framework_sx(&SCROLLER_CONTENT_SX)
         .prepare()
-        .event("onresize", measure)
+        .event("onresize", resized)
         .render(HtmlTag::Div, Vec::new(), props.children)?;
 
-    let strip = use_box()
-        .framework_sx(&SCROLLER_VIEWPORT_SX)
-        .states(&viewport_states)
-        .prepare()
-        .element(&viewport)
-        .attr("id", viewport_id())
-        // A tab stop, so a strip of plain images or text can still be reached
-        // and scrolled with the arrow keys - and so it needs a name.
-        .attr("tabindex", "0")
-        .attr("role", "region")
-        .attr("aria-label", props.aria_label)
-        .event("onscroll", onscroll)
-        .event("onresize", measure)
-        .event("onpointerdown", onpointerdown)
-        .event("onpointermove", onpointermove)
-        .event("onpointerup", onpointerup)
-        .event("onpointercancel", onpointerup)
-        .render(HtmlTag::Div, Vec::new(), rsx! { {content} })?;
+    let strip = rsx! {
+        ScrollArea {
+            handle: area,
+            scrollbars: "horizontal",
+            scrollbar_visibility: "hidden",
+            // A tab stop, so a strip of plain images or text can still be
+            // reached and scrolled with the arrow keys - and so it needs a
+            // name.
+            focusable: true,
+            framework_sx: ScrollAreaBase(&SCROLLER_VIEWPORT_SX),
+            states: viewport_states,
+            id: viewport_id(),
+            role: "region",
+            aria_label: props.aria_label,
+            on_scroll: move |_| measure(),
+            onresize: resized,
+            onpointerdown,
+            onpointermove,
+            onpointerup,
+            onpointercancel: onpointerup,
+            {content}
+        }
+    };
 
     let current = edges();
     let viewport_id = viewport_id();
@@ -409,7 +477,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
                 tabindex: if at_edge { "-1" } else { "0" },
                 onclick: move |_| {
                     if !at_edge {
-                        step(forward);
+                        handle.step(forward);
                     }
                 },
                 ChevronDownIcon {}

@@ -6,7 +6,10 @@ use crate::{
     components::{
         Box, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
-        layout::use_box,
+        layout::{
+            ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
+            use_box, use_scroll_area,
+        },
     },
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id, use_theme,
@@ -51,54 +54,46 @@ static CAROUSEL_VIEWPORT_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative").overflow("hidden")
 });
 
+/// Merged onto `ScrollArea`'s own, which scrolls the carousel's axis and hides
+/// the scrollbar: that is the indicators' job here, the strip still scrolls.
 static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
-    sx().display("flex")
-        // `overridable`, not `value`: the props write the `-override` twin.
-        .gap(CAROUSEL_GAP.overridable())
-        .when(
-            "horizontal",
-            sx().flex_direction("row")
-                .overflow_x("auto")
-                .overflow_y("hidden"),
-        )
-        .when(
-            "vertical",
-            sx().flex_direction("column")
-                .overflow_y("auto")
-                .overflow_x("hidden"),
-        )
-        // The scrollbar is the indicators' job here; the strip still scrolls.
-        .scrollbar_width("none")
-        .when("horizontal", sx().scroll_snap_type("x mandatory"))
-        .when("vertical", sx().scroll_snap_type("y mandatory"))
-        // Keeps a fast flick from skipping past a slide.
-        .scroll_snap_stop("always")
-        // A carousel inside a scrollable page should not scroll the page when
-        // it reaches its own end.
-        .overscroll_behavior_x("contain")
-        .overscroll_behavior_y("contain")
-        .height(CAROUSEL_HEIGHT.value_or("auto"))
-        .scroll_behavior("smooth")
-        // Chrome and Safari do **not** disable `scroll-behavior: smooth` under
-        // reduced motion - only Firefox does - so the guard is explicit. It
-        // sits at the same specificity as the declaration it overrides and
-        // after it, which is what settles the two.
-        .media(
-            "(prefers-reduced-motion: reduce)",
-            sx().scroll_behavior("auto"),
-        )
-        // A drag is the pointer's own position: animating towards it lags,
-        // and a mandatory snap pulls every write back to the slide it left, so
-        // the strip sat still and then jumped a whole slide. After the
-        // orientation arms, which it has to beat at equal specificity.
-        .when(
-            "dragging",
-            sx().scroll_behavior("auto").scroll_snap_type("none"),
-        )
-        .when("seam", sx().scroll_behavior("auto"))
-        // Inset: the viewport is `overflow: hidden` and exactly this size, so
-        // an outset ring is clipped away entirely.
-        .focus_visible(focus_ring_sx().outline_offset("-2px"))
+    scroll_area_base(
+        sx().display("flex")
+            // `overridable`, not `value`: the props write the `-override` twin.
+            .gap(CAROUSEL_GAP.overridable())
+            .when("horizontal", sx().flex_direction("row"))
+            .when("vertical", sx().flex_direction("column"))
+            .when("horizontal", sx().scroll_snap_type("x mandatory"))
+            .when("vertical", sx().scroll_snap_type("y mandatory"))
+            // Keeps a fast flick from skipping past a slide.
+            .scroll_snap_stop("always")
+            // A carousel inside a scrollable page should not scroll the page when
+            // it reaches its own end.
+            .overscroll_behavior_x("contain")
+            .overscroll_behavior_y("contain")
+            .height(CAROUSEL_HEIGHT.value_or("auto"))
+            .scroll_behavior("smooth")
+            // Chrome and Safari do **not** disable `scroll-behavior: smooth` under
+            // reduced motion - only Firefox does - so the guard is explicit. It
+            // sits at the same specificity as the declaration it overrides and
+            // after it, which is what settles the two.
+            .media(
+                "(prefers-reduced-motion: reduce)",
+                sx().scroll_behavior("auto"),
+            )
+            // A drag is the pointer's own position: animating towards it lags,
+            // and a mandatory snap pulls every write back to the slide it left, so
+            // the strip sat still and then jumped a whole slide. After the
+            // orientation arms, which it has to beat at equal specificity.
+            .when(
+                "dragging",
+                sx().scroll_behavior("auto").scroll_snap_type("none"),
+            )
+            .when("seam", sx().scroll_behavior("auto"))
+            // Inset: the viewport is `overflow: hidden` and exactly this size, so
+            // an outset ring is clipped away entirely.
+            .focus_visible(focus_ring_sx().outline_offset("-2px")),
+    )
 });
 
 static CAROUSEL_SLIDE_SX: StaticSx = StaticSx::new(|| {
@@ -408,34 +403,21 @@ fn instant_first_scroll(first_scroll: bool, clones: usize, index: usize, first: 
     first_scroll && clones == 0 && index != first
 }
 
-/// Scrolls the track so `index` is the snapped slide.
-///
-/// The reads are created here and awaited in the task: off the web each is a
-/// round-trip ([[codebase/platform-api]]).
+/// Scrolls the track so `index` is the snapped slide. The offset is a share of
+/// the range, so it goes over as a percent and `ScrollArea` measures the range.
 fn scroll_to_index(
-    track: ElementHandle,
+    track: ScrollAreaHandle,
     index: usize,
     count: usize,
     per_view: f64,
     orientation: Orientation,
     align: CarouselAlign,
 ) {
-    let (content, viewport) = (track.scroll_size(), track.dimensions());
-    spawn(async move {
-        let (Ok(content), Ok(viewport)) = (content.await, viewport.await) else {
-            return;
-        };
-        let max = match orientation {
-            Orientation::Horizontal => content.width - viewport.width,
-            Orientation::Vertical => content.height - viewport.height,
-        }
-        .max(0.0);
-        let offset = offset_for(index, max, count, per_view, align);
-        let _ = match orientation {
-            Orientation::Horizontal => track.scroll_to(offset, 0.0),
-            Orientation::Vertical => track.scroll_to(0.0, offset),
-        };
-    });
+    let percent = offset_for(index, 100.0, count, per_view, align);
+    match orientation {
+        Orientation::Horizontal => track.scroll_to_percent(Some(percent), None),
+        Orientation::Vertical => track.scroll_to_percent(None, Some(percent)),
+    }
 }
 
 /// Per-instance only: a carousel's height has no default worth publishing on
@@ -470,7 +452,7 @@ struct Nav {
     current: Signal<usize>,
     settled: Signal<usize>,
     seam: Signal<bool>,
-    track: ElementHandle,
+    track: ScrollAreaHandle,
     count: usize,
     per_view: f64,
     orientation: Orientation,
@@ -566,18 +548,20 @@ impl Nav {
         self.seam.set(true);
     }
 
-    /// The offset and scrollable range along this carousel's own axis.
-    fn metrics(self, data: &ScrollData) -> (f64, f64) {
-        match self.orientation {
-            Orientation::Horizontal => (
-                data.scroll_left(),
-                (data.scroll_width() - data.client_width()).max(0) as f64,
-            ),
-            Orientation::Vertical => (
-                data.scroll_top(),
-                (data.scroll_height() - data.client_height()).max(0) as f64,
-            ),
-        }
+    /// The strip position a scroll report names: `index_at` only needs the
+    /// offset as a share of the range, which is exactly the percent.
+    fn raw_at(self, x: f64, y: f64) -> usize {
+        let percent = match self.orientation {
+            Orientation::Horizontal => x,
+            Orientation::Vertical => y,
+        };
+        index_at(
+            percent,
+            100.0,
+            self.strip_count(),
+            self.per_view,
+            self.align,
+        )
     }
 }
 
@@ -660,7 +644,7 @@ base_props! {
 #[component]
 pub fn Carousel(props: CarouselProps) -> Element {
     let theme = use_theme();
-    let track = use_element();
+    let track = use_scroll_area();
     // The indicators sit outside the track, so the roving focus looks them up
     // from the root.
     let root_handle = use_element();
@@ -844,10 +828,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
         nav.go_to(next);
     }));
 
-    let onscroll = move |event: Event<ScrollData>| {
-        let (offset, max) = nav.metrics(&event.data());
-        let raw = index_at(offset, max, nav.strip_count(), per_view, align);
-        let next = nav.real_for(raw);
+    let mut onscroll = move |x: f64, y: f64| {
+        let next = nav.real_for(nav.raw_at(x, y));
         if next != *current.peek() {
             current.set(next);
         }
@@ -855,7 +837,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
 
     // Only a settled scroll moves `settled`, which is what the live region and
     // `onindexchange` read - a scroll in progress moves `current` alone.
-    let onscrollend = move |event: Event<ScrollData>| {
+    let mut onscrollend = move |x: f64, y: f64| {
         // A drag writes an instant scroll per pointer move, and each of those
         // ends too. None is a settle: treating them as one reported the index
         // mid-drag and, on a looping strip, jumped the seam out from under the
@@ -864,8 +846,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         if *dragging.peek() {
             return;
         }
-        let (offset, max) = nav.metrics(&event.data());
-        let raw = index_at(offset, max, nav.strip_count(), per_view, align);
+        let raw = nav.raw_at(x, y);
         let next = nav.real_for(raw);
         current.set(next);
         if next != *settled.peek() {
@@ -934,14 +915,14 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // scrolls the platform's way and a mouse drags, on every backend.
     let draggable = props.draggable;
     let drag = use_drag(DragOptions {
-        capture: track,
+        capture: track.element,
         on_start: Callback::new(move |start: DragStart| {
             if !draggable {
                 start.cancel.call(());
                 return;
             }
             dragging.set(true);
-            let offset = track.scroll_offset();
+            let offset = track.element.scroll_offset();
             spawn(async move {
                 if let Ok((x, y)) = offset.await {
                     drag_origin.set(match orientation {
@@ -958,10 +939,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
                 Orientation::Vertical => drag_origin() - delta.y,
             }
             .max(0.0);
-            let _ = match orientation {
+            match orientation {
                 Orientation::Horizontal => track.scroll_to(target, 0.0),
                 Orientation::Vertical => track.scroll_to(0.0, target),
-            };
+            }
         }),
         // No settle of our own: releasing hands the strip back to the
         // browser, which snaps and fires `onscrollend`.
@@ -1039,29 +1020,40 @@ pub fn Carousel(props: CarouselProps) -> Element {
             }
         });
 
-    let track_element = use_box()
-        .framework_sx(&CAROUSEL_TRACK_SX)
-        .states(&track_states)
-        .prepare()
-        .element(&track)
-        .event("onkeydown", onkeydown)
-        .attr("id", track_id())
-        // The track is the scrollable region, so it is the tab stop - the
-        // opposite of `ScrollArea`'s default, and on purpose.
-        .attr("tabindex", "0")
-        .event("onscroll", onscroll)
-        .event("onscrollend", onscrollend)
-        // Mouse only: a touch is already scrolling the track natively, and
-        // dragging it too would move it twice.
-        .event("onpointerdown", move |event: Event<PointerData>| {
-            if draggable && event.data().pointer_type() == "mouse" {
-                drag.onpointerdown.call(event);
-            }
-        })
-        .event("onpointermove", drag.onpointermove)
-        .event("onpointerup", drag.onpointerup)
-        .event("onpointercancel", drag.onpointercancel)
-        .render(HtmlTag::Div, Vec::new(), rsx! { {track_body} })?;
+    let track_element = rsx! {
+        ScrollArea {
+            handle: track,
+            scrollbars: match orientation {
+                Orientation::Horizontal => "horizontal",
+                Orientation::Vertical => "vertical",
+            },
+            scrollbar_visibility: "hidden",
+            // The track is the scrollable region, so it is the tab stop - the
+            // opposite of `ScrollArea`'s default, and on purpose.
+            focusable: true,
+            framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
+            states: track_states,
+            id: track_id(),
+            on_scroll: move |event: ScrollPositionEvent| match event {
+                ScrollPositionEvent::Start(x, y) | ScrollPositionEvent::Change(x, y) => {
+                    onscroll(x, y)
+                }
+                ScrollPositionEvent::End(x, y) => onscrollend(x, y),
+            },
+            onkeydown,
+            // Mouse only: a touch is already scrolling the track natively, and
+            // dragging it too would move it twice.
+            onpointerdown: move |event: Event<PointerData>| {
+                if draggable && event.data().pointer_type() == "mouse" {
+                    drag.onpointerdown.call(event);
+                }
+            },
+            onpointermove: drag.onpointermove,
+            onpointerup: drag.onpointerup,
+            onpointercancel: drag.onpointercancel,
+            {track_body}
+        }
+    };
 
     let root = use_box()
         .framework_sx(&CAROUSEL_ROOT_SX)

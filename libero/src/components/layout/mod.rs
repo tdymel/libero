@@ -33,6 +33,9 @@ pub use image_list::{ImageBar, ImageItem, ImageList, ImageListProps};
 pub use scroll_area::{
     ScrollArea, ScrollAreaHandle, ScrollPositionEvent, Virtualize, use_scroll_area,
 };
-pub use scroller::{Scroller, ScrollerControls, ScrollerEdges, ScrollerProps};
+pub(crate) use scroll_area::{ScrollAreaBase, scroll_area_base};
+pub use scroller::{
+    Scroller, ScrollerControls, ScrollerEdges, ScrollerHandle, ScrollerProps, use_scroller,
+};
 pub use sidebar::{Sidebar, SidebarProps, SidebarSide};
 pub use splitter::{Splitter, SplitterResizeEvent};

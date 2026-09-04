@@ -1,7 +1,9 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Code, Flex, Input, Kbd, Scroller, ScrollerEdges, Text},
+    components::{
+        Button, Chip, Code, Flex, Input, Kbd, Scroller, ScrollerEdges, Text, use_scroller,
+    },
     use_theme,
 };
 
@@ -37,12 +39,24 @@ const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
 }"#;
 
 /// The edge report, printed under the strip. `on_edge_change` is in `fixed`;
-/// this adds the signal it writes and the text that reads it.
-fn wrap_edges(_: &DemoValues, source: &str) -> String {
+/// this adds the signal it writes and the text that reads it. Under
+/// `controls: "never"` also the handle and the caller's own two buttons.
+fn wrap_edges(values: &DemoValues, source: &str) -> String {
+    let own = values.str("controls") == "never";
+    let (handle, buttons) = match own {
+        true => (
+            "let strip = use_scroller();\n",
+            "    Flex { direction: \"row\", gap: \"sm\",\n        \
+             Button { variant: \"outlined\", onclick: move |_| strip.step_back(), \"Back\" }\n        \
+             Button { variant: \"outlined\", onclick: move |_| strip.step_forward(), \"Forward\" }\n    \
+             }\n",
+        ),
+        false => ("", ""),
+    };
     format!(
-        "let mut edges = use_signal(|| None::<ScrollerEdges>);\n\n\
+        "let mut edges = use_signal(|| None::<ScrollerEdges>);\n{handle}\n\
          rsx! {{\n\
-         {}    Text {{ size: \"sm\",\n        \
+         {}{buttons}    Text {{ size: \"sm\",\n        \
          match edges() {{\n            \
          Some(ScrollerEdges {{ at_start: true, at_end: true }}) => \"Everything fits\",\n            \
          Some(ScrollerEdges {{ at_end: false, .. }}) => \"More to the right\",\n            \
@@ -54,7 +68,7 @@ fn wrap_edges(_: &DemoValues, source: &str) -> String {
     )
 }
 
-fn strip() -> Element {
+fn strip_content() -> Element {
     rsx! {
         Flex { direction: "row", gap: "sm", wrap: "nowrap",
             for tag in TAGS {
@@ -69,7 +83,9 @@ fn strip() -> Element {
 #[component]
 fn ScrollerDemo(values: DemoValues) -> Element {
     let mut edges = use_signal(|| None::<ScrollerEdges>);
+    let strip = use_scroller();
     let fade = values.str("fade_color");
+    let own = values.str("controls") == "never";
 
     rsx! {
         Scroller {
@@ -83,7 +99,26 @@ fn ScrollerDemo(values: DemoValues) -> Element {
             },
             draggable: values.str("draggable") == "true",
             on_edge_change: move |next| edges.set(Some(next)),
-            {strip()}
+            // Always bound, not only under `never`: an element handle is
+            // attached on mount, so one passed later is never mounted.
+            handle: strip,
+            {strip_content()}
+        }
+        if own {
+            Flex { direction: "row", gap: "sm",
+                // Not `disabled` at an end: a focused button that becomes
+                // disabled drops focus to the page. A step there does nothing.
+                Button {
+                    variant: "outlined",
+                    onclick: move |_| strip.step_back(),
+                    "Back"
+                }
+                Button {
+                    variant: "outlined",
+                    onclick: move |_| strip.step_forward(),
+                    "Forward"
+                }
+            }
         }
         Text { size: "sm",
             match edges() {
@@ -126,6 +161,8 @@ pub fn ScrollerPage() -> Element {
                         .doc("Mouse drag-to-pan. Touch and trackpad scroll natively either way."),
                     prop("on_edge_change", "EventHandler<ScrollerEdges>")
                         .doc("Fires when either edge state flips, including the first measurement."),
+                    prop("handle", "ScrollerHandle")
+                        .doc("From use_scroller(). Its step_forward() and step_back() move the strip as the controls do, for buttons of your own."),
                     prop("children", "Element").doc("The strip."),
                 ]),
             ],
@@ -152,7 +189,14 @@ pub fn ScrollerPage() -> Element {
                     "measured and again whenever that changes; the line under the preview "
                     "prints it. With "
                     Code { source: "controls: \"never\"" }
-                    " it is the whole affordance, for a strip that should say so in its own words."
+                    " it is the whole affordance, for a strip that should say so in its own words. "
+                    "To move it from buttons of your own, pass a "
+                    Code { source: "use_scroller()" }
+                    " handle and call its "
+                    Code { source: "step_forward()" }
+                    " and "
+                    Code { source: "step_back()" }
+                    "; pick never in the preview to see it."
                 }
             },
             Demo {
@@ -173,8 +217,21 @@ pub fn ScrollerPage() -> Element {
                                 false => vec![format!("scroll_amount: {value}")],
                             }
                         }),
+                    // `never` hands the stepping to the caller's own buttons,
+                    // so it also prints the handle they drive.
                     Control::toggle("controls", ["auto", "always", "never"])
-                        .default(theme.scroller.controls.as_str()),
+                        .default(theme.scroller.controls.as_str())
+                        .code(|control, values| {
+                            let value = values.str(control.name);
+                            let mut lines = match value == control.default {
+                                true => vec![],
+                                false => vec![format!(r#"controls: "{value}""#)],
+                            };
+                            if value == "never" {
+                                lines.push("handle: strip".to_string());
+                            }
+                            lines
+                        }),
                     Control::slider("control_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.scroller.control_size.as_str()),
                     Control::color_shades("fade_color", [UNSET, "grey.1", "primary.1", "warning.1"]),
