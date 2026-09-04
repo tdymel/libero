@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
+        HtmlTag, Input, States, Variant,
         common::{
             base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
             hover_color, input_from_str, selected_color, shade_color, variables,
@@ -12,7 +12,6 @@ use crate::{
         navigation::InternalAnchor,
     },
     hooks::{ripple_sx, use_cache, use_ripple, use_theme},
-    str_enum::str_enum,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{BUTTON_HEIGHT, ButtonDefaults, ColorShade, CssVar, LOADER_SIZE, Size, SizeCss},
     utils::warn,
@@ -30,23 +29,7 @@ impl From<NavigationTarget> for Input<NavigationTarget> {
     }
 }
 
-str_enum! {
-    /// Material 3's five button styles, in descending emphasis.
-    pub enum ButtonVariant {
-        #[default]
-        Filled = "filled",
-        Tonal = "tonal" | "filled-tonal",
-        Elevated = "elevated",
-        Outlined = "outlined" | "outline",
-        /// M3's name for the lowest-emphasis arm. `text` (its name on a
-        /// button) and `transparent` (its old name on an icon) both parse.
-        Standard = "standard" | "text" | "transparent",
-    }
-}
-
-input_from_str!(ButtonVariant);
-
-// What `button_variant_sx` references by name.
+// What `interactive_variant_sx` references by name.
 pub(crate) const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
 pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
@@ -82,9 +65,9 @@ const ELEVATED_HOVER: Size = Size::Sm;
 /// Structural chrome for `variant`, in `var()` names rather than resolved
 /// values - which is what lets a second component reuse it under its own set.
 ///
-/// The hover response is [`button_variant_sx`]'s: `Icon` is a static badge and
+/// The hover response is [`interactive_variant_sx`]'s: `Icon` is a static badge and
 /// must not grow one, so it takes the chrome alone.
-pub(crate) fn variant_chrome_sx(variant: ButtonVariant, vars: &VariantVars) -> Sx {
+pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
     let VariantVars {
         color,
         contrast,
@@ -93,30 +76,30 @@ pub(crate) fn variant_chrome_sx(variant: ButtonVariant, vars: &VariantVars) -> S
     } = vars;
 
     match variant {
-        ButtonVariant::Filled => sx()
+        Variant::Filled => sx()
             .background(color.value())
             .border_color(color.value())
             .color(contrast.value_or("inherit")),
         // M3's secondary-container pairing: a light tint of the colour under
         // the label that reads on it. A literal colour has no ramp, so every
         // fallback here lands back on the filled look.
-        ButtonVariant::Tonal => sx()
+        Variant::Tonal => sx()
             .background(container.value_or(color.value()))
             .border_color("transparent")
             .color(on_container.value_or(contrast.value_or("inherit"))),
         // The *surface*, not a tint of the colour - M3's elevated button is
         // separated from the page by its shadow alone, and the label carries
         // the accent. An opaque background is what the shadow needs to sit on.
-        ButtonVariant::Elevated => sx()
+        Variant::Elevated => sx()
             .background("white")
             .border_color("transparent")
             .color(color.value())
             .box_shadow(SizeCss::SHADOW.value(ELEVATED_REST)),
-        ButtonVariant::Outlined => sx()
+        Variant::Outlined => sx()
             .background("transparent")
             .border_color(color.value())
             .color(color.value()),
-        ButtonVariant::Standard => sx()
+        Variant::Standard => sx()
             .background("transparent")
             .border_color("transparent")
             .color(color.value()),
@@ -126,17 +109,17 @@ pub(crate) fn variant_chrome_sx(variant: ButtonVariant, vars: &VariantVars) -> S
 /// [`variant_chrome_sx`] plus the hover response an interactive control needs:
 /// a filled or tinted variant darkens, an unfilled one tints, and `Elevated`
 /// lifts a level rather than changing its fill.
-pub(crate) fn button_variant_sx(variant: ButtonVariant, vars: &VariantVars, hover: &CssVar) -> Sx {
+pub(crate) fn interactive_variant_sx(variant: Variant, vars: &VariantVars, hover: &CssVar) -> Sx {
     let color = vars.color;
 
     let fallback = match variant {
-        ButtonVariant::Filled | ButtonVariant::Tonal => color.value(),
-        ButtonVariant::Elevated => "white".to_string(),
-        ButtonVariant::Outlined | ButtonVariant::Standard => "transparent".to_string(),
+        Variant::Filled | Variant::Tonal => color.value(),
+        Variant::Elevated => "white".to_string(),
+        Variant::Outlined | Variant::Standard => "transparent".to_string(),
     };
 
     let mut hovered = sx().background(hover.value_or(fallback));
-    if variant == ButtonVariant::Elevated {
+    if variant == Variant::Elevated {
         hovered = hovered.box_shadow(SizeCss::SHADOW.value(ELEVATED_HOVER));
     }
 
@@ -155,11 +138,11 @@ pub(crate) struct VariantColors {
 /// Which shades a variant tints with. The tinted variants pin absolute
 /// shades rather than stepping from `base`, the same way the hover tint
 /// always has.
-pub(crate) fn variant_colors(variant: ButtonVariant, base: &ThemeAwareValue) -> VariantColors {
-    let filled = variant == ButtonVariant::Filled;
+pub(crate) fn variant_colors(variant: Variant, base: &ThemeAwareValue) -> VariantColors {
+    let filled = variant == Variant::Filled;
     // Only `Tonal` paints a container; `Elevated` sits on the surface itself.
     let (container, on_container) = match variant {
-        ButtonVariant::Tonal => (
+        Variant::Tonal => (
             shade_color(base, TONAL_CONTAINER),
             contrast_shade_color(base, TONAL_CONTAINER),
         ),
@@ -167,13 +150,13 @@ pub(crate) fn variant_colors(variant: ButtonVariant, base: &ThemeAwareValue) -> 
     };
 
     let (hover, selected) = match variant {
-        ButtonVariant::Tonal => (
+        Variant::Tonal => (
             shade_color(base, ColorShade::S2),
             shade_color(base, ColorShade::S3),
         ),
         // A faint tint over the surface, the way the other unfilled variants
         // hover - the shadow is what actually moves.
-        ButtonVariant::Elevated => (
+        Variant::Elevated => (
             shade_color(base, ColorShade::S1),
             shade_color(base, ColorShade::S2),
         ),
@@ -190,7 +173,7 @@ pub(crate) fn variant_colors(variant: ButtonVariant, base: &ThemeAwareValue) -> 
 
 /// The `selected` look for `variant`, nested inside that variant's own block.
 /// Ties that block's own `:hover` on specificity, so it has to stay *after* it
-/// in `button_variant_sx`'s output - source order is what settles the two.
+/// in `interactive_variant_sx`'s output - source order is what settles the two.
 ///
 /// Only the background moves: the enclosing variant already sets the label
 /// colour every arm here would want, bar `Text`, whose accent label on its own
@@ -198,17 +181,17 @@ pub(crate) fn variant_colors(variant: ButtonVariant, base: &ThemeAwareValue) -> 
 /// tint - falling back to the base colour would paint a full-strength
 /// background under an `inherit` label, so the untinted variants fall back to
 /// nothing at all.
-pub(crate) fn button_selected_sx(
-    variant: ButtonVariant,
+pub(crate) fn variant_selected_sx(
+    variant: Variant,
     color_var: &CssVar,
     selected_var: &CssVar,
 ) -> Sx {
     match variant {
-        ButtonVariant::Filled | ButtonVariant::Tonal | ButtonVariant::Elevated => {
+        Variant::Filled | Variant::Tonal | Variant::Elevated => {
             sx().background(selected_var.value_or(color_var.value()))
         }
         // Both label the surface's accent, which is ~2.3:1 on its own tint.
-        ButtonVariant::Outlined | ButtonVariant::Standard => sx()
+        Variant::Outlined | Variant::Standard => sx()
             .background(selected_var.value_or("transparent"))
             .color("inherit"),
     }
@@ -228,16 +211,16 @@ static BUTTON_BASE_SX: StaticSx = StaticSx::new(|| {
         .text_decoration("none")
         .outline("none");
 
-    ButtonVariant::ALL
+    Variant::ALL
         .iter()
         .fold(base, |base, &variant| {
             base.when(
                 variant.state_name(),
-                button_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR)
+                interactive_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR)
                     // After the variant's `:hover`, which it ties on specificity.
                     .when(
                         "checked",
-                        button_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
+                        variant_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
                     ),
             )
         })
@@ -297,7 +280,7 @@ fn loading_sx() -> Sx {
 /// `(variant, base)` alone - see [`use_button_variables`], which is what keeps
 /// it off the render path.
 pub(crate) fn button_variables(
-    variant: ButtonVariant,
+    variant: Variant,
     base: &ThemeAwareValue,
     selectable: bool,
 ) -> String {
@@ -323,7 +306,7 @@ base_props! {
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         /// Corner radius, independent of `size`.
         #[props(default, into)]
         radius: Input<Size>,
@@ -514,8 +497,8 @@ mod tests {
     #[test]
     fn a_filled_button_darkens_on_hover_where_an_outlined_one_tints() {
         let base = base_color(Some(&ThemeAwareValue::Color(Color::Primary)));
-        let filled = button_variables(ButtonVariant::Filled, &base, false);
-        let outlined = button_variables(ButtonVariant::Outlined, &base, false);
+        let filled = button_variables(Variant::Filled, &base, false);
+        let outlined = button_variables(Variant::Outlined, &base, false);
 
         assert!(filled.contains(&format!(
             "{}:{};",
@@ -532,7 +515,7 @@ mod tests {
     #[test]
     fn the_color_variable_is_the_base_color_itself() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
-        let variables = button_variables(ButtonVariant::Filled, &base, false);
+        let variables = button_variables(Variant::Filled, &base, false);
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
@@ -546,7 +529,7 @@ mod tests {
     #[test]
     fn an_unparseable_color_emits_no_contrast() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(ButtonVariant::Filled, &base, false);
+        let variables = button_variables(Variant::Filled, &base, false);
 
         assert!(!variables.contains(BUTTON_CONTRAST_VAR.name()));
     }
@@ -554,15 +537,15 @@ mod tests {
     #[test]
     fn each_variant_renders_its_own_css() {
         let class_of =
-            |variant| button_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR).class_name();
+            |variant| interactive_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR).class_name();
 
-        let classes: Vec<String> = ButtonVariant::ALL.iter().map(|v| class_of(*v)).collect();
+        let classes: Vec<String> = Variant::ALL.iter().map(|v| class_of(*v)).collect();
         let mut unique = classes.clone();
         unique.sort();
         unique.dedup();
 
-        assert_eq!(unique.len(), ButtonVariant::ALL.len());
-        assert_eq!(classes[0], class_of(ButtonVariant::ALL[0]));
+        assert_eq!(unique.len(), Variant::ALL.len());
+        assert_eq!(classes[0], class_of(Variant::ALL[0]));
     }
 
     /// Only `Tonal` paints a container - `Elevated` keeps the surface, so a
@@ -571,11 +554,11 @@ mod tests {
     fn only_the_tonal_variant_emits_a_container() {
         let base = base_color(None);
 
-        let tonal = button_variables(ButtonVariant::Tonal, &base, false);
+        let tonal = button_variables(Variant::Tonal, &base, false);
         assert!(tonal.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(tonal.contains(BUTTON_ON_CONTAINER_VAR.name()));
 
-        for variant in [ButtonVariant::Elevated, ButtonVariant::Outlined] {
+        for variant in [Variant::Elevated, Variant::Outlined] {
             let variables = button_variables(variant, &base, false);
             assert!(
                 !variables.contains(BUTTON_CONTAINER_VAR.name()),
@@ -589,7 +572,7 @@ mod tests {
     #[test]
     fn a_literal_color_gets_no_container() {
         let base = ThemeAwareValue::String("gold".to_string());
-        let variables = button_variables(ButtonVariant::Tonal, &base, false);
+        let variables = button_variables(Variant::Tonal, &base, false);
 
         assert!(!variables.contains(BUTTON_CONTAINER_VAR.name()));
         assert!(!variables.contains(BUTTON_ON_CONTAINER_VAR.name()));

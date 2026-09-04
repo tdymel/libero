@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, States,
+        HtmlTag, States, Variant,
         common::{Orientation, focus_ring_sx},
         form::Activation,
         inputs::{
-            BUTTON_COLOR_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS, ButtonVariant,
-            button_selected_sx, button_variant_sx,
+            BUTTON_COLOR_VAR, BUTTON_HOVER_VAR, BUTTON_SELECTED_VAR, BUTTON_VARS,
+            interactive_variant_sx, variant_selected_sx,
         },
         layout::use_box,
     },
@@ -133,17 +133,17 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
             ),
         );
 
-    let base = ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+    let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
             sx().selector(
                 SEGMENT,
-                button_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR),
+                interactive_variant_sx(variant, &BUTTON_VARS, &BUTTON_HOVER_VAR),
             )
             // After the variant's own `:hover`, which it ties on specificity.
             .selector(
                 "& > label[data-state~=\"checked\"]",
-                button_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
+                variant_selected_sx(variant, &BUTTON_COLOR_VAR, &BUTTON_SELECTED_VAR),
             ),
         )
     });
@@ -168,7 +168,7 @@ pub(crate) struct SegmentedControlView {
     pub selected: Option<usize>,
     pub onselect: Callback<usize>,
     pub orientation: Orientation,
-    pub variant: ButtonVariant,
+    pub variant: Variant,
     pub full_width: bool,
     pub size: Size,
     pub radius: Size,

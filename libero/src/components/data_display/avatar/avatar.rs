@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables, Variant,
         common::{base_color, base_props, contrast_color, variables},
-        inputs::{ButtonVariant, VariantVars, variant_chrome_sx, variant_colors},
+        inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
     },
     hooks::use_theme,
@@ -20,11 +20,11 @@ pub(super) const AVATAR_CONTRAST_VAR: CssVar = CssVar::new("--lsx-avatar-contras
 const AVATAR_CONTAINER_VAR: CssVar = CssVar::new("--lsx-avatar-container");
 const AVATAR_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-avatar-on-container");
 
-/// Not a theme field: `ButtonVariant` is component-layer, and a theme naming
+/// Not a theme field: `Variant` is component-layer, and a theme naming
 /// one inverts the layer order (the `ChipDefaults` rule). `Tonal` because
 /// initials on a light tint read at any size - the filled arm puts them on a
 /// mid shade, where the palette's own contrast twin is the weakest.
-pub(super) const DEFAULT_VARIANT: ButtonVariant = ButtonVariant::Tonal;
+pub(super) const DEFAULT_VARIANT: Variant = Variant::Tonal;
 
 const AVATAR_VARS: VariantVars<'static> = VariantVars {
     color: &AVATAR_COLOR_VAR,
@@ -84,7 +84,7 @@ pub(super) fn avatar_sx() -> Sx {
 
     // Chrome only, `Icon`'s rule: an avatar is not interactive, so it takes no
     // hover response.
-    let base = ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+    let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
             variant_chrome_sx(variant, &AVATAR_VARS),
@@ -96,7 +96,7 @@ pub(super) fn avatar_sx() -> Sx {
     // picture filling the box, and a border it did not ask for insets that
     // picture by a pixel on three variants that draw no border at all.
     base.when(
-        ButtonVariant::Outlined.state_name(),
+        Variant::Outlined.state_name(),
         sx().border_style("solid").border_width("1px"),
     )
 }
@@ -108,7 +108,7 @@ static AVATAR_BASE_SX: StaticSx = StaticSx::new(avatar_sx);
 /// chip builds the same set without being an `Avatar`.
 pub(super) fn avatar_variables(
     color: Option<&ThemeAwareValue>,
-    variant: ButtonVariant,
+    variant: Variant,
     radius: &Input<ThemeAwareValue>,
 ) -> Variables {
     let base = base_color(color);
@@ -172,7 +172,7 @@ base_props! {
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Anything at all in place of the initials - an icon, a glyph.
@@ -265,12 +265,8 @@ mod tests {
 
     #[test]
     fn a_bare_theme_color_becomes_a_shade_plus_its_contrast() {
-        let variables = avatar_variables(
-            Some(&Color::Error.into()),
-            ButtonVariant::Filled,
-            &Input::None,
-        )
-        .to_string();
+        let variables =
+            avatar_variables(Some(&Color::Error.into()), Variant::Filled, &Input::None).to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",
@@ -285,7 +281,7 @@ mod tests {
     #[test]
     fn a_size_radius_resolves_through_the_radius_scale() {
         let radius: Input<ThemeAwareValue> = ThemeAwareValue::Size(Size::Md).into();
-        let variables = avatar_variables(None, ButtonVariant::Tonal, &radius).to_string();
+        let variables = avatar_variables(None, Variant::Tonal, &radius).to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",
@@ -296,7 +292,7 @@ mod tests {
 
     #[test]
     fn no_radius_emits_no_override() {
-        let variables = avatar_variables(None, ButtonVariant::Tonal, &Input::None).to_string();
+        let variables = avatar_variables(None, Variant::Tonal, &Input::None).to_string();
 
         assert!(!variables.contains(AVATAR_RADIUS.override_var().name()));
     }

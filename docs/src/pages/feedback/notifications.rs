@@ -5,9 +5,9 @@ use crate::icons::DismissIcon;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Box, Button, ButtonVariant, Code, CodeBlock, Flex, Input, NotificationData,
-        NotificationLive, NotificationOptions, NotificationScope, Notifications, Paper,
-        ProgressBar, Text, use_notifications, use_notifications_with,
+        ActionIcon, Box, Button, Code, CodeBlock, Flex, Input, NotificationData, NotificationLive,
+        NotificationOptions, NotificationScope, Notifications, Paper, ProgressBar, Text, Variant,
+        use_notifications, use_notifications_with,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
@@ -273,7 +273,7 @@ fn Examples(color: String, variant: String, closable: bool, template: bool) -> E
     };
     // Every `Alert` the buttons raise takes the variant; only the plain ones
     // take the colour, since the others name their own.
-    let variant = Input::<ButtonVariant>::from(variant.as_str()).copied_or(ButtonVariant::Tonal);
+    let variant = Input::<Variant>::from(variant.as_str()).copied_or(Variant::Tonal);
     let plain = move |message: &str| NotificationData {
         message: message.into(),
         color: color.clone(),

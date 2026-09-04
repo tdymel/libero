@@ -5,7 +5,7 @@ use chrono::{Datelike, Days, Months, NaiveDate};
 use super::{DateRange, fields::day_allowed, format::format_date, today::use_today};
 use crate::{
     components::{
-        ActionIcon, ButtonVariant, ClassList, HtmlTag, Input, States, common::focus_ring_sx,
+        ActionIcon, ClassList, HtmlTag, Input, States, Variant, common::focus_ring_sx,
         layout::use_box,
     },
     hooks::{use_element, use_theme},
@@ -949,7 +949,7 @@ fn Nav(props: NavProps) -> Element {
     rsx! {
         ActionIcon {
             aria_label: props.label,
-            variant: Input::Value(ButtonVariant::Standard),
+            variant: Input::Value(Variant::Standard),
             size: ThemeAwareValue::Size(nav_size(props.size)),
             tabindex: if props.focusable { "0" } else { "-1" },
             disabled: props.disabled,

@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables, Variant,
         common::{base_color, base_props, contrast_color},
-        inputs::{ButtonVariant, VariantVars, variant_chrome_sx, variant_colors},
+        inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
         variables,
     },
@@ -37,7 +37,7 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .selector("& svg", sx().width("100%").height("100%"));
 
     // Chrome only: a badge is not interactive, so it takes no hover response.
-    ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+    Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(variant.state_name(), variant_chrome_sx(variant, &ICON_VARS))
     })
 });
@@ -65,7 +65,7 @@ base_props! {
         #[props(default, into)]
         component: Input<HtmlTag>,
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
@@ -103,7 +103,7 @@ pub fn Icon(props: IconProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::components::inputs::button_variant_sx;
+    use crate::components::inputs::interactive_variant_sx;
     use crate::tokens::{Color, ColorShade, ColorValue};
 
     fn icon_props(color: Input<ThemeAwareValue>) -> IconProps {
@@ -148,17 +148,17 @@ mod tests {
     fn a_badge_renders_variant_chrome_without_a_hover() {
         let class_of = |variant| variant_chrome_sx(variant, &ICON_VARS).class_name();
 
-        let classes: Vec<String> = ButtonVariant::ALL.iter().map(|v| class_of(*v)).collect();
+        let classes: Vec<String> = Variant::ALL.iter().map(|v| class_of(*v)).collect();
         let mut unique = classes.clone();
         unique.sort();
         unique.dedup();
-        assert_eq!(unique.len(), ButtonVariant::ALL.len());
+        assert_eq!(unique.len(), Variant::ALL.len());
 
         // The interactive chrome is the same rules plus a `:hover`, so a
         // matching class name would mean the badge grew one.
         assert_ne!(
-            variant_chrome_sx(ButtonVariant::Filled, &ICON_VARS).class_name(),
-            button_variant_sx(ButtonVariant::Filled, &ICON_VARS, &ICON_COLOR_VAR).class_name()
+            variant_chrome_sx(Variant::Filled, &ICON_VARS).class_name(),
+            interactive_variant_sx(Variant::Filled, &ICON_VARS, &ICON_COLOR_VAR).class_name()
         );
     }
 }

@@ -115,7 +115,7 @@ pub fn SegmentedControlPage() -> Element {
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("Row or column layout."),
-                    prop("variant", "ButtonVariant")
+                    prop("variant", "Variant")
                         .default("filled")
                         .doc("The unselected look, shared by every segment."),
                     prop("color", "ThemeAwareValue")

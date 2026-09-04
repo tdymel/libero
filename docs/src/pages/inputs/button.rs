@@ -13,7 +13,7 @@ pub fn ButtonPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("Accent color; a theme color name or a literal CSS color."),
-                prop("variant", "ButtonVariant")
+                prop("variant", "Variant")
                     .default("filled")
                     .doc("Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `text`."),
                 prop("radius", "Size")

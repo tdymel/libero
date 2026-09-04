@@ -13,6 +13,7 @@ mod states;
 mod style_attributes;
 mod util;
 mod variables;
+mod variant;
 
 pub(crate) use base_props::base_props;
 pub use class_list::{ClassList, class_list};
@@ -37,3 +38,4 @@ pub use states::{States, states};
 pub(crate) use style_attributes::{StyleAttributes, use_style_attributes};
 pub(crate) use util::{attr, css_string, focus_ring_sx};
 pub use variables::{Variables, variables};
+pub use variant::Variant;

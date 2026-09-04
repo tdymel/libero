@@ -13,7 +13,7 @@ mod typography;
 pub use a11y::*;
 pub use common::{
     ClassList, HtmlTag, Input, NumberValue, OptionLabel, Options, Orientation, States, Variables,
-    class_list, states, variables,
+    Variant, class_list, states, variables,
 };
 pub use data_display::*;
 pub use feedback::*;

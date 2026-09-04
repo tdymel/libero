@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 use super::core::{SegmentSpec, SegmentedControlView, render_segmented_control};
 use crate::{
     components::{
-        Input, OptionLabel, Options,
+        Input, OptionLabel, Options, Variant,
         common::{Orientation, base_color, field_props},
         form::{use_bound, use_field},
-        inputs::{ButtonVariant, button_variables},
+        inputs::button_variables,
     },
     hooks::{use_cache, use_element, use_theme},
     sx::ThemeAwareValue,
@@ -54,7 +54,7 @@ field_props! {
         orientation: Input<Orientation>,
         /// The *unselected* look, shared by every segment.
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         /// Space between the segments. Set it and they stop sharing borders -

@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables, Variant,
         common::{base_color, base_props, contrast_color, variables},
-        inputs::{ButtonVariant, VariantVars, variant_chrome_sx, variant_colors},
+        inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
     },
     hooks::use_theme,
@@ -50,7 +50,7 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
     // Chrome only, no `:hover` - `Icon`'s rule and the same reason: a static
     // label that changed colour under the pointer would be claiming to be
     // interactive.
-    let base = ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+    let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
             variant_chrome_sx(variant, &BADGE_VARS),
@@ -95,7 +95,7 @@ base_props! {
         /// The five M3 arms, shared with `Button` and `Chip` - minus their
         /// hover response.
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]

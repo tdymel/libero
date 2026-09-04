@@ -14,7 +14,7 @@ use dioxus::{
 
 use crate::{
     components::{
-        ButtonVariant, HtmlTag, Input, States,
+        HtmlTag, Input, States, Variant,
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
@@ -143,7 +143,7 @@ pub struct NotificationData {
     /// `Alert`'s `color`; unset is `theme.alert.color`.
     pub color: Input<ThemeAwareValue>,
     /// `Alert`'s `variant`; unset is `theme.alert.variant`.
-    pub variant: Input<ButtonVariant>,
+    pub variant: Input<Variant>,
     /// A glyph only. It is rendered by the host long after the scope that
     /// built it may be gone, so it must not carry event handlers.
     pub icon: Option<Element>,

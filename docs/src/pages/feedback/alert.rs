@@ -26,7 +26,7 @@ pub fn AlertPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("info")
                     .doc("The tint; a theme color name or a literal CSS color. Severity is yours to state - `Form`'s summary passes `error`."),
-                prop("variant", "ButtonVariant")
+                prop("variant", "Variant")
                     .default("tonal")
                     .doc("Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target."),
                 prop("radius", "ThemeAwareValue")

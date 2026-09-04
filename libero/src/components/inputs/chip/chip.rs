@@ -2,14 +2,14 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States,
+        HtmlTag, Input, States, Variant,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
             base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
             shade_color, variables,
         },
         form::Activation,
-        inputs::{ButtonVariant, VariantColors, VariantVars, button_variant_sx, variant_colors},
+        inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
     },
@@ -52,12 +52,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .text_decoration("none");
 
-    ButtonVariant::ALL
+    Variant::ALL
         .iter()
         .fold(base, |base, &variant| {
             base.when(
                 variant.state_name(),
-                button_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR),
+                interactive_variant_sx(variant, &CHIP_VARS, &CHIP_HOVER_VAR),
             )
         })
         // Folded after the variants, which is what makes it win: equal
@@ -67,7 +67,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         // sets `border-color: transparent`.
         .when(
             "checked",
-            button_variant_sx(ButtonVariant::Tonal, &CHIP_VARS, &CHIP_HOVER_VAR),
+            interactive_variant_sx(Variant::Tonal, &CHIP_VARS, &CHIP_HOVER_VAR),
         )
         .when("clickable", sx().cursor("pointer"))
         .when(
@@ -94,7 +94,7 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
-fn chip_variables(variant: ButtonVariant, checked: bool, base: &ThemeAwareValue) -> String {
+fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> String {
     // Selected is a tonal container, whatever the unselected look is - but one
     // step past `Tonal`'s own resting tint, or selecting a chip that is
     // already tonal would produce no visible change at all.
@@ -127,7 +127,7 @@ base_props! {
         color: Input<ThemeAwareValue>,
         /// The *unselected* look; a checked chip is always filled.
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         #[props(default, into)]
         size: Input<Size>,
         /// Corner radius, independent of `size`.

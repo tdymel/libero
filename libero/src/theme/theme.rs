@@ -1,7 +1,7 @@
 // A glob over `theme`'s exports, so a new component's defaults never edit
 // this import list.
 use super::*;
-use crate::components::ButtonVariant;
+use crate::components::Variant;
 
 const SANS_FONT_FAMILY: &str = "ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Noto Sans', Ubuntu, Cantarell, 'Helvetica Neue', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji'";
 const MONO_FONT_FAMILY: &str = "ui-monospace, SFMono-Regular, Menlo, Consolas, monospace";
@@ -434,7 +434,7 @@ impl Theme {
             ),
         },
         alert: AlertDefaults {
-            variant: ButtonVariant::Tonal,
+            variant: Variant::Tonal,
             // Not the primary colour: severity is the caller's to state, and
             // the brand colour on an alert reads as decoration.
             color: "info",

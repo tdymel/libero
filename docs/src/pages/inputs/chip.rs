@@ -16,7 +16,7 @@ pub fn ChipPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("Accent color; a theme color name or a literal CSS color."),
-                prop("variant", "ButtonVariant")
+                prop("variant", "Variant")
                     .default("filled")
                     .doc("The unselected look; a checked chip is a tonal container whatever its variant."),
                 prop("size", "Size").default("md").doc("Controls height, padding, and font size."),

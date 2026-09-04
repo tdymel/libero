@@ -8,7 +8,7 @@
 /// ```ignore
 /// str_enum! {
 ///     /// How a control paints itself.
-///     pub enum ButtonVariant {
+///     pub enum Variant {
 ///         #[default]
 ///         Filled = "filled",
 ///         Outlined = "outlined" | "outline",
@@ -136,8 +136,8 @@ pub(crate) use str_enum;
 mod tests {
 
     use crate::components::{
-        AnchorUnderline, ButtonVariant, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition,
-        ImageFit, LabelPosition, Orientation, PinKind, SidebarSide,
+        AnchorUnderline, DrawerAnchor, FlexDirection, FlexWrap, HeaderPosition, ImageFit,
+        LabelPosition, Orientation, PinKind, SidebarSide, Variant,
     };
     use crate::theme::{
         ChoiceVariant, LoaderVariant, Placement, QrRobustness, ScrollAxis, ScrollbarSize,
@@ -148,7 +148,7 @@ mod tests {
     macro_rules! for_every_str_enum {
         ($check:ident) => {
             $check!(AnchorUnderline);
-            $check!(ButtonVariant);
+            $check!(Variant);
             $check!(ChoiceVariant);
             $check!(DrawerAnchor);
             $check!(FlexDirection);
@@ -213,28 +213,28 @@ mod tests {
 
     #[test]
     fn parses_case_insensitively_and_accepts_aliases() {
-        assert_eq!(ButtonVariant::from("OUTLINED"), ButtonVariant::Outlined);
-        assert_eq!(ButtonVariant::from("outline"), ButtonVariant::Outlined);
+        assert_eq!(Variant::from("OUTLINED"), Variant::Outlined);
+        assert_eq!(Variant::from("outline"), Variant::Outlined);
         // The lowest arm answers to M3's name and to both of ours.
-        assert_eq!(ButtonVariant::from("text"), ButtonVariant::Standard);
-        assert_eq!(ButtonVariant::from("transparent"), ButtonVariant::Standard);
+        assert_eq!(Variant::from("text"), Variant::Standard);
+        assert_eq!(Variant::from("transparent"), Variant::Standard);
     }
 
     #[test]
     fn an_unknown_string_falls_back_to_the_default_variant() {
-        assert_eq!(ButtonVariant::from("nonsense"), ButtonVariant::default());
-        assert_eq!(ButtonVariant::from(""), ButtonVariant::Filled);
+        assert_eq!(Variant::from("nonsense"), Variant::default());
+        assert_eq!(Variant::from(""), Variant::Filled);
     }
 
     #[test]
     fn as_str_is_the_canonical_spelling_not_an_alias() {
         assert_eq!(ImageFit::ScaleDown.as_str(), "scale-down");
-        assert_eq!(ButtonVariant::Standard.as_str(), "standard");
+        assert_eq!(Variant::Standard.as_str(), "standard");
     }
 
     #[test]
     fn state_name_is_as_str_unless_a_prefix_is_declared() {
-        assert_eq!(ButtonVariant::Outlined.state_name(), "outlined");
+        assert_eq!(Variant::Outlined.state_name(), "outlined");
         assert_eq!(ImageFit::ScaleDown.state_name(), "fit-scale-down");
     }
 }

@@ -2,10 +2,10 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, States, Variables, Variant,
         common::base_props,
         common::{base_color, contrast_color},
-        inputs::{ButtonVariant, VariantVars, button_variant_sx, variant_colors},
+        inputs::{VariantVars, interactive_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
         variables,
@@ -52,13 +52,13 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
         .border_radius(ACTION_ICON_RADIUS.overridable())
         .selector("& svg", sx().width("100%").height("100%"));
 
-    let base = ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+    let base = Variant::ALL.iter().fold(base, |base, &variant| {
         base.when(
             variant.state_name(),
             // The ungated base is `border: none` for a caller with its own
             // `sx`, so the width the variants' `border-color` needs joins
             // here rather than out there.
-            button_variant_sx(variant, &ACTION_ICON_VARS, &ACTION_ICON_HOVER_VAR)
+            interactive_variant_sx(variant, &ACTION_ICON_VARS, &ACTION_ICON_HOVER_VAR)
                 .border_style("solid")
                 .border_width("1px"),
         )
@@ -106,7 +106,7 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
 base_props! {
     pub struct ActionIconProps {
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
         #[props(default, into)]

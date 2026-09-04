@@ -2,9 +2,9 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, HtmlTag, Input, States, Variables,
+        ActionIcon, HtmlTag, Input, States, Variables, Variant,
         common::{CloseIcon, base_color, base_props, contrast_color, variables},
-        inputs::{ButtonVariant, VariantVars, variant_chrome_sx, variant_colors},
+        inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
         surface::paper_sx,
     },
@@ -82,7 +82,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
 
     // Chrome only, no `:hover` - `Badge`'s rule. An alert is not a target, and
     // a tint that moved under the pointer would claim it is.
-    ButtonVariant::ALL.iter().fold(base, |base, &variant| {
+    Variant::ALL.iter().fold(base, |base, &variant| {
         let chrome = variant_chrome_sx(variant, &ALERT_VARS);
         // `paper_sx()`'s black focus ring is lost on a solid ground - 1.8:1 on
         // `neutral`. The text colour reads on it by construction, so the ring
@@ -92,7 +92,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
         // outside it, on the page, where the text colour is often white on
         // white.
         let chrome = match variant {
-            ButtonVariant::Filled => chrome.selector(
+            Variant::Filled => chrome.selector(
                 "& > *",
                 sx().var(
                     CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
@@ -105,11 +105,7 @@ static ALERT_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-fn alert_variables(
-    props: &AlertProps,
-    base: &ThemeAwareValue,
-    variant: ButtonVariant,
-) -> Variables {
+fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant) -> Variables {
     let contrast = contrast_color(base);
     let colors = variant_colors(variant, base);
 
@@ -146,7 +142,7 @@ base_props! {
         /// hover response. `Outlined` is border-plus-`color: inherit` and
         /// carries no tint, deliberately.
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         /// A size step or any CSS length.
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,

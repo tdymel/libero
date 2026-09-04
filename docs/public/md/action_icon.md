@@ -89,7 +89,7 @@ gets `aria-disabled="true"` plus `tabindex="-1"` so it leaves the tab order.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `ButtonVariant` | - | Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
+| `variant` | `Variant` | - | Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
 | `color` | `ThemeAwareValue` | - | Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`). |
 | `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |

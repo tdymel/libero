@@ -42,7 +42,7 @@ fn it_renders_one_span_with_no_role_and_no_aria() {
     );
 }
 
-/// `variant_chrome_sx`, not `button_variant_sx`: a static label that changed
+/// `variant_chrome_sx`, not `interactive_variant_sx`: a static label that changed
 /// colour under the pointer would be claiming to be interactive. The rule is
 /// `Icon`'s, and the mistake is one `Chip`-shaped copy-paste away.
 #[test]

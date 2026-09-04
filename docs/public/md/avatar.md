@@ -129,7 +129,7 @@ Barbara Liskov, Margaret Hamilton".
 | `alt` | `String` | follows `name` | Overrides the announced name. `alt: ""` marks the avatar decorative. |
 | `size` | `Size` | `theme.avatar.size` | The square's side, which also sets the placeholder's font size. |
 | `radius` | `ThemeAwareValue` | `theme.avatar.radius` | Corner radius - the radius scale, or any CSS length. The default is a circle. |
-| `variant` | `ButtonVariant` | `tonal` | Placeholder chrome; invisible once a picture loads. |
+| `variant` | `Variant` | `tonal` | Placeholder chrome; invisible once a picture loads. |
 | `color` | `ThemeAwareValue` | `primary` | Placeholder tint. |
 | `children` | `Element` | - | Anything at all in place of the initials - an icon, a glyph. |
 
@@ -142,7 +142,7 @@ Barbara Liskov, Margaret Hamilton".
 | `spacing` | `Size` | `theme.avatar_group.spacing` | How far each circle is pulled over the one before it. |
 | `size` | `Size` | `theme.avatar.size` | Applied to every member, the chip included. |
 | `radius` | `ThemeAwareValue` | `theme.avatar.radius` | Applied to every member, the chip included. |
-| `variant` | `ButtonVariant` | `tonal` | Applied to every member, the chip included. |
+| `variant` | `Variant` | `tonal` | Applied to every member, the chip included. |
 | `color` | `ThemeAwareValue` | `primary` | The tint a member without a `color` of its own takes. |
 
 ### `AvatarSpec`
@@ -159,7 +159,7 @@ memoize.
 | `initials` | `Option<String>` | `None` | Drawn when there is no picture. |
 | `color` | `Option<ThemeAwareValue>` | `None` | This member's own tint, overriding the group's. |
 
-`ButtonVariant` takes `filled`, `tonal`, `elevated`, `outlined` or `standard`.
+`Variant` takes `filled`, `tonal`, `elevated`, `outlined` or `standard`.
 
 Like every component, both also take the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

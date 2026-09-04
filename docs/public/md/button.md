@@ -86,7 +86,7 @@ name.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `filled` | Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `standard` (also spelled `text`). |
+| `variant` | `Variant` | `filled` | Visual style, in Material 3's descending emphasis order: `filled`, `tonal`, `elevated`, `outlined`, `standard` (also spelled `text`). |
 | `radius` | `Size` | `md` | Corner radius, independent of `size`. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `full_width` | `bool` | `false` | Stretches the button to fill its container. |

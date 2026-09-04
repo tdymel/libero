@@ -109,7 +109,7 @@ pub fn AvatarPage() -> Element {
                     prop("radius", "ThemeAwareValue")
                         .default("theme.avatar.radius")
                         .doc("Corner radius - the radius scale, or any CSS length. The default is a circle."),
-                    prop("variant", "ButtonVariant")
+                    prop("variant", "Variant")
                         .default("tonal")
                         .doc("Placeholder chrome; invisible once a picture loads."),
                     prop("color", "ThemeAwareValue")
@@ -133,7 +133,7 @@ pub fn AvatarPage() -> Element {
                     prop("radius", "ThemeAwareValue")
                         .default("theme.avatar.radius")
                         .doc("Applied to every member, the chip included."),
-                    prop("variant", "ButtonVariant")
+                    prop("variant", "Variant")
                         .default("tonal")
                         .doc("Applied to every member, the chip included."),
                     prop("color", "ThemeAwareValue")

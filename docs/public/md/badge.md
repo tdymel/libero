@@ -98,7 +98,7 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `variant` | `ButtonVariant` | `filled` | Chrome, shared with `Button` and `Chip`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response. |
+| `variant` | `Variant` | `filled` | Chrome, shared with `Button` and `Chip`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response. |
 | `color` | `ThemeAwareValue` | `primary` | The accent; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with. |
 | `size` | `Size` | `md` | Height, horizontal padding and font size, on the badge's own scale - smaller than a chip's. |
 | `radius` | `ThemeAwareValue` | `9999px` | A size step or any CSS length. The theme's own default is off the scale, because a badge is a pill at every height. |
@@ -121,7 +121,7 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 | `font_weight` | `&'static str` | `700`. |
 | `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/16px/6px`, `0.625rem/18px/8px`, `0.6875rem/20px/10px`, `0.8125rem/26px/12px`, `1rem/32px/16px`, `1.125rem/38px/20px`. |
 
-`variant` and `color` are not theme fields - `ButtonVariant` is component-layer,
+`variant` and `color` are not theme fields - `Variant` is component-layer,
 and `color` falls back to `primary` shade 6 in the component.
 
 ## CSS variables

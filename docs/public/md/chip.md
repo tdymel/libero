@@ -100,7 +100,7 @@ any nested control.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `filled` | The unselected look; a checked chip is a tonal container whatever its variant. |
+| `variant` | `Variant` | `filled` | The unselected look; a checked chip is a tonal container whatever its variant. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `radius` | `Size` | `xl` | Corner radius, independent of `size`. |
 | `checked` | `bool` | - | Strictly controlled selection state - pair it with `onchange`. |

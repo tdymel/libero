@@ -15,7 +15,7 @@ pub fn ActionIconPage() -> Element {
             source: "libero/src/components/inputs/action_icon.rs",
             markdown: "/md/action_icon.md",
             properties: vec![props("ActionIcon", vec![
-                prop("variant", "ButtonVariant")
+                prop("variant", "Variant")
                     .doc("Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color."),
                 prop("color", "ThemeAwareValue")
                     .doc("Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`)."),

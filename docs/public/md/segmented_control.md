@@ -254,7 +254,7 @@ themselves.
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a segment. Runs during render, so it can read a locale from context. |
 | `disabled_options` | `Vec<T>` | - | Segments that render but cannot be picked. |
 | `orientation` | `Orientation` | `horizontal` | Row or column layout. |
-| `variant` | `ButtonVariant` | `filled` | The unselected look, shared by every segment. |
+| `variant` | `Variant` | `filled` | The unselected look, shared by every segment. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
 | `size` | `Size` | `md` | Shared by every segment, and by the captions around them. |
 | `radius` | `Size` | `md` | Corner radius of the control's outer corners; inner ones are square. |

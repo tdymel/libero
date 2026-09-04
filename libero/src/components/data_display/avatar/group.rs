@@ -4,9 +4,8 @@ use super::avatar::{avatar_sx, avatar_variables};
 use super::spec::AvatarSpec;
 use crate::{
     components::{
-        Avatar, HtmlTag, Input, States, Tooltip, Variables,
+        Avatar, HtmlTag, Input, States, Tooltip, Variables, Variant,
         common::{base_props, focus_ring_sx, variables},
-        inputs::ButtonVariant,
         layout::use_box,
     },
     hooks::use_theme,
@@ -57,7 +56,7 @@ base_props! {
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
         #[props(default, into)]
-        variant: Input<ButtonVariant>,
+        variant: Input<Variant>,
         /// The tint every member without one of its own takes.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,

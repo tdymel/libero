@@ -16,7 +16,7 @@ pub fn BadgePage() -> Element {
             source: "libero/src/components/data_display/badge.rs",
             markdown: "/md/badge.md",
             properties: vec![props("Badge", vec![
-                prop("variant", "ButtonVariant")
+                prop("variant", "Variant")
                     .default("filled")
                     .doc("Chrome, shared with `Button` and `Chip`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response."),
                 prop("color", "ThemeAwareValue")

@@ -195,7 +195,7 @@ pub fn use_notifications_with<T: 'static>(
 | `title` | `Option<String>` | The `Alert`'s title and accessible name. |
 | `message` | `String` | The message. Empty renders no message slot. |
 | `color` | `Input<ThemeAwareValue>` | The `Alert`'s colour; unset is `theme.alert.color`. |
-| `variant` | `Input<ButtonVariant>` | The `Alert`'s variant; unset is `theme.alert.variant`. |
+| `variant` | `Input<Variant>` | The `Alert`'s variant; unset is `theme.alert.variant`. |
 | `icon` | `Option<Element>` | A glyph. It is drawn by the host later, so it must not carry event handlers. |
 
 `From<&str>` and `From<String>` fill `message`.

@@ -95,7 +95,7 @@ its field. See [Form](form.md).
 | `title` | `String` | - | The heading, and the accessible name through `aria-labelledby`. |
 | `icon` | `Element` | - | A leading glyph, rendered `aria-hidden`. |
 | `color` | `ThemeAwareValue` | `info` | The tint; a theme color name or a literal CSS color. |
-| `variant` | `ButtonVariant` | `tonal` | Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target. |
+| `variant` | `Variant` | `tonal` | Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target. |
 | `radius` | `ThemeAwareValue` | `md` | A size step or any CSS length. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button, and fires when it is pressed. |
 | `close_label` | `String` | `Close` | The close button's accessible name. |
@@ -110,7 +110,7 @@ Like every component, `Alert` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `variant` | `ButtonVariant` | `Tonal`. |
+| `variant` | `Variant` | `Tonal`. |
 | `color` | `&'static str` | `info`. A palette colour name, read to default the `color` prop. |
 | `radius` | `Size` | `Md`, the same step as `paper.radius`. |
 | `padding` | `Size` | `Md`, on the spacing scale. |

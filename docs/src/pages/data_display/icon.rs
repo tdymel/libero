@@ -17,7 +17,7 @@ pub fn IconPage() -> Element {
             properties: vec![
                 props("Icon", vec![
                     prop("component", "HtmlTag").default("span").doc("Element to render as."),
-                    prop("variant", "ButtonVariant")
+                    prop("variant", "Variant")
                         .default("filled")
                         .doc("Chrome around the svg, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response."),
                     prop("color", "ThemeAwareValue")

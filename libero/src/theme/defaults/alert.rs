@@ -1,4 +1,4 @@
-use crate::components::ButtonVariant;
+use crate::components::Variant;
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 use crate::theme::{CssVar, Size, SizeCss};
@@ -21,7 +21,7 @@ pub const ALERT_ICON_SIZE: CssVar = CssVar::new("--lsx-alert-icon-size");
 pub struct AlertDefaults {
     /// Chrome, shared with `Button`. `Tonal` is the tinted arm, which is what
     /// an alert is; it carries no `var()` of its own, only a `data-state`.
-    pub variant: ButtonVariant,
+    pub variant: Variant,
     /// A palette colour name, read in Rust to default the `color` prop - not
     /// a CSS declaration, the way `badge.size` is not one. The component
     /// publishes the resolved shades as its own `var()`s per instance.

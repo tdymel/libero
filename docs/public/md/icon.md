@@ -77,7 +77,7 @@ with a required `aria_label`.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `component` | `HtmlTag` | `span` | Element to render as. |
-| `variant` | `ButtonVariant` | `filled` | Chrome around the svg, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response. |
+| `variant` | `Variant` | `filled` | Chrome around the svg, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response. |
 | `color` | `ThemeAwareValue` | `primary` | Sets the container's CSS color, which a `currentColor` svg then inherits. A theme color also tints the background under variant `filled`. |
 | `size` | `ThemeAwareValue` | `md` | Badge width and height. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius of the badge. |
