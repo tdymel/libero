@@ -28,7 +28,7 @@ fn Demo() -> Element {
             title: Some("Inspector".into()),
             placement: "bottom-end".into(),
             resizable: true,
-            sx: sx().min_width("16rem").max_width("40rem").into(),
+            sx: sx().min_width("16rem").max_width("min(40rem, 100dvw)").into(),
             ..Default::default()
         },
         |window| rsx! {
@@ -43,6 +43,29 @@ fn Demo() -> Element {
 
 Call it under `LiberoProvider`, in a component that outlives every trigger: the
 window is portaled from there.
+
+The docs page's preview opens three windows - Inspector (`bottom-end`), Notes
+(`top-end`, which opens a modal) and Layers (`bottom-start`) - one at a time or
+all at once, to show stacking. Its switches set `resizable`, `pinned` and
+`onmove`/`onresize` on all three, and the code block prints the example opened
+last. The windows sit on the viewport, not in the preview: a window is
+`position: fixed` and clamped to the viewport.
+
+Reporting the geometry, with one callback for both events:
+
+```rust
+let mut last = use_signal(|| None::<WindowRect>);
+let report = use_callback(move |rect: WindowRect| last.set(Some(rect)));
+let inspector = use_floating_window(
+    FloatingWindowOptions {
+        title: Some("Inspector".into()),
+        onmove: Some(report),
+        onresize: Some(report),
+        ..Default::default()
+    },
+    |window| rsx! { Button { onclick: move |_| window.close(), "Done" } },
+);
+```
 
 ## API
 
@@ -76,7 +99,9 @@ handle, so the body can close its own window.
   sits where it was put, clamped into the viewport by CSS so it re-clamps when
   its own size changes. A window larger than the viewport pins to the top-left.
 - The resize handle asks for a size; your `sx` constraints clamp it. Without
-  them it is capped at the viewport.
+  them it is capped at the viewport. A `max_width` of your own replaces that
+  cap, so write `min(40rem, 100dvw)` rather than `40rem`, or a phone gets a
+  window wider than the screen.
 - A drag re-renders the whole window, `children` included. Keep the body shallow.
 
 ## Stacking

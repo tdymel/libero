@@ -1,11 +1,16 @@
-use crate::components::{DocPage, DocSection};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
+use crate::icons::{FileIcon, FolderIcon};
 use dioxus::prelude::*;
 use libero::components::{
-    Button, Code, CodeBlock, Flex, Kbd, SpotlightAction, SpotlightOptions, Text, spotlight_filter,
+    Button, Code, Flex, Kbd, SpotlightAction, SpotlightOptions, Text, spotlight_filter,
     use_spotlight,
 };
 
-const USAGE: &str = r#"fn actions(mut last: Signal<String>) -> Vec<SpotlightAction> {
+/// Each example's actions, printed verbatim above the hook - keep every one in
+/// step with the fn below it.
+const COMMANDS_CODE: &str = r#"fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     let run = move |name: &'static str| move |_| last.set(name.to_string());
     vec![
         SpotlightAction::new("Home").group("Pages").description("The start page").onclick(run("Home")),
@@ -16,22 +21,9 @@ const USAGE: &str = r#"fn actions(mut last: Signal<String>) -> Vec<SpotlightActi
         SpotlightAction::new("Sign out").group("Account").onclick(run("Sign out")),
     ]
 }
+"#;
 
-let mut last = use_signal(|| String::from("nothing yet"));
-let all = use_hook(|| actions(last));
-let spotlight = use_spotlight(SpotlightOptions {
-    actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &all))),
-    // The docs shell already owns Ctrl+K; a page-level palette binds none.
-    shortcut: None,
-    ..Default::default()
-});
-
-rsx! {
-    Button { variant: "outlined", onclick: move |_| spotlight.open(), "Open the palette" }
-    Text { size: "sm", "Last run: {last()}" }
-}"#;
-
-fn actions(mut last: Signal<String>) -> Vec<SpotlightAction> {
+fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     let run = move |name: &'static str| move |_| last.set(name.to_string());
     vec![
         SpotlightAction::new("Home")
@@ -59,24 +51,214 @@ fn actions(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ]
 }
 
+const FILES_CODE: &str = r#"fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
+    ["src", "src/main.rs", "src/lib.rs", "tests", "Cargo.toml", "README.md"]
+        .into_iter()
+        .map(|path| {
+            let icon = if path.contains('.') { rsx! { FileIcon {} } } else { rsx! { FolderIcon {} } };
+            SpotlightAction::new(path).icon(icon).onclick(move |_| last.set(path.to_string()))
+        })
+        .collect()
+}
+"#;
+
+fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
+    [
+        "src",
+        "src/main.rs",
+        "src/lib.rs",
+        "tests",
+        "Cargo.toml",
+        "README.md",
+    ]
+    .into_iter()
+    .map(|path| {
+        let icon = if path.contains('.') {
+            rsx! { FileIcon {} }
+        } else {
+            rsx! { FolderIcon {} }
+        };
+        SpotlightAction::new(path)
+            .icon(icon)
+            .onclick(move |_| last.set(path.to_string()))
+    })
+    .collect()
+}
+
+const ISSUES_CODE: &str = r#"fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
+    (1..=200)
+        .map(|n| {
+            SpotlightAction::new(format!("Issue #{n}"))
+                .description(if n % 2 == 0 { "Open" } else { "Closed" })
+                .onclick(move |_| last.set(format!("Issue #{n}")))
+        })
+        .collect()
+}
+"#;
+
+fn issues(mut last: Signal<String>) -> Vec<SpotlightAction> {
+    (1..=200)
+        .map(|n| {
+            SpotlightAction::new(format!("Issue #{n}"))
+                .description(if n % 2 == 0 { "Open" } else { "Closed" })
+                .onclick(move |_| last.set(format!("Issue #{n}")))
+        })
+        .collect()
+}
+
+/// The three examples: the name of the handle and the actions fn in the
+/// printed code, the actions fn's source, and the trigger's label.
+const EXAMPLES: [(&str, &str, &str, &str); 3] = [
+    ("commands", "commands", COMMANDS_CODE, "Commands"),
+    ("files", "files", FILES_CODE, "Files"),
+    ("issues", "issues", ISSUES_CODE, "200 issues"),
+];
+
+/// What the controls add to every palette's options.
+fn option_lines(values: &DemoValues) -> Vec<String> {
+    let mut lines = vec![];
+    match values.str("limit").as_str() {
+        "none" => {}
+        limit => lines.push(format!("limit: Some({limit}),")),
+    }
+    if values.str("close_on_action") == "false" {
+        lines.push("close_on_action: false,".into());
+    }
+    if values.str("clear_on_close") == "false" {
+        lines.push("clear_on_close: false,".into());
+    }
+    lines.push(match values.str("shortcut").as_str() {
+        "none" => "shortcut: None,".into(),
+        key => format!("shortcut: Some('{key}'),"),
+    });
+    lines
+}
+
+/// The code of the example opened last. The preview's buttons pick it.
+fn wrap_example(values: &DemoValues, _: &str) -> String {
+    let example = values.str("example");
+    let (handle, actions, actions_code, label) = EXAMPLES
+        .into_iter()
+        .find(|(name, ..)| *name == example)
+        .unwrap_or(EXAMPLES[0]);
+
+    let mut options = vec![
+        "actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &all))),"
+            .to_string(),
+    ];
+    if handle == "files" {
+        options.push(r#"placeholder: Some("Go to file...".into()),"#.into());
+        options.push(r#"nothing_found: Some(rsx! { "No file by that name." }),"#.into());
+    }
+    options.extend(option_lines(values));
+    options.push("..Default::default()".into());
+
+    let key = values.str("shortcut");
+    let hint = if key == "none" {
+        String::new()
+    } else {
+        format!(
+            "    Text {{ size: \"sm\", Kbd {{ \"Ctrl\" }} \" + \" Kbd {{ {:?} }} \" toggles it\" }}\n",
+            key.to_uppercase()
+        )
+    };
+    format!(
+        "{actions_code}\nlet last = use_signal(|| String::from(\"nothing yet\"));\n\
+         let all = use_hook(|| {actions}(last));\n\
+         let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
+         rsx! {{\n    \
+             Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), {label:?} }}\n\
+         {hint}    \
+             Text {{ size: \"sm\", \"Last run: {{last()}}\" }}\n\
+         }}",
+        indent(&options.join("\n")),
+    )
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct SpotlightDemoProps {
+    limit: Option<usize>,
+    close_on_action: bool,
+    clear_on_close: bool,
+    shortcut: Option<char>,
+    values: DemoValues,
+}
+
+/// The hooks need a scope of their own: `Demo` calls `render` from its own.
 #[component]
-fn SpotlightDemo() -> Element {
+fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
+    let SpotlightDemoProps {
+        limit,
+        close_on_action,
+        clear_on_close,
+        shortcut,
+        values,
+    } = props;
+    let example = values.str("example");
     let last = use_signal(|| String::from("nothing yet"));
-    let all = use_hook(|| actions(last));
-    let spotlight = use_spotlight(SpotlightOptions {
-        actions: Some(Callback::new(move |query: String| {
-            spotlight_filter(&query, &all)
-        })),
-        shortcut: None,
+    // Only the palette the code block shows is bound to the key.
+    let options = |name: &str| SpotlightOptions {
+        limit,
+        close_on_action,
+        clear_on_close,
+        shortcut: shortcut.filter(|_| example == name),
         ..Default::default()
+    };
+
+    let all_commands = use_hook(|| commands(last));
+    let commands_actions =
+        use_callback(move |query: String| spotlight_filter(&query, &all_commands));
+    let commands = use_spotlight(SpotlightOptions {
+        actions: Some(commands_actions),
+        ..options("commands")
+    });
+    let all_files = use_hook(|| files(last));
+    let files_actions = use_callback(move |query: String| spotlight_filter(&query, &all_files));
+    let files = use_spotlight(SpotlightOptions {
+        actions: Some(files_actions),
+        placeholder: Some("Go to file...".into()),
+        nothing_found: Some(rsx! { "No file by that name." }),
+        ..options("files")
+    });
+    let all_issues = use_hook(|| issues(last));
+    let issues_actions = use_callback(move |query: String| spotlight_filter(&query, &all_issues));
+    let issues = use_spotlight(SpotlightOptions {
+        actions: Some(issues_actions),
+        ..options("issues")
     });
 
+    let handles = [commands, files, issues];
+
     rsx! {
-        Flex {
-            direction: "row",
-            align: "center",
-            gap: "md",
-            Button { variant: "outlined", onclick: move |_| spotlight.open(), "Open the palette" }
+        Flex { direction: "column", align: "center", gap: "md",
+            Flex {
+                direction: "row",
+                justify: "center",
+                gap: "sm",
+                wrap: "wrap",
+                for ((name, _, _, label), handle) in EXAMPLES.into_iter().zip(handles) {
+                    Button {
+                        key: "{name}",
+                        variant: "outlined",
+                        onclick: {
+                            let values = values.clone();
+                            move |_| {
+                                values.set("example", name);
+                                handle.open();
+                            }
+                        },
+                        "{label}"
+                    }
+                }
+            }
+            if let Some(key) = shortcut {
+                Text { size: "sm",
+                    Kbd { "Ctrl" }
+                    " + "
+                    Kbd { "{key.to_ascii_uppercase()}" }
+                    " toggles it"
+                }
+            }
             Text { size: "sm", "Last run: {last()}" }
         }
     }
@@ -89,87 +271,88 @@ pub fn SpotlightPage() -> Element {
             title: "Spotlight",
             source: "libero/src/components/overlay/spotlight",
             markdown: "/md/spotlight.md",
+            properties: vec![
+                props("SpotlightOptions", vec![
+                    prop("actions", "Option<Callback<String, Vec<SpotlightAction>>>").doc("Called with the live query, returns the rows. Capture a `Signal`, not a `Vec`, if the list changes. `None` warns and shows nothing."),
+                    prop("placeholder", "Option<String>").default("\"Search...\"").doc("The search box's placeholder, from the theme's labels."),
+                    prop("nothing_found", "Option<Element>").doc("Shown, and announced, when a non-empty query matches nothing. Unset, the theme's text."),
+                    prop("limit", "Option<usize>").doc("A cap on the rows drawn, counted through the groups."),
+                    prop("close_on_action", "bool").default("true").doc("Close after running an action."),
+                    prop("clear_on_close", "bool").default("true").doc("Start every opening with an empty query."),
+                    prop("aria_label", "Option<String>").default("\"Command palette\"").doc("Names the dialog."),
+                    prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on the page. `None` for no hotkey. Web only."),
+                ]),
+                props("SpotlightAction", vec![
+                    prop("label", "String").doc("The row's text, and the first thing `spotlight_filter` matches."),
+                    prop("description", "Option<String>").doc("A second line, matched after the label."),
+                    prop("keywords", "Vec<String>").doc("Matched, never drawn."),
+                    prop("group", "Option<String>").doc("A section header. Groups keep the order they first appear in."),
+                    prop("icon", "Option<Element>").doc("Drawn before the label."),
+                    prop("shortcut", "Option<String>").doc("A hint drawn as a `Kbd`. Never bound."),
+                    prop("onclick", "Option<Callback<()>>").doc("Run on Enter or a click."),
+                ]),
+                props("SpotlightHandle", vec![
+                    prop("open()", "()").doc("Opens with focus in the search box. Call it from the trigger's handler, so focus returns there."),
+                    prop("close()", "()").doc("Closes."),
+                    prop("toggle()", "()").doc("One or the other."),
+                    prop("is_open()", "bool").doc("Whether it is open."),
+                ]),
+            ],
             lead: rsx! {
                 Text {
                     "A command palette: a modal search box over a list of actions. "
                     Code { source: "use_spotlight" }
-                    " is a hook, like "
-                    Code { source: "use_modal" }
-                    " - it returns a "
+                    " returns a "
                     Code { source: "Copy" }
-                    " handle with "
-                    Code { source: "open" }
-                    ", "
-                    Code { source: "close" }
-                    " and "
-                    Code { source: "toggle" }
+                    " handle, like "
+                    Code { source: "use_modal" }
                     ". What it lists is yours: "
                     Code { source: "actions" }
-                    " is called with the live query and returns the rows, so a static list, "
-                    "a filtered one and search results are the same prop. "
+                    " is called with the live query and returns the rows, so a fixed list and "
+                    "search results are the same prop. "
                     Code { source: "spotlight_filter" }
-                    " is the common case: label hits first, then description and keyword hits."
-                }
-                Text {
-                    "Rows with a "
-                    Code { source: "group" }
-                    " are drawn under its header, groups in the order they first appear, and "
-                    Code { source: "limit" }
-                    " counts rows through the groups. A "
-                    Code { source: "shortcut" }
-                    " on an action is a hint, drawn as a "
-                    Code { source: "Kbd" }
-                    ", and never bound."
+                    " is the common case, label hits first. The code block follows the last "
+                    "button you pressed. The hotkey here is J or P, because this site's own "
+                    "search already owns "
+                    Kbd { "Ctrl" }
+                    " + "
+                    Kbd { "K" }
+                    "."
                 }
             },
-            DocSection {
-                title: "Usage",
-                SpotlightDemo {}
-                CodeBlock { source: USAGE, language: "rust" }
+            Demo {
+                component: "SpotlightOptions",
+                children_text: "",
+                controls: vec![
+                    // Set by the preview's buttons, never by the panel.
+                    Control::toggle("example", ["commands", "files", "issues"])
+                        .hidden_when(|_| true),
+                    Control::toggle("shortcut", ["j", "p", "none"]),
+                    Control::slider("limit", ["3", "5", "10", "none"]).default("none"),
+                    Control::switch("close_on_action").default("true"),
+                    Control::switch("clear_on_close").default("true"),
+                ],
+                render: move |values: DemoValues| rsx! {
+                    SpotlightDemo {
+                        limit: values.str("limit").parse().ok(),
+                        close_on_action: values.str("close_on_action") == "true",
+                        clear_on_close: values.str("clear_on_close") == "true",
+                        shortcut: values.str("shortcut").chars().next().filter(|_| values.str("shortcut") != "none"),
+                        values: values.clone(),
+                    }
+                },
+                wrap: Wrap(wrap_example),
             }
             DocSection {
-                title: "Opening it",
+                title: "Keyboard",
                 Text {
-                    Kbd { "Ctrl" } " + " Kbd { "K" } " (" Kbd { "Cmd" } " on a Mac) toggles a palette "
-                    "from anywhere on the page - try it here, it opens this site's own search. "
-                    "Change the key with "
-                    Code { source: "shortcut: Some('p')" }
-                    ", or turn it off with "
-                    Code { source: "None" }
-                    ". The chord is ignored while you type in another text field, and while "
-                    "a dialog or a popover is already open. It needs a document-level key "
-                    "listener, which only the web has today: elsewhere, open the palette "
-                    "from a button."
-                }
-                Text {
-                    "Results that arrive from a search index are the same prop: return a "
-                    "signal's contents from "
-                    Code { source: "actions" }
-                    " instead of calling "
-                    Code { source: "spotlight_filter" }
-                    ", and the palette redraws when the signal fills."
-                }
-            }
-            DocSection {
-                title: "Keyboard and accessibility",
-                Text {
-                    "Focus stays in the search box the whole time. The search box is a "
-                    Code { source: "role=\"combobox\"" }
-                    " over a "
-                    Code { source: "role=\"listbox\"" }
-                    ", and " Kbd { "↓" } " " Kbd { "↑" }
-                    " move a highlight it names with "
-                    Code { source: "aria-activedescendant" }
-                    ", wrapping at both ends. "
-                    Kbd { "Enter" } " runs the highlighted action; typing clears the highlight, "
-                    "so Enter never runs a row you did not look at. " Kbd { "Esc" }
-                    " or a click outside closes, and focus goes back to what opened it. "
-                    "Groups are "
-                    Code { source: "role=\"group\"" }
-                    " named by their header, nothing is ever "
-                    Code { source: "aria-selected" }
-                    " - a palette runs things, it does not select them - and \"Nothing found\" "
-                    "is announced through a status region."
+                    "Focus stays in the search box. " Kbd { "↓" } " " Kbd { "↑" }
+                    " move the highlight, wrapping at both ends. " Kbd { "Enter" }
+                    " runs the highlighted action; typing clears the highlight, so Enter never "
+                    "runs a row you did not look at. " Kbd { "Esc" }
+                    " or a click outside closes, and focus goes back to what opened it. The "
+                    "hotkey is ignored while you type in another text field, and while a dialog "
+                    "or popover is open."
                 }
             }
         }

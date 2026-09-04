@@ -55,6 +55,29 @@ fn Demo() -> Element {
 Call the hook in a component that outlives every trigger: the palette is
 portaled from there, like a `use_modal` dialog.
 
+The docs page's preview has three palettes: Commands (groups, descriptions,
+keywords and shortcut hints), Files (a flat list with icons, a custom
+`placeholder` and `nothing_found`) and 200 issues (a long list, for `limit`).
+The controls set `shortcut`, `limit`, `close_on_action` and `clear_on_close`,
+and the code block prints the palette opened last. The page binds J or P, not
+K, because the docs site's own search owns Ctrl+K.
+
+A flat list with icons and custom texts:
+
+```rust
+let files: Vec<SpotlightAction> = ["src", "src/main.rs", "Cargo.toml"]
+    .into_iter()
+    .map(|path| SpotlightAction::new(path).icon(rsx! { FileIcon {} }))
+    .collect();
+let spotlight = use_spotlight(SpotlightOptions {
+    actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &files))),
+    placeholder: Some("Go to file...".into()),
+    nothing_found: Some(rsx! { "No file by that name." }),
+    shortcut: Some('p'),
+    ..Default::default()
+});
+```
+
 ## Opening it
 
 Ctrl + K (Cmd + K on a Mac) toggles the palette from anywhere on the page. Change
