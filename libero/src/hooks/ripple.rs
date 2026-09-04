@@ -95,9 +95,38 @@ pub(crate) fn ripple_sx(base: Sx) -> Sx {
         )
 }
 
+/// No ripple at all under reduced motion: it is decoration, the click does
+/// the same without it.
 fn ripple_animation_sx(which: usize) -> Sx {
     sx().animation(format!(
         "{} 550ms ease-out forwards",
         RIPPLE_ANIMATION[which]
     ))
+    .media("(prefers-reduced-motion: reduce)", sx().animation("none"))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// Both animation names have to stop, or the second click replays one.
+    #[test]
+    fn reduced_motion_switches_both_ripples_off() {
+        let css = Stylesheet::from(&ripple_sx(sx()));
+        let css = css.as_str();
+        let reduced = css
+            .find("(prefers-reduced-motion: reduce)")
+            .expect("a reduced-motion block");
+
+        for (state, name) in RIPPLE_STATE.iter().zip(RIPPLE_ANIMATION) {
+            let running = css.find(name).expect("the ripple animation");
+            let stopped = css
+                .find(&format!(
+                    "[data-state~=\"{state}\"]::after{{animation:none;}}"
+                ))
+                .unwrap_or_else(|| panic!("{state} never stops: {css}"));
+            assert!(reduced < stopped && running < stopped, "{css}");
+        }
+    }
 }

@@ -102,3 +102,12 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     #[cfg(not(target_arch = "wasm32"))]
     return false;
 }
+
+/// Only the web can read a media query today - see
+/// [`prefers_reduced_motion`](crate::platform::prefers_reduced_motion).
+pub(crate) fn prefers_reduced_motion() -> bool {
+    #[cfg(target_arch = "wasm32")]
+    return web::prefers_reduced_motion();
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
+}

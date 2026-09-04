@@ -62,6 +62,16 @@ pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     nested().unwrap_or(false)
 }
 
+pub(super) fn prefers_reduced_motion() -> bool {
+    web_sys::window()
+        .and_then(|window| {
+            window
+                .match_media("(prefers-reduced-motion: reduce)")
+                .ok()?
+        })
+        .is_some_and(|query| query.matches())
+}
+
 pub(super) fn document() -> Option<Box<dyn DocumentApi>> {
     Some(Box::new(WebDocument))
 }

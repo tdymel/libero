@@ -74,6 +74,9 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
             "& > [role=\"tabpanel\"]",
             sx().padding_top(SizeCss::SPACING.value(Size::Md)),
         )
+        // The panel is a tab stop too, and without this it gets the UA's
+        // outline rather than the house ring.
+        .selector("& > [role=\"tabpanel\"]:focus-visible", focus_ring_sx())
         .when(
             "full-width",
             // The root pins its own width, or a flex parent shrinks it to the
@@ -187,7 +190,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             // Strings, not bools: SSR writes a bare `true`, and the
                             // selected-tab CSS matches on `[aria-selected="true"]`.
                             "aria-selected": if selected == Some(index) { "true" } else { "false" },
-                            "aria-controls": "{root}-panel-{index}",
+                            // Only the selected panel is rendered, and an id
+                            // that is not in the document is an invalid ref.
+                            "aria-controls": (selected == Some(index)).then(|| format!("{root}-panel-{index}")),
                             // `aria-disabled`, not `disabled`: a disabled tab
                             // stays reachable, it just cannot be picked.
                             "aria-disabled": if tab.disabled { "true" } else { "false" },

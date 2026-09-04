@@ -5,6 +5,7 @@ use crate::{
         HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
     },
     hooks::use_theme,
+    platform::prefers_reduced_motion,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
 };
@@ -129,10 +130,17 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             && is_active
             && let Some(event) = mounted()
         {
+            // `Instant` under reduced motion: an explicit `Smooth` overrides
+            // whatever the stylesheet says.
+            let behavior = if prefers_reduced_motion() {
+                ScrollBehavior::Instant
+            } else {
+                ScrollBehavior::Smooth
+            };
             spawn(async move {
                 let _ = event
                     .scroll_to_with_options(ScrollToOptions {
-                        behavior: ScrollBehavior::Smooth,
+                        behavior,
                         vertical: ScrollLogicalPosition::Nearest,
                         horizontal: ScrollLogicalPosition::Nearest,
                     })

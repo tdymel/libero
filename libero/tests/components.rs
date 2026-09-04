@@ -2381,7 +2381,7 @@ enum Section {
 }
 
 #[test]
-fn tabs_wire_every_tab_to_its_panel_and_render_only_the_selected_one() {
+fn tabs_wire_the_selected_tab_to_its_panel_and_render_only_that_one() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -2422,6 +2422,14 @@ fn tabs_wire_every_tab_to_its_panel_and_render_only_the_selected_one() {
     let tab_id = panel["aria-labelledby"].clone();
     assert!(body.contains(&format!("id=\"{tab_id}\"")));
     assert!(body.contains(&format!("aria-controls=\"{}\"", panel["id"])));
+
+    // Only the selected tab names a panel: the others' panels are not in the
+    // document, and a reference to a missing id is invalid.
+    assert_eq!(body.matches("aria-controls=").count(), 1);
+    assert!(body.contains(&format!(
+        "id=\"{tab_id}\" aria-selected=\"true\" aria-controls=\"{}\"",
+        panel["id"]
+    )));
 }
 
 #[test]
