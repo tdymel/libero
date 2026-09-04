@@ -7,11 +7,7 @@ use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenR
 const RULES: &[TokenRule] = &[
     TokenRule {
         name: "comment",
-        patterns: &[PatternDef::new(r"#.*")],
-    },
-    TokenRule {
-        name: "title",
-        patterns: &[PatternDef::new(r"\[[\w.\s\[\]-]+\]")],
+        patterns: &[PatternDef::new(r"#.*").greedy()],
     },
     TokenRule {
         name: "string",
@@ -20,6 +16,10 @@ const RULES: &[TokenRule] = &[
             PatternDef::new(r#""(?:[^"\\]|\\.)*""#).greedy(),
             PatternDef::new(r"'[^']*'").greedy(),
         ],
+    },
+    TokenRule {
+        name: "title",
+        patterns: &[PatternDef::new(r"\[[\w.\s\[\]-]+\]")],
     },
     TokenRule {
         name: "property",

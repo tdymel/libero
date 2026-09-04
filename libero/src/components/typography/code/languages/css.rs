@@ -12,15 +12,15 @@ const RULES: &[TokenRule] = &[
         patterns: &[PatternDef::new(r"/\*[\s\S]*?\*/").greedy()],
     },
     TokenRule {
-        name: "atrule",
-        patterns: &[PatternDef::new(r"@[-\w]+").alias("keyword")],
-    },
-    TokenRule {
         name: "string",
         patterns: &[
             PatternDef::new(r#""(?:[^"\\\n]|\\.)*""#).greedy(),
             PatternDef::new(r"'(?:[^'\\\n]|\\.)*'").greedy(),
         ],
+    },
+    TokenRule {
+        name: "atrule",
+        patterns: &[PatternDef::new(r"@[-\w]+").alias("keyword")],
     },
     TokenRule {
         name: "important",

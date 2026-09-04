@@ -11,12 +11,12 @@ const RULES: &[TokenRule] = &[
         ],
     },
     TokenRule {
-        name: "macro",
-        patterns: &[PatternDef::new(r"#\s*[a-zA-Z]+.*")],
-    },
-    TokenRule {
         name: "string",
         patterns: &[PatternDef::new(r#"@?"(?:[^"\\]|\\.)*""#).greedy()],
+    },
+    TokenRule {
+        name: "macro",
+        patterns: &[PatternDef::new(r"#\s*[a-zA-Z]+.*")],
     },
     TokenRule {
         name: "directive",

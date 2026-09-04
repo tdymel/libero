@@ -1,8 +1,9 @@
 //! A small port of Prism (https://prismjs.com)'s tokenizing engine.
 //!
 //! Simplified: matching only happens within text no higher-priority rule has
-//! claimed, dropping Prism's rarer greedy rematch across already-tokenized
-//! siblings. The hand-ported grammars in `languages/` don't need it.
+//! claimed, dropping Prism's greedy rematch across already-tokenized siblings.
+//! What that rematch is for - a `//` inside a string is not a comment - is
+//! covered by letting adjacent greedy patterns compete by position instead.
 
 use crate::components::Input;
 use crate::platform::{PreparedText, RegexMatch, regex_api};
@@ -79,9 +80,10 @@ pub(crate) struct PatternDef {
     /// (a CSS property's trailing `:`), but the token ends where this group
     /// starts rather than at the match's end.
     lookahead_group: Option<usize>,
-    /// No effect here - this engine only matches untokenized text. Kept for
-    /// parity when cross-referencing upstream Prism grammars.
-    #[allow(dead_code)]
+    /// Adjacent greedy patterns, across rules, are matched in one pass where
+    /// the leftmost match wins and a tie goes to the earlier pattern. That is
+    /// what keeps a comment rule from starting inside a string and a string
+    /// rule from starting inside a comment, whichever of the two comes first.
     greedy: bool,
     inside: Option<fn() -> Grammar>,
     alias: Option<&'static str>,
@@ -156,20 +158,39 @@ enum Token<'a> {
 
 fn tokenize(text: &str, grammar: Grammar) -> Vec<Token<'_>> {
     let mut tokens = vec![Token::Plain(text)];
+    let mut greedy_run: Vec<(&'static str, &PatternDef)> = Vec::new();
     for rule in grammar {
         for pattern in rule.patterns {
-            apply_pattern(&mut tokens, rule.name, pattern);
+            if pattern.greedy {
+                greedy_run.push((rule.name, pattern));
+                continue;
+            }
+            if !greedy_run.is_empty() {
+                apply_patterns(&mut tokens, &greedy_run);
+                greedy_run.clear();
+            }
+            apply_patterns(&mut tokens, &[(rule.name, pattern)]);
         }
+    }
+    if !greedy_run.is_empty() {
+        apply_patterns(&mut tokens, &greedy_run);
     }
     tokens
 }
 
-/// Replaces every match of `pattern` within still-untokenized (`Plain`)
+/// Replaces every match of `patterns` within still-untokenized (`Plain`)
 /// spans with a `Tagged` token, recursing into `inside` grammars first.
-fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &PatternDef) {
+/// Several patterns compete: the leftmost match wins, a tie goes to the
+/// earlier pattern, and a match that started inside the winner is searched
+/// for again after it.
+fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &PatternDef)]) {
     // Rebuilt rather than spliced in place: splicing shifts every following
     // token per match, which is quadratic over a long block.
     let mut out = Vec::with_capacity(tokens.len());
+    // Each pattern's next match in the current span; `None` once it has none.
+    // A pattern is only searched again when the cursor passes its match, so
+    // one competing pattern costs about what one sequential pass did.
+    let mut next: Vec<Option<RegexMatch>> = Vec::with_capacity(patterns.len());
     for token in tokens.drain(..) {
         let Token::Plain(span) = token else {
             out.push(token);
@@ -180,17 +201,37 @@ fn apply_pattern<'a>(tokens: &mut Vec<Token<'a>>, name: &'static str, pattern: &
         // `find` on a fresh `&str` would re-marshal the tail on wasm.
         let prepared = PreparedText::new(span);
         let mut cursor = 0;
-
-        while let Some(matched) =
+        let find = |pattern: &PatternDef, cursor: usize| {
             regex_api().find(pattern.pattern, pattern.case_insensitive, &prepared, cursor)
-        {
-            let (start, end) = resolve_span(pattern, &matched);
-            if start >= end {
+        };
+        next.clear();
+        next.extend(patterns.iter().map(|(_, pattern)| find(pattern, 0)));
+
+        loop {
+            for (slot, (_, pattern)) in next.iter_mut().zip(patterns) {
+                if slot.as_ref().is_some_and(|matched| matched.start < cursor) {
+                    *slot = find(pattern, cursor);
+                }
+            }
+            // `min_by_key` keeps the first of equal keys, so ties go to the
+            // earlier pattern.
+            let Some((index, matched)) = next
+                .iter()
+                .enumerate()
+                .filter_map(|(index, slot)| slot.as_ref().map(|matched| (index, matched)))
+                .min_by_key(|(_, matched)| matched.start)
+            else {
                 break;
+            };
+            let (name, pattern) = patterns[index];
+            let (start, end) = resolve_span(pattern, matched);
+            if start >= end {
+                next[index] = None;
+                continue;
             }
 
-            // `find` returns the leftmost match, so the text before it can
-            // hold none and is never re-searched.
+            // No pattern matches before the winner starts, so the text
+            // before it is never re-searched.
             if start > cursor {
                 out.push(Token::Plain(&span[cursor..start]));
             }
@@ -379,6 +420,71 @@ mod tests {
         assert_eq!(Language::parse("bash"), Language::parse("sh"));
         assert_eq!(Language::parse("md"), Language::parse("markdown"));
         assert_eq!(Language::parse("cobol"), None);
+    }
+
+    #[test]
+    fn plain_text_is_a_known_language_that_highlights_nothing() {
+        for alias in ["text", "plain", "plaintext", "txt", "Text"] {
+            let input: Input<Language> = alias.into();
+            assert!(matches!(input, Input::Value(_)), "{alias} should parse");
+        }
+        assert_eq!(lang("text").label(), "Plain text");
+        assert_eq!(
+            flat("let x = \"//\"; // hi\n", lang("text")),
+            vec![("let x = \"//\"; // hi".to_string(), None)]
+        );
+    }
+
+    /// Adjacent greedy patterns compete by position, so a comment and a
+    /// string only keep out of each other when no non-greedy pattern sits
+    /// between their rules.
+    #[test]
+    fn every_grammars_comment_and_string_rules_compete() {
+        for entry in LANGUAGE_CATALOG.iter() {
+            let patterns: Vec<(&str, bool)> = (entry.grammar)()
+                .iter()
+                .flat_map(|rule| rule.patterns.iter().map(|p| (rule.name, p.greedy)))
+                .collect();
+            let delimited = |(name, _): &(&str, bool)| *name == "comment" || *name == "string";
+            let (Some(first), Some(last)) = (
+                patterns.iter().position(delimited),
+                patterns.iter().rposition(delimited),
+            ) else {
+                continue;
+            };
+            assert!(
+                patterns[first..=last].iter().all(|(_, greedy)| *greedy),
+                "{}: a non-greedy pattern splits its comment and string rules",
+                entry.label
+            );
+        }
+    }
+
+    #[test]
+    fn highlight_rust_comment_marker_inside_a_string_stays_string() {
+        let spans = flat("to: \"https://dioxuslabs.com\", // link\n", lang("rust"));
+
+        assert!(spans.contains(&(
+            "\"https://dioxuslabs.com\"".to_string(),
+            Some("lsx-tok-string")
+        )));
+        assert!(spans.contains(&("// link".to_string(), Some("lsx-tok-comment"))));
+    }
+
+    #[test]
+    fn highlight_rust_quote_and_line_comment_inside_a_comment_stay_comment() {
+        let spans = flat("// say \"hi\"\n/* a // b */ x\n", lang("rust"));
+
+        assert!(spans.contains(&("// say \"hi\"".to_string(), Some("lsx-tok-comment"))));
+        assert!(spans.contains(&("/* a // b */".to_string(), Some("lsx-tok-comment"))));
+    }
+
+    #[test]
+    fn highlight_shell_hash_inside_a_string_stays_string() {
+        let spans = flat("echo \"a#b\" # c\n", lang("bash"));
+
+        assert!(spans.contains(&("\"a#b\"".to_string(), Some("lsx-tok-string"))));
+        assert!(spans.contains(&("# c".to_string(), Some("lsx-tok-comment"))));
     }
 
     #[test]

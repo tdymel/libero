@@ -5,7 +5,7 @@ use crate::components::typography::code::highlight::{Grammar, PatternDef, TokenR
 const RULES: &[TokenRule] = &[
     TokenRule {
         name: "comment",
-        patterns: &[PatternDef::new(r"#.*")],
+        patterns: &[PatternDef::new(r"#.*").greedy()],
     },
     TokenRule {
         name: "string",

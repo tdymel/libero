@@ -320,13 +320,6 @@ pub fn DocsNav(open: Signal<bool>) -> Element {
             Flex {
                 direction: "column",
                 gap: "sm",
-                // Closes on any click inside - good enough for "tap a link,
-                // the panel closes" without threading a callback through
-                // `NavLink` (which has none, deliberately, same as
-                // `Button`'s link mode). Only matters below `Sm`; at desktop
-                // widths `open` never becomes true in the first place, since
-                // the toggle that sets it is hidden there.
-                onclick: move |_| open.set(false),
                 Tree {
                     aria_label: "Documentation pages",
                     size: "xs",
@@ -355,55 +348,67 @@ pub fn DocsNav(open: Signal<bool>) -> Element {
                             return default_tree_render(args);
                         }
                         let padding_left = 7 + args.depth as u32 * 16;
+                        // Closes the panel when a page link is clicked, and
+                        // only then - a chevron must expand its section, not
+                        // close the panel. `NavLink` takes no `onclick`
+                        // (deliberately, same as `Button`'s link mode), so a
+                        // `display: contents` wrapper catches the bubbling
+                        // click, including the one `Tree` fires on Enter.
+                        // Only matters below `Sm`; at desktop widths `open`
+                        // never becomes true, since its toggle is hidden there.
                         rsx! {
-                            NavLink {
-                                to: NavigationTarget::Internal(args.id),
-                                // Suppresses the anchor's own native tab
-                                // stop - `Tree`'s roving `<li>` is the only
-                                // one; see `TreeNodeRenderArgs::tabindex`.
-                                tabindex: args.tabindex,
-                                scroll_into_view: true,
-                                // Only a *nested* leaf (inside a group) gets
-                                // the connecting border - a top-level page
-                                // like "Getting Started" has no parent
-                                // chevron to line up with.
-                                states: States::new().with("leaf", args.depth > 0),
-                                // `NavLink` already knows whether it's
-                                // active (it compares `to` against the
-                                // current route itself) and sets its own
-                                // `data-state="active"` - this just adds a
-                                // border reacting to that same state,
-                                // rather than `Tree` tracking "selected"
-                                // at all. `align-self: stretch` overrides
-                                // the row's own `align-items: center`, so
-                                // this spans the row's full height instead
-                                // of just its own text height - otherwise
-                                // the border would stop short top/bottom
-                                // and not read as continuous between rows.
-                                // `border-radius: 0` overrides `NavLink`'s
-                                // own rounded corners, which otherwise curve
-                                // the border away from the edge and break
-                                // that same continuity.
-                                sx: sx()
-                                    .align_self("stretch")
-                                    .padding_left(0)
-                                    .when("leaf", sx()
-                                        .border_radius("0")
-                                        .margin_left("7px")
-                                        .padding_left(format!("{padding_left}px"))
-                                        .border_left(format!(
-                                            "2px solid {}",
-                                            ColorCss::GREY.value(ColorShade::S3),
-                                        ))
-                                        .when(
-                                            "active",
-                                            sx().border_left(format!(
+                            div {
+                                display: "contents",
+                                onclick: move |_| open.set(false),
+                                NavLink {
+                                    to: NavigationTarget::Internal(args.id),
+                                    // Suppresses the anchor's own native tab
+                                    // stop - `Tree`'s roving `<li>` is the only
+                                    // one; see `TreeNodeRenderArgs::tabindex`.
+                                    tabindex: args.tabindex,
+                                    scroll_into_view: true,
+                                    // Only a *nested* leaf (inside a group) gets
+                                    // the connecting border - a top-level page
+                                    // like "Getting Started" has no parent
+                                    // chevron to line up with.
+                                    states: States::new().with("leaf", args.depth > 0),
+                                    // `NavLink` already knows whether it's
+                                    // active (it compares `to` against the
+                                    // current route itself) and sets its own
+                                    // `data-state="active"` - this just adds a
+                                    // border reacting to that same state,
+                                    // rather than `Tree` tracking "selected"
+                                    // at all. `align-self: stretch` overrides
+                                    // the row's own `align-items: center`, so
+                                    // this spans the row's full height instead
+                                    // of just its own text height - otherwise
+                                    // the border would stop short top/bottom
+                                    // and not read as continuous between rows.
+                                    // `border-radius: 0` overrides `NavLink`'s
+                                    // own rounded corners, which otherwise curve
+                                    // the border away from the edge and break
+                                    // that same continuity.
+                                    sx: sx()
+                                        .align_self("stretch")
+                                        .padding_left(0)
+                                        .when("leaf", sx()
+                                            .border_radius("0")
+                                            .margin_left("7px")
+                                            .padding_left(format!("{padding_left}px"))
+                                            .border_left(format!(
                                                 "2px solid {}",
-                                                ColorCss::PRIMARY.value(ColorShade::S6),
-                                            )),
-                                        )
-                                    ),
-                                "{args.data.label}"
+                                                ColorCss::GREY.value(ColorShade::S3),
+                                            ))
+                                            .when(
+                                                "active",
+                                                sx().border_left(format!(
+                                                    "2px solid {}",
+                                                    ColorCss::PRIMARY.value(ColorShade::S6),
+                                                )),
+                                            )
+                                        ),
+                                    "{args.data.label}"
+                                }
                             }
                         }
                     },
