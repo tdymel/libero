@@ -60,7 +60,7 @@ fn hook_code(
     if values.str("resizable") == "true" {
         options.push("resizable: true,".into());
         options.push(
-            r#"sx: sx().min_width("16rem").min_height("8rem").max_width("min(40rem, 100dvw)").into(),"#.into(),
+            r#"sx: sx().min_width("16rem").min_height("8rem").max_width("40rem").into(),"#.into(),
         );
     }
     if values.str("pinned") == "true" {
@@ -132,7 +132,7 @@ fn WindowDemo(resizable: bool, pinned: bool, report: bool, values: DemoValues) -
         sx: if resizable {
             sx().min_width("16rem")
                 .min_height("8rem")
-                .max_width("min(40rem, 100dvw)")
+                .max_width("40rem")
                 .into()
         } else {
             Input::None
@@ -268,7 +268,7 @@ pub fn FloatingWindowPage() -> Element {
                     prop("resizable", "bool").default("false").doc("Draws the corner resize handle."),
                     prop("pinned", "bool").default("false").doc("No drag and no keyboard move."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Overrides the stacking. Unset, windows stack from `theme.z_index.window`, below overlays and modals."),
-                    prop("sx", "Input<Sx>").doc("On the window. `min_width`/`max_width`/`min_height`/`max_height` here clamp a resize. A `max_width` replaces the viewport cap, so keep `100dvw` in it: `min(40rem, 100dvw)`."),
+                    prop("sx", "Input<Sx>").doc("On the window. `min_width`/`max_width`/`min_height`/`max_height` here clamp a resize. The viewport cap always applies on top, so a `max_width` of `40rem` is still no wider than a phone."),
                     prop("onmove", "Option<Callback<WindowRect>>").doc("After a drag or a keyboard move, in viewport pixels."),
                     prop("onresize", "Option<Callback<WindowRect>>").doc("After a resize, by pointer or keyboard."),
                 ]),

@@ -7,7 +7,9 @@ mod common;
 use common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
-use libero::{LiberoProvider, components::FloatingWindowOptions, hooks::use_floating_window};
+use libero::{
+    LiberoProvider, components::FloatingWindowOptions, hooks::use_floating_window, sx::sx,
+};
 
 fn options() -> FloatingWindowOptions {
     FloatingWindowOptions {
@@ -93,6 +95,49 @@ fn the_window_sits_in_a_fixed_float() {
     let tokens: Vec<_> = float["data-state"].split(' ').collect();
     assert!(tokens.contains(&"fixed"), "{float:?}");
     assert!(tokens.contains(&"vertical-center"), "{float:?}");
+}
+
+/// A caller's `max_width` replaces the window's own `max-width`, so the
+/// viewport cap has to sit where no caller `sx` reaches: on the `Float`.
+#[test]
+fn the_viewport_cap_survives_a_callers_max_width() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Opened {
+                    options: FloatingWindowOptions {
+                        sx: sx().max_width("40rem").into(),
+                        ..options()
+                    },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let dialog_at = body.find("role=\"dialog\"").unwrap();
+    let float_open = body[..dialog_at].rfind("<div").unwrap();
+    let float_open = body[..float_open].rfind("<div").unwrap();
+    let float = attributes_of(&body[float_open..], "div");
+    let rules: String = float["class"]
+        .split(' ')
+        .filter_map(|class| {
+            let start = html.find(&format!(".{class}{{"))?;
+            let rule = &html[start..];
+            Some(rule[..rule.find('}')?].to_owned())
+        })
+        .collect();
+    for declaration in [
+        "max-width:100dvw",
+        "max-height:100dvh",
+        "flex-direction:column",
+    ] {
+        assert!(
+            rules.replace(' ', "").contains(declaration),
+            "{declaration} in {rules}"
+        );
+    }
 }
 
 #[test]

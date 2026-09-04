@@ -28,7 +28,7 @@ fn Demo() -> Element {
             title: Some("Inspector".into()),
             placement: "bottom-end".into(),
             resizable: true,
-            sx: sx().min_width("16rem").max_width("min(40rem, 100dvw)").into(),
+            sx: sx().min_width("16rem").max_width("40rem").into(),
             ..Default::default()
         },
         |window| rsx! {
@@ -97,11 +97,11 @@ handle, so the body can close its own window.
 
 - Built on `Float { fixed: true }`. It stays at `placement` until moved, then
   sits where it was put, clamped into the viewport by CSS so it re-clamps when
-  its own size changes. A window larger than the viewport pins to the top-left.
-- The resize handle asks for a size; your `sx` constraints clamp it. Without
-  them it is capped at the viewport. A `max_width` of your own replaces that
-  cap, so write `min(40rem, 100dvw)` rather than `40rem`, or a phone gets a
-  window wider than the screen.
+  its own size changes. A window whose `min_width` is wider than the viewport
+  pins to the top-left.
+- The resize handle asks for a size; your `sx` constraints clamp it. The
+  viewport caps it on top of them, always: a `max_width` of `40rem` is still
+  no wider than a phone.
 - A drag re-renders the whole window, `children` included. Keep the body shallow.
 
 ## Stacking

@@ -42,6 +42,8 @@ pub struct FloatingWindowOptions {
     pub z_index: Input<ThemeAwareValue>,
     /// On the window itself - this is where `min_width`/`max_width` and
     /// friends go. The resize handle asks for a size, and these clamp it.
+    /// The viewport cap always applies on top: a `max_width("40rem")` is
+    /// still no wider than the screen.
     pub sx: Input<Sx>,
     /// After a drag or a keyboard move.
     pub onmove: Option<Callback<WindowRect>>,
@@ -66,7 +68,8 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
         .flex_direction("column")
         .width(WINDOW_WIDTH.value_or("auto"))
         .height(WINDOW_HEIGHT.value_or("auto"))
-        // The largest a resize can ask for, unless the caller's `sx` says less.
+        // The cap when the caller's `sx` sets no max. A caller's max replaces
+        // these, so the `Float` wrapper and the width variable cap it again.
         .max_width("100dvw")
         .max_height("100dvh")
         .overflow("hidden")
@@ -379,8 +382,15 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         ),
     };
 
+    // A resized width is capped at the viewport here, because a `max_width` in
+    // the caller's `sx` replaces the window's own cap. The height needs no
+    // `min`: the wrapper is a column flexbox capped at `100dvh`, and the window
+    // shrinks into it.
     let window_variables: Input<Variables> = variables()
-        .with(WINDOW_WIDTH, size().map(|(width, _)| format!("{width}px")))
+        .with(
+            WINDOW_WIDTH,
+            size().map(|(width, _)| format!("min({width}px, 100dvw)")),
+        )
         .with(
             WINDOW_HEIGHT,
             size().map(|(_, height)| format!("{height}px")),
@@ -484,8 +494,16 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
             z_index,
             // As wide as the window, not as wide as the space left of a
             // centred anchor - `left: 50%` would otherwise wrap it at half
-            // the viewport.
-            sx: sx().width("max-content"),
+            // the viewport. The viewport cap lives here too, where no caller
+            // `sx` reaches: an auto-width window stretches to this box, and the
+            // column flexbox shrinks the window's height into it (`overflow:
+            // hidden` drops a flex item's automatic minimum to 0).
+            sx: sx()
+                .width("max-content")
+                .max_width("100dvw")
+                .max_height("100dvh")
+                .display("flex")
+                .flex_direction("column"),
             {window}
         }
     }
