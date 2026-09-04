@@ -7,7 +7,10 @@ use std::{
     time::Duration,
 };
 
-use dioxus::{core::Runtime, prelude::*};
+use dioxus::{
+    core::{Runtime, current_scope_id},
+    prelude::*,
+};
 
 use crate::{
     components::{
@@ -30,18 +33,22 @@ const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 
-/// One stack, anchored to a viewport corner or edge. It lets the pointer
+/// One stack, anchored to a corner or edge of the viewport, or of a
+/// contained host. It lets the pointer
 /// through: only the notifications in it take clicks.
 static STACK_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .width(format!(
-            "min({}, calc(100vw - 2 * {}))",
+            "min({}, calc(100% - 2 * {}))",
             NOTIFICATION_WIDTH.value(),
             NOTIFICATION_OFFSET.value()
         ))
         .pointer_events("none")
 });
+
+/// A contained host's box: the stacks' positioned ancestor.
+static CONTAINED_SX: StaticSx = StaticSx::new(|| sx().position("relative"));
 
 /// One live region. Both are always rendered, even empty, and the space
 /// between the two comes from here rather than from a `gap` on the stack, so
@@ -189,9 +196,10 @@ impl Drop for Entry {
     }
 }
 
-/// The queue. Lives in the root scope, so it outlives every component that
-/// raised a notification: a notification survives its caller navigating away.
-#[derive(Clone, Copy)]
+/// The queue. The app's lives in the root scope, so it outlives every
+/// component that raised a notification: a notification survives its caller
+/// navigating away. A contained host owns one of its own.
+#[derive(Clone, Copy, PartialEq)]
 struct NotificationStore {
     entries: Signal<Vec<Entry>>,
     /// Which notification the pointer is on, and which one holds focus. Either
@@ -203,17 +211,36 @@ struct NotificationStore {
     /// needs one, and may be called from a timer callback that runs outside
     /// every runtime. Weak: the runtime owns the store.
     runtime: CopyValue<Weak<Runtime>>,
+    /// The scope every signal of the store, and of each entry, belongs to.
+    owner: ScopeId,
 }
 
 impl NotificationStore {
-    /// A new signal owned by the root, like the store's own.
-    fn root_signal<V: 'static>(&self, value: V) -> Signal<V> {
+    /// Called in a render, so the runtime is there.
+    fn new(owner: ScopeId) -> Self {
+        Self {
+            entries: Signal::new_in_scope(Vec::new(), owner),
+            hovered: Signal::new_in_scope(None, owner),
+            focused: Signal::new_in_scope(None, owner),
+            runtime: CopyValue::new_in_scope(Rc::downgrade(&Runtime::current()), owner),
+            owner,
+        }
+    }
+
+    /// A new signal owned by the store's owner, like the store's own.
+    fn owned_signal<V: 'static>(&self, value: V) -> Signal<V> {
         let runtime = self
             .runtime
             .peek()
             .upgrade()
             .expect("the notification store outlived its runtime");
-        runtime.in_scope(ScopeId::ROOT, || Signal::new_in_scope(value, ScopeId::ROOT))
+        runtime.in_scope(self.owner, || Signal::new_in_scope(value, self.owner))
+    }
+
+    /// Whether the store is still there. A contained host's goes with the
+    /// host, and a handle copied out of it may outlive it.
+    fn alive(&self) -> bool {
+        self.entries.try_peek().is_ok()
     }
 
     fn paused(&self) -> bool {
@@ -222,6 +249,9 @@ impl NotificationStore {
 
     /// Starts the exit of one that is showing, and drops one that is queued.
     fn hide(&self, id: NotificationId) {
+        if !self.alive() {
+            return;
+        }
         let mut entries = self.entries;
         let mut entries = entries.write();
         let Some(index) = entries.iter().position(|entry| entry.id == id) else {
@@ -235,12 +265,16 @@ impl NotificationStore {
     }
 
     fn remove(&self, id: NotificationId) {
+        if !self.alive() {
+            return;
+        }
         let mut entries = self.entries;
         entries.write().retain(|entry| entry.id != id);
     }
 }
 
-/// The one store, created in the root scope by whichever caller asks first.
+/// The nearest contained host's store, else the app's, created in the root
+/// scope by whichever caller asks first.
 ///
 /// Root, not the caller's scope: the store and every signal in it must outlive
 /// the component that first asked, and timer callbacks write to it from
@@ -248,12 +282,7 @@ impl NotificationStore {
 fn use_notification_store() -> NotificationStore {
     use_hook(|| {
         try_consume_context::<NotificationStore>().unwrap_or_else(|| {
-            dioxus::core::provide_root_context(NotificationStore {
-                entries: Signal::new_in_scope(Vec::new(), ScopeId::ROOT),
-                hovered: Signal::new_in_scope(None, ScopeId::ROOT),
-                focused: Signal::new_in_scope(None, ScopeId::ROOT),
-                runtime: CopyValue::new_in_scope(Rc::downgrade(&Runtime::current()), ScopeId::ROOT),
-            })
+            dioxus::core::provide_root_context(NotificationStore::new(ScopeId::ROOT))
         })
     })
 }
@@ -330,8 +359,12 @@ impl<T: 'static> NotificationHandle<T> {
     pub fn show_with(&self, args: impl Into<T>, options: NotificationOptions) -> NotificationId {
         let id = NotificationId(NEXT_ID.fetch_add(1, Ordering::Relaxed));
         let store = self.store;
+        if !store.alive() {
+            return id;
+        }
         let template = self.template;
-        let args = store.root_signal(std::boxed::Box::new(args.into()) as std::boxed::Box<dyn Any>);
+        let args =
+            store.owned_signal(std::boxed::Box::new(args.into()) as std::boxed::Box<dyn Any>);
         let closable = options.closable;
         let draw: Draw = Rc::new(move || {
             template(NotificationScope {
@@ -363,7 +396,9 @@ impl<T: 'static> NotificationHandle<T> {
     pub fn update(&self, id: NotificationId, args: impl Into<T>) {
         // `peek`: the list itself is untouched, so nothing that draws it
         // should hear of this.
-        let entries = self.store.entries.peek();
+        let Ok(entries) = self.store.entries.try_peek() else {
+            return;
+        };
         let Some(mut slot) = entries
             .iter()
             .find(|entry| entry.id == id)
@@ -385,6 +420,9 @@ impl<T: 'static> NotificationHandle<T> {
 
     /// Removes every notification, of every template, at once.
     pub fn clear(&self) {
+        if !self.store.alive() {
+            return;
+        }
         let mut entries = self.store.entries;
         entries.write().clear();
     }
@@ -464,11 +502,22 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 
 /// Where the stacks and their notifications render. **Render it once**, near
 /// the root: it is the one outlet for every [`use_notifications`] handle, and
-/// a second one would draw every notification twice.
+/// a second one would draw every notification twice. A `contained` one is the
+/// exception: it has a queue of its own.
 ///
 /// It is portaled, so where it sits in the tree does not matter, and each
 /// stack is a `Float { fixed: true }`, so it stays in its corner while the
 /// page scrolls.
+///
+/// `contained` makes it a host for one region instead: it draws its stacks
+/// inside its own box, around `children`, and every handle created below it
+/// shows notifications here rather than in the app's host.
+///
+/// ```ignore
+/// Notifications { contained: true,
+///     SaveButton {} // its `use_notifications()` shows them in this box
+/// }
+/// ```
 ///
 /// No keyboard behaviour of its own and no `Escape`: nothing here ever takes
 /// focus. A close button is reached by `Tab` in document order.
@@ -486,9 +535,25 @@ pub fn Notifications(
     /// `theme.notification.auto_close`.
     #[props(default)]
     auto_close: Option<AutoClose>,
+    /// Draws the stacks inside this host's box, a `position: relative` block
+    /// around `children`, and gives the handles below it a queue of their
+    /// own. Read once, when the host mounts.
+    #[props(default)]
+    contained: bool,
+    /// Rendered inside a contained host, before its stacks.
+    #[props(default)]
+    children: Option<Element>,
 ) -> Element {
     let theme = use_theme();
-    let store = use_notification_store();
+    let store = use_hook(|| {
+        if contained {
+            provide_context(NotificationStore::new(current_scope_id()))
+        } else {
+            try_consume_context::<NotificationStore>().unwrap_or_else(|| {
+                dioxus::core::provide_root_context(NotificationStore::new(ScopeId::ROOT))
+            })
+        }
+    });
 
     let position = position.copied_or(theme.notification.position);
     let limit = limit.unwrap_or(theme.notification.limit);
@@ -505,6 +570,7 @@ pub fn Notifications(
             .filter(|entry| entry.position.unwrap_or(position) == placement)
             .take(limit)
             .map(|entry| ItemProps {
+                store,
                 id: entry.id,
                 draw: DrawRef(entry.draw.clone()),
                 auto_close: match entry.auto_close.unwrap_or(auto_close) {
@@ -528,7 +594,7 @@ pub fn Notifications(
         rsx! {
             Float {
                 key: "{placement.as_str()}",
-                fixed: true,
+                fixed: !contained,
                 placement: Input::Value(placement),
                 offset_x: edge_offset(placement, Axis::Horizontal),
                 offset_y: edge_offset(placement, Axis::Vertical),
@@ -541,6 +607,7 @@ pub fn Notifications(
                     for item in assertive {
                         NotificationItem {
                             key: "{item.id.0}",
+                            store,
                             id: item.id,
                             draw: item.draw,
                             auto_close: item.auto_close,
@@ -557,6 +624,7 @@ pub fn Notifications(
                     for item in polite {
                         NotificationItem {
                             key: "{item.id.0}",
+                            store,
                             id: item.id,
                             draw: item.draw,
                             auto_close: item.auto_close,
@@ -574,6 +642,15 @@ pub fn Notifications(
     };
     drop(entries);
 
+    if contained {
+        use_portal(None);
+        return rsx! {
+            Box { framework_sx: &CONTAINED_SX,
+                {children}
+                {content}
+            }
+        };
+    }
     use_portal(Some(content));
     rsx! {}
 }
@@ -621,6 +698,9 @@ impl PartialEq for DrawRef {
 
 #[derive(Props, Clone, PartialEq)]
 struct ItemProps {
+    /// Passed, not looked up: which store a lookup finds depends on where
+    /// the item renders, and the host already knows its own.
+    store: NotificationStore,
     id: NotificationId,
     draw: DrawRef,
     /// Resolved against the host: `None` stays until closed.
@@ -632,7 +712,7 @@ struct ItemProps {
 
 #[allow(non_snake_case)]
 fn NotificationItem(props: ItemProps) -> Element {
-    let store = use_notification_store();
+    let store = props.store;
     let id = props.id;
 
     use_hook(|| {

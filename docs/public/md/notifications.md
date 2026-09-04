@@ -63,6 +63,23 @@ host would draw every notification twice. It is portaled, so its place in the
 tree does not matter. Without a host, `show` queues notifications that nobody
 draws.
 
+## A contained host
+
+`Notifications { contained: true, children }` is a host for one region of the
+page instead of the window. It draws its nine stacks inside its own
+`position: relative` box, around its children, and it gives the handles
+created below it a queue of their own: a `use_notifications()` inside it shows
+its notifications there, not in the app's host. The docs preview is one.
+
+```rust
+Notifications { contained: true, position: "top-end",
+    SaveButton {} // its `use_notifications()` shows them in this box
+}
+```
+
+`contained` is read once, when the host mounts. When the host unmounts, its
+queue goes with it, and a handle that outlives it does nothing.
+
 ## Your own template
 
 `use_notifications_with` takes your own data type and a template that draws it.
@@ -98,9 +115,10 @@ uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 **The template is a `fn`, not a closure that captures.** A notification outlives
 the component that raised it, so a captured signal or handler could be dropped
 while the notification still draws with it. Everything the template needs
-travels in `T`. A closure that captures nothing coerces to the `fn`. The host
-calls the template in its own scope on every render, so the template may call
-hooks, as long as it calls the same ones every time.
+travels in `T`. A closure that captures nothing coerces to the `fn`. The
+template is called in its notification's own scope on every render, so it may
+call hooks, as long as it calls the same ones every time. That scope redraws
+when `update` changes its data, and no other one does.
 
 The store is type-erased. Each `T` adds one small closure, and the queue, the
 timers and the host compile once.
@@ -199,6 +217,8 @@ pub fn use_notifications_with<T: 'static>(
 | `position` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
 | `limit` | `Option<usize>` | `5` | Shown at once per stack. |
 | `auto_close` | `Option<AutoClose>` | `After(4000)` | Unless a notification says otherwise. |
+| `contained` | `bool` | `false` | Draw the stacks in this host's own box, and give the handles below it a queue of their own. Read once, at mount. |
+| `children` | `Option<Element>` | - | Rendered inside a contained host, before its stacks. |
 
 ## Theme defaults
 
@@ -209,9 +229,9 @@ pub fn use_notifications_with<T: 'static>(
 | `position` | `Placement` | `BottomEnd`. |
 | `auto_close` | `AutoClose` | `After(4000)`. |
 | `limit` | `usize` | `5`. |
-| `width` | `&'static str` | `360px`, capped at the viewport width minus both offsets. |
+| `width` | `&'static str` | `360px`, capped at the viewport's (or the contained host's) width minus both offsets. |
 | `gap` | `Size` | `Sm`, between two notifications. |
-| `offset` | `Size` | `Md`, from the viewport edge. |
+| `offset` | `Size` | `Md`, from the viewport's (or the contained host's) edge. |
 | `transition_duration` | `u32` | `200` ms, the entry and the exit. |
 | `close_label` | `&'static str` | `Close`, the default template's close button. |
 

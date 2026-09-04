@@ -435,3 +435,48 @@ fn showing_never_panics_without_a_provider() {
 
     render(app);
 }
+
+#[component]
+fn RaiseInside() -> Element {
+    let notify = use_notifications();
+    use_hook(|| notify.show("Inside."));
+    rsx! {
+        p { "The region's own content." }
+    }
+}
+
+#[test]
+fn a_contained_host_draws_what_is_raised_below_it_in_its_own_box() {
+    fn app() -> Element {
+        let notify = use_notifications();
+        use_hook(|| notify.show("Outside."));
+        rsx! {
+            LiberoProvider {
+                Notifications {}
+                section {
+                    Notifications { contained: true, RaiseInside {} }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let region = &html[html.find("<section").unwrap()..html.find("</section>").unwrap()];
+
+    // Its own children first, then its nine stacks, placed against its box
+    // and not the viewport.
+    assert!(
+        region.find("The region&#39;s own content.").unwrap() < region.find("aria-live").unwrap(),
+        "{region}"
+    );
+    assert_eq!(region.matches("aria-live").count(), 18, "{region}");
+    assert!(!region.contains("\"fixed "), "{region}");
+    assert_eq!(html.matches("\"fixed ").count(), 9, "{html}");
+    // Each notification in exactly one host.
+    assert_eq!(html.matches("Inside.").count(), 1, "{html}");
+    assert!(
+        region.contains("Inside.") && !region.contains("Outside."),
+        "{region}"
+    );
+    assert_eq!(html.matches("Outside.").count(), 1, "{html}");
+}
