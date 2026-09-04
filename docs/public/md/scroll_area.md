@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::{ScrollArea, ScrollPositionEvent, Virtualize};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroll_area.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout/scroll_area/scroll_area.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
 

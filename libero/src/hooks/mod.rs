@@ -20,11 +20,6 @@ mod typeahead;
 
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
-// `Modal` is the only consumer of the layer stack so far. The hook itself
-// lands ahead of its first consumer, `Menu` - it exists so that `Menu`,
-// `Menubar` and `HoverCard` do not each hand-write dismissal, which is the
-// whole point of the unit.
-#[allow(unused_imports)]
 pub(crate) use dismiss::{DismissHandle, DismissOptions, use_dismiss, use_dismiss_layer};
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub use drawer::{DrawerOptions, use_drawer};

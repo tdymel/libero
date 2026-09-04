@@ -202,7 +202,7 @@ pub fn ImageListPage() -> Element {
         DocPage {
             title: "ImageList",
             source: "libero/src/components/layout/image_list/image_list.rs",
-            markdown: "/md/image-list.md",
+            markdown: "/md/image_list.md",
             properties: vec![
                 props("ImageList", vec![
                     prop("items", "Vec<ImageItem>").doc("One cell each, in render order."),

@@ -45,6 +45,7 @@ fn divider_element(_values: &DemoValues) -> Option<Element> {
 }
 
 fn controls() -> Vec<Control> {
+    // Only the `dioxus-fork` build pushes the divider control below.
     #[allow(unused_mut)]
     let mut controls = vec![
         Control::toggle("direction", ["column", "row"]),

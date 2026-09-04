@@ -91,7 +91,7 @@ fetch only the file you need.
 - [Float](float.md): Anchors its child to a corner or edge of the nearest positioned ancestor - a badge on an avatar, say.
 - [Grid](grid.md): A named-area layout matrix - `Grid` holds the shape, a `GridZone` is a twelve-column packing container with optional masonry, and a `GridItem` takes a fraction of it.
 - [Header](header.md): The page's banner landmark - a sticky, static or fixed `header` bar hosting nav and actions.
-- [ImageList](image-list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
+- [ImageList](image_list.md): A gallery of pictures with optional caption bars, rendered as a ul/li list over a GridZone - so cols is a span of the library's own twelve tracks and masonry is that zone's measuring engine.
 - [ScrollArea](scroll_area.md): A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
 - [Scroller](scroller.md): A horizontal strip with a hidden scrollbar and a step control over each end that shows while there is more content that way.
 - [Sidebar](sidebar.md): An in-flow panel bordering one edge of its parent and scrolling its own content - a nav rail or inspector.
@@ -114,8 +114,8 @@ fetch only the file you need.
 ## Overlay
 
 - [Drawer](drawer.md): A dimmed, focus-trapped panel docked to one edge - `use_modal` with the docking around it, so it has the same handle, arguments and results.
-- [Floating window](floating-window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
-- [HoverCard](hover-card.md): An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
+- [Floating window](floating_window.md): A non-modal window over the page that drags, moves by keyboard and resizes from a corner; a hook owns whether it exists.
+- [HoverCard](hover_card.md): An interactive card that opens while its trigger is hovered or focused - a named, dismissible dialog on a paper surface.
 - [Lightbox](lightbox.md): A modal image viewer - `use_modal` with a gallery around it: zoom, pan, captions and a thumbnail strip.
 - [Modal](modal.md): A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 - [Overlay](overlay.md): A full-viewport dim and blur layer with centred content - the backdrop behind a modal, or a loading screen.

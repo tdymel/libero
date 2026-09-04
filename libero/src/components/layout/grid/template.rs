@@ -132,6 +132,7 @@ impl PartialEq for GridTemplate {
 }
 
 impl GridTemplate {
+    // `new` starts a builder, and its `build()` validates and returns the template.
     #[allow(clippy::new_ret_no_self)]
     pub fn new<A: GridArea>() -> GridTemplateBuilder<A> {
         GridTemplateBuilder { rows: Vec::new() }

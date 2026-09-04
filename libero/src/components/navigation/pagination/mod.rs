@@ -1,5 +1,4 @@
 mod glyphs;
-#[allow(clippy::module_inception)]
 mod pagination;
 mod range;
 

@@ -259,7 +259,7 @@ pub fn FloatingWindowPage() -> Element {
         DocPage {
             title: "Floating window",
             source: "libero/src/hooks/floating_window.rs",
-            markdown: "/md/floating-window.md",
+            markdown: "/md/floating_window.md",
             properties: vec![
                 props("FloatingWindowOptions", vec![
                     prop("title", "Option<String>").doc("The title bar's heading, and the window's accessible name."),

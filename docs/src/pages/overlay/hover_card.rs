@@ -79,7 +79,7 @@ pub fn HoverCardPage() -> Element {
         DocPage {
             title: "HoverCard",
             source: "libero/src/components/overlay/hover_card.rs",
-            markdown: "/md/hover-card.md",
+            markdown: "/md/hover_card.md",
             properties: vec![props("HoverCard", vec![
                 prop("content", "Element")
                     .doc("What the card shows. It may hold links and buttons - the card is a non-modal dialog, not a tooltip."),

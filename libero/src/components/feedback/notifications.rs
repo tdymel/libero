@@ -713,7 +713,6 @@ struct ItemProps {
     live: NotificationLive,
 }
 
-#[allow(non_snake_case)]
 fn NotificationItem(props: ItemProps) -> Element {
     let store = props.store;
     let id = props.id;
