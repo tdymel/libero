@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, UNSET, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, UNSET, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Chip, Code, CodeBlock, Flex, Input, Kbd, Scroller, ScrollerEdges, Text},
+    components::{Chip, Code, Flex, Input, Kbd, Scroller, ScrollerEdges, Text},
     use_theme,
 };
 
@@ -36,28 +36,23 @@ const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
     }
 }"#;
 
-const OWN_CONTROLS: &str = r#"let mut edges = use_signal(|| None::<ScrollerEdges>);
-
-rsx! {
-    Scroller {
-        aria_label: "Tags",
-        controls: "never",
-        on_edge_change: move |next| edges.set(Some(next)),
-        Flex { direction: "row", gap: "sm", wrap: "nowrap",
-            for tag in TAGS {
-                Chip { key: "{tag}", "{tag}" }
-            }
-        }
-    }
-    Text { size: "sm",
-        match edges() {
-            Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
-            Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
-            Some(_) => "End of the list",
-            None => "",
-        }
-    }
-}"#;
+/// The edge report, printed under the strip. `on_edge_change` is in `fixed`;
+/// this adds the signal it writes and the text that reads it.
+fn wrap_edges(_: &DemoValues, source: &str) -> String {
+    format!(
+        "let mut edges = use_signal(|| None::<ScrollerEdges>);\n\n\
+         rsx! {{\n\
+         {}    Text {{ size: \"sm\",\n        \
+         match edges() {{\n            \
+         Some(ScrollerEdges {{ at_start: true, at_end: true }}) => \"Everything fits\",\n            \
+         Some(ScrollerEdges {{ at_end: false, .. }}) => \"More to the right\",\n            \
+         Some(_) => \"End of the list\",\n            \
+         None => \"\",\n        \
+         }}\n    \
+         }}\n}}",
+        indent(source)
+    )
+}
 
 fn strip() -> Element {
     rsx! {
@@ -69,15 +64,24 @@ fn strip() -> Element {
     }
 }
 
-/// A page-local component, so the signal is its own and not `DocPage`'s.
+/// A page-local component, so the signal is its own and not `Demo`'s.
+/// **Kept in step with `wrap_edges` by hand.**
 #[component]
-fn OwnControls() -> Element {
+fn ScrollerDemo(values: DemoValues) -> Element {
     let mut edges = use_signal(|| None::<ScrollerEdges>);
+    let fade = values.str("fade_color");
 
     rsx! {
         Scroller {
             aria_label: "Tags",
-            controls: "never",
+            scroll_amount: values.str("scroll_amount").parse::<u32>().ok(),
+            controls: values.str("controls"),
+            control_size: values.str("control_size"),
+            fade_color: match fade.as_str() {
+                UNSET => Input::None,
+                _ => Input::from(fade),
+            },
+            draggable: values.str("draggable") == "true",
             on_edge_change: move |next| edges.set(Some(next)),
             {strip()}
         }
@@ -142,12 +146,23 @@ pub fn ScrollerPage() -> Element {
                     " scroll it natively. A control at its own end leaves the tab order, but it "
                     "keeps focus if it had it."
                 }
+                Text {
+                    Code { source: "on_edge_change" }
+                    " reports whether the strip rests against either end, once it is first "
+                    "measured and again whenever that changes; the line under the preview "
+                    "prints it. With "
+                    Code { source: "controls: \"never\"" }
+                    " it is the whole affordance, for a strip that should say so in its own words."
+                }
             },
             Demo {
                 component: "Scroller",
                 children_text: "",
                 children_code: CHILDREN.to_string(),
-                fixed: vec![r#"aria_label: "Tags""#.to_string()],
+                fixed: vec![
+                    r#"aria_label: "Tags""#.to_string(),
+                    "on_edge_change: move |next| edges.set(Some(next))".to_string(),
+                ],
                 controls: vec![
                     Control::slider("scroll_amount", ["120", "200", "320", "480"])
                         .default(theme.scroller.scroll_amount.to_string())
@@ -165,36 +180,8 @@ pub fn ScrollerPage() -> Element {
                     Control::color("fade_color", [UNSET, "grey.1", "primary.1", "warning.1"]),
                     Control::switch("draggable"),
                 ],
-                render: move |values: DemoValues| {
-                    let fade = values.str("fade_color");
-                    rsx! {
-                        Scroller {
-                            aria_label: "Tags",
-                            scroll_amount: values.str("scroll_amount").parse::<u32>().ok(),
-                            controls: values.str("controls"),
-                            control_size: values.str("control_size"),
-                            fade_color: match fade.as_str() {
-                                UNSET => Input::None,
-                                _ => Input::from(fade),
-                            },
-                            draggable: values.str("draggable") == "true",
-                            {strip()}
-                        }
-                    }
-                },
-            }
-
-            DocSection {
-                title: "Reacting to the edges",
-                Text {
-                    Code { source: "on_edge_change" }
-                    " reports whether the strip rests against either end, once it is first "
-                    "measured and again whenever that changes. With "
-                    Code { source: "controls: \"never\"" }
-                    " it is the whole affordance, for a strip that should say so in its own words."
-                }
-                OwnControls {}
-                CodeBlock { source: OWN_CONTROLS, language: "rust" }
+                wrap: Wrap(wrap_edges),
+                render: move |values: DemoValues| rsx! { ScrollerDemo { values } },
             }
         }
     }

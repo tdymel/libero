@@ -172,3 +172,54 @@ pub fn DismissIcon() -> Element {
         }
     }
 }
+
+#[component]
+pub fn TruckIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "1", y: "3", width: "15", height: "13" }
+            polygon { points: "16 8 20 8 23 11 23 16 16 16 16 8" }
+            circle { cx: "5.5", cy: "18.5", r: "2.5" }
+            circle { cx: "18.5", cy: "18.5", r: "2.5" }
+        }
+    }
+}
+
+#[component]
+pub fn CreditCardIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "1", y: "4", width: "22", height: "16", rx: "2", ry: "2" }
+            line { x1: "1", y1: "10", x2: "23", y2: "10" }
+        }
+    }
+}
+
+#[component]
+pub fn ClipboardCheckIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            rect { x: "8", y: "2", width: "8", height: "4", rx: "1" }
+            path { d: "M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" }
+            path { d: "m9 14 2 2 4-4" }
+        }
+    }
+}

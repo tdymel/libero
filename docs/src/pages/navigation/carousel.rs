@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Carousel, Code, CodeBlock, Input, Kbd, List, ListItem, Text},
+    components::{Box, Carousel, Code, Input, Kbd, List, ListItem, Text},
     sx::sx,
     use_theme,
 };
@@ -26,20 +26,6 @@ const FIXED: [&str; 2] = [
     })
     .collect()"#,
 ];
-
-const CONTROLLED: &str = r#"let mut slide = use_signal(|| 0usize);
-
-rsx! {
-    Carousel {
-        aria_label: "Product photos",
-        index: slide(),
-        onindexchange: move |index| slide.set(index),
-        slides: photos.iter().map(|photo| rsx! {
-            Image { src: "{photo.url}", alt: "{photo.alt}", fit: "cover" }
-        }).collect(),
-    }
-    Text { "Showing {slide() + 1} of {photos.len()}" }
-}"#;
 
 fn demo_slides() -> Vec<Element> {
     (1..=6)
@@ -211,28 +197,6 @@ pub fn CarouselPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "Controlled slide",
-                Text {
-                    "Pass "
-                    Code { source: "index" }
-                    " and the carousel follows it; read "
-                    Code { source: "onindexchange" }
-                    " to follow the carousel. It fires once a scroll settles rather than on "
-                    "every frame, so it is safe to write straight back into the signal that "
-                    "drives it."
-                }
-                Text {
-                    "While you are driving index, it can also fire with an index you did not "
-                    "ask for. If the one you passed is outside the reachable window - slide 0 "
-                    "on a centred three-up strip, or an index left over after the slides got "
-                    "shorter - the carousel clamps it and tells you, rather than the two of you "
-                    "disagreeing forever with your code pushing the same unreachable value back "
-                    "on every render. An uncontrolled carousel stays quiet."
-                }
-                CodeBlock { source: CONTROLLED, language: "rust" }
             }
 
             DocSection {

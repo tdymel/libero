@@ -1,8 +1,11 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
-use crate::icons::FileIcon;
+use crate::icons::{ClipboardCheckIcon, CreditCardIcon, TruckIcon};
 use dioxus::prelude::*;
-use libero::components::{
-    Accordion, AccordionOpen, Button, Code, Flex, Icon, OptionLabel, Options, Text,
+use libero::{
+    components::{
+        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, OptionLabel, Options, Text,
+    },
+    sx::sx,
 };
 
 /// The sections are the enum, so the snippet is a lie without it.
@@ -40,15 +43,34 @@ const MANY_PANEL: &str = r#"panel: |step: Step| match step {
     Step::Review => rsx! { Text { "Check the order, then place it." } },
 }"#;
 
-// A trigger is a `button`, so its content has to stay phrasing content: `Icon`
-// is an inline-flex `span`.
+// A trigger is a `button`, so its content has to stay phrasing content: a
+// `Box` as a `span`, not a `Flex`, which is a `div`. The inline-flex row is
+// what centres the icon on the label; beside bare text it sits on the
+// baseline.
 const RICH: &str = r#"label: |step: Step| OptionLabel::rich(
     step.label(),
     rsx! {
-        Icon { variant: "transparent", size: "sm", FileIcon {} }
-        "{step.label()}"
+        Box {
+            component: "span",
+            sx: sx().display("inline-flex").align_items("center").gap("sm"),
+            Icon { variant: "transparent", size: "sm", {step.icon()} }
+            "{step.label()}"
+        }
     },
 )"#;
+
+/// Printed with the rich label, which calls it.
+const STEP_ICON: &str = r#"impl Step {
+    fn icon(&self) -> Element {
+        match self {
+            Step::Shipping => rsx! { TruckIcon {} },
+            Step::Payment => rsx! { CreditCardIcon {} },
+            Step::Review => rsx! { ClipboardCheckIcon {} },
+        }
+    }
+}
+
+"#;
 
 #[derive(Clone, PartialEq, Options)]
 enum Step {
@@ -58,12 +80,26 @@ enum Step {
     Review,
 }
 
+impl Step {
+    fn icon(&self) -> Element {
+        match self {
+            Step::Shipping => rsx! { TruckIcon {} },
+            Step::Payment => rsx! { CreditCardIcon {} },
+            Step::Review => rsx! { ClipboardCheckIcon {} },
+        }
+    }
+}
+
 fn rich(step: Step) -> OptionLabel {
     OptionLabel::rich(
         step.label(),
         rsx! {
-            Icon { variant: "transparent", size: "sm", FileIcon {} }
-            "{step.label()}"
+            Box {
+                component: "span",
+                sx: sx().display("inline-flex").align_items("center").gap("sm"),
+                Icon { variant: "transparent", size: "sm", {step.icon()} }
+                "{step.label()}"
+            }
         },
     )
 }
@@ -145,7 +181,11 @@ pub fn AccordionPage() -> Element {
                     } else {
                         "AccordionOpen::One(Some(Step::Shipping))"
                     };
-                    format!("{STEP_ENUM}let mut open = use_signal(|| {initial});\n\n{source}")
+                    let icon = match values.str("rich_label") == "true" {
+                        true => STEP_ICON,
+                        false => "",
+                    };
+                    format!("{STEP_ENUM}{icon}let mut open = use_signal(|| {initial});\n\n{source}")
                 }),
                 fixed: vec![
                     "open: open()".to_string(),

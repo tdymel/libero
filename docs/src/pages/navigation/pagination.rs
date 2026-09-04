@@ -1,47 +1,11 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Code, CodeBlock, Pagination, Text},
+    components::{Code, Pagination, Text},
     use_theme,
 };
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
-
-const RANGE_TABLE: &str = r#"total  siblings  boundaries  page   rendered
-    7         1           1     4   1 2 3 4 5 6 7
-   10         1           1     1   1 2 3 4 5 … 10
-   10         1           1     5   1 … 4 5 6 … 10
-   10         1           1     7   1 … 6 7 8 9 10
-   20         2           1    10   1 … 8 9 10 11 12 … 20
-   20         1           2    10   1 2 … 9 10 11 … 19 20
-   11         0           1     6   1 … 6 … 11"#;
-
-const LABEL_EXAMPLE: &str = r#"Pagination {
-    total: 42,
-    page: page(),
-    onchange: move |next| page.set(next),
-    aria_label: "Suchergebnisse",
-    label: |label: PaginationLabel| match label {
-        // The number does not have to go last.
-        PaginationLabel::Page { number, current: true } => format!("Seite {number}, aktuell"),
-        PaginationLabel::Page { number, .. } => format!("Seite {number}"),
-        PaginationLabel::First => "Erste Seite".to_string(),
-        PaginationLabel::Previous => "Vorherige Seite".to_string(),
-        PaginationLabel::Next => "Nächste Seite".to_string(),
-        PaginationLabel::Last => "Letzte Seite".to_string(),
-    },
-}"#;
-
-const RANGE_EXAMPLE: &str = r#"use libero::components::{pagination_range, PaginationItem};
-
-// The same arithmetic the component draws with, for a strip you draw
-// yourself.
-for item in pagination_range(42, 7, 1, 1) {
-    match item {
-        PaginationItem::Page(n) => { /* a control for page n */ }
-        PaginationItem::Ellipsis => { /* a gap */ }
-    }
-}"#;
 
 /// `siblings` and `boundaries` are `u8`s, so they print unquoted.
 fn unquoted(control: &Control, values: &DemoValues) -> Vec<String> {
@@ -149,53 +113,6 @@ pub fn PaginationPage() -> Element {
                         }
                     }
                 },
-            }
-
-            DocSection {
-                title: "The range",
-                Text {
-                    "An ellipsis never stands for exactly one page. Hiding "
-                    Code { source: "9" }
-                    " behind a gap costs the same width as printing it, so the gap is only "
-                    "drawn where it saves something. That also fixes the rendered width at "
-                    Code { source: "2·siblings + 2·boundaries + 3" }
-                    ", which is why the strip does not reflow while you click through it - the "
-                    "comparison is the point here, so it is a table rather than a control."
-                }
-                CodeBlock { source: RANGE_TABLE, language: "text" }
-                Text {
-                    "The arithmetic is public. "
-                    Code { source: "pagination_range" }
-                    " is a pure function of four integers, so a caller drawing a custom strip "
-                    "can reuse it rather than re-deriving the edge cases."
-                }
-                CodeBlock { source: RANGE_EXAMPLE, language: "rust" }
-            }
-
-            DocSection {
-                title: "Accessible names",
-                Text {
-                    "The current page is named "
-                    Code { source: "Page 4" }
-                    " and every other "
-                    Code { source: "Go to page 4" }
-                    ". "
-                    Code { source: "aria-current" }
-                    " already says \"current\", so repeating \"go to\" on the page you are on "
-                    "would be a lie. The ellipsis is "
-                    Code { source: "aria-hidden" }
-                    " and not focusable: it is a gap, not a control."
-                }
-                Text {
-                    "Every string lives in "
-                    Code { source: "theme.pagination_labels" }
-                    ", which is English by default and swapped whole for a locale. That shape "
-                    "assumes the number goes last, which is wrong in plenty of languages - "
-                    Code { source: "label" }
-                    " is the escape hatch, and it sees the five named controls and never the "
-                    "ellipsis, so an exhaustive match has no dead branch."
-                }
-                CodeBlock { source: LABEL_EXAMPLE, language: "rust" }
             }
         }
     }
