@@ -12,12 +12,13 @@ pub const LIGHTBOX_THUMBNAILS_GAP: CssVar = CssVar::new("--lsx-lightbox-thumbnai
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LightboxDefaults {
     /// The dialog's widest extent, a CSS length. Below the `sm` breakpoint,
-    /// or under 30rem tall (a phone on its side), the dialog and its pictures
-    /// take the whole screen width instead.
+    /// or under 30rem tall (a phone on its side), the viewer is full screen
+    /// instead, inside the safe-area insets.
     pub width: &'static str,
     /// The stage's height, a CSS length. Fixed, so every slide is the same
     /// box and a picture is fitted into it rather than sizing it. A picture
-    /// smaller than the stage keeps its natural size.
+    /// smaller than the stage keeps its natural size. Full screen, the stage
+    /// is the room the close button, caption and thumbnails leave.
     pub stage_height: &'static str,
     /// One thumbnail's edge, a CSS length. The strip is a `Carousel`, so this
     /// caps the strip at `thumbnails_per_view` of them rather than sizing

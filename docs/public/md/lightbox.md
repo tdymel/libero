@@ -162,8 +162,8 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 
 | Field | Type | Description |
 |---|---|---|
-| `width` | `&'static str` | The dialog's widest extent. Below the `sm` breakpoint, or under `30rem` tall (a phone on its side), the dialog and its pictures take the whole screen width instead. |
-| `stage_height` | `&'static str` | Every frame's height. A larger picture is scaled down into it; a smaller one shows at its natural size, never upscaled. |
+| `width` | `&'static str` | The dialog's widest extent. Below the `sm` breakpoint, or under `30rem` tall (a phone on its side), the viewer is full screen instead, inside the safe-area insets. |
+| `stage_height` | `&'static str` | Every frame's height; full screen, the room the close button, caption and thumbnails leave. A larger picture is scaled down into it; a smaller one shows at its natural size, never upscaled. |
 | `thumbnail_size` | `&'static str` | One thumbnail's edge, capping the strip's width. |
 | `thumbnails_per_view` | `f64` | Thumbnails visible at once before the strip scrolls. |
 | `thumbnails_gap` | `Size` | Space between thumbnails. |

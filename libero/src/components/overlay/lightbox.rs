@@ -35,10 +35,10 @@ const LIGHTBOX_TRANSFORM: CssVar = CssVar::new("--lsx-lightbox-transform");
 /// thumbnails and centres.
 const LIGHTBOX_THUMBNAILS_SHOWN: CssVar = CssVar::new("--lsx-lightbox-thumbnails-shown");
 
-/// On a phone the viewer takes the whole width of the screen: it has none to
-/// spare for a margin round a picture. Either way up - `xs` alone (576px)
-/// caught every phone held upright and none held sideways, which are 640 to
-/// 932px wide but never more than 480px tall.
+/// On a phone the viewer is the whole screen: it has none to spare for a
+/// margin round a picture. Either way up - `xs` alone (576px) caught every
+/// phone held upright and none held sideways, which are 640 to 932px wide but
+/// never more than 480px tall.
 fn phone() -> String {
     format!(
         "(width < {}), (height < 30rem)",
@@ -46,21 +46,63 @@ fn phone() -> String {
     )
 }
 
+/// The dialog's padding on one side of a phone: the usual `sm`, plus whatever
+/// a notch or a home indicator takes there.
+fn safe_padding(side: &str) -> String {
+    format!(
+        "calc({} + env(safe-area-inset-{side}, 0px))",
+        SizeCss::SPACING.value(Size::Sm)
+    )
+}
+
+// On a phone the dialog is the screen: fixed to the whole viewport, no
+// margin, radius or shadow, and a column in which the stage takes whatever
+// the close button, caption and thumbnails leave.
 static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .max_width(LIGHTBOX_WIDTH.value())
         .padding("sm")
         .media(
             phone(),
-            sx().max_width("none").margin_left("0").margin_right("0"),
+            sx().position("fixed")
+                .inset("0")
+                .max_width("none")
+                .margin("0")
+                .border_radius("0")
+                .box_shadow("none")
+                .display("flex")
+                .flex_direction("column")
+                .padding_top(safe_padding("top"))
+                .padding_right(safe_padding("right"))
+                .padding_bottom(safe_padding("bottom"))
+                .padding_left(safe_padding("left")),
         )
 });
 
-// On a phone the pictures also reach past the dialog's padding, so the stage
-// is the viewport's width; the close button, caption and thumbnails keep it.
+// Everything under the dialog's header: the stage, the caption, the strip.
+static LIGHTBOX_BODY_SX: StaticSx = StaticSx::new(|| {
+    sx().media(
+        phone(),
+        sx().flex("1")
+            .min_height("0")
+            .display("flex")
+            .flex_direction("column"),
+    )
+});
+
+// On a phone the pictures also reach past the dialog's `sm` padding, to the
+// safe area's edge, and the stage is a size container: a frame is as tall as
+// the room left, `100cqh`, where elsewhere it is the theme's stage height.
 static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
     let bleed = format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Sm));
-    sx().media(phone(), sx().margin_left(bleed.clone()).margin_right(bleed))
+    sx().media(
+        phone(),
+        sx().margin_left(bleed.clone())
+            .margin_right(bleed)
+            .flex("1")
+            .min_height("0")
+            .container_type("size"),
+    )
 });
 
 // Every slide is this one box, so a picture is fitted into the stage rather
@@ -69,6 +111,7 @@ static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
 static LIGHTBOX_FRAME_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .height(LIGHTBOX_STAGE_HEIGHT.value())
+        .media(phone(), sx().height("100cqh"))
         .overflow("hidden")
         .has_focus_visible(focus_ring_sx().outline_offset("-2px"))
 });
@@ -660,6 +703,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
             close_label: theme.lightbox.close_label,
             sx: &LIGHTBOX_DIALOG_SX,
             Box {
+                framework_sx: &LIGHTBOX_BODY_SX,
                 onmounted: stage.mount(),
                 Box { framework_sx: &LIGHTBOX_STAGE_SX, {stage_body} }
                 if let Some(caption) = caption {
