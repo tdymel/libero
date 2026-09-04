@@ -362,15 +362,20 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let count = items.len();
     let last = count.saturating_sub(1);
     let mut index = use_signal(|| opening.index.min(last));
+    let mut zoom = use_signal(|| Zoom::fitted(usize::MAX));
     // A second `open_with` while this one shows replaces the gallery in place.
+    // A zoom is keyed by index only, so it would carry onto whichever new
+    // picture lands at the same index.
     use_effect(use_reactive!(|opening| {
         let target = opening.index.min(opening.items.len().saturating_sub(1));
         if *index.peek() != target {
             index.set(target);
         }
+        if zoom.peek().is_zoomed() {
+            zoom.set(Zoom::fitted(usize::MAX));
+        }
     }));
 
-    let mut zoom = use_signal(|| Zoom::fitted(usize::MAX));
     // Measured whenever a zoom starts, so a zoomed picture always has bounds
     // to pan within - and a key can decide synchronously whether it pans.
     let fit = use_signal(|| None::<Fit>);

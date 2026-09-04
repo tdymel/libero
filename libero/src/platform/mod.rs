@@ -35,6 +35,7 @@ pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub use eye_dropper::EyeDropperApi;
 pub(crate) use eye_dropper::eye_dropper;
+pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::warn_reserved_chord;
 pub use keyboard::{KeyChord, KeySubscription, KeyboardApi, keyboard};
 pub(crate) use motion::prefers_reduced_motion;

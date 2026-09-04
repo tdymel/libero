@@ -9,6 +9,7 @@ use crate::{
     },
     context::ModalContext,
     hooks::{use_dismiss_layer, use_modal_z_index},
+    platform::key_taken,
     sx::{StaticSx, sx},
     theme::CssVar,
 };
@@ -107,7 +108,15 @@ pub fn Modal(props: ModalProps) -> Element {
             // Only the top layer answers: a popover open inside this modal
             // hears the same press on its own box, and without the guard both
             // would close.
-            if event.key() == Key::Escape && layer.is_top() {
+            //
+            // On the web a popover hears Escape at the document instead, and
+            // dioxus-web delivers this handler only after that popover has
+            // closed and left the stack, so `is_top()` alone answers yes. Its
+            // listener prevented the press's default when it took it, and that
+            // is what this reads. Off the web `key_taken` is always false and
+            // nothing changes: there a popover's own element handler stops the
+            // press before it reaches this one.
+            if event.key() == Key::Escape && layer.is_top() && !key_taken(&event) {
                 close();
             }
         })

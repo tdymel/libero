@@ -129,7 +129,10 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         }
     });
     // `outside` is ours: `use_dismiss` has one `onclose` for every reason, and
-    // focus leaving must clear only `focused`.
+    // focus leaving must clear only `focused`. A card forced open takes no
+    // Escape, so it never sits on the Escape stack above a `Modal` it cannot
+    // leave.
+    let dismissible = props.opened.is_none();
     let dismiss = use_dismiss(
         anchor,
         floating,
@@ -137,6 +140,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         placed,
         Some(onclose),
         DismissOptions {
+            escape: dismissible,
             outside: false,
             ..Default::default()
         },
@@ -320,6 +324,9 @@ fn trigger_tab(event: &KeyboardEvent, open: bool, floating: ElementHandle) {
         .and_then(|items| items.into_iter().next());
     if let Some(first) = first {
         event.prevent_default();
+        // An enclosing `Modal`'s `FocusTrap` answers every Tab itself, and
+        // would take focus straight back out of the portaled card.
+        event.stop_propagation();
         let _ = first.focus();
     }
 }

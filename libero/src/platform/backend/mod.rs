@@ -14,7 +14,7 @@
 
 use std::rc::Rc;
 
-use dioxus::prelude::{Event, MountedData, MouseData, TransitionData};
+use dioxus::prelude::{Event, KeyboardData, MountedData, MouseData, TransitionData};
 
 use super::{DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
@@ -90,6 +90,17 @@ pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     return web::transition_property(event);
     #[cfg(not(target_arch = "wasm32"))]
     return None;
+}
+
+/// Only the web has a document key listener that can take a press - see
+/// [`key_taken`](crate::platform::key_taken).
+pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::key_taken(event);
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
 }
 
 /// Only the web can see a click's target today - see

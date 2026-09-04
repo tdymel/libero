@@ -1,4 +1,4 @@
-use dioxus::prelude::{Key, Modifiers};
+use dioxus::prelude::{Event, Key, KeyboardData, Modifiers};
 
 use super::backend;
 
@@ -94,6 +94,17 @@ pub trait KeyboardApi {
 /// for the same reason.
 pub fn keyboard() -> Option<Box<dyn KeyboardApi>> {
     backend::keyboard()
+}
+
+/// Whether a [`KeyboardApi`] subscriber already took this press, which it
+/// marks by preventing its default. That listener runs in the capture phase,
+/// ahead of every element handler, so an element handler asks this to learn
+/// that a layer above it has consumed the key.
+///
+/// Always `false` off the web, where there is no document listener to take
+/// anything.
+pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
+    backend::key_taken(event)
 }
 
 /// Whether an element takes typing, so a hotkey must not fire from it - the

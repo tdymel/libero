@@ -2,7 +2,9 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use dioxus::prelude::{Event, Key, Modifiers, MountedData, MouseData, TransitionData};
+use dioxus::prelude::{
+    Event, Key, KeyboardData, Modifiers, MountedData, MouseData, TransitionData,
+};
 use wasm_bindgen::{JsCast, JsValue};
 
 use wasm_bindgen::prelude::Closure;
@@ -37,6 +39,14 @@ pub(super) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
             .downcast::<web_sys::TransitionEvent>()?
             .property_name(),
     )
+}
+
+/// The native event outlives its dispatch, so `defaultPrevented` still reads
+/// what the capture-phase `KeyboardApi` listener did to it.
+pub(super) fn key_taken(event: &Event<KeyboardData>) -> bool {
+    event
+        .downcast::<web_sys::KeyboardEvent>()
+        .is_some_and(|event| event.default_prevented())
 }
 
 /// What HTML counts as interactive content, plus anything a caller made
