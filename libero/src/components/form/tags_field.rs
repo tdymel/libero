@@ -4,15 +4,17 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Chip, ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
+        ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
         common::field_props,
-        form::{field_control_sx, glyphs::CloseIcon, use_bound, use_field, use_field_frame},
+        form::{
+            field_control_sx, glyphs::CloseIcon, removable_chip, use_bound, use_field,
+            use_field_frame,
+        },
         layout::use_box,
         use_combobox,
     },
     hooks::{PopoverWidth, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CHIP_HEIGHT, Size},
     utils::warn,
 };
 
@@ -30,29 +32,16 @@ static TAGS_VALUE_SX: StaticSx = StaticSx::new(|| {
         .flex("1 1 auto")
         // Without it a long tag pushes the frame wider instead of wrapping.
         .min_width("0")
+        // `min-width: 0`, or a long tag's chip is floored at its whole label
+        // before the chip's own ellipsis can apply.
         .selector(
             "& > [data-slot='tag']",
             sx().display("inline-flex").max_width("100%").min_width("0"),
         )
-        // A tag is free text, so one can be arbitrarily long. The label is the
-        // only part that may shrink: without `min-width: 0` a flex item's floor
-        // is its min-content size, which for an unbroken 240-character tag is
-        // the whole string - and the x was then pushed clean out of its own
-        // chip. Seen in a browser; the box model alone looked correct.
-        .selector(
-            "& [data-slot='label']",
-            sx().min_width("0")
-                .overflow("hidden")
-                .text_overflow("ellipsis")
-                .white_space("nowrap"),
-        )
-        // A flex line of its own, or the x hangs off the label's baseline. It
-        // never shrinks - an x too narrow to hit is worse than a clipped label.
+        // A flex line of its own, or the x hangs off the label's baseline.
         .selector(
             "& [data-slot='remove']",
-            sx().display("inline-flex")
-                .align_items("center")
-                .flex("0 0 auto"),
+            sx().display("inline-flex").align_items("center"),
         )
 });
 
@@ -213,7 +202,6 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // The chips. The input is the one tab stop, so removing one never destroys
     // the control the keyboard was on and there is no focus debt to repay
     // ([[principles/focus-after-removal]] - "where this does not apply").
-    let chip_size = Size::ALL[size.index().saturating_sub(1)];
     let removing = held.clone();
     let remove_change = onchange.clone();
     let draw_tag = props.tag;
@@ -230,7 +218,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         });
         match &draw_tag {
             Some(tag) => tag.call(SelectionArgs { value, remove }),
-            None => default_tag(&value, remove, chip_size, disabled),
+            None => removable_chip(value, remove, size, disabled),
         }
     });
     let tags = rsx! {
@@ -528,60 +516,6 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
     }
     pieces.retain(|piece| !piece.trim().is_empty());
     pieces
-}
-
-/// The default tag: the text, and an x that drops it.
-///
-/// The x is `tabindex="-1"`, the same shape `MultiSelect`'s chips have and the
-/// one Mantine's `Pill` uses: the field is one tab stop, and the keyboard takes
-/// a tag back with Backspace rather than by tabbing onto a button per chip.
-fn default_tag(value: &str, remove: Callback<()>, size: Size, disabled: bool) -> Element {
-    let label = value.to_string();
-    // A fraction of the chip's own height, not of its font: the two do not
-    // scale at the same rate, so an `em` x shrinks against its chip as the
-    // field grows.
-    let icon_size: Input<ThemeAwareValue> =
-        ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
-    rsx! {
-        Chip { size,
-            // Its own element, so it is a flex item the value slot can let
-            // shrink. A bare text node is an anonymous one, which no selector
-            // reaches.
-            span { "data-slot": "label", "{label}" }
-            span {
-                // Centred by the value slot's own sx - a bare inline span would
-                // hang the button off the label's baseline.
-                "data-slot": "remove",
-                // The input holds the focus that keeps the list open, so a
-                // press must not move it onto the button before the click.
-                onmousedown: move |event: MouseEvent| event.prevent_default(),
-                ActionIcon {
-                    aria_label: "Remove {label}",
-                    size: icon_size,
-                    disabled,
-                    // A native `<button>` inherits neither `color` nor
-                    // `font-size` - it takes the UA's `buttontext` and 13.3px.
-                    //
-                    // The hover tint is `currentColor` at 20%, so it reads on a
-                    // filled chip and a tonal one alike without either knowing
-                    // the other's colour.
-                    sx: sx()
-                        .color("inherit")
-                        .font_size("inherit")
-                        .border_radius("50%")
-                        .selector(
-                            "&:hover",
-                            sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
-                        ),
-                    // The control is one tab stop: Backspace, not a button per
-                    // chip, is how a keyboard takes a tag back.
-                    tabindex: "-1",
-                    onclick: move |_| remove.call(()),
-                    CloseIcon {}
-                }
-            }
-        }
-    }
 }
 
 #[cfg(test)]

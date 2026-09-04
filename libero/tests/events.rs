@@ -8,17 +8,21 @@ use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{ActionIcon, Box, Button, Dialog, Marquee, Options, SegmentedControl, Tabs},
+    components::{
+        ActionIcon, Box, Button, Dialog, Marquee, MultiSelect, Options, SegmentedControl, Tabs,
+        TagsField,
+    },
     hooks::{ModalScope, use_modal},
 };
 use std::rc::Rc;
 
 /// Records the element the `click` listener landed on, which is the only way
-/// to address it from a test.
+/// to address it from a test - and every `mousedown` one, in order.
 #[derive(Default)]
 struct FindClickListener {
     last: Option<ElementId>,
     click: Option<ElementId>,
+    mousedown: Vec<ElementId>,
 }
 
 impl WriteMutations for FindClickListener {
@@ -31,6 +35,9 @@ impl WriteMutations for FindClickListener {
     fn add_event_listener(&mut self, name: &str) {
         if name == "click" {
             self.click = self.last;
+        }
+        if name == "mousedown" {
+            self.mousedown.extend(self.last);
         }
     }
     fn child(&mut self, _index: usize) {}
@@ -534,4 +541,58 @@ fn an_uncontrolled_marquee_pauses_on_its_toggle() {
 
     let (_, after) = click_the_pause_toggle(app);
     assert_eq!(marquee_paused(&after), (true, true), "{after}");
+}
+
+/// A press on a chip's x must not take the focus. The field holds the focus
+/// that keeps its list open, and the x is about to be removed: focused, it
+/// would take the focus down with it, to the body. Nothing but this guard
+/// stops that, so nothing but this test notices it gone (todo 77).
+fn assert_every_press_keeps_the_focus(app: fn() -> Element, chips: usize) {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    // Closed, the field has no other `mousedown` listener: the dropdown's own
+    // guard only mounts with the dropdown.
+    assert_eq!(find.mousedown.len(), chips, "one guard per chip");
+
+    for chip in find.mousedown {
+        let press = Event::new(click_event(), true);
+        dom.runtime().handle_event("mousedown", press.clone(), chip);
+        assert!(!press.default_action_enabled(), "a press moved the focus");
+    }
+}
+
+#[test]
+fn pressing_a_tag_x_keeps_the_focus_on_the_input() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    value: vec!["rust".to_string(), "dioxus".to_string()],
+                    onchange: move |_: Vec<String>| {},
+                }
+            }
+        }
+    }
+
+    assert_every_press_keeps_the_focus(app, 2);
+}
+
+#[test]
+fn pressing_a_chip_x_keeps_the_focus_on_the_trigger() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                MultiSelect::<Emphasis> {
+                    label: "Emphasis",
+                    value: vec![Emphasis::Bold, Emphasis::Italic],
+                    onchange: move |_: Vec<Emphasis>| {},
+                }
+            }
+        }
+    }
+
+    assert_every_press_keeps_the_focus(app, 2);
 }

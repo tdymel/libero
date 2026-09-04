@@ -3,10 +3,8 @@ use dioxus::prelude::*;
 use crate::components::form::use_bound;
 
 use crate::{
-    components::{ActionIcon, Chip, Input, Options, common::field_props, form::glyphs::CloseIcon},
+    components::{Input, Options, common::field_props, form::removable_chip},
     hooks::use_theme,
-    sx::{ThemeAwareValue, sx},
-    theme::{CHIP_HEIGHT, Size},
     utils::warn,
 };
 
@@ -100,9 +98,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     // the caller's.
     let onchange = bound.emit(props.onchange);
     let size = props.size.copied_or(theme.multi_select.size);
-    // Chips ride inside the control, so they sit one step down the same scale
-    // the field is on - `xs` has nowhere lower to go.
-    let chip_size = Size::ALL[size.index().saturating_sub(1)];
+    let disabled = bound.disabled(props.disabled);
     let picked = held.clone();
     let draw_selection = props.selection;
     let chip_change = onchange.clone();
@@ -114,7 +110,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
                 match &draw_selection {
                     Some(selection) => selection.call(SelectionArgs { value, remove }),
-                    None => default_chip(&value, remove, chip_size),
+                    None => removable_chip(value.label(), remove, size, disabled),
                 }
             });
             rsx! {
@@ -199,62 +195,12 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             status: props.status,
             size,
             radius: props.radius.copied_or(theme.multi_select.radius),
-            disabled: Some(bound.disabled(props.disabled)),
+            disabled: Some(disabled),
             required: props.required,
             class: props.class,
             sx: props.sx,
             states: props.states,
             attributes: props.attributes,
-        }
-    }
-}
-
-/// The default chip: the label, and an x that drops it.
-fn default_chip<T: Options>(value: &T, remove: Callback<()>, size: Size) -> Element {
-    let label = value.label();
-    // A fraction of the chip's own height, not of its font: the two do not
-    // scale at the same rate (20 -> 36px against 11 -> 15px), so an `em` x
-    // shrinks against its chip as the field grows.
-    let icon_size: Input<ThemeAwareValue> =
-        ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
-    rsx! {
-        Chip { size,
-            "{label}"
-            span {
-                // Centred by the trigger's own sx - a bare inline span would
-                // hang the button off the label's baseline.
-                "data-slot": "remove",
-                // The trigger holds the focus that keeps the list open, so the
-                // press must not move it onto the button.
-                onmousedown: move |event: MouseEvent| event.prevent_default(),
-                // A remove is not a click on the trigger, which would open the
-                // list under the chip that just went away.
-                onclick: move |event: MouseEvent| event.stop_propagation(),
-                ActionIcon {
-                    aria_label: "Remove {label}",
-                    size: icon_size,
-                    // A native `<button>` inherits neither `color` nor
-                    // `font-size` - it takes the UA's `buttontext` and 13.3px.
-                    // `color` is the fix `Chip`'s removed `ondelete` needed.
-                    //
-                    // The hover tint is `currentColor` at 20%, so it reads on a
-                    // filled chip and a tonal one alike without either knowing
-                    // the other's colour.
-                    sx: sx()
-                        .color("inherit")
-                        .font_size("inherit")
-                        .border_radius("50%")
-                        .selector(
-                            "&:hover",
-                            sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
-                        ),
-                    // The control is one tab stop: the keys, not the buttons,
-                    // are how a keyboard removes a chip.
-                    tabindex: "-1",
-                    onclick: move |_| remove.call(()),
-                    CloseIcon {}
-                }
-            }
         }
     }
 }

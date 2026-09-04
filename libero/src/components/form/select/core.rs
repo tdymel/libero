@@ -57,10 +57,12 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
             ),
         )
         // One wrapper per selected item: it carries the id
-        // `aria-activedescendant` points at, and nothing visual.
+        // `aria-activedescendant` points at, and nothing visual. `min-width: 0`,
+        // or a long option's chip is floored at its whole label before the
+        // chip's own ellipsis can apply.
         .selector(
             "& [data-slot='chip']",
-            sx().display("inline-flex").max_width("100%"),
+            sx().display("inline-flex").max_width("100%").min_width("0"),
         )
         // A flex line of its own, or the button hangs off the label's baseline.
         .selector(

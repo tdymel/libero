@@ -18,6 +18,7 @@ mod phone_field;
 mod pin_field;
 mod radio;
 mod radio_group;
+mod removable_chip;
 mod segmented_control;
 mod select;
 mod slider;
@@ -60,6 +61,7 @@ pub use phone_field::{PhoneField, PhoneFieldProps};
 pub use pin_field::{PinField, PinFieldProps, PinKind};
 pub use radio::{Radio, RadioProps};
 pub use radio_group::{RadioGroup, RadioGroupProps};
+pub(crate) use removable_chip::removable_chip;
 pub use segmented_control::{SegmentedControl, SegmentedControlProps};
 pub use select::{
     MultiSelect, MultiSelectProps, Select, SelectFilterArgs, SelectOptionArgs, SelectProps,

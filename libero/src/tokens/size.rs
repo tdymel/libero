@@ -18,6 +18,12 @@ impl Size {
         self as usize
     }
 
+    /// One step down the scale, for a part that rides inside a control of this
+    /// size - a chip in a field. `xs` has nowhere lower to go.
+    pub(crate) const fn step_down(self) -> Self {
+        Self::ALL[self.index().saturating_sub(1)]
+    }
+
     pub const fn as_str(&self) -> &'static str {
         match self {
             Self::Xs => "xs",
