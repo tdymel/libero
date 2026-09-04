@@ -4,6 +4,7 @@ use libero::{
     components::{
         Button, Chip, Code, Flex, Input, Kbd, Scroller, ScrollerEdges, Text, use_scroller,
     },
+    sx::sx,
     use_theme,
 };
 
@@ -40,31 +41,34 @@ const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
 
 /// The edge report, printed under the strip. `on_edge_change` is in `fixed`;
 /// this adds the signal it writes and the text that reads it. Under
-/// `controls: "never"` also the handle and the caller's own two buttons.
+/// `controls: "never"` also the handle and the caller's own two buttons. A
+/// column, so the report sits below the strip rather than beside it.
 fn wrap_edges(values: &DemoValues, source: &str) -> String {
     let own = values.str("controls") == "never";
     let (handle, buttons) = match own {
         true => (
             "let strip = use_scroller();\n",
-            "    Flex { direction: \"row\", gap: \"sm\",\n        \
-             Button { variant: \"outlined\", onclick: move |_| strip.step_back(), \"Back\" }\n        \
-             Button { variant: \"outlined\", onclick: move |_| strip.step_forward(), \"Forward\" }\n    \
+            "        Flex { direction: \"row\", gap: \"sm\",\n            \
+             Button { variant: \"outlined\", onclick: move |_| strip.step_back(), \"Back\" }\n            \
+             Button { variant: \"outlined\", onclick: move |_| strip.step_forward(), \"Forward\" }\n        \
              }\n",
         ),
         false => ("", ""),
     };
     format!(
         "let mut edges = use_signal(|| None::<ScrollerEdges>);\n{handle}\n\
-         rsx! {{\n\
-         {}{buttons}    Text {{ size: \"sm\",\n        \
-         match edges() {{\n            \
-         Some(ScrollerEdges {{ at_start: true, at_end: true }}) => \"Everything fits\",\n            \
-         Some(ScrollerEdges {{ at_end: false, .. }}) => \"More to the right\",\n            \
-         Some(_) => \"End of the list\",\n            \
-         None => \"\",\n        \
+         rsx! {{\n    \
+         Flex {{ direction: \"column\", gap: \"sm\", sx: sx().width(\"100%\"),\n\
+         {}{buttons}        Text {{ size: \"sm\",\n            \
+         match edges() {{\n                \
+         Some(ScrollerEdges {{ at_start: true, at_end: true }}) => \"Everything fits\",\n                \
+         Some(ScrollerEdges {{ at_end: false, .. }}) => \"More to the right\",\n                \
+         Some(_) => \"End of the list\",\n                \
+         None => \"\",\n            \
+         }}\n        \
          }}\n    \
          }}\n}}",
-        indent(source)
+        indent(&indent(source))
     )
 }
 
@@ -88,44 +92,46 @@ fn ScrollerDemo(values: DemoValues) -> Element {
     let own = values.str("controls") == "never";
 
     rsx! {
-        Scroller {
-            aria_label: "Tags",
-            scroll_amount: values.str("scroll_amount").parse::<u32>().ok(),
-            controls: values.str("controls"),
-            control_size: values.str("control_size"),
-            fade_color: match fade.as_str() {
-                UNSET => Input::None,
-                _ => Input::from(fade),
-            },
-            draggable: values.str("draggable") == "true",
-            on_edge_change: move |next| edges.set(Some(next)),
-            // Always bound, not only under `never`: an element handle is
-            // attached on mount, so one passed later is never mounted.
-            handle: strip,
-            {strip_content()}
-        }
-        if own {
-            Flex { direction: "row", gap: "sm",
-                // Not `disabled` at an end: a focused button that becomes
-                // disabled drops focus to the page. A step there does nothing.
-                Button {
-                    variant: "outlined",
-                    onclick: move |_| strip.step_back(),
-                    "Back"
-                }
-                Button {
-                    variant: "outlined",
-                    onclick: move |_| strip.step_forward(),
-                    "Forward"
+        Flex { direction: "column", gap: "sm", sx: sx().width("100%"),
+            Scroller {
+                aria_label: "Tags",
+                scroll_amount: values.str("scroll_amount").parse::<u32>().ok(),
+                controls: values.str("controls"),
+                control_size: values.str("control_size"),
+                fade_color: match fade.as_str() {
+                    UNSET => Input::None,
+                    _ => Input::from(fade),
+                },
+                draggable: values.str("draggable") == "true",
+                on_edge_change: move |next| edges.set(Some(next)),
+                // Always bound, not only under `never`: an element handle is
+                // attached on mount, so one passed later is never mounted.
+                handle: strip,
+                {strip_content()}
+            }
+            if own {
+                Flex { direction: "row", gap: "sm",
+                    // Not `disabled` at an end: a focused button that becomes
+                    // disabled drops focus to the page. A step there does nothing.
+                    Button {
+                        variant: "outlined",
+                        onclick: move |_| strip.step_back(),
+                        "Back"
+                    }
+                    Button {
+                        variant: "outlined",
+                        onclick: move |_| strip.step_forward(),
+                        "Forward"
+                    }
                 }
             }
-        }
-        Text { size: "sm",
-            match edges() {
-                Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
-                Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
-                Some(_) => "End of the list",
-                None => "",
+            Text { size: "sm",
+                match edges() {
+                    Some(ScrollerEdges { at_start: true, at_end: true }) => "Everything fits",
+                    Some(ScrollerEdges { at_end: false, .. }) => "More to the right",
+                    Some(_) => "End of the list",
+                    None => "",
+                }
             }
         }
     }
@@ -186,7 +192,7 @@ pub fn ScrollerPage() -> Element {
                 Text {
                     Code { source: "on_edge_change" }
                     " reports whether the strip rests against either end, once it is first "
-                    "measured and again whenever that changes; the line under the preview "
+                    "measured and again whenever that changes; the line under the strip "
                     "prints it. With "
                     Code { source: "controls: \"never\"" }
                     " it is the whole affordance, for a strip that should say so in its own words. "

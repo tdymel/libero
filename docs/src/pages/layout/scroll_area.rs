@@ -46,8 +46,8 @@ const CONTENT: &str = r#"Box {
 }"#;
 
 /// The scroll position is read *and* written from the page, so all four wiring
-/// props are the demo's fixture rather than anything a control varies. `area`
-/// is `let area = use_scroll_area();`.
+/// props are the demo's fixture rather than anything a control varies. `area`,
+/// `position` and `edge` are declared in `PREAMBLE`.
 const FIXED: [&str; 4] = [
     "handle: area",
     "on_scroll: move |event: ScrollPositionEvent| position.set(event)",
@@ -57,6 +57,7 @@ const FIXED: [&str; 4] = [
 
 /// A raw `{event:?}` prints an unrounded `f64` and reflows the row on every
 /// scroll tick, so the readout formats the two percentages itself.
+/// **Kept in step with `PREAMBLE` by hand.**
 fn readout(event: ScrollPositionEvent) -> String {
     let (kind, x, y) = match event {
         ScrollPositionEvent::Start(x, y) => ("Start", x, y),
@@ -66,13 +67,30 @@ fn readout(event: ScrollPositionEvent) -> String {
     format!("{kind} at x {x:.0}%, y {y:.0}%")
 }
 
+/// The helper, the handle and the two signals the preview's wiring uses,
+/// printed above the rsx so the snippet compiles as it stands.
+const PREAMBLE: &str = r#"fn readout(event: ScrollPositionEvent) -> String {
+    let (kind, x, y) = match event {
+        ScrollPositionEvent::Start(x, y) => ("Start", x, y),
+        ScrollPositionEvent::Change(x, y) => ("Change", x, y),
+        ScrollPositionEvent::End(x, y) => ("End", x, y),
+    };
+    format!("{kind} at x {x:.0}%, y {y:.0}%")
+}
+
+let area = use_scroll_area();
+let mut position = use_signal(|| ScrollPositionEvent::Change(0.0, 0.0));
+let mut edge = use_signal(|| "none");
+
+"#;
+
 /// A scroll area fills its parent, so the preview has to give it one - and the
 /// readout and the three jump buttons are the other half of the wiring above,
 /// so they belong in the preview too. The code block prints all of it.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n    Box {{\n        sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-grey-3)\"),\n{}    }}\n    Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n    Flex {{\n        gap: \"sm\",\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n        Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n    }}\n}}",
-        indent(&indent(code))
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-grey-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        indent(&indent(&indent(code)))
     )
 }
 
