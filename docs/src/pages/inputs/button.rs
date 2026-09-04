@@ -1,6 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Button, Code, Text};
+use libero::components::{Button, Code, Input, Text};
 
 #[component]
 pub fn ButtonPage() -> Element {
@@ -70,10 +70,23 @@ pub fn ButtonPage() -> Element {
                     Control::switch("selected"),
                     Control::switch("disabled"),
                     Control::switch("loading"),
+                    // `to` and `target` together, since the preview's link
+                    // must not navigate the docs away.
+                    Control::switch("link").code(|_, values| match values.str("link").as_str() {
+                        "true" => vec![
+                            r#"to: "https://dioxuslabs.com""#.to_string(),
+                            r#"target: "_blank""#.to_string(),
+                        ],
+                        _ => vec![],
+                    }),
                     // A `GlobalAttributes` pass-through rather than a
-                    // prop, so it prints as the raw identifier.
-                    Control::toggle("type", ["button", "submit", "reset"]).code(
+                    // prop, so it prints as the raw identifier. A link has
+                    // no `type`.
+                    Control::toggle("type", ["button", "submit", "reset"])
+                        .hidden_when(|values| values.str("link") == "true")
+                        .code(
                         |control, values| match values.str("type") {
+                            _ if values.str("link") == "true" => vec![],
                             value if value == control.default => vec![],
                             value => vec![format!("r#type: {value:?}")],
                         },
@@ -95,21 +108,14 @@ pub fn ButtonPage() -> Element {
                         disabled: values.str("disabled") == "true",
                         loading: values.str("loading") == "true",
                         r#type: values.str("type"),
+                        to: match values.str("link").as_str() {
+                            "true" => Input::from("https://dioxuslabs.com"),
+                            _ => Input::None,
+                        },
+                        target: (values.str("link") == "true").then(|| "_blank".to_string()),
                         "Save changes"
                     }
                 },
-            }
-            DocSection {
-                title: "As a link",
-                Text {
-                    "Renders as a real anchor, or a router Link when to matches an internal route.",
-                }
-                Button {
-                    variant: "outlined",
-                    to: "https://dioxuslabs.com",
-                    target: "_blank",
-                    "Open Dioxus docs"
-                }
             }
         }
     }

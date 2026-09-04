@@ -3,7 +3,7 @@ use crate::components::{
 };
 use dioxus::prelude::*;
 use libero::{
-    components::{Button, Code, CodeBlock, Flex, Text, Title},
+    components::{Button, Code, Flex, Text, Title},
     hooks::{DrawerOptions, ModalScope, use_drawer},
     sx::sx,
 };
@@ -40,28 +40,6 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
         indent(&indent(CONTENT)),
     )
 }
-
-const ARGS_EXAMPLE: &str = r#"// The argument type is the modal's, so a drawer takes per-opening data and
-// answers its caller exactly like any other dialog.
-let details = use_drawer(
-    DrawerOptions {
-        anchor: "right".into(),
-        aria_label: Some("Order details".into()),
-        ..Default::default()
-    },
-    |s: ModalScope<Order, bool>| {
-        let order = s.args();
-
-        rsx! {
-            Title { size: "lg", component: "h2", "Order {order.id}" }
-            Button { onclick: move |_| s.resolve(true), "Mark shipped" }
-        }
-    },
-);
-
-if details.open_with(order).await == Some(true) {
-    refresh().await;
-}"#;
 
 /// The hook needs a scope of its own: `Demo` calls its `render` closure from
 /// its own, where a hook would be invisible to the next reader.
@@ -135,21 +113,6 @@ pub fn DrawerPage() -> Element {
                     DrawerDemo { anchor: values.str("anchor"), size: values.str("size") }
                 },
                 wrap: Wrap(wrap_hook),
-            }
-
-            DocSection {
-                title: "Arguments and answers",
-                Text {
-                    "Everything on the Modal page applies here unchanged: "
-                    Code { source: "open_with" }
-                    " carries this opening's data, the returned "
-                    Code { source: "Opening" }
-                    " takes a handler or is awaited, and Escape or a backdrop click settles "
-                    "it with "
-                    Code { source: "None" }
-                    "."
-                }
-                CodeBlock { source: ARGS_EXAMPLE, language: "rust" }
             }
 
             DocSection {

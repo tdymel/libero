@@ -1,14 +1,13 @@
 use super::date_common::{
     SIZES, calendar_controls, day_limits, field_controls, has_days, has_time, is_on, is_weekend,
-    moment_limits, shared_controls, shown, status_of, step_of, switches_last, text_of, time_limits,
-    today_of, twelve_hour_of,
+    moment_limits, shared_controls, shown, status_of, step_of, text_of, time_limits, today_of,
+    twelve_hour_of,
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::{
-    Code, CodeBlock, DateField, DateRange, Flex, Kbd, List, ListItem, Rule, Text, Validators,
-    not_empty,
+    Code, DateField, DateRange, Flex, Kbd, Rule, Text, Validators, not_empty,
 };
 
 const KINDS: [&str; 5] = ["date", "time", "date-time", "date-range", "date-time-range"];
@@ -29,13 +28,6 @@ const FORMATS: [&str; 5] = [
     "YYYY-MM-DD",
     "ddd, D MMM YYYY",
 ];
-
-const NAMING_V: &str = r#"// A typed signal names `V` through the handler.
-let mut day = use_signal(|| None::<NaiveDate>);
-DateField { value: day(), onchange: move |next| day.set(next) }
-
-// Without a typed handler, a turbofish does.
-DateField::<NaiveTime> { name: "alarm" }"#;
 
 fn day(day: u32) -> Option<NaiveDate> {
     NaiveDate::from_ymd_opt(2026, 9, day)
@@ -116,6 +108,24 @@ pub fn DateFieldPage() -> Element {
                     ". Two-digit years are rejected. Text that is not an accepted value stays, and the field shows an error. "
                     "The form gets ISO 8601, whatever the text shows."
                 }
+                Text {
+                    "A typed "
+                    Code { source: "value" }
+                    " alone does not name the type, because dioxus converts every prop. A handler that stores into a typed signal names it; "
+                    "without one, a turbofish does: "
+                    Code { source: "DateField::<NaiveTime> {{ .. }}" }
+                    ". For one value type there are "
+                    Code { source: "DayField" }
+                    ", "
+                    Code { source: "TimeField" }
+                    ", "
+                    Code { source: "DateTimeField" }
+                    ", "
+                    Code { source: "DateRangeField" }
+                    " and "
+                    Code { source: "DateTimeRangeField" }
+                    ": only the props that type uses, no turbofish, and a value of the wrong type is a plain type mismatch."
+                }
             },
             Demo {
                 component: "DateField",
@@ -180,7 +190,7 @@ pub fn DateFieldPage() -> Element {
                             false => vec![],
                         }),
                     ];
-                    switches_last([controls, calendar_controls(), shared_controls(), field_controls()].concat())
+                    [controls, calendar_controls(), shared_controls(), field_controls()].concat()
                 },
                 render: move |values: DemoValues| rsx! {
                     DateFieldDemo { values }
@@ -195,33 +205,6 @@ pub fn DateFieldPage() -> Element {
                     " keys apply. "
                     Kbd { "Escape" } " goes back to the text, and so does a pick that closes the dropdown. "
                     "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
-                }
-            }
-            DocSection {
-                title: "Naming the value type",
-                Text {
-                    "A typed "
-                    Code { source: "value" }
-                    " alone does not tell the compiler which "
-                    Code { source: "V" }
-                    " the field holds: dioxus converts every prop, so "
-                    Code { source: "Some(day)" }
-                    " could become more than one type. A handler that stores into a typed signal names it, and so does a turbofish."
-                }
-                CodeBlock { source: NAMING_V, language: "rust" }
-            }
-            DocSection {
-                title: "Alternatives",
-                Text {
-                    "The same field for one value type each, with only the props that type uses. "
-                    "They need no turbofish, and a value of the wrong type is a plain type mismatch."
-                }
-                List {
-                    ListItem { Code { source: "DayField" } " - a " Code { source: "NaiveDate" } ", with " Code { source: "DayPicker" } " in the dropdown." }
-                    ListItem { Code { source: "TimeField" } " - a " Code { source: "NaiveTime" } ", with " Code { source: "TimePicker" } "." }
-                    ListItem { Code { source: "DateTimeField" } " - a " Code { source: "NaiveDateTime" } ": the day, then the time." }
-                    ListItem { Code { source: "DateRangeField" } " - a " Code { source: "DateRange<NaiveDate>" } ", with " Code { source: "DateRangePicker" } "." }
-                    ListItem { Code { source: "DateTimeRangeField" } " - a " Code { source: "DateRange<NaiveDateTime>" } ": the start, then the end." }
                 }
             }
         }

@@ -53,8 +53,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Groups
-
 `AvatarGroup` owns its members rather than taking them as children, which is
 what lets it count them. `max` is the number of circles, the chip included, so
 the chip always stands for at least two people - a `+1` is unrepresentable by

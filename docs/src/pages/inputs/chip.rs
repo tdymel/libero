@@ -1,12 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Chip, Code, Flex, Text};
+use libero::components::{Chip, Code, Input, Text};
 
 #[component]
 pub fn ChipPage() -> Element {
-    let mut selected = use_signal(|| vec!["rust".to_string()]);
-    let mut clicks = use_signal(|| 0);
-
     rsx! {
         DocPage {
             title: "Chip",
@@ -64,17 +61,29 @@ pub fn ChipPage() -> Element {
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("xl"),
-                    // Controlled state is `checked` + `onchange`; the
-                    // library warns about one without the other.
-                    Control::switch("checked").code(|_, values| {
-                        match values.str("checked").as_str() {
-                            "true" => vec![
-                                "checked: true".to_string(),
-                                "onchange: move |_| {}".to_string(),
+                    // What the chip is: a plain tag, a checkbox, a button or
+                    // a link. The last three never combine.
+                    Control::toggle("kind", ["tag", "filter", "action", "link"])
+                        .labels(["Tag", "Filter", "Action", "Link"])
+                        .code(|_, values| match values.str("kind").as_str() {
+                            // Controlled state is `checked` + `onchange`; the
+                            // library warns about one without the other.
+                            "filter" => vec![
+                                "checked: selected()".to_string(),
+                                "onchange: move |next| selected.set(next)".to_string(),
+                            ],
+                            "action" => vec!["onclick: move |_| {}".to_string()],
+                            "link" => vec![
+                                r#"to: "https://dioxuslabs.com""#.to_string(),
+                                r#"target: "_blank""#.to_string(),
                             ],
                             _ => vec![],
-                        }
-                    }),
+                        }),
+                    // The preview writes `onchange` back into this switch;
+                    // `kind` prints the pair a caller writes.
+                    Control::switch("checked")
+                        .hidden_when(|values| values.str("kind") != "filter")
+                        .code(|_, _| vec![]),
                     Control::switch("disabled"),
                 ],
                 render: move |values: DemoValues| rsx! {
@@ -85,79 +94,23 @@ pub fn ChipPage() -> Element {
                         radius: values.str("radius"),
                         // Both or neither: `checked` alone can never
                         // change, `onchange` alone can never look selected.
-                        checked: match values.str("checked").as_str() {
-                            "true" => Some(true),
-                            _ => None,
+                        checked: (values.str("kind") == "filter")
+                            .then(|| values.str("checked") == "true"),
+                        onchange: (values.str("kind") == "filter").then(|| {
+                            let values = values.clone();
+                            EventHandler::new(move |next: bool| values.set("checked", next.to_string()))
+                        }),
+                        onclick: (values.str("kind") == "action")
+                            .then(|| EventHandler::new(move |_: MouseEvent| {})),
+                        to: match values.str("kind").as_str() {
+                            "link" => Input::from("https://dioxuslabs.com"),
+                            _ => Input::None,
                         },
-                        onchange: (values.str("checked") == "true")
-                            .then(|| EventHandler::new(move |_: bool| {})),
+                        target: (values.str("kind") == "link").then(|| "_blank".to_string()),
                         disabled: values.str("disabled") == "true",
                         "rust"
                     }
                 },
-            }
-            DocSection {
-                title: "Selectable",
-                Text {
-                    "Strictly controlled: "
-                    Code { source: "checked" }
-                    " drives the look, "
-                    Code { source: "onchange" }
-                    " reports the value it should take next. A checked chip is a tinted "
-                    "container - Material 3's selected filter chip - whatever its "
-                    Code { source: "variant" }
-                    ", so "
-                    Code { source: "variant" }
-                    " describes the unselected state."
-                }
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    for language in ["rust", "css", "html"] {
-                        Chip {
-                            key: "{language}",
-                            checked: selected().iter().any(|s| s == language),
-                            onchange: move |next: bool| {
-                                selected
-                                    .with_mut(|selected| {
-                                        if next {
-                                            selected.push(language.to_string());
-                                        } else {
-                                            selected.retain(|s| s != language);
-                                        }
-                                    });
-                            },
-                            "{language}"
-                        }
-                    }
-                }
-                Text { "Selected: {selected():?}" }
-            }
-            DocSection {
-                title: "Actions and links",
-                Text {
-                    Code { source: "onclick" }
-                    " makes the chip a "
-                    Code { source: "button" }
-                    ", "
-                    Code { source: "to" }
-                    " a router-aware link. Neither combines with "
-                    Code { source: "onchange" }
-                    "."
-                }
-                Flex {
-                    direction: "row",
-                    gap: "md",
-                    Chip {
-                        onclick: move |_| clicks += 1,
-                        "Clicked {clicks}x"
-                    }
-                    Chip {
-                        to: "https://dioxuslabs.com",
-                        target: "_blank",
-                        "Dioxus"
-                    }
-                }
             }
         }
     }

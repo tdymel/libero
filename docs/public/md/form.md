@@ -55,15 +55,11 @@ fn SignupForm() -> Element {
 }
 ```
 
-## Submitting
-
 A submit reveals every status. With any error it is cancelled, and a summary of
 every problem appears above the fields and takes focus. Without errors
 `onsubmit` fires; the browser's own submit is cancelled unless the form has an
 `action`. Warnings never block. The summary keeps the problems of that submit:
 a line leaves once it is fixed, and none is added until the next submit.
-
-## Controlling a form
 
 `use_form()` makes a handle to pass as `form`. Inside a form,
 `use_form_context()` returns the same handle.

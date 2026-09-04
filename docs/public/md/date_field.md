@@ -10,6 +10,15 @@ Modelled on Mantine's `DateInput`, `TimeInput`, `DateTimePicker` and
 `DatePickerInput`, in one component. The dropdown is a
 [DatePicker](date_picker.md) of the same value type.
 
+There is also the same field for one value type each, with only the props that type uses.
+They need no turbofish, and a value of the wrong type is a plain type mismatch.
+
+- `DayField` - a `NaiveDate`, with `DayPicker` in the dropdown.
+- `TimeField` - a `NaiveTime`, with `TimePicker`.
+- `DateTimeField` - a `NaiveDateTime`: the day, then the time.
+- `DateRangeField` - a `DateRange<NaiveDate>`, with `DateRangePicker`.
+- `DateTimeRangeField` - a `DateRange<NaiveDateTime>`: the start, then the end.
+
 ## Value types
 
 `DateField<V: DateValue>` holds an `Option<V>`. The type picks the dropdown:
@@ -45,8 +54,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Naming the value type
 
 A typed `value` alone does not name `V`: dioxus converts every prop, so
 `Some(day)` could become more than one type. A handler that stores into a typed
@@ -120,17 +127,6 @@ whatever the text shows: `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
 | `size`, `radius`, `label`, `description`, `helper`, `status`, `required`, `disabled` | | | The shared field props. |
 
 Props that only some value types use are ignored by the rest.
-
-## Alternatives
-
-The same field for one value type each, with only the props that type uses.
-They need no turbofish, and a value of the wrong type is a plain type mismatch.
-
-- `DayField` - a `NaiveDate`, with `DayPicker` in the dropdown.
-- `TimeField` - a `NaiveTime`, with `TimePicker`.
-- `DateTimeField` - a `NaiveDateTime`: the day, then the time.
-- `DateRangeField` - a `DateRange<NaiveDate>`, with `DateRangePicker`.
-- `DateTimeRangeField` - a `DateRange<NaiveDateTime>`: the start, then the end.
 
 ## Theme
 

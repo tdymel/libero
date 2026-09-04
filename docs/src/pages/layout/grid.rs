@@ -1,9 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Code, CodeBlock, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, SpanValue,
-        StaticGridTemplate, Text, sp,
+        Box, Grid, GridArea, GridItem, GridSpan, GridZone, HtmlTag, SpanValue, StaticGridTemplate,
+        Text, sp,
     },
     sx::sx,
 };
@@ -140,11 +140,27 @@ fn panel(label: &str, height: u32) -> Element {
 }
 
 fn controls() -> Vec<Control> {
+    let wall = |values: &DemoValues| values.str("layout") != "wall";
     vec![
-        Control::switch("masonry"),
-        Control::switch("dense"),
-        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
+        // Not a prop: which of three layouts the preview shows. Only the
+        // masonry wall has knobs; the other two print their whole source.
+        Control::toggle("layout", ["wall", "page", "responsive"])
+            .labels(["Masonry wall", "Named areas", "Responsive spans"])
+            .code(|_, _| vec![]),
+        Control::switch("masonry").hidden_when(wall),
+        Control::switch("dense").hidden_when(wall),
+        Control::slider("gap", ["xs", "sm", "md", "lg", "xl", "xxl"])
+            .default("md")
+            .hidden_when(wall),
     ]
+}
+
+fn wrap_layout(values: &DemoValues, source: &str) -> String {
+    match values.str("layout").as_str() {
+        "page" => TEMPLATE_SOURCE.to_string(),
+        "responsive" => RESPONSIVE_SOURCE.to_string(),
+        _ => source.to_string(),
+    }
 }
 
 #[component]
@@ -156,21 +172,21 @@ pub fn GridPage() -> Element {
             markdown: "/md/grid.md",
             properties: vec![
                 props("Grid", vec![
-                    prop("template", "GridTemplate").doc("The named-area matrix. Build it once outside the render."),
+                    prop("template", "GridTemplate").doc("The named-area matrix. Each row shares its width equally between its cells, and `cells(area, n)` gives one area several; rows of different lengths reconcile to their least common multiple. `build` rejects an area that is not a rectangle, or rows needing more than twelve columns. Build it once outside the render, as a `StaticGridTemplate` static."),
                     prop("gap", "Size").default("md").doc("Between zones."),
                     prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
                     prop("children", "Element").doc("`GridZone`s."),
                 ]),
                 props("GridZone", vec![
-                    prop("area", "AreaName").doc("Which of the parent `Grid`'s areas this fills. Omit it to use the zone on its own, without a `Grid` - a plain masonry wall needs no template."),
-                    prop("dense", "bool").default("false").doc("Backfill gaps a wider item left behind. Pure CSS, no measurement."),
-                    prop("masonry", "bool").default("false").doc("Measure item heights and pack them with no vertical dead space. Costs a `ResizeObserver` per item."),
+                    prop("area", "AreaName").doc("Which of the parent `Grid`'s areas this fills. Zones land by name, so their order is only the reading and tab order; an unknown area warns and auto-places. A zone in an area is a query container, so it is a stacking context and the containing block of any absolutely positioned descendant. Omit it to use the zone on its own, without a `Grid` - a plain masonry wall needs no template."),
+                    prop("dense", "bool").default("false").doc("Backfill gaps a wider item left behind, moving items sideways only. Pure CSS, no measurement."),
+                    prop("masonry", "bool").default("false").doc("Measure item heights and pack them with no vertical dead space. Costs a `ResizeObserver` per item; without a DOM the zone renders as an ordinary grid. Its height follows its items, so scroll inside a `GridItem`, not around the zone, and never set `align-self` or `margin-bottom` on an item."),
                     prop("gap", "Size").default("md").doc("Between items."),
                     prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
                     prop("children", "Element").doc("`GridItem`s."),
                 ]),
                 props("GridItem", vec![
-                    prop("span", "SpanValue").default("full").doc("Width, in twelfths of the zone. A `GridSpan`, or `sp()` for a span that changes with the zone's width."),
+                    prop("span", "SpanValue").default("full").doc("Width, in twelfths of the zone. A `GridSpan`, which is closed, so every value is an exact twelfth; or `sp()` for a span keyed off the zone's own width through a container query, not the window's. `sp()` needs a zone with an `area`."),
                     prop("component", "HtmlTag").default("div").doc("Overrides the root element."),
                     prop("children", "Element").doc("The item's content."),
                 ]),
@@ -182,216 +198,73 @@ pub fn GridPage() -> Element {
                     "fraction of its zone. A zone works on its own too - a masonry wall needs "
                     "no template."
                 }
+                Text {
+                    "`masonry` and `dense` both make the visual order diverge from the DOM order, "
+                    "and Tab follows the DOM - don't reach for either where the reading order "
+                    "carries meaning."
+                }
             },
             Demo {
                 component: "GridZone",
                 children_text: "",
                 children_code: CARDS,
                 controls: controls(),
-                render: move |values: DemoValues| rsx! {
-                    GridZone {
-                        masonry: values.str("masonry") == "true",
-                        dense: values.str("dense") == "true",
-                        gap: values.str("gap"),
-                        {cards()}
-                    }
+                wrap: Wrap(wrap_layout),
+                // A span breakpoint measures the zone, and `sm` is 48rem: beside
+                // the controls the zone never gets that wide.
+                wide_preview: true,
+                render: move |values: DemoValues| match values.str("layout").as_str() {
+                    // Written content-first and the sidebar last, and still
+                    // rendered header on top: zones land by name.
+                    "page" => rsx! {
+                        Grid {
+                            template: PAGE.clone(),
+                            sx: sx().width("100%").background("grey.1").padding("12px").border_radius("sm"),
+                            GridZone {
+                                area: PageArea::Content,
+                                masonry: true,
+                                GridItem { span: GridSpan::Half, {panel("Card A", 60)} }
+                                GridItem { span: GridSpan::Half, {panel("Card B", 120)} }
+                                GridItem { span: GridSpan::Half, {panel("Card C", 90)} }
+                                GridItem { span: GridSpan::Half, {panel("Card D", 50)} }
+                            }
+                            GridZone {
+                                area: PageArea::Header,
+                                component: HtmlTag::Header,
+                                GridItem { span: GridSpan::Half, {panel("Logo", 44)} }
+                                GridItem { span: GridSpan::Half, {panel("Nav", 44)} }
+                            }
+                            GridZone {
+                                area: PageArea::Sidebar,
+                                component: HtmlTag::Aside,
+                                GridItem { {panel("Menu", 220)} }
+                            }
+                        }
+                    },
+                    // The zone is as wide as the preview, so the cards walk
+                    // down the ladder as the page narrows.
+                    "responsive" => rsx! {
+                        Grid {
+                            template: SPANS.clone(),
+                            sx: sx().width("100%").background("grey.1").padding("12px").border_radius("sm"),
+                            GridZone {
+                                area: SpanArea::Row,
+                                gap: "xs",
+                                for name in ["A", "B", "C"] {
+                                    GridItem { key: "{name}", span: CARD_SPAN, {panel(name, 32)} }
+                                }
+                            }
+                        }
+                    },
+                    _ => rsx! {
+                        GridZone {
+                            masonry: values.str("masonry") == "true",
+                            dense: values.str("dense") == "true",
+                            gap: values.str("gap"),
+                            {cards()}
+                        }
+                    },
                 },
-            }
-            DocSection {
-                title: "masonry and dense",
-                Text {
-                    Code { source: "dense" }
-                    " backfills gaps a wider item left behind - pure CSS, no measurement, "
-                    "and it only moves items sideways. Vertical dead space under a short "
-                    "card needs "
-                    Code { source: "masonry" }
-                    ", which measures every item and packs it against the column above. "
-                    "They compose: a wall of mixed spans wants both."
-                }
-                Text {
-                    Code { source: "masonry" }
-                    " costs a "
-                    Code { source: "ResizeObserver" }
-                    " per item. Without a browser - during SSR, or on a target with no DOM "
-                    "- nothing measures and the zone renders as an ordinary grid: unpacked, "
-                    "but correct."
-                }
-                Text {
-                    "Both make visual order diverge from DOM order. Tab order always follows "
-                    "the DOM, so don't reach for either where the reading order carries "
-                    "meaning."
-                }
-            }
-            DocSection {
-                title: "Named areas",
-                Text {
-                    "A `GridTemplate` is a matrix of enum variants. Each row shares its width "
-                    "equally between its cells, and `cells(area, n)` gives one area several of "
-                    "them - so a row of `cell(Sidebar)` plus `cells(Content, 3)` splits one "
-                    "to three. Rows of different lengths reconcile to their least common "
-                    "multiple: a one-cell row above a four-cell row gives four columns, and a "
-                    "three-cell row beside a two-cell one would give six. `build` rejects a "
-                    "shape CSS cannot express: an area that is not a rectangle, or rows "
-                    "needing more than twelve columns."
-                }
-                Text {
-                    "Cells say how much *width* an area gets, not how many items it holds. "
-                    "Every zone is its own twelve-column grid regardless of the template, so "
-                    "the one-cell header below holds two items and would just as happily hold "
-                    "six."
-                }
-                Text {
-                    "A zone subdivides into twelfths however narrow it is, so its column "
-                    "gutter shrinks with the zone once there is no room for the full one - "
-                    "twelve tracks always carry eleven gaps, and a fixed gutter would make a "
-                    "narrow zone overflow its own area."
-                }
-                Text {
-                    "A zone is placed by name, so the order the zones appear in has no effect "
-                    "on where they land - it is only the reading and tab order. The example "
-                    "below is written content-first and the sidebar last, and still renders "
-                    "header on top. A zone whose `area` names nothing in the template warns "
-                    "and auto-places instead."
-                }
-                Grid {
-                    template: PAGE.clone(),
-                    sx: sx().background("grey.1").padding("12px").border_radius("sm"),
-                    GridZone {
-                        area: PageArea::Content,
-                        masonry: true,
-                        GridItem { span: GridSpan::Half, {panel("Card A", 60)} }
-                        GridItem { span: GridSpan::Half, {panel("Card B", 120)} }
-                        GridItem { span: GridSpan::Half, {panel("Card C", 90)} }
-                        GridItem { span: GridSpan::Half, {panel("Card D", 50)} }
-                    }
-                    GridZone {
-                        area: PageArea::Header,
-                        component: HtmlTag::Header,
-                        GridItem { span: GridSpan::Half, {panel("Logo", 44)} }
-                        GridItem { span: GridSpan::Half, {panel("Nav", 44)} }
-                    }
-                    GridZone {
-                        area: PageArea::Sidebar,
-                        component: HtmlTag::Aside,
-                        GridItem { {panel("Menu", 220)} }
-                    }
-                }
-                CodeBlock { source: TEMPLATE_SOURCE, language: "rust" }
-            }
-            DocSection {
-                title: "Spans",
-                Text {
-                    Code { source: "GridSpan" }
-                    " is closed, so an invalid width is not representable. Every value is "
-                    "an exact twelfth of the zone."
-                }
-                Grid {
-                    template: SPANS.clone(),
-                    sx: sx().background("grey.1").padding("12px").border_radius("sm"),
-                    GridZone {
-                        area: SpanArea::Row,
-                        gap: "xs",
-                        for span in GridSpan::ALL {
-                            GridItem { span: *span, {panel(span.as_str(), 32)} }
-                        }
-                    }
-                }
-            }
-
-            DocSection {
-                title: "Responsive spans",
-                Text {
-                    "A zone is almost never as wide as the window, so "
-                    Code { source: "bp()" }
-                    " is the wrong question for a span. "
-                    Code { source: "sp()" }
-                    " keys the span off the "
-                    Code { source: "zone's" }
-                    " width instead, through a container query. Narrow the window and "
-                    "the three cards below walk down the ladder: three across, then two "
-                    "with C wrapping under them, then one per row."
-                }
-                Grid {
-                    template: SPANS.clone(),
-                    sx: sx().background("grey.1").padding("12px").border_radius("sm"),
-                    GridZone {
-                        area: SpanArea::Row,
-                        gap: "xs",
-                        for name in ["A", "B", "C"] {
-                            GridItem { key: "{name}", span: CARD_SPAN, {panel(name, 32)} }
-                        }
-                    }
-                }
-                CodeBlock { source: RESPONSIVE_SOURCE, language: "rust" }
-                Text {
-                    "The breakpoints are the same "
-                    Code { source: "Size" }
-                    " scale a viewport query uses - "
-                    Code { source: "sm" }
-                    " is 48rem either way - but they measure the zone, so a zone that is "
-                    "a quarter of a wide page still counts as small and keeps its base "
-                    "span. A plain "
-                    Code { source: "GridSpan" }
-                    " still costs no query at all: only an item with breakpoints gets a "
-                    "rule of its own."
-                }
-            }
-
-            DocSection {
-                title: "Caveats",
-                Text {
-                    "A masonry zone's height is "
-                    Code { source: "derived" }
-                    " from its items, so it cannot also be a viewport. To scroll, put a "
-                    Code { source: "ScrollArea" }
-                    " inside a "
-                    Code { source: "GridItem" }
-                    " - not around the zone. Nesting a masonry zone directly in a "
-                    "container whose width follows its content is the same trap from the "
-                    "other side: taller items make the zone taller, a scrollbar appears, "
-                    "the width changes, and everything re-measures."
-                }
-                Text {
-                    "Masonry packs by giving each item a row span and cancelling the row "
-                    "gap, so an item's "
-                    Code { source: "sx" }
-                    " that sets "
-                    Code { source: "align-self" }
-                    " or "
-                    Code { source: "margin-bottom" }
-                    " overwrites the mechanism. At the default "
-                    Code { source: "stretch" }
-                    " an item's border box becomes its whole row span, the next "
-                    "measurement reports that, and the item grows without bound."
-                }
-                Text {
-                    "A zone filling a named area is a query container, which means "
-                    Code { source: "contain: layout style inline-size" }
-                    ": it is a stacking context and the containing block for any "
-                    "absolutely positioned descendant. Something inside a "
-                    Code { source: "GridItem" }
-                    " that positions itself against the page needs a portal, not a "
-                    Code { source: "position: absolute" }
-                    "."
-                }
-                Text {
-                    "A zone used on its own, outside a "
-                    Code { source: "Grid" }
-                    ", is deliberately not a container: inline-size containment zeroes an "
-                    "element's own contribution to its width, which collapses a "
-                    "shrink-to-fit box to nothing. That also means "
-                    Code { source: "sp()" }
-                    " needs a zone with an area - there is nothing to query otherwise, and "
-                    "the base span stands."
-                }
-                Text {
-                    "Build templates outside the render - a "
-                    Code { source: "StaticGridTemplate" }
-                    " static, as every example here does. Rebuilding one per render "
-                    "re-parses the matrix and hands "
-                    Code { source: "Grid" }
-                    " a new value every time."
-                }
             }
         }
     }

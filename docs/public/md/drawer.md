@@ -53,8 +53,6 @@ theme's drawer size scale; the other axis is always the full 100%. Both are read
 on every render, so an anchor held in a signal switches a drawer that is already
 open.
 
-## Arguments and answers
-
 The argument and result types are the modal's, so a drawer takes per-opening
 data and answers its caller exactly like any other dialog - see
 [Modal](modal.md) for `open_with`, `Opening`, `on_result` and `.await`.

@@ -105,6 +105,19 @@ pub fn indent(code: &str) -> String {
     code.lines().map(|line| format!("    {line}\n")).collect()
 }
 
+/// The controls the panel draws, switches after every other kind so a page's
+/// switches always share rows as one group. Stable, so each group keeps the
+/// page's order; the code block keeps it too, it reads `controls` directly.
+fn shown_controls<'a>(controls: &'a [Control], values: &DemoValues) -> Vec<(usize, &'a Control)> {
+    let mut shown: Vec<_> = controls
+        .iter()
+        .enumerate()
+        .filter(|(_, control)| !control.is_hidden(values))
+        .collect();
+    shown.sort_by_key(|(_, control)| control.kind == ControlKind::Switch);
+    shown
+}
+
 /// A live example: `render` on the left, a control per prop on the right,
 /// and the rsx those values add up to below.
 #[component]
@@ -248,11 +261,7 @@ pub fn Demo(
                         // Enumerated before the filter: `index` addresses
                         // `DemoValues`, which keeps every control's value,
                         // hidden or not.
-                        for (index, control) in controls
-                            .iter()
-                            .enumerate()
-                            .filter(|(_, control)| !control.is_hidden(&values()))
-                        {
+                        for (index, control) in shown_controls(&controls, &values()) {
                             Flex {
                                 key: "{control.name}",
                                 direction: "column",

@@ -1,8 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{
-    Code, CodeBlock, FieldStatus, Fields, Fieldset, Input, Rule, Text, TextField,
-};
+use libero::components::{Code, FieldStatus, Fields, Fieldset, Input, Rule, Text, TextField};
 
 #[derive(Clone, PartialEq, Default, Fields)]
 pub struct Address {
@@ -49,18 +47,6 @@ fn AddressFieldset() -> Element {
                 name: Address::FIELDS.city(),
             }
         }
-    }
-}"#;
-
-const IN_FORM_CODE: &str = r#"Form {
-    value: order,
-    Fieldset {
-        label: "Delivery address",
-        path: Order::FIELDS.address(),               // the group's value is order.address
-        validate: (|a: &Address| a.city.is_empty() || !a.zip.is_empty())
-            .error("A city needs its zip code.")
-            .on([Address::FIELDS.zip()]),            // rules are rooted at Address
-        TextField { label: "Zip code", name: Address::FIELDS.zip() }  // posts "address.zip"
     }
 }"#;
 
@@ -149,17 +135,6 @@ pub fn FieldsetPage() -> Element {
                         status: values.str("status"),
                     }
                 },
-            }
-            DocSection { title: "Inside a Form",
-                Text {
-                    "Give the group a "
-                    Code { source: "path" }
-                    ". Field names and rule paths inside are relative to it. On its own a fieldset "
-                    "takes a "
-                    Code { source: "value" }
-                    " store instead."
-                }
-                CodeBlock { source: IN_FORM_CODE, language: "rust" }
             }
         }
     }

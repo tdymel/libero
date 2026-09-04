@@ -156,11 +156,10 @@ announced.
 
 Scroll tracking needs a document-level scroll notification, which only the web
 answers today - natively an open popover drifts when the page scrolls. Nothing
-tracks a resize on any backend; `remeasure` is the only answer there. The
-focus-leaves check waits for the platform's next task to see where focus landed,
-which is a real wait only on the web. Elsewhere nothing counts as inside, so
-every focusout would close the box - including focus moving from the trigger into
-the content. A consumer that has to work there closes on its own signal.
+tracks a resize on any backend; `remeasure` is the only answer there. Off the
+web, closing when focus leaves is unreliable: every focusout counts as leaving,
+including focus moving from the trigger into the content, so close on a signal of
+your own there.
 
 ## Hook API
 

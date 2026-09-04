@@ -1,11 +1,11 @@
 use std::time::Duration;
 
-use crate::components::{Child, Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, CodeBlock, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Options, Text,
-        TextField, use_combobox,
+        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Options, Text, TextField,
+        use_combobox,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
@@ -13,41 +13,27 @@ use libero::{
 
 /// A fetch per keystroke. `loading` is what keeps `empty` from flashing
 /// between the keystroke and the answer.
-const FETCHING: &str = r#"let suggestions = use_combobox();
+const FETCHING_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 let mut results = use_signal(Vec::<Fruit>::new);
 let mut loading = use_signal(|| false);
 
-rsx! {
-    Combobox {
-        state: suggestions,
-        options: results(),
-        loading: loading(),
-        loading_label: "Searching fruit",
-        empty: rsx! { Text { size: "sm", "No fruit matches" } },
-        option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
-            ComboboxOption {
-                onpick: move |_| {
-                    text.set(o.value.label());
-                    suggestions.close();
-                },
-                "{o.value.label()}"
-            }
-        },
-        TextField {
-            value: text(),
-            attributes: suggestions.a11y_attributes(),
-            oninput: move |next: String| {
-                text.set(next.clone());
-                suggestions.open();
-                loading.set(true);
-                spawn(async move {
-                    results.set(search(&next).await);
-                    loading.set(false);
-                });
-            },
-        }
-    }
+"#;
+
+const FETCHING_TRIGGER: &str = r#"TextField {
+    sx: sx().width("280px"),
+    placeholder: "Type a fruit",
+    value: text(),
+    attributes: suggestions.a11y_attributes(),
+    oninput: move |next: String| {
+        text.set(next.clone());
+        suggestions.open();
+        loading.set(true);
+        spawn(async move {
+            results.set(search(&next).await);
+            loading.set(false);
+        });
+    },
 }"#;
 
 /// How long the fake search takes - long enough to see, short enough to type
@@ -139,14 +125,31 @@ const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "{o.valu
             }
         }"#;
 
+/// Suggestions and fetching wire their rows the same way: picking one fills
+/// the text.
 fn suggesting(values: &DemoValues) -> bool {
-    values.str("mode") == "suggestions"
+    matches!(values.str("mode").as_str(), "suggestions" | "fetching")
+}
+
+fn fetching(values: &DemoValues) -> bool {
+    values.str("mode") == "fetching"
 }
 
 /// The mode drives the state the two examples keep, so it prints their props
 /// too - `options` is a whole filtered `Vec` in one and the enum's own list in
 /// the other.
 fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
+    if fetching(values) {
+        return [
+            "state: suggestions",
+            "options: results()",
+            "loading: loading()",
+            r#"loading_label: "Searching fruit""#,
+            r#"empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } }"#,
+        ]
+        .map(String::from)
+        .to_vec();
+    }
     let (state, options) = match suggesting(values) {
         true => ("state: suggestions", "options: matches"),
         false => ("state: fruit", "options: Fruit::options().to_vec()"),
@@ -170,6 +173,9 @@ fn option_code(_: &Control, values: &DemoValues) -> Vec<String> {
 }
 
 fn trigger_code(values: &DemoValues) -> String {
+    if fetching(values) {
+        return FETCHING_TRIGGER.to_string();
+    }
     match suggesting(values) {
         true => SUGGESTIONS_TRIGGER.to_string(),
         false => SELECT_TRIGGER.to_string(),
@@ -177,9 +183,10 @@ fn trigger_code(values: &DemoValues) -> String {
 }
 
 fn preamble(values: &DemoValues, source: &str) -> String {
-    let state = match suggesting(values) {
-        true => SUGGESTIONS_STATE,
-        false => SELECT_STATE,
+    let state = match values.str("mode").as_str() {
+        "fetching" => FETCHING_STATE,
+        "suggestions" => SUGGESTIONS_STATE,
+        _ => SELECT_STATE,
     };
     format!("{FRUIT_ENUM}{state}{source}")
 }
@@ -314,19 +321,21 @@ fn matching(query: &str) -> Vec<Fruit> {
 /// Every keystroke starts a fake search that answers after [`LATENCY`], and a
 /// newer keystroke cancels the older one by dropping its timer.
 #[component]
-fn FetchingDemo() -> Element {
+fn FetchingDemo(values: DemoValues) -> Element {
     let suggestions = use_combobox();
+    let rich = values.str("option") == "true";
+    let disabled = values.str("disabled") == "true";
     let mut text = use_signal(String::new);
     let mut results = use_signal(Vec::<Fruit>::new);
     let mut loading = use_signal(|| false);
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
 
-    // The dropdown matches its wrapper's width, and a bare wrapper in a
-    // column is as wide as the page.
     rsx! {
-        Flex { direction: "column", align: "flex-start",
         Combobox {
+            size: values.str("size"),
+            radius: values.str("radius"),
+            disabled: disabled.then_some(true),
             state: suggestions,
             options: results(),
             loading: loading(),
@@ -338,13 +347,14 @@ fn FetchingDemo() -> Element {
                         text.set(o.value.label());
                         suggestions.close();
                     },
-                    "{o.value.label()}"
+                    RowContent { fruit: o.value, rich }
                 }
             },
             TextField {
                 sx: sx().width("280px"),
                 placeholder: "Type a fruit",
                 value: text(),
+                disabled,
                 attributes: suggestions.a11y_attributes(),
                 oninput: move |next: String| {
                     text.set(next.clone());
@@ -362,7 +372,6 @@ fn FetchingDemo() -> Element {
                     pending.set(answer);
                 },
             }
-        }
         }
     }
 }
@@ -486,8 +495,8 @@ pub fn ComboboxPage() -> Element {
                 code_child: Child(trigger_code),
                 wrap: Wrap(preamble),
                 controls: vec![
-                    Control::toggle("mode", ["select", "suggestions"])
-                        .labels(["Select", "Suggestions"])
+                    Control::toggle("mode", ["select", "suggestions", "fetching"])
+                        .labels(["Select", "Suggestions", "Fetching"])
                         .code(mode_code),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
@@ -498,33 +507,10 @@ pub fn ComboboxPage() -> Element {
                 ],
                 render: move |values: DemoValues| match values.str("mode").as_str() {
                     "suggestions" => rsx! { SuggestionsDemo { values } },
+                    // Every keystroke answers after 700ms, so the loader shows.
+                    "fetching" => rsx! { FetchingDemo { values } },
                     _ => rsx! { SelectDemo { values } },
                 },
-            }
-            DocSection {
-                title: "Fetching options",
-                Text {
-                    "When the options come from a request, set "
-                    Code { source: "loading" }
-                    " while it runs. The dropdown then shows a "
-                    Code { source: "Loader" }
-                    " in place of the rows and of "
-                    Code { source: "empty" }
-                    " - an async list's "
-                    Code { source: "options" }
-                    " is empty between a keystroke and its answer, and without "
-                    Code { source: "loading" }
-                    " every keystroke would flash \"No fruit matches\" first. The dropdown is marked "
-                    Code { source: "aria-busy" }
-                    " and its loader is silent. "
-                    Code { source: "loading_label" }
-                    " is said by a hidden "
-                    Code { source: "role=\"status\"" }
-                    " region beside the trigger, which stays mounted, so a screen reader "
-                    "hears its text change. This one answers after 700ms."
-                }
-                FetchingDemo {}
-                CodeBlock { source: FETCHING, language: "rust" }
             }
         }
     }

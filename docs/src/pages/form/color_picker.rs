@@ -1,8 +1,8 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    AlphaSlider, Code, CodeBlock, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider,
-    SliderChangeEvent, Swatches, Text,
+    AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
+    Swatches, Text,
 };
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
@@ -19,7 +19,8 @@ HueSlider {
     value: hue(),
     oninput: move |event: SliderChangeEvent| hue.set(event.value()),
     aria_label: "Hue",
-}"#;
+}
+Text { size: "sm", "{hue()}°" }"#;
 
 const ALPHA_SLIDER: &str = r#"let mut alpha = use_signal(|| 0.6);
 
@@ -28,19 +29,32 @@ AlphaSlider {
     color: ColorCode::hex(0x228be6),
     oninput: move |event: SliderChangeEvent| alpha.set(event.value()),
     aria_label: "Opacity",
-}"#;
+}
+Text { size: "sm", "{alpha()}" }"#;
 
 const COLOR_SWATCH: &str = r#"ColorSwatch { color: ColorCode::hex(0x228be6) }
 ColorSwatch { color: "rgba(250, 82, 82, 0.4)".parse().unwrap() }
 ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }"#;
 
-const CONVERSIONS: &str = r##"let color: ColorCode = "#228be6".parse()?;
+/// The preview prints the value in three formats under the picker, which is
+/// how the page shows that one `ColorCode` converts to every CSS form.
+fn wrap_picker(values: &DemoValues, source: &str) -> String {
+    match values.str("component").as_str() {
+        "hue" => HUE_SLIDER.to_string(),
+        "alpha" => ALPHA_SLIDER.to_string(),
+        "swatch" => COLOR_SWATCH.to_string(),
+        _ => format!(
+            "let mut color = use_signal(|| ColorCode::hex(0x228be6));\n\n\
+             Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\"),\n\
+             {}    Text {{ size: \"sm\", \"{{color().to_hexa()}} · {{color().to_rgba()}} · {{color().to_hsla()}}\" }}\n}}",
+            indent(source)
+        ),
+    }
+}
 
-color.to_hex();   // "#228be6"
-color.to_rgba();  // "rgba(34, 139, 230, 1)"
-color.to_hsl();   // "hsl(208, 80%, 52%)"
-color.to_format(ColorFormat::Hsla);
-color.to_rgba_channels(); // (34, 139, 230, 1.0)"##;
+fn picker(values: &DemoValues) -> bool {
+    values.str("component") == "picker"
+}
 
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
@@ -129,7 +143,9 @@ pub fn ColorPickerPage() -> Element {
                     Code { source: "rgb()" }
                     " or "
                     Code { source: "hsl()" }
-                    " text and converts back to any of them, so the picker has no format to choose."
+                    " text and converts back to any of them, so the picker has no format to choose. "
+                    "It is stored as hue, saturation, value and alpha, which keeps the hue thumb in place "
+                    "when the panel is dragged onto grey or black, where RGB has no hue at all."
                 }
             },
             Demo {
@@ -142,11 +158,18 @@ pub fn ColorPickerPage() -> Element {
                     "oninput: move |event: SliderChangeEvent<ColorCode>| color.set(event.value())"
                         .to_string(),
                 ],
+                wrap: Wrap(wrap_picker),
                 controls: vec![
-                    Control::slider("size", SIZES).default("md"),
-                    Control::slider("radius", SIZES).default("xxl"),
-                    Control::switch("with_alpha"),
-                    Control::switch("swatches").code(|_, values| match is_on(values, "swatches") {
+                    // Not a prop: the picker, or one of the parts it is built
+                    // from, each usable on its own. A part prints its own
+                    // snippet whole.
+                    Control::toggle("component", ["picker", "hue", "alpha", "swatch"])
+                        .labels(["ColorPicker", "HueSlider", "AlphaSlider", "ColorSwatch"])
+                        .code(|_, _| vec![]),
+                    Control::slider("size", SIZES).default("md").hidden_when(|values| !picker(values)),
+                    Control::slider("radius", SIZES).default("xxl").hidden_when(|values| !picker(values)),
+                    Control::switch("with_alpha").hidden_when(|values| !picker(values)),
+                    Control::switch("swatches").hidden_when(|values| !picker(values)).code(|_, values| match is_on(values, "swatches") {
                         // The whole list, seven to a line, so the snippet
                         // needs no constant of ours.
                         true => {
@@ -161,60 +184,26 @@ pub fn ColorPickerPage() -> Element {
                         }
                         false => vec![],
                     }),
-                    Control::switch("with_picker").default("true").code(|_, values| {
+                    Control::switch("with_picker").default("true").hidden_when(|values| !picker(values)).code(|_, values| {
                         match is_on(values, "with_picker") {
                             true => vec![],
                             false => vec!["with_picker: false".to_string()],
                         }
                     }),
-                    Control::switch("full_width"),
+                    Control::switch("full_width").hidden_when(|values| !picker(values)),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    ColorPickerDemo { values }
+                render: move |values: DemoValues| match values.str("component").as_str() {
+                    "hue" => rsx! { HueSliderPreview {} },
+                    "alpha" => rsx! { AlphaSliderPreview {} },
+                    "swatch" => rsx! {
+                        Flex { direction: "row", gap: "sm", align: "center",
+                            ColorSwatch { color: ColorCode::hex(0x228be6) }
+                            ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4) }
+                            ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }
+                        }
+                    },
+                    _ => rsx! { ColorPickerDemo { values } },
                 },
-            }
-            DocSection {
-                title: "Converting the value",
-                Text {
-                    "A "
-                    Code { source: "ColorCode" }
-                    " is stored as hue, saturation, value and alpha. That is what keeps the hue thumb in place "
-                    "when the panel is dragged onto grey or black, where RGB has no hue at all."
-                }
-                CodeBlock { source: CONVERSIONS, language: "rust" }
-            }
-            DocSection {
-                title: "HueSlider",
-                Text {
-                    "The picker's hue track, on its own. Its value is plain degrees."
-                }
-                HueSliderPreview {}
-                CodeBlock { source: HUE_SLIDER, language: "rust" }
-            }
-            DocSection {
-                title: "AlphaSlider",
-                Text {
-                    "The picker's opacity track: transparent to "
-                    Code { source: "color" }
-                    " over a checkerboard."
-                }
-                AlphaSliderPreview {}
-                CodeBlock { source: ALPHA_SLIDER, language: "rust" }
-            }
-            DocSection {
-                title: "ColorSwatch",
-                Text {
-                    "A patch of one color, which is what the picker's preview and swatches are drawn with. "
-                    "With "
-                    Code { source: "onclick" }
-                    " it is a button."
-                }
-                Flex { direction: "row", gap: "sm", align: "center",
-                    ColorSwatch { color: ColorCode::hex(0x228be6) }
-                    ColorSwatch { color: ColorCode::rgba(250, 82, 82, 0.4) }
-                    ColorSwatch { color: ColorCode::hex(0x40c057), onclick: move |_| {}, "✓" }
-                }
-                CodeBlock { source: COLOR_SWATCH, language: "rust" }
             }
         }
     }

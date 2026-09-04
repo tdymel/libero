@@ -44,8 +44,6 @@ rather than a preference: there is no `Children.map`, so `Timeline.Item`
 children could not see their own order, and an item's connector colour is a
 function of `active` and its own index. A `Vec` makes that plain indexing.
 
-## Progress
-
 `active` is strictly controlled. Bind it to whatever already knows how far
 along the process is, and the rail follows. An index past the end clamps to the
 last event, so "step 7 of 4" means finished rather than nothing.

@@ -85,8 +85,6 @@ Bound to a signal they re-apply only when its value *changes*, so asking for
 the same position twice does nothing unless the signal went through `None` in
 between; a literal applies once, at mount. Use the handle for buttons.
 
-## Virtualization
-
 `Virtualize` renders only the rows the area can show, so a fifty-thousand-row
 list costs about a dozen elements. It draws no element of its own, so it goes
 wherever the rows go - inside a `List`, a table body, a plain stack - and it

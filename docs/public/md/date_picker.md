@@ -10,6 +10,15 @@ Modelled on Mantine's `DatePicker`, `MonthPicker`, `YearPicker` and
 `TimePicker`, in one component. [DateField](date_field.md) shows it in a
 dropdown.
 
+There is also the same picker for one value type each, with only the props that type uses
+and no turbofish.
+
+- `DayPicker` - a `NaiveDate` day.
+- `MonthPicker` - a month, as `level: DateLevel::Month`.
+- `YearPicker` - a year, as `level: DateLevel::Year`.
+- `TimePicker` - a `NaiveTime`, digital or analog.
+- `DateRangePicker` - a `DateRange<NaiveDate>`.
+
 ## Value types
 
 `DatePicker<V: DateValue>` holds an `Option<V>`. The type picks what is drawn:
@@ -125,17 +134,6 @@ clock.
 | `focusable` | `bool` | `true` | `false` keeps the picker out of the tab order. |
 
 Props that only some value types use are ignored by the rest.
-
-## Alternatives
-
-The same picker for one value type each, with only the props that type uses
-and no turbofish.
-
-- `DayPicker` - a `NaiveDate` day.
-- `MonthPicker` - a month, as `level: DateLevel::Month`.
-- `YearPicker` - a year, as `level: DateLevel::Year`.
-- `TimePicker` - a `NaiveTime`, digital or analog.
-- `DateRangePicker` - a `DateRange<NaiveDate>`.
 
 ## Theme
 

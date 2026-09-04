@@ -1,5 +1,5 @@
 use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
+    Child, Control, Demo, DemoValues, DocPage, DocSection, UNSET, Wrap, indent, prop, props,
 };
 use dioxus::prelude::*;
 use libero::{
@@ -18,21 +18,16 @@ const FOCUSABLE_EXAMPLE: &str = r#"ScrollArea {
     Text { "..." }
 }"#;
 
-/// Fifty thousand rows, of which the section below renders about a dozen.
+/// Fifty thousand rows, of which the preview renders about a dozen.
 const VIRTUAL_ROWS: usize = 50_000;
 
-const VIRTUAL_EXAMPLE: &str = r#"let rows = use_signal(|| (0..50_000).map(|i| format!("Row {i}")).collect::<Vec<_>>());
-
-rsx! {
-    ScrollArea {
-        List {
-            Virtualize {
-                count: rows.read().len(),
-                item: move |index| rsx! {
-                    ListItem { "{rows.read()[index]}" }
-                },
-            }
-        }
+/// What the `virtualize` switch puts in the area instead of `CONTENT`.
+const VIRTUAL_CONTENT: &str = r#"List {
+    Virtualize {
+        count: 50_000,
+        item: move |index: usize| rsx! {
+            ListItem { sx: sx().padding("sm"), "Row {index}" }
+        },
     }
 }"#;
 
@@ -140,7 +135,7 @@ pub fn ScrollAreaPage() -> Element {
                 prop("item", "Callback<usize, Element>")
                     .doc("Renders one row. Called only for the rows in view."),
                 prop("item_size", "f64")
-                    .doc("Row pitch in px - a row's height plus the gap below it. Measured from the first rows rendered when unset."),
+                    .doc("Row pitch in px - a row's height plus the gap below it. Rows must be a uniform height: unset, it is measured from the first rows rendered and assumed for the rest."),
                 prop("overscan", "usize")
                     .default("theme.scroll_area.overscan")
                     .doc("Rows kept beyond each edge, so a scroll has something to reveal before the next render lands."),
@@ -175,7 +170,10 @@ pub fn ScrollAreaPage() -> Element {
             Demo {
                 component: "ScrollArea",
                 children_text: "",
-                children_code: CONTENT.to_string(),
+                code_child: Child(|values: &DemoValues| match values.str("virtualize").as_str() {
+                    "true" => VIRTUAL_CONTENT.to_string(),
+                    _ => CONTENT.to_string(),
+                }),
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
                     Control::toggle("scrollbars", ["vertical", "horizontal", "both", "none"])
@@ -190,6 +188,9 @@ pub fn ScrollAreaPage() -> Element {
                     // what the scrollbar actually draws without the prop.
                     Control::color("scrollbar_color").with_unset()
                     .unset_swatch("grey.5"),
+                    // Not a prop: swaps the content for a `Virtualize` list,
+                    // which renders only the rows in view.
+                    Control::switch("virtualize").code(|_, _| vec![]),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Flex {
@@ -217,10 +218,21 @@ pub fn ScrollAreaPage() -> Element {
                                 },
                                 on_top_reached: move |_| edge.set("top"),
                                 on_bottom_reached: move |_| edge.set("bottom"),
-                                Box {
-                                    sx: sx().width("150%").padding("md"),
-                                    for i in 0..20 {
-                                        Text { key: "{i}", "Item {i}" }
+                                if values.str("virtualize") == "true" {
+                                    List {
+                                        Virtualize {
+                                            count: VIRTUAL_ROWS,
+                                            item: move |index: usize| rsx! {
+                                                ListItem { sx: sx().padding("sm"), "Row {index}" }
+                                            },
+                                        }
+                                    }
+                                } else {
+                                    Box {
+                                        sx: sx().width("150%").padding("md"),
+                                        for i in 0..20 {
+                                            Text { key: "{i}", "Item {i}" }
+                                        }
                                     }
                                 }
                             }
@@ -295,46 +307,6 @@ pub fn ScrollAreaPage() -> Element {
                 }
             }
 
-            DocSection {
-                title: "Virtualization",
-                Text {
-                    Code { source: "Virtualize" }
-                    " renders only the rows the area can show. It draws no element of its "
-                    "own, so it goes wherever the rows go - inside a "
-                    Code { source: "List" }
-                    ", a table body, a plain stack - and it needs a "
-                    Code { source: "ScrollArea" }
-                    " above it, which is what tells it where the viewport is and pads itself "
-                    "with the rows that were skipped. The list below is "
-                    "{VIRTUAL_ROWS} rows long; about a dozen exist at a time."
-                }
-                Box {
-                    sx: sx()
-                        .height("200px")
-                        .width("100%")
-                        .border("1px solid var(--lsx-grey-3)"),
-                    ScrollArea {
-                        List {
-                            Virtualize {
-                                count: VIRTUAL_ROWS,
-                                item: move |index: usize| rsx! {
-                                    ListItem {
-                                        sx: sx().padding("sm"),
-                                        "Row {index}"
-                                    }
-                                },
-                            }
-                        }
-                    }
-                }
-                CodeBlock { source: VIRTUAL_EXAMPLE, language: "rust" }
-                Text {
-                    "Rows have to be a uniform height: it measures the first ones rendered "
-                    "and assumes the rest match. Pass "
-                    Code { source: "item_size" }
-                    " to skip that measurement when the height is already known."
-                }
-            }
         }
     }
 }

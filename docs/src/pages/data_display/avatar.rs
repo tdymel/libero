@@ -1,6 +1,4 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Avatar, AvatarGroup, AvatarSpec, Code, Input, Text};
 
@@ -61,7 +59,13 @@ fn people() -> Vec<AvatarSpec> {
 /// `generate_code` never prints `people`, so the generated block is reopened
 /// and the whole `vec![..]` spliced in - the snippet is then the one that
 /// produced the preview.
-fn wrap_group(_values: &DemoValues, source: &str) -> String {
+///
+/// The demo is `Avatar`'s, so in group mode the header is renamed too.
+fn wrap_group(values: &DemoValues, source: &str) -> String {
+    if !grouped(values) {
+        return source.to_string();
+    }
+    let source = source.replacen("Avatar {", "AvatarGroup {", 1);
     let people = indent(PEOPLE);
     match source.strip_suffix('}') {
         Some(open) if source.contains('\n') => format!("{open}{people}}}"),
@@ -69,18 +73,25 @@ fn wrap_group(_values: &DemoValues, source: &str) -> String {
     }
 }
 
+fn grouped(values: &DemoValues) -> bool {
+    values.str("component") == "group"
+}
+
 /// One control over the whole fallback chain: every step of it is a different
 /// thing on screen, and a broken source is the only way to show that the
 /// picture falls back rather than merely being absent.
+/// Prints `name` too, which a group does not take.
 fn content_code(_control: &Control, values: &DemoValues) -> Vec<String> {
+    let name = r#"name: "Ada Lovelace""#.to_string();
     match values.str("content").as_str() {
-        "picture" => vec!["src: AVATAR_IMAGE".to_string()],
+        "picture" => vec![name, "src: AVATAR_IMAGE".to_string()],
         "broken" => vec![
+            name,
             format!("src: {MISSING_SRC:?}"),
             r#"initials: "AL""#.to_string(),
         ],
-        "initials" => vec![r#"initials: "AL""#.to_string()],
-        _ => vec![],
+        "initials" => vec![name, r#"initials: "AL""#.to_string()],
+        _ => vec![name],
     }
 }
 
@@ -121,9 +132,9 @@ pub fn AvatarPage() -> Element {
                 props("AvatarGroup", vec![
                     prop("people", "Vec<AvatarSpec>")
                         .default("required")
-                        .doc("The members, in paint order: the first is drawn on top."),
+                        .doc("The members, in paint order: the first is drawn on top. The group owns them rather than taking children, which is what lets it count them."),
                     prop("max", "usize")
-                        .doc("How many circles in total. Past that, the rest collapse into a `+N` chip."),
+                        .doc("How many circles in total, the chip included, so the chip always stands for at least two people. Past that, the rest collapse into a `+N` chip, focusable and tooltipped, whose `aria-label` lists the same names."),
                     prop("spacing", "Size")
                         .default("theme.avatar_group.spacing")
                         .doc("How far each circle is pulled over the one before it."),
@@ -181,11 +192,27 @@ pub fn AvatarPage() -> Element {
             Demo {
                 component: "Avatar",
                 children_text: "",
-                fixed: vec![r#"name: "Ada Lovelace""#.to_string()],
+                wrap: Wrap(wrap_group),
                 controls: vec![
+                    // Not a prop: one avatar, or a group of six. A group
+                    // takes the same size and chrome for every member.
+                    Control::toggle("component", ["avatar", "group"])
+                        .labels(["Avatar", "AvatarGroup"])
+                        .code(|_, _| vec![]),
                     Control::toggle("content", ["picture", "broken", "initials", "glyph"])
                         .labels(["Picture", "Broken src", "Initials", "Glyph"])
+                        .hidden_when(grouped)
                         .code(content_code),
+                    Control::slider("max", ["none", "2", "3", "4", "5", "6"])
+                        .default("4")
+                        .hidden_when(|values| !grouped(values))
+                        .code(|_, values| match values.str("max").as_str() {
+                            "none" => vec![],
+                            value => vec![format!("max: {value}")],
+                        }),
+                    Control::slider("spacing", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("sm")
+                        .hidden_when(|values| !grouped(values)),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "9999px"])
                         .default("9999px"),
@@ -202,6 +229,19 @@ pub fn AvatarPage() -> Element {
                 render: move |values: DemoValues| {
                     let content = values.str("content");
 
+                    if grouped(&values) {
+                        return rsx! {
+                            AvatarGroup {
+                                max: values.str("max").parse::<usize>().ok(),
+                                spacing: values.str("spacing"),
+                                size: values.str("size"),
+                                radius: values.str("radius"),
+                                variant: values.str("variant"),
+                                color: Input::from(values.str("color")),
+                                people: people(),
+                            }
+                        };
+                    }
                     rsx! {
                         Avatar {
                             name: "Ada Lovelace",
@@ -219,48 +259,6 @@ pub fn AvatarPage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection {
-                title: "Groups",
-                Text {
-                    Code { source: "AvatarGroup" }
-                    " owns its members rather than taking them as children, which is what lets "
-                    "it count them. "
-                    Code { source: "max" }
-                    " is the number of circles, the chip included, so the chip always stands "
-                    "for at least two people. It is focusable and tooltipped, and its "
-                    Code { source: "aria-label" }
-                    " lists the same names, so a tooltip clipped by an "
-                    Code { source: "overflow: hidden" }
-                    " ancestor costs nothing but the hover."
-                }
-                Demo {
-                    component: "AvatarGroup",
-                    children_text: "",
-                    controls: vec![
-                        Control::slider("max", ["none", "2", "3", "4", "5", "6"])
-                            .default("4")
-                            .code(|_, values| match values.str("max").as_str() {
-                                "none" => vec![],
-                                value => vec![format!("max: {value}")],
-                            }),
-                        Control::slider("spacing", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("sm"),
-                        Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
-                            .default("md"),
-                    ],
-                    wrap: Wrap(wrap_group),
-                    render: move |values: DemoValues| {
-                        rsx! {
-                            AvatarGroup {
-                                max: values.str("max").parse::<usize>().ok(),
-                                spacing: values.str("spacing"),
-                                size: values.str("size"),
-                                people: people(),
-                            }
-                        }
-                    },
-                }
             }
         }
     }

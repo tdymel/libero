@@ -1,12 +1,7 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use crate::icons::{CheckmarkIcon, CodeIcon, FileIcon, GitHubIcon};
 use dioxus::prelude::*;
-use libero::{
-    components::{Code, CodeBlock, SegmentedControl, Text, Timeline, TimelineEvent, TimelineLine},
-    sx::sx,
-};
+use libero::components::{Code, Text, Timeline, TimelineEvent, TimelineLine};
 
 /// The four fixed events, as the code block prints them. `Wrap` substitutes
 /// the bullet lines and the line style, so what is printed is what the
@@ -92,48 +87,6 @@ fn demo_items(values: &DemoValues) -> Vec<TimelineEvent> {
         .collect()
 }
 
-/// `active` bound to a real control - the wiring no single knob shows.
-#[component]
-fn ProgressDemo() -> Element {
-    let mut step = use_signal(|| 1usize);
-
-    rsx! {
-        SegmentedControl {
-            value: "{step}",
-            onchange: move |next: String| {
-                if let Ok(next) = next.parse::<usize>() {
-                    step.set(next);
-                }
-            },
-            options: vec!["0".to_string(), "1".to_string(), "2".to_string(), "3".to_string()],
-        }
-        Timeline {
-            sx: sx().margin_top("lg"),
-            active: step(),
-            items: vec![
-                TimelineEvent::new("Ordered").content(rsx! { Text { "Payment captured" } }),
-                TimelineEvent::new("Packed").content(rsx! { Text { "Two parcels" } }),
-                TimelineEvent::new("Shipped").content(rsx! { Text { "DHL, tracked" } }),
-                TimelineEvent::new("Delivered").content(rsx! { Text { "Signed for" } }),
-            ],
-        }
-    }
-}
-
-const PROGRESS: &str = r#"let mut step = use_signal(|| 1usize);
-
-rsx! {
-    Timeline {
-        active: step(),
-        items: vec![
-            TimelineEvent::new("Ordered").content(rsx! { Text { "Payment captured" } }),
-            TimelineEvent::new("Packed").content(rsx! { Text { "Two parcels" } }),
-            TimelineEvent::new("Shipped").content(rsx! { Text { "DHL, tracked" } }),
-            TimelineEvent::new("Delivered").content(rsx! { Text { "Signed for" } }),
-        ],
-    }
-}"#;
-
 #[component]
 pub fn TimelinePage() -> Element {
     rsx! {
@@ -147,7 +100,7 @@ pub fn TimelinePage() -> Element {
                         .default("vec![]")
                         .doc("The events, in render order."),
                     prop("active", "usize")
-                        .doc("The current event. Bullets `0..=active` and the connectors `0..active` draw active; out of range clamps to the last event."),
+                        .doc("The current event, strictly controlled: bind it to whatever already knows how far along the process is. Bullets `0..=active` and the connectors `0..active` draw active; out of range clamps to the last event, so \"step 7 of 4\" means finished."),
                     prop("align", "TimelineAlign")
                         .default("theme.timeline.align")
                         .doc("`\"left\"`, `\"right\"`, or `\"alternate\"` - content either side of a centred rail. `\"alternate\"` alternates at every width and fills its parent, so a narrower parent is how you make it narrower."),
@@ -249,17 +202,6 @@ pub fn TimelinePage() -> Element {
                         }
                     }
                 },
-            }
-            DocSection {
-                title: "Progress",
-                Text {
-                    Code { source: "active" }
-                    " is strictly controlled - bind it to whatever already knows how far along "
-                    "the process is, and the rail follows. An index past the end clamps to the "
-                    "last event, so \"step 7 of 4\" means finished rather than nothing."
-                }
-                ProgressDemo {}
-                CodeBlock { source: PROGRESS, language: "rust" }
             }
         }
     }

@@ -1,12 +1,11 @@
 use super::date_common::{
     SIZES, calendar_controls, day_limits, has_days, has_time, is_mini, is_on, is_weekend,
-    moment_limits, shared_controls, shown, step_of, switches_last, time_limits, today_of,
-    twelve_hour_of,
+    moment_limits, shared_controls, shown, step_of, time_limits, today_of, twelve_hour_of,
 };
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::chrono::{NaiveDate, NaiveDateTime, NaiveTime};
-use libero::components::{Code, DateLevel, DatePicker, DateRange, Flex, Kbd, List, ListItem, Text};
+use libero::components::{Code, DateLevel, DatePicker, DateRange, Flex, Kbd, Text};
 
 const KINDS: [&str; 7] = [
     "date",
@@ -86,13 +85,23 @@ pub fn DatePickerPage() -> Element {
                     Code { source: "value" }
                     " alone does not name the type - a typed handler or a turbofish does, as on "
                     Code { source: "DateField" }
-                    "."
+                    ". For one value type there are "
+                    Code { source: "DayPicker" }
+                    ", "
+                    Code { source: "MonthPicker" }
+                    ", "
+                    Code { source: "YearPicker" }
+                    ", "
+                    Code { source: "TimePicker" }
+                    " and "
+                    Code { source: "DateRangePicker" }
+                    ", with only the props that type uses and no turbofish."
                 }
             },
             Demo {
                 component: "DatePicker",
                 children_text: "",
-                controls: switches_last([vec![
+                controls: [vec![
                     Control::select("value", KINDS).default("date").code(|_, values| {
                         match values.str("value").as_str() {
                             "month" => vec!["value: month() /* Option<NaiveDate> */".to_string(), "level: DateLevel::Month".to_string()],
@@ -129,7 +138,7 @@ pub fn DatePickerPage() -> Element {
                             false => vec![],
                         }
                     }),
-                ], calendar_controls(), shared_controls()].concat()),
+                ], calendar_controls(), shared_controls()].concat(),
                 render: move |values: DemoValues| rsx! {
                     DatePickerDemo { values }
                 },
@@ -168,17 +177,6 @@ pub fn DatePickerPage() -> Element {
                     Kbd { "PageUp" } " " Kbd { "PageDown" } " move a row's worth of days. The buttons page the row."
                 }
                 Text { "A date-time picks the day first; picking it moves focus into the clock." }
-            }
-            DocSection {
-                title: "Alternatives",
-                Text { "The same picker for one value type each, with only the props that type uses and no turbofish." }
-                List {
-                    ListItem { Code { source: "DayPicker" } " - a " Code { source: "NaiveDate" } " day." }
-                    ListItem { Code { source: "MonthPicker" } " - a month, as " Code { source: "level: DateLevel::Month" } "." }
-                    ListItem { Code { source: "YearPicker" } " - a year, as " Code { source: "level: DateLevel::Year" } "." }
-                    ListItem { Code { source: "TimePicker" } " - a " Code { source: "NaiveTime" } ", digital or analog." }
-                    ListItem { Code { source: "DateRangePicker" } " - a " Code { source: "DateRange<NaiveDate>" } "." }
-                }
             }
         }
     }

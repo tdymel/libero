@@ -33,8 +33,6 @@ fn Demo() -> Element {
 Without `language` the source renders as plain, unhighlighted text - that is
 the default.
 
-## Languages
-
 Libero ships grammars for 30 languages, each behind its own `code-lang-*`
 feature so a build only pays for what it highlights. The default set covers
 `rust`, `bash`, `css` and a few more; enable the rest as you need them. An

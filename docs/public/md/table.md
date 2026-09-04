@@ -59,8 +59,6 @@ fn Demo() -> Element {
 }
 ```
 
-## The cell type decides
-
 Strings sort as text and align left. Every integer and float sorts numerically
 and aligns right. `bool` prints `true`/`false`. `Option<V>` keeps the inner
 type's alignment, renders `None` as empty, and sorts it last in both directions.

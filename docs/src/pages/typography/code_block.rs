@@ -2,7 +2,7 @@ use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, CodeBlock, Text};
 
-use super::code::languages_section;
+use super::code::LANGUAGE_DOC;
 
 const RUST_EXAMPLE: &str = r#"fn shout(word: &str) -> String {
     // Rust
@@ -50,8 +50,7 @@ pub fn CodeBlockPage() -> Element {
             properties: vec![props("CodeBlock", vec![
                 prop("source", "String")
                     .doc("The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content."),
-                prop("language", "Language")
-                    .doc("Unrecognized values fall back to no highlighting rather than a guess."),
+                prop("language", "Language").doc(LANGUAGE_DOC),
                 prop("header", "bool")
                     .default("true")
                     .doc("A bar above the code naming the language, or \"Unrecognized language\" if it isn't in the catalog or its `code-lang-*` feature is off."),
@@ -141,7 +140,6 @@ pub fn CodeBlockPage() -> Element {
                         }
                     },
             }
-            {languages_section()}
         }
     }
 }

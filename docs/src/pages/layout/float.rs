@@ -1,12 +1,8 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Button, Checkbox, Code, CodeBlock, Flex, Float, Paper, States, Text},
-    hooks::use_element,
-    platform::ElementApi,
-    sx::{Sx, sx},
+    components::{Box, Float, Text},
+    sx::sx,
     use_theme,
 };
 
@@ -19,152 +15,6 @@ fn wrap_anchor(_: &DemoValues, code: &str) -> String {
         "Box {{\n    sx: sx().position(\"relative\").width(\"160px\").height(\"120px\").background(\"primary.1\"),\n{}}}",
         indent(code)
     )
-}
-
-/// Printed verbatim under the live example below - keep the two in step.
-const ACTION_BAR: &str = r##"const INVOICES: [&str; 3] = ["Invoice 1042", "Invoice 1043", "Invoice 1044"];
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
-
-/// CSS drives the show and hide, keyed on the `open`/`closed` state: a fade and
-/// a short slide, with `visibility` flipping to `hidden` only once the fade has
-/// ended. That flip is what takes a hidden bar out of the tab order and the
-/// accessibility tree. Each transition's reduced-motion guard sits in the same
-/// block as the transition, or the block's higher specificity wins.
-fn bar_sx() -> Sx {
-    let motion = "opacity 200ms ease, translate 200ms ease";
-    sx().when(
-        "open",
-        sx().opacity("1")
-            .with("translate", "0 0")
-            .visibility("visible")
-            .transition(format!("{motion}, visibility 0s"))
-            .media(REDUCED_MOTION, sx().transition("none")),
-    )
-    .when(
-        "closed",
-        sx().opacity("0")
-            .with("translate", "0 8px")
-            .visibility("hidden")
-            .transition(format!("{motion}, visibility 0s linear 200ms"))
-            .media(REDUCED_MOTION, sx().transition("none")),
-    )
-}
-
-#[component]
-fn Invoices() -> Element {
-    let mut selected = use_signal(Vec::<usize>::new);
-    let list = use_element();
-    let count = selected.read().len();
-    let open = count > 0;
-
-    rsx! {
-        div { onmounted: list.mount(),
-            for (index, invoice) in INVOICES.iter().enumerate() {
-                Checkbox {
-                    id: "invoice-{index}",
-                    label: *invoice,
-                    checked: selected.read().contains(&index),
-                    onchange: move |on: bool| {
-                        let mut selected = selected.write();
-                        if on { selected.push(index) } else { selected.retain(|i| *i != index) }
-                    },
-                }
-            }
-        }
-        Float { fixed: true, placement: "bottom-center", offset_y: "-xl",
-            Paper {
-                role: "group",
-                aria_label: "Selected invoices",
-                bordered: true,
-                shadow: "md",
-                states: States::default().with("open", open).with("closed", !open),
-                sx: bar_sx().padding("xs sm"),
-                Flex { direction: "row", gap: "sm", align: "center",
-                    Text { "{count} selected" }
-                    Button { variant: "outlined", "Download" }
-                    Button {
-                        onclick: move |_| {
-                            selected.write().clear();
-                            // The bar hides with this button in it: hand focus
-                            // back to the list rather than to the page.
-                            let _ = list.query_selector("#invoice-0").and_then(|first| first.focus());
-                        },
-                        "Clear"
-                    }
-                }
-            }
-        }
-    }
-}"##;
-
-const INVOICES: [&str; 3] = ["Invoice 1042", "Invoice 1043", "Invoice 1044"];
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
-
-fn bar_sx() -> Sx {
-    let motion = "opacity 200ms ease, translate 200ms ease";
-    sx().when(
-        "open",
-        sx().opacity("1")
-            .with("translate", "0 0")
-            .visibility("visible")
-            .transition(format!("{motion}, visibility 0s"))
-            .media(REDUCED_MOTION, sx().transition("none")),
-    )
-    .when(
-        "closed",
-        sx().opacity("0")
-            .with("translate", "0 8px")
-            .visibility("hidden")
-            .transition(format!("{motion}, visibility 0s linear 200ms"))
-            .media(REDUCED_MOTION, sx().transition("none")),
-    )
-}
-
-#[component]
-fn Invoices() -> Element {
-    let mut selected = use_signal(Vec::<usize>::new);
-    let list = use_element();
-    let count = selected.read().len();
-    let open = count > 0;
-
-    rsx! {
-        div { onmounted: list.mount(),
-            for (index, invoice) in INVOICES.iter().enumerate() {
-                Checkbox {
-                    id: "invoice-{index}",
-                    label: *invoice,
-                    checked: selected.read().contains(&index),
-                    onchange: move |on: bool| {
-                        let mut selected = selected.write();
-                        if on { selected.push(index) } else { selected.retain(|i| *i != index) }
-                    },
-                }
-            }
-        }
-        Float { fixed: true, placement: "bottom-center", offset_y: "-xl",
-            Paper {
-                role: "group",
-                aria_label: "Selected invoices",
-                bordered: true,
-                shadow: "md",
-                states: States::default().with("open", open).with("closed", !open),
-                sx: bar_sx().padding("xs sm"),
-                Flex { direction: "row", gap: "sm", align: "center",
-                    Text { "{count} selected" }
-                    Button { variant: "outlined", "Download" }
-                    Button {
-                        onclick: move |_| {
-                            selected.write().clear();
-                            // The bar hides with this button in it: hand focus
-                            // back to the list rather than to the page.
-                            let _ = list.query_selector("#invoice-0").and_then(|first| first.focus());
-                        },
-                        "Clear"
-                    }
-                }
-            }
-        }
-    }
 }
 
 #[component]
@@ -186,6 +36,9 @@ pub fn FloatPage() -> Element {
                 prop("offset_y", "ThemeAwareValue")
                     .default("0px")
                     .doc("Shift along the vertical axis."),
+                prop("fixed", "bool")
+                    .default("false")
+                    .doc("Places against the viewport (`position: fixed`) instead of the positioned parent - an action bar, a toast. A transformed, filtered or container-query ancestor becomes a fixed element's containing block; render through `use_portal` where you do not control the ancestors."),
                 prop("z_index", "ThemeAwareValue")
                     .default("200")
                     .doc("Stacking order."),
@@ -224,6 +77,8 @@ pub fn FloatPage() -> Element {
                         ["-lg", "-md", "-sm", "-xs", "auto", "xs", "sm", "md", "lg"],
                     )
                     .default("auto"),
+                    // Leaves the frame for the window's own corner.
+                    Control::switch("fixed"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Box {
@@ -236,42 +91,12 @@ pub fn FloatPage() -> Element {
                             placement: values.str("placement"),
                             offset_x: or_unset(values.str("offset_x")),
                             offset_y: or_unset(values.str("offset_y")),
+                            fixed: values.str("fixed") == "true",
                             Box { sx: sx().padding("4px 8px").background("primary"), "Badge" }
                         }
                     }
                 },
                 wrap: Wrap(wrap_anchor),
-            }
-            DocSection {
-                title: "Fixed: an action bar",
-                Text {
-                    Code { source: "fixed: true" }
-                    " places against the viewport instead of a positioned parent, so the bar "
-                    "stays at the bottom of the window while the page scrolls. Tick an invoice: "
-                    "a bar with the selection's actions slides in. It is a "
-                    Code { source: "Paper" }
-                    " with "
-                    Code { source: "role=\"group\"" }
-                    " and a label, not a toolbar - every button stays in the normal Tab order."
-                }
-                Text {
-                    "The show and hide are CSS only: the bar stays mounted, and its "
-                    Code { source: "open" }
-                    "/"
-                    Code { source: "closed" }
-                    " state fades it and flips "
-                    Code { source: "visibility" }
-                    " once the fade has ended, which takes the hidden bar out of the tab order and "
-                    "the accessibility tree. Reduced motion drops the animation. To unmount it "
-                    "instead, use "
-                    Code { source: "use_presence(open, \"opacity\")" }
-                    ". A transformed, filtered or container-query ancestor becomes a fixed "
-                    "element's containing block; render the bar through "
-                    Code { source: "use_portal" }
-                    " where you do not control the ancestors."
-                }
-                Invoices {}
-                CodeBlock { source: ACTION_BAR, language: "rust" }
             }
         }
     }

@@ -1,7 +1,7 @@
 //! What the DateField and DatePicker demos share: the caption and state
 //! controls of a field, the controls both demos have, and reading them back.
 
-use crate::components::{Control, ControlKind, DemoValues};
+use crate::components::{Control, DemoValues};
 use libero::chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
 use libero::components::FieldStatus;
 
@@ -56,13 +56,6 @@ pub fn field_controls() -> Vec<Control> {
         Control::switch("required"),
         Control::switch("disabled"),
     ]
-}
-
-/// Switches after every other control, so they share rows as one group.
-/// Stable, so each group keeps its order.
-pub fn switches_last(mut controls: Vec<Control>) -> Vec<Control> {
-    controls.sort_by_key(|control| control.kind == ControlKind::Switch);
-    controls
 }
 
 pub fn text_of(values: &DemoValues, name: &str, text: &str) -> Option<String> {

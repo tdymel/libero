@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{ActionIcon, Code, Input, Text};
 
@@ -78,6 +78,15 @@ pub fn ActionIconPage() -> Element {
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
                     Control::switch("disabled"),
+                    // `to` and `target` together, since the preview's link
+                    // must not navigate the docs away.
+                    Control::switch("link").code(|_, values| match values.str("link").as_str() {
+                        "true" => vec![
+                            r#"to: "https://dioxuslabs.com""#.to_string(),
+                            r#"target: "_blank""#.to_string(),
+                        ],
+                        _ => vec![],
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     ActionIcon {
@@ -89,24 +98,15 @@ pub fn ActionIconPage() -> Element {
                         size: values.str("size"),
                         radius: values.str("radius"),
                         disabled: values.str("disabled") == "true",
+                        to: match values.str("link").as_str() {
+                            "true" => Input::from("https://dioxuslabs.com"),
+                            _ => Input::None,
+                        },
+                        target: (values.str("link") == "true").then(|| "_blank".to_string()),
                         aria_label: "Confirm",
                         CheckmarkIcon {}
                     }
                 },
-            }
-            DocSection {
-                title: "As a link",
-                Text {
-                    "Renders as a real anchor, or a router Link when to matches an internal route.",
-                }
-                ActionIcon {
-                    variant: "outlined",
-                    color: "primary",
-                    to: "https://dioxuslabs.com",
-                    target: "_blank",
-                    aria_label: "Open Dioxus docs",
-                    CheckmarkIcon {}
-                }
             }
         }
     }

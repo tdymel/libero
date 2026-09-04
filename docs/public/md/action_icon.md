@@ -54,9 +54,8 @@ fn Demo() -> Element {
 }
 ```
 
-## As a link
-
-Renders as a real anchor, or a router `Link` when `to` matches an internal route.
+With `to` set it renders as a real anchor, or a router `Link` when `to`
+matches an internal route.
 
 ```rust
 use dioxus::prelude::*;

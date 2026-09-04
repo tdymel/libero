@@ -38,10 +38,8 @@ fn Demo() -> Element {
 `type` is not a prop but a `<button>` attribute passed straight through, so it
 is written `r#type: "submit"` in rsx.
 
-## As a link
-
-Renders as a real anchor, or a router `Link` when `to` matches an internal
-route. A link-mode button has no ripple and never calls `onclick`; `disabled`
+With `to` set it renders as a real anchor, or a router `Link` when `to`
+matches an internal route. A link-mode button has no ripple and never calls `onclick`; `disabled`
 drops `to` and falls back to `aria-disabled` plus `tabindex="-1"`, since `<a>`
 has no native disabled state.
 

@@ -25,9 +25,7 @@ fn Demo() -> Element {
 }
 ```
 
-## Selectable
-
-Strictly controlled: `checked` drives the look, `onchange` reports the value it
+A selectable chip is strictly controlled: `checked` drives the look, `onchange` reports the value it
 should take next. A checked chip is a tinted container - Material 3's selected
 filter chip, which also drops the outline - whatever its `variant`, so `variant`
 describes the unselected state. `checked` without `onchange` can never change,
@@ -64,8 +62,6 @@ fn Demo() -> Element {
     }
 }
 ```
-
-## Actions and links
 
 `onclick` makes the chip a `<button>`, `to` a router-aware link that takes
 precedence over `onclick`. Neither combines with `onchange`.

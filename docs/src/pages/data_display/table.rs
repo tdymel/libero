@@ -1,6 +1,6 @@
-use crate::components::{Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
+use crate::components::{Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Chip, Code, CodeBlock, Table, Text, column};
+use libero::components::{Chip, Code, Table, Text, column};
 
 #[derive(Clone, PartialEq)]
 struct Person {
@@ -64,10 +64,6 @@ let people = vec![
     )
 }
 
-const CELL_TYPES: &str = r#"|p: &Person| p.name.clone()  // String      -> text sort, start-aligned
-|p: &Person| p.age          // u32         -> numeric sort, end-aligned
-|p: &Person| p.bonus        // Option<f64> -> None renders empty, sorts last"#;
-
 #[component]
 pub fn TablePage() -> Element {
     rsx! {
@@ -82,7 +78,7 @@ pub fn TablePage() -> Element {
                 ]),
                 props("column()", vec![
                     prop("header", "String").doc("The column's title, given as the argument to `column(..)`."),
-                    prop("value", "fn(&T) -> V").doc("Reads one cell out of a row. `V`'s `CellValue` impl decides sort order and alignment, then is erased."),
+                    prop("value", "fn(&T) -> V").doc("Reads one cell out of a row. `V`'s `CellValue` impl decides sort order and alignment, then is erased. Strings sort as text and align left, every integer and float sorts numerically and aligns right, `bool` prints `true`/`false`, and `Option<V>` keeps the inner alignment, renders `None` empty and sorts it last in both directions. Your own type joins them with one `impl CellValue`: `cell_text` is required, `sort_key` and `align` have defaults."),
                     prop("sortable", "bool").default("false").doc("Turns the header into a sort button."),
                     prop("render", "fn(&T) -> Element").doc("Replaces the cell body. Sorting still uses `value`."),
                     prop("align", "CellAlign").default("follows the cell type").doc("Overrides the alignment `value`'s type chose."),
@@ -142,34 +138,6 @@ pub fn TablePage() -> Element {
                         ],
                     }
                 },
-            }
-            DocSection {
-                title: "The cell type decides",
-                Text {
-                    "Strings sort as text and align left. Every integer and float sorts numerically and aligns right. "
-                    Code { source: "bool" }
-                    " prints "
-                    Code { source: "true" }
-                    "/"
-                    Code { source: "false" }
-                    ". "
-                    Code { source: "Option<V>" }
-                    " keeps the inner type's alignment, renders "
-                    Code { source: "None" }
-                    " as empty, and sorts it last in both directions."
-                }
-                CodeBlock { source: CELL_TYPES, language: "rust" }
-                Text {
-                    "Your own type joins them with one "
-                    Code { source: "impl CellValue" }
-                    ": "
-                    Code { source: "cell_text" }
-                    " is required, "
-                    Code { source: "sort_key" }
-                    " and "
-                    Code { source: "align" }
-                    " have defaults."
-                }
             }
         }
     }

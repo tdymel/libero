@@ -1,15 +1,17 @@
-use crate::components::{
-    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
-};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Anchor, Code, Text};
+use libero::components::{Code, Text};
 
-/// Every grammar libero ships, spelled as its `code-lang-*` suffix. Each is
-/// also a `language` value, though `language` takes aliases the feature names
-/// don't - `rs`, `py`, `c#`.
-const ALL_LANGUAGES: &str = "bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, \
-javascript, json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r, ruby, \
-rust, scala, sql, swift, toml, typescript, yaml";
+/// The `language` prop's doc, shared with the `CodeBlock` page: the prop and
+/// the feature flags behind it work the same for both. Each grammar is also a
+/// `language` value, though `language` takes aliases the feature names don't -
+/// `rs`, `py`, `c#`.
+pub(super) const LANGUAGE_DOC: &str = "One of 30 grammars hand-ported from Prism, each behind its own \
+`code-lang-*` feature so a build only pays for what it highlights: bash, c, cpp, csharp, css, dart, \
+go, graphql, haskell, html, java, javascript, json, kotlin, lua, markdown, objective-c, perl, php, \
+powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml. The default set covers \
+`rust`, `bash`, `css` and a few more. An unrecognized name, or one whose feature is off, renders \
+plain text, as does leaving it off.";
 
 /// Inline `Code` earns its keep mid-sentence, so the demo shows it there
 /// rather than alone: (before, source, after).
@@ -23,41 +25,6 @@ fn inline_example(language: &str) -> (&'static str, &'static str, &'static str) 
             "let width: u32 = 320;",
             " before the first draw.",
         ),
-    }
-}
-
-/// Shared with the `CodeBlock` page: `language` and the feature flags behind
-/// it work the same for both.
-pub(super) fn languages_section() -> Element {
-    rsx! {
-        DocSection {
-            title: "Languages",
-            Text {
-                "Libero ships grammars for 30 languages, each behind its own "
-                Code { source: "code-lang-*" }
-                " feature so a build only pays for what it highlights. The default set covers "
-                Code { source: "rust" }
-                ", "
-                Code { source: "bash" }
-                ", "
-                Code { source: "css" }
-                " and a few more; enable the rest as you need them. An unrecognized name - or a "
-                "recognized one whose feature is off - falls back to plain, unhighlighted text, "
-                "which is also what leaving "
-                Code { source: "language" }
-                " off does. This site doesn't compile in "
-                Code { source: "python" }
-                ", so picking it above shows exactly that."
-            }
-            Code { source: ALL_LANGUAGES }
-            Text {
-                "The grammars are hand-ported from "
-                Anchor { to: "https://prismjs.com", "Prism" }
-                ", as is the tokenizer that runs them. These 30 are where we started, not a "
-                "closed set - if you need one Prism has and we don't, it can be ported the same "
-                "way."
-            }
-        }
     }
 }
 
@@ -78,8 +45,7 @@ pub fn CodePage() -> Element {
             markdown: "/md/code.md",
             properties: vec![props("Code", vec![
                 prop("source", "String").doc("The text to render, highlighted when `language` names a grammar this build compiles in."),
-                prop("language", "Language")
-                    .doc("Unrecognized values fall back to no highlighting rather than a guess."),
+                prop("language", "Language").doc(LANGUAGE_DOC),
             ])],
             lead: rsx! {
                 Text {
@@ -132,7 +98,6 @@ pub fn CodePage() -> Element {
                 },
                 wrap: Wrap(wrap_inline),
             }
-            {languages_section()}
         }
     }
 }
