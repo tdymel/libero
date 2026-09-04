@@ -10,7 +10,7 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{ClassList, Input},
-    context::{LiberoContext, StylesheetKey},
+    context::{LiberoContext, SheetRank, StylesheetKey},
     css::Stylesheet,
     sx::{StaticSx, Sx},
 };
@@ -135,6 +135,7 @@ fn register(
     slot: &mut Option<CssRegistration>,
     source: Option<impl CssSource>,
     layer: CssLayer,
+    rank: SheetRank,
     context: &mut LiberoContext,
 ) -> bool {
     let identity_hash = source.as_ref().map(CssSource::identity_hash);
@@ -161,7 +162,7 @@ fn register(
             let key = match stylesheet {
                 Some(stylesheet) if !stylesheet.as_str().is_empty() => {
                     changed = true;
-                    Some(context.stylesheet_registry.acquire(stylesheet, layer))
+                    Some(context.stylesheet_registry.acquire(stylesheet, layer, rank))
                 }
                 _ => None,
             };
@@ -234,7 +235,7 @@ pub(crate) fn use_css(source: Option<impl CssSource>, layer: CssLayer) -> Option
     let context = &mut *state.context.borrow_mut();
     let slots = &mut *state.slots.borrow_mut();
 
-    let changed = register(&mut slots[0], source, layer, context);
+    let changed = register(&mut slots[0], source, layer, SheetRank::Component, context);
     bump_if_changed(changed, context);
 
     class_name(&slots[0]).map(str::to_string)
@@ -265,16 +266,24 @@ pub(crate) fn use_box_css(
     let focus_changed = register(
         &mut focus_slot[0],
         focus,
-        CssLayer::FrameworkDefault,
+        CssLayer::Framework,
+        SheetRank::Default,
         context,
     );
     let framework_changed = register(
         &mut framework_slot[0],
         framework,
         CssLayer::Framework,
+        SheetRank::Component,
         context,
     );
-    let sx_changed = register(&mut sx_slot[0], sx, CssLayer::UserStatic, context);
+    let sx_changed = register(
+        &mut sx_slot[0],
+        sx,
+        CssLayer::UserStatic,
+        SheetRank::Component,
+        context,
+    );
     bump_if_changed(focus_changed || framework_changed || sx_changed, context);
 
     // Composed straight into the attribute value. Going through `ClassList`

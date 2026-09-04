@@ -3,11 +3,25 @@ use std::{cell::RefCell, collections::BTreeMap, rc::Rc};
 use super::CssLayer;
 use crate::css::Stylesheet;
 
+/// Where a sheet sorts among the others in its layer. Two rules of equal
+/// specificity in one layer are decided by source order, and without a rank
+/// that order is the CSS hash's - arbitrary.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum SheetRank {
+    /// Ahead of every other sheet in the layer, so any of them overrides it
+    /// at equal specificity. Only `Box`'s focus ring: a component's own
+    /// `:focus-visible` has the same specificity and has to win.
+    Default,
+    /// Hash order.
+    Component,
+}
+
 /// Only [`StylesheetRegistry::acquire`] mints one, so nothing can be released
 /// under a key the registry never issued.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct StylesheetKey {
     layer: CssLayer,
+    rank: SheetRank,
     hash: u64,
 }
 
@@ -45,17 +59,28 @@ impl StylesheetRegistry {
         Self::default()
     }
 
-    pub fn acquire(&self, stylesheet: impl Into<Stylesheet>, layer: CssLayer) -> StylesheetKey {
+    pub fn acquire(
+        &self,
+        stylesheet: impl Into<Stylesheet>,
+        layer: CssLayer,
+        rank: SheetRank,
+    ) -> StylesheetKey {
         let stylesheet = stylesheet.into();
         let key = StylesheetKey {
             layer,
+            rank,
             hash: stylesheet.hash(),
         };
         let mut registry = self.inner.borrow_mut();
 
         let entry = registry.entry(key).or_insert_with(|| RegisteredStylesheet {
             // Not a `Stylesheet`: that re-hashes text for a key we have.
-            node_key: Rc::from(format!("{}-{:x}", layer.key_name(), key.hash)),
+            // The rank is part of the key, so the same CSS on both ranks is
+            // two entries and needs two node keys.
+            node_key: Rc::from(match rank {
+                SheetRank::Default => format!("{}-default-{:x}", layer.css_name(), key.hash),
+                SheetRank::Component => format!("{}-{:x}", layer.css_name(), key.hash),
+            }),
             css: Rc::from(layered_css(layer, &stylesheet)),
             ref_count: 0,
         });
@@ -112,10 +137,14 @@ mod tests {
         let registry = StylesheetRegistry::new();
         let stylesheet = Stylesheet::from(&sx().padding("lg"));
 
-        let key = registry.acquire(stylesheet.clone(), CssLayer::UserCustom);
+        let key = registry.acquire(
+            stylesheet.clone(),
+            CssLayer::UserCustom,
+            SheetRank::Component,
+        );
         assert_eq!(registry.stylesheets().len(), 1);
 
-        let second_key = registry.acquire(stylesheet, CssLayer::UserCustom);
+        let second_key = registry.acquire(stylesheet, CssLayer::UserCustom, SheetRank::Component);
         assert_eq!(key, second_key);
         assert_eq!(registry.stylesheets().len(), 1);
 
@@ -131,8 +160,12 @@ mod tests {
         let registry = StylesheetRegistry::new();
         let stylesheet = Stylesheet::from(&sx().padding("lg"));
 
-        let framework = registry.acquire(stylesheet.clone(), CssLayer::Framework);
-        let custom = registry.acquire(stylesheet, CssLayer::UserCustom);
+        let framework = registry.acquire(
+            stylesheet.clone(),
+            CssLayer::Framework,
+            SheetRank::Component,
+        );
+        let custom = registry.acquire(stylesheet, CssLayer::UserCustom, SheetRank::Component);
 
         assert_ne!(framework, custom);
         assert_eq!(registry.stylesheets().len(), 2);
@@ -148,7 +181,11 @@ mod tests {
     #[test]
     fn an_entry_does_not_hold_a_different_sheets_css() {
         let registry = StylesheetRegistry::new();
-        let key = registry.acquire(Stylesheet::from(&sx().padding("lg")), CssLayer::Framework);
+        let key = registry.acquire(
+            Stylesheet::from(&sx().padding("lg")),
+            CssLayer::Framework,
+            SheetRank::Component,
+        );
         let registry = registry.inner.borrow();
         let entry = registry.get(&key).expect("just acquired");
 
@@ -160,7 +197,11 @@ mod tests {
     #[test]
     fn an_entry_carries_its_layer_in_both_its_node_key_and_its_css() {
         let registry = StylesheetRegistry::new();
-        registry.acquire(Stylesheet::from(&sx().padding("lg")), CssLayer::Framework);
+        registry.acquire(
+            Stylesheet::from(&sx().padding("lg")),
+            CssLayer::Framework,
+            SheetRank::Component,
+        );
 
         let (node_key, css) = registry.stylesheets().remove(0);
 
@@ -172,14 +213,19 @@ mod tests {
     /// specificity, so the ring has to come first whatever the two hash to.
     /// Several sheets, so some hash below the default one and some above.
     #[test]
-    fn a_framework_default_comes_before_every_framework_sheet() {
+    fn a_default_ranked_sheet_comes_before_every_other_in_its_layer() {
         let registry = StylesheetRegistry::new();
         for color in ["red", "blue", "green", "black", "white", "gray"] {
-            registry.acquire(Stylesheet::from(&sx().color(color)), CssLayer::Framework);
+            registry.acquire(
+                Stylesheet::from(&sx().color(color)),
+                CssLayer::Framework,
+                SheetRank::Component,
+            );
         }
         registry.acquire(
             Stylesheet::from(&sx().padding("lg")),
-            CssLayer::FrameworkDefault,
+            CssLayer::Framework,
+            SheetRank::Default,
         );
 
         let (node_key, css) = registry.stylesheets().remove(0);
@@ -189,11 +235,11 @@ mod tests {
     }
 
     #[test]
-    fn the_same_css_on_both_framework_ranks_is_two_node_keys() {
+    fn the_same_css_on_both_ranks_is_two_node_keys() {
         let registry = StylesheetRegistry::new();
         let stylesheet = Stylesheet::from(&sx().padding("lg"));
-        registry.acquire(stylesheet.clone(), CssLayer::FrameworkDefault);
-        registry.acquire(stylesheet, CssLayer::Framework);
+        registry.acquire(stylesheet.clone(), CssLayer::Framework, SheetRank::Default);
+        registry.acquire(stylesheet, CssLayer::Framework, SheetRank::Component);
 
         let keys = registry.stylesheets();
 

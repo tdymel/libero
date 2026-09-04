@@ -3,7 +3,7 @@ mod modal;
 mod portal;
 mod window;
 
-pub(crate) use libero::{CssLayer, StylesheetKey};
+pub(crate) use libero::{CssLayer, SheetRank, StylesheetKey};
 pub use libero::{LiberoContext, LiberoProvider};
 pub use modal::{ModalContext, ModalHost};
 pub(crate) use portal::PortalEntry;

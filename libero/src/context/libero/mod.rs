@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use stylesheet_registry::StylesheetRegistry;
 
-pub(crate) use stylesheet_registry::StylesheetKey;
+pub(crate) use stylesheet_registry::{SheetRank, StylesheetKey};
 
 use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
 use crate::{css::Stylesheet, theme::Theme};
