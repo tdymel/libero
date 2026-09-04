@@ -161,7 +161,6 @@ unaffected.
 - Set `aria_label`: it names the region.
 - The track is a tab stop. `ArrowLeft` / `ArrowRight`, or `ArrowUp` / `ArrowDown` when vertical: previous and next. `Home` / `End`: first and last.
 - The indicators are one tab stop with the same keys, and focus follows the slide.
-- Announces "Slide 3 of 7" once a move settles. Autoplay stays silent until it is paused - by its button, by hover or by focus.
 
 ## Props
 

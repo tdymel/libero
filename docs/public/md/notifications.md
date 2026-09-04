@@ -140,19 +140,11 @@ timers and the host compile once.
 
 ## Accessibility
 
-- Each of the nine stacks is an `ol` pair: one `aria-live="polite"` and one
-  `aria-live="assertive"`. **All eighteen are always mounted, even when empty**,
-  because a live region has to be in the document before content is added to
-  it, or nothing is announced. `NotificationOptions::live` picks the region. It
-  is `Polite` unless you say otherwise, and it is never derived from a colour.
-- The default template is an `Alert` with `role="group"`, not `role="alert"`.
-  The list around it is already the live region, and a live region nested in
-  another can be announced twice.
-- **Focus is never moved**, on show or on close (WCAG 2.4.3). A close button is
-  a real `<button>`, reached by Tab in document order. Escape does nothing,
-  because nothing here takes focus. After you close the notification that held
-  focus, focus falls back to the page.
-- An assertive notification sits above the polite ones in the same stack.
+- `NotificationOptions::live` picks how a notification is announced. It is
+  `Polite` unless you say otherwise, and it is never derived from a colour -
+  pass `Assertive` for what cannot wait.
+- **Focus is never moved**, on show or on close. A close button is reached by
+  Tab in document order, and Escape does nothing.
 
 ## API
 

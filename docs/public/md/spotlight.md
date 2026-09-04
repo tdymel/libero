@@ -121,22 +121,14 @@ let spotlight = use_spotlight(SpotlightOptions {
 });
 ```
 
-## Keyboard and accessibility
+## Keyboard
 
-- The search box is `role="combobox"` (`aria-expanded`, `aria-controls`,
-  `aria-haspopup="listbox"`) over a `role="listbox"`. Focus stays in it the
-  whole time.
-- ArrowDown / ArrowUp move a highlight named by `aria-activedescendant`,
-  wrapping at both ends. Home and End are left to the caret.
+- Focus stays in the search box the whole time.
+- ArrowDown / ArrowUp move the highlight, wrapping at both ends. Home and End
+  are left to the caret.
 - Enter runs the highlighted action. Typing clears the highlight, so Enter
   never runs a row the user did not look at.
 - Escape or a click outside closes; focus returns to what opened it.
-- Groups are `role="group"`, named by their visible header. No row is ever
-  `aria-selected`.
-- "Nothing found", and "Searching" while `loading`, are announced through a
-  `role="status"` region that is present from the start. It sits outside the
-  listbox, which is `aria-busy` while loading, and the loader in it is
-  `aria-hidden`.
 
 ## API
 

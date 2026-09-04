@@ -113,14 +113,12 @@ run from 250, capped below the overlay layer however many windows are open.
 
 ## Accessibility
 
-- `role="dialog"` named by the title, **no** `aria-modal`. It takes focus on
-  open; Escape, the close button or `close()` hands focus back to the trigger.
-- The title bar is a tab stop named "Move window": Arrow moves 10px
-  (`move_step`), Shift+Arrow 1px.
-- The resize handle is `role="separator"`, named "Resize window", with the width
-  as `aria-valuenow` and "W by H pixels" as `aria-valuetext` (one handle, two
-  axes). Arrow resizes by `resize_step`, Shift+Arrow by 1px, Home/End ask for
-  the smallest/largest size the constraints allow.
+- Give it a `title`: it names the window.
+- It takes focus on open; Escape, the close button or `close()` hands focus
+  back to the trigger.
+- The title bar is a tab stop: Arrow moves 10px (`move_step`), Shift+Arrow 1px.
+- On the resize handle Arrow resizes by `resize_step`, Shift+Arrow by 1px, and
+  Home/End ask for the smallest/largest size the constraints allow.
 
 ## Theme
 

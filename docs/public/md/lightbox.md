@@ -97,19 +97,12 @@ modal.
 
 ## Accessibility
 
-The dialog is named by `aria_label`, falling back to the theme's `"Gallery"`.
-Focus is trapped inside while it is open, lands on **Close** on open, and
-returns to whatever opened it - the hook records the trigger itself.
+Name the dialog with `aria_label`; it falls back to the theme's `"Gallery"`.
+Give every picture its own `alt`.
 
-Every picture keeps its own `alt`. The picture showing is the one tab stop
-among them (with `zoom` on), since it takes the zoom and pan keys; its frame
-draws the focus ring, because the picture itself is scaled. Its caption is
-linked with `aria-describedby`, so it is read after the slide's position.
-
-The thumbnail strip is a named region of `<button>`s, `"Go to slide {n}"`, with
-`aria-current="true"` on the current one and a roving tab stop: the arrows,
-`Home` and `End` move along the strip and change the picture with it. The strip
-is also a `Carousel`, so its track is a tab stop of its own.
+The picture showing is a tab stop (with `zoom` on) and takes the zoom and pan
+keys. In the thumbnail strip the arrows, `Home` and `End` move along the strip
+and change the picture with it.
 
 ## API
 

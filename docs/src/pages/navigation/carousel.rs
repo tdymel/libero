@@ -226,10 +226,6 @@ pub fn CarouselPage() -> Element {
                         "The indicators are one tab stop with the same keys, and focus follows "
                         "the slide."
                     }
-                    ListItem {
-                        "Announces \"Slide 3 of 7\" once a move settles. Autoplay stays silent "
-                        "until it is paused - by its button, by hover or by focus."
-                    }
                 }
             }
         }
