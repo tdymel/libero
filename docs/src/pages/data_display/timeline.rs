@@ -219,10 +219,7 @@ pub fn TimelinePage() -> Element {
                     // `generate_code` omits a control at its default - the
                     // block prints no `color:` line there, exactly as the
                     // unset state did.
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning"],
-                    ),
+                    Control::color("color"),
                     Control::slider("bullet_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

@@ -197,10 +197,7 @@ pub fn AvatarPage() -> Element {
                     // An unset `color` is `base_color`'s primary shade 6,
                     // which is exactly what a bare `primary` resolves to - so
                     // the default swatch is primary, not a white "unset" one.
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning"],
-                    ),
+                    Control::color("color"),
                 ],
                 render: move |values: DemoValues| {
                     let content = values.str("content");

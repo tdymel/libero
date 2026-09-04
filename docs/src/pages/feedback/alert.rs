@@ -69,10 +69,7 @@ pub fn AlertPage() -> Element {
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
                     .default(theme.alert.variant.as_str()),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
-                    )
+                    Control::color("color")
                     .default(theme.alert.color),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.alert.radius.as_str()),

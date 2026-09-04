@@ -54,10 +54,7 @@ pub fn ChipPage() -> Element {
                 component: "Chip",
                 children_text: "rust",
                 controls: vec![
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
-                    ),
+                    Control::color("color"),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "text"],

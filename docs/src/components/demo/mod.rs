@@ -1,3 +1,4 @@
+mod color;
 mod control;
 mod demo;
 

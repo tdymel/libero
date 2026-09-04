@@ -142,10 +142,7 @@ pub fn RadioGroupPage() -> Element {
                             ],
                             _ => vec![],
                         }),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::toggle("orientation", ["vertical", "horizontal"])

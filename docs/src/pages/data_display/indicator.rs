@@ -96,10 +96,7 @@ pub fn IndicatorPage() -> Element {
                         .default(theme.indicator.size.as_str()),
                     // An unset `color` is the theme's error role, so that
                     // swatch prints nothing.
-                    Control::color(
-                        "color",
-                        ["error", "primary", "success", "warning", "info", "neutral"],
-                    ),
+                    Control::color("color").default("error"),
                     Control::toggle("placement", ["top-end", "top-start", "bottom-end", "bottom-start"])
                         .labels(["Top end", "Top start", "Bottom end", "Bottom start"])
                         .code(|_, _| vec![]),

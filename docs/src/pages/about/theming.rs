@@ -34,7 +34,7 @@ const COMPONENT_DEFAULTS: &str = r#"static THEME: Theme = Theme {
 
 const READING_THE_THEME: &str = r#"let theme = use_theme();
 
-Control::color("color", [..]).default(theme.mark.color.as_str())"#;
+Control::color("color").default(theme.mark.color.as_str())"#;
 
 const EMITTED_CSS: &str = r#":root {
   --lsx-primary-6: #7c3aed;

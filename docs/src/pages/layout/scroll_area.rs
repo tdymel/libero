@@ -170,10 +170,7 @@ pub fn ScrollAreaPage() -> Element {
                     // *not* resolve to - so the first swatch is unset, and it
                     // is painted grey-5 rather than white: the swatch shows
                     // what the scrollbar actually draws without the prop.
-                    Control::color(
-                        "scrollbar_color",
-                        [UNSET, "primary", "secondary", "success", "error", "warning"],
-                    )
+                    Control::color("scrollbar_color").with_unset()
                     .unset_swatch("grey.5"),
                 ],
                 render: move |values: DemoValues| rsx! {

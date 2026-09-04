@@ -112,10 +112,7 @@ pub fn SplitterPage() -> Element {
                         .default("sm"),
                     // A bare `grey` is what an unset `divider_color`
                     // falls back to, so that swatch prints nothing.
-                    Control::color(
-                        "divider_color",
-                        ["grey", "primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("divider_color").default("grey"),
                     // Last, so the panes print below the props they
                     // configure.
                     Control::switch("composed").code(panels_code),

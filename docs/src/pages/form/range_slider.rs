@@ -305,10 +305,7 @@ pub fn RangeSliderPage() -> Element {
                         .labels(["Discrete", "Continuous"])
                         .code(mode_code),
                     Control::slider("size", SIZES).default(theme.slider.size.as_str()),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     Control::slider("min", Quality::ALL)
                         .code(bound_code)
                         .hidden_when(continuous),

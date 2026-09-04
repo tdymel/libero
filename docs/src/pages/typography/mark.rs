@@ -35,7 +35,7 @@ pub fn MarkPage() -> Element {
                 component: "Mark",
                 children_text: "this chunk",
                 controls: vec![
-                    Control::color("color", ["warning", "primary", "success", "error", "info"])
+                    Control::color("color")
                         .default(theme.mark.color.as_str()),
                 ],
                 render: move |values: DemoValues| rsx! {

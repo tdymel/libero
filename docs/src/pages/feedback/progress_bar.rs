@@ -78,10 +78,7 @@ pub fn ProgressBarPage() -> Element {
                     .hidden_when(indeterminate),
                     // An unset `color` is `base_color`'s primary shade 6, which
                     // is exactly what a bare `primary` resolves to.
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     // Opens on the tallest track, not the default `md`: on an
                     // 8px track every radius from `sm` up is the same pill, so
                     // the radius slider would look dead. The theme default

@@ -75,10 +75,7 @@ pub fn CheckboxPage() -> Element {
                             "card" => vec![r#"variant: "card""#.to_string()],
                             _ => vec![],
                         }),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

@@ -80,10 +80,7 @@ pub fn DividerPage() -> Element {
                     // *not* resolve to - it is tinted to shade 3 like every
                     // other bare color. So the first swatch is unset, painted
                     // the grey-4 the rule actually draws.
-                    Control::color(
-                        "color",
-                        [UNSET, "primary", "secondary", "success", "error", "warning", "info"],
-                    )
+                    Control::color("color").with_unset()
                     .unset_swatch("grey.4"),
                     Control::slider("spacing", ["auto", "xs", "sm", "md", "lg", "xl"])
                         .default("md")

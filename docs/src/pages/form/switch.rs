@@ -57,10 +57,7 @@ pub fn SwitchPage() -> Element {
                 component: "Switch",
                 children_text: "",
                 controls: vec![
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])

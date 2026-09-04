@@ -74,10 +74,7 @@ pub fn NavLinkPage() -> Element {
                             active => vec![format!("active: {active}")],
                         },
                     ),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    )
+                    Control::color("color")
                     .default(theme.nav_link.color.as_str()),
                     Control::switch("disabled"),
                 ],

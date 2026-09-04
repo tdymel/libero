@@ -56,10 +56,7 @@ pub fn ButtonPage() -> Element {
                 component: "Button",
                 children_text: "Save changes",
                 controls: vec![
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
-                    ),
+                    Control::color("color"),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "text"],

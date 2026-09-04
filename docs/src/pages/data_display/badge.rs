@@ -56,10 +56,7 @@ pub fn BadgePage() -> Element {
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
-                    ),
+                    Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     // "pill" is the theme's own off-scale default, so it is
                     // "leave the prop unset", not a value to print.

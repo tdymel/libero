@@ -171,10 +171,10 @@ pub fn StylingPage() -> Element {
                     component: "Box",
                     children_text: "Styled with sx",
                     controls: vec![
-                        Control::color(
-                            "background",
-                            ["primary", "secondary", "success", "error", "warning", "info"],
-                        )
+                        Control::color("background")
+                        // The chain derives `-contrast` and `.8` from the
+                        // name, which a custom hex has neither of.
+                        .without_custom()
                         .code(|_, values| card_sx_code(values)),
                         // The whole chain prints from the control above, so
                         // the rest add nothing of their own.

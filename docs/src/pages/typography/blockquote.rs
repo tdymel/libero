@@ -60,10 +60,7 @@ pub fn BlockquotePage() -> Element {
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.blockquote.size.as_str()),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    )
+                    Control::color("color")
                     .default(theme.blockquote.color.as_str()),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.blockquote.radius.as_str()),

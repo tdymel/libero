@@ -127,10 +127,7 @@ pub fn TabsPage() -> Element {
                             "rich" => vec![RICH.to_string()],
                             _ => vec![],
                         }),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::switch("full_width"),

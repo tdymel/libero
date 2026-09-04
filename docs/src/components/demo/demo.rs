@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Box, Button, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
+        Box, CodeBlock, Flex, Input, NativeSelect, OptionLabel, SegmentedControl, Slider,
         SliderChangeEvent, Switch, Text,
     },
     sx::sx,
@@ -9,9 +9,7 @@ use libero::{
 };
 use std::sync::LazyLock;
 
-use crate::icons::CheckmarkIcon;
-
-use super::{Control, ControlKind};
+use super::{Control, ControlKind, color::ColorControl};
 
 /// The card is the query container the control panel keys off.
 const DEMO_CARD: &str = "demo-card";
@@ -23,7 +21,7 @@ const DEMO_CARD: &str = "demo-card";
 static BORDER: LazyLock<String> =
     LazyLock::new(|| format!("1px solid {}", CODE_BLOCK_BORDER.value()));
 
-fn border() -> &'static str {
+pub(super) fn border() -> &'static str {
     BORDER.as_str()
 }
 
@@ -101,27 +99,6 @@ where
 /// The value a color control uses for "leave the prop unset". Kept apart from
 /// the color names so no swatch has to double as a sentinel.
 pub const UNSET: &str = "unset";
-
-/// Fill and tick color for one swatch. The unset swatch shows what the
-/// component renders *without* the prop, which is white only where nothing
-/// else is drawn - `Control::unset_swatch` names the real color otherwise.
-fn swatch(control: &Control, option: &str) -> (String, String) {
-    match option {
-        UNSET => (
-            control
-                .unset_swatch
-                .clone()
-                .unwrap_or_else(|| "white".to_string()),
-            "black".to_string(),
-        ),
-        // The palette's own contrast color, so the tick reads on every swatch.
-        // A shade keeps its step: `grey.1` pairs with `grey-contrast.1`.
-        color => match color.split_once('.') {
-            Some((name, shade)) => (color.to_string(), format!("{name}-contrast.{shade}")),
-            None => (color.to_string(), format!("{color}-contrast")),
-        },
-    }
-}
 
 /// Indents generated rsx one level, for a `Wrap` that nests it.
 pub fn indent(code: &str) -> String {
@@ -289,60 +266,14 @@ pub fn Demo(
                                     }
                                 }
                                 match control.kind {
-                                    // Swatches read as separate chips, not one
-                                    // segmented control - so this is a row of
-                                    // toggle `Button`s, not a `SegmentedControl`.
                                     ControlKind::Color => rsx! {
-                                        Flex {
-                                            // `Flex` defaults to a column, and
-                                            // the swatches are a row.
-                                            direction: "row",
-                                            gap: "xs",
-                                            sx: sx().width("100%"),
-                                            for option in control.options.iter() {
-                                                Button {
-                                                    key: "{option}",
-                                                    size: "sm",
-                                                    variant: "text",
-                                                    aria_label: "{option}",
-                                                    selected: values().str(control.name) == *option,
-                                                    onclick: {
-                                                        let option = option.clone();
-                                                        move |_| {
-                                                            values.write().0[index].1 = option.clone();
-                                                        }
-                                                    },
-                                                    // The swatch is the whole button, so
-                                                    // the fill reaches the border - and
-                                                    // the variant's hover tint would show
-                                                    // as a halo around it.
-                                                    sx: sx()
-                                                        .flex("1 1 0")
-                                                        .padding("0")
-                                                        .hover(sx().background("transparent")),
-                                                    Box {
-                                                        sx: sx()
-                                                            .width("100%")
-                                                            .height("100%")
-                                                            .border_radius("inherit")
-                                                            .background(swatch(control, option).0)
-                                                            .color(swatch(control, option).1)
-                                                            // A pale swatch needs an edge
-                                                            // to read as a swatch at all.
-                                                            .border(border())
-                                                            .display("flex")
-                                                            .align_items("center")
-                                                            .justify_content("center")
-                                                            .selector(
-                                                                "& svg",
-                                                                sx().width("18px").height("18px"),
-                                                            ),
-                                                        if values().str(control.name) == *option {
-                                                            CheckmarkIcon {}
-                                                        }
-                                                    }
-                                                }
-                                            }
+                                        ColorControl {
+                                            control: control.clone(),
+                                            label: label(control.name),
+                                            value: values().str(control.name),
+                                            onchange: move |value: String| {
+                                                values.write().0[index].1 = value;
+                                            },
                                         }
                                     },
                                     ControlKind::Slider => rsx! {

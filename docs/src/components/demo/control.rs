@@ -1,11 +1,25 @@
 use libero::components::SliderMark;
 
-use super::DemoValues;
+use super::{DemoValues, UNSET};
+
+/// Every theme palette color, in swatch order. `black` and `white` are left
+/// out: they have no shades and no `-contrast` twin to draw a tick with.
+const THEME_COLORS: [&str; 8] = [
+    "primary",
+    "secondary",
+    "success",
+    "error",
+    "warning",
+    "info",
+    "neutral",
+    "grey",
+];
 
 /// How a control offers its options.
 #[derive(Clone, Copy, PartialEq)]
 pub enum ControlKind {
-    /// A swatch per value, filled with the color it names.
+    /// A swatch per value, filled with the color it names, and one that
+    /// opens a `ColorPicker` for any other.
     Color,
     /// One step per value - for an ordered scale, where the options' order is
     /// the scale's.
@@ -43,6 +57,10 @@ pub struct Control {
     /// grey-5 thumb. `None` leaves it white, which is what an unset color
     /// renders as wherever nothing else is drawn.
     pub unset_swatch: Option<String>,
+    /// Whether a `ControlKind::Color` ends in a swatch that opens a
+    /// `ColorPicker`. Off only where the page builds theme tokens *from* the
+    /// value (`{color}-contrast`), which a hex cannot name.
+    pub custom: bool,
 }
 
 /// `code` is a page-level constant, so whether one is set is all that can
@@ -57,13 +75,29 @@ impl PartialEq for Control {
             && self.labels == other.labels
             && self.hidden.is_some() == other.hidden.is_some()
             && self.unset_swatch == other.unset_swatch
+            && self.custom == other.custom
     }
 }
 
 impl Control {
-    /// The first option is the default until `default` says otherwise.
-    pub fn color<const N: usize>(name: &'static str, options: [&str; N]) -> Self {
+    /// A swatch per theme color, then the custom one. `primary` is the
+    /// default until `default` says otherwise.
+    pub fn color(name: &'static str) -> Self {
+        Self::new(name, ControlKind::Color, &THEME_COLORS)
+    }
+
+    /// Only the swatches given, for a prop that wants shades (`grey.1`)
+    /// rather than the palette. The first option is the default.
+    pub fn color_shades<const N: usize>(name: &'static str, options: [&str; N]) -> Self {
         Self::new(name, ControlKind::Color, &options)
+    }
+
+    /// Leads the swatches with `UNSET` and makes it the default - for a prop
+    /// whose absence renders something no theme color names.
+    pub fn with_unset(mut self) -> Self {
+        self.options.insert(0, UNSET.to_string());
+        self.default = UNSET.to_string();
+        self
     }
 
     /// Options in scale order; pair it with `default`, since that is rarely
@@ -104,6 +138,7 @@ impl Control {
             labels: None,
             hidden: None,
             unset_swatch: None,
+            custom: kind == ControlKind::Color,
         }
     }
 
@@ -158,6 +193,13 @@ impl Control {
     /// next swatch already names is what made these read as "white".
     pub fn unset_swatch(mut self, color: impl Into<String>) -> Self {
         self.unset_swatch = Some(color.into());
+        self
+    }
+
+    /// Drops the custom-color swatch, for a value the page turns into theme
+    /// token names.
+    pub fn without_custom(mut self) -> Self {
+        self.custom = false;
         self
     }
 

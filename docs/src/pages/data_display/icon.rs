@@ -53,10 +53,7 @@ pub fn IconPage() -> Element {
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"]),
                     // A bare `primary` is what an unset `color` resolves
                     // to, so that swatch prints nothing.
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
-                    ),
+                    Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),

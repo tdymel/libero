@@ -132,10 +132,7 @@ pub fn BurgerPage() -> Element {
                     // Unset is `currentColor`, not a palette colour, so the
                     // swatch is painted rather than dropped - see
                     // `codebase/docs/demo-controls`.
-                    Control::color(
-                        "color",
-                        [UNSET, "primary", "secondary", "success", "error", "warning"],
-                    )
+                    Control::color("color").with_unset()
                     .unset_swatch("currentColor"),
                     Control::switch("disabled"),
                 ],

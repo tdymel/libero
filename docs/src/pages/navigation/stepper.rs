@@ -139,10 +139,7 @@ pub fn StepperPage() -> Element {
                         .hidden_when(|values| values.str("orientation") == "vertical"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info"],
-                    ),
+                    Control::color("color"),
                     Control::switch("clickable").code(|_, values| {
                         if on(values, "clickable") {
                             vec!["onstepclick: move |s| stage.set(Some(s))".to_string()]

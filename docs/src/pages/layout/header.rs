@@ -67,10 +67,7 @@ pub fn HeaderPage() -> Element {
                     // Opens on the tinted banner, since that is what
                     // `color` is for - but unset (the neutral white one)
                     // is the real default, so it prints nothing.
-                    Control::color(
-                        "color",
-                        [UNSET, "primary", "secondary", "success", "error", "warning"],
-                    )
+                    Control::color("color").with_unset()
                     .default("primary")
                     .code(|_, values| match values.str("color").as_str() {
                         UNSET => vec![],

@@ -95,10 +95,7 @@ pub fn LoaderPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
-                    Control::color(
-                        "color",
-                        ["primary", "secondary", "success", "error", "warning", "info", "neutral"],
-                    ),
+                    Control::color("color"),
                     // Not a prop: it puts the loader beside its own text,
                     // where `label` does not belong.
                     Control::switch("beside_text").code(|_, _| vec![]),
