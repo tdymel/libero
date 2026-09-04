@@ -92,10 +92,20 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
         .with(AVATAR_GROUP_SPACING, SizeCss::SPACING.value(spacing))
         .into();
 
-    // The chip's style is resolved unconditionally: `prepare()` is a hook.
+    // Through `variables`, not a raw `style` attribute, so a var the chip
+    // stops setting is reverted ([[codebase/css-vars]]). Resolved only when
+    // there is a chip, but the hook runs unconditionally.
+    let chip_variables: Input<Variables> = match hidden > 0 {
+        // The bottom of the stack, under every member.
+        true => avatar_variables(props.color.as_ref(), variant, &props.radius)
+            .with(AVATAR_GROUP_INDEX, "1".to_string())
+            .into(),
+        false => Input::None,
+    };
     let chip_style = use_box()
         .framework_sx(&AVATAR_CHIP_SX)
         .focus_ring(false)
+        .variables(&chip_variables)
         .prepare();
 
     let members = props
@@ -142,14 +152,9 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
             .with("grouped", true)
             .with(size.state_name(), true)
             .with(variant.state_name(), true);
-        // The bottom of the stack, under every member.
-        let chip_variables = avatar_variables(props.color.as_ref(), variant, &props.radius)
-            .with(AVATAR_GROUP_INDEX, "1".to_string());
-
         let chip = chip_style
             .clone()
             .attr("data-state", chip_states.data_state())
-            .attr("style", chip_variables.to_string())
             .attr("role", "img")
             // The same names the tooltip shows. A tooltip clipped by an
             // `overflow: hidden` ancestor is then cosmetic, not a loss.

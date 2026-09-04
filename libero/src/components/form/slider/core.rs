@@ -34,8 +34,6 @@ const SLIDER_FILLED_SPAN: CssVar = CssVar::new("--lsx-slider-filled-span");
 const SLIDER_THUMB_AT: CssVar = CssVar::new("--lsx-slider-thumb-at");
 const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
-/// Set only on marks the bar has already reached, so one class covers both.
-const SLIDER_MARK_FILL: CssVar = CssVar::new("--lsx-slider-mark-fill");
 /// A plain slider's thumb face - the color the track is pointing at.
 const SLIDER_THUMB_FILL: CssVar = CssVar::new("--lsx-slider-thumb-fill");
 
@@ -157,9 +155,10 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
         .width(dot.clone())
         .height(dot)
         .border_radius("50%")
-        .background(
-            SLIDER_MARK_FILL.value_or(ColorValue::Shade(Color::Grey, ColorShade::S4).value()),
-        )
+        .background(ColorValue::Shade(Color::Grey, ColorShade::S4).value())
+        // White on the filled bar, the way the thumb is - the grey dot would
+        // disappear into it.
+        .when("filled", sx().background("white"))
 });
 
 static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
@@ -477,18 +476,15 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
         let mark_at = fraction(mark.value, min, max);
         let at = variables()
             .with(SLIDER_MARK_AT, Some(mark_at.to_string()))
-            // White on the filled bar, the way the thumb is - the grey dot
-            // would disappear into it.
-            .with(
-                SLIDER_MARK_FILL,
-                (bar.0 <= mark_at && mark_at <= bar.1).then(|| "white".to_string()),
-            )
             .render();
+        // A state, not a var set only when filled: a raw `style` that drops a
+        // declaration keeps its last value ([[codebase/css-vars]]).
+        let filled = (bar.0 <= mark_at && mark_at <= bar.1).then_some("filled");
         let caption = mark.label.clone().map(|label| {
             rsx! { span { class: mark_label_class.clone(), style: "{at}", {label} } }
         });
         rsx! {
-            span { class: mark_class.clone(), style: "{at}" }
+            span { class: mark_class.clone(), "data-state": filled, style: "{at}" }
             {caption}
         }
     });

@@ -67,6 +67,11 @@ pub(crate) fn use_style_attributes(
 static BOX_FOCUS_SX: StaticSx =
     StaticSx::new(|| crate::sx::sx().focus_visible(super::focus_ring_sx()));
 
+/// A custom property's value that computes as if it were absent - see
+/// [`keep_dropped_vars`]. For a `style` the revert cannot see, one set with
+/// `.attr("style", ..)`: write this rather than leave the var out.
+pub(crate) const ABSENT: &str = "revert-layer";
+
 /// Writes `--x:revert-layer` for every custom property this element had
 /// before and `style` no longer declares.
 ///
@@ -90,7 +95,7 @@ fn keep_dropped_vars(style: Option<String>, written: &mut Vec<String>) -> Option
     let dropped: String = written
         .iter()
         .filter(|seen| !custom_properties(&style).any(|name| name == seen.as_str()))
-        .map(|name| format!("{name}:revert-layer;"))
+        .map(|name| format!("{name}:{ABSENT};"))
         .collect();
     style.push_str(&dropped);
     (!style.is_empty()).then_some(style)

@@ -245,6 +245,29 @@ fn slider_renders_a_thumb_with_the_value_and_its_marks() {
     assert!(body(&html).contains(">25%<"));
 }
 
+/// Filled is a state, not a var set only on filled marks: a raw `style` that
+/// drops a declaration between renders keeps its last value in the browser.
+#[test]
+fn a_slider_mark_says_filled_with_a_state_and_keeps_its_style_shape() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: 25.0,
+                    aria_label: "Volume",
+                    marks: vec![SliderMark::new(0.0), SliderMark::new(50.0)],
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains(r#"data-state="filled" style="--lsx-slider-mark-at:0;""#));
+    assert!(html.contains(r#"style="--lsx-slider-mark-at:0.5;""#));
+    assert!(!html.contains("--lsx-slider-mark-fill"));
+}
+
 #[test]
 fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     fn app() -> Element {

@@ -188,6 +188,19 @@ fn the_first_avatar_paints_over_the_second() {
     assert_eq!(indices, vec!["3", "2", "1"], "{html}");
 }
 
+/// The chip's vars reach it through `Box`'s `variables`, where a var dropped
+/// on a later render is reverted, rather than a raw `style` attribute, where it
+/// would stay. SSR sees one render, so this pins only that they still arrive.
+#[test]
+fn the_chip_carries_its_vars() {
+    let html = body(&render(group_app));
+    let chip = &html[..html.find(">+3</span>").expect("a chip")];
+    let chip = &chip[chip.rfind("<span").expect("the chip's tag")..];
+
+    assert!(chip.contains("--lsx-avatar-group-index:1;"), "{chip}");
+    assert!(chip.contains("--lsx-avatar-color:"), "{chip}");
+}
+
 /// No `max`, so every person is a circle and there is nothing to collapse.
 #[test]
 fn a_group_under_its_max_grows_no_chip() {

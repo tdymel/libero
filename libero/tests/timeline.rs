@@ -122,6 +122,20 @@ fn a_per_item_line_style_is_a_variable_not_a_rule() {
     assert!(html.contains("--lsx-timeline-line-style:dashed"), "{html}");
 }
 
+/// An item's `style` is a raw attribute the revert in `Box` never sees, so an
+/// uncoloured item still declares its colour, as `revert-layer` (absent). Left
+/// out, a colour the item had on an earlier render would stay.
+#[test]
+fn an_uncoloured_item_still_declares_its_colour() {
+    let html = body(&render(plain_app));
+
+    assert_eq!(
+        html.matches("--lsx-timeline-color:revert-layer;").count(),
+        4,
+        "{html}"
+    );
+}
+
 /// The geometry `Stepper` inherits. Asserted on the emitted text rather than
 /// on the formula, because the plan quotes a formula whose origin could not be
 /// verified - see `components/common/rail.rs`.

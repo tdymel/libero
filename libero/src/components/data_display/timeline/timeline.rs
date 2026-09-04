@@ -4,7 +4,7 @@ use super::event::TimelineEvent;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{Rail, RailInset, base_props, input_from_str, variables},
+        common::{ABSENT, Rail, RailInset, base_props, input_from_str, variables},
         layout::use_box,
     },
     hooks::use_theme,
@@ -249,11 +249,17 @@ pub fn Timeline(props: TimelineProps) -> Element {
                 .with(align.state_name(), true)
                 .with("active", is_active)
                 .with("line-active", line_active);
+            // Always written, `ABSENT` when unset: this `style` is a raw
+            // attribute, so a var it stops declaring would keep its last value
+            // ([[codebase/css-vars]]).
             let item_variables = variables()
                 .with(TIMELINE_LINE_STYLE, item.line.as_str().to_string())
                 .with(
                     TIMELINE_COLOR,
-                    item.color.as_ref().and_then(|color| color.resolve(None)),
+                    item.color
+                        .as_ref()
+                        .and_then(|color| color.resolve(None))
+                        .unwrap_or_else(|| ABSENT.to_string()),
                 );
 
             let bullet_states = States::default()
