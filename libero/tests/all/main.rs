@@ -38,6 +38,7 @@ mod data_list;
 mod date;
 mod dialog;
 mod divider;
+mod drag;
 mod drawer;
 mod events;
 mod field;

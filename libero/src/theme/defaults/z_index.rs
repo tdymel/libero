@@ -23,7 +23,8 @@ pub struct ZIndexDefaults {
     pub window: i32,
     pub window_step: i32,
     pub overlay: i32,
-    /// The first modal's z-index; each one above adds `modal_step`.
+    /// The first modal's z-index; each one open above it adds `modal_step`,
+    /// capped below `popover`.
     pub modal: i32,
     pub modal_step: i32,
     /// Above every modal, not below: an anchored popover is portaled to the

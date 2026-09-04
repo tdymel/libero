@@ -73,8 +73,15 @@ pub fn LiberoProvider(
     let portal_entries = use_signal(Vec::new);
     use_context_provider(|| PortalHost::new(portal_entries));
 
-    let modal_z_index = use_signal(|| theme.z_index.modal);
-    use_context_provider(|| ModalHost::new(modal_z_index, theme.z_index.modal_step));
+    let modal_stack = use_signal(Vec::new);
+    use_context_provider(|| {
+        ModalHost::new(
+            modal_stack,
+            theme.z_index.modal,
+            theme.z_index.modal_step,
+            theme.z_index.popover,
+        )
+    });
 
     let window_stack = use_signal(Vec::new);
     use_context_provider(|| {

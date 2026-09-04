@@ -19,8 +19,10 @@ pub struct DragPoint {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct DragStart {
     pub client: DragPoint,
-    /// Abandons the drag - for a handler that only learns the drag is
-    /// impossible after measuring, which off the web is a round-trip away.
+    /// Abandons the drag, either at once - a disabled control refusing it -
+    /// or once the handler has measured and learned it is impossible, which
+    /// off the web is a round-trip away. Called at once, no move or end is
+    /// ever reported for this press.
     pub cancel: Callback<()>,
 }
 
@@ -105,17 +107,23 @@ pub fn use_drag(options: DragOptions) -> Drag {
             y: coordinates.y,
         };
 
-        on_start.call(DragStart { client, cancel });
-
-        // Best-effort: where the platform has no capture this costs
-        // out-of-element tracking, not the drag.
-        let _ = capture.set_pointer_capture(event.pointer_id());
-
+        // Active before `on_start`, so a `cancel` it makes synchronously - a
+        // disabled control refusing the drag - clears it rather than being
+        // overwritten.
         active.set(Some(ActiveDrag {
             pointer_id: event.pointer_id(),
             start: client,
         }));
         dragging.set(true);
+
+        on_start.call(DragStart { client, cancel });
+        if active.peek().is_none() {
+            return;
+        }
+
+        // Best-effort: where the platform has no capture this costs
+        // out-of-element tracking, not the drag.
+        let _ = capture.set_pointer_capture(event.pointer_id());
     });
 
     let onpointermove = use_callback(move |event: Event<PointerData>| {

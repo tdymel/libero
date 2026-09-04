@@ -13,10 +13,10 @@ use crate::{
 };
 
 pub(crate) fn use_modal_z_index() -> i32 {
-    let mut host = use_context::<ModalHost>();
-    let z_index = use_hook(|| host.acquire_z_index());
-    use_drop(move || host.release_z_index(z_index));
-    z_index
+    let host = use_context::<ModalHost>();
+    let id = use_hook(|| host.open());
+    use_drop(move || host.close(id));
+    host.z_index(id)
 }
 
 /// Closes the modal this content is rendered in. For a component factored out
