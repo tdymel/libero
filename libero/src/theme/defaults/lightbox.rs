@@ -11,8 +11,9 @@ pub const LIGHTBOX_THUMBNAILS_GAP: CssVar = CssVar::new("--lsx-lightbox-thumbnai
 /// knobs").
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LightboxDefaults {
-    /// The dialog's widest extent, a CSS length. Below the `xs` breakpoint
-    /// the dialog and its pictures take the whole screen width instead.
+    /// The dialog's widest extent, a CSS length. Below the `sm` breakpoint,
+    /// or under 30rem tall (a phone on its side), the dialog and its pictures
+    /// take the whole screen width instead.
     pub width: &'static str,
     /// The stage's height, a CSS length. Fixed, so every slide is the same
     /// box and a picture is fitted into it rather than sizing it. A picture

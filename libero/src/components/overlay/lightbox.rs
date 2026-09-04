@@ -35,10 +35,15 @@ const LIGHTBOX_TRANSFORM: CssVar = CssVar::new("--lsx-lightbox-transform");
 /// thumbnails and centres.
 const LIGHTBOX_THUMBNAILS_SHOWN: CssVar = CssVar::new("--lsx-lightbox-thumbnails-shown");
 
-/// Below the smallest breakpoint the viewer takes the whole width of the
-/// screen: a phone has none to spare for a margin round a picture.
+/// On a phone the viewer takes the whole width of the screen: it has none to
+/// spare for a margin round a picture. Either way up - `xs` alone (576px)
+/// caught every phone held upright and none held sideways, which are 640 to
+/// 932px wide but never more than 480px tall.
 fn phone() -> String {
-    format!("(width < {})", Size::Xs.breakpoint_value())
+    format!(
+        "(width < {}), (height < 30rem)",
+        Size::Sm.breakpoint_value()
+    )
 }
 
 static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {

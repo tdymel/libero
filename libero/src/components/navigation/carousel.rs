@@ -286,6 +286,24 @@ fn index_range(count: usize, per_view: f64, align: CarouselAlign) -> (usize, usi
     (first, last.max(first))
 }
 
+/// Where `index` stands among the positions the strip can actually rest at,
+/// and how many there are - what the status and the dots count, as Mantine
+/// counts Embla's snaps rather than slides. Six slides three-up rest at four
+/// places, so the status runs "1 of 4" to "4 of 4", and a strip whose slides
+/// all fit rests at one: "1 of 1". A looping strip has a position per slide.
+fn snap_position(
+    index: usize,
+    count: usize,
+    first: usize,
+    last: usize,
+    looping: bool,
+) -> (usize, usize) {
+    match looping {
+        true => (index.min(count.saturating_sub(1)), count),
+        false => (index.clamp(first, last) - first, last - first + 1),
+    }
+}
+
 /// The keys the track acts on, so a slide can keep them.
 ///
 /// A caller's `TextField` inside a slide is not code this component owns and
@@ -970,7 +988,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let variables: Input<Variables> =
         carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
 
-    let status = CarouselDefaults::format_label(theme.carousel.status_label, settled(), count);
+    let (position, positions) = snap_position(settled(), count, first, last, clones > 0);
+    let status = CarouselDefaults::format_label(theme.carousel.status_label, position, positions);
 
     // The strip: the tail cloned onto the front, the slides, the head cloned
     // onto the back. Without looping the clones are empty and this is just the
@@ -1172,8 +1191,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
                                 .with("current", index == current()),
                             aria_label: CarouselDefaults::format_label(
                                 theme.carousel.indicator_label,
-                                index,
-                                count,
+                                index - low,
+                                high - low + 1,
                             ),
                             aria_current: (index == current()).then(|| "true".to_string()),
                             // Roving: one tab stop for the whole strip. The
@@ -1233,6 +1252,23 @@ mod tests {
         assert_eq!(index_range(3, 3.0, start), (0, 0));
         assert_eq!(index_range(2, 5.0, start), (0, 0));
         assert_eq!(index_range(0, 1.0, start), (0, 0));
+    }
+
+    /// The status and the dots count resting positions, not slides.
+    #[test]
+    fn the_status_counts_where_the_strip_can_rest() {
+        let (first, last) = index_range(6, 3.0, CarouselAlign::Center);
+        assert_eq!(snap_position(1, 6, first, last, false), (0, 4));
+        assert_eq!(snap_position(4, 6, first, last, false), (3, 4));
+
+        // All six fit: one resting place, whichever slide was asked for.
+        let (first, last) = index_range(6, 6.0, CarouselAlign::Center);
+        assert_eq!(snap_position(5, 6, first, last, false), (0, 1));
+        assert_eq!(snap_position(0, 6, first, last, false), (0, 1));
+
+        // One-up and looping: a position per slide, as before.
+        assert_eq!(snap_position(2, 6, 0, 5, false), (2, 6));
+        assert_eq!(snap_position(5, 6, 0, 0, true), (5, 6));
     }
 
     /// The alignment slides the reachable window: the same strip reaches 0-3

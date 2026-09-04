@@ -1260,10 +1260,11 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     assert!(html.contains(r#"aria-disabled="true""#), "{html}");
     assert!(!html.contains("disabled=true"), "{html}");
 
-    // The live region reads the settled slide, politely, as one utterance.
+    // The live region reads the settled position, politely, as one
+    // utterance - out of the four places the strip can rest, as Mantine counts.
     assert!(html.contains(r#"role="status""#), "{html}");
     assert!(html.contains(r#"aria-live="polite""#), "{html}");
-    assert!(html.contains("Slide 1 of 6"), "{html}");
+    assert!(html.contains("Slide 1 of 4"), "{html}");
 }
 
 /// Centred three-up over six slides reaches indices 1-4, not 0-3, so an index

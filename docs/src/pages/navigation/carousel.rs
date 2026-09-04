@@ -7,9 +7,13 @@ use libero::{
 };
 
 /// The slides are fixed markup, not a control: a carousel has nothing to show
-/// without them, and there is nothing here for a reader to vary.
-const FIXED: [&str; 2] = [
+/// without them, and there is nothing here for a reader to vary. It opens on
+/// slide 3 because at slide 1 the strip is at its very start, where every
+/// `align` rests the same way; on a middle slide switching it moves the slide
+/// to the left, the middle or the right at once.
+const FIXED: [&str; 3] = [
     r#"aria_label: "Product photos""#,
+    "index: 2",
     r#"slides: (1..=6)
     .map(|n| rsx! {
         Box {
@@ -78,7 +82,7 @@ pub fn CarouselPage() -> Element {
                     prop("gap", "Size").default(theme.carousel.gap.as_str()).doc("Between slides."),
                     prop("align", "CarouselAlign")
                         .default(theme.carousel.align.as_str())
-                        .doc("Where a snapped slide comes to rest - start, center or end. Above per_view 1 it also moves which indices are reachable, because the browser clamps the scroll at both ends."),
+                        .doc("Where a snapped slide comes to rest - start, center or end. Visible with a fractional per_view; at a whole one the alignments can share their resting offsets. Above per_view 1 it also moves which indices are reachable, because the browser clamps the scroll at both ends."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("Scroll axis."),
@@ -123,14 +127,18 @@ pub fn CarouselPage() -> Element {
                 children_text: "",
                 fixed: FIXED.map(str::to_string).to_vec(),
                 controls: vec![
-                    // Opens at 3, not at the component's own default of 1.
-                    // At 1 a slide fills the viewport, so all three `align`
-                    // values coincide and that control looks dead - and the
-                    // dot strip is one dot per slide, so `indicators` has
-                    // nothing to say either. `code` prints against the real
-                    // default, and unquoted: `per_view` is an `f64`.
+                    // Opens at 1.5, not at the component's own default of 1.
+                    // `align` only moves a slide where the three alignments
+                    // snap to different offsets, and with equal slides that
+                    // takes a fractional `per_view`: at 1 a slide fills the
+                    // viewport, and at 3 the centred and end-aligned snaps
+                    // land on the same whole-slide offsets as the start ones,
+                    // so the control looked dead (todo 153). At 1.5 the slide
+                    // rests at the left, in the middle or at the right, with
+                    // the neighbours peeking round it. `code` prints against
+                    // the real default, and unquoted: `per_view` is an `f64`.
                     Control::slider("per_view", ["1", "1.5", "2", "3", "4"])
-                        .default("3")
+                        .default("1.5")
                         .code(|_, values| match values.str("per_view").as_str() {
                             "1" => vec![],
                             value => vec![format!("per_view: {value}")],
@@ -152,10 +160,10 @@ pub fn CarouselPage() -> Element {
                     ),
                     Control::switch("controls").default(theme.carousel.controls.to_string()),
                     // On, though the theme's default is off: above `per_view`
-                    // 1 the dot strip is the only thing that shows `align`
-                    // moving the reachable window - four dots reading 1-4,
-                    // 2-5 or 3-6 - while the strip itself is clamped at rest
-                    // and cannot move. `code` prints against the theme.
+                    // 1 the dot strip shows `align` moving the reachable
+                    // window - end-aligned at 1.5 has no dot for slide 1, and
+                    // at 3 the dots read 1-4, 2-5 or 3-6. `code` prints
+                    // against the theme.
                     Control::switch("indicators").default("true").code(|_, values| {
                         match values.str("indicators").as_str() {
                             "true" => vec!["indicators: true".to_string()],
@@ -177,6 +185,7 @@ pub fn CarouselPage() -> Element {
                     rsx! {
                         Carousel {
                             aria_label: "Product photos",
+                            index: 2,
                             per_view: values.str("per_view").parse::<f64>().unwrap_or(1.0),
                             gap: values.str("gap"),
                             align: values.str("align"),

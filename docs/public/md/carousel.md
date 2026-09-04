@@ -57,7 +57,10 @@ can compare equal.
 
 `per_view` above `1` shows several slides at once, and the strip then runs out
 of scroll before it runs out of slides - six slides three-up stop at index 3,
-not 5. The indicator strip follows that, so it shows four dots rather than six.
+not 5. The indicator strip and the live region follow that: four dots rather
+than six, and a status that runs "Slide 1 of 4" to "Slide 4 of 4". They count
+where the strip can rest, as Mantine does, so a strip whose slides all fit is
+one position - one dot, "Slide 1 of 1", and both controls inactive.
 
 `align` moves that window rather than just the look. Six slides three-up reach
 indices 0-3 aligned to the start, 1-4 centred and 2-5 aligned to the end,
@@ -67,6 +70,13 @@ and the live region all follow what is actually in that position, and an `index`
 outside the window is pulled into it - so a centred three-up carousel asked for
 slide 0 reports slide 1, which is the one genuinely centred. At `per_view: 1`
 all three alignments coincide.
+
+Where a slide visibly rests needs a fractional `per_view`. With equal slides at
+a whole number, a centred or end-aligned snap often lands on the same offset as
+a start-aligned one - three-up, every alignment rests on whole-slide steps, and
+only the reported index differs. At the very start of the strip, too, every
+alignment rests the same way. The demo above is `1.5` up and opens on slide 3,
+so switching `align` moves that slide to the left, the middle or the right.
 
 ## Vertical
 
@@ -163,7 +173,7 @@ unaffected.
 | `onindexchange` | `EventHandler<usize>` | - | Fired once a scroll settles, and on every control, key, indicator and autoplay tick. |
 | `per_view` | `f64` | `1` | Slides visible at once. Fractional peeks the next one. |
 | `gap` | `Size` | `md` | Between slides. |
-| `align` | `CarouselAlign` | `start` | Where a snapped slide comes to rest - `start`, `center` or `end`. Above `per_view: 1` it also moves which indices are reachable. |
+| `align` | `CarouselAlign` | `start` | Where a snapped slide comes to rest - `start`, `center` or `end`. Visible with a fractional `per_view`; at a whole one the alignments can share their resting offsets. Above `per_view: 1` it also moves which indices are reachable. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. Note this differs from `Orientation`'s own default. |
 | `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel. |
 | `controls` | `bool` | `true` | Prev/next buttons. |
@@ -202,7 +212,7 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `previous_label` / `next_label` | `&'static str` | `Previous slide` / `Next slide` | The controls' names. |
 | `indicator_label` | `&'static str` | `Go to slide {n}` | An indicator's name. |
 | `slide_label` | `&'static str` | `{n} of {m}` | A slide group's name. |
-| `status_label` | `&'static str` | `Slide {n} of {m}` | What the live region reads. |
+| `status_label` | `&'static str` | `Slide {n} of {m}` | What the live region reads. `{m}` counts resting positions, not slides. |
 | `pause_label` | `&'static str` | `Pause slideshow` | The autoplay control's name. It does not change when paused: `aria-pressed` carries the state. |
 
 The label fields are English literals on the theme, the same as `DateDefaults`.
