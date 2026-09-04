@@ -8,7 +8,7 @@ use crate::{
         common::{field_props, focus_ring_sx, input_from_str},
         feedback::Loader,
         form::{
-            SelectionArgs, field_control_sx,
+            SelectionArgs, clear_button, field_control_sx,
             glyphs::{CloseIcon, UploadIcon},
             use_bound, use_field, use_field_frame,
         },
@@ -397,20 +397,21 @@ pub fn FileField(props: FileFieldProps) -> Element {
     // Silent: it sits inside a control that the field's label already names,
     // and `aria-busy` on that control is what says it is waiting.
     let spinner = loading.then(|| rsx! { Loader { size: chip_size } });
-    let clear = (clearable && has_files && interactive).then(|| {
+    let clear = clear_button(
+        clearable && has_files && interactive,
+        size,
+        surface_element,
+        move |event: MouseEvent| {
+            // Clearing is not a click on the control, which would open the
+            // picker straight after emptying the field.
+            event.stop_propagation();
+            emit.call(Files::default());
+        },
+    )
+    .map(|button| {
         rsx! {
             {spinner.clone()}
-            ActionIcon {
-                aria_label: "Clear",
-                size: icon_size.clone(),
-                onclick: move |event: MouseEvent| {
-                    // Clearing is not a click on the control, which would open
-                    // the picker straight after emptying the field.
-                    event.stop_propagation();
-                    emit.call(Files::default());
-                },
-                CloseIcon {}
-            }
+            {button}
         }
     });
     // The frame's trailing slot: the clear button, with the loader ahead of

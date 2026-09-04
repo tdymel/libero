@@ -2,14 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
+        ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
         common::field_props,
-        form::{FIELD_CONTROL_SX, glyphs::CloseIcon, use_bound, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, clear_button, use_bound, use_field, use_field_frame},
         layout::use_box,
         use_combobox,
     },
-    hooks::{PopoverWidth, use_theme},
-    sx::ThemeAwareValue,
+    hooks::{PopoverWidth, use_element, use_theme},
     utils::warn,
 };
 
@@ -121,6 +120,8 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
     }
 
     let state = use_combobox();
+    // What the x hands the focus to once it has cleared the field.
+    let input_element = use_element();
 
     let query = text.to_lowercase();
     let matches: Vec<T> = props
@@ -190,23 +191,18 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         })
         .collect();
 
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
     let clear_input = oninput.clone();
-    let clear = (props.clearable.unwrap_or(false) && !text.is_empty() && !disabled).then(|| {
-        rsx! {
-            ActionIcon {
-                aria_label: "Clear",
-                size: icon_size,
-                onclick: move |_| {
-                    if let Some(oninput) = &clear_input {
-                        oninput(String::new());
-                    }
-                    state.set_active(None);
-                },
-                CloseIcon {}
+    let clear = clear_button(
+        props.clearable.unwrap_or(false) && !text.is_empty() && !disabled,
+        size,
+        input_element,
+        move |_| {
+            if let Some(oninput) = &clear_input {
+                oninput(String::new());
             }
-        }
-    });
+            state.set_active(None);
+        },
+    );
     // The caller's own trailing content keeps its place; the x sits at the end,
     // nearest the frame's edge.
     let trailing = (props.trailing.is_some() || clear.is_some()).then(|| {
@@ -255,6 +251,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             state.open();
         })
         .event("onblur", move |_: FocusEvent| state.close())
+        .element(&input_element)
         .render(HtmlTag::Input, attributes, ());
 
     let listbox = rsx! {

@@ -4,17 +4,16 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
+        ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
         common::field_props,
         form::{
-            field_control_sx, glyphs::CloseIcon, removable_chip, use_bound, use_field,
-            use_field_frame,
+            clear_button, field_control_sx, removable_chip, use_bound, use_field, use_field_frame,
         },
         layout::use_box,
         use_combobox,
     },
-    hooks::{PopoverWidth, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    hooks::{PopoverWidth, use_element, use_theme},
+    sx::{StaticSx, sx},
     utils::warn,
 };
 
@@ -149,6 +148,8 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // be one more thing for every call site to hold.
     let mut text = use_signal(String::new);
     let state = use_combobox();
+    // What the x hands the focus to once it has cleared the field.
+    let input_element = use_element();
 
     let rules = TagRules {
         allow_duplicates: props.allow_duplicates.unwrap_or(false),
@@ -261,25 +262,20 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         })
         .collect();
 
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
     let clear_change = onchange.clone();
     let clearable = props.clearable.unwrap_or(false);
-    let clear = (clearable && !(held.is_empty() && text().is_empty()) && !disabled).then(|| {
-        rsx! {
-            ActionIcon {
-                aria_label: "Clear",
-                size: icon_size,
-                onclick: move |_| {
-                    text.set(String::new());
-                    state.set_active(None);
-                    if let Some(onchange) = &clear_change {
-                        onchange(Vec::new());
-                    }
-                },
-                CloseIcon {}
+    let clear = clear_button(
+        clearable && !(held.is_empty() && text().is_empty()) && !disabled,
+        size,
+        input_element,
+        move |_| {
+            text.set(String::new());
+            state.set_active(None);
+            if let Some(onchange) = &clear_change {
+                onchange(Vec::new());
             }
-        }
-    });
+        },
+    );
 
     let frame = use_field_frame()
         .trailing(&clear)
@@ -391,6 +387,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             }
             state.close();
         })
+        .element(&input_element)
         .render(HtmlTag::Input, attributes, ());
 
     let control = slot.render(

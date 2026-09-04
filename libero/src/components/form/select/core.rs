@@ -2,19 +2,17 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, ComboboxCore, ComboboxOption, HtmlTag, Input, States,
+        ComboboxCore, ComboboxOption, HtmlTag, Input, States,
         common::{attr, field_props, focus_ring_sx},
         form::{
-            field_control_sx,
-            glyphs::{ChevronIcon, CloseIcon},
-            use_field, use_field_frame,
+            clear_button, field_control_sx, glyphs::ChevronIcon, use_field, use_field_frame,
+            use_refocus_on_close,
         },
         layout::use_box,
         use_combobox,
     },
     hooks::{PopoverWidth, use_element, use_theme},
-    platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, sx},
 };
 
 /// The trigger is the frame's control: one line, the selection or the
@@ -190,7 +188,6 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let mut cursor = use_signal(|| None::<usize>);
     let search = use_element();
     let trigger_element = use_element();
-    let mut was_open = use_signal(|| false);
 
     // Which rows survive the query, and what each one's index was in the full
     // list. `onpick` reports the original index, so the skins never remap.
@@ -232,29 +229,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         state.set_opened(next);
     };
 
-    // Closing clears the query and hands focus back to the trigger, which would
-    // otherwise be lost to the body - the box the user was typing in has just
-    // unmounted.
-    //
-    // Opening is deliberately *not* handled here. The list is
-    // `visibility: hidden` until `use_popover` has measured it, and focusing a
-    // hidden element does nothing while still reporting success, so focusing
-    // the box on mount never took. `ComboboxCore` does it instead, once the box
-    // is on screen - that is what `autofocus` is.
-    use_effect(use_reactive!(|(opened, searchable)| {
-        if !searchable {
-            return;
-        }
-        // `peek`, so writing it below cannot re-trigger this effect forever.
-        let previously = *was_open.peek();
-        if previously && !opened {
-            query.set(String::new());
-            let _ = trigger_element.focus();
-        }
-        if previously != opened {
-            was_open.set(opened);
-        }
-    }));
+    use_refocus_on_close(opened, searchable, trigger_element, query);
 
     let field = use_field()
         .labelled_by()
@@ -276,17 +251,12 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let onclear = props.onclear;
     let onremove = props.onremove;
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
-    let clear = (props.clearable && has_selection && !disabled).then(|| {
-        rsx! {
-            ActionIcon {
-                aria_label: "Clear",
-                size: icon_size,
-                onclick: move |_| onclear.call(()),
-                CloseIcon {}
-            }
-        }
-    });
+    let clear = clear_button(
+        props.clearable && has_selection && !disabled,
+        size,
+        trigger_element,
+        move |_| onclear.call(()),
+    );
 
     let frame = use_field_frame()
         .trailing(&clear)

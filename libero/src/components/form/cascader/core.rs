@@ -4,20 +4,18 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Box, ComboboxOption, HtmlTag, Input, States,
+        Box, ComboboxOption, HtmlTag, Input, States,
         common::{attr, field_props, input_from_str},
         form::{
-            combobox::COMBOBOX_DROPDOWN_SX,
-            field_control_sx,
-            glyphs::{ChevronIcon, CloseIcon},
-            use_combobox, use_field, use_field_frame,
+            clear_button, combobox::COMBOBOX_DROPDOWN_SX, field_control_sx, glyphs::ChevronIcon,
+            use_combobox, use_field, use_field_frame, use_refocus_on_close,
         },
         layout::{ScrollArea, use_box},
     },
     hooks::{PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
     platform::ElementApi,
     str_enum::str_enum,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, sx},
 };
 
 use super::{
@@ -281,7 +279,6 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let mut query = use_signal(String::new);
     let search = use_element();
     let trigger_element = use_element();
-    let mut was_open = use_signal(|| false);
 
     let nodes = props.options.0.clone();
     let separator = props.separator.clone();
@@ -366,24 +363,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         })
     };
 
-    // Closing clears the query and hands focus back to the trigger, which
-    // would otherwise be lost to the body - the box the user was typing in has
-    // just unmounted. Opening is deliberately not handled here: the list is
-    // `visibility: hidden` until `use_popover` has measured it, and focusing a
-    // hidden element does nothing while still reporting success.
-    use_effect(use_reactive!(|(opened, searchable)| {
-        if !searchable {
-            return;
-        }
-        let previously = *was_open.peek();
-        if previously && !opened {
-            query.set(String::new());
-            let _ = trigger_element.focus();
-        }
-        if previously != opened {
-            was_open.set(opened);
-        }
-    }));
+    use_refocus_on_close(opened, searchable, trigger_element, query);
 
     let field = use_field()
         .labelled_by()
@@ -403,20 +383,15 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .attributes(&props.attributes)
         .prepare();
 
-    let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
-    let clear = (props.clearable && committed.is_some() && !disabled).then(|| {
-        rsx! {
-            ActionIcon {
-                aria_label: "Clear",
-                size: icon_size,
-                onclick: move |_| {
-                    onpick.call(None);
-                    state.close();
-                },
-                CloseIcon {}
-            }
-        }
-    });
+    let clear = clear_button(
+        props.clearable && committed.is_some() && !disabled,
+        size,
+        trigger_element,
+        move |_| {
+            onpick.call(None);
+            state.close();
+        },
+    );
 
     let frame = use_field_frame()
         .trailing(&clear)
@@ -853,8 +828,8 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
-            // The same handler as the wrapper's, because the dropdown is
-            // portaled: it is no descendant of that wrapper, so a key pressed
+            // The same handler as the trigger's, because the dropdown is
+            // portaled: it is no descendant of the trigger, so a key pressed
             // inside it would otherwise bubble to `PortalOutlet` and die.
             .event("onkeydown", move |event: KeyboardEvent| {
                 dropdown_keys(event)
@@ -924,6 +899,10 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                 state.close();
             }
         })
+        // On the trigger, not on a wrapper around the frame: the frame also
+        // holds the x, and a wrapper would take its Enter and Space to open
+        // the list instead of letting the button clear.
+        .event("onkeydown", move |event: KeyboardEvent| keys(event))
         .render(
             HtmlTag::Div,
             attributes,
@@ -956,10 +935,6 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         {
             wrapper
                 .element(&anchor)
-                // The trigger is inside this wrapper, so the keys are caught
-                // where they bubble to. The portaled dropdown carries the very
-                // same handler, for focus that moved into the search box.
-                .event("onkeydown", move |event: KeyboardEvent| keys(event))
                 .render(HtmlTag::Div, Vec::new(), frame.render(trigger))
         }
         {hidden}
