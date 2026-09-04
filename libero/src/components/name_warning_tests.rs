@@ -98,15 +98,14 @@ fn an_unnamed_dialog_warns() {
     ));
 }
 
-/// A drawer's dialog cannot be named yet, so it must not nag.
 #[test]
-fn a_drawer_does_not_warn_about_a_name_it_cannot_take() {
+fn an_unnamed_drawer_warns() {
+    assert!(warns(
+        || rsx! { LiberoProvider { Drawer { "Nav" } } },
+        "Dialog:"
+    ));
     assert!(!warns(
-        || rsx! {
-            LiberoProvider {
-                Drawer { "Nav" }
-            }
-        },
+        || rsx! { LiberoProvider { Drawer { aria_label: "Navigation", "Nav" } } },
         "Dialog:"
     ));
 }

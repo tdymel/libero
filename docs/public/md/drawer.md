@@ -29,6 +29,7 @@ fn Demo() -> Element {
         DrawerOptions {
             anchor: "right".into(),
             size: "sm".into(),
+            aria_label: Some("Menu".into()),
             ..Default::default()
         },
         |s: ModalScope<()>| {
@@ -60,7 +61,11 @@ data and answers its caller exactly like any other dialog - see
 
 ```rust
 let details = use_drawer(
-    DrawerOptions { anchor: "right".into(), ..Default::default() },
+    DrawerOptions {
+        anchor: "right".into(),
+        aria_label: Some("Order details".into()),
+        ..Default::default()
+    },
     |s: ModalScope<Order, bool>| {
         let order = s.args();
 
@@ -88,8 +93,8 @@ last part is why the panel carries the dialog role for free.
 Escape and a backdrop click close it, settling the `Opening` with `None`, so a
 handler written for an answer never runs on a dismissal.
 
-Give the panel an accessible name where its content does not already provide
-one, with `Dialog`'s `title` or `aria_label` inside the closure. Unlike a plain
+Set `DrawerOptions::aria_label`: the panel is a dialog and has no name of its
+own. Unset, it warns in a debug build. Unlike a plain
 `Dialog`, the drawer panel renders no header close button - a drawer's content
 owns its own dismissal.
 
@@ -117,6 +122,7 @@ Returns the same `ModalHandle` as `use_modal`; every method on it, on
 | `anchor` | `Input<DrawerAnchor>` | `left` | The edge the panel docks to. |
 | `size` | `Input<Size>` | `md` | Width along the docked edge, height for top/bottom. |
 | `z_index` | `Input<ThemeAwareValue>` | - | Stacking order for the docked panel. |
+| `aria_label` | `Option<String>` | - | Names the panel, which is a dialog. Unset warns in a debug build. |
 
 ## Theme defaults
 

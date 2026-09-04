@@ -4,7 +4,6 @@ use crate::{
     components::{
         Dialog, Float, Input, Placement,
         common::{base_props, input_from_str},
-        surface::UnnameableDialog,
     },
     hooks::use_css,
     str_enum::str_enum,
@@ -76,6 +75,8 @@ base_props! {
         size: Input<Size>,
         #[props(default, into)]
         z_index: Input<ThemeAwareValue>,
+        #[props(default, into)]
+        aria_label: Option<String>,
         children: Element,
     }
 }
@@ -84,7 +85,6 @@ base_props! {
 /// the portal and the dismissal are [`crate::hooks::use_drawer`]'s.
 #[component]
 pub(crate) fn Drawer(props: DrawerProps) -> Element {
-    use_context_provider(|| UnnameableDialog);
     let anchor = props.anchor.copied_or_default();
     let size = props.size.copied_or(Size::Md);
 
@@ -109,6 +109,7 @@ pub(crate) fn Drawer(props: DrawerProps) -> Element {
             Dialog {
                 // A drawer's own content owns its dismissal.
                 close_button: false,
+                aria_label: props.aria_label.clone(),
                 class,
                 sx: props.sx.clone(),
                 states,

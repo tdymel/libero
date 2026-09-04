@@ -14,12 +14,6 @@ use crate::{
     utils::{names_itself, use_name_warning},
 };
 
-/// Provided by `Drawer`, whose dialog a caller has no way to name yet
-/// (`DrawerOptions` takes no label), so `Dialog` does not warn about what the
-/// caller cannot fix. A dialog nested in a drawer's content inherits it too.
-#[derive(Clone, Copy)]
-pub(crate) struct UnnameableDialog;
-
 const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");
 
 // A dialog is a `Paper`, so its chrome comes from `paper_sx()` - background,
@@ -104,12 +98,8 @@ pub fn Dialog(props: DialogProps) -> Element {
     let is_modal = modal.is_some();
     let close_button = props.close_button.unwrap_or(is_modal);
     let title_id = use_id();
-    let unnameable = try_use_context::<UnnameableDialog>().is_some();
     use_name_warning(
-        unnameable
-            || props.aria_label.is_some()
-            || props.title.is_some()
-            || names_itself(&props.attributes),
+        props.aria_label.is_some() || props.title.is_some() || names_itself(&props.attributes),
         "Dialog: no `title`, `aria_label` or `aria-labelledby`, so it is announced as just \
          \"dialog\".",
     );

@@ -15,13 +15,19 @@ pub struct DrawerOptions {
     /// Width when docked left or right, height when docked top or bottom.
     pub size: Input<Size>,
     pub z_index: Input<ThemeAwareValue>,
+    /// Names the panel, which is a dialog. Unset is a `warn()`.
+    pub aria_label: Option<String>,
 }
 
 /// A drawer is [`use_modal`] with a docked panel around the content: same
 /// handle, same openings, same results.
 ///
 /// ```ignore
-/// let options = DrawerOptions { anchor: "right".into(), ..Default::default() };
+/// let options = DrawerOptions {
+///     anchor: "right".into(),
+///     aria_label: Some("Navigation".into()),
+///     ..Default::default()
+/// };
 /// let nav = use_drawer(options, |s: ModalScope<()>| rsx! {
 ///     Anchor { to: "/", "Home" }
 /// });
@@ -43,6 +49,7 @@ where
                 anchor: options.anchor.clone(),
                 size: options.size.clone(),
                 z_index: options.z_index.clone(),
+                aria_label: options.aria_label.clone(),
                 {content}
             }
         }

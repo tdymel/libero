@@ -28,6 +28,7 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
              DrawerOptions {{\n        \
                  anchor: {:?}.into(),\n        \
                  size: {:?}.into(),\n        \
+                 aria_label: Some(\"Menu\".into()),\n        \
                  ..Default::default()\n    \
              }},\n    \
              |s: ModalScope<()>| rsx! {{\n{}    }},\n);\n\n\
@@ -43,7 +44,11 @@ fn wrap_hook(values: &DemoValues, _: &str) -> String {
 const ARGS_EXAMPLE: &str = r#"// The argument type is the modal's, so a drawer takes per-opening data and
 // answers its caller exactly like any other dialog.
 let details = use_drawer(
-    DrawerOptions { anchor: "right".into(), ..Default::default() },
+    DrawerOptions {
+        anchor: "right".into(),
+        aria_label: Some("Order details".into()),
+        ..Default::default()
+    },
     |s: ModalScope<Order, bool>| {
         let order = s.args();
 
@@ -66,6 +71,7 @@ fn DrawerDemo(anchor: String, size: String) -> Element {
         DrawerOptions {
             anchor: anchor.into(),
             size: size.into(),
+            aria_label: Some("Menu".into()),
             ..Default::default()
         },
         |s: ModalScope<()>| {
@@ -105,6 +111,7 @@ pub fn DrawerPage() -> Element {
                     prop("anchor", "Input<DrawerAnchor>").default("left").doc("The edge the panel docks to."),
                     prop("size", "Input<Size>").default("md").doc("Width along the docked edge, height for top/bottom."),
                     prop("z_index", "Input<ThemeAwareValue>").doc("Stacking order for the docked panel."),
+                    prop("aria_label", "Option<String>").doc("Names the panel, which is a dialog. Unset warns in a debug build."),
                 ]),
             ],
             lead: rsx! {
@@ -148,11 +155,9 @@ pub fn DrawerPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Escape and a backdrop click close it. Give the panel a name with "
-                    Code { source: "title" }
-                    " or "
-                    Code { source: "aria_label" }
-                    ". Unlike a plain "
+                    "Escape and a backdrop click close it. Set "
+                    Code { source: "DrawerOptions::aria_label" }
+                    ": the panel is a dialog and has no name of its own. Unlike a plain "
                     Code { source: "Dialog" }
                     ", the panel renders no header close button - a drawer's content usually "
                     "owns its own dismissal."
