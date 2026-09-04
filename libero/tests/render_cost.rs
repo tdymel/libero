@@ -174,9 +174,8 @@ fn notifications_app<const N: usize>() -> Element {
     }
 }
 
-/// An `update` of the first notification, which redraws the host and every
-/// shown notification - they all read the store. With none shown, a `clear`,
-/// which redraws the host alone.
+/// An `update` of the first notification, which redraws that notification
+/// alone. With none shown, a `clear`, which redraws the host alone.
 fn notifications_round(dom: &mut VirtualDom) {
     dom.in_scope(ScopeId::APP, || {
         let (notify, first) =
@@ -188,9 +187,29 @@ fn notifications_round(dom: &mut VirtualDom) {
     });
 }
 
+thread_local! {
+    /// The notification [`notifications_list_round`] queued, until it hides it.
+    static QUEUED: std::cell::Cell<Option<NotificationId>> = const { std::cell::Cell::new(None) };
+}
+
+/// A write to the list itself: one round queues a notification past the
+/// limit, the next hides it. Either redraws the host, which compares every
+/// shown notification and redraws none of them - the price of a `show` or a
+/// `hide` with that many on screen.
+fn notifications_list_round(dom: &mut VirtualDom) {
+    dom.in_scope(ScopeId::APP, || {
+        let (notify, _) =
+            consume_context::<(NotificationHandle<NotificationData>, Option<NotificationId>)>();
+        match QUEUED.take() {
+            Some(id) => notify.hide(id),
+            None => QUEUED.set(Some(notify.show("queued"))),
+        }
+    });
+}
+
 /// The `Notifications` rows. "host" is per host, "item" per shown
 /// notification, with the host's share (the "host" row over [`CHILDREN`])
-/// still in it.
+/// still in it, and "update" is one `update` with [`CHILDREN`] shown.
 const NOTIFICATION_SHAPES: &[Shape] = &[
     Shape {
         name: "Notifications host",
@@ -202,6 +221,12 @@ const NOTIFICATION_SHAPES: &[Shape] = &[
         name: "Notifications item",
         app: notifications_app::<CHILDREN>,
         count: CHILDREN,
+        round: notifications_list_round,
+    },
+    Shape {
+        name: "Notifications update",
+        app: notifications_app::<CHILDREN>,
+        count: 1,
         round: notifications_round,
     },
 ];

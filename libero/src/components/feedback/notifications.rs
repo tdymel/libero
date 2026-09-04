@@ -2,12 +2,12 @@ use std::{
     any::Any,
     cell::{Cell, RefCell},
     marker::PhantomData,
-    rc::Rc,
+    rc::{Rc, Weak},
     sync::atomic::{AtomicU64, Ordering},
     time::Duration,
 };
 
-use dioxus::prelude::*;
+use dioxus::{core::Runtime, prelude::*};
 
 use crate::{
     components::{
@@ -155,7 +155,7 @@ impl From<String> for NotificationData {
     }
 }
 
-type Draw = Rc<dyn Fn(NotificationId) -> Element>;
+type Draw = Rc<dyn Fn() -> Element>;
 
 /// A notification with its type erased, so the store, the timers and the host
 /// compile once whatever `T`s an app uses.
@@ -164,18 +164,29 @@ struct Entry {
     /// The `T`, so [`NotificationHandle::update`] can replace it and
     /// [`NotificationScope::args`] can read it. Only ever downcast to the `T`
     /// of the handle that stored it.
-    args: std::boxed::Box<dyn Any>,
-    /// The template with `T` still known, called by the host in its own scope.
+    ///
+    /// A signal of its own, not a field read through `entries`: only the
+    /// template that reads it redraws when it changes, and an `update` leaves
+    /// the host and every other notification alone.
+    args: Signal<std::boxed::Box<dyn Any>>,
+    /// The template with `T` still known, called by the notification's own
+    /// scope.
     draw: Draw,
     position: Option<Placement>,
     auto_close: Option<AutoClose>,
-    closable: bool,
     live: NotificationLive,
     /// Closing: the exit is running, and it is removed when that ends.
     leaving: bool,
     /// Has been on screen. One that never was - queued past the limit - has
     /// no exit to run and is removed at once.
     shown: Cell<bool>,
+}
+
+impl Drop for Entry {
+    /// The root owns `args`, so nothing else would ever drop it.
+    fn drop(&mut self) {
+        self.args.manually_drop();
+    }
 }
 
 /// The queue. Lives in the root scope, so it outlives every component that
@@ -188,9 +199,23 @@ struct NotificationStore {
     /// and a close button someone tabbed to must not disappear under them.
     hovered: Signal<Option<NotificationId>>,
     focused: Signal<Option<NotificationId>>,
+    /// The runtime the store was made in. `show` creates a signal, which
+    /// needs one, and may be called from a timer callback that runs outside
+    /// every runtime. Weak: the runtime owns the store.
+    runtime: CopyValue<Weak<Runtime>>,
 }
 
 impl NotificationStore {
+    /// A new signal owned by the root, like the store's own.
+    fn root_signal<V: 'static>(&self, value: V) -> Signal<V> {
+        let runtime = self
+            .runtime
+            .peek()
+            .upgrade()
+            .expect("the notification store outlived its runtime");
+        runtime.in_scope(ScopeId::ROOT, || Signal::new_in_scope(value, ScopeId::ROOT))
+    }
+
     fn paused(&self) -> bool {
         self.hovered.read().is_some() || self.focused.read().is_some()
     }
@@ -227,6 +252,7 @@ fn use_notification_store() -> NotificationStore {
                 entries: Signal::new_in_scope(Vec::new(), ScopeId::ROOT),
                 hovered: Signal::new_in_scope(None, ScopeId::ROOT),
                 focused: Signal::new_in_scope(None, ScopeId::ROOT),
+                runtime: CopyValue::new_in_scope(Rc::downgrade(&Runtime::current()), ScopeId::ROOT),
             })
         })
     })
@@ -237,7 +263,9 @@ fn use_notification_store() -> NotificationStore {
 pub struct NotificationScope<T: 'static> {
     id: NotificationId,
     store: NotificationStore,
-    args: PhantomData<fn() -> T>,
+    args: Signal<std::boxed::Box<dyn Any>>,
+    closable: bool,
+    ty: PhantomData<fn() -> T>,
 }
 
 impl<T: 'static> Clone for NotificationScope<T> {
@@ -260,25 +288,17 @@ impl<T: 'static> NotificationScope<T> {
 
     /// [`NotificationOptions::closable`]: whether to draw a close control.
     pub fn closable(&self) -> bool {
-        self.store
-            .entries
-            .read()
-            .iter()
-            .find(|entry| entry.id == self.id)
-            .is_some_and(|entry| entry.closable)
+        self.closable
     }
 }
 
 impl<T: Clone + 'static> NotificationScope<T> {
     /// The data it was shown with, or last updated to.
     pub fn args(&self) -> T {
-        self.store
-            .entries
-            .read()
-            .iter()
-            .find(|entry| entry.id == self.id)
-            .and_then(|entry| entry.args.downcast_ref::<T>())
-            .cloned()
+        self.args
+            .try_read()
+            .ok()
+            .and_then(|args| args.downcast_ref::<T>().cloned())
             .expect("NotificationScope used after its notification was removed")
     }
 }
@@ -311,22 +331,25 @@ impl<T: 'static> NotificationHandle<T> {
         let id = NotificationId(NEXT_ID.fetch_add(1, Ordering::Relaxed));
         let store = self.store;
         let template = self.template;
-        let draw: Draw = Rc::new(move |id| {
+        let args = store.root_signal(std::boxed::Box::new(args.into()) as std::boxed::Box<dyn Any>);
+        let closable = options.closable;
+        let draw: Draw = Rc::new(move || {
             template(NotificationScope {
                 id,
                 store,
-                args: PhantomData,
+                args,
+                closable,
+                ty: PhantomData,
             })
         });
 
         let mut entries = self.store.entries;
         entries.write().push(Entry {
             id,
-            args: std::boxed::Box::new(args.into()),
+            args,
             draw,
             position: options.position,
             auto_close: options.auto_close,
-            closable: options.closable,
             live: options.live,
             leaving: false,
             shown: Cell::new(false),
@@ -338,12 +361,18 @@ impl<T: 'static> NotificationHandle<T> {
     /// "Uploaded". Its place in the stack and its timer are untouched. Does
     /// nothing once it is gone.
     pub fn update(&self, id: NotificationId, args: impl Into<T>) {
-        let mut entries = self.store.entries;
-        let mut entries = entries.write();
-        let Some(entry) = entries.iter_mut().find(|entry| entry.id == id) else {
+        // `peek`: the list itself is untouched, so nothing that draws it
+        // should hear of this.
+        let entries = self.store.entries.peek();
+        let Some(mut slot) = entries
+            .iter()
+            .find(|entry| entry.id == id)
+            .map(|entry| entry.args)
+        else {
             return;
         };
-        match entry.args.downcast_mut::<T>() {
+        drop(entries);
+        match slot.write().downcast_mut::<T>() {
             Some(slot) => *slot = args.into(),
             None => warn("NotificationHandle::update: that id belongs to another template"),
         }
@@ -394,8 +423,9 @@ pub fn use_notifications() -> NotificationHandle<NotificationData> {
 /// uploads.update(id, Upload { file: "archive.zip".into(), percent: 40.0 });
 /// ```
 ///
-/// The template is called in the host's scope on every render, so it may call
-/// hooks, the same ones every time.
+/// The template is called in its notification's own scope, on every render,
+/// so it may call hooks, the same ones every time. That scope redraws when the
+/// notification's data changes, and no other does.
 pub fn use_notifications_with<T: 'static>(
     template: fn(NotificationScope<T>) -> Element,
 ) -> NotificationHandle<T> {
@@ -617,12 +647,15 @@ fn NotificationItem(props: ItemProps) -> Element {
     let subscription =
         use_hook(|| Rc::new(RefCell::new(None::<std::boxed::Box<dyn TimerSubscription>>)));
 
-    let paused = store.paused();
     let leaving = props.leaving;
     let auto_close = props.auto_close;
     let exit_ms = props.exit_ms;
     let armed = subscription.clone();
-    use_effect(use_reactive!(|(paused, leaving, auto_close, exit_ms)| {
+    use_effect(use_reactive!(|(leaving, auto_close, exit_ms)| {
+        // Read here and not in the render: the effect subscribes to what it
+        // reads, so the pointer moving onto a notification re-arms every
+        // timer without redrawing a single notification.
+        let paused = store.paused();
         let mut armed = armed.borrow_mut();
         *armed = None;
 
@@ -680,5 +713,5 @@ fn NotificationItem(props: ItemProps) -> Element {
                 focused.set(None);
             }
         })
-        .render(HtmlTag::Li, Vec::new(), (props.draw.0)(id))
+        .render(HtmlTag::Li, Vec::new(), (props.draw.0)())
 }

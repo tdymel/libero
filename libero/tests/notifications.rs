@@ -4,17 +4,20 @@
 
 mod common;
 
+use std::cell::RefCell;
 use std::thread;
 use std::time::{Duration, Instant};
 
 use common::{body, render};
 
+use dioxus::dioxus_core::{NoOpMutations, ScopeId};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        NotificationData, NotificationLive, NotificationOptions, NotificationScope, Notifications,
-        Placement, use_notifications, use_notifications_with,
+        NotificationData, NotificationHandle, NotificationId, NotificationLive,
+        NotificationOptions, NotificationScope, Notifications, Placement, use_notifications,
+        use_notifications_with,
     },
     theme::{AutoClose, NotificationDefaults, Theme},
 };
@@ -201,6 +204,73 @@ fn a_custom_template_draws_its_own_data_and_update_replaces_it() {
 
     assert_eq!(shown.len(), 1, "{html}");
     assert!(shown[0].contains("archive.zip: 40%"), "{}", shown[0]);
+}
+
+thread_local! {
+    /// Which notifications [`counting_template`] drew, in order.
+    static DRAWN: RefCell<Vec<&'static str>> = const { RefCell::new(Vec::new()) };
+}
+
+fn counting_template(s: NotificationScope<Upload>) -> Element {
+    let upload = s.args();
+    DRAWN.with_borrow_mut(|drawn| drawn.push(upload.file));
+    rsx! {
+        p { "{upload.file}: {upload.percent}%" }
+    }
+}
+
+/// Each notification reads its own data, so a write redraws the one it
+/// concerns: an `update` or a `hide` redraws that notification, and a `show`
+/// only the new one.
+#[test]
+fn a_store_write_redraws_only_the_notification_it_concerns() {
+    fn app() -> Element {
+        let uploads = use_notifications_with(counting_template);
+        use_context_provider(|| {
+            let [a, b] = ["a", "b"].map(|file| uploads.show(Upload { file, percent: 0 }));
+            (uploads, a, b)
+        });
+        rsx! {
+            LiberoProvider { Notifications {} }
+        }
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    dom.render_immediate(&mut NoOpMutations);
+    let (uploads, a, b) = dom.in_scope(ScopeId::APP, || {
+        consume_context::<(NotificationHandle<Upload>, NotificationId, NotificationId)>()
+    });
+    let round = |dom: &mut VirtualDom, write: &dyn Fn()| {
+        DRAWN.with_borrow_mut(Vec::clear);
+        dom.in_runtime(write);
+        dom.render_immediate(&mut NoOpMutations);
+        DRAWN.with_borrow_mut(std::mem::take)
+    };
+
+    let drawn = round(&mut dom, &|| {
+        uploads.update(
+            a,
+            Upload {
+                file: "a",
+                percent: 50,
+            },
+        )
+    });
+    assert_eq!(drawn, ["a"]);
+    let html = body(&dioxus_ssr::render(&dom));
+    assert!(html.contains("a: 50%") && html.contains("b: 0%"), "{html}");
+
+    let drawn = round(&mut dom, &|| {
+        uploads.show(Upload {
+            file: "c",
+            percent: 0,
+        });
+    });
+    assert_eq!(drawn, ["c"]);
+
+    let drawn = round(&mut dom, &|| uploads.hide(b));
+    assert_eq!(drawn, ["b"]);
 }
 
 /// Short enough that a test waits milliseconds, not seconds.
