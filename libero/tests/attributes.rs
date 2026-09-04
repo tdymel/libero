@@ -93,7 +93,9 @@ fn a_colored_header_that_becomes_unset_reverts_its_variables() {
 
     assert_eq!(
         style,
-        Some("Text(\"--lsx-header-background:revert-layer;--lsx-header-color:revert-layer;\")"),
+        Some(
+            "Text(\"--lsx-header-background:revert-layer;--lsx-header-color:revert-layer;--lsx-focus-contrast:revert-layer;\")"
+        ),
         "the header kept its old color variables: {:?}",
         writes.0
     );

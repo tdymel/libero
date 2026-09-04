@@ -160,12 +160,14 @@ base_props! {
         /// The ink.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Turns the loader into a live region announcing this text.
+        /// Turns the loader into a live region holding this text.
         ///
-        /// Pass it **only** when the loader is the sole content of the area
-        /// that is loading. Beside its own visible text, or inside a control
-        /// that already has a name, leave it `None` - the default is
-        /// `aria-hidden`, and a second announcement of the same state is
+        /// It mounts with the text already in it, and some screen readers
+        /// do not announce a region like that. To announce a wait, keep the
+        /// loader silent and fill an always-mounted status region outside
+        /// the busy element (see "Announcing it" on [`Loader`]). Beside its
+        /// own visible text, or inside a control that already has a name,
+        /// leave it `None` - a second announcement of the same state is
         /// noise, not help.
         #[props(default, into)]
         label: Option<String>,
@@ -191,12 +193,26 @@ base_props! {
 /// |---|---|---|
 /// | beside its own visible text | `Loader {}` | `aria-hidden="true"` |
 /// | inside an already-named control | `Loader {}` | `aria-hidden="true"`; the control's name plus `aria-busy` carries it |
-/// | the only content of a region | `Loader { label: "Loading results" }`, and `aria-busy="true"` on the region | `role="status"` and a visually-hidden text node |
+/// | the only content of a region | `Loader {}`, `aria-busy="true"` on the region, and the text in an always-mounted `role="status"` region outside it | `aria-hidden="true"`; the status region carries it |
 ///
-/// The label is a *text node*, not `aria-label`: a live region announces its
-/// contents, so naming it announces nothing. `role="status"` already implies
+/// The status region must exist before the wait starts and must not sit inside
+/// the busy element. Some screen readers skip a live region that mounts with
+/// its text, and some hold back changes inside an `aria-busy` subtree until it
+/// is no longer busy - by which time the loader is gone. `ComboboxCore` does
+/// it this way:
+///
+/// ```rust,ignore
+/// Box { "aria-busy": loading,
+///     if loading { Loader {} } else { ResultList { rows } }
+/// }
+/// VisuallyHidden { role: "status", if loading { "Loading results" } }
+/// ```
+///
+/// `label` makes the loader its own status region instead, with the text as
+/// a *text node*, not `aria-label`: a live region announces its contents, so
+/// naming it announces nothing. `role="status"` already implies
 /// `aria-live="polite"` and `aria-atomic="true"`, which is why neither is
-/// restated here.
+/// restated here. It mounts with its text, so it has the first risk above.
 ///
 /// Not focusable, and no keyboard behaviour at all.
 #[component]

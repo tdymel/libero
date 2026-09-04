@@ -223,3 +223,20 @@ pub fn ClipboardCheckIcon() -> Element {
         }
     }
 }
+
+#[component]
+pub fn SearchIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            circle { cx: "11", cy: "11", r: "7" }
+            path { d: "M20 20l-4-4" }
+        }
+    }
+}

@@ -1,31 +1,38 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Box, Code, Flex, Input, Loader, Text};
+use libero::components::{Box, Code, Flex, Input, Loader, Text, VisuallyHidden};
 
 /// Beside its own text, the text is the message and the loader stays silent.
-/// With a `label` it is the sole content of a region, which carries
-/// `aria-busy`.
+/// As the sole content of a busy region it stays silent too, and a status
+/// region outside that region says the text.
 fn wrap_context(values: &DemoValues, code: &str) -> String {
     if beside_text(values) {
         format!(
             "Flex {{ direction: \"row\", align: \"center\", gap: \"sm\",\n{}    Text {{ \"Uploading…\" }}\n}}",
             indent(code)
         )
-    } else if labelled(values) {
-        format!("Box {{ \"aria-busy\": \"true\",\n{}}}", indent(code))
+    } else if in_region(values) {
+        format!(
+            "Box {{ \"aria-busy\": \"true\",\n{}}}\n\
+             // Always mounted, outside the busy element. Empty once loading ends.\n\
+             VisuallyHidden {{ role: \"status\", \"{LOADING}\" }}",
+            indent(code)
+        )
     } else {
         code.to_string()
     }
 }
 
+const LOADING: &str = "Loading results";
+
 fn beside_text(values: &DemoValues) -> bool {
     values.str("beside_text") == "true"
 }
 
-/// A loader beside its own text never takes a label: that would announce the
-/// same state twice.
-fn labelled(values: &DemoValues) -> bool {
-    values.str("label") == "true" && !beside_text(values)
+/// A loader beside its own text needs no status region: the text is already
+/// on screen.
+fn in_region(values: &DemoValues) -> bool {
+    values.str("sole_content") == "true" && !beside_text(values)
 }
 
 #[component]
@@ -46,7 +53,7 @@ pub fn LoaderPage() -> Element {
                     .default("primary")
                     .doc("The ink; a theme color name or a literal CSS color."),
                 prop("label", "Option<String>")
-                    .doc("Makes the loader a `role=\"status\"` live region that announces this text. Pass it only when the loader is the sole content of the area that is loading; mark that area `aria-busy` while it waits."),
+                    .doc("Makes the loader its own `role=\"status\"` live region holding this text. It mounts with the text already in it, which some screen readers do not announce, so to announce a wait use an always-mounted status region outside the busy element instead."),
             ])],
             lead: rsx! {
                 Text {
@@ -70,19 +77,16 @@ pub fn LoaderPage() -> Element {
                     Code { source: "loading" }
                     " - the control's name plus "
                     Code { source: "aria-busy" }
-                    " carries it. Leave "
-                    Code { source: "label" }
-                    " unset in both. Only as the sole content of a region does the loader "
-                    "speak: with a "
-                    Code { source: "label" }
-                    " it renders "
-                    Code { source: "role=\"status\"" }
-                    " and the label as a visually hidden text node, and the region is marked "
+                    " carries it. As the sole content of a region, mark the region "
                     Code { source: "aria-busy" }
-                    ". Switch "
+                    " and keep the loader silent there too. The text goes into a "
+                    Code { source: "role=\"status\"" }
+                    " region that is always mounted and sits outside the busy element, and "
+                    "is filled only while loading. A region that mounts with its text, or "
+                    "changes inside a busy element, may never be read. Switch "
                     Code { source: "Beside text" }
                     " and "
-                    Code { source: "Label" }
+                    Code { source: "Sole content" }
                     " to see both."
                 }
             },
@@ -96,17 +100,11 @@ pub fn LoaderPage() -> Element {
                     // A bare `primary` is what an unset `color` resolves to,
                     // so that swatch prints nothing.
                     Control::color("color"),
-                    // Not a prop: it puts the loader beside its own text,
-                    // where `label` does not belong.
+                    // Neither is a prop: they place the loader beside its
+                    // own text, or alone in a busy region.
                     Control::switch("beside_text").code(|_, _| vec![]),
-                    Control::switch("label")
-                        .code(|_, values| {
-                            if labelled(values) {
-                                vec![r#"label: "Loading""#.to_string()]
-                            } else {
-                                vec![]
-                            }
-                        })
+                    Control::switch("sole_content")
+                        .code(|_, _| vec![])
                         .hidden_when(beside_text),
                 ],
                 wrap: Wrap(wrap_context),
@@ -119,10 +117,10 @@ pub fn LoaderPage() -> Element {
                                 "primary" => Input::None,
                                 color => Input::from(color),
                             },
-                            label: labelled(&values).then(|| "Loading".to_string()),
                         }
                     };
-                    match (beside_text(&values), labelled(&values)) {
+                    let in_region = in_region(&values);
+                    let shown = match (beside_text(&values), in_region) {
                         (true, _) => rsx! {
                             Flex { direction: "row", align: "center", gap: "sm",
                                 {loader}
@@ -133,6 +131,12 @@ pub fn LoaderPage() -> Element {
                             Box { "aria-busy": "true", {loader} }
                         },
                         (false, false) => loader,
+                    };
+                    // Mounted in every arm, so switching `Sole content` on
+                    // changes the text of a region that already exists.
+                    rsx! {
+                        {shown}
+                        VisuallyHidden { role: "status", if in_region { "{LOADING}" } }
                     }
                 },
             }

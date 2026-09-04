@@ -9,7 +9,7 @@ use crate::{
     },
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, Size, Z_INDEX_HEADER},
+    theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, NamedColorCss, Size, Z_INDEX_HEADER},
 };
 
 str_enum! {
@@ -72,7 +72,10 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
 
 fn header_variables(props: &HeaderProps) -> Variables {
     let base = header_base_color(props.color.as_ref());
-    let contrast = base.as_ref().and_then(header_contrast_color);
+    let contrast = base
+        .as_ref()
+        .and_then(header_contrast_color)
+        .and_then(|v| v.resolve(None));
 
     variables()
         .with(
@@ -83,9 +86,14 @@ fn header_variables(props: &HeaderProps) -> Variables {
             HEADER_BACKGROUND_VAR,
             base.as_ref().and_then(|v| v.resolve(None)),
         )
+        .with(HEADER_COLOR_VAR, contrast.clone())
+        // The background comes through a var, so `sx` cannot publish the
+        // focus contrast from it (`codebase/sx`): without this every ring in a
+        // coloured header is the primary shade on a primary banner. Only with
+        // a `color`, so an uncoloured header inherits the page's.
         .with(
-            HEADER_COLOR_VAR,
-            contrast.as_ref().and_then(|v| v.resolve(None)),
+            CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+            contrast,
         )
         .with(Z_INDEX_HEADER.override_var(), props.z_index.resolve(None))
 }
@@ -155,6 +163,7 @@ mod tests {
 
         assert!(variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(variables.contains(HEADER_COLOR_VAR.name()));
+        assert!(variables.contains(NamedColorCss::FOCUS_CONTRAST.name()));
     }
 
     /// Unset means the themed default applies, so neither var is pinned.
@@ -164,5 +173,6 @@ mod tests {
 
         assert!(!variables.contains(HEADER_BACKGROUND_VAR.name()));
         assert!(!variables.contains(HEADER_COLOR_VAR.name()));
+        assert!(!variables.contains(NamedColorCss::FOCUS_CONTRAST.name()));
     }
 }

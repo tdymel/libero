@@ -9,8 +9,9 @@ use libero::{
         Burger, Button, Container, Flex, Header, Image, Kbd, Notifications, ScrollArea,
         SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
+    hooks::use_element,
     sx::sx,
-    theme::{HEADER_HEIGHT, Size},
+    theme::{HEADER_HEIGHT, PAPER_BACKGROUND, Size},
 };
 
 mod components;
@@ -18,6 +19,7 @@ mod icons;
 mod nav;
 mod pages;
 
+use icons::SearchIcon;
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
@@ -258,6 +260,7 @@ fn App() -> Element {
 #[component]
 fn AppShell() -> Element {
     let mut open = use_signal(|| false);
+    let burger = use_element();
     // The docs search: every page, Ctrl/Cmd+K from anywhere.
     let pages = use_hook(nav::page_actions);
     let search = use_spotlight(SpotlightOptions {
@@ -277,33 +280,39 @@ fn AppShell() -> Element {
             Header {
                 color: "primary",
                 sx: sx().gap("md"),
-                Burger {
-                    opened: open(),
-                    "aria-controls": "docs-nav",
-                    onclick: move |_| open.set(!open()),
-                    // No `variant`/`color` prop - the underlying ActionIcon
-                    // then contributes no background/color/hover of its own
-                    // (same reasoning as `Code`'s copy button), so this `sx`
-                    // is the only thing controlling its look. Needed here
-                    // specifically: the shade-based hover `variant`/`color`
-                    // would compute (tinting `color` a shade lighter) is a
-                    // no-op on white - there's no lighter shade of white, so
-                    // it rendered as a solid white box instead of a subtle
-                    // hover. A translucent white overlay is the actual right
-                    // look for a light control against Header's solid
-                    // primary banner.
-                    //
-                    // `color` stays an `sx` rather than the `color` prop: the
-                    // bars fall back to `currentColor`, so one declaration
-                    // still drives them.
-                    sx: sx()
-                        .color("white")
-                        .hover(sx().background("rgba(255, 255, 255, 0.15)"))
-                        // Only relevant below `Sm` - the burger is the only
-                        // way to set `open`, so hiding it here means the
-                        // mobile drawer can never actually be open at
-                        // desktop widths.
-                        .breakpoint(Size::Sm, sx().display("none")),
+                // Where focus goes when a page link closes the drawer: the
+                // link hides with it, and focus would fall to `<body>`.
+                // `Burger` takes no `onmounted`, so a `display: contents`
+                // wrapper holds the handle.
+                div { display: "contents", onmounted: burger.mount(),
+                    Burger {
+                        opened: open(),
+                        "aria-controls": "docs-nav",
+                        onclick: move |_| open.set(!open()),
+                        // No `variant`/`color` prop - the underlying ActionIcon
+                        // then contributes no background/color/hover of its own
+                        // (same reasoning as `Code`'s copy button), so this `sx`
+                        // is the only thing controlling its look. Needed here
+                        // specifically: the shade-based hover `variant`/`color`
+                        // would compute (tinting `color` a shade lighter) is a
+                        // no-op on white - there's no lighter shade of white, so
+                        // it rendered as a solid white box instead of a subtle
+                        // hover. A translucent white overlay is the actual right
+                        // look for a light control against Header's solid
+                        // primary banner.
+                        //
+                        // `color` stays an `sx` rather than the `color` prop: the
+                        // bars fall back to `currentColor`, so one declaration
+                        // still drives them.
+                        sx: sx()
+                            .color("white")
+                            .hover(sx().background("rgba(255, 255, 255, 0.15)"))
+                            // Only relevant below `Sm` - the burger is the only
+                            // way to set `open`, so hiding it here means the
+                            // mobile drawer can never actually be open at
+                            // desktop widths.
+                            .breakpoint(Size::Sm, sx().display("none")),
+                    }
                 }
                 Flex {
                     direction: "row",
@@ -312,16 +321,40 @@ fn AppShell() -> Element {
                     Image { src: LOGO, sx: sx().width("auto").height("28px") }
                     Title { size: "lg", component: "span", "Libero" }
                 }
+                // Looks like a search field, but it opens the Spotlight
+                // dialog, so it stays a button. The name is fixed, so the
+                // hidden hint on a phone does not change it; the shortcut
+                // rides `aria-keyshortcuts` instead of the name.
                 Button {
-                    variant: "outlined",
+                    variant: "standard",
+                    aria_label: "Search",
+                    "aria-keyshortcuts": "Control+K Meta+K",
                     sx: sx()
                         .margin_left("auto")
-                        .color("white")
-                        .border_color("rgba(255, 255, 255, 0.6)")
-                        .gap("sm"),
+                        .background(PAPER_BACKGROUND.value())
+                        .color("grey.7")
+                        // A placeholder's weight, not a button label's.
+                        .font_weight("400")
+                        .gap("sm")
+                        .hover(sx().background("grey.1"))
+                        .breakpoint(Size::Sm, sx().width("240px").justify_content("flex-start")),
                     onclick: move |_| search.open(),
+                    span {
+                        display: "inline-flex",
+                        width: "16px",
+                        height: "16px",
+                        SearchIcon {}
+                    }
                     "Search"
-                    Kbd { "Ctrl K" }
+                    Kbd {
+                        // A phone has no Ctrl K to press, and the room is the
+                        // burger's.
+                        sx: sx()
+                            .display("none")
+                            .margin_left("auto")
+                            .breakpoint(Size::Sm, sx().display("revert-layer")),
+                        "Ctrl K"
+                    }
                 }
             }
             // This row itself never scrolls - the nav scrolls its own
@@ -335,7 +368,7 @@ fn AppShell() -> Element {
                 direction: "row",
                 align: "stretch",
                 sx: sx().height(format!("calc(100vh - {})", HEADER_HEIGHT.value(Size::Md))),
-                DocsNav { open }
+                DocsNav { open, burger }
                 ScrollArea {
                     sx: sx()
                         .flex("1")

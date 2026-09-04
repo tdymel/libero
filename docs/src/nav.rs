@@ -6,6 +6,8 @@ use libero::{
         Flex, NavLink, Sidebar, SpotlightAction, States, Tree, TreeLabel, TreeNode,
         TreeNodeRenderArgs, default_tree_render,
     },
+    hooks::ElementHandle,
+    platform::ElementApi,
     sx::{Sx, sx},
     theme::{ColorCss, ColorShade, HEADER_HEIGHT, SIDEBAR_SIZE, Size},
 };
@@ -295,7 +297,7 @@ fn ancestor_group(data: &[TreeNode<NavEntry>], target: &str) -> Option<String> {
 }
 
 #[component]
-pub fn DocsNav(open: Signal<bool>) -> Element {
+pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
     let data = nav_tree();
 
     let current_path = try_router()
@@ -356,10 +358,22 @@ pub fn DocsNav(open: Signal<bool>) -> Element {
                         // click, including the one `Tree` fires on Enter.
                         // Only matters below `Sm`; at desktop widths `open`
                         // never becomes true, since its toggle is hidden there.
+                        //
+                        // The link hides with the panel, so focus moves to the
+                        // burger that reopens it rather than falling to
+                        // `<body>`. A pointer click too: one handler, and the
+                        // burger shows no ring after a pointer interaction.
                         rsx! {
                             div {
                                 display: "contents",
-                                onclick: move |_| open.set(false),
+                                onclick: move |_| {
+                                    if open() {
+                                        open.set(false);
+                                        let _ = burger
+                                            .query_selector("button")
+                                            .and_then(|button| button.focus());
+                                    }
+                                },
                                 NavLink {
                                     to: NavigationTarget::Internal(args.id),
                                     // Suppresses the anchor's own native tab
