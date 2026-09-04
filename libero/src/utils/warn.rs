@@ -1,4 +1,4 @@
-use dioxus::prelude::*;
+use dioxus::{dioxus_core::AttributeValue, prelude::*};
 
 /// Debug-only warning. Plain string, no `dioxus::warn!` format semantics.
 #[cfg(debug_assertions)]
@@ -23,11 +23,13 @@ pub(crate) fn take_warnings() -> Vec<String> {
 #[cfg(not(debug_assertions))]
 pub(crate) fn warn(_message: &str) {}
 
-/// Whether a spread `aria-label` or `aria-labelledby` names the element.
+/// Whether a spread `aria-label` or `aria-labelledby` names the element. A
+/// `None` value renders no attribute, so it names nothing.
 pub(crate) fn names_itself(attributes: &[Attribute]) -> bool {
-    attributes
-        .iter()
-        .any(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"))
+    attributes.iter().any(|attribute| {
+        matches!(attribute.name, "aria-label" | "aria-labelledby")
+            && !matches!(attribute.value, AttributeValue::None)
+    })
 }
 
 /// The one way a role that needs an accessible name says it has none: a
@@ -61,12 +63,7 @@ mod tests {
     use super::*;
 
     fn attribute(name: &'static str) -> Attribute {
-        Attribute::new(
-            name,
-            dioxus::dioxus_core::AttributeValue::Text("x".to_string()),
-            None,
-            false,
-        )
+        Attribute::new(name, AttributeValue::Text("x".to_string()), None, false)
     }
 
     #[test]
@@ -78,6 +75,8 @@ mod tests {
             attribute("id"),
             attribute("aria-labelledby")
         ]));
+        let unset = Attribute::new("aria-label", AttributeValue::None, None, false);
+        assert!(!names_itself(&[unset]));
     }
 
     #[test]

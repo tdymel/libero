@@ -233,7 +233,8 @@ pub fn SegmentedControlPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec![r#"label: "Alignment""#.to_string()],
-                            _ => vec![],
+                            // Unlabelled, it still needs a name.
+                            _ => vec![r#""aria-label": "Alignment""#.to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -273,6 +274,7 @@ pub fn SegmentedControlPage() -> Element {
                         gap: or_unset(values.str("gap")),
                         full_width: is_on(&values, "full_width"),
                         label: is_on(&values, "label").then(|| "Alignment".to_string()),
+                        "aria-label": (!is_on(&values, "label")).then_some("Alignment"),
                         description: is_on(&values, "description")
                             .then(|| "Where each line starts.".to_string()),
                         helper: is_on(&values, "helper")
@@ -302,9 +304,9 @@ pub fn SegmentedControlPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "Arrow keys move the selection; Tab enters and leaves the whole control. "
-                    "Without a visible label, name it with an "
-                    Code { source: "aria_label" }
-                    " where its purpose is not obvious from the segments themselves."
+                    "Without a visible label, name it by spreading "
+                    Code { source: "\"aria-label\"" }
+                    ": the segments name the options, not the question."
                 }
             }
         }

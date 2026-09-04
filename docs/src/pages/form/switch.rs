@@ -84,7 +84,8 @@ pub fn SwitchPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec!["label: \"Notifications\"".to_string()],
-                            _ => vec![],
+                            // Unlabelled, it still needs a name.
+                            _ => vec!["aria_label: \"Notifications\"".to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -117,6 +118,8 @@ pub fn SwitchPage() -> Element {
                             EventHandler::new(move |next: bool| values.set("checked", next.to_string()))
                         },
                         label: (values.str("label") == "true")
+                            .then(|| "Notifications".to_string()),
+                        aria_label: (values.str("label") != "true")
                             .then(|| "Notifications".to_string()),
                         description: (values.str("description") == "true")
                             .then(|| "About once a month.".to_string()),

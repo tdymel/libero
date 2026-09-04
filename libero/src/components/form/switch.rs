@@ -12,7 +12,7 @@ use crate::{
     hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W, SwitchDefaults},
-    utils::warn,
+    utils::{names_itself, use_name_warning, warn},
 };
 
 const SWITCH_COLOR_VAR: CssVar = CssVar::new("--lsx-switch-color");
@@ -175,6 +175,11 @@ pub fn Switch(props: SwitchProps) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    // A `<label for>` names it, so there is no label id to ask the field for.
+    use_name_warning(
+        !props.label.is_none() || props.aria_label.is_some() || names_itself(&props.attributes),
+        "Switch: no `label` or `aria_label`, so it is announced as just \"switch\".",
+    );
 
     let states: Input<States> = field
         .states()

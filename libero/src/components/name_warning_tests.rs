@@ -6,7 +6,9 @@ use dioxus::prelude::*;
 
 use crate::{
     LiberoProvider,
-    components::{Anchor, Dialog, Drawer, ProgressBar, Slider, Splitter},
+    components::{
+        Anchor, Dialog, Drawer, ProgressBar, RadioGroup, SegmentedControl, Slider, Splitter, Switch,
+    },
     utils::take_warnings,
 };
 
@@ -135,5 +137,53 @@ fn a_javascript_link_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Anchor { to: "https://example.com", "Site" } } },
         "Link to"
+    ));
+}
+
+#[test]
+fn an_unnamed_switch_warns() {
+    let prefix = "Switch: no `";
+    assert!(warns(|| rsx! { LiberoProvider { Switch {} } }, prefix));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Switch { label: "Wi-Fi" } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Switch { aria_label: "Wi-Fi" } } },
+        prefix
+    ));
+}
+
+#[test]
+fn an_unnamed_radio_group_warns() {
+    let prefix = "RadioGroup: no `";
+    assert!(warns(
+        || rsx! { LiberoProvider { RadioGroup::<String> { options: vec!["a".to_string()] } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { RadioGroup::<String> { label: "Plan", options: vec!["a".to_string()] } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { RadioGroup::<String> { "aria-label": "Plan", options: vec!["a".to_string()] } } },
+        prefix
+    ));
+}
+
+#[test]
+fn an_unnamed_segmented_control_warns() {
+    let prefix = "SegmentedControl: no `";
+    assert!(warns(
+        || rsx! { LiberoProvider { SegmentedControl::<String> { options: vec!["a".to_string()] } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { SegmentedControl::<String> { label: "Align", options: vec!["a".to_string()] } } },
+        prefix
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { SegmentedControl::<String> { "aria-label": "Align", options: vec!["a".to_string()] } } },
+        prefix
     ));
 }

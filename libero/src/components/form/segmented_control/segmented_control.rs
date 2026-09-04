@@ -11,7 +11,7 @@ use crate::{
     hooks::{use_cache, use_element, use_theme},
     sx::ThemeAwareValue,
     theme::Size,
-    utils::warn,
+    utils::{names_itself, use_name_warning, warn},
 };
 
 field_props! {
@@ -143,6 +143,11 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         .states(&field_states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        field.label_id().is_some() || names_itself(&props.attributes),
+        "SegmentedControl: no `label`, `aria-label` or `aria-labelledby`, so the group \
+         has no name and only its options are read.",
+    );
 
     let segments: Vec<SegmentSpec> = values
         .iter()

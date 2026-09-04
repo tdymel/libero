@@ -11,7 +11,7 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
-    utils::warn,
+    utils::{names_itself, use_name_warning, warn},
 };
 
 static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
@@ -135,6 +135,11 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
+    use_name_warning(
+        field.label_id().is_some() || names_itself(&props.attributes),
+        "RadioGroup: no `label`, `aria-label` or `aria-labelledby`, so the group has no \
+         name and its question is never read.",
+    );
 
     let states: Input<States> = field
         .states()

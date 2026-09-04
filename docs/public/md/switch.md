@@ -63,7 +63,7 @@ same size.
 ## Accessibility
 
 Space and Enter toggle it. Without a `label`, pass `aria_label` - but a visible
-label is better.
+label is better. With neither, it warns in a debug build.
 
 ## Props
 

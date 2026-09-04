@@ -77,7 +77,8 @@ Selection follows focus, as it does natively.
 ## Accessibility
 
 Give it a `label`: an option's label names one option, and only the group's
-label says what the question is.
+label says what the question is. Without a visible one, spread `"aria-label"`.
+With neither, it warns in a debug build.
 
 ## Standalone `Radio`
 

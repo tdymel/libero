@@ -71,6 +71,10 @@ pub struct DateDefaults {
     /// The segments that switch a range dropdown between its two ends.
     pub start_label: &'static str,
     pub end_label: &'static str,
+    /// Names the calendar/clock switch itself.
+    pub part_switch_label: &'static str,
+    /// Names the start/end switch itself.
+    pub side_switch_label: &'static str,
     /// Names a `TimePicker`'s columns.
     pub hours_label: &'static str,
     pub minutes_label: &'static str,
@@ -127,6 +131,8 @@ impl DateDefaults {
         time_label: "Time",
         start_label: "Start",
         end_label: "End",
+        part_switch_label: "Date or time",
+        side_switch_label: "Range end",
         hours_label: "Hours",
         minutes_label: "Minutes",
         seconds_label: "Seconds",

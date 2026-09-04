@@ -371,6 +371,7 @@ pub fn Demo(
                                             variant: "outlined",
                                             size: "sm",
                                             full_width: true,
+                                            "aria-label": control.name,
                                             value: values().str(control.name),
                                             // A control panel's options are data, so
                                             // they arrive here rather than from a `T`

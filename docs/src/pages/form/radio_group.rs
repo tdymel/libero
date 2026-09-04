@@ -164,7 +164,8 @@ pub fn RadioGroupPage() -> Element {
                     Control::switch("label").default("true").code(|_, values| {
                         match values.str("label").as_str() {
                             "true" => vec![r#"label: "Plan""#.to_string()],
-                            _ => vec![],
+                            // Unlabelled, it still needs a name.
+                            _ => vec![r#""aria-label": "Plan""#.to_string()],
                         }
                     }),
                     Control::switch("description").code(|_, values| {
@@ -191,6 +192,7 @@ pub fn RadioGroupPage() -> Element {
                         size: values.str("size"),
                         orientation: values.str("orientation"),
                         label: is_on(&values, "label").then(|| "Plan".to_string()),
+                        "aria-label": (!is_on(&values, "label")).then_some("Plan"),
                         description: is_on(&values, "description")
                             .then(|| "What your seats cost.".to_string()),
                         helper: is_on(&values, "helper")

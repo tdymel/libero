@@ -227,8 +227,8 @@ fn Demo() -> Element {
 ## Accessibility
 
 Arrow keys move the selection; Tab enters and leaves the whole control. Without
-a visible `label`, name the control with an `aria_label` where its purpose is
-not obvious from the segments themselves.
+a visible `label`, name the control by spreading `"aria-label"`: the segments
+name the options, not the question. With neither, it warns in a debug build.
 
 ## Props
 
