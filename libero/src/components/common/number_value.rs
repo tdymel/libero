@@ -69,16 +69,41 @@ pub trait NumberValue:
     }
 }
 
+/// The digits after the point in `value`'s shortest form: 2 for `0.25`.
+fn decimals(value: impl Display) -> usize {
+    value
+        .to_string()
+        .split_once('.')
+        .map_or(0, |(_, fraction)| fraction.len())
+}
+
+/// `sum` rounded to as many decimals as the finer of `value` and `by` has, so
+/// binary noise does not reach the field: `0.1 + 0.2` is `0.3`, not
+/// `0.30000000000000004`.
+fn rounded<T: Copy + Display + FromStr>(sum: T, value: T, by: T) -> T {
+    let places = decimals(value).max(decimals(by));
+    format!("{sum:.places$}").parse().unwrap_or(sum)
+}
+
 /// One line per primitive: everything but the step unit comes from the trait's
 /// default bodies. An integer also saturates when it steps, so a press at the
 /// edge of its type stays there instead of overflowing - a panic in a debug
-/// build, a wrap-around in release.
+/// build, a wrap-around in release. A float rounds to the precision of its
+/// step, or of its value where that is finer.
 macro_rules! number_value {
     (float: $($float:ty),+; int: $($int:ty),+ $(,)?) => {
         $(
             impl NumberValue for $float {
                 fn default_step() -> Self {
                     1.0
+                }
+
+                fn step_up(self, by: Self) -> Self {
+                    rounded(self + by, self, by)
+                }
+
+                fn step_down(self, by: Self) -> Self {
+                    rounded(self - by, self, by)
                 }
             }
         )+

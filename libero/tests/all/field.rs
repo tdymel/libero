@@ -536,6 +536,23 @@ fn a_saturated_step_is_then_clamped_to_min_and_max() {
     assert_eq!(i32::MIN.step_down(1).clamp_to(Some(-3), None), -3);
 }
 
+/// A float step lands on the step's precision, or the value's where that is
+/// finer, so binary noise never reaches the field.
+#[test]
+fn a_float_step_rounds_away_binary_noise() {
+    assert_eq!(0.1f64.step_up(0.2).to_string(), "0.3");
+    assert_eq!(0.3f64.step_down(0.1).to_string(), "0.2");
+    assert_eq!(1.1f64.step_up(0.1).step_up(0.1).to_string(), "1.3");
+    // The value's own digits survive a coarser step.
+    assert_eq!(1.234f64.step_up(0.1).to_string(), "1.334");
+    assert_eq!(2.5f64.step_down(1.0).to_string(), "1.5");
+    assert_eq!(0.1f32.step_up(0.2).to_string(), "0.3");
+    // Ten presses of 0.1 from zero end on 1, not 0.9999999999999999.
+    let ten = (0..10).fold(0.0f64, |value, _| value.step_up(0.1));
+    assert_eq!(ten.to_string(), "1");
+    assert_eq!(f64::MAX.step_up(f64::MAX), f64::INFINITY);
+}
+
 /// The steppers are opt-in: a number is usually typed, and two buttons are the
 /// most expensive thing a field can carry.
 #[test]
