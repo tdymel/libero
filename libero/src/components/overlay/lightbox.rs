@@ -15,7 +15,7 @@ use crate::{
     sx::{StaticSx, sx},
     theme::{
         CarouselDefaults, CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE,
-        LIGHTBOX_THUMBNAILS_GAP, LIGHTBOX_WIDTH,
+        LIGHTBOX_THUMBNAILS_GAP, LIGHTBOX_WIDTH, Size, SizeCss,
     },
 };
 
@@ -35,16 +35,32 @@ const LIGHTBOX_TRANSFORM: CssVar = CssVar::new("--lsx-lightbox-transform");
 /// thumbnails and centres.
 const LIGHTBOX_THUMBNAILS_SHOWN: CssVar = CssVar::new("--lsx-lightbox-thumbnails-shown");
 
+/// Below the smallest breakpoint the viewer takes the whole width of the
+/// screen: a phone has none to spare for a margin round a picture.
+fn phone() -> String {
+    format!("(width < {})", Size::Xs.breakpoint_value())
+}
+
 static LIGHTBOX_DIALOG_SX: StaticSx = StaticSx::new(|| {
     sx().width("100%")
         .max_width(LIGHTBOX_WIDTH.value())
         .padding("sm")
+        .media(
+            phone(),
+            sx().max_width("none").margin_left("0").margin_right("0"),
+        )
+});
+
+// On a phone the pictures also reach past the dialog's padding, so the stage
+// is the viewport's width; the close button, caption and thumbnails keep it.
+static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
+    let bleed = format!("calc(-1 * {})", SizeCss::SPACING.value(Size::Sm));
+    sx().media(phone(), sx().margin_left(bleed.clone()).margin_right(bleed))
 });
 
 // Every slide is this one box, so a picture is fitted into the stage rather
-// than sizing it, and the pan bounds are the same for all of them. The ring
-// sits here, inset, because the picture itself is scaled while zoomed and an
-// outline on it would be scaled and clipped with it.
+// than sizing it. The ring sits here, inset, because the picture itself is
+// scaled while zoomed and an outline on it would be scaled and clipped with it.
 static LIGHTBOX_FRAME_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .height(LIGHTBOX_STAGE_HEIGHT.value())
@@ -56,7 +72,9 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
     sx().display("block")
         .width("100%")
         .height("100%")
-        .object_fit("contain")
+        // Shrinks a large picture to the stage and leaves a small one at its
+        // own size: an upscaled thumbnail only shows its pixels.
+        .object_fit("scale-down")
         // Replaces `Box`'s own ring: the frame draws this one.
         .focus_visible(sx().outline("none"))
         .transform(LIGHTBOX_TRANSFORM.value_or("none"))
@@ -109,6 +127,35 @@ static LIGHTBOX_THUMBNAIL_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .object_fit("cover")
 });
 
+/// What a zoom is bounded by: the frame, and the picture as it is shown in it.
+#[derive(Clone, Copy, Debug, PartialEq)]
+struct Fit {
+    frame: Dimensions,
+    picture: Dimensions,
+}
+
+impl Fit {
+    /// The picture as `object-fit: scale-down` shows it: shrunk to fit the
+    /// frame, never grown past its natural size. Without a natural size - not
+    /// decoded yet, or a renderer that cannot say - it is taken to fill the
+    /// frame, which only makes the pan bounds generous.
+    fn new(frame: Dimensions, natural: Option<Dimensions>) -> Self {
+        let picture = match natural {
+            Some(natural) => {
+                let ratio = (frame.width / natural.width)
+                    .min(frame.height / natural.height)
+                    .min(1.0);
+                Dimensions {
+                    width: natural.width * ratio,
+                    height: natural.height * ratio,
+                }
+            }
+            None => frame,
+        };
+        Self { frame, picture }
+    }
+}
+
 /// The zoom of one picture. Carries the index it belongs to, so moving to
 /// another picture resets it without a write: a zoom for any other index reads
 /// as fitted. Mantine resets during render for the same reason - the new
@@ -137,10 +184,12 @@ impl Zoom {
     }
 
     /// Keeps the picture covering the frame: at scale `s` it overhangs by
-    /// `length * (s - 1) / 2` on each side, and that is how far it may move.
-    fn clamped(self, size: Dimensions) -> Self {
-        let bound = |length: f64| (length * (self.scale - 1.0) / 2.0).max(0.0);
-        let (x_bound, y_bound) = (bound(size.width), bound(size.height));
+    /// `(picture * s - frame) / 2` on each side, and that is how far it may
+    /// move. A picture still smaller than the frame does not move at all.
+    fn clamped(self, fit: Fit) -> Self {
+        let bound = |picture: f64, frame: f64| ((picture * self.scale - frame) / 2.0).max(0.0);
+        let x_bound = bound(fit.picture.width, fit.frame.width);
+        let y_bound = bound(fit.picture.height, fit.frame.height);
         Self {
             x: self.x.clamp(-x_bound, x_bound),
             y: self.y.clamp(-y_bound, y_bound),
@@ -150,7 +199,7 @@ impl Zoom {
 
     /// Rescales about `point`, measured from the frame's centre, so the spot
     /// under the cursor stays under it.
-    fn scaled(self, scale: f64, point: DragPoint, size: Dimensions) -> Self {
+    fn scaled(self, scale: f64, point: DragPoint, fit: Fit) -> Self {
         let ratio = scale / self.scale;
         Self {
             scale,
@@ -158,16 +207,16 @@ impl Zoom {
             y: point.y * (1.0 - ratio) + self.y * ratio,
             ..self
         }
-        .clamped(size)
+        .clamped(fit)
     }
 
-    fn panned(self, dx: f64, dy: f64, size: Dimensions) -> Self {
+    fn panned(self, dx: f64, dy: f64, fit: Fit) -> Self {
         Self {
             x: self.x + dx,
             y: self.y + dy,
             ..self
         }
-        .clamped(size)
+        .clamped(fit)
     }
 
     /// Scale about the centre, then shift: the translation is divided by the
@@ -207,12 +256,13 @@ fn thumbnail_id(base: &str, index: usize) -> String {
 }
 
 /// Rescales picture `index` to `next(current scale)`, about `client` or the
-/// centre. The frame is measured first - both for the pan bounds and for where
-/// the cursor sits in it - so the zoom lands once the read does.
+/// centre. The frame and the picture's natural size are read first - for the
+/// pan bounds and for where the cursor sits - so the zoom lands once they do.
 fn zoom_about(
     stage: ElementHandle,
+    picture: ElementHandle,
     mut zoom: Signal<Zoom>,
-    mut size: Signal<Option<Dimensions>>,
+    mut fit: Signal<Option<Fit>>,
     index: usize,
     client: Option<DragPoint>,
     next: impl Fn(f64) -> f64 + 'static,
@@ -220,12 +270,17 @@ fn zoom_about(
     let Ok(frame) = stage.query_selector(&frame_selector(index)) else {
         return;
     };
-    let (dimensions, origin) = (frame.dimensions(), frame.client_offset());
+    let (dimensions, origin, natural) = (
+        frame.dimensions(),
+        frame.client_offset(),
+        picture.natural_size(),
+    );
     spawn(async move {
         let (Ok(dimensions), Ok((left, top))) = (dimensions.await, origin.await) else {
             return;
         };
-        size.set(Some(dimensions));
+        let bounds = Fit::new(dimensions, natural.await.ok());
+        fit.set(Some(bounds));
         let point = match client {
             Some(client) => DragPoint {
                 x: client.x - left - dimensions.width / 2.0,
@@ -239,7 +294,7 @@ fn zoom_about(
         };
         let scale = next(from.scale);
         zoom.set(match scale > 1.0 {
-            true => from.scaled(scale, point, dimensions),
+            true => from.scaled(scale, point, bounds),
             false => Zoom::fitted(index),
         });
     });
@@ -270,7 +325,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let mut zoom = use_signal(|| Zoom::fitted(usize::MAX));
     // Measured whenever a zoom starts, so a zoomed picture always has bounds
     // to pan within - and a key can decide synchronously whether it pans.
-    let size = use_signal(|| None::<Dimensions>);
+    let fit = use_signal(|| None::<Fit>);
     let mut gesture = use_signal(|| None::<Gesture>);
 
     let current = index();
@@ -330,7 +385,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
             let held_gesture = *gesture.peek();
             match held_gesture {
                 Some(Gesture::Pan { origin }) => {
-                    let Some(dimensions) = *size.peek() else {
+                    let Some(bounds) = *fit.peek() else {
                         return;
                     };
                     let from = held();
@@ -340,7 +395,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                             y: origin.y + delta.y,
                             ..from
                         }
-                        .clamped(dimensions),
+                        .clamped(bounds),
                     );
                 }
                 Some(Gesture::Swipe { .. }) => gesture.set(Some(Gesture::Swipe { delta })),
@@ -371,6 +426,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
 
     let slide = |i: usize| -> Element {
         let item = &items[i];
+        let image = picture(i);
         let is_current = i == current;
         let zoomed = is_current && active.is_zoomed();
         let image_states: Input<States> = states()
@@ -421,9 +477,9 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         };
                         if let Some((dx, dy)) = pan
                             && from.is_zoomed()
-                            && let Some(dimensions) = *size.peek()
+                            && let Some(bounds) = *fit.peek()
                         {
-                            let moved = from.panned(dx, dy, dimensions);
+                            let moved = from.panned(dx, dy, bounds);
                             // Only a pan that moved is a pan. At the edge the
                             // key falls through to the slide change, so a
                             // zoomed picture never traps the keyboard - our
@@ -445,7 +501,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                                     && !event.modifiers().meta()
                                     && !event.modifiers().alt() =>
                             {
-                                zoom_about(stage, zoom, size, i, None, toggle_scale);
+                                zoom_about(stage, image, zoom, fit, i, None, toggle_scale);
                             }
                             _ => return,
                         }
@@ -460,8 +516,9 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         let client = event.client_coordinates();
                         zoom_about(
                             stage,
+                            image,
                             zoom,
-                            size,
+                            fit,
                             i,
                             Some(DragPoint { x: client.x, y: client.y }),
                             move |scale| {
@@ -480,14 +537,15 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         let client = event.client_coordinates();
                         zoom_about(
                             stage,
+                            image,
                             zoom,
-                            size,
+                            fit,
                             i,
                             Some(DragPoint { x: client.x, y: client.y }),
                             toggle_scale,
                         );
                     },
-                    onmounted: picture(i).mount(),
+                    onmounted: image.mount(),
                     onpointermove: drag.onpointermove,
                     onpointerup: drag.onpointerup,
                     onpointercancel: drag.onpointercancel,
@@ -598,7 +656,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
             sx: &LIGHTBOX_DIALOG_SX,
             Box {
                 onmounted: stage.mount(),
-                {stage_body}
+                Box { framework_sx: &LIGHTBOX_STAGE_SX, {stage_body} }
                 if let Some(caption) = caption {
                     Box { component: "p", id: caption_id(), framework_sx: &LIGHTBOX_CAPTION_SX, "{caption}" }
                 }
@@ -632,11 +690,67 @@ mod tests {
         height: 600.0,
     };
 
+    /// A picture exactly the frame's size: the bounds before natural sizes.
+    const FILLS: Fit = Fit {
+        frame: FRAME,
+        picture: FRAME,
+    };
+
+    fn size(width: f64, height: f64) -> Dimensions {
+        Dimensions { width, height }
+    }
+
+    #[test]
+    fn a_small_picture_is_shown_at_its_natural_size() {
+        let fit = Fit::new(FRAME, Some(size(200.0, 100.0)));
+
+        assert_eq!(fit.picture, size(200.0, 100.0));
+    }
+
+    #[test]
+    fn a_large_picture_is_scaled_down_into_the_frame() {
+        let fit = Fit::new(FRAME, Some(size(3200.0, 1200.0)));
+
+        assert_eq!(fit.picture, size(800.0, 300.0));
+    }
+
+    /// At 3x a 200px picture is still 600px, inside the 800px frame.
+    #[test]
+    fn a_zoomed_picture_smaller_than_the_frame_cannot_move() {
+        let zoomed = Zoom {
+            scale: 3.0,
+            ..Zoom::fitted(0)
+        };
+        let fit = Fit::new(FRAME, Some(size(200.0, 100.0)));
+
+        assert_eq!(zoomed.panned(500.0, 500.0, fit), zoomed);
+    }
+
+    /// Scaled down to 800x300, then doubled to 1600x600: it overhangs 400px
+    /// sideways and nothing vertically.
+    #[test]
+    fn a_pan_is_bounded_by_the_picture_not_the_frame() {
+        let zoomed = Zoom {
+            scale: 2.0,
+            ..Zoom::fitted(0)
+        };
+        let fit = Fit::new(FRAME, Some(size(3200.0, 1200.0)));
+
+        let far = zoomed.panned(10_000.0, 10_000.0, fit);
+
+        assert_eq!((far.x, far.y), (400.0, 0.0));
+    }
+
+    #[test]
+    fn without_a_natural_size_the_picture_fills_the_frame() {
+        assert_eq!(Fit::new(FRAME, None), FILLS);
+    }
+
     #[test]
     fn a_fitted_picture_cannot_move() {
         let fitted = Zoom::fitted(0);
 
-        assert_eq!(fitted.panned(40.0, -40.0, FRAME), fitted);
+        assert_eq!(fitted.panned(40.0, -40.0, FILLS), fitted);
     }
 
     /// At scale 2 an 800px picture overhangs 400px each side, and no further.
@@ -647,7 +761,7 @@ mod tests {
             ..Zoom::fitted(0)
         };
 
-        let far = zoomed.panned(10_000.0, -10_000.0, FRAME);
+        let far = zoomed.panned(10_000.0, -10_000.0, FILLS);
 
         assert_eq!((far.x, far.y), (400.0, -300.0));
     }
@@ -662,8 +776,8 @@ mod tests {
             ..Zoom::fitted(0)
         };
 
-        assert_eq!(at_edge.panned(PAN_STEP, 0.0, FRAME), at_edge);
-        assert_ne!(at_edge.panned(-PAN_STEP, 0.0, FRAME), at_edge);
+        assert_eq!(at_edge.panned(PAN_STEP, 0.0, FILLS), at_edge);
+        assert_ne!(at_edge.panned(-PAN_STEP, 0.0, FILLS), at_edge);
     }
 
     /// A pan short of the edge by less than a step still moves, and lands on
@@ -676,12 +790,12 @@ mod tests {
             ..Zoom::fitted(0)
         };
 
-        assert_eq!(near.panned(PAN_STEP, 0.0, FRAME).x, 400.0);
+        assert_eq!(near.panned(PAN_STEP, 0.0, FILLS).x, 400.0);
     }
 
     #[test]
     fn zooming_about_the_centre_does_not_move_the_picture() {
-        let zoomed = Zoom::fitted(0).scaled(2.0, DragPoint { x: 0.0, y: 0.0 }, FRAME);
+        let zoomed = Zoom::fitted(0).scaled(2.0, DragPoint { x: 0.0, y: 0.0 }, FILLS);
 
         assert_eq!((zoomed.scale, zoomed.x, zoomed.y), (2.0, 0.0, 0.0));
     }
@@ -691,7 +805,7 @@ mod tests {
     #[test]
     fn zooming_about_a_point_keeps_that_point_still() {
         let point = DragPoint { x: 100.0, y: -50.0 };
-        let zoomed = Zoom::fitted(0).scaled(2.0, point, FRAME);
+        let zoomed = Zoom::fitted(0).scaled(2.0, point, FILLS);
 
         // Image-local position of the point, then back to the screen.
         let local = (point.x / 1.0, point.y / 1.0);

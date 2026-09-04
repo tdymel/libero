@@ -162,12 +162,12 @@ Returns the same `ModalHandle` as `use_modal`; every method on it and on
 
 | Field | Type | Description |
 |---|---|---|
-| `width` | `&'static str` | The dialog's widest extent. |
-| `stage_height` | `&'static str` | Every frame's height; a picture is fitted into it. |
+| `width` | `&'static str` | The dialog's widest extent. Below the `xs` breakpoint the dialog and its pictures take the whole screen width instead. |
+| `stage_height` | `&'static str` | Every frame's height. A larger picture is scaled down into it; a smaller one shows at its natural size, never upscaled. |
 | `thumbnail_size` | `&'static str` | One thumbnail's edge, capping the strip's width. |
 | `thumbnails_per_view` | `f64` | Thumbnails visible at once before the strip scrolls. |
 | `thumbnails_gap` | `Size` | Space between thumbnails. |
-| `max_zoom` | `f64` | Default upper scale bound. |
+| `max_zoom` | `f64` | Default upper scale bound, `1.0` being the picture as first shown. |
 | `label` | `&'static str` | The dialog's default name. |
 | `close_label` | `&'static str` | The close button's name. |
 | `thumbnails_label` | `&'static str` | The strip's region name. |

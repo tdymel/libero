@@ -11,10 +11,12 @@ pub const LIGHTBOX_THUMBNAILS_GAP: CssVar = CssVar::new("--lsx-lightbox-thumbnai
 /// knobs").
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct LightboxDefaults {
-    /// The dialog's widest extent, a CSS length.
+    /// The dialog's widest extent, a CSS length. Below the `xs` breakpoint
+    /// the dialog and its pictures take the whole screen width instead.
     pub width: &'static str,
     /// The stage's height, a CSS length. Fixed, so every slide is the same
-    /// box and a picture is fitted into it rather than sizing it.
+    /// box and a picture is fitted into it rather than sizing it. A picture
+    /// smaller than the stage keeps its natural size.
     pub stage_height: &'static str,
     /// One thumbnail's edge, a CSS length. The strip is a `Carousel`, so this
     /// caps the strip at `thumbnails_per_view` of them rather than sizing
@@ -23,7 +25,8 @@ pub struct LightboxDefaults {
     /// Thumbnails visible at once before the strip scrolls.
     pub thumbnails_per_view: f64,
     pub thumbnails_gap: Size,
-    /// The upper scale bound, `1.0` being the picture fitted to the stage.
+    /// The upper scale bound, `1.0` being the picture as first shown: scaled
+    /// down into the stage, never above its natural size.
     pub max_zoom: f64,
     /// English literals, the `DateDefaults` precedent: no i18n mechanism yet
     /// (todo 28).

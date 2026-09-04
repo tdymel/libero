@@ -61,6 +61,11 @@ impl ElementApi for MountedElement {
         })
     }
 
+    /// `MountedData` has no way to reach an image's own data.
+    fn natural_size(&self) -> Read<Dimensions> {
+        Box::pin(std::future::ready(Err(PlatformError::Unsupported)))
+    }
+
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         let element = self.0.clone();
         queue(async move {

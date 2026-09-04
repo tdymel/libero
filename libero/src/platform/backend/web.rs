@@ -301,6 +301,19 @@ impl ElementApi for WebElement {
         ))
     }
 
+    /// Zero until the picture has decoded, which is reported as not there.
+    fn natural_size(&self) -> Read<Dimensions> {
+        let size = self
+            .element
+            .dyn_ref::<web_sys::HtmlImageElement>()
+            .map(|image| Dimensions {
+                width: image.natural_width() as f64,
+                height: image.natural_height() as f64,
+            })
+            .filter(|size| size.width > 0.0 && size.height > 0.0);
+        Box::pin(std::future::ready(size.ok_or(PlatformError::NotFound)))
+    }
+
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         // One call, not `scrollLeft` then `scrollTop`: under
         // `scroll-behavior: smooth` the second write starts a new scroll from

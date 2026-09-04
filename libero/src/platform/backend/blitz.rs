@@ -202,6 +202,18 @@ impl ElementApi for BlitzElement {
         })
     }
 
+    /// Only a raster picture carries its size; a decoded SVG answers
+    /// `NotFound`, as does an image still loading.
+    fn natural_size(&self) -> Read<Dimensions> {
+        self.read(|doc, node_id| {
+            let image = doc.get_node(node_id)?.element_data()?.raster_image_data()?;
+            Some(Dimensions {
+                width: image.width as f64,
+                height: image.height as f64,
+            })
+        })
+    }
+
     /// Blitz only scrolls by a delta, so this reads the current offset first.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         let mut doc = self.anchor.doc_mut();

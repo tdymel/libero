@@ -72,6 +72,13 @@ pub trait ElementApi {
     /// Current scroll offset in pixels (`scrollLeft`, `scrollTop`).
     fn scroll_offset(&self) -> Read<(f64, f64)>;
 
+    /// An `<img>`'s intrinsic pixel size (`naturalWidth`/`naturalHeight`).
+    ///
+    /// [`PlatformError::NotFound`] until the picture has decoded, and for any
+    /// element that is not an image: there is no size to report yet, which is
+    /// different from a renderer that cannot say.
+    fn natural_size(&self) -> Read<Dimensions>;
+
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 

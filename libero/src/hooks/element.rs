@@ -131,6 +131,10 @@ impl ElementApi for ElementHandle {
         self.read(|element| element.scroll_offset())
     }
 
+    fn natural_size(&self) -> Read<Dimensions> {
+        self.read(|element| element.natural_size())
+    }
+
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
         self.get()?.scroll_to(x, y)
     }
