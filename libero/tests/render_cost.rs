@@ -7,11 +7,18 @@
 //! cargo test --release -p libero --test render_cost -- --ignored --nocapture
 //! ```
 //!
+//! One component on its own - every row whose label is that name, or starts
+//! with it and then ` `, `+` or `-`, plus the two controls. Commas for more:
+//!
+//! ```text
+//! RENDER_COST=Notifications cargo test --release -p libero --test render_cost -- --ignored --nocapture
+//! ```
+//!
 //! `span` is a bare element with no scope; `Leaf` the cheapest possible
 //! component. The ratios travel between machines, the absolutes do not - so
 //! compare a change against a run of `main` on the same machine, not against a
 //! number written down anywhere. The current baseline table lives in
-//! `memory/performance.md`.
+//! `.agents/brain/codebase/performance/component-table.md`.
 //!
 //! Every shape renders its component in the plainest configuration that
 //! compiles: what is measured is the framework overhead a caller pays for
@@ -40,9 +47,20 @@ enum CostPane {
     Two,
 }
 
-/// A shape to measure: what to call it, and the app that renders
-/// [`CHILDREN`] of it.
-type Shape = (&'static str, fn() -> Element);
+/// A row to measure: what to call it, the app, how many instances the app
+/// renders (the time is divided by it), and what one round changes.
+#[derive(Clone, Copy)]
+struct Shape {
+    name: &'static str,
+    app: fn() -> Element,
+    count: usize,
+    round: fn(&mut VirtualDom),
+}
+
+/// The round of every [`shapes!`] row: the parent re-renders.
+fn rerender_app(dom: &mut VirtualDom) {
+    dom.mark_dirty(ScopeId::APP);
+}
 
 static FLIP: AtomicBool = AtomicBool::new(false);
 
@@ -61,9 +79,9 @@ const ROUNDS: usize = 80;
 /// One [`Shape`] per entry: a label, and the `rsx!` body to repeat.
 macro_rules! shapes {
     ($($label:literal { $($item:tt)* })*) => {
-        &[$((
-            $label,
-            {
+        &[$(Shape {
+            name: $label,
+            app: {
                 fn app() -> Element {
                     rsx! {
                         LiberoProvider {
@@ -73,7 +91,9 @@ macro_rules! shapes {
                 }
                 app as fn() -> Element
             },
-        )),*]
+            count: CHILDREN,
+            round: rerender_app,
+        }),*]
     };
 }
 
@@ -136,6 +156,79 @@ fn BoundForm(children: Element) -> Element {
     }
 }
 
+/// A `Notifications` host showing `N` notifications, all in one stack.
+///
+/// A singleton, so it gets rows of its own instead of [`CHILDREN`] copies,
+/// each of which would portal nine stacks. Its props compare equal, so its
+/// parent re-rendering skips it: what redraws it is a store write, which
+/// [`notifications_round`] makes.
+fn notifications_app<const N: usize>() -> Element {
+    let notify = use_notifications();
+    let first = use_hook(|| {
+        let ids: Vec<_> = (0..N).map(|i| notify.show(format!("n{i}"))).collect();
+        ids.first().copied()
+    });
+    use_context_provider(|| (notify, first));
+    rsx! {
+        LiberoProvider { Notifications { limit: N } }
+    }
+}
+
+/// An `update` of the first notification, which redraws the host and every
+/// shown notification - they all read the store. With none shown, a `clear`,
+/// which redraws the host alone.
+fn notifications_round(dom: &mut VirtualDom) {
+    dom.in_scope(ScopeId::APP, || {
+        let (notify, first) =
+            consume_context::<(NotificationHandle<NotificationData>, Option<NotificationId>)>();
+        match first {
+            Some(id) => notify.update(id, if flip() { "a" } else { "b" }),
+            None => notify.clear(),
+        }
+    });
+}
+
+/// The `Notifications` rows. "host" is per host, "item" per shown
+/// notification, with the host's share (the "host" row over [`CHILDREN`])
+/// still in it.
+const NOTIFICATION_SHAPES: &[Shape] = &[
+    Shape {
+        name: "Notifications host",
+        app: notifications_app::<0>,
+        count: 1,
+        round: notifications_round,
+    },
+    Shape {
+        name: "Notifications item",
+        app: notifications_app::<CHILDREN>,
+        count: CHILDREN,
+        round: notifications_round,
+    },
+];
+
+/// Whether `RENDER_COST` asks for this row. Unset or empty measures them all,
+/// and the controls always run - every row is read against `Leaf`.
+fn wanted(label: &str) -> bool {
+    let filter = std::env::var("RENDER_COST").unwrap_or_default();
+    let names: Vec<&str> = filter
+        .split(',')
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .collect();
+    if names.is_empty() || label == "span" || label == "Leaf" {
+        return true;
+    }
+    names.iter().any(|name| {
+        label
+            .get(..name.len())
+            .is_some_and(|head| head.eq_ignore_ascii_case(name))
+            && matches!(
+                label[name.len()..].chars().next(),
+                None | Some(' ' | '+' | '-')
+            )
+    })
+}
+
 /// The cheapest component that can exist: one scope, one element, no styling.
 #[component]
 fn Leaf(children: Element) -> Element {
@@ -151,17 +244,17 @@ fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
     FLIP.store(false, Ordering::Relaxed);
     let mut doms: Vec<_> = shapes
         .iter()
-        .map(|(name, app)| {
-            let mut dom = VirtualDom::new(*app);
+        .map(|shape| {
+            let mut dom = VirtualDom::new(shape.app);
             dom.rebuild(&mut NoOpMutations);
-            (*name, dom, u64::MAX)
+            (shape, dom, u64::MAX)
         })
         .collect();
 
     for round in 0..ROUNDS {
         FLIP.store(round % 2 == 0, Ordering::Relaxed);
-        for (_, dom, best) in doms.iter_mut() {
-            dom.mark_dirty(ScopeId::APP);
+        for (shape, dom, best) in doms.iter_mut() {
+            (shape.round)(dom);
             let started = std::time::Instant::now();
             dom.render_immediate(&mut NoOpMutations);
             *best = (*best).min(started.elapsed().as_nanos() as u64);
@@ -169,14 +262,14 @@ fn measure(shapes: &[Shape]) -> Vec<(&'static str, f64)> {
     }
 
     doms.into_iter()
-        .map(|(name, _, best)| (name, best as f64 / CHILDREN as f64))
+        .map(|(shape, _, best)| (shape.name, best as f64 / shape.count as f64))
         .collect()
 }
 
 #[test]
 #[ignore = "a measurement; needs --release to mean anything"]
 fn render_cost_per_component() {
-    let measured = measure(shapes! {
+    let shapes = shapes! {
         // Controls. Everything below is read as a multiple of `Leaf`.
         "span" { span { "x" } }
         "Leaf" { Leaf { "x" } }
@@ -314,16 +407,26 @@ fn render_cost_per_component() {
 
         "FocusTrap" { FocusTrap { "x" } }
         "VisuallyHidden" { VisuallyHidden { "x" } }
-    });
+    };
+    let shapes: Vec<Shape> = shapes
+        .iter()
+        .chain(NOTIFICATION_SHAPES)
+        .filter(|shape| wanted(shape.name))
+        .copied()
+        .collect();
+    assert!(
+        shapes.len() > 2,
+        "RENDER_COST matches no row besides the controls"
+    );
+    let measured = measure(&shapes);
 
     let cost = |wanted: &str| {
         measured
             .iter()
             .find(|(name, _)| *name == wanted)
-            .unwrap_or_else(|| panic!("{wanted} was not measured"))
-            .1
+            .map(|(_, ns)| *ns)
     };
-    let leaf = cost("Leaf");
+    let leaf = cost("Leaf").expect("the control is always measured");
 
     println!();
     for (name, ns) in &measured {
@@ -343,12 +446,13 @@ fn render_cost_per_component() {
 
     // Tripwires, not targets. They catch a component growing a scope or an
     // uncached per-render build, and stay quiet for ordinary drift.
+    // A single-component run skips the ones it did not measure.
     for (name, ceiling) in [("Box", 3.0), ("Text", 5.0), ("Button", 6.0)] {
+        let Some(ns) = cost(name) else { continue };
         assert!(
-            cost(name) < leaf * ceiling,
-            "{name} regressed: {:.0} ns, {:.1}x Leaf",
-            cost(name),
-            cost(name) / leaf
+            ns < leaf * ceiling,
+            "{name} regressed: {ns:.0} ns, {:.1}x Leaf",
+            ns / leaf
         );
     }
 }
