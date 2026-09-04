@@ -216,13 +216,18 @@ fn focus_segment(element: &ElementHandle, root: &str, index: usize) {
     let _ = element.query_selector(&selector).and_then(|el| el.focus());
 }
 
-/// A segment label's `data-state`.
+/// A segment label's `data-state`. The two flags are independent: a picked
+/// segment that is then disabled still reads as picked, because its radio
+/// stays checked (todo 134).
 fn segment_state(shared: &str, disabled: bool, checked: bool) -> String {
-    match (disabled, checked) {
-        (true, _) => format!("{shared} disabled"),
-        (false, true) => format!("{shared} checked"),
-        (false, false) => shared.to_string(),
+    let mut state = shared.to_string();
+    if checked {
+        state.push_str(" checked");
     }
+    if disabled {
+        state.push_str(" disabled");
+    }
+    state
 }
 
 /// A plain `fn`, not a component: `Vec<Element>` props defeat memoization, so
@@ -372,7 +377,20 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
 
 #[cfg(test)]
 mod tests {
-    use super::neighbour;
+    use super::{neighbour, segment_state};
+
+    /// Disabling the picked segment must not hide that it is picked: its
+    /// radio stays checked, so the label has to say so too.
+    #[test]
+    fn a_disabled_pick_stays_checked() {
+        assert_eq!(
+            segment_state("size-md", true, true),
+            "size-md checked disabled"
+        );
+        assert_eq!(segment_state("size-md", true, false), "size-md disabled");
+        assert_eq!(segment_state("size-md", false, true), "size-md checked");
+        assert_eq!(segment_state("size-md", false, false), "size-md");
+    }
 
     /// The arrow keys are answered in Rust now, so the wrap SSR cannot reach
     /// is at least pinned here.

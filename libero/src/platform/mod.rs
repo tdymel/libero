@@ -11,6 +11,7 @@
 //! backend the renderer offers. See [`backend`].
 
 pub(crate) mod backend;
+mod click;
 mod clipboard;
 mod clock;
 mod document;
@@ -24,6 +25,7 @@ mod task;
 mod timer;
 mod transition;
 
+pub(crate) use click::nested_interactive;
 pub use clipboard::ClipboardApi;
 pub(crate) use clipboard::clipboard;
 pub use clock::{ClockApi, clock};

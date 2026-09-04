@@ -2,7 +2,7 @@ use std::cell::Cell;
 use std::rc::Rc;
 use std::time::Duration;
 
-use dioxus::prelude::{Event, Key, Modifiers, MountedData, TransitionData};
+use dioxus::prelude::{Event, Key, Modifiers, MountedData, MouseData, TransitionData};
 use wasm_bindgen::{JsCast, JsValue};
 
 use wasm_bindgen::prelude::Closure;
@@ -36,6 +36,29 @@ pub(super) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
             .downcast::<web_sys::TransitionEvent>()?
             .property_name(),
     )
+}
+
+/// What HTML counts as interactive content, plus anything a caller made
+/// focusable. A label does not forward a click on any of these.
+const INTERACTIVE: &str = "a[href], button, input, select, textarea, summary, \
+    [tabindex], [contenteditable]:not([contenteditable=\"false\"])";
+
+/// The click's target, walked up to the nearest interactive element and the
+/// nearest `boundary`: nested when the first sits strictly inside the second.
+/// dioxus-web delegates from the root, so `currentTarget` is not the element
+/// the handler sits on - the boundary selector stands in for it.
+pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {
+    let nested = || -> Option<bool> {
+        let target = event
+            .downcast::<web_sys::MouseEvent>()?
+            .target()?
+            .dyn_into::<web_sys::Element>()
+            .ok()?;
+        let boundary = target.closest(boundary).ok()??;
+        let hit = target.closest(INTERACTIVE).ok()??;
+        Some(hit != boundary && boundary.contains(Some(&hit)))
+    };
+    nested().unwrap_or(false)
 }
 
 pub(super) fn document() -> Option<Box<dyn DocumentApi>> {

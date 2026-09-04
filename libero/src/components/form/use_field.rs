@@ -13,7 +13,7 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     hooks::{ElementHandle, use_root_id},
-    platform::{ElementApi, next_task},
+    platform::{ElementApi, nested_interactive, next_task},
     sx::{StaticSx, Sx, sx},
     theme::{
         ChoiceVariant, FIELD_CARD_PADDING, FIELD_FRAME_GAP, FieldDefaults, PAPER_BACKGROUND,
@@ -754,6 +754,9 @@ impl Activation {
     pub(crate) fn label_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
         let activation = self.clone();
         move |event| {
+            if nested_interactive(&event, CLICK_BOUNDARY) {
+                return;
+            }
             event.prevent_default();
             if activation.card {
                 event.stop_propagation();
@@ -768,7 +771,10 @@ impl Activation {
     /// action of its own to cancel.
     fn card_click(&self) -> impl FnMut(Event<MouseData>) + 'static {
         let activation = self.clone();
-        move |_| {
+        move |event| {
+            if nested_interactive(&event, CLICK_BOUNDARY) {
+                return;
+            }
             (activation.activate)();
             activation.focus();
         }
@@ -845,6 +851,11 @@ impl Activation {
         }
     }
 }
+
+/// What a label or a card leaves to a link or button nested in it: the
+/// label, or the card's wrapper - not the control `<span>`, which carries
+/// `card` too.
+const CLICK_BOUNDARY: &str = "label, div[data-state~=\"card\"]";
 
 fn activates(event: &KeyboardData, enter: bool) -> bool {
     match event.key() {

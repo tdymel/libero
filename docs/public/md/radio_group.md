@@ -123,8 +123,9 @@ RadioGroup {
 In a row the cards stretch to one height. The keyboard, the single tab stop and
 the aria wiring are the plain group's; the focus ring moves from the circle to
 the card. The selected card is marked by its filled circle, not by its border,
-which is decoration. A label or description must hold nothing interactive: a
-click on a link inside the card would pick the option too.
+which is decoration. On the web a link or button inside a label or description
+keeps its own click, and the option is not picked. Natively (Blitz) the whole
+card is still one click target, so a link inside it picks the option.
 
 ## Props
 

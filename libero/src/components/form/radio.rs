@@ -100,8 +100,9 @@ field_props! {
         #[props(default, into)]
         aria_label: Option<String>,
         /// `Card` draws the radio as a bordered surface and makes all of it
-        /// the hit area. The label and captions must not hold anything
-        /// interactive of their own: a click on it would reach the card too.
+        /// the hit area. On the web a link or button in the label or
+        /// captions keeps its own click; natively the card cannot tell, and
+        /// picks the radio.
         #[props(default, into)]
         variant: Input<ChoiceVariant>,
     }

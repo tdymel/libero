@@ -91,9 +91,10 @@ Checkbox {
 
 Nothing else changes: the same hidden input, one tab stop, Space to toggle.
 The focus ring moves from the box to the card. The checked state is shown by
-the box, not by the card's border, which is decoration. The label and captions
-must hold nothing interactive: a click on a link inside the card would toggle
-it too.
+the box, not by the card's border, which is decoration. On the web a link or
+button inside the label or a caption keeps its own click, and the card does
+not toggle. Natively (Blitz) the whole card is still one click target, so a
+link inside it toggles the card.
 
 ## Accessibility
 

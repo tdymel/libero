@@ -14,7 +14,7 @@
 
 use std::rc::Rc;
 
-use dioxus::prelude::{Event, MountedData, TransitionData};
+use dioxus::prelude::{Event, MountedData, MouseData, TransitionData};
 
 use super::{DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
@@ -90,4 +90,15 @@ pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     return web::transition_property(event);
     #[cfg(not(target_arch = "wasm32"))]
     return None;
+}
+
+/// Only the web can see a click's target today - see
+/// [`nested_interactive`](crate::platform::nested_interactive).
+pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (event, boundary);
+    #[cfg(target_arch = "wasm32")]
+    return web::nested_interactive(event, boundary);
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
 }

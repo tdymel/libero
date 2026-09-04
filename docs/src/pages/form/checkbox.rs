@@ -48,7 +48,7 @@ pub fn CheckboxPage() -> Element {
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
-                        .doc("`card` draws the checkbox as a bordered surface and makes all of it the hit area. Pair it with a `description`; the label and captions must hold nothing interactive of their own."),
+                        .doc("`card` draws the checkbox as a bordered surface and makes all of it the hit area. Pair it with a `description`. On the web a link inside the card keeps its own click; natively it toggles the card."),
                 ]),
             ],
             lead: rsx! {
