@@ -52,16 +52,14 @@ pub fn LoaderPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("primary")
                     .doc("The ink; a theme color name or a literal CSS color."),
-                prop("label", "Option<String>")
-                    .doc("Makes the loader its own `role=\"status\"` live region holding this text. It mounts with the text already in it, which some screen readers do not announce, so to announce a wait use an always-mounted status region outside the busy element instead."),
             ])],
             lead: rsx! {
                 Text {
                     "An indeterminate busy indicator: it says something is happening, never "
                     "how much is left. The root is a "
                     Code { source: "<span>" }
-                    ", so a loader is legal inside a paragraph or a button. It is silent by "
-                    "default - "
+                    ", so a loader is legal inside a paragraph or a button. It is always "
+                    "silent - "
                     Code { source: "aria-hidden=\"true\"" }
                     " - because something else on screen usually already says what is going "
                     "on. Under "

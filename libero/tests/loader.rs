@@ -1,5 +1,4 @@
-//! `Loader`'s rendered contract: silent by default, a live region only when it
-//! is given a label, and a reduced-motion arm that leaves every shape visible.
+//! `Loader`'s rendered contract: always silent, and a reduced-motion arm that leaves every shape visible.
 
 mod common;
 
@@ -16,11 +15,12 @@ fn loader_class(html: &str) -> String {
         .clone()
 }
 
-/// The default is beside-its-own-text or inside a named control, so the loader
-/// is silent: `aria-hidden`, no role. `role="presentation"` would be a no-op on
+/// Something else always says the wait - its own text, a named control or a
+/// status region outside the busy element - so the loader is silent:
+/// `aria-hidden`, no role. `role="presentation"` would be a no-op on
 /// a `<span>`, which has no implicit role to strip.
 #[test]
-fn without_a_label_it_is_hidden_and_has_no_role() {
+fn it_is_hidden_and_has_no_role() {
     fn app() -> Element {
         rsx! {
             LiberoProvider { Loader {} }
@@ -41,25 +41,6 @@ fn without_a_label_it_is_hidden_and_has_no_role() {
         1,
         "oval takes no children: {html}"
     );
-}
-
-/// A live region announces its content, so the label is a text node inside the
-/// root, not `aria-label`. And a live region must not also be `aria-hidden`.
-#[test]
-fn a_label_makes_it_a_status_region_with_a_text_node() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider { Loader { variant: "dots", label: "Loading results" } }
-        }
-    }
-
-    let html = body(&render(app));
-    let attributes = attributes_of(&html, "span");
-
-    assert_eq!(attributes["role"], "status", "{attributes:?}");
-    assert!(!attributes.contains_key("aria-hidden"), "{attributes:?}");
-    assert!(!attributes.contains_key("aria-label"), "{attributes:?}");
-    assert!(html.contains("Loading results"), "{html}");
 }
 
 /// `bars` and `dots` are three real boxes - three independently delayed

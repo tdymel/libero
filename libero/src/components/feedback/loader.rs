@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables, VisuallyHidden,
+        HtmlTag, Input, States, Variables,
         common::{base_color, base_props, input_from_str, variables},
         layout::use_box,
     },
@@ -160,17 +160,6 @@ base_props! {
         /// The ink.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Turns the loader into a live region holding this text.
-        ///
-        /// It mounts with the text already in it, and some screen readers
-        /// do not announce a region like that. To announce a wait, keep the
-        /// loader silent and fill an always-mounted status region outside
-        /// the busy element (see "Announcing it" on [`Loader`]). Beside its
-        /// own visible text, or inside a control that already has a name,
-        /// leave it `None` - a second announcement of the same state is
-        /// noise, not help.
-        #[props(default, into)]
-        label: Option<String>,
     }
 }
 
@@ -184,10 +173,9 @@ base_props! {
 ///
 /// # Announcing it
 ///
-/// The default is silence: `aria-hidden="true"`, on the assumption that
-/// something else on screen already says what is going on. That is the common
-/// case and the right default - a spinner next to the word "Uploading…" that
-/// also announced itself would be read twice.
+/// A loader is always silent: `aria-hidden="true"`, on the assumption that
+/// something else on screen already says what is going on. A spinner next to
+/// the word "Uploading…" that also announced itself would be read twice.
 ///
 /// | The loader is… | write | the root renders |
 /// |---|---|---|
@@ -208,11 +196,9 @@ base_props! {
 /// VisuallyHidden { role: "status", if loading { "Loading results" } }
 /// ```
 ///
-/// `label` makes the loader its own status region instead, with the text as
-/// a *text node*, not `aria-label`: a live region announces its contents, so
-/// naming it announces nothing. `role="status"` already implies
-/// `aria-live="polite"` and `aria-atomic="true"`, which is why neither is
-/// restated here. It mounts with its text, so it has the first risk above.
+/// There is no `label` prop that would make the loader its own status region:
+/// that region would mount together with its text, which is the first risk
+/// above.
 ///
 /// Not focusable, and no keyboard behaviour at all.
 #[component]
@@ -249,30 +235,17 @@ pub fn Loader(props: LoaderProps) -> Element {
     // `aria-hidden`, not `role="presentation"`: `presentation` strips an
     // element's *implicit* role, and a `<span>` has none - it would be a no-op
     // and leave a nameless node in the tree.
-    let boxed = match props.label.as_ref() {
-        Some(_) => boxed.attr("role", "status"),
-        None => boxed.attr("aria-hidden", "true"),
-    };
-
-    let label = props.label.clone();
-    let announcement = rsx! {
-        if let Some(text) = label {
-            VisuallyHidden { "{text}" }
-        }
-    };
+    let boxed = boxed.attr("aria-hidden", "true");
 
     // `oval` draws itself with `::after` and takes no children; the other two
     // are three real elements, because three independently delayed animations
     // need three boxes and an element has only one `::before`/`::after` pair.
     let children = match variant {
-        LoaderVariant::Oval => rsx! {
-            {announcement}
-        },
+        LoaderVariant::Oval => rsx! {},
         LoaderVariant::Bars | LoaderVariant::Dots => rsx! {
             span {}
             span {}
             span {}
-            {announcement}
         },
     };
 

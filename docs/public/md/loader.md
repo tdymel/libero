@@ -4,11 +4,11 @@ Crate: `libero`
 Import: `use libero::components::Loader;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/feedback/loader.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An indeterminate busy indicator - a rotating ring, three bars or three dots - silent by default; an always-mounted status region says the wait.
+Description: An indeterminate busy indicator - a rotating ring, three bars or three dots - always silent; an always-mounted status region says the wait.
 
 An indeterminate busy indicator: it says something is happening, never how much
 is left. The root is a `<span>`, so a loader is legal inside a paragraph or a
-button. It is silent by default - `aria-hidden="true"` - because something else
+button. It is always silent - `aria-hidden="true"` - because something else
 on screen usually already says what is going on. Under
 `prefers-reduced-motion: reduce` all three shapes stop and stay visible: a still
 ring with its gap, three full-height bars, three dots.
@@ -85,14 +85,11 @@ its loading status this way.
 
 ## Accessibility
 
-- **Silent by default**: `aria-hidden="true"`, not `role="presentation"` - a
+- **Always silent**: `aria-hidden="true"`, not `role="presentation"` - a
   `<span>` has no implicit role for `presentation` to strip.
-- **`label` makes the loader its own live region.** The label is a visually
-  hidden text node, not `aria-label`: a live region announces its content, so
-  naming it announces nothing. `role="status"` implies `aria-live="polite"` and
-  `aria-atomic="true"`, which are not restated. The region mounts with its
-  text, which some screen readers do not announce, so prefer the always-mounted
-  status region above.
+- **No `label` prop.** A loader that is its own status region mounts together
+  with its text, which some screen readers do not announce. Use the
+  always-mounted status region above.
 - **Not focusable, no keyboard contract.**
 - **Reduced motion**: every animation stops, and each shape rests on its
   visible end - a bar's keyframes start at `opacity: 0`, so its arm restores
@@ -105,7 +102,6 @@ its loading status this way.
 | `variant` | `LoaderVariant` | `oval` | The shape: `oval`, `bars` or `dots`. |
 | `size` | `Size` | `md` | The square edge, 18px at `xs` to 72px at `xxl`. Every part of the shape is a fraction of it. |
 | `color` | `ThemeAwareValue` | `primary` | The ink; a theme color name or a literal CSS color. |
-| `label` | `Option<String>` | `None` | Makes the loader its own `role="status"` live region holding this text. It mounts with the text, which some screen readers do not announce; to announce a wait, use an always-mounted status region outside the busy element. |
 
 Like every component, `Loader` also takes the shared props `sx`, `class`,
 `states`, and any extra HTML attributes.

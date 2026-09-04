@@ -38,7 +38,7 @@ fetch only the file you need.
 ## Feedback
 
 - [Alert](alert.md): A tinted surface for something the reader has to know - a title that names it, an optional icon and close button, and `role="alert"` as a default you can replace.
-- [Loader](loader.md): An indeterminate busy indicator - oval, bars or dots - silent by default; an always-mounted status region outside the busy element says the wait. The `loading` state behind `Button`, `Combobox` and `FileField`.
+- [Loader](loader.md): An indeterminate busy indicator - oval, bars or dots - always silent; an always-mounted status region outside the busy element says the wait. The `loading` state behind `Button`, `Combobox` and `FileField`.
 - [Notifications](notifications.md): A hook plus a host. Render `Notifications {}` once, and `use_notifications()` shows messages from anywhere, as an `Alert` or as your own template over your own data.
 - [ProgressBar](progress_bar.md): A determinate or indeterminate progress bar over any `min..=max` range, with `role="progressbar"` and the raw `aria-value*` set on its root.
 - [Skeleton](skeleton.md): A placeholder for loading content - a standalone grey shape, or a wrapper that hides the real content until it is ready.
