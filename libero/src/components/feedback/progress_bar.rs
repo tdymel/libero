@@ -14,7 +14,7 @@ use crate::{
         PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS,
         PROGRESS_BAR_SIZE, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size,
     },
-    utils::warn,
+    utils::{names_itself, use_name_warning, warn},
 };
 
 /// The `data-state` the determinate arm keys on. Named rather than left as the
@@ -194,6 +194,11 @@ base_props! {
 #[component]
 pub fn ProgressBar(props: ProgressBarProps) -> Element {
     let theme = use_theme();
+    use_name_warning(
+        names_itself(&props.attributes),
+        "ProgressBar: no `aria_label` or `aria-labelledby`, so it is announced as just \
+         \"progress bar\" and a percentage.",
+    );
     let color = base_color(props.color.as_ref());
 
     let size = props.size.copied_or(theme.progress_bar.size);

@@ -8,10 +8,11 @@ use crate::{
         common::{base_props, variables},
         layout::use_box,
     },
-    hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_theme},
+    hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_id, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
+    utils::use_name_warning,
 };
 
 /// Both panes' resulting sizes as percentages, `A` (left/top) first.
@@ -103,6 +104,11 @@ base_props! {
         divider_color: Input<ThemeAwareValue>,
         #[props(default)]
         on_resize: Option<EventHandler<SplitterResizeEvent>>,
+        /// Names the divider, which is a focusable `role="separator"` - after
+        /// the pane it resizes, e.g. `"Resize sidebar"`. An `aria_label` in
+        /// `attributes` would land on the root instead. Unset is a `warn()`.
+        #[props(default, into)]
+        aria_label: Option<String>,
         /// Pane A (left/top). Required against upstream main, which cannot
         /// split `children` apart; on the fork it falls back to the first
         /// child.
@@ -129,6 +135,13 @@ base_props! {
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
     let root = use_element();
+    // The divider controls pane A, so it points there.
+    let panel_a_id = use_id();
+    use_name_warning(
+        props.aria_label.is_some(),
+        "Splitter: no `aria_label`, so the divider is announced as just \"separator\" \
+         and a number.",
+    );
     #[cfg(feature = "dioxus-fork")]
     let (panel_a, panel_b) = { resolve_panels(props.panel_a, props.panel_b, props.children) };
     #[cfg(not(feature = "dioxus-fork"))]
@@ -253,12 +266,14 @@ pub fn Splitter(props: SplitterProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
-                div { class: panel_a_class, {panel_a} }
+                div { id: panel_a_id, class: panel_a_class, {panel_a} }
                 SplitterDivider {
                     a,
                     vertical,
                     size,
                     min_size,
+                    aria_label: props.aria_label,
+                    controls: panel_a_id(),
                     onpointerdown: drag.onpointerdown,
                     onkeydown,
                 }

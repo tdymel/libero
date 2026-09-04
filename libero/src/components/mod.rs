@@ -5,6 +5,8 @@ mod feedback;
 mod form;
 mod inputs;
 mod layout;
+#[cfg(all(test, debug_assertions))]
+mod name_warning_tests;
 mod navigation;
 mod overlay;
 mod surface;

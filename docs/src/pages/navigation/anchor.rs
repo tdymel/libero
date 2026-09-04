@@ -24,7 +24,7 @@ pub fn AnchorPage() -> Element {
             properties: vec![props("Anchor", vec![
                 prop("size", "Size").default("md").doc("Text size."),
                 prop("to", "NavigationTarget")
-                    .doc("A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target gets SPA navigation; otherwise a plain `href`."),
+                    .doc("A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `\"_blank\"`, an internal target gets SPA navigation; otherwise a plain `href`. A `javascript:` URL runs script on click and warns in a debug build, so check the scheme of any URL that comes from user data."),
                 prop("target", "String").doc("The anchor's `target` attribute."),
                 prop("underline", "AnchorUnderline")
                     .default("hover")

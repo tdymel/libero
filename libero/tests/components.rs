@@ -1886,10 +1886,14 @@ fn a_root_element_component_leaves_the_id_to_its_caller() {
     let body = body(&render(app));
 
     assert_eq!(body.matches("id=\"mine\"").count(), 4);
-    assert!(
-        !body.contains("id=\"lsx-"),
+    // The one generated id is on Splitter's pane A, not a root: its divider's
+    // `aria-controls` points there.
+    assert_eq!(
+        body.matches("id=\"lsx-").count(),
+        1,
         "a generated id shadowed the caller's:\n{body}"
     );
+    assert!(body.contains("aria-controls=\"lsx-"), "{body}");
 }
 
 /// `min_size` floors *both* panes, so anything past 50 leaves `f64::clamp`

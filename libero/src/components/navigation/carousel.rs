@@ -22,7 +22,7 @@ use crate::{
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
         CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, Size, SizeCss,
     },
-    utils::warn,
+    utils::use_name_warning,
 };
 
 pub use crate::theme::CarouselAlign;
@@ -693,11 +693,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
 
     // A named region beats an unnamed one even when the name is generic, so
     // the theme's stands in - and the warning still says to do better.
-    if props.aria_label.is_none() {
-        warn(
-            "Carousel: no `aria_label`, falling back to the theme's. A region needs a name of its own to be told apart in a landmark list.",
-        );
-    }
+    use_name_warning(
+        props.aria_label.is_some(),
+        "Carousel: no `aria_label`, falling back to the theme's. A region needs a name of its own to be told apart in a landmark list.",
+    );
     let aria_label = props
         .aria_label
         .clone()

@@ -1,7 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, or_unset, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, or_unset, prop, props,
+};
 use dioxus::prelude::*;
 use libero::{
-    components::{Box, Input, Splitter, Text},
+    components::{Box, Code, Input, Kbd, List, ListItem, Splitter, Text},
     sx::sx,
 };
 
@@ -14,6 +16,7 @@ const NESTED_PANEL_B: &str = r#"panel_b: rsx! {
         Splitter {
             orientation: "horizontal",
             initial_size: 65.0,
+            aria_label: "Resize pane B",
             panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
             panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("info.1"), "C" } },
         }
@@ -65,6 +68,7 @@ fn panel_b(values: &DemoValues) -> Element {
             Splitter {
                 orientation: "horizontal",
                 initial_size: 65.0,
+                aria_label: "Resize pane B",
                 panel_a: pane("secondary.1", "B"),
                 panel_b: pane("info.1", "C"),
             }
@@ -94,6 +98,8 @@ pub fn SplitterPage() -> Element {
                 prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
                 prop("on_resize", "EventHandler<SplitterResizeEvent>")
                     .doc("Fires as the divider moves, with both panes' resulting sizes as percentages."),
+                prop("aria_label", "String")
+                    .doc("Names the divider, after the pane it resizes. Unset warns in a debug build."),
                 prop("panel_a", "Element").doc("Pane A (left/top)."),
                 prop("panel_b", "Element").doc("Pane B (right/bottom). Nest another `Splitter` in a pane for more than two."),
             ])],
@@ -104,7 +110,10 @@ pub fn SplitterPage() -> Element {
                 component: "Splitter",
                 children_text: "",
                 // Required, and not something a control varies.
-                fixed: vec!["initial_size: 50.0".to_string()],
+                fixed: vec![
+                    "initial_size: 50.0".to_string(),
+                    r#"aria_label: "Resize panes""#.to_string(),
+                ],
                 controls: vec![
                     Control::toggle("orientation", ["vertical", "horizontal"]),
                     Control::slider("min_size", ["10", "20", "30", "40"]).code(percent_code),
@@ -126,6 +135,7 @@ pub fn SplitterPage() -> Element {
                         Splitter {
                             orientation: values.str("orientation"),
                             initial_size: 50.0,
+                            aria_label: "Resize panes",
                             min_size: percent(values.str("min_size")),
                             divider_size: or_unset(values.str("divider_size")),
                             divider_color: match values.str("divider_color").as_str() {
@@ -146,6 +156,23 @@ pub fn SplitterPage() -> Element {
                     }
                 },
                 wrap: Wrap(wrap_splitter),
+            }
+
+            DocSection {
+                title: "Accessibility",
+                List {
+                    ListItem {
+                        "Set "
+                        Code { source: "aria_label" }
+                        ": it names the divider. Name it after the pane it resizes."
+                    }
+                    ListItem {
+                        "The divider is a tab stop. "
+                        Kbd { "←" } " " Kbd { "→" } ", or " Kbd { "↑" } " " Kbd { "↓" }
+                        " when horizontal: move it, with " Kbd { "Shift" } " in bigger steps. "
+                        Kbd { "Home" } " " Kbd { "End" } ": to either limit."
+                    }
+                }
             }
         }
     }

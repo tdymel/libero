@@ -27,6 +27,7 @@ fn Demo() -> Element {
             sx: sx().height("160px").width("320px").border("1px solid var(--lsx-grey-3)"),
             Splitter {
                 initial_size: 50.0,
+                aria_label: "Resize panes",
                 panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } },
                 panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
             }
@@ -48,11 +49,13 @@ fn Demo() -> Element {
             sx: sx().height("160px").width("320px").border("1px solid var(--lsx-grey-3)"),
             Splitter {
                 initial_size: 50.0,
+                aria_label: "Resize panes",
                 panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } },
                 panel_b: rsx! {
                     Splitter {
                         orientation: "horizontal",
                         initial_size: 65.0,
+                        aria_label: "Resize pane B",
                         panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } },
                         panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("info.1"), "C" } },
                     }
@@ -69,6 +72,9 @@ a scroll is.
 
 ## Accessibility
 
+Set `aria_label`: the divider is a focusable separator, and it has no name of its
+own. Name it after the pane it resizes, such as `"Resize sidebar"`.
+
 Once the divider has focus, Arrow keys move by `SplitterDefaults::step` (1%),
 Shift+Arrow by `big_step` (10%), Home and End jump to the `min_size` floor and
 its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
@@ -83,6 +89,7 @@ its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 | `divider_size` | `Size` | `sm` | Which size level the divider uses. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
 | `on_resize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. |
+| `aria_label` | `String` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
 | `panel_a` | `Element` | required | Pane A (left/top). |
 | `panel_b` | `Element` | required | Pane B (right/bottom). Nest another `Splitter` in a pane for more than two. |
 

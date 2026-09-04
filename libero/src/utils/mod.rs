@@ -3,4 +3,6 @@
 
 mod warn;
 
-pub(crate) use warn::warn;
+#[cfg(test)]
+pub(crate) use warn::take_warnings;
+pub(crate) use warn::{is_javascript_url, names_itself, use_name_warning, warn};

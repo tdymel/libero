@@ -74,6 +74,9 @@ pub(super) fn SplitterDivider(
     vertical: bool,
     size: Size,
     min_size: f64,
+    aria_label: Option<String>,
+    /// Pane A's id.
+    controls: String,
     onpointerdown: Callback<Event<PointerData>>,
     onkeydown: Callback<Event<KeyboardData>>,
 ) -> Element {
@@ -95,6 +98,8 @@ pub(super) fn SplitterDivider(
     let hit = hit
         .attr("role", "separator")
         .attr("tabindex", "0")
+        .attr("aria-label", aria_label)
+        .attr("aria-controls", controls)
         .attr(
             "aria-orientation",
             if vertical { "vertical" } else { "horizontal" },

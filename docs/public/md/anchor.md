@@ -82,7 +82,7 @@ label or a `Tooltip` for anyone who cannot see it happen.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `size` | `Size` | `md` | Text size. |
-| `to` | `NavigationTarget` | required | A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target gets SPA navigation; otherwise a plain `href`. |
+| `to` | `NavigationTarget` | required | A path/URL or a typed route (`Route::Foo {}`). With a router mounted and `target` unset or `"_blank"`, an internal target gets SPA navigation; otherwise a plain `href`. A `javascript:` URL runs script on click and warns in a debug build, so check the scheme of any URL that comes from user data. |
 | `target` | `String` | - | The anchor's `target` attribute. |
 | `underline` | `AnchorUnderline` | `hover` | When the underline draws: `always`, `hover`, or `never`. |
 | `children` | `Element` | required | The link's content. |

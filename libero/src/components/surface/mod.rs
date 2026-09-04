@@ -1,6 +1,7 @@
 mod dialog;
 mod paper;
 
+pub(crate) use dialog::UnnameableDialog;
 pub use dialog::{Dialog, DialogProps};
 /// The surface definition itself, for a component that renders one as part of
 /// its own element instead of nesting a `Paper` - see `PaperProps::framework_sx`.

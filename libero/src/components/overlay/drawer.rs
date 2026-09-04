@@ -4,6 +4,7 @@ use crate::{
     components::{
         Dialog, Float, Input, Placement,
         common::{base_props, input_from_str},
+        surface::UnnameableDialog,
     },
     hooks::use_css,
     str_enum::str_enum,
@@ -83,6 +84,7 @@ base_props! {
 /// the portal and the dismissal are [`crate::hooks::use_drawer`]'s.
 #[component]
 pub(crate) fn Drawer(props: DrawerProps) -> Element {
+    use_context_provider(|| UnnameableDialog);
     let anchor = props.anchor.copied_or_default();
     let size = props.size.copied_or(Size::Md);
 

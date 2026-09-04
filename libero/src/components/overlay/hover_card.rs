@@ -206,18 +206,11 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     };
 
     // A dialog with no name is announced as "dialog" and nothing else.
-    let named = props
-        .attributes
-        .iter()
-        .any(|attribute| matches!(attribute.name, "aria-label" | "aria-labelledby"));
-    use_hook(move || {
-        if !named {
-            crate::utils::warn(
-                "HoverCard: the card is a dialog and needs a name - pass `aria_label`, or \
-                 `aria-labelledby` pointing into `content`.",
-            );
-        }
-    });
+    crate::utils::use_name_warning(
+        crate::utils::names_itself(&props.attributes),
+        "HoverCard: the card is a dialog and needs a name - pass `aria_label`, or \
+         `aria-labelledby` pointing into `content`.",
+    );
 
     let states: Input<States> = props
         .states

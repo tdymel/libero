@@ -7,12 +7,26 @@ use crate::{
         layout::box_style,
     },
     sx::StaticSx,
+    utils::{is_javascript_url, warn},
 };
 
 fn navigation_target_href(to: NavigationTarget) -> String {
     match to {
         NavigationTarget::Internal(url) | NavigationTarget::External(url) => url,
     }
+}
+
+/// Every link in the library resolves here, so this is the one place a
+/// script URL can be caught. It is passed through, not blocked: the caller
+/// may mean it, and a URL from user data is theirs to check.
+fn javascript_url_warning(to: &NavigationTarget) -> Option<String> {
+    let (NavigationTarget::Internal(url) | NavigationTarget::External(url)) = to;
+    is_javascript_url(url).then(|| {
+        format!(
+            "Link to `{url}`: a `javascript:` URL runs script on click. If it comes from user \
+             data, check the scheme before passing it."
+        )
+    })
 }
 
 base_props! {
@@ -39,6 +53,10 @@ base_props! {
 /// `<button>` case needs one.
 #[component]
 pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
+    if let Some(message) = javascript_url_warning(&props.to) {
+        warn(&message);
+    }
+
     // A hook both branches need, so it stays above the return.
     let style_attributes = use_style_attributes(
         &props.class,
@@ -91,4 +109,18 @@ pub(crate) fn InternalAnchor(props: InternalAnchorProps) -> Element {
     }
 
     anchor.render(HtmlTag::A, props.attributes, props.children)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn only_a_javascript_target_warns() {
+        let external = |url: &str| NavigationTarget::<String>::External(url.to_string());
+
+        assert!(javascript_url_warning(&external(" JavaScript:alert(1)")).is_some());
+        assert!(javascript_url_warning(&external("https://example.com")).is_none());
+        assert!(javascript_url_warning(&NavigationTarget::Internal("/docs".to_string())).is_none());
+    }
 }
