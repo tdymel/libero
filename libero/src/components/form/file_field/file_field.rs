@@ -4,13 +4,13 @@ use dioxus::prelude::*;
 use crate::{
     CssLayer,
     components::{
-        ActionIcon, Chip, HtmlTag, Input, States,
+        ActionIcon, HtmlTag, Input, States,
         common::{field_props, focus_ring_sx, input_from_str},
         feedback::Loader,
         form::{
             SelectionArgs, clear_button, field_control_sx,
             glyphs::{CloseIcon, UploadIcon},
-            use_bound, use_field, use_field_frame,
+            removable_chip, use_bound, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -20,8 +20,8 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        CHIP_HEIGHT, FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS,
-        FileFieldDefaults, FileFieldVariant, Size,
+        FILE_FIELD_DROPZONE_HEIGHT, FILE_FIELD_PADDING, FILE_FIELD_RADIUS, FileFieldDefaults,
+        FileFieldVariant, Size,
     },
     utils::warn,
 };
@@ -420,7 +420,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         multiple,
         interactive,
         icon_size: ThemeAwareValue::Size(size).into(),
-        chip_size,
+        size,
         // Only once the surface is gone: otherwise the loader is on the
         // surface, and one is enough.
         card_loader: (loading && !surface).then_some(chip_size),
@@ -706,7 +706,8 @@ struct FileRows {
     multiple: bool,
     interactive: bool,
     icon_size: Input<ThemeAwareValue>,
-    chip_size: Size,
+    /// The field's; the chips step down from it themselves.
+    size: Size,
     /// The loader a card carries, once no surface is left to carry it.
     card_loader: Option<Size>,
     field_id: String,
@@ -743,13 +744,7 @@ impl FileRows {
                     self.card_loader,
                     format!("{}-remove-{index}", self.field_id),
                 ),
-                false => default_chip(
-                    &file,
-                    remove,
-                    self.chip_size,
-                    self.multiple,
-                    self.interactive,
-                ),
+                false => default_chip(&file, remove, self.size, self.multiple, self.interactive),
             },
         };
         match self.cards {
@@ -1034,44 +1029,9 @@ fn default_chip(
             span { "data-slot": "name", "{name}" }
         };
     }
-    // A fraction of the chip's own height, not of its font: the two do not
-    // scale at the same rate, so an `em` x shrinks against its chip as the
-    // field grows.
-    let icon_size: Input<ThemeAwareValue> =
-        ThemeAwareValue::String(format!("calc({} * 0.6)", CHIP_HEIGHT.value(size))).into();
-    rsx! {
-        Chip { size,
-            span { "data-slot": "name", "{name}" }
-            if interactive {
-                span {
-                    "data-slot": "remove",
-                    // A remove is not a click on the control, which would open
-                    // the picker under the chip that just went away.
-                    onclick: move |event: MouseEvent| {
-                        event.stop_propagation();
-                        remove.call(());
-                    },
-                    ActionIcon {
-                        aria_label: "Remove {name}",
-                        size: icon_size,
-                        // A native button inherits neither `color` nor
-                        // `font-size` - it takes the UA's `buttontext`.
-                        sx: sx()
-                            .color("inherit")
-                            .font_size("inherit")
-                            .border_radius("50%")
-                            .selector(
-                                "&:hover",
-                                sx().background("color-mix(in srgb, currentColor 20%, transparent)"),
-                            ),
-                        // The control is one tab stop.
-                        tabindex: "-1",
-                        CloseIcon {}
-                    }
-                }
-            }
-        }
-    }
+    // The chip `MultiSelect` and `TagsField` draw. Its press guard keeps the
+    // focus on the control, so a mouse removal needs no repair.
+    removable_chip(name, remove, size, !interactive)
 }
 
 /// One picked file as a row under the dropzone: the name, its size, and an x.

@@ -43,7 +43,8 @@ static REMOVE_BUTTON_SX: StaticSx = StaticSx::new(|| {
 });
 
 /// The default chip of a field that holds a list - `MultiSelect`'s selection,
-/// `TagsField`'s tags: the label, and an x that drops it.
+/// `TagsField`'s tags, a `multiple` `FileField`'s files: the label, and an x
+/// that drops it.
 ///
 /// `size` is the field's; chips ride inside the control, so they sit one step
 /// down the same scale.
@@ -77,7 +78,7 @@ pub(crate) fn removable_chip(
                 // must not move it onto the button. And the button is about to
                 // be removed: a focused one would take the focus down with it,
                 // to the body ([[principles/focus-after-removal]]). With this,
-                // no mouse removal moves focus at all, which is why neither
+                // no mouse removal moves focus at all, which is why no
                 // field repairs it. Tested in `tests/all/events.rs`.
                 onmousedown: move |event: MouseEvent| event.prevent_default(),
                 // A remove is not a click on the field, which would open the

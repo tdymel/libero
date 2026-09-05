@@ -66,6 +66,8 @@ arboard = { version = "3.6", optional = true, default-features = false }
 # own copy, so the tests build against exactly the dioxus this crate does.
 [dev-dependencies]
 dioxus-ssr = { path = "../.dioxus-active/packages/ssr" }
+# Only to name `NativeFileData::byte_stream`'s return type in a fake file.
+futures-core = "0.3"
 
 [features]
 # Build against `.dioxus-fork` instead of upstream main. Only the fork lets a

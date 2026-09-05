@@ -312,6 +312,17 @@ fn thumbnail_id(base: &str, index: usize) -> String {
 /// Rescales picture `index` to `next(current scale)`, about `client` or the
 /// centre. The frame and the picture's natural size are read first - for the
 /// pan bounds and for where the cursor sits - so the zoom lands once they do.
+/// Where a second `open_with` leaves the viewer: on its index, clamped to its
+/// gallery, and fitted. A zoom is keyed by index only, so kept, it would carry
+/// onto whichever new picture lands at the same index.
+fn reopened(zoom: Zoom, index: usize, count: usize) -> (usize, Zoom) {
+    let zoom = match zoom.is_zoomed() {
+        true => Zoom::fitted(usize::MAX),
+        false => zoom,
+    };
+    (index.min(count.saturating_sub(1)), zoom)
+}
+
 fn zoom_about(
     stage: ElementHandle,
     picture: ElementHandle,
@@ -373,12 +384,12 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // A zoom is keyed by index only, so it would carry onto whichever new
     // picture lands at the same index.
     use_effect(use_reactive!(|opening| {
-        let target = opening.index.min(opening.items.len().saturating_sub(1));
+        let (target, fitted) = reopened(*zoom.peek(), opening.index, opening.items.len());
         if *index.peek() != target {
             index.set(target);
         }
-        if zoom.peek().is_zoomed() {
-            zoom.set(Zoom::fitted(usize::MAX));
+        if *zoom.peek() != fitted {
+            zoom.set(fitted);
         }
     }));
 
@@ -776,6 +787,25 @@ mod tests {
     }
 
     /// At 3x a 200px picture is still 600px, inside the 800px frame.
+    /// Todo 252, for `3203d7fd`: a second `open_with` drops the zoom, even
+    /// onto the index the zoom belonged to. Only this decision is testable
+    /// here: zooming needs the frame measured, which SSR cannot do. The
+    /// effect that calls it was checked in Chromium when it landed.
+    #[test]
+    fn a_second_open_drops_the_zoom_and_clamps_the_index() {
+        let zoomed = Zoom {
+            index: 2,
+            scale: 2.0,
+            x: 10.0,
+            y: 0.0,
+        };
+        assert_eq!(reopened(zoomed, 2, 4), (2, Zoom::fitted(usize::MAX)));
+        assert_eq!(reopened(zoomed, 9, 4), (3, Zoom::fitted(usize::MAX)));
+        // A fitted zoom is left as it is, so reopening writes nothing.
+        assert_eq!(reopened(Zoom::fitted(1), 0, 4), (0, Zoom::fitted(1)));
+        assert_eq!(reopened(Zoom::fitted(1), 0, 0).0, 0);
+    }
+
     #[test]
     fn a_zoomed_picture_smaller_than_the_frame_cannot_move() {
         let zoomed = Zoom {

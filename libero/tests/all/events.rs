@@ -9,8 +9,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Button, Dialog, Marquee, MultiSelect, Options, SegmentedControl, Tabs,
-        TagsField,
+        ActionIcon, Box, Button, Dialog, FileField, Marquee, MultiSelect, Options,
+        SegmentedControl, Tabs, TagsField,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -580,6 +580,27 @@ fn pressing_a_tag_x_keeps_the_focus_on_the_input() {
     assert_every_press_keeps_the_focus(app, 2);
 }
 
+/// Todo 250: `FileField`'s chips are the shared removable chip, guard
+/// included. Its own copy had none, so a press focused the x, and removing
+/// one of several chips dropped the focus to the body.
+#[test]
+fn pressing_a_file_chip_x_keeps_the_focus_on_the_control() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    assert_every_press_keeps_the_focus(app, 2);
+}
+
 #[test]
 fn pressing_a_chip_x_keeps_the_focus_on_the_trigger() {
     fn app() -> Element {
@@ -595,4 +616,127 @@ fn pressing_a_chip_x_keeps_the_focus_on_the_trigger() {
     }
 
     assert_every_press_keeps_the_focus(app, 2);
+}
+
+/// Every element that registered a `click` listener, and the one named
+/// "Clear" - the shared `clear_button` of five fields.
+#[derive(Default)]
+struct FindClear {
+    last: Option<ElementId>,
+    clicks: Vec<ElementId>,
+    clear: Option<ElementId>,
+}
+
+impl WriteMutations for FindClear {
+    fn push_id(&mut self, id: ElementId) {
+        self.last = Some(id);
+    }
+    fn set_id(&mut self, id: ElementId) {
+        self.last = Some(id);
+    }
+    fn add_event_listener(&mut self, name: &str) {
+        if name == "click" {
+            self.clicks.extend(self.last);
+        }
+    }
+    fn child(&mut self, _index: usize) {}
+    fn pop(&mut self) {}
+    fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+    fn create_text(&mut self, _value: &str) {}
+    fn clone(&mut self) {}
+    fn append_children(&mut self, _m: usize) {}
+    fn replace_with(&mut self, _m: usize) {}
+    fn insert_after(&mut self, _m: usize) {}
+    fn insert_before(&mut self, _m: usize) {}
+    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+        if name == "aria-label" && matches!(value, AttributeValue::Text(text) if text == "Clear") {
+            self.clear = self.last;
+        }
+    }
+    fn set_text(&mut self, _value: &str) {}
+    fn remove_event_listener(&mut self, _name: &str) {}
+    fn remove(&mut self) {}
+}
+
+thread_local! {
+    /// What each `onchange` handed back, in order.
+    static CLEARED: std::cell::RefCell<Vec<usize>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Clicks the field's Clear button and returns what `onchange` received, as
+/// value lengths. `None` when the field drew no Clear button.
+///
+/// Todo 252, for `b7d1c39d`: the shared `clear_button` renders only while it
+/// has something to clear, and one click reports one change. Where focus goes
+/// next is `ElementApi::focus` on the field's own control, which does nothing
+/// without a renderer, so that half is still checked only in a browser.
+fn click_clear(app: fn() -> Element) -> Option<Vec<usize>> {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    CLEARED.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClear::default();
+    dom.rebuild(&mut find);
+    let clear = find.clear?;
+    assert!(find.clicks.contains(&clear), "Clear has no click listener");
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), clear);
+    dom.process_events();
+    Some(CLEARED.with_borrow(Clone::clone))
+}
+
+#[test]
+fn clear_empties_a_tags_field_once() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    clearable: true,
+                    value: vec!["rust".to_string(), "dioxus".to_string()],
+                    onchange: move |tags: Vec<String>| CLEARED.with_borrow_mut(|seen| seen.push(tags.len())),
+                }
+            }
+        }
+    }
+
+    assert_eq!(click_clear(app), Some(vec![0]));
+}
+
+#[test]
+fn clear_empties_a_file_field_once() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    clearable: true,
+                    value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                    onchange: move |files: libero::components::Files| {
+                        CLEARED.with_borrow_mut(|seen| seen.push(files.len()));
+                    },
+                }
+            }
+        }
+    }
+
+    assert_eq!(click_clear(app), Some(vec![0]));
+}
+
+#[test]
+fn an_empty_field_draws_no_clear_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    clearable: true,
+                    value: Vec::<String>::new(),
+                    onchange: move |_: Vec<String>| {},
+                }
+            }
+        }
+    }
+
+    assert_eq!(click_clear(app), None);
 }

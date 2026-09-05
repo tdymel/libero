@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, body, classes_of, has_rule_for, render};
+use crate::common::{attributes_of, body, classes_of, fake_files, has_rule_for, render};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::FileField};
@@ -153,4 +153,34 @@ fn a_caller_id_that_is_no_css_identifier_is_the_field_id() {
     let body = body(&render(app));
 
     assert!(body.contains("id=\"1-faq-label\""), "{body}");
+}
+
+/// Todo 250: a `multiple` field draws the chip `MultiSelect` and `TagsField`
+/// draw - the label in its `label` slot, and an x named after the file that
+/// is out of the tab order.
+#[test]
+fn a_multiple_file_field_draws_the_shared_removable_chip() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    value: fake_files(&["a.txt", "b.txt"]),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    assert!(
+        body.contains(r#"<span data-slot="label">a.txt</span>"#),
+        "{body}"
+    );
+    let named = body.find(r#""Remove b.txt""#).expect("the second chip's x");
+    let x = attributes_of(&body[body[..named].rfind("<button").unwrap()..], "button");
+    assert_eq!(x["aria-label"], "Remove b.txt", "{x:?}");
+    assert_eq!(x["tabindex"], "-1", "{x:?}");
 }

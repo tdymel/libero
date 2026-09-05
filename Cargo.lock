@@ -4162,6 +4162,7 @@ dependencies = [
  "dioxus-native-dom",
  "dioxus-ssr",
  "fast_qr",
+ "futures-core",
  "js-sys",
  "libero-macros",
  "regex",

@@ -80,3 +80,64 @@ pub fn classes_of(html: &str, tag: &str) -> Vec<String> {
 pub fn has_rule_for(html: &str, class: &str) -> bool {
     html.contains(&format!(".{class}"))
 }
+
+/// A picked file with a name and nothing to read, for drawing a `FileField`'s
+/// selection. Nothing in SSR reads its contents.
+pub struct FakeFile(pub &'static str);
+
+impl dioxus::html::NativeFileData for FakeFile {
+    fn name(&self) -> String {
+        self.0.to_string()
+    }
+    fn size(&self) -> u64 {
+        0
+    }
+    fn last_modified(&self) -> u64 {
+        0
+    }
+    fn path(&self) -> std::path::PathBuf {
+        self.0.into()
+    }
+    fn content_type(&self) -> Option<String> {
+        None
+    }
+    fn read_bytes(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn std::future::Future<
+                    Output = Result<dioxus::html::bytes::Bytes, dioxus::CapturedError>,
+                >,
+        >,
+    > {
+        unimplemented!("SSR never reads a file")
+    }
+    fn byte_stream(
+        &self,
+    ) -> std::pin::Pin<
+        Box<
+            dyn futures_core::Stream<
+                    Item = Result<dioxus::html::bytes::Bytes, dioxus::CapturedError>,
+                > + Send,
+        >,
+    > {
+        unimplemented!("SSR never reads a file")
+    }
+    fn read_string(
+        &self,
+    ) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<String, dioxus::CapturedError>>>>
+    {
+        unimplemented!("SSR never reads a file")
+    }
+    fn inner(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+/// `FakeFile`s as a `FileField` value.
+pub fn fake_files(names: &[&'static str]) -> libero::components::Files {
+    names
+        .iter()
+        .map(|name| dioxus::html::FileData::new(FakeFile(name)))
+        .collect()
+}

@@ -1315,6 +1315,60 @@ mod tests {
         );
     }
 
+    /// Todo 252, for `3203d7fd`: a `HoverCard` forced open cannot be
+    /// dismissed, so it takes no Escape. With `escape: true` its trigger's
+    /// listener consumed the press and closed nothing, and the `Modal` around
+    /// it never heard Escape while focus sat on the trigger. Checked by
+    /// putting `escape: true` back: this test then fails.
+    #[test]
+    fn a_hover_card_forced_open_lets_escape_through_to_the_modal() {
+        #[component]
+        fn Forced(modal: Signal<bool>) -> Element {
+            // Through `use_box`, as `Region` does. With `button { id: .. }`
+            // written in `rsx!`, the recorded trigger was not where the press
+            // bubbled to the modal from, and even a bare button failed.
+            let trigger = use_box().prepare();
+            let anchor = use_element();
+            rsx! {
+                Modal { onclose: move |_| { let mut modal = modal; modal.set(false); },
+                    crate::components::HoverCard {
+                        opened: Some(true),
+                        aria_label: "Details",
+                        content: rsx! { "details" },
+                        {trigger.element(&anchor).attr("id", "trigger").render(HtmlTag::Button, Vec::new(), rsx! { "Trigger" })}
+                    }
+                }
+            }
+        }
+
+        fn app() -> Element {
+            let modal = use_signal(|| true);
+            rsx! {
+                LiberoProvider {
+                    if modal() {
+                        Forced { modal }
+                    }
+                }
+                "state: modal={modal}"
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+
+        let trigger = find.trigger.expect("the trigger element");
+        assert_eq!(state(&dom), "state: modal=true");
+        press(&mut dom, trigger);
+        assert_eq!(
+            state(&dom),
+            "state: modal=false",
+            "a card that cannot close must not take the modal's Escape"
+        );
+    }
+
     /// The other half: with no modal over it, the floating box's own handler is
     /// the transport and it closes the box.
     #[test]
