@@ -77,7 +77,7 @@ month, else today's. Today comes from the platform clock after mount - on the
 web; a server render and native builds have no clock, so no day is marked
 unless `today` is set.
 
-## Keyboard
+## Accessibility
 
 Days, months and years are one tab stop each: the picked cell, else today,
 else the first.

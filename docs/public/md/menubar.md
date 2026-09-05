@@ -39,7 +39,7 @@ fn Demo() -> Element {
 }
 ```
 
-## Keyboard
+## Accessibility
 
 On a trigger: ArrowLeft/ArrowRight move along the bar, wrapping unless
 `loop_focus` is off; if a menu is open the new one opens. A disabled trigger
@@ -53,8 +53,6 @@ top level, close the menu and open the neighbouring one on its first item.
 ArrowRight on a submenu item opens the submenu; ArrowLeft in a submenu closes
 it. Escape closes the menu and returns focus to its trigger; Tab closes it and
 leaves the bar. Everything else is `Menu`'s.
-
-## Accessibility
 
 `aria_label` is required: it names the bar.
 

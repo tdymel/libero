@@ -101,7 +101,7 @@ more of them fit per row instead.
 its text: `hex` by default, `hexa` with alpha, or any of `rgb`, `rgba`, `hsl`,
 `hsla`.
 
-## Keyboard
+## Accessibility
 
 - The panel's thumb moves saturation with Left/Right and brightness with
   Up/Down, one percent per press, ten with Shift.

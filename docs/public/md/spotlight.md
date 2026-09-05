@@ -121,7 +121,7 @@ let spotlight = use_spotlight(SpotlightOptions {
 });
 ```
 
-## Keyboard
+## Accessibility
 
 - Focus stays in the search box the whole time.
 - ArrowDown / ArrowUp move the highlight, wrapping at both ends. Home and End

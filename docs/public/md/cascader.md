@@ -94,7 +94,7 @@ branch commits its own value as well as expanding, and every option gets a row.
 A node under a disabled ancestor is disabled too; the arrows skip it and it
 cannot be picked.
 
-## Keyboard
+## Accessibility
 
 | Key | State | Effect |
 |---|---|---|

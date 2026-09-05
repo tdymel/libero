@@ -45,7 +45,7 @@ impl CssSource for &Sx {
 thread_local! {
     /// A `'static` `Sx` renders to byte-identical CSS however many components
     /// mount it, so the conversion is done once per static instead of once
-    /// per mount. Keyed by address, the way `regex_api`'s `CompiledKey` keys
+    /// per mount. Keyed by address, the way `platform::regex`'s `CompiledKey` keys
     /// a pattern - sound because every key comes from a `&'static Sx`, so an
     /// entry's address can never be reused by something else. Unbounded on
     /// purpose: every one of them is a `static` item, so the map reaches a

@@ -64,7 +64,7 @@ fn Demo() -> Element {
 }
 ```
 
-## Keyboard
+## Accessibility
 
 On the trigger, Enter, Space and ArrowDown open the menu on its first item,
 ArrowUp on its last. In the menu, ArrowDown/ArrowUp move an item (wrapping
@@ -74,8 +74,6 @@ it is pressed in and hands focus back to whatever opened it; Tab closes every
 level and moves on from the trigger. Typing jumps to an item: "s" to the next
 one starting with S, "sav" to Save; a half-second pause starts over. A disabled
 item stays in the arrow order but cannot be chosen.
-
-## Accessibility
 
 - Spread `menu.a11y_attributes()` on the trigger; it ties the trigger to the
   menu.

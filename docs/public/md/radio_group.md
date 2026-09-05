@@ -61,7 +61,7 @@ contract [NativeSelect](native_select.md) has.
 The group still needs a way in, so the first option holds the tab stop until
 something is selected.
 
-## Keyboard
+## Accessibility
 
 One tab stop for the whole group:
 
@@ -73,8 +73,6 @@ One tab stop for the whole group:
 | Tab | Leaves the group entirely |
 
 Selection follows focus, as it does natively.
-
-## Accessibility
 
 Give it a `label`: an option's label names one option, and only the group's
 label says what the question is. Without a visible one, spread `"aria-label"`.

@@ -116,7 +116,7 @@ fn Demo() -> Element {
 }
 ```
 
-## Keyboard
+## Accessibility
 
 | Key | Does |
 |---|---|

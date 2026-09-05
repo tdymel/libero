@@ -474,8 +474,7 @@ impl DismissHandle {
                 // stack rejected - that was a capture-phase stop at the
                 // document, which kills every element handler for the press in
                 // the whole document and hands the veto to whichever subscriber
-                // ran first. `FileField` and `MultiSelect` already stop at
-                // their own handlers for the same reason.
+                // ran first. `Menu`'s trigger stops its Escape the same way.
                 //
                 // Without it an enclosing `Modal` hears the same press and
                 // closes too. The earlier version of this comment called that

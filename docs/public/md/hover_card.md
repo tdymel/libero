@@ -63,7 +63,7 @@ fn Demo() -> Element {
 Theme: `theme.hover_card` holds `open_delay`, `close_delay`, `radius` and
 `shadow`.
 
-## Keyboard and dismissal
+## Accessibility
 
 - Focusing the trigger from the keyboard opens the card; a click does not keep
   it open.
