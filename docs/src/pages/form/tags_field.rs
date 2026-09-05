@@ -135,7 +135,7 @@ pub fn TagsFieldPage() -> Element {
                 component: "TagsField",
                 children_text: "",
                 fixed: vec![
-                    "sx: sx().width(\"320px\")".to_string(),
+                    "sx: sx().width(\"100%\").max_width(\"320px\")".to_string(),
                     "value: topics()".to_string(),
                     "onchange: move |next| topics.set(next)".to_string(),
                 ],
@@ -205,7 +205,7 @@ pub fn TagsFieldPage() -> Element {
                     let ruled = values.str("tag_rules") == "true";
                     rsx! {
                         TagsField {
-                            sx: sx().width("320px"),
+                            sx: sx().width("100%").max_width("320px"),
                             size: values.str("size"),
                             radius: values.str("radius"),
                             label: (values.str("label") == "true").then(|| "Topics".to_string()),

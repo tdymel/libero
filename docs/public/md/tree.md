@@ -70,7 +70,7 @@ fn Demo() -> Element {
         Flex {
             direction: "column",
             gap: "sm",
-            sx: sx().width("320px"),
+            sx: sx().width("100%").max_width("320px"),
             Tree {
                 aria_label: "Project files",
                 data: file_tree(),

@@ -161,7 +161,7 @@ pub fn CascaderPage() -> Element {
                 component: "Cascader",
                 children_text: "",
                 fixed: vec![
-                    "sx: sx().width(\"320px\")".to_string(),
+                    "sx: sx().width(\"100%\").max_width(\"320px\")".to_string(),
                     "data: categories()".to_string(),
                     "value: chosen()".to_string(),
                     "onchange: move |next: Option<String>| chosen.set(next)".to_string(),
@@ -208,7 +208,7 @@ pub fn CascaderPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     Flex { direction: "column", gap: "sm", align: "flex-start",
                         Cascader {
-                            sx: sx().width("320px"),
+                            sx: sx().width("100%").max_width("320px"),
                             size: values.str("size"),
                             radius: values.str("radius"),
                             layout: values.str("layout"),

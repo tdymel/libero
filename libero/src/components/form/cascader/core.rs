@@ -16,7 +16,7 @@ use crate::{
     platform::ElementApi,
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
-    theme::Size,
+    theme::{POPOVER_PADDING, Size},
 };
 
 use super::{
@@ -156,12 +156,24 @@ fn cascader_rows_sx() -> Sx {
     .selector("& [data-state~='committed']", sx().font_weight("700"))
 }
 
+/// The shared dropdown, held inside the viewport. Three columns side by side
+/// are wider than a phone, and a fixed box that runs off the right edge
+/// cannot be scrolled to - the columns scroll inside it instead.
+static CASCADER_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
+    COMBOBOX_DROPDOWN_SX
+        .clone()
+        .max_width(format!("calc(100vw - 2 * {})", POPOVER_PADDING.value()))
+});
+
 /// One listbox per level, side by side, each scrolling on its own.
 static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
     cascader_rows_sx()
         .display("flex")
         .align_items("stretch")
         .gap("4px")
+        // Only where the dropdown is held narrower than its columns, which
+        // on a desktop it never is.
+        .overflow_x("auto")
         // A column never shrinks below `column_width`, and grows into the
         // room a trigger wider than the open columns leaves - or the rows,
         // and the chevrons at their ends, stop short of the dropdown's edge.
@@ -384,8 +396,29 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         radius,
     };
     let max_height = theme.combobox.max_dropdown_height;
+    // The strip of columns, which scrolls sideways once the viewport holds
+    // the dropdown narrower than them. The cursor always sits in the last
+    // column, so each new column is scrolled into view as it opens - by
+    // pointer or by the arrows, which would otherwise move into a column no
+    // one can see.
+    let strip = use_element();
+    let depth = cursor_now.len();
+    use_effect(use_reactive!(|depth| {
+        let _ = depth;
+        // Read, not branched on: it subscribes the effect to every reopen,
+        // which mounts a new strip at the same handle.
+        if strip.mount_token().is_some() {
+            // Past the end on purpose: the browser clamps it to the range.
+            let _ = strip.scroll_to(f64::from(u32::MAX), 0.0);
+        }
+    }));
+    let columns = use_box()
+        .framework_sx(&CASCADER_COLUMNS_SX)
+        .prepare()
+        .element(&strip);
     let body = match layout {
         CascaderLayout::Columns => rows.columns(
+            columns,
             &listbox_id,
             field.label_id(),
             &props.column_width,
@@ -425,7 +458,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .with(layout.state_name(), true)
         .into();
     let dropdown = use_box()
-        .framework_sx(&COMBOBOX_DROPDOWN_SX)
+        .framework_sx(&CASCADER_DROPDOWN_SX)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
@@ -870,6 +903,7 @@ impl CascaderRows {
     /// columns never run ahead of the cursor.
     fn columns(
         &self,
+        strip: BoxStyle,
         listbox_id: &str,
         label_id: Option<String>,
         width: &str,
@@ -919,16 +953,18 @@ impl CascaderRows {
                 }
             })
             .collect();
-        rsx! {
-            Box {
-                framework_sx: &CASCADER_COLUMNS_SX,
-                id: listbox_id.to_string(),
-                "role": "presentation",
-                for column in columns {
-                    {column}
-                }
-            }
-        }
+        strip
+            .attr("id", listbox_id.to_string())
+            .attr("role", "presentation")
+            .render(
+                HtmlTag::Div,
+                Vec::new(),
+                rsx! {
+                    for column in columns {
+                        {column}
+                    }
+                },
+            )
     }
 
     /// One row per path in `visible`; `path_row` is the cursor's.
@@ -1172,5 +1208,25 @@ mod tests {
         let css = css.as_str();
 
         assert!(css.contains("flex:1 0 auto;"), "{css}");
+    }
+
+    /// Three columns are wider than a phone. The dropdown is held inside the
+    /// viewport and the columns scroll sideways within it, rather than
+    /// opening off the right edge where nothing can reach them.
+    #[test]
+    fn the_columns_stay_inside_the_viewport() {
+        let dropdown = Stylesheet::from(&*CASCADER_DROPDOWN_SX);
+        let dropdown = dropdown.as_str();
+        assert!(
+            dropdown.contains("max-width:calc(100vw - 2 * var(--lsx-popover-padding));"),
+            "{dropdown}"
+        );
+
+        let columns = Stylesheet::from(&*CASCADER_COLUMNS_SX);
+        assert!(
+            columns.as_str().contains("overflow-x:auto;"),
+            "{}",
+            columns.as_str()
+        );
     }
 }

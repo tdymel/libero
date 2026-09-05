@@ -43,7 +43,7 @@ fn panels_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 fn wrap_splitter(_values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
     format!(
-        "Box {{\n    sx: sx().height(\"160px\").width(\"320px\").border(\"1px solid var(--lsx-grey-3)\"),\n{indented}}}"
+        "Box {{\n    sx: sx().height(\"160px\").width(\"100%\").max_width(\"320px\").border(\"1px solid var(--lsx-grey-3)\"),\n{indented}}}"
     )
 }
 
@@ -133,7 +133,8 @@ pub fn SplitterPage() -> Element {
                     Box {
                         sx: sx()
                             .height("160px")
-                            .width("320px")
+                            .width("100%")
+                            .max_width("320px")
                             .border("1px solid var(--lsx-grey-3)"),
                         Splitter {
                             orientation: values.str("orientation"),

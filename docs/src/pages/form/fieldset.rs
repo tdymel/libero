@@ -146,7 +146,7 @@ fn AddressFieldset(description: bool, helper: bool, disabled: bool, status: Stri
 
     rsx! {
         Fieldset {
-            sx: libero::sx::sx().width("320px"),
+            sx: libero::sx::sx().width("100%").max_width("320px"),
             label: "Delivery address",
             description: description.then(|| "Where the parcel goes.".to_string()),
             helper: helper.then(|| "We deliver Monday to Saturday.".to_string()),

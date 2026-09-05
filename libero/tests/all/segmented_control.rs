@@ -115,3 +115,40 @@ fn a_gapped_segmented_control_keeps_every_segment_s_own_corners() {
         ".{root_class}[data-state~=\"size-xs\"]{{gap:var(--lsx-spacing-xs)"
     )));
 }
+
+/// A `full_width` row must fit the box it claims to fill: its segments may
+/// shrink below their labels, and a plain label sits in a span so it can end
+/// in an ellipsis. Before, a narrow column pushed the last segment out of the
+/// box. Only a browser sees the layout, so this reads the markup and rules.
+#[test]
+fn a_full_width_segment_can_shrink_below_its_label() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl {
+                    full_width: true,
+                    value: Emphasis::Bold,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let body = &body[body[1..].find("<div").expect("the group") + 1..];
+    assert!(body.contains("><span>Bold</span></label>"), "{body}");
+
+    let root_class = classes_of(body, "div");
+    let root_class = root_class.first().expect("a framework class");
+    let row = format!(".{root_class}[data-state~=\"full-width\"][data-state~=\"horizontal\"]");
+    assert!(
+        html.contains(&format!(
+            "{row} > label{{flex:1 1 0;min-width:0;overflow:hidden;}}"
+        )),
+        "{html}"
+    );
+    assert!(html.contains(&format!(
+        "{row} > label > span{{min-width:0;overflow:hidden;text-overflow:ellipsis;}}"
+    )));
+}

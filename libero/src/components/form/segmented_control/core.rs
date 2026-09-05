@@ -125,11 +125,26 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // stretch the segments' heights past their size scale, and
         // `align-items: stretch` has already equalised what "full width"
         // means there.
+        //
+        // A shared-out row must fit the box it fills, so a segment may shrink
+        // below its label and the label ends in an ellipsis - Mantine's
+        // answer. Wrapping was the other option, but one word cannot wrap and
+        // a row of segments at different heights stops reading as one strip.
+        // The radio's `aria-label` still carries the whole name.
         .when(
             "full-width",
             sx().width("100%").when(
                 Orientation::Horizontal.state_name(),
-                sx().selector(SEGMENT, sx().flex("1 1 0")),
+                sx().selector(
+                    SEGMENT,
+                    sx().flex("1 1 0").min_width("0").overflow("hidden"),
+                )
+                .selector(
+                    "& > label > span",
+                    sx().min_width("0")
+                        .overflow("hidden")
+                        .text_overflow("ellipsis"),
+                ),
             ),
         );
 

@@ -213,7 +213,7 @@ fn SignupForm(summary_title: bool, handle: bool) -> Element {
 
     rsx! {
         Form {
-            sx: libero::sx::sx().width("320px"),
+            sx: libero::sx::sx().width("100%").max_width("320px"),
             form: handle.then_some(form),
             value: signup,
             validate: (|s: &Signup| s.email.is_empty() || !s.password.value.contains(&s.email))

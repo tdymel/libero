@@ -128,7 +128,7 @@ const FIXED: [&str; 4] = [
 /// example rather than something the component provides.
 fn wrap_selection(_: &DemoValues, code: &str) -> String {
     format!(
-        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"320px\"),\n{}    if let Some(selected) = selected() {{\n        Text {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
+        "Flex {{\n    direction: \"column\",\n    gap: \"sm\",\n    sx: sx().width(\"100%\").max_width(\"320px\"),\n{}    if let Some(selected) = selected() {{\n        Text {{ \"Selected: \" Code {{ source: \"{{selected}}\" }} }}\n    }}\n}}",
         indent(code)
     )
 }
@@ -263,7 +263,7 @@ pub fn TreePage() -> Element {
                         gap: "sm",
                         // Pinned: the selection readout appearing must not
                         // reflow the preview under the pointer.
-                        sx: sx().width("320px"),
+                        sx: sx().width("100%").max_width("320px"),
                         Tree {
                             aria_label: "Project files",
                             data: file_tree(),

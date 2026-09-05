@@ -158,7 +158,9 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             };
             let name = label.name;
             SegmentSpec {
-                content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
+                // In a span, so a squeezed `full_width` segment can cut the
+                // text with an ellipsis - a bare text node cannot take one.
+                content: label.content.unwrap_or_else(|| rsx! { span { "{name}" } }),
                 name,
                 disabled: disabled || props.disabled_options.contains(value),
             }
