@@ -105,6 +105,60 @@ pub fn indent(code: &str) -> String {
     code.lines().map(|line| format!("    {line}\n")).collect()
 }
 
+/// Roughly what one segment of an `sm` `SegmentedControl` needs for the
+/// labels we use - `Elevated` measures ~93px, shorter ones less.
+const SEGMENT_WIDTH: usize = 88;
+
+/// Everything the panel spends on padding, either side of a control.
+const PANEL_PADDING: usize = 48;
+
+/// What the panel gives a control once it becomes the card's side column
+/// (512px wide, see the panel's `sx` below).
+const WIDE_PANEL_CONTROL: usize = 512 - PANEL_PADDING;
+
+/// The card width a toggle's segments need, or `None` when a segmented
+/// control is the right shape at every width.
+///
+/// Segments are `flex: 1 1 0` with `white-space: nowrap`, so a group narrower
+/// than its labels ellipsizes them: five options in the 308px a 390px phone
+/// leaves showed four of five labels truncated. More than three options
+/// therefore fall back to a select until the card is wide enough, and a set
+/// too wide for even the side column never gets the segments at all.
+fn segments_need(options: usize) -> Option<usize> {
+    if options <= 3 {
+        return None;
+    }
+    let needed = options * SEGMENT_WIDTH;
+    Some(if needed > WIDE_PANEL_CONTROL {
+        // Wider than the panel ever gets: a width no card reaches.
+        99_999
+    } else {
+        needed + PANEL_PADDING
+    })
+}
+
+/// The segmented half of a toggle control, shared by the always-segmented
+/// path and the one a container query hides on a narrow card.
+#[component]
+fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String>) -> Element {
+    rsx! {
+        SegmentedControl {
+            // The panel is chrome, not the demo - a filled default would
+            // shout over the preview.
+            variant: "outlined",
+            size: "sm",
+            full_width: true,
+            "aria-label": control.name,
+            value,
+            // A control panel's options are data, so they arrive here rather
+            // than from a `T` that could list them statically.
+            options: control.options.clone(),
+            option_label: move |option: String| OptionLabel::from(control.label_of(&option)),
+            onchange: move |next: String| onchange.call(next),
+        }
+    }
+}
+
 /// The controls the panel draws, switches after every other kind so a page's
 /// switches always share rows as one group. Stable, so each group keeps the
 /// page's order; the code block keeps it too, it reads `controls` directly.
@@ -363,24 +417,61 @@ pub fn Demo(
                                             },
                                         }
                                     },
+                                    // A toggle too wide for the card falls back
+                                    // to a select. Both are rendered and a
+                                    // container query picks one: `display:
+                                    // none` keeps the other out of the tab
+                                    // order and the accessibility tree, which
+                                    // is what a JS width check would cost us a
+                                    // hook and a resize observer for.
+                                    ControlKind::Toggle if segments_need(control.options.len()).is_some() => rsx! {
+                                        {
+                                            let needed = format!(
+                                                "(min-width: {}px)",
+                                                segments_need(control.options.len()).unwrap_or_default(),
+                                            );
+                                            rsx! {
+                                                Box {
+                                                    sx: sx()
+                                                        .display("none")
+                                                        .container_query(DEMO_CARD, needed.clone(), sx().display("block")),
+                                                    ToggleSegments {
+                                                        control: control.clone(),
+                                                        value: values().str(control.name),
+                                                        onchange: move |next: String| {
+                                                            values.write().0[index].1 = next;
+                                                        },
+                                                    }
+                                                }
+                                                Box {
+                                                    sx: sx()
+                                                        .display("block")
+                                                        .container_query(DEMO_CARD, needed, sx().display("none")),
+                                                    NativeSelect {
+                                                        size: "sm",
+                                                        // The row's own `Text`
+                                                        // already names it, so
+                                                        // the field draws no
+                                                        // second label.
+                                                        "aria-label": control.name,
+                                                        value: Some(values().str(control.name)),
+                                                        options: control.options.clone(),
+                                                        option_label: {
+                                                            let control = control.clone();
+                                                            move |option: String| control.label_of(&option)
+                                                        },
+                                                        onchange: move |value: String| {
+                                                            values.write().0[index].1 = value;
+                                                        },
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    },
                                     ControlKind::Toggle => rsx! {
-                                        SegmentedControl {
-                                            // The panel is chrome, not the
-                                            // demo - a filled default would
-                                            // shout over the preview.
-                                            variant: "outlined",
-                                            size: "sm",
-                                            full_width: true,
-                                            "aria-label": control.name,
+                                        ToggleSegments {
+                                            control: control.clone(),
                                             value: values().str(control.name),
-                                            // A control panel's options are data, so
-                                            // they arrive here rather than from a `T`
-                                            // that could list them statically.
-                                            options: control.options.clone(),
-                                            option_label: {
-                                                let control = control.clone();
-                                                move |option: String| OptionLabel::from(control.label_of(&option))
-                                            },
                                             onchange: move |next: String| {
                                                 values.write().0[index].1 = next;
                                             },

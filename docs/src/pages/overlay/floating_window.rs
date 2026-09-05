@@ -315,7 +315,7 @@ pub fn FloatingWindowPage() -> Element {
                 wrap: Wrap(wrap_example),
             }
             DocSection {
-                title: "Keyboard",
+                title: "Accessibility",
                 Text {
                     "A window takes focus when it opens. " Kbd { "Tab" }
                     " reaches the title bar, where " Kbd { "←" } " " Kbd { "↑" } " "

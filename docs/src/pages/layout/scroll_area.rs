@@ -265,7 +265,7 @@ pub fn ScrollAreaPage() -> Element {
             }
 
             DocSection {
-                title: "Keyboard access",
+                title: "Accessibility",
                 Text {
                     "A scroll area is not a tab stop: its content usually carries its own "
                     "focusable elements, and tabbing to those scrolls them into view."

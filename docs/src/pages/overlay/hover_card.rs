@@ -183,7 +183,7 @@ pub fn HoverCardPage() -> Element {
                 },
             }
             DocSection {
-                title: "Keyboard and dismissal",
+                title: "Accessibility",
                 Text {
                     "Focusing the trigger from the keyboard opens the card; a click does not "
                     "keep it open. " Kbd { "Tab" } " on the trigger moves into the card, "

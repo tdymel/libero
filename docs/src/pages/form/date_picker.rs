@@ -145,7 +145,7 @@ pub fn DatePickerPage() -> Element {
             }
 
             DocSection {
-                title: "Keyboard",
+                title: "Accessibility",
                 Text {
                     "Days, months and years are one tab stop each: the picked cell, else today, else the first. "
                     Kbd { "←" } " " Kbd { "→" } " move a cell, "

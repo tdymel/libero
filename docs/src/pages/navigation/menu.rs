@@ -288,7 +288,7 @@ pub fn MenuPage() -> Element {
                 },
             }
             DocSection {
-                title: "Keyboard",
+                title: "Accessibility",
                 Text {
                     "On the trigger, "
                     Kbd { "Enter" } " " Kbd { "Space" } " and " Kbd { "↓" }

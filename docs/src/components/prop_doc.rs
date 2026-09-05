@@ -133,7 +133,17 @@ fn PropRows(properties: Vec<PropDoc>, base: bool, extends: String) -> Element {
         Table {
             // A wrapped name cell would float a middle-aligned description
             // away from the prop it describes.
-            sx: sx().selector("& td", sx().vertical_align("top")),
+            //
+            // The table lays out automatically, so it grows to the widest
+            // unbreakable run in any cell - a type like
+            // `Option<Callback<WindowRect>>` in the Name column, or a
+            // `min_width`/`max_width`/`min_height` in a description. At 390px
+            // that pushed the table past the page on 18 pages, so every cell
+            // may break inside a word when it has to.
+            sx: sx().selector(
+                "& td",
+                sx().vertical_align("top").with("overflow-wrap", "anywhere"),
+            ),
             data: rows,
             columns: vec![
                 column("Name")

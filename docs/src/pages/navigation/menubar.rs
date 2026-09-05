@@ -226,7 +226,7 @@ pub fn MenubarPage() -> Element {
                 },
             }
             DocSection {
-                title: "Keyboard",
+                title: "Accessibility",
                 Text {
                     "The bar is one tab stop. " Kbd { "←" } " " Kbd { "→" }
                     " move along it, a disabled trigger included (it takes focus and opens nothing), and " Kbd { "Home" } " "

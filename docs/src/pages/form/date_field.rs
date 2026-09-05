@@ -197,7 +197,7 @@ pub fn DateFieldPage() -> Element {
                 },
             }
             DocSection {
-                title: "Keyboard",
+                title: "Accessibility",
                 Text {
                     "Focus opens the dropdown and stays in the text, so typing works at once. "
                     Kbd { "↓" } " moves focus into the picker, onto the picked day or the clock, where the "
