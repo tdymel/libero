@@ -6,7 +6,7 @@ use crate::{
         a11y::VISUALLY_HIDDEN_SX,
         common::{
             base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
-            shade_color, variables,
+            ring_overlay, ring_overlay_sx, shade_color, variables,
         },
         form::Activation,
         inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
@@ -77,9 +77,12 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
                 .pointer_events("none"),
         )
         // The root is not focusable; the visually hidden checkbox inside it
-        // is. Scoped to that child so the delete button's own ring - every
-        // `Box` gets one - does not draw a second one out here.
-        .selector("&:has(> input:focus-visible)", focus_ring_sx())
+        // is, and the overlay after its label draws the root's ring. Scoped
+        // to that child so the delete button's own ring - every `Box` gets
+        // one - does not draw a second one out here. Out by the border, as an
+        // outline on the root would sit.
+        .selector("& > [data-ring]", ring_overlay_sx().inset("-1px"))
+        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
         // The `<button>`/`<a>` root focuses itself.
         .focus_visible(focus_ring_sx())
 });
@@ -281,6 +284,9 @@ pub fn Chip(props: ChipProps) -> Element {
         .event("onclick", activation.label_click())
         .render(HtmlTag::Label, Vec::new(), props.children);
 
-    root.attr("aria-disabled", disabled)
-        .render(HtmlTag::Span, props.attributes, vec![input, label])
+    root.attr("aria-disabled", disabled).render(
+        HtmlTag::Span,
+        props.attributes,
+        vec![input, label, ring_overlay()],
+    )
 }

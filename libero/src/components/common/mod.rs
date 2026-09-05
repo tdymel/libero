@@ -36,6 +36,6 @@ pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attribute
 pub(crate) use rail::{Rail, RailInset};
 pub use states::{States, states};
 pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
-pub(crate) use util::{attr, css_string, focus_ring_sx};
+pub(crate) use util::{attr, css_string, focus_ring_sx, ring_overlay, ring_overlay_sx};
 pub use variables::{Variables, variables};
 pub use variant::Variant;

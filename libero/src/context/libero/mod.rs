@@ -14,8 +14,6 @@ mod stylesheet_registry;
 
 pub(crate) use css_layer::CssLayer;
 
-const SCROLL_LOCK_CSS: &str = "body:has([data-lsx-scroll-lock]) { overflow: hidden; }";
-
 #[derive(Clone)]
 pub struct LiberoContext {
     pub theme: &'static Theme,
@@ -99,9 +97,6 @@ pub fn LiberoProvider(
         }
         style {
             dangerous_inner_html: "{context.theme_css}"
-        }
-        style {
-            dangerous_inner_html: SCROLL_LOCK_CSS
         }
         {children}
         PortalOutlet {}

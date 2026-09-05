@@ -31,8 +31,9 @@ static TABLE_SX: StaticSx = StaticSx::new(|| {
             sx().text_align("end"),
         )
         // The button carries the header's padding instead, so the whole
-        // padded area is clickable and not just the label.
-        .selector("& th:has(button)", sx().padding("0"))
+        // padded area is clickable and not just the label. Marked from Rust:
+        // `th:has(button)` never matches natively.
+        .selector("& th[data-sortable]", sx().padding("0"))
         .selector(
             "& th button",
             sx().display("flex")

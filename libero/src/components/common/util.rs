@@ -20,6 +20,36 @@ pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
         .outline_offset("2px")
 }
 
+/// The stand-in that draws a focus ring for an element the focus lands
+/// *inside* of - a field's frame, a checkbox's box. Placed after the
+/// focusable, so `:focus-visible ~ [data-ring]` reaches it: a sibling rule.
+/// The obvious `:has(:focus-visible)` never matches natively, because stylo
+/// rejects `:has()` ([[codebase/blitz-platform-gaps]]), and there is no
+/// `:focus-visible-within`.
+///
+/// It covers its containing block - the nearest positioned ancestor, which
+/// must be the element the ring belongs to - and is styled there with
+/// [`ring_overlay_sx`].
+pub(crate) fn ring_overlay() -> dioxus::prelude::Element {
+    use dioxus::prelude::*;
+
+    rsx! {
+        span { "data-ring": true }
+    }
+}
+
+/// The overlay's own box: over the whole padding box, with the owner's
+/// corners, and never in the way of a click. An owner with a border moves it
+/// out by the border's width, so the ring's offset is measured from the same
+/// edge as an outline on the owner.
+pub(crate) fn ring_overlay_sx() -> crate::sx::Sx {
+    crate::sx::sx()
+        .position("absolute")
+        .inset("0")
+        .border_radius("inherit")
+        .pointer_events("none")
+}
+
 /// A user-supplied value as a CSS string literal, quotes included. Rust's
 /// `{:?}` is not CSS escaping - it emits `\u{...}`, which no selector parses.
 pub(crate) fn css_string(value: &str) -> String {

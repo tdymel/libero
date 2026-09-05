@@ -22,6 +22,8 @@ const TOOLTIP_CLOSE_DELAY_VAR: CssVar = CssVar::new("--lsx-tooltip-close-delay")
 /// The bubble, addressed from the wrapper's rules. Its own class is generated,
 /// so `role` - which it needs anyway - is what the wrapper can name.
 const BUBBLE: &str = "> [role=\"tooltip\"]";
+/// The same bubble, as the sibling of a focused trigger.
+const BUBBLE_SIBLING: &str = "[role=\"tooltip\"]";
 
 fn gap() -> String {
     TOOLTIP_GAP_VAR.value_or(SizeCss::SPACING.value(Size::Xs))
@@ -60,9 +62,14 @@ static TOOLTIP_WRAPPER_SX: StaticSx = StaticSx::new(|| {
         .width("max-content")
         .max_width("100%")
         .selector(
-            // `:has(:focus-visible)`, not `:focus-within`: a click focuses the
-            // trigger too, and the bubble would then stay up after it.
-            format!("&:hover {BUBBLE}, &:has(:focus-visible) {BUBBLE}"),
+            // `:focus-visible`, not `:focus-within`: a click focuses the
+            // trigger too, and the bubble would then stay up after it. A
+            // sibling rule, not `:has(:focus-visible)`, which never matches
+            // natively - so the trigger has to be the wrapper's child. Focus
+            // inside the bubble, which Tab reaches next, holds it open.
+            format!(
+                "&:hover {BUBBLE}, & > :focus-visible ~ {BUBBLE_SIBLING}, & {BUBBLE}:focus-within"
+            ),
             open_sx(),
         )
         // Folded after the hover rules: equal specificity, so source order is

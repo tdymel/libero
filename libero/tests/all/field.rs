@@ -254,12 +254,14 @@ fn the_frame_draws_the_focus_ring_and_the_control_does_not() {
     let frame_class = attributes_of(&body(&html), "div")["class"].clone();
     let control_class = attributes_of(&body(&html), "input")["class"].clone();
 
-    // The ring lives on the frame, keyed off a descendant's `:focus-visible` -
-    // there is no `:focus-visible-within`.
+    // The ring is the frame's, drawn by an overlay after the control and
+    // keyed off the control's `:focus-visible` - there is no
+    // `:focus-visible-within`, and `:has()` never matches natively.
     assert!(
-        html.contains(":has(:focus-visible)"),
-        "the frame must draw the ring"
+        html.contains(" :focus-visible ~ [data-ring]{outline:"),
+        "the frame must draw the ring: {html}"
     );
+    assert!(body(&html).contains("data-ring"), "{html}");
     // Both would draw one, at two different offsets, if the control kept the
     // shared ring class.
     let shared: Vec<&str> = frame_class

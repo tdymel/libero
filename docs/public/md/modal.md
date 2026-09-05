@@ -230,4 +230,6 @@ out of the render closure, which cannot capture the `ModalScope`.
 ## Data attributes
 
 The modal layer writes no state tokens of its own. Its root carries
-`data-lsx-scroll-lock`, which is what locks the page behind it.
+`data-lsx-scroll-lock`, marking a layer that locks the page behind it. The lock
+itself is a `body { overflow: hidden }` rule the modal renders while it is
+mounted.

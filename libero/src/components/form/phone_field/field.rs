@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ComboboxCore, ComboboxOption, HtmlTag, Input,
-        common::field_props,
+        common::{field_props, ring_overlay},
         form::{FIELD_CONTROL_SX, glyphs::ChevronIcon, use_bound, use_field, use_field_frame},
         layout::use_box,
         use_combobox,
@@ -408,6 +408,9 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
                 header: opened.then_some(search),
                 autofocus: search_element,
                 {picker}
+                // The picker sits inside the combobox's wrapper, not straight
+                // in the slot, so it brings the ring overlay it needs.
+                {ring_overlay()}
             }
         }),
         false => Some(prefix_box.render(HtmlTag::Span, Vec::new(), rsx! { "+{country.dial}" })),

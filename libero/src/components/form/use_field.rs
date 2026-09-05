@@ -8,7 +8,7 @@ use dioxus::{
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{focus_ring_sx, input_from_str},
+        common::input_from_str,
         form::{Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, worst},
         layout::{BoxStyle, use_box},
     },
@@ -71,9 +71,14 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
                 // rather than spreading the rows over the extra height.
                 .align_content("start")
                 .per_size(|size| sx().padding(FIELD_CARD_PADDING.value(size)))
-                // The ring moves from the control to the card; the control
-                // drops its own under `card`.
-                .selector("&:has(input:focus-visible)", focus_ring_sx())
+                // The ring moves from the control to the card: the control
+                // turns static under `card`, so its ring overlay covers this
+                // box instead, out by the border as an outline would sit.
+                .position("relative")
+                .selector(
+                    "& [data-state~=\"card\"] > [data-ring]",
+                    sx().inset("-1px").border_radius(PAPER_RADIUS.value()),
+                )
                 .when("disabled", sx().cursor("not-allowed")),
         )
         // Not `opacity`: the control dims itself, and two stacked opacities

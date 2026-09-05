@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Carousel, Dialog, Input, States, Variables,
-        common::{focus_ring_sx, states, variables},
+        common::{focus_ring_sx, ring_overlay, ring_overlay_sx, states, variables},
     },
     hooks::{
         DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxOpening,
@@ -108,12 +108,17 @@ static LIGHTBOX_STAGE_SX: StaticSx = StaticSx::new(|| {
 // Every slide is this one box, so a picture is fitted into the stage rather
 // than sizing it. The ring sits here, inset, because the picture itself is
 // scaled while zoomed and an outline on it would be scaled and clipped with it.
+// Drawn by the overlay after the picture, which is what takes the focus.
 static LIGHTBOX_FRAME_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .height(LIGHTBOX_STAGE_HEIGHT.value())
         .media(phone(), sx().height("100cqh"))
         .overflow("hidden")
-        .has_focus_visible(focus_ring_sx().outline_offset("-2px"))
+        .selector("& > [data-ring]", ring_overlay_sx())
+        .selector(
+            "& > :focus-visible ~ [data-ring]",
+            focus_ring_sx().outline_offset("-2px"),
+        )
 });
 
 static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
@@ -622,6 +627,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         drag.onpointerdown.call(event);
                     },
                 }
+                {ring_overlay()}
             }
         }
     };

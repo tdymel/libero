@@ -16,6 +16,8 @@ use crate::{
 
 const MODAL_Z_INDEX_VAR: CssVar = CssVar::new("--lsx-modal-z-index");
 
+const SCROLL_LOCK_CSS: &str = "body { overflow: hidden; }";
+
 static MODAL_SX: StaticSx = StaticSx::new(|| {
     sx().position("fixed")
         .inset("0")
@@ -124,6 +126,9 @@ pub fn Modal(props: ModalProps) -> Element {
             HtmlTag::Div,
             props.attributes,
             rsx! {
+                // The scroll lock: in the document exactly while a modal is.
+                // Not `body:has(..)` - `:has()` never matches natively.
+                style { dangerous_inner_html: SCROLL_LOCK_CSS }
                 Overlay { z_index: 0, onclick: on_backdrop_click }
                 FocusTrap { sx: &MODAL_CONTENT_SX, {props.children} }
             },

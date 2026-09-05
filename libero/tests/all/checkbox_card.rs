@@ -57,13 +57,16 @@ fn a_card_checkbox_marks_its_wrapper_and_keeps_its_input_wiring() {
         )),
         "{html}"
     );
-    assert!(html.contains(&format!(
-        r#".{class}[data-state~="card"]:has(input:focus-visible){{outline:"#
-    )));
+    assert!(
+        html.contains(&format!(
+            r#".{class}[data-state~="card"] [data-state~="card"] > [data-ring]{{inset:-1px;border-radius:var(--lsx-paper-radius);}}"#
+        )),
+        "{html}"
+    );
 }
 
 #[test]
-fn the_control_drops_its_ring_inside_a_card() {
+fn the_control_hands_its_ring_to_the_card() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
@@ -75,9 +78,18 @@ fn the_control_drops_its_ring_inside_a_card() {
     let html = render(app);
     let body = body(&html);
     let control = &classes_of(&body, "span")[0];
+    // One ring, drawn by the overlay after the box. A static control leaves
+    // the card as the overlay's containing block, so it rings the card.
+    assert!(body.contains("data-ring"), "{body}");
     assert!(
         html.contains(&format!(
-            r#".{control}[data-state~="card"]:has(> input:focus-visible){{outline:none;}}"#
+            r#".{control} > input:focus-visible ~ [data-ring]{{outline:"#
+        )),
+        "{html}"
+    );
+    assert!(
+        html.contains(&format!(
+            r#".{control}[data-state~="card"]{{position:static;}}"#
         )),
         "{html}"
     );

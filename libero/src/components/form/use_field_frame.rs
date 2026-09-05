@@ -3,11 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::focus_ring_sx,
+        common::{focus_ring_sx, ring_overlay, ring_overlay_sx},
         layout::{BoxStyle, use_box},
     },
     sx::{StaticSx, Sx, sx},
-    theme::FieldDefaults,
+    theme::{FieldDefaults, SizeCss},
 };
 
 /// The bordered box a control sits in. Shared by every framed field, so the
@@ -24,10 +24,26 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .background("white")
         .color("black")
         .focus_within(sx().border_color("primary.6"))
-        // The ring is the frame's, because focus lands on a child. There is no
-        // `:focus-visible-within`, so `:has` is what keeps a mouse click from
-        // drawing one.
-        .has_focus_visible(focus_ring_sx())
+        // The ring is the frame's, because focus lands on a child - the
+        // control, or a button in a slot. Each of them is followed by a ring
+        // overlay, and the frame is the overlay's containing block. Keyed off
+        // `:focus-visible`, not `:focus-within`, so a click on a trigger or a
+        // slot's button draws no ring.
+        .position("relative")
+        .selector(
+            "& [data-ring]",
+            ring_overlay_sx()
+                // Out by the border, as an outline on the frame would sit.
+                .inset("-1px"),
+        )
+        // Stated rather than inherited: a slot's overlay sits in the slot.
+        .per_radius(|radius| {
+            sx().selector(
+                "& [data-ring]",
+                sx().border_radius(SizeCss::RADIUS.value(radius)),
+            )
+        })
+        .selector("& :focus-visible ~ [data-ring]", focus_ring_sx())
         .when("error", sx().border_color("error.7"))
         .when("warning", sx().border_color("warning.7"))
         .when(
@@ -146,14 +162,20 @@ impl PreparedFrame {
         children.extend(self.leading);
         children.push(control);
         children.extend(self.trailing);
+        children.push(ring_overlay());
 
         self.frame.render(HtmlTag::Div, Vec::new(), children)
     }
 }
 
+/// A slot carries its own ring overlay, for a button placed straight in it:
+/// the frame's own overlay is not that button's sibling.
 fn slot(slot: &'static str, content: &Element) -> Element {
     let content = content.clone();
     rsx! {
-        span { "data-slot": slot, {content} }
+        span { "data-slot": slot,
+            {content}
+            {ring_overlay()}
+        }
     }
 }

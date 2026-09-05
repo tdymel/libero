@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
-        common::field_props,
+        common::{field_props, ring_overlay},
         form::{
             clear_button, field_control_sx, removable_chip, use_bound, use_field, use_field_frame,
         },
@@ -393,9 +393,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let control = slot.render(
         HtmlTag::Div,
         Vec::new(),
+        // The input is not the frame's child, so the frame's own ring overlay
+        // is not its sibling; this one is, and the frame still positions it.
         rsx! {
             {tags}
             {input}
+            {ring_overlay()}
         },
     );
 

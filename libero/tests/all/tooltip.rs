@@ -71,9 +71,7 @@ fn tooltip_opens_on_hover_and_a_controlled_state_wins_by_source_order() {
         .find(&format!(".{wrapper}:hover > [role=\"tooltip\"]"))
         .expect("a hover rule");
     let focus = html
-        .find(&format!(
-            ".{wrapper}:has(:focus-visible) > [role=\"tooltip\"]"
-        ))
+        .find(&format!(".{wrapper} > :focus-visible ~ [role=\"tooltip\"]"))
         .expect("a keyboard-focus rule");
     let opened = html
         .find(&format!(

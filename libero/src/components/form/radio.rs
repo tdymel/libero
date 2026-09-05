@@ -5,7 +5,9 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
-        common::{base_color, field_props, focus_ring_sx, variables},
+        common::{
+            base_color, field_props, focus_ring_sx, ring_overlay, ring_overlay_sx, variables,
+        },
         form::use_field,
         layout::use_box,
     },
@@ -29,12 +31,13 @@ static RADIO_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // The visually hidden input is absolutely positioned; without this it
         // escapes to the nearest positioned ancestor.
         .position("relative")
-        .selector("&:has(> input:focus-visible)", focus_ring_sx())
-        // A card rings itself; a second ring here would sit at another offset.
-        .when(
-            "card",
-            sx().selector("&:has(> input:focus-visible)", sx().outline("none")),
-        )
+        // Drawn by the overlay after the circle, because the focus is on the
+        // input beside it - the same shape as `Checkbox`'s.
+        .selector("& > [data-ring]", ring_overlay_sx())
+        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
+        // A card rings itself: the control stops being the overlay's
+        // containing block, so the same overlay covers the card.
+        .when("card", sx().position("static"))
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
@@ -212,5 +215,9 @@ pub fn Radio(props: RadioProps) -> Element {
         }
     };
 
-    field.render(control.render(HtmlTag::Span, Vec::new(), vec![input, circle]))
+    field.render(control.render(
+        HtmlTag::Span,
+        Vec::new(),
+        vec![input, circle, ring_overlay()],
+    ))
 }

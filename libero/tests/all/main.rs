@@ -67,6 +67,7 @@ mod menu;
 mod menubar;
 mod modal;
 mod nav_link;
+mod no_has_selector;
 mod notifications;
 mod overlay;
 mod page_snippets;

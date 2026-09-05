@@ -53,6 +53,7 @@ pub(super) fn render_body(
                         key: "{index}",
                         scope: "col",
                         "data-align": align_attr(spec.align),
+                        "data-sortable": spec.sortable.then_some(true),
                         // Only a sortable column may advertise `aria-sort`.
                         aria_sort: spec.sortable.then(|| match active {
                             Some((column, direction)) if column == index => direction.aria_value(),

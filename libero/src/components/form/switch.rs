@@ -5,7 +5,10 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
-        common::{base_color, contrast_color, field_props, focus_ring_sx, variables},
+        common::{
+            base_color, contrast_color, field_props, focus_ring_sx, ring_overlay, ring_overlay_sx,
+            variables,
+        },
         form::{use_bound, use_field},
         layout::use_box,
     },
@@ -32,9 +35,10 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // escapes to the nearest positioned ancestor.
         .position("relative")
         // The control wraps the track and nothing else, so the ring hugs the
-        // track rather than the row - `:has`, because there is no
-        // `:focus-visible-within`.
-        .selector("&:has(> input:focus-visible)", focus_ring_sx())
+        // track rather than the row. Drawn by the overlay after the track,
+        // because the focus is on the input beside it.
+        .selector("& > [data-ring]", ring_overlay_sx())
+        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
@@ -231,5 +235,9 @@ pub fn Switch(props: SwitchProps) -> Element {
         }
     };
 
-    field.render(control.render(HtmlTag::Span, Vec::new(), vec![input, track]))
+    field.render(control.render(
+        HtmlTag::Span,
+        Vec::new(),
+        vec![input, track, ring_overlay()],
+    ))
 }

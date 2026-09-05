@@ -5,7 +5,10 @@ use crate::{
     components::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
-        common::{base_color, contrast_color, field_props, focus_ring_sx, variables},
+        common::{
+            base_color, contrast_color, field_props, focus_ring_sx, ring_overlay, ring_overlay_sx,
+            variables,
+        },
         form::{use_bound, use_field},
         layout::use_box,
     },
@@ -30,13 +33,13 @@ static CHECKBOX_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // escapes to the nearest positioned ancestor.
         .position("relative")
         // The box is the whole control, so the ring hugs it rather than the
-        // row - `:has`, because there is no `:focus-visible-within`.
-        .selector("&:has(> input:focus-visible)", focus_ring_sx())
-        // A card rings itself; a second ring here would sit at another offset.
-        .when(
-            "card",
-            sx().selector("&:has(> input:focus-visible)", sx().outline("none")),
-        )
+        // row. Drawn by the overlay after the box, because the focus is on
+        // the input beside it.
+        .selector("& > [data-ring]", ring_overlay_sx())
+        .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
+        // A card rings itself: the control stops being the overlay's
+        // containing block, so the same overlay covers the card.
+        .when("card", sx().position("static"))
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
@@ -253,5 +256,9 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         }
     };
 
-    field.render(control.render(HtmlTag::Span, Vec::new(), vec![input, box_node]))
+    field.render(control.render(
+        HtmlTag::Span,
+        Vec::new(),
+        vec![input, box_node, ring_overlay()],
+    ))
 }
