@@ -655,7 +655,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         placed,
         Some(props.onclose),
         DismissOptions {
-            focus_moved: Some(focus_moved),
+            onfocusmoved: Some(focus_moved),
             ..Default::default()
         },
     );

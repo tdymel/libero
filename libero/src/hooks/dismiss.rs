@@ -246,7 +246,7 @@ pub(crate) struct DismissOptions {
     /// ([`Dismissal::FocusMoved`]). `None` calls `onclose`, as for every other
     /// close. A submenu uses it: where focus went decides whether only it
     /// closes or the whole menu does, and only this close knows focus left.
-    pub focus_moved: Option<Callback<()>>,
+    pub onfocusmoved: Option<Callback<()>>,
 }
 
 impl Default for DismissOptions {
@@ -256,7 +256,7 @@ impl Default for DismissOptions {
             outside: true,
             return_focus: true,
             initial_focus: None,
-            focus_moved: None,
+            onfocusmoved: None,
         }
     }
 }
@@ -299,7 +299,7 @@ pub(crate) struct DismissHandle {
     global: bool,
     inside: Signal<Vec<(u64, ElementHandle)>>,
     inside_next: Signal<u64>,
-    focus_moved: Option<Callback<()>>,
+    onfocusmoved: Option<Callback<()>>,
 }
 
 impl DismissHandle {
@@ -551,7 +551,7 @@ impl DismissHandle {
         let handle = *self;
         spawn(async move {
             let onclose = match reason {
-                Dismissal::FocusMoved => handle.focus_moved.or(handle.onclose),
+                Dismissal::FocusMoved => handle.onfocusmoved.or(handle.onclose),
                 _ => handle.onclose,
             };
             if let Some(onclose) = onclose {
@@ -639,7 +639,7 @@ pub(crate) fn use_dismiss(
         global,
         inside,
         inside_next,
-        focus_moved: options.focus_moved,
+        onfocusmoved: options.onfocusmoved,
     };
 
     // The document subscription and the stack membership have exactly the same
@@ -1734,7 +1734,7 @@ mod tests {
     }
 
     /// A box with `outside` on, recording which of its two callbacks a close
-    /// called. With `focus_moved: false` it passes no `focus_moved` at all.
+    /// called. With `focus_moved: false` it passes no `onfocusmoved` at all.
     #[component]
     fn Watched(open: Signal<bool>, focus_moved: bool, heard: Signal<Vec<&'static str>>) -> Element {
         let anchor = use_element();
@@ -1757,7 +1757,7 @@ mod tests {
             Some(onclose),
             DismissOptions {
                 return_focus: false,
-                focus_moved: focus_moved.then_some(moved),
+                onfocusmoved: focus_moved.then_some(moved),
                 ..Default::default()
             },
         );
@@ -1805,7 +1805,7 @@ mod tests {
     }
 
     /// Focus leaving the box - a click or a Tab elsewhere, which is the only
-    /// way this hook hears an outside pointer - calls `focus_moved` in place
+    /// way this hook hears an outside pointer - calls `onfocusmoved` in place
     /// of `onclose`. Off the web nothing counts as focused, so every focusout
     /// here is focus leaving.
     #[test]
