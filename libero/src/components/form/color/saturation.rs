@@ -198,7 +198,14 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         .prepare();
 
     // One `role="slider"` for a 2D control: its value is the saturation, and
-    // the up and down keys still move the brightness.
+    // the up and down keys still move the brightness - so the text names
+    // both, or an Up/Down press would announce nothing.
+    let percent = |fraction: f64| (fraction * 100.0).round();
+    let valuetext = format!(
+        "Saturation {}%, brightness {}%",
+        percent(value.saturation()),
+        percent(value.value()),
+    );
     let thumb = thumb_style
         .attr("role", "slider")
         .attr(
@@ -208,7 +215,8 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
         .attr("aria-label", props.aria_label)
         .attr("aria-valuemin", 0)
         .attr("aria-valuemax", 100)
-        .attr("aria-valuenow", (value.saturation() * 100.0).round())
+        .attr("aria-valuenow", percent(value.saturation()))
+        .attr("aria-valuetext", valuetext)
         .element(&thumb_element)
         .event("onkeydown", onkeydown)
         .render(HtmlTag::Div, Vec::new(), rsx! {});

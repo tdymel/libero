@@ -128,8 +128,8 @@ The focused thumb is the one the keys move. Arrows move one `step`,
 Shift+arrow, PageUp and PageDown move `big_step` of them, and Home and End jump
 that thumb to `min` or `max` - stopping at its neighbour like any other move.
 
-A `label` names both thumbs, so each also carries its own name: "Minimum" and
-"Maximum" by default. Pass `aria_label_from` and `aria_label_to` where those
+A `label` names both thumbs, so each follows it with its own name: "Price
+Minimum" and "Price Maximum", with "Minimum" and "Maximum" by default. Pass `aria_label_from` and `aria_label_to` where those
 words do not fit, and `format` where a bare number does not say the unit.
 
 ## Props

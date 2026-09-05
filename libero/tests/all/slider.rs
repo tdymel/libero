@@ -97,6 +97,19 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     assert!(html.contains("--lsx-slider-thumb-at:0.8"));
     assert!(html.contains(r#"aria-label="Minimum""#));
     assert!(html.contains(r#"aria-label="Maximum""#));
+    // `aria-labelledby` beats `aria-label`, so each thumb lists itself after
+    // the caption: "Price Minimum", "Price Maximum".
+    let thumbs: Vec<_> = html
+        .match_indices(r#"role="slider""#)
+        .map(|(at, _)| attributes_of(&html[html[..at].rfind('<').unwrap()..], "span"))
+        .collect();
+    for thumb in &thumbs {
+        let label = thumb["aria-labelledby"].split(' ').collect::<Vec<_>>();
+        assert_eq!(label.len(), 2, "{thumb:?}");
+        assert!(label[0].ends_with("-label"), "{thumb:?}");
+        assert_eq!(label[1], thumb["id"], "{thumb:?}");
+    }
+    assert_ne!(thumbs[0]["id"], thumbs[1]["id"]);
 
     // Each thumb is bounded by its neighbour, `min_range` short of it.
     assert!(html.contains("aria-valuenow=20"));
@@ -111,6 +124,26 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     let first = html.find(r#"value="20""#).expect("the lower value");
     let second = html.find(r#"value="80""#).expect("the upper value");
     assert!(first < second, "{html}");
+}
+
+/// A single thumb's `aria_label` stands in for a missing `label`, so with both
+/// the label names it alone - only a range appends each thumb's own name.
+#[test]
+fn a_labelled_single_slider_is_named_by_its_label_alone() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider { label: "Quality", aria_label: "Quality", value: 25.0, oninput: move |_| {} }
+            }
+        }
+    }
+
+    let html = render(app);
+    let at = html.find(r#"role="slider""#).unwrap();
+    let thumb = attributes_of(&html[html[..at].rfind('<').unwrap()..], "span");
+    assert!(thumb["aria-labelledby"].ends_with("-label"), "{thumb:?}");
+    assert!(!thumb["aria-labelledby"].contains(' '), "{thumb:?}");
+    assert!(!thumb.contains_key("id"), "{thumb:?}");
 }
 
 /// A hand-written `SliderValue`, which is what a caller with a foreign enum

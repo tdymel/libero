@@ -7,12 +7,13 @@ use super::token_theme::use_token_theme;
 use crate::{
     CssLayer,
     components::{
-        ActionIcon, Box, HtmlTag, Input, States, Variables,
-        common::{base_props, variables},
+        ActionIcon, Box, HtmlTag, Input, States, Variables, VisuallyHidden,
+        common::{base_props, focus_ring_sx, variables},
         layout::use_box,
     },
-    hooks::{Clipboard, use_clipboard, use_css},
-    sx::{StaticSx, sx},
+    hooks::{Clipboard, use_clipboard, use_css, use_element},
+    platform::ElementApi,
+    sx::{StaticSx, Sx, sx},
     theme::{
         CODE_BLOCK_BACKGROUND, CODE_BLOCK_BORDER, CODE_BLOCK_COPY_HOVER_BACKGROUND,
         CODE_BLOCK_COPY_HOVER_TEXT, CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT,
@@ -83,7 +84,11 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-static CODE_BLOCK_SCROLL_SX: StaticSx = StaticSx::new(|| sx().overflow("auto"));
+// Inset: the container clips, so an outset ring would be cut away.
+static CODE_BLOCK_SCROLL_SX: StaticSx = StaticSx::new(|| {
+    sx().overflow("auto")
+        .focus_visible(focus_ring_sx().outline_offset("-2px"))
+});
 
 static CODE_LINES_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -366,12 +371,26 @@ fn CopyButton(source: String, floating: bool) -> Element {
         ActionIcon {
             aria_label: "Copy code",
             sx: button_sx,
-            onclick: move |_| clipboard.copy(source.clone()),
+            // Reset first, so a second copy empties the status and fills it
+            // again rather than leaving the same text a reader skips.
+            onclick: move |_| {
+                clipboard.reset();
+                clipboard.copy(source.clone());
+            },
             onmouseleave: move |_| clipboard.reset(),
+            // A keyboard or touch user never leaves with a mouse.
+            onblur: move |_| clipboard.reset(),
             if clipboard.copied() {
                 {check_icon()}
             } else {
                 {copy_icon()}
+            }
+        }
+        // Always mounted, so a reader is already watching it when the text
+        // arrives - the check icon alone says nothing.
+        VisuallyHidden { role: "status",
+            if clipboard.copied() {
+                "Copied"
             }
         }
     }
@@ -425,12 +444,69 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .as_deref()
         .map(parse_highlighted_lines)
         .unwrap_or_default();
-    let scroll_sx = match props.max_lines {
+    let scroll_sx: Input<Sx> = match props.max_lines {
         Some(max_lines) => sx().max_height(format!(
             "{}px",
             max_lines * CODE_LINE_HEIGHT_PX + CODE_LINES_VERTICAL_PADDING_PX
         )),
         None => sx(),
+    }
+    .into();
+
+    // A box that scrolls must be reachable from the keyboard (Safari does not
+    // make scrollers focusable), but one that does not is only a tab stop in
+    // the way - so it is measured.
+    let scroll_element = use_element();
+    let mut overflows = use_signal(|| false);
+    let measure = move || {
+        if !scroll_element.is_mounted() {
+            return;
+        }
+        let (content, size) = (scroll_element.scroll_size(), scroll_element.dimensions());
+        spawn(async move {
+            if let (Ok(content), Ok(size)) = (content.await, size.await) {
+                // `scrollWidth` is rounded, the rect is not.
+                let next = content.width > size.width + 1.0 || content.height > size.height + 1.0;
+                if next != *overflows.peek() {
+                    overflows.set(next);
+                }
+            }
+        });
+    };
+    // `ResizeObserver` reports the box, not its content, so the rows that
+    // replace the plain `pre` once highlighting resolves are measured here.
+    use_effect(move || {
+        let _ = highlighted.read();
+        measure();
+    });
+    let scrolls = overflows();
+    let scroll_label = match language {
+        Some(language) => format!("{} code", Language::label(language)),
+        None => "Code".to_string(),
+    };
+    let scroll_box = use_box()
+        .framework_sx(&CODE_BLOCK_SCROLL_SX)
+        .sx(&scroll_sx)
+        .prepare()
+        .element(&scroll_element)
+        .event("onresize", move |_: Event<ResizeData>| measure())
+        .attr("tabindex", scrolls.then_some("0"))
+        .attr("role", scrolls.then_some("region"))
+        .attr("aria-label", scrolls.then_some(scroll_label));
+    let code = match &lines {
+        Some(lines) => rsx! {
+            {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
+        },
+        None => rsx! {
+            Box {
+                component: "pre",
+                framework_sx: &CODE_PLAIN_PRE_SX,
+                Box {
+                    component: "code",
+                    {display_source.as_str()}
+                }
+            }
+        },
     };
 
     boxed.render(
@@ -447,26 +523,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
             } else if let Some(copy_source) = copy_source.clone() {
                 CopyButton { source: copy_source, floating: true }
             }
-            Box {
-                component: "div",
-                framework_sx: &CODE_BLOCK_SCROLL_SX,
-                sx: scroll_sx,
-                match &lines {
-                    Some(lines) => rsx! {
-                        {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
-                    },
-                    None => rsx! {
-                        Box {
-                            component: "pre",
-                            framework_sx: &CODE_PLAIN_PRE_SX,
-                            Box {
-                                component: "code",
-                                {display_source.as_str()}
-                            }
-                        }
-                    },
-                }
-            }
+            {scroll_box.render(HtmlTag::Div, Vec::new(), code)}
         },
     )
 }

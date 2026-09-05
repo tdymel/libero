@@ -490,12 +490,27 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     });
 
     let aria_labels = [props.aria_label.clone(), props.aria_label_to.clone()];
+    let range = matches!(value, SliderCoreValue::Range { .. });
     let thumbs = value.thumbs().enumerate().map(|(index, thumb_value)| {
         let (thumb_min, thumb_max) = value.bounds(index, min, max, min_range);
         // Only a custom label is worth an `aria-valuetext` - the bare value
         // is already in `aria-valuenow`.
         let text = props.label.map(|label| label.call(thumb_value));
         let bubble_text = text.clone().unwrap_or_else(|| thumb_value.to_string());
+        // `aria-labelledby` beats `aria-label`, so a range thumb that has both
+        // lists itself after the field's label: its own `aria-label` then
+        // follows the caption ("Price Minimum") instead of being dropped. A
+        // single thumb's `aria_label` is the stand-in for a missing `label`,
+        // so there the label keeps winning alone.
+        let aria_label = aria_labels[index].clone();
+        let (own_id, labelledby) = match (&props.labelledby, &aria_label) {
+            (Some(label), Some(_)) if range => {
+                let own_id = format!("{label}-thumb-{index}");
+                let labelledby = format!("{label} {own_id}");
+                (Some(own_id), Some(labelledby))
+            }
+            _ => (None, props.labelledby.clone()),
+        };
 
         let thumb = thumb_style
             .clone()
@@ -509,8 +524,9 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
             .attr("aria-valuemax", thumb_max)
             .attr("aria-valuenow", thumb_value)
             .attr("aria-valuetext", text)
-            .attr("aria-label", aria_labels[index].clone())
-            .attr("aria-labelledby", props.labelledby.clone())
+            .attr("id", own_id)
+            .attr("aria-label", aria_label)
+            .attr("aria-labelledby", labelledby)
             .attr("aria-describedby", props.describedby.clone())
             .attr("aria-invalid", props.invalid.then_some("true"))
             .attr("aria-required", props.required.then_some("true"))

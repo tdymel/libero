@@ -153,6 +153,13 @@ static MARQUEE_BASE_SX: StaticSx = StaticSx::new(|| {
                 sx().animation_play_state("paused"),
             ),
         )
+        // A focused link must not drift out of view (WCAG 2.4.11), whatever
+        // `pause_on_hover` says. The track and not the root, so focusing the
+        // toggle does not hold the motion it reports.
+        .selector(
+            "& > [data-slot='track']:focus-within",
+            sx().animation_play_state("paused"),
+        )
         .when("fade-edges", fade_edges)
 });
 
