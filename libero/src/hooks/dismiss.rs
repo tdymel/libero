@@ -781,6 +781,7 @@ mod tests {
     struct FindKeydownListeners {
         last: Option<ElementId>,
         keydown: Vec<ElementId>,
+        focusout: Vec<ElementId>,
         /// The element carrying `id="trigger"`, so a press can be dispatched at
         /// it even when it has no listener of its own - which is exactly the
         /// state `a_closed_box_does_not_swallow_escape_from_the_modal_around_it`
@@ -798,10 +799,10 @@ mod tests {
             self.last = Some(id);
         }
         fn add_event_listener(&mut self, name: &str) {
-            if name == "keydown"
-                && let Some(id) = self.last
-            {
-                self.keydown.push(id);
+            match (name, self.last) {
+                ("keydown", Some(id)) => self.keydown.push(id),
+                ("focusout", Some(id)) => self.focusout.push(id),
+                _ => {}
             }
         }
         fn child(&mut self, _index: usize) {}
@@ -896,7 +897,7 @@ mod tests {
             unimplemented!()
         }
         fn convert_focus_data(&self, _e: &PlatformEventData) -> dioxus::html::FocusData {
-            unimplemented!()
+            dioxus::html::FocusData::new(FakeFocus)
         }
         fn convert_form_data(&self, _e: &PlatformEventData) -> dioxus::html::FormData {
             unimplemented!()
@@ -939,6 +940,15 @@ mod tests {
         }
         fn convert_wheel_data(&self, _e: &PlatformEventData) -> dioxus::html::WheelData {
             unimplemented!()
+        }
+    }
+
+    /// The focus payload carries nothing the hook reads.
+    struct FakeFocus;
+
+    impl dioxus::html::HasFocusData for FakeFocus {
+        fn as_any(&self) -> &dyn std::any::Any {
+            self
         }
     }
 
@@ -1722,5 +1732,104 @@ mod tests {
 
         assert!(html.contains("dropdown body"), "the box should render");
         assert!(html.contains("Open"), "the trigger should render");
+    }
+
+    /// A box with `outside` on, recording which of its two callbacks a close
+    /// called. With `focus_moved: false` it passes no `focus_moved` at all.
+    #[component]
+    fn Watched(open: Signal<bool>, focus_moved: bool, heard: Signal<Vec<&'static str>>) -> Element {
+        let anchor = use_element();
+        let floating = use_element();
+        let onclose = use_callback(move |()| {
+            let (mut open, mut heard) = (open, heard);
+            heard.write().push("onclose");
+            open.set(false);
+        });
+        let moved = use_callback(move |()| {
+            let (mut open, mut heard) = (open, heard);
+            heard.write().push("focus_moved");
+            open.set(false);
+        });
+        let dismiss = use_dismiss(
+            anchor,
+            floating,
+            open(),
+            true,
+            Some(onclose),
+            DismissOptions {
+                return_focus: false,
+                focus_moved: focus_moved.then_some(moved),
+                ..Default::default()
+            },
+        );
+        let style = use_box().prepare();
+        rsx! {
+            if open() {
+                {style.element(&floating).render(HtmlTag::Div, dismiss.floating_events(), rsx! { "box" })}
+            }
+        }
+    }
+
+    thread_local! {
+        static WITH_FOCUS_MOVED: std::cell::Cell<bool> = const { std::cell::Cell::new(true) };
+    }
+
+    fn watched() -> Element {
+        let open = use_signal(|| true);
+        let heard = use_signal(Vec::new);
+        rsx! {
+            LiberoProvider { Watched { open, focus_moved: WITH_FOCUS_MOVED.get(), heard } }
+            "state: open={open} heard={heard.read().join(\",\")}"
+        }
+    }
+
+    /// Mounts [`Watched`] and sends `name` to its box.
+    fn close_watched(with_focus_moved: bool, name: &str) -> String {
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        WITH_FOCUS_MOVED.set(with_focus_moved);
+        let mut dom = VirtualDom::new(watched);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        let (target, data) = match name {
+            "focusout" => (
+                find.focusout.last(),
+                Rc::new(PlatformEventData::new(Box::new(FakeFocus))) as Rc<dyn std::any::Any>,
+            ),
+            _ => (find.keydown.last(), escape()),
+        };
+        let target = *target.expect("the box listens");
+        dom.runtime()
+            .handle_event(name, Event::new(data, true), target);
+        settle(&mut dom);
+        state(&dom)
+    }
+
+    /// Focus leaving the box - a click or a Tab elsewhere, which is the only
+    /// way this hook hears an outside pointer - calls `focus_moved` in place
+    /// of `onclose`. Off the web nothing counts as focused, so every focusout
+    /// here is focus leaving.
+    #[test]
+    fn focus_leaving_calls_focus_moved_instead_of_onclose() {
+        assert_eq!(
+            close_watched(true, "focusout"),
+            "state: open=false heard=focus_moved"
+        );
+    }
+
+    #[test]
+    fn without_focus_moved_focus_leaving_calls_onclose() {
+        assert_eq!(
+            close_watched(false, "focusout"),
+            "state: open=false heard=onclose"
+        );
+    }
+
+    #[test]
+    fn escape_still_calls_onclose_when_focus_moved_is_set() {
+        assert_eq!(
+            close_watched(true, "keydown"),
+            "state: open=false heard=onclose"
+        );
     }
 }
