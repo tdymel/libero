@@ -104,7 +104,7 @@ base_props! {
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// Initial % of pane A, clamped to `min_size` at mount. Uncontrolled
-        /// afterward - `on_resize` only notifies.
+        /// afterward - `onresize` only notifies.
         initial_size: f64,
         /// % floor applied to both panes, capped at 50.
         #[props(default, into)]
@@ -114,7 +114,7 @@ base_props! {
         #[props(default, into)]
         divider_color: Input<ThemeAwareValue>,
         #[props(default)]
-        on_resize: Option<EventHandler<SplitterResizeEvent>>,
+        onresize: Option<EventHandler<SplitterResizeEvent>>,
         /// Names the divider, which is a focusable `role="separator"` - after
         /// the pane it resizes, e.g. `"Resize sidebar"`. An `aria_label` in
         /// `attributes` would land on the root instead. Unset is a `warn()`.
@@ -186,16 +186,16 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let mut container_size = use_signal(|| 0.0_f64);
     let mut start_a = use_signal(|| 0.0_f64);
 
-    let on_resize = props.on_resize;
+    let onresize = props.onresize;
     let notify = move |event: SplitterResizeEvent| {
-        if let Some(on_resize) = &on_resize {
-            on_resize.call(event);
+        if let Some(onresize) = &onresize {
+            onresize.call(event);
         }
     };
 
     let drag = use_drag(DragOptions {
         capture: root,
-        on_start: Callback::new(move |start: DragStart| {
+        onstart: Callback::new(move |start: DragStart| {
             let cancel = start.cancel;
             // Started here, awaited in the task: see `ElementApi::dimensions`.
             let size = root.dimensions();
@@ -219,7 +219,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
                 notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
             });
         }),
-        on_move: Callback::new(move |event: DragMove| {
+        onmove: Callback::new(move |event: DragMove| {
             let delta = event.delta();
             let pixels = if vertical { delta.x } else { delta.y };
             let delta_pct = pixels / container_size() * 100.0;
@@ -227,7 +227,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             a.set(new_a);
             notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
         }),
-        on_end: Callback::new(move |_| {
+        onend: Callback::new(move |_| {
             notify(SplitterResizeEvent::End(a(), 100.0 - a()));
         }),
     });

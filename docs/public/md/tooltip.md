@@ -23,7 +23,7 @@ fn Demo() -> Element {
     rsx! {
         Tooltip {
             label: rsx! { "Saves the current draft" },
-            placement: "top",
+            side: "top",
             size: "sm",
             gap: "xs",
             Button { variant: "outlined", "Save" }
@@ -84,13 +84,13 @@ popover there.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `label` | `Element` | required | The bubble's content. |
-| `placement` | `TooltipPlacement` | `top` | Which side of the trigger the bubble sits on, centred on that side. No viewport flipping. |
+| `side` | `Side` | `top` | Which side of the trigger the bubble sits on, centred on that side. No viewport flipping. |
 | `gap` | `Size` | `xs` | Distance to the trigger, rendered as transparent padding so the pointer can cross it. |
 | `size` | `Size` | `sm` | Font size of the bubble. |
 | `z_index` | `ThemeAwareValue` | the float layer | Overrides the stacking level, for a bubble that loses to a neighbouring overlay. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest before the bubble appears. |
 | `close_delay` | `u32` | `0` | Milliseconds the bubble lingers after the pointer leaves. |
-| `opened` | `bool` | - | Forces the bubble open or closed; unset leaves it to hover and focus. |
+| `open` | `bool` | - | Forces the bubble open or closed; unset leaves it to hover and focus. |
 | `disabled` | `bool` | `false` | Renders `children` bare - no wrapper, no bubble. |
 | `label_id` | `String` | - | The bubble's `id`, so the trigger can carry `aria-describedby`. |
 | `children` | `Element` | required | The trigger. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this. |
@@ -108,13 +108,13 @@ scale.
 
 | Field | Type | Description |
 |---|---|---|
-| `placement` | `TooltipPlacement` | Default `placement`. |
+| `side` | `Side` | Default `side`. |
 | `gap` | `Size` | Default distance between trigger and bubble, bridged so the pointer can cross. |
 | `size` | `Size` | Default `size`. |
 | `open_delay` | `u32` | Default milliseconds before the bubble appears. |
 | `close_delay` | `u32` | Default milliseconds before it disappears. |
 | `duration` | `u32` | Fade duration, in milliseconds. |
-| `font_size` | `Sizes<u16>` | Bubble font size per size step, in px. |
+| `font_sizes` | `Sizes<u16>` | Bubble font size per size step, in px. |
 | `background` | `&'static str` | Bubble background. |
 | `color` | `&'static str` | Bubble text color. |
 
@@ -139,9 +139,9 @@ The wrapper and the bubble carry different tokens.
 
 | Token | On | Condition |
 |---|---|---|
-| `opened` | wrapper | `opened` is `Some(true)` - forces the bubble visible. |
-| `closed` | wrapper | `opened` is `Some(false)` - forces it hidden, hover included. |
-| `placement-top` / `placement-right` / `placement-bottom` / `placement-left` | bubble | The `placement` in effect. |
+| `open` | wrapper | `open` is `Some(true)` - forces the bubble visible. |
+| `closed` | wrapper | `open` is `Some(false)` - forces it hidden, hover included. |
+| `side-top` / `side-right` / `side-bottom` / `side-left` | bubble | The `side` in effect. |
 | `size-<size>` | bubble | The `size` in effect. |
 
 The bubble is also addressable as `[role="tooltip"]`, which is how the

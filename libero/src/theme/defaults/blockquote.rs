@@ -77,7 +77,7 @@ impl BlockquoteDefaults {
 
     /// The font scale is `TextDefaults`', not one of our own: "scales the
     /// text" should mean the same scale everywhere, and a caller who retunes
-    /// `theme.texts` gets quotes that still match their prose.
+    /// `theme.text` gets quotes that still match their prose.
     pub fn size_sx(size: Size) -> Sx {
         sx().padding(format!(
             "{} {}",

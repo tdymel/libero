@@ -358,7 +358,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 // two things. Nothing highlighted and nothing typed is nobody's,
                 // so it bubbles and a form still submits.
                 Key::Enter
-                    if !(state.opened() && state.active().is_some() && row_count > 0)
+                    if !(state.is_open() && state.active().is_some() && row_count > 0)
                         && !text().trim().is_empty() =>
                 {
                     event.prevent_default();
@@ -431,8 +431,8 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 rows,
                 active: state.active(),
                 onactive: move |row| state.set_active(Some(row)),
-                opened: state.opened() && !disabled,
-                onopened: move |opened| state.set_opened(opened),
+                opened: state.is_open() && !disabled,
+                onopened: move |opened| state.set_open(opened),
                 state,
                 size,
                 radius,

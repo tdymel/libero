@@ -17,7 +17,7 @@ thread_local! {
 }
 
 fn app() -> Element {
-    let item = |label: &str| MenuItem::new(label).on_select(|_| {}).into();
+    let item = |label: &str| MenuItem::new(label).onselect(|_| {}).into();
     rsx! {
         LiberoProvider {
             Menubar {

@@ -53,7 +53,7 @@ has none of that.
 | `title` | `String` | - | Heading, and the accessible name unless `aria_label` overrides it. |
 | `close_button` | `bool` | in a modal | Header button that closes the surrounding modal. On by default inside one, where it has something to close. |
 | `close_label` | `String` | `Close` | Accessible name for the close button. |
-| `radius` | `ThemeAwareValue` | `md` | Corner radius - the radius scale, or any CSS length. |
+| `radius` | `Size` | `md` | Corner radius, a step on the radius scale. Anything else goes through `sx`. |
 | `size` | `ThemeAwareValue` | `md` | Caps the dialog's width from the dialog scale (`md` is 510px). |
 | `variables` | `Variables` | - | Layered onto `Dialog`'s own - e.g. `Drawer`'s anchor/size vars. |
 | `children` | `Element` | required | The dialog's content. |
@@ -67,7 +67,7 @@ Like every component, `Dialog` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Sizes<u16>` | Max width in px per size step - 240, 300, 510, 600, 750, 900. |
+| `sizes` | `Sizes<u16>` | Max width in px per size step - 240, 300, 510, 600, 750, 900. |
 
 ## CSS variables
 

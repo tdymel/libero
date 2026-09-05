@@ -95,11 +95,11 @@ pub fn SplitterPage() -> Element {
                     .default("vertical")
                     .doc("Divider line axis - vertical (side-by-side panes) or horizontal (stacked panes)."),
                 prop("initial_size", "f64")
-                    .doc("Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `on_resize` only notifies."),
+                    .doc("Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `onresize` only notifies."),
                 prop("min_size", "f64").default("10").doc("% floor applied to both panes, capped at 50."),
                 prop("divider_size", "Size").default("sm").doc("Which size level the divider uses."),
                 prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
-                prop("on_resize", "EventHandler<SplitterResizeEvent>")
+                prop("onresize", "EventHandler<SplitterResizeEvent>")
                     .doc("Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`."),
                 prop("aria_label", "String")
                     .doc("Names the divider, after the pane it resizes. Unset warns in a debug build."),

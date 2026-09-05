@@ -240,7 +240,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
 
     let move_drag = use_drag(DragOptions {
         capture: root,
-        on_start: Callback::new(move |_: DragStart| {
+        onstart: Callback::new(move |_: DragStart| {
             move_origin.set(None);
             let offset = root.client_offset();
             spawn(async move {
@@ -249,18 +249,18 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                 }
             });
         }),
-        on_move: Callback::new(move |event: DragMove| {
+        onmove: Callback::new(move |event: DragMove| {
             if let Some((x, y)) = move_origin() {
                 let delta = event.delta();
                 position.set(Some((x + delta.x, y + delta.y)));
             }
         }),
-        on_end: Callback::new(move |()| report(root, onmove)),
+        onend: Callback::new(move |()| report(root, onmove)),
     });
 
     let resize_drag = use_drag(DragOptions {
         capture: root,
-        on_start: Callback::new(move |_: DragStart| {
+        onstart: Callback::new(move |_: DragStart| {
             size_origin.set(None);
             let dimensions = root.dimensions();
             spawn(async move {
@@ -269,7 +269,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                 }
             });
         }),
-        on_move: Callback::new(move |event: DragMove| {
+        onmove: Callback::new(move |event: DragMove| {
             if let Some((width, height)) = size_origin() {
                 let delta = event.delta();
                 size.set(Some((
@@ -278,7 +278,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                 )));
             }
         }),
-        on_end: Callback::new(move |()| report(root, onresize)),
+        onend: Callback::new(move |()| report(root, onresize)),
     });
 
     // Both drags capture on the root, so it receives every move; only the one

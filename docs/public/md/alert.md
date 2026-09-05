@@ -86,7 +86,7 @@ its field. See [Form](form.md).
 | `icon` | `Element` | - | A leading glyph, rendered `aria-hidden`. |
 | `color` | `ThemeAwareValue` | `info` | The tint; a theme color name or a literal CSS color. |
 | `variant` | `Variant` | `tonal` | Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target. |
-| `radius` | `ThemeAwareValue` | `md` | A size step or any CSS length. |
+| `radius` | `Size` | `md` | A step on the radius scale. Anything else goes through `sx`. |
 | `onclose` | `EventHandler<()>` | - | Shows the close button, and fires when it is pressed. |
 | `close_label` | `String` | `Close` | The close button's accessible name. |
 | `children` | `Element` | - | The message, and the description through `aria-describedby`. |

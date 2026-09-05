@@ -18,8 +18,8 @@ let mut stage = use_signal(|| Some(Stage::Account));
 /// Each step's own button moves on, which removes the content it sits in -
 /// the case the component hands focus back for.
 // snippet: after STAGE_ENUM
-// snippet: in Stepper { active: stage(), .. }
-const CONTENT: &str = r#"content: move |s: Stage| match s {
+// snippet: in Stepper { value: stage(), .. }
+const CONTENT: &str = r#"panel: move |s: Stage| match s {
     Stage::Account => rsx! {
         Flex { gap: "sm", align: "flex-start",
             Text { "Who is ordering?" }
@@ -41,15 +41,15 @@ const CONTENT: &str = r#"content: move |s: Stage| match s {
 }"#;
 
 // snippet: after STAGE_ENUM
-// snippet: in Stepper { active: stage(), content: |_: Stage| rsx! {}, .. }
-const DESCRIPTION: &str = r#"description: |s: Stage| match s {
+// snippet: in Stepper { value: stage(), panel: |_: Stage| rsx! {}, .. }
+const DESCRIPTION: &str = r#"option_description: |s: Stage| match s {
     Stage::Account => "Who you are".to_string(),
     Stage::Shipping => "Where it goes".to_string(),
     Stage::Review => "Check and pay".to_string(),
 }"#;
 
 // snippet: after STAGE_ENUM
-// snippet: in Stepper { active: stage(), content: |_: Stage| rsx! {}, .. }
+// snippet: in Stepper { value: stage(), panel: |_: Stage| rsx! {}, .. }
 const ERROR: &str = r#"state: |s: Stage| (s == Stage::Shipping).then_some(StepState::Error)"#;
 
 #[derive(Clone, PartialEq, Options)]
@@ -87,13 +87,13 @@ pub fn StepperPage() -> Element {
             markdown: "/md/stepper.md",
             properties: vec![
                 props("Stepper", vec![
-                    prop("active", "Option<T>").doc("The current step. `None` means every step is finished. Required and strictly controlled."),
-                    prop("content", "Callback<T, Element>").doc("A step's body. Horizontal shows the current one below the strip; vertical shows it under its own step and collapses the rest. A closed step's content is not mounted."),
+                    prop("value", "Option<T>").doc("The current step. `None` means every step is finished. Required and strictly controlled."),
+                    prop("panel", "Callback<T, Element>").doc("A step's body. Horizontal shows the current one below the strip; vertical shows it under its own step and collapses the rest. A closed step's content is not mounted."),
                     prop("steps", "Vec<T>").default("T::options()").doc("The steps to show, in order."),
-                    prop("label", "Callback<T, OptionLabel>")
+                    prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a step. `OptionLabel::rich` draws it as rsx and still names it."),
-                    prop("description", "Callback<T, String>").doc("A second line under a step's label. An empty string prints none."),
+                    prop("option_description", "Callback<T, String>").doc("A second line under a step's label. An empty string prints none."),
                     prop("state", "Callback<T, Option<StepState>>")
                         .default("derived")
                         .doc("Overrides a step's derived state; `None` keeps it. The only way to mark a step `Error`."),
@@ -109,9 +109,9 @@ pub fn StepperPage() -> Element {
                 Text {
                     "The stages of a process over an enum, with the current one's content. The "
                     "steps are the enum's variants and "
-                    Code { source: "content" }
+                    Code { source: "panel" }
                     " is a match over the same type, so a step without a body is a compile error. "
-                    Code { source: "active" }
+                    Code { source: "value" }
                     " is strictly controlled - moving on is the caller's, usually from a button "
                     "inside the step - and "
                     Code { source: "None" }
@@ -119,9 +119,9 @@ pub fn StepperPage() -> Element {
                 }
                 Text {
                     "A step's state comes from its position: before "
-                    Code { source: "active" }
+                    Code { source: "value" }
                     " is completed, "
-                    Code { source: "active" }
+                    Code { source: "value" }
                     " itself is current, the rest are pending. "
                     Code { source: "state" }
                     " only overrides, and returning "
@@ -136,7 +136,7 @@ pub fn StepperPage() -> Element {
                 component: "Stepper",
                 children_text: "",
                 wrap: Wrap(|_: &DemoValues, source: &str| format!("{STAGE_ENUM}{source}")),
-                fixed: vec!["active: stage()".to_string(), CONTENT.to_string()],
+                fixed: vec!["value: stage()".to_string(), CONTENT.to_string()],
                 controls: vec![
                     Control::toggle("orientation", ["horizontal", "vertical"])
                         .default("horizontal"),
@@ -162,8 +162,8 @@ pub fn StepperPage() -> Element {
                             }
                         })
                         .hidden_when(|values| !on(values, "clickable")),
-                    Control::switch("description").code(|_, values| {
-                        if on(values, "description") {
+                    Control::switch("option_description").code(|_, values| {
+                        if on(values, "option_description") {
                             vec![DESCRIPTION.to_string()]
                         } else {
                             vec![]
@@ -207,7 +207,7 @@ pub fn StepperPage() -> Element {
                     rsx! {
                         div { style: "display: flex; flex-direction: column; align-items: flex-start; gap: 16px; width: 100%;",
                             Stepper {
-                                active: stage(),
+                                value: stage(),
                                 orientation: values.str("orientation"),
                                 label_position: values.str("label_position"),
                                 size: values.str("size"),
@@ -218,10 +218,10 @@ pub fn StepperPage() -> Element {
                                 onstepclick: on(&values, "clickable")
                                     .then(|| EventHandler::new(move |s| stage.set(Some(s)))),
                                 allow_next_steps: on(&values, "allow_next_steps"),
-                                description: on(&values, "description")
+                                option_description: on(&values, "option_description")
                                     .then(|| Callback::new(description)),
                                 state: on(&values, "error").then(|| Callback::new(errored)),
-                                content,
+                                panel: content,
                             }
                             // Not part of the snippet: once every step is
                             // done there is no content left to move back from.

@@ -57,7 +57,7 @@ const MANY_PANEL: &str = r#"panel: |step: Step| match step {
 // snippet: item impl Step { fn icon(&self) -> Element { rsx! {} } }
 // snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
 // snippet: in Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, .. }
-const RICH: &str = r#"label: |step: Step| OptionLabel::rich(
+const RICH: &str = r#"option_label: |step: Step| OptionLabel::rich(
     step.label(),
     rsx! {
         Box {
@@ -142,10 +142,10 @@ pub fn AccordionPage() -> Element {
                     prop("onchange", "EventHandler<AccordionOpen<T>>").doc("Called with the whole new open set, in the same mode, ready to store."),
                     prop("panel", "Callback<T, Element>").doc("A section's body. A closed panel's content is never mounted, so it keeps no state."),
                     prop("sections", "Vec<T>").default("T::options()").doc("The sections to show."),
-                    prop("label", "Callback<T, OptionLabel>")
+                    prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
-                    prop("disabled", "Vec<T>").doc("Sections that render but cannot be toggled. They stay tab stops."),
+                    prop("disabled_options", "Vec<T>").doc("Sections that render but cannot be toggled. They stay tab stops."),
                     prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1`..`h6`."),
                     prop("size", "Size").default("md").doc("Type and padding of the triggers and panels."),
                 ]),
@@ -214,9 +214,9 @@ pub fn AccordionPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::toggle("heading", ["h2", "h3", "h4"]).default("h3"),
-                    Control::switch("disabled").code(|_, values| {
-                        if values.str("disabled") == "true" {
-                            vec!["disabled: vec![Step::Review]".to_string()]
+                    Control::switch("disabled_options").code(|_, values| {
+                        if values.str("disabled_options") == "true" {
+                            vec!["disabled_options: vec![Step::Review]".to_string()]
                         } else {
                             vec![]
                         }
@@ -259,12 +259,12 @@ pub fn AccordionPage() -> Element {
                         Accordion {
                             size: values.str("size"),
                             heading: values.str("heading"),
-                            disabled: if values.str("disabled") == "true" {
+                            disabled_options: if values.str("disabled_options") == "true" {
                                 vec![Step::Review]
                             } else {
                                 vec![]
                             },
-                            label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
+                            option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
                             open: open(),
                             onchange: move |next| open.set(next),
                             panel,

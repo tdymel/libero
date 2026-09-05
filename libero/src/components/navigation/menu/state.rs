@@ -53,7 +53,7 @@ impl MenuState {
         (self.id)()
     }
 
-    pub fn opened(&self) -> bool {
+    pub fn is_open(&self) -> bool {
         (self.opened)()
     }
 
@@ -102,7 +102,7 @@ impl MenuState {
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
         let id = self.id();
-        let opened = self.opened();
+        let opened = self.is_open();
         let mut attributes = vec![
             attr("id", trigger_id(&id)),
             attr("aria-haspopup", "menu"),

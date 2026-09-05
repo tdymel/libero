@@ -10,13 +10,13 @@ pub const DIVIDER_LINE: CssVar = CssVar::new("--lsx-divider-line");
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DividerDefaults {
     pub spacing: Option<Size>,
-    pub thickness: Sizes<u16>,
+    pub thicknesses: Sizes<u16>,
 }
 
 impl DividerDefaults {
     pub const DEFAULT: Self = Self {
         spacing: None,
-        thickness: Sizes::new(1, 2, 3, 4, 5, 6),
+        thicknesses: Sizes::new(1, 2, 3, 4, 5, 6),
     };
 
     pub fn size_sx(size: Size) -> Sx {
@@ -40,7 +40,9 @@ impl ToCssDeclarations for DividerDefaults {
             Some(size) => SizeCss::SPACING.value(size),
             None => "0".to_string(),
         };
-        let mut declarations = self.thickness.to_css_declarations(DIVIDER_THICKNESS, "px");
+        let mut declarations = self
+            .thicknesses
+            .to_css_declarations(DIVIDER_THICKNESS, "px");
         declarations.push(DIVIDER_SPACING.declare(spacing));
         declarations
     }

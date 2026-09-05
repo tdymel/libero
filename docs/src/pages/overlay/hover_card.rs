@@ -98,7 +98,7 @@ pub fn HoverCardPage() -> Element {
                 prop("close_delay", "u32")
                     .default(theme.hover_card.close_delay.to_string())
                     .doc("Milliseconds the card waits after the pointer leaves. It is also the time the pointer has to cross into the card, so `0` makes the card unreachable by pointer."),
-                prop("opened", "bool")
+                prop("open", "bool")
                     .default("unset")
                     .doc("Forces the card open or closed; unset leaves it to hover and focus. A card forced open cannot be dismissed."),
                 prop("radius", "Size")
@@ -149,10 +149,10 @@ pub fn HoverCardPage() -> Element {
                         .code(delay_code),
                     Control::slider("close_delay", ["auto", "0", "300", "1000"])
                         .code(delay_code),
-                    Control::toggle("opened", ["auto", "true", "false"]).code(
-                        |_, values| match values.str("opened").as_str() {
+                    Control::toggle("open", ["auto", "true", "false"]).code(
+                        |_, values| match values.str("open").as_str() {
                             "auto" => vec![],
-                            opened => vec![format!("opened: {opened}")],
+                            open => vec![format!("open: {open}")],
                         },
                     ),
                     Control::switch("disabled"),
@@ -163,9 +163,9 @@ pub fn HoverCardPage() -> Element {
                         align: align_of(&values.str("align")),
                         open_delay: delay(values.str("open_delay")),
                         close_delay: delay(values.str("close_delay")),
-                        opened: match values.str("opened").as_str() {
+                        open: match values.str("open").as_str() {
                             "auto" => None,
-                            opened => Some(opened == "true"),
+                            open => Some(open == "true"),
                         },
                         disabled: values.str("disabled") == "true",
                         aria_label: "Ada Lovelace",

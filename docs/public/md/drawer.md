@@ -55,7 +55,7 @@ open.
 
 The argument and result types are the modal's, so a drawer takes per-opening
 data and answers its caller exactly like any other dialog - see
-[Modal](modal.md) for `open_with`, `Opening`, `on_result` and `.await`.
+[Modal](modal.md) for `open_with`, `Opening`, `onresult` and `.await`.
 
 ```rust,ignore
 let details = use_drawer(
@@ -128,7 +128,7 @@ Returns the same `ModalHandle` as `use_modal`; every method on it, on
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Sizes<u16>` | Panel extent per size step, in px. |
+| `sizes` | `Sizes<u16>` | Panel extent per size step, in px. |
 
 The panel's surface - background, shadow, padding - comes from the theme's
 `Dialog` defaults.

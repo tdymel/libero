@@ -20,10 +20,10 @@ pub struct AvatarDefaults {
     /// `ImageDefaults::radius` is, through `AVATAR_RADIUS`'s override twin.
     pub radius: &'static str,
     /// The square's side, in px.
-    pub size_scale: Sizes<u16>,
+    pub sizes: Sizes<u16>,
     /// Derived from the square (`side / 2.5`), not a second scale to keep in
     /// step with it.
-    pub font_size: Sizes<u16>,
+    pub font_sizes: Sizes<u16>,
 }
 
 impl AvatarDefaults {
@@ -33,8 +33,8 @@ impl AvatarDefaults {
         // the two largest avatars and a circle on the two smallest.
         radius: "9999px",
         // Mantine's scale, plus an `xxl` continuing its steps.
-        size_scale: Sizes::new(20, 28, 38, 56, 84, 120),
-        font_size: Sizes::new(8, 11, 15, 22, 34, 48),
+        sizes: Sizes::new(20, 28, 38, 56, 84, 120),
+        font_sizes: Sizes::new(8, 11, 15, 22, 34, 48),
     };
 
     fn size_sx(size: Size) -> Sx {
@@ -56,8 +56,8 @@ impl AvatarDefaults {
 
 impl ToCssDeclarations for AvatarDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let mut declarations = self.size_scale.to_css_declarations(AVATAR_SIZE, "px");
-        declarations.extend(self.font_size.to_css_declarations(AVATAR_FONT_SIZE, "px"));
+        let mut declarations = self.sizes.to_css_declarations(AVATAR_SIZE, "px");
+        declarations.extend(self.font_sizes.to_css_declarations(AVATAR_FONT_SIZE, "px"));
         declarations.push(AVATAR_RADIUS.declare(self.radius));
         declarations
     }

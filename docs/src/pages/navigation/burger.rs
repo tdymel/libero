@@ -4,34 +4,34 @@ use libero::components::{Burger, Code, Flex, Input, Paper, Text};
 use libero::sx::sx;
 
 /// The panel the preview's `aria-controls` points at. A `Burger` whose
-/// `opened` is `Some` and whose `aria-controls` names nothing is exactly what
+/// `open` is `Some` and whose `aria-controls` names nothing is exactly what
 /// the component warns about, so the demo has to own a real one - and
-/// `opened` is a relation to a neighbour, which the preview needs anyway.
+/// `open` is a relation to a neighbour, which the preview needs anyway.
 const PANEL_ID: &str = "burger-demo-panel";
 
 // Rendered on both states, hidden rather than absent: `aria-controls`
 // pointing at an element that is not in the document is a dangling
 // reference, and a disclosure's panel is the thing that exists and is
 // hidden.
-// snippet: let opened = use_signal(|| false);
+// snippet: let open = use_signal(|| false);
 const PANEL: &str = r#"Paper {
     id: "burger-demo-panel",
-    sx: sx().padding("sm").display(if opened() { "block" } else { "none" }),
+    sx: sx().padding("sm").display(if open() { "block" } else { "none" }),
     "Navigation"
 }"#;
 
 /// The preview is a pair - the button and the thing it expands - so the block
 /// has to be that pair too, signal and all. The signal is the preview's own:
-/// nothing outside the block owns `opened`.
+/// nothing outside the block owns `open`.
 fn wrap(_values: &DemoValues, source: &str) -> String {
-    let mut code = String::from("let mut opened = use_signal(|| false);\n\nrsx! {\n");
+    let mut code = String::from("let mut open = use_signal(|| false);\n\nrsx! {\n");
     code.push_str(&indent(source));
     code.push_str(&indent(PANEL));
     code.push('}');
     code
 }
 
-/// The preview owns `opened` itself, so the burger in it is the control.
+/// The preview owns `open` itself, so the burger in it is the control.
 ///
 /// `Demo` hands `render` a snapshot of the control values and no way to write
 /// back, which is why a *control* could never have driven this. It does not
@@ -41,7 +41,7 @@ fn wrap(_values: &DemoValues, source: &str) -> String {
 /// resetting the signal.
 #[component]
 fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
-    let mut opened = use_signal(|| false);
+    let mut open = use_signal(|| false);
 
     rsx! {
         Flex {
@@ -49,9 +49,9 @@ fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
             align: "center",
             gap: "md",
             Burger {
-                opened: opened(),
+                open: open(),
                 "aria-controls": PANEL_ID,
-                onclick: move |_| opened.toggle(),
+                onclick: move |_| open.toggle(),
                 size,
                 color: match color.as_str() {
                     UNSET => Input::None,
@@ -61,7 +61,7 @@ fn BurgerPreview(size: String, color: String, disabled: bool) -> Element {
             }
             Paper {
                 id: PANEL_ID,
-                sx: sx().padding("sm").display(if opened() { "block" } else { "none" }),
+                sx: sx().padding("sm").display(if open() { "block" } else { "none" }),
                 "Navigation"
             }
         }
@@ -76,12 +76,12 @@ pub fn BurgerPage() -> Element {
             source: "libero/src/components/navigation/burger.rs",
             markdown: "/md/burger.md",
             properties: vec![props("Burger", vec![
-                prop("opened", "bool")
+                prop("open", "bool")
                     .doc("`true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it entirely for a burger that opens something that is not one - a modal."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("`Burger` never owns the open state; the panel does, and the caller already holds that signal to drive the panel itself."),
                 prop("label", "Callback<bool, String>")
-                    .doc("Replaces the theme's two labels, keyed by `opened`. It runs during render, so it can read a live locale."),
+                    .doc("Replaces the theme's two labels, keyed by `open`. It runs during render, so it can read a live locale."),
                 prop("size", "ThemeAwareValue")
                     .default("md")
                     .doc("The glyph's width and height. The bars are a twelfth of it thick, and the button around it is one `spacing.xs` larger."),
@@ -117,16 +117,16 @@ pub fn BurgerPage() -> Element {
                 component: "Burger",
                 children_text: "",
                 // The three props the preview owns rather than varies.
-                // `opened` is no longer a control - the burger toggles itself -
+                // `open` is no longer a control - the burger toggles itself -
                 // but it is still the prop a caller has to hold, so the block
                 // prints it together with the handler that writes it and the
                 // `aria-controls` that names what it expands. That attribute is
                 // a `GlobalAttributes` pass-through, not a prop, and it is the
                 // half of the contract no control could ever have shown.
                 fixed: vec![
-                    "opened: opened()".to_string(),
+                    "open: open()".to_string(),
                     format!("{:?}: {PANEL_ID:?}", "aria-controls"),
-                    "onclick: move |_| opened.toggle()".to_string(),
+                    "onclick: move |_| open.toggle()".to_string(),
                 ],
                 controls: vec![
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),

@@ -29,9 +29,9 @@ pub fn AlertPage() -> Element {
                 prop("variant", "Variant")
                     .default("tonal")
                     .doc("Chrome, shared with `Button` and `Badge`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. No hover response - an alert is not a target."),
-                prop("radius", "ThemeAwareValue")
+                prop("radius", "Size")
                     .default("md")
-                    .doc("A size step or any CSS length."),
+                    .doc("A step on the radius scale. Anything else goes through `sx`."),
                 prop("onclose", "EventHandler<()>")
                     .doc("Its presence is what shows the close button. Closing is yours: unmount the alert."),
                 prop("close_label", "String")

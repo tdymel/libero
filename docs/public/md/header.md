@@ -78,7 +78,7 @@ Like every component, `Header` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `height` | `Sizes<u16>` | Header height in pixels per size step. |
+| `heights` | `Sizes<u16>` | Header height in pixels per size step. |
 
 The stacking order comes from the theme's shared `z_index` scale, not from
 `HeaderDefaults`.

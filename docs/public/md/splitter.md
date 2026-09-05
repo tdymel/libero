@@ -11,7 +11,7 @@ Splits two panes with a draggable/keyboard-resizable divider. Panes go in
 
 `initial_size` is the starting percentage of pane A, clamped to `min_size` at
 mount. It is uncontrolled after that - the divider owns its position and
-`on_resize` only notifies. A splitter is `height: 100%` and a flex container, so
+`onresize` only notifies. A splitter is `height: 100%` and a flex container, so
 it needs a parent with a real size.
 
 ## Usage
@@ -66,7 +66,7 @@ fn Demo() -> Element {
 }
 ```
 
-`on_resize` reports both panes' resulting percentages, A first -
+`onresize` reports both panes' resulting percentages, A first -
 `SplitterResizeEvent::Start`/`Change`/`End`, so a drag is bracketed the same way
 a scroll is. A key press emits `Change` then `End`, because it settles on its
 size at once - so persisting the layout on `End` also catches a keyboard
@@ -86,11 +86,11 @@ its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `orientation` | `Orientation` | `vertical` | Divider line axis - `vertical` (side-by-side panes) or `horizontal` (stacked panes). |
-| `initial_size` | `f64` | required | Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `on_resize` only notifies. |
+| `initial_size` | `f64` | required | Initial % of pane A, clamped to `min_size` at mount. Uncontrolled afterward - `onresize` only notifies. |
 | `min_size` | `f64` | `10` | % floor applied to both panes, capped at 50. |
 | `divider_size` | `Size` | `sm` | Which size level the divider uses. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
-| `on_resize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`. |
+| `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`. |
 | `aria_label` | `String` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
 | `panel_a` | `Element` | required | Pane A (left/top). |
 | `panel_b` | `Element` | required | Pane B (right/bottom). Nest another `Splitter` in a pane for more than two. |
@@ -105,8 +105,8 @@ Like every component, `Splitter` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Which size level `divider_size` uses when unset (`sm`). |
-| `divider_size` | `Sizes<u8>` | Visible line thickness in px per size step - `1, 1, 2, 3, 4, 6`. |
-| `hit_size` | `Sizes<u8>` | Invisible hit-target thickness in px - `10, 10, 12, 14, 16, 20`. Fixed regardless of `divider_size`. |
+| `divider_sizes` | `Sizes<u8>` | Visible line thickness in px per size step - `1, 1, 2, 3, 4, 6`. |
+| `hit_sizes` | `Sizes<u8>` | Invisible hit-target thickness in px - `10, 10, 12, 14, 16, 20`. Fixed regardless of `divider_size`. |
 | `min_size` | `f64` | Percent floor applied to both panes (`10`). |
 | `step` | `f64` | Percent moved per arrow key press (`1`). |
 | `big_step` | `f64` | Percent moved per Shift+arrow press (`10`). |

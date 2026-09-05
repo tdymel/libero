@@ -7,13 +7,13 @@ pub const DATA_LIST_GAP: SizeCss = SizeCss::new("--lsx-data-list-gap-");
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DataListDefaults {
     pub size: Size,
-    pub gap: Sizes<u8>,
+    pub gaps: Sizes<u8>,
 }
 
 impl DataListDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
-        gap: Sizes::new(6, 8, 12, 16, 20, 24),
+        gaps: Sizes::new(6, 8, 12, 16, 20, 24),
     };
 
     fn size_sx(size: Size) -> Sx {
@@ -27,6 +27,6 @@ impl DataListDefaults {
 
 impl ToCssDeclarations for DataListDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        self.gap.to_css_declarations(DATA_LIST_GAP, "px")
+        self.gaps.to_css_declarations(DATA_LIST_GAP, "px")
     }
 }

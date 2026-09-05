@@ -21,7 +21,7 @@ fn app() -> Element {
     rsx! {
         LiberoProvider {
             HoverCard {
-                opened: OPENED.get(),
+                open: OPENED.get(),
                 disabled: DISABLED.get(),
                 aria_label: "Author",
                 content: rsx! { a { href: "/authors/ada", "Profile" } },
@@ -31,8 +31,8 @@ fn app() -> Element {
     }
 }
 
-fn rendered(opened: Option<bool>, disabled: bool) -> String {
-    OPENED.set(opened);
+fn rendered(open: Option<bool>, disabled: bool) -> String {
+    OPENED.set(open);
     DISABLED.set(disabled);
     render(app)
 }

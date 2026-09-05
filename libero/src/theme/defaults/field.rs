@@ -52,7 +52,7 @@ pub struct FieldDefaults {
     pub frame_gap: &'static str,
     pub sizes: Sizes<FieldSizeLevel>,
     /// Inner padding of a field drawn as a card, per size step.
-    pub card_padding: Sizes<&'static str>,
+    pub card_paddings: Sizes<&'static str>,
 }
 
 impl FieldDefaults {
@@ -109,7 +109,7 @@ impl FieldDefaults {
                 padding_x: "18px",
             },
         ),
-        card_padding: Sizes::new("8px", "10px", "12px", "14px", "16px", "18px"),
+        card_paddings: Sizes::new("8px", "10px", "12px", "14px", "16px", "18px"),
     };
 
     /// Per-slot typography for one size step. The slots are addressed from the
@@ -165,7 +165,7 @@ impl ToCssDeclarations for FieldDefaults {
             declarations.push(FIELD_HEIGHT.declare(size, level.height));
             declarations.push(FIELD_PADDING_Y.declare(size, level.padding_y));
             declarations.push(FIELD_PADDING_X.declare(size, level.padding_x));
-            declarations.push(FIELD_CARD_PADDING.declare(size, self.card_padding.get(size)));
+            declarations.push(FIELD_CARD_PADDING.declare(size, self.card_paddings.get(size)));
         }
         declarations
     }

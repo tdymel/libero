@@ -933,7 +933,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let draggable = props.draggable;
     let drag = use_drag(DragOptions {
         capture: track.element,
-        on_start: Callback::new(move |start: DragStart| {
+        onstart: Callback::new(move |start: DragStart| {
             if !draggable {
                 start.cancel.call(());
                 return;
@@ -949,7 +949,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
                 }
             });
         }),
-        on_move: Callback::new(move |moved: DragMove| {
+        onmove: Callback::new(move |moved: DragMove| {
             let delta = moved.delta();
             let target = match orientation {
                 Orientation::Horizontal => drag_origin() - delta.x,
@@ -963,7 +963,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         }),
         // No settle of our own: releasing hands the strip back to the
         // browser, which snaps and fires `onscrollend`.
-        on_end: Callback::new(move |()| dragging.set(false)),
+        onend: Callback::new(move |()| dragging.set(false)),
     });
 
     let slide_label = props.slide_label;
@@ -1052,7 +1052,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
             id: track_id(),
-            on_scroll: move |event: ScrollPositionEvent| match event {
+            onscroll: move |event: ScrollPositionEvent| match event {
                 ScrollPositionEvent::Start(x, y) | ScrollPositionEvent::Change(x, y) => {
                     onscroll(x, y)
                 }

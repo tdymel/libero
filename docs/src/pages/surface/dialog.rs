@@ -27,7 +27,7 @@ pub fn DialogPage() -> Element {
                         .default("in a modal")
                         .doc("Header button that closes the surrounding modal. On by default inside one, where it has something to close."),
                     prop("close_label", "String").default("Close").doc("Accessible name for the close button."),
-                    prop("radius", "ThemeAwareValue").default("md").doc("Corner radius - the radius scale, or any CSS length."),
+                    prop("radius", "Size").default("md").doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
                     prop("size", "ThemeAwareValue")
                         .default("md")
                         .doc("Caps the dialog's width from the dialog scale (md is 510px)."),

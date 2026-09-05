@@ -79,7 +79,7 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Size step `gap` falls back to when the prop is omitted. |
-| `gap` | `Sizes<u8>` | Row gap per size step, in px. |
+| `gaps` | `Sizes<u8>` | Row gap per size step, in px. |
 
 ## CSS variables
 

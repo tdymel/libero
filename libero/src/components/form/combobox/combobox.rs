@@ -80,7 +80,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     // Opening always starts at the top; nothing carries over from last time.
     // Reading `opened` is what makes the effect re-run on it.
     use_effect(move || {
-        let _ = state.opened();
+        let _ = state.is_open();
         state.set_active(Some(0));
     });
 
@@ -114,8 +114,8 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
             rows,
             active: active_row,
             onactive: move |row| state.set_active(Some(row)),
-            opened: state.opened(),
-            onopened: move |opened| state.set_opened(opened),
+            opened: state.is_open(),
+            onopened: move |opened| state.set_open(opened),
             state,
             empty: props.empty,
             loading: props.loading.unwrap_or(false).then(|| {

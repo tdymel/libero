@@ -11,9 +11,9 @@ use crate::{
     theme::{CssVar, Size, SizeCss, TOOLTIP_DURATION, TooltipDefaults, Z_INDEX_FLOAT},
 };
 
-pub use crate::theme::TooltipPlacement;
+use crate::theme::Side;
 
-input_from_str!(TooltipPlacement);
+input_from_str!(Side);
 
 const TOOLTIP_GAP_VAR: CssVar = CssVar::new("--lsx-tooltip-gap");
 const TOOLTIP_OPEN_DELAY_VAR: CssVar = CssVar::new("--lsx-tooltip-open-delay");
@@ -36,7 +36,7 @@ fn gap() -> String {
 /// box, and that counts toward its scroll container's overflow whether it is
 /// visible or not, so a tooltip near an edge gave the container a scrollbar.
 /// Scaled to 0 it has no area to add. The individual property, so it composes
-/// with the placement's `transform` rather than replacing it.
+/// with the side's `transform` rather than replacing it.
 fn closed_transition() -> String {
     let delay = TOOLTIP_CLOSE_DELAY_VAR.value_or("0ms");
     let duration = TOOLTIP_DURATION.value();
@@ -87,7 +87,7 @@ static TOOLTIP_WRAPPER_SX: StaticSx = StaticSx::new(|| {
         )
         // Folded after the hover rules: equal specificity, so source order is
         // what makes an explicitly controlled tooltip win.
-        .when("opened", sx().selector(format!("& {BUBBLE}"), open_sx()))
+        .when("open", sx().selector(format!("& {BUBBLE}"), open_sx()))
         .when("closed", sx().selector(format!("& {BUBBLE}"), closed_sx()))
 });
 
@@ -95,12 +95,12 @@ static TOOLTIP_WRAPPER_SX: StaticSx = StaticSx::new(|| {
 /// `:hover` the moment the pointer left the trigger, and the bubble could
 /// never be reached (WCAG 2.1 SC 1.4.13). Same reason there is no
 /// `pointer-events: none`.
-fn placement_sx(placement: TooltipPlacement) -> Sx {
+fn side_sx(side: Side) -> Sx {
     let gap = gap();
     let offset = format!("calc(100% + {gap})");
 
-    match placement {
-        TooltipPlacement::Top => sx()
+    match side {
+        Side::Top => sx()
             .bottom(offset)
             .left("50%")
             .transform("translateX(-50%)")
@@ -108,7 +108,7 @@ fn placement_sx(placement: TooltipPlacement) -> Sx {
                 "&::before",
                 sx().top("100%").left("0").right("0").height(gap),
             ),
-        TooltipPlacement::Bottom => sx()
+        Side::Bottom => sx()
             .top(offset)
             .left("50%")
             .transform("translateX(-50%)")
@@ -116,7 +116,7 @@ fn placement_sx(placement: TooltipPlacement) -> Sx {
                 "&::before",
                 sx().bottom("100%").left("0").right("0").height(gap),
             ),
-        TooltipPlacement::Left => sx()
+        Side::Left => sx()
             .right(offset)
             .top("50%")
             .transform("translateY(-50%)")
@@ -124,7 +124,7 @@ fn placement_sx(placement: TooltipPlacement) -> Sx {
                 "&::before",
                 sx().left("100%").top("0").bottom("0").width(gap),
             ),
-        TooltipPlacement::Right => sx()
+        Side::Right => sx()
             .left(offset)
             .top("50%")
             .transform("translateY(-50%)")
@@ -147,8 +147,8 @@ static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
         .with("scale", "0")
         .transition(closed_transition());
 
-    TooltipPlacement::ALL.iter().fold(base, |base, &placement| {
-        base.when(placement.state_name(), placement_sx(placement))
+    Side::ALL.iter().fold(base, |base, &side| {
+        base.when(side.state_name(), side_sx(side))
     })
 });
 
@@ -157,7 +157,7 @@ base_props! {
         /// The bubble's content.
         label: Element,
         #[props(default, into)]
-        placement: Input<TooltipPlacement>,
+        side: Input<Side>,
         /// Distance to the trigger, bridged so the pointer can cross it.
         #[props(default, into)]
         gap: Input<Size>,
@@ -172,7 +172,7 @@ base_props! {
         close_delay: Option<u32>,
         /// Forces the bubble open or closed; `None` leaves it to hover/focus.
         #[props(default)]
-        opened: Option<bool>,
+        open: Option<bool>,
         /// Renders `children` bare - no wrapper, no bubble.
         #[props(default)]
         disabled: Option<bool>,
@@ -189,7 +189,7 @@ base_props! {
 #[component]
 pub fn Tooltip(props: TooltipProps) -> Element {
     let theme = use_theme();
-    let placement = props.placement.copied_or(theme.tooltip.placement);
+    let side = props.side.copied_or(theme.tooltip.side);
     let size = props.size.copied_or(theme.tooltip.size);
     let gap = props.gap.copied_or(theme.tooltip.gap);
 
@@ -210,14 +210,14 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         .into();
 
     let wrapper_states: Input<States> = States::default()
-        .with("opened", props.opened == Some(true))
-        .with("closed", props.opened == Some(false))
+        .with("open", props.open == Some(true))
+        .with("closed", props.open == Some(false))
         .into();
 
     let bubble_states: Input<States> = props
         .states
         .unwrap_or_default()
-        .with(placement.state_name(), true)
+        .with(side.state_name(), true)
         .with(size.state_name(), true)
         .into();
 

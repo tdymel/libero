@@ -142,7 +142,7 @@ impl<R: 'static> Copy for Opening<R> {}
 
 impl<R: Clone + 'static> Opening<R> {
     /// Runs `handler` when this opening settles - `None` if it was dismissed.
-    pub fn on_result(self, mut handler: impl FnMut(Option<R>) + 'static) -> Self {
+    pub fn onresult(self, mut handler: impl FnMut(Option<R>) + 'static) -> Self {
         let mut signal = self.resolution;
         // A stale opening settled as a dismissal the moment it was superseded.
         let settled = {
@@ -278,7 +278,7 @@ impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
 ///     Dialog { title: "{s.args().message}",
 ///         Button { onclick: move |_| s.resolve(true), "Delete" } }
 /// });
-/// confirm.open_with("Delete this file?").on_result(move |r| { .. });
+/// confirm.open_with("Delete this file?").onresult(move |r| { .. });
 /// ```
 pub fn use_modal<S, R>(
     render: impl FnMut(ModalScope<S, R>) -> Element + 'static,

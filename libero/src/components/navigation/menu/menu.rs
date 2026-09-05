@@ -147,12 +147,12 @@ base_props! {
         radius: Input<Size>,
         /// The trigger opens nothing, and an open menu closes.
         #[props(default)]
-        disabled: bool,
+        disabled: Option<bool>,
         /// Hears ArrowLeft and ArrowRight when the menu has no submenu of its
         /// own to answer them with - a menubar moving to the next menu. With
         /// `None` those keys do what they always did.
         #[props(default)]
-        on_edge: Option<Callback<MenuEdge>>,
+        onedge: Option<Callback<MenuEdge>>,
         /// The trigger - usually a `Button` carrying `state.a11y_attributes()`.
         /// Its clicks and keys are caught on the wrapper they bubble to.
         children: Element,
@@ -173,7 +173,7 @@ base_props! {
 pub fn Menu(props: MenuProps) -> Element {
     let theme = use_theme();
     let state = props.state;
-    let disabled = props.disabled;
+    let disabled = props.disabled.unwrap_or(false);
     let id = state.id();
 
     let wrapper = use_element();
@@ -181,7 +181,7 @@ pub fn Menu(props: MenuProps) -> Element {
     let owner = use_hook(dioxus::core::current_scope_id);
     let wrapper_box = use_box().prepare();
 
-    let opened = state.opened();
+    let opened = state.is_open();
     let open = opened && !disabled;
     // A disabled menu is a closed one, not an open one that happens to be
     // hidden: otherwise the trigger's `aria-expanded` claims a menu nobody can
@@ -225,7 +225,7 @@ pub fn Menu(props: MenuProps) -> Element {
                         // document listener hears this press, so the trigger
                         // has to; on the web the stack's listener closes it
                         // too, and closing twice is closing.
-                        Key::Escape if state.opened() => {
+                        Key::Escape if state.is_open() => {
                             event.prevent_default();
                             event.stop_propagation();
                             state.close();
@@ -248,7 +248,7 @@ pub fn Menu(props: MenuProps) -> Element {
             initial: state.request().1,
             onclose,
             close_all: None,
-            on_edge: props.on_edge,
+            onedge: props.onedge,
             parents: Parents(Vec::new()),
             onpointerenter: None,
             side: props.side,
@@ -267,7 +267,7 @@ pub fn Menu(props: MenuProps) -> Element {
 }
 
 /// Which neighbour of the menu ArrowLeft or ArrowRight asked for, handed to
-/// [`MenuProps::on_edge`].
+/// [`MenuProps::onedge`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MenuEdge {
     Previous,
@@ -305,7 +305,7 @@ struct Level {
     wrapper: ElementHandle,
     dismiss: DismissHandle,
     close_all: Callback<bool>,
-    on_edge: Option<Callback<MenuEdge>>,
+    onedge: Option<Callback<MenuEdge>>,
     active: Signal<Option<usize>>,
     open_child: Signal<Option<usize>>,
     /// Which submenu to focus into, and a counter that makes asking twice
@@ -361,13 +361,13 @@ impl Level {
         self.close_all.call(false);
     }
 
-    fn choose(self, index: usize, on_select: Option<Callback<()>>, submenu: bool) {
+    fn choose(self, index: usize, onselect: Option<Callback<()>>, submenu: bool) {
         if submenu {
             self.enter_submenu(index);
             return;
         }
-        if let Some(on_select) = on_select {
-            on_select.call(());
+        if let Some(onselect) = onselect {
+            onselect.call(());
         }
         if self.close_on_select {
             self.close_all.call(true);
@@ -414,10 +414,10 @@ impl Level {
             }
             // Nothing here answers these, so they go up - at any depth for
             // ArrowRight, the root only for ArrowLeft.
-            Key::ArrowLeft | Key::ArrowRight if self.on_edge.is_some() => {
+            Key::ArrowLeft | Key::ArrowRight if self.onedge.is_some() => {
                 event.prevent_default();
-                if let Some(on_edge) = self.on_edge {
-                    on_edge.call(match event.key() {
+                if let Some(onedge) = self.onedge {
+                    onedge.call(match event.key() {
                         Key::ArrowLeft => MenuEdge::Previous,
                         _ => MenuEdge::Next,
                     });
@@ -589,9 +589,9 @@ struct MenuLevelProps {
     /// `None` on the root, which builds it from its own dismissal. `true`
     /// hands focus back to the trigger.
     close_all: Option<Callback<bool>>,
-    /// The root's `on_edge`, handed to every level: ArrowRight on a plain item
+    /// The root's `onedge`, handed to every level: ArrowRight on a plain item
     /// in a submenu moves on too, APG's menubar.
-    on_edge: Option<Callback<MenuEdge>>,
+    onedge: Option<Callback<MenuEdge>>,
     parents: Parents,
     /// The pointer entered this box - the parent cancels a pending hover, so
     /// crossing a sibling on the way in does not close this submenu.
@@ -690,7 +690,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         wrapper: props.wrapper,
         dismiss,
         close_all,
-        on_edge: props.on_edge,
+        onedge: props.onedge,
         active,
         open_child,
         child_request,
@@ -746,7 +746,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         let submenu = item.submenu_items().cloned();
         let has_submenu = submenu.is_some();
         let disabled = item.disabled;
-        let on_select = item.on_select_callback();
+        let onselect = item.onselect_callback();
         let item_id = format!("{level_id}-item-{index}");
         let child_id = format!("{level_id}-{index}");
         let handles = has_submenu.then(|| anchor_of(index));
@@ -774,7 +774,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                     return;
                 }
                 hover.cancel();
-                level.choose(index, on_select, has_submenu);
+                level.choose(index, onselect, has_submenu);
             }
         };
 
@@ -881,7 +881,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
                 initial: MenuFocus::First,
                 onclose: onclose_child,
                 close_all: Some(close_all),
-                on_edge: props.on_edge,
+                onedge: props.onedge,
                 parents: parents.clone(),
                 onpointerenter: Some(cancel_callback),
                 side: Side::Right,

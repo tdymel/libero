@@ -1567,7 +1567,7 @@ mod tests {
             rsx! {
                 Modal { onclose: move |_| { let mut modal = modal; modal.set(false); },
                     crate::components::HoverCard {
-                        opened: Some(true),
+                        open: Some(true),
                         aria_label: "Details",
                         content: rsx! { "details" },
                         {trigger.element(&anchor).attr("id", "trigger").render(HtmlTag::Button, Vec::new(), rsx! { "Trigger" })}

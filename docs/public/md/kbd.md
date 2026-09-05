@@ -70,7 +70,7 @@ hardcodes `sm`, matching Mantine.
 
 | Field | Type | Description |
 |---|---|---|
-| `font_size` | `Sizes<u16>` | Font size in px per size step - 10, 12, 14, 16, 20, 24. |
+| `font_sizes` | `Sizes<u16>` | Font size in px per size step - 10, 12, 14, 16, 20, 24. |
 | `font_family` | `&'static str` | The keycap's font; the theme's mono stack. |
 | `background` | `&'static str` | Keycap fill; `#f6f8fa`. |
 | `border` | `&'static str` | Border color, used on all four sides; `#d0d7de`. |

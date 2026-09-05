@@ -151,7 +151,7 @@ impl Row {
     }
 
     fn open_index(&self) -> Option<usize> {
-        (0..self.disabled.len()).find(|&index| self.states[index].opened())
+        (0..self.disabled.len()).find(|&index| self.states[index].is_open())
     }
 
     fn focus(&self, index: usize) {
@@ -259,7 +259,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
         let state = row.states[index];
         let disabled = menu.disabled;
 
-        let on_edge = {
+        let onedge = {
             let row = row.clone();
             Callback::new(move |edge: MenuEdge| {
                 if let Some(next) = row.step(index, edge == MenuEdge::Next) {
@@ -348,7 +348,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 radius,
                 loop_focus: props.loop_focus,
                 disabled,
-                on_edge,
+                onedge,
                 button {
                     r#type: "button",
                     "role": "menuitem",

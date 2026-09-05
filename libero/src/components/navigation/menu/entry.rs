@@ -37,7 +37,7 @@ enum Action {
 /// ```ignore
 /// MenuItem::new("Copy")
 ///     .trailing(rsx! { Kbd { "Ctrl C" } })
-///     .on_select(move |_| copy())
+///     .onselect(move |_| copy())
 /// ```
 ///
 /// `leading` and `trailing` land inside the item's `<button>`, so they must not
@@ -81,8 +81,8 @@ impl MenuItem {
     /// menu then closes unless it was told not to (`close_on_select`).
     ///
     /// Replaces a [`submenu`](Self::submenu): an item does one or the other.
-    pub fn on_select(mut self, on_select: impl FnMut(()) + 'static) -> Self {
-        self.action = Action::Select(Callback::new(on_select));
+    pub fn onselect(mut self, onselect: impl FnMut(()) + 'static) -> Self {
+        self.action = Action::Select(Callback::new(onselect));
         self
     }
 
@@ -90,7 +90,7 @@ impl MenuItem {
     /// anything. ArrowRight, Enter, Space, a click, or resting the pointer on
     /// it opens it.
     ///
-    /// Replaces an [`on_select`](Self::on_select): an item does one or the
+    /// Replaces an [`onselect`](Self::onselect): an item does one or the
     /// other.
     pub fn submenu(mut self, items: Vec<MenuEntry>) -> Self {
         self.action = Action::Submenu(items);
@@ -116,7 +116,7 @@ impl MenuItem {
         self
     }
 
-    pub(super) fn on_select_callback(&self) -> Option<Callback<()>> {
+    pub(super) fn onselect_callback(&self) -> Option<Callback<()>> {
         match &self.action {
             Action::Select(callback) => Some(*callback),
             _ => None,

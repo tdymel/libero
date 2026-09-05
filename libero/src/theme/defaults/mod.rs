@@ -50,7 +50,7 @@ mod menu;
 mod menubar;
 mod native_select;
 mod nav_link;
-mod notification;
+mod notifications;
 mod number_field;
 mod overlay;
 mod pagination;
@@ -226,9 +226,9 @@ pub use menubar::{
 };
 pub use native_select::NativeSelectDefaults;
 pub use nav_link::NavLinkDefaults;
-pub use notification::{
+pub use notifications::{
     AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_KEYFRAMES, NOTIFICATION_OFFSET,
-    NOTIFICATION_OUT, NOTIFICATION_TRANSITION, NOTIFICATION_WIDTH, NotificationDefaults,
+    NOTIFICATION_OUT, NOTIFICATION_TRANSITION, NOTIFICATION_WIDTH, NotificationsDefaults,
 };
 pub use number_field::NumberFieldDefaults;
 pub use overlay::{OVERLAY_BLUR, OVERLAY_OPACITY, OverlayDefaults};
@@ -240,7 +240,7 @@ pub use pagination::{
 pub use paper::{PAPER_BACKGROUND, PAPER_BORDER_COLOR, PAPER_RADIUS, PAPER_SHADOW, PaperDefaults};
 pub use phone_field::PhoneFieldDefaults;
 pub use pin_field::{PIN_FIELD_GAP, PinFieldDefaults, PinKind};
-pub use popover::{POPOVER_GAP, POPOVER_PADDING, PopoverDefaults};
+pub use popover::{Align, POPOVER_GAP, POPOVER_PADDING, PopoverDefaults, Side};
 pub use progress_bar::{
     INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION, PROGRESS_BAR_COLOR, PROGRESS_BAR_FILL,
     PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_KEYFRAMES, PROGRESS_BAR_RADIUS,
@@ -293,7 +293,7 @@ pub use tabs::{
 pub use tags_field::TagsFieldDefaults;
 pub use text::{
     TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT,
-    TextDefaults, TextSize,
+    TextDefaults, TextSizeLevel,
 };
 pub use text_field::TextFieldDefaults;
 pub use textarea::TextareaDefaults;
@@ -305,11 +305,10 @@ pub use timeline::{
 };
 pub use title::{
     TITLE_FONT_FAMILY, TITLE_FONT_SIZE, TITLE_FONT_WEIGHT, TITLE_LETTER_SPACING, TITLE_LINE_HEIGHT,
-    TitleDefaults, TitleSize,
+    TitleDefaults, TitleSizeLevel,
 };
 pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
-    TooltipPlacement,
 };
 pub use tree::TreeDefaults;
 pub use z_index::{

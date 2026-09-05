@@ -92,13 +92,13 @@ base_props! {
         /// The sections to show. Defaults to every `Options::options()`.
         #[props(default)]
         sections: Option<Vec<T>>,
-        /// Overrides `Options::label`, like `Tabs::label`. `OptionLabel::rich`
+        /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
         /// draws a trigger as rsx and still names it.
         #[props(default)]
-        label: Option<Callback<T, OptionLabel>>,
+        option_label: Option<Callback<T, OptionLabel>>,
         /// Sections that render but cannot be toggled.
         #[props(default)]
-        disabled: Vec<T>,
+        disabled_options: Vec<T>,
         /// The heading element around each trigger, `h1`..`h6`. Pick the level
         /// the page outline needs; `h3` is a default, not an answer.
         #[props(default, into)]
@@ -163,7 +163,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     let sections: Vec<SectionSpec> = values
         .iter()
         .map(|value| {
-            let label = match &props.label {
+            let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
             };
@@ -171,7 +171,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
             SectionSpec {
                 content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
                 name,
-                disabled: props.disabled.contains(value),
+                disabled: props.disabled_options.contains(value),
                 open: props.open.is_open(value),
                 // Not only while open: a closing panel animates out around its
                 // content, and only `Collapse` knows when that ends. It mounts

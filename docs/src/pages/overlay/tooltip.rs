@@ -48,7 +48,7 @@ pub fn TooltipPage() -> Element {
             markdown: "/md/tooltip.md",
             properties: vec![props("Tooltip", vec![
                 prop("label", "Element").doc("The bubble's content."),
-                prop("placement", "TooltipPlacement")
+                prop("side", "Side")
                     .default("top")
                     .doc("Which side of the trigger the bubble sits on, centred on that side. No viewport flipping."),
                 prop("gap", "Size")
@@ -64,7 +64,7 @@ pub fn TooltipPage() -> Element {
                 prop("close_delay", "u32")
                     .default("0")
                     .doc("Milliseconds the bubble lingers after the pointer leaves."),
-                prop("opened", "bool")
+                prop("open", "bool")
                     .default("unset")
                     .doc("Forces the bubble open or closed; unset leaves it to hover and focus."),
                 prop("disabled", "bool")
@@ -98,8 +98,8 @@ pub fn TooltipPage() -> Element {
                 children_code: TRIGGER.to_string(),
                 fixed: vec![LABEL.to_string()],
                 controls: vec![
-                    Control::toggle("placement", ["top", "right", "bottom", "left"])
-                        .default(theme.tooltip.placement.as_str()),
+                    Control::toggle("side", ["top", "right", "bottom", "left"])
+                        .default(theme.tooltip.side.as_str()),
                     Control::slider("size", SIZES).default(theme.tooltip.size.as_str()),
                     Control::slider("gap", SIZES).default(theme.tooltip.gap.as_str()),
                     Control::slider("open_delay", ["auto", "200", "500", "1000"])
@@ -108,10 +108,10 @@ pub fn TooltipPage() -> Element {
                         .code(delay_code),
                     // `Some(false)` pins it *shut*, which hover cannot
                     // override - a different thing from leaving it unset.
-                    Control::toggle("opened", ["auto", "true", "false"]).code(
-                        |_, values| match values.str("opened").as_str() {
+                    Control::toggle("open", ["auto", "true", "false"]).code(
+                        |_, values| match values.str("open").as_str() {
                             "auto" => vec![],
-                            opened => vec![format!("opened: {opened}")],
+                            open => vec![format!("open: {open}")],
                         },
                     ),
                     Control::switch("disabled"),
@@ -129,14 +129,14 @@ pub fn TooltipPage() -> Element {
                         sx: sx().padding("40px"),
                         Tooltip {
                             label: rsx! { "Saves the current draft" },
-                            placement: values.str("placement"),
+                            side: values.str("side"),
                             size: values.str("size"),
                             gap: values.str("gap"),
                             open_delay: delay(values.str("open_delay")),
                             close_delay: delay(values.str("close_delay")),
-                            opened: match values.str("opened").as_str() {
+                            open: match values.str("open").as_str() {
                                 "auto" => None,
-                                opened => Some(opened == "true"),
+                                open => Some(open == "true"),
                             },
                             disabled: (values.str("disabled") == "true").then_some(true),
                             sx: match values.str("styled").as_str() {

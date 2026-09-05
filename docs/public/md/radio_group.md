@@ -67,9 +67,9 @@ One tab stop for the whole group:
 
 | Key | Effect |
 |---|---|
-| Tab | Enters at the selected option, or the first one |
-| Arrow down / right | Next option, selected as focus lands |
-| Arrow up / left | Previous option, selected as focus lands |
+| Tab | Enters at the selected option, or the first one that is not disabled |
+| Arrow down / right | Next option that is not disabled, selected as focus lands |
+| Arrow up / left | Previous option that is not disabled, selected as focus lands |
 | Tab | Leaves the group entirely |
 
 Selection follows focus, as it does natively.
@@ -128,6 +128,7 @@ card is still one click target, so a link inside it picks the option.
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes them here. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. |
 | `option_description` | `Callback<T, String>` | - | A line under each option's label; an empty string renders none. |
+| `disabled_options` | `Vec<T>` | - | Options that render but cannot be picked. The arrow keys step over them. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface that is its own hit area. |
 | `orientation` | `Orientation` | `vertical` | A row instead of a column. |
 | `color` | `ThemeAwareValue` | `primary` | The ring and dot color of the selected option. |

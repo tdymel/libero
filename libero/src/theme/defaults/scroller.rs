@@ -25,7 +25,7 @@ str_enum! {
         Auto = "auto",
         /// Both always show, dimmed at their own end.
         Always = "always",
-        /// Neither renders. Pair with `on_edge_change` for controls of your
+        /// Neither renders. Pair with `onedgechange` for controls of your
         /// own.
         Never = "never",
     }

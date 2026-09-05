@@ -81,7 +81,7 @@ or the dialog's **Close** button close the overlay again.
 | `fallback_src` | `String` | - | Shown in place of `src` once it fails to load. |
 | `zoomed_src` | `String` | follows `src` | Source shown in the zoom overlay, if different from the inline image. |
 | `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
-| `radius` | `ThemeAwareValue` | `0` | Corner radius - the radius scale, or any CSS length. |
+| `radius` | `Size` | `0` | Corner radius, a step on the radius scale. Anything else goes through `sx`. |
 | `alt` | `String` | required | Alt text. Empty marks the image decorative. |
 | `zoomable` | `bool` | `false` | Wraps the image in a click-to-zoom overlay. |
 

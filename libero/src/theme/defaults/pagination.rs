@@ -28,8 +28,8 @@ pub struct PaginationDefaults {
     pub boundaries: u8,
     pub gap: Size,
     /// Control box, in px. Mantine's scale plus an `xxl`.
-    pub control_size: Sizes<u16>,
-    pub font_size: Sizes<u16>,
+    pub control_sizes: Sizes<u16>,
+    pub font_sizes: Sizes<u16>,
     /// `ColorValue`, not a `&'static str`: a raw `"grey.4"` is declared
     /// verbatim, and a bare palette token is not a CSS colour.
     pub border: ColorValue,
@@ -44,8 +44,8 @@ impl PaginationDefaults {
         boundaries: 1,
         gap: Size::Xs,
         // Mantine's control scale, plus an `xxl` continuing its steps.
-        control_size: Sizes::new(22, 26, 32, 38, 44, 52),
-        font_size: Sizes::new(11, 12, 14, 16, 18, 20),
+        control_sizes: Sizes::new(22, 26, 32, 38, 44, 52),
+        font_sizes: Sizes::new(11, 12, 14, 16, 18, 20),
         border: ColorValue::Shade(Color::Grey, ColorShade::S4),
     };
 
@@ -68,10 +68,10 @@ impl ToCssDeclarations for PaginationDefaults {
         let on_active = ColorValue::Contrast(self.color, ACTIVE_SHADE);
 
         let mut declarations = self
-            .control_size
+            .control_sizes
             .to_css_declarations(PAGINATION_CONTROL_SIZE, "px");
         declarations.extend(
-            self.font_size
+            self.font_sizes
                 .to_css_declarations(PAGINATION_FONT_SIZE, "px"),
         );
         declarations.push(PAGINATION_GAP.declare(SizeCss::SPACING.value(self.gap)));

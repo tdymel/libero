@@ -20,17 +20,17 @@ str_enum! {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SidebarDefaults {
-    pub size: Sizes<u16>,
+    pub sizes: Sizes<u16>,
 }
 
 impl SidebarDefaults {
     pub const DEFAULT: Self = Self {
-        size: Sizes::new(200, 240, 280, 320, 400, 480),
+        sizes: Sizes::new(200, 240, 280, 320, 400, 480),
     };
 }
 
 impl ToCssDeclarations for SidebarDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        self.size.to_css_declarations(SIDEBAR_SIZE, "px")
+        self.sizes.to_css_declarations(SIDEBAR_SIZE, "px")
     }
 }

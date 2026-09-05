@@ -7,18 +7,18 @@ use crate::{
         layout::use_box,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox, use_theme},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
+    sx::{StaticSx, Sx, sx},
+    theme::{IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
 };
 
 pub use crate::theme::ImageFit;
 
 input_from_str!(ImageFit);
 
-fn image_variables(radius: Option<&ThemeAwareValue>) -> Variables {
+fn image_variables(radius: Option<Size>) -> Variables {
     variables().with(
         IMAGE_RADIUS.override_var(),
-        radius.and_then(|v| v.resolve(Some(SizeCss::RADIUS))),
+        radius.map(|radius| SizeCss::RADIUS.value(radius)),
     )
 }
 
@@ -58,7 +58,7 @@ base_props! {
         #[props(default, into)]
         fit: Input<ImageFit>,
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         #[props(default, into)]
         alt: String,
         #[props(default)]
@@ -90,7 +90,7 @@ pub fn Image(props: ImageProps) -> Element {
     };
 
     let fit = props.fit.copied_or(use_theme().image.fit);
-    let variables: Input<Variables> = image_variables(props.radius.as_ref()).into();
+    let variables: Input<Variables> = image_variables(props.radius.as_ref().copied()).into();
 
     let on_error_src = props.src.clone();
 
@@ -210,12 +210,10 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tokens::Size;
 
     #[test]
     fn a_size_radius_resolves_through_the_radius_scale() {
-        let radius = ThemeAwareValue::Size(Size::Md);
-        let variables = image_variables(Some(&radius));
+        let variables = image_variables(Some(Size::Md));
 
         assert_eq!(
             variables.to_string(),

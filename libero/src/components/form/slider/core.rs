@@ -70,7 +70,7 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 .pointer_events("none"),
         )
         // Nothing to grab: the track's pointer and the thumb's grab hand would
-        // promise a drag that `on_start` refuses.
+        // promise a drag that `onstart` refuses.
         .when("readonly", sx().selector("& *", sx().cursor("default")))
         // The track is the scale, so the thumb must read against any color on
         // it: white ring, dark halo, the picked color as its face.
@@ -367,7 +367,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
 
     let drag = use_drag(DragOptions {
         capture: root_element,
-        on_start: Callback::new(move |event: DragStart| {
+        onstart: Callback::new(move |event: DragStart| {
             if !editable {
                 event.cancel.call(());
                 return;
@@ -413,12 +413,12 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
                 }
             });
         }),
-        on_move: Callback::new(move |event: DragMove| {
+        onmove: Callback::new(move |event: DragMove| {
             if let Some(raw) = position_at.call(event.client.x) {
                 slide.call(raw);
             }
         }),
-        on_end: Callback::new(move |_| {
+        onend: Callback::new(move |_| {
             emit.call(SliderChangeEvent::End(latest.get()));
         }),
     });
@@ -575,7 +575,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
                 Tooltip {
                     label: rsx! { {bubble_text} },
                     size,
-                    opened: ((drag.dragging)() && active.get() == index).then_some(true),
+                    open: ((drag.dragging)() && active.get() == index).then_some(true),
                     {thumb}
                 }
             }

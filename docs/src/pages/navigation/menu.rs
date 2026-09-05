@@ -19,31 +19,31 @@ let items = vec![
         items: vec![
             MenuItem::new("Cut")
                 .trailing(rsx! { Kbd { "Ctrl X" } })
-                .on_select(pick("Cut"))
+                .onselect(pick("Cut"))
                 .into(),
             MenuItem::new("Copy")
                 .trailing(rsx! { Kbd { "Ctrl C" } })
-                .on_select(pick("Copy"))
+                .onselect(pick("Copy"))
                 .into(),
             MenuItem::new("Paste")
                 .trailing(rsx! { Kbd { "Ctrl V" } })
                 .disabled(true)
-                .on_select(pick("Paste"))
+                .onselect(pick("Paste"))
                 .into(),
         ],
     },
     MenuEntry::Separator,
-    MenuItem::new("Save").on_select(pick("Save")).into(),
-    MenuItem::new("Save as").on_select(pick("Save as")).into(),
+    MenuItem::new("Save").onselect(pick("Save")).into(),
+    MenuItem::new("Save as").onselect(pick("Save as")).into(),
     MenuItem::new("Share")
         .submenu(vec![
-            MenuItem::new("Copy link").on_select(pick("Copy link")).into(),
-            MenuItem::new("Email").on_select(pick("Email")).into(),
-            MenuItem::new("Messages").on_select(pick("Messages")).into(),
+            MenuItem::new("Copy link").onselect(pick("Copy link")).into(),
+            MenuItem::new("Email").onselect(pick("Email")).into(),
+            MenuItem::new("Messages").onselect(pick("Messages")).into(),
         ])
         .into(),
     MenuEntry::Separator,
-    MenuItem::new("Delete").on_select(pick("Delete")).into(),
+    MenuItem::new("Delete").onselect(pick("Delete")).into(),
 ];
 
 "#;
@@ -115,33 +115,33 @@ fn MenuDemo(
             items: vec![
                 MenuItem::new("Cut")
                     .trailing(rsx! { Kbd { "Ctrl X" } })
-                    .on_select(pick("Cut"))
+                    .onselect(pick("Cut"))
                     .into(),
                 MenuItem::new("Copy")
                     .trailing(rsx! { Kbd { "Ctrl C" } })
-                    .on_select(pick("Copy"))
+                    .onselect(pick("Copy"))
                     .into(),
                 MenuItem::new("Paste")
                     .trailing(rsx! { Kbd { "Ctrl V" } })
                     .disabled(true)
-                    .on_select(pick("Paste"))
+                    .onselect(pick("Paste"))
                     .into(),
             ],
         },
         MenuEntry::Separator,
-        MenuItem::new("Save").on_select(pick("Save")).into(),
-        MenuItem::new("Save as").on_select(pick("Save as")).into(),
+        MenuItem::new("Save").onselect(pick("Save")).into(),
+        MenuItem::new("Save as").onselect(pick("Save as")).into(),
         MenuItem::new("Share")
             .submenu(vec![
                 MenuItem::new("Copy link")
-                    .on_select(pick("Copy link"))
+                    .onselect(pick("Copy link"))
                     .into(),
-                MenuItem::new("Email").on_select(pick("Email")).into(),
-                MenuItem::new("Messages").on_select(pick("Messages")).into(),
+                MenuItem::new("Email").onselect(pick("Email")).into(),
+                MenuItem::new("Messages").onselect(pick("Messages")).into(),
             ])
             .into(),
         MenuEntry::Separator,
-        MenuItem::new("Delete").on_select(pick("Delete")).into(),
+        MenuItem::new("Delete").onselect(pick("Delete")).into(),
     ];
 
     rsx! {
@@ -205,14 +205,14 @@ pub fn MenuPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("The trigger opens nothing. Disable the trigger too, which draws its own dimmed state."),
-                    prop("on_edge", "Option<Callback<MenuEdge>>")
+                    prop("onedge", "Option<Callback<MenuEdge>>")
                         .default("None")
                         .doc("Hears ← and → when no submenu answers them: ← on the top level, → on any item without a submenu. `Menubar` moves to the neighbouring menu with it."),
                 ]),
                 props("MenuItem", vec![
                     prop("new(label)", "String")
                         .doc("The visible text, the accessible name, and what typeahead matches."),
-                    prop("on_select", "FnMut(())")
+                    prop("onselect", "FnMut(())")
                         .doc("Runs when the item is chosen: a click, or Enter or Space on it."),
                     prop("submenu", "Vec<MenuEntry>")
                         .doc("Opens a second menu beside the item instead. An item either runs a command or opens a submenu - the later call replaces the earlier."),

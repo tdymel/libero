@@ -509,7 +509,7 @@ fn resolving_from_inside_a_modal_settles_its_opening() {
             let mut outcome = outcome;
             modal
                 .open()
-                .on_result(move |result| outcome.set(Some(result)));
+                .onresult(move |result| outcome.set(Some(result)));
         });
 
         rsx! {}
@@ -1501,6 +1501,100 @@ fn a_read_only_radio_group_cancels_the_native_arrow() {
     }
 }
 
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
+enum Tier {
+    Free,
+    Pro,
+    Team,
+}
+
+thread_local! {
+    /// The selection and the disabled options `tier_group` mounts with.
+    static TIER: std::cell::Cell<Option<Tier>> = const { std::cell::Cell::new(None) };
+    static TIERS_OFF: std::cell::RefCell<Vec<Tier>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn tier_group() -> Element {
+    rsx! {
+        LiberoProvider {
+            RadioGroup {
+                label: "Tier",
+                value: TIER.get(),
+                disabled_options: TIERS_OFF.with_borrow(Clone::clone),
+                onchange: move |next: Tier| heard(next),
+            }
+        }
+    }
+}
+
+/// `(disabled, tabindex)` per radio input, in order.
+fn radio_inputs(html: &str) -> Vec<(bool, String)> {
+    html.match_indices("<input")
+        .map(|(at, _)| {
+            let tag = &html[at..at + html[at..].find('>').unwrap()];
+            let tabindex = tag
+                .split("tabindex=\"")
+                .nth(1)
+                .map(|rest| rest[..rest.find('"').unwrap()].to_string())
+                .unwrap_or_default();
+            (tag.contains(" disabled"), tabindex)
+        })
+        .collect()
+}
+
+/// Mounts `tier_group`, and returns each input's `(disabled, tabindex)` and
+/// what one `key` press picked.
+fn tier_press(value: Option<Tier>, off: &[Tier], key: Key) -> (Vec<(bool, String)>, Vec<String>) {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    TIER.set(value);
+    TIERS_OFF.set(off.to_vec());
+    HEARD.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(tier_group);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let inputs = radio_inputs(&dioxus_ssr::render(&dom));
+    dom.runtime().handle_event(
+        "keydown",
+        Event::new(key_event(key), true),
+        last_keydown(&find),
+    );
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    (inputs, HEARD.with_borrow(Clone::clone))
+}
+
+/// Todo 221: `disabled_options` greys out single options, and the arrows
+/// step over them, wrapping.
+#[test]
+fn a_radio_group_steps_over_its_disabled_options() {
+    let (inputs, picked) = tier_press(Some(Tier::Free), &[Tier::Pro], Key::ArrowDown);
+    let off: Vec<bool> = inputs.iter().map(|(off, _)| *off).collect();
+    assert_eq!(off, [false, true, false], "{inputs:?}");
+    assert_eq!(picked, ["Team"]);
+
+    let (_, picked) = tier_press(Some(Tier::Team), &[Tier::Pro], Key::ArrowUp);
+    assert_eq!(picked, ["Free"]);
+    // Positive control: without the option disabled, the arrow lands on it.
+    let (_, picked) = tier_press(Some(Tier::Free), &[], Key::ArrowDown);
+    assert_eq!(picked, ["Pro"]);
+}
+
+/// A disabled input takes no focus, so a tab stop on one would drop the group
+/// out of the Tab order. The stop moves to the first option that can be picked.
+#[test]
+fn a_radio_group_never_puts_its_tab_stop_on_a_disabled_option() {
+    let stop = |inputs: &[(bool, String)]| {
+        (0..inputs.len())
+            .filter(|&i| inputs[i].1 == "0")
+            .collect::<Vec<_>>()
+    };
+    let (inputs, _) = tier_press(None, &[Tier::Free], Key::Tab);
+    assert_eq!(stop(&inputs), [1], "{inputs:?}");
+    let (inputs, _) = tier_press(Some(Tier::Pro), &[Tier::Pro], Key::Tab);
+    assert_eq!(stop(&inputs), [0], "{inputs:?}");
+    let (inputs, _) = tier_press(Some(Tier::Pro), &[], Key::Tab);
+    assert_eq!(stop(&inputs), [1], "{inputs:?}");
+}
+
 /// Two `keep_mounted: false` collapses, one inside the other, both closing.
 /// The inner one is the faster, so its `transitionend` arrives first, and it
 /// bubbles. Before todo 36d it reached the outer root too and unmounted the
@@ -1755,12 +1849,12 @@ fn submenu_app() -> Element {
                 state: menu,
                 items: vec![
                     MenuItem::new("Recent")
-                        .submenu(vec![MenuItem::new("notes.md").on_select(|_| {}).into()])
+                        .submenu(vec![MenuItem::new("notes.md").onselect(|_| {}).into()])
                         .into(),
                 ],
                 Button { attributes: menu.a11y_attributes(), "File" }
             }
-            "menus:{menu.opened()}"
+            "menus:{menu.is_open()}"
         }
     }
 }

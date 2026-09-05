@@ -13,7 +13,7 @@ use crate::{
     hooks::{use_root_id, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, CssVar, NamedColorCss,
+        ALERT_BODY_GAP, ALERT_ICON_SIZE, ALERT_RADIUS, AlertDefaults, CssVar, NamedColorCss, Size,
         SizeCss,
     },
 };
@@ -121,7 +121,10 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
         .with(ALERT_ON_CONTAINER_VAR, colors.on_container)
         .with(
             ALERT_RADIUS.override_var(),
-            props.radius.resolve(Some(SizeCss::RADIUS)),
+            props
+                .radius
+                .as_ref()
+                .map(|&radius| SizeCss::RADIUS.value(radius)),
         )
 }
 
@@ -150,7 +153,7 @@ base_props! {
         variant: Input<Variant>,
         /// A size step or any CSS length.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         /// **Its presence is what shows the close button.** There is no
         /// separate `with_close_button`: the pair would make "a close button
         /// that does nothing" representable, and a `Callback` prop can never

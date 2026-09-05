@@ -476,8 +476,8 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
 
     let drag = use_drag(DragOptions {
         capture: if count > 0 { picture(current) } else { stage },
-        on_start: Callback::new(move |_: DragStart| {}),
-        on_move: Callback::new(move |moved: DragMove| {
+        onstart: Callback::new(move |_: DragStart| {}),
+        onmove: Callback::new(move |moved: DragMove| {
             let delta = moved.delta();
             let held_gesture = *gesture.peek();
             match held_gesture {
@@ -499,7 +499,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                 None => {}
             }
         }),
-        on_end: Callback::new(move |()| {
+        onend: Callback::new(move |()| {
             if let Some(Gesture::Swipe { delta }) = *gesture.peek()
                 && swipe_closes(delta)
             {

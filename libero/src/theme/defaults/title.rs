@@ -12,7 +12,7 @@ pub const TITLE_LETTER_SPACING: SizeCss = SizeCss::new("--lsx-title-letter-spaci
 pub const TITLE_LINE_HEIGHT: SizeCss = SizeCss::new("--lsx-title-line-height-");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TitleSize {
+pub struct TitleSizeLevel {
     pub font_weight: &'static str,
     pub font_size: &'static str, // in rem
     pub letter_spacing: &'static str,
@@ -22,44 +22,44 @@ pub struct TitleSize {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleDefaults {
     pub font_family: &'static str,
-    pub sizes: Sizes<TitleSize>,
+    pub sizes: Sizes<TitleSizeLevel>,
 }
 
 impl TitleDefaults {
     pub const DEFAULT: Self = Self {
         font_family: SANS_FONT_FAMILY,
         sizes: Sizes::new(
-            TitleSize {
+            TitleSizeLevel {
                 font_weight: "400",
                 font_size: "0.75rem",
                 letter_spacing: "0em",
                 line_height: "1.5",
             }, // xs (h6)
-            TitleSize {
+            TitleSizeLevel {
                 font_weight: "400",
                 font_size: "0.875rem",
                 letter_spacing: "0em",
                 line_height: "1.5",
             }, // sm (h5)
-            TitleSize {
+            TitleSizeLevel {
                 font_weight: "400",
                 font_size: "1rem",
                 letter_spacing: "0em",
                 line_height: "1.45",
             }, // md (h4)
-            TitleSize {
+            TitleSizeLevel {
                 font_weight: "400",
                 font_size: "1.375rem",
                 letter_spacing: "0em",
                 line_height: "1.4",
             }, // lg (h3)
-            TitleSize {
+            TitleSizeLevel {
                 font_weight: "400",
                 font_size: "1.625rem",
                 letter_spacing: "-0.005em",
                 line_height: "1.35",
             }, // xl (h2)
-            TitleSize {
+            TitleSizeLevel {
                 font_weight: "400",
                 font_size: "2.125rem",
                 letter_spacing: "-0.01em",

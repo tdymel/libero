@@ -50,7 +50,7 @@ Like every component, `Text` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `font_family` | `&'static str` | Font stack for all text; it does not vary by size. |
-| `sizes` | `Sizes<TextSize>` | `font_weight`, `font_size`, `letter_spacing`, `line_height` per size. |
+| `sizes` | `Sizes<TextSizeLevel>` | `font_weight`, `font_size`, `letter_spacing`, `line_height` per size. |
 
 ## CSS variables
 

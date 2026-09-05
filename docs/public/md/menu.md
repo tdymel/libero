@@ -37,15 +37,15 @@ fn Demo() -> Element {
             items: vec![
                 MenuItem::new("Cut")
                     .trailing(rsx! { Kbd { "Ctrl X" } })
-                    .on_select(pick("Cut"))
+                    .onselect(pick("Cut"))
                     .into(),
-                MenuItem::new("Paste").disabled(true).on_select(pick("Paste")).into(),
+                MenuItem::new("Paste").disabled(true).onselect(pick("Paste")).into(),
             ],
         },
         MenuEntry::Separator,
-        MenuItem::new("Save").on_select(pick("Save")).into(),
+        MenuItem::new("Save").onselect(pick("Save")).into(),
         MenuItem::new("Share")
-            .submenu(vec![MenuItem::new("Email").on_select(pick("Email")).into()])
+            .submenu(vec![MenuItem::new("Email").onselect(pick("Email")).into()])
             .into(),
     ];
 
@@ -94,11 +94,11 @@ item stays in the arrow order but cannot be chosen.
 | `size` | `Size` | `md` | Item height and font size. |
 | `radius` | `Size` | `sm` | Menu corner radius; items nest with it minus the padding. |
 | `disabled` | `bool` | `false` | The trigger opens nothing. |
-| `on_edge` | `Option<Callback<MenuEdge>>` | `None` | Hears ArrowLeft (top level) and ArrowRight (an item without a submenu) when no submenu answers them - `MenuEdge::Previous` / `Next`. `Menubar` uses it. |
+| `onedge` | `Option<Callback<MenuEdge>>` | `None` | Hears ArrowLeft (top level) and ArrowRight (an item without a submenu) when no submenu answers them - `MenuEdge::Previous` / `Next`. `Menubar` uses it. |
 
 `sx`, `class`, `states` and `attributes` land on the root menu box.
 
-`MenuItem` builder: `new(label)`, `on_select(FnMut(()))`, `submenu(Vec<MenuEntry>)`
+`MenuItem` builder: `new(label)`, `onselect(FnMut(()))`, `submenu(Vec<MenuEntry>)`
 (an item does one or the other; the later call wins), `leading(Element)`,
 `trailing(Element)`, `disabled(bool)`.
 

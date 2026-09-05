@@ -124,7 +124,7 @@ fn scroll_area_content_variables(offsets: ContentOffsets) -> Variables {
         .with(SCROLL_AREA_TRAILING_VAR, format!("{}px", offsets.trailing))
 }
 
-/// Which edges the last scroll position rested against, so `on_*_reached`
+/// Which edges the last scroll position rested against, so `on*reached`
 /// fires on the rising edge rather than every event.
 #[derive(Clone, Copy, Debug, PartialEq)]
 struct EdgeState {
@@ -187,15 +187,15 @@ base_props! {
         #[props(default)]
         framework_sx: Option<ScrollAreaBase>,
         #[props(default)]
-        on_scroll: Option<EventHandler<ScrollPositionEvent>>,
+        onscroll: Option<EventHandler<ScrollPositionEvent>>,
         #[props(default)]
-        on_top_reached: Option<EventHandler<()>>,
+        ontopreached: Option<EventHandler<()>>,
         #[props(default)]
-        on_bottom_reached: Option<EventHandler<()>>,
+        onbottomreached: Option<EventHandler<()>>,
         #[props(default)]
-        on_left_reached: Option<EventHandler<()>>,
+        onleftreached: Option<EventHandler<()>>,
         #[props(default)]
-        on_right_reached: Option<EventHandler<()>>,
+        onrightreached: Option<EventHandler<()>>,
         children: Element,
     }
 }
@@ -216,7 +216,7 @@ fn scroll_metrics(data: &ScrollData) -> (f64, f64, f64, f64) {
 }
 
 /// Scrolls its content, filling the parent by default. Read the scroll
-/// position via `on_scroll`/`on_*_reached`; set it imperatively via
+/// position via `onscroll`/`on*reached`; set it imperatively via
 /// `scroll_position_x`/`scroll_position_y` (reactive if bound to a signal,
 /// initial-only if a literal).
 #[component]
@@ -261,10 +261,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         });
     });
 
-    let on_scroll = props.on_scroll;
+    let onscroll = props.onscroll;
     let scrolled = move |event: ScrollPositionEvent| {
-        if let Some(on_scroll) = &on_scroll {
-            on_scroll.call(event);
+        if let Some(onscroll) = &onscroll {
+            onscroll.call(event);
         }
     };
     let reached = |handler: Option<EventHandler<()>>| {
@@ -272,10 +272,10 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
             handler.call(());
         }
     };
-    let on_top_reached = props.on_top_reached;
-    let on_bottom_reached = props.on_bottom_reached;
-    let on_left_reached = props.on_left_reached;
-    let on_right_reached = props.on_right_reached;
+    let ontopreached = props.ontopreached;
+    let onbottomreached = props.onbottomreached;
+    let onleftreached = props.onleftreached;
+    let onrightreached = props.onrightreached;
 
     let onscroll = move |event: Event<ScrollData>| {
         let data = event.data();
@@ -300,16 +300,16 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         };
         let previous = edges();
         if new_edges.top && !previous.top {
-            reached(on_top_reached);
+            reached(ontopreached);
         }
         if new_edges.bottom && !previous.bottom {
-            reached(on_bottom_reached);
+            reached(onbottomreached);
         }
         if new_edges.left && !previous.left {
-            reached(on_left_reached);
+            reached(onleftreached);
         }
         if new_edges.right && !previous.right {
-            reached(on_right_reached);
+            reached(onrightreached);
         }
         edges.set(new_edges);
     };

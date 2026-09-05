@@ -8,8 +8,8 @@ Description: The stages of a process over an enum, horizontal or vertical, with 
 
 The stages of a process over an enum, with the current one's content. The steps
 are the enum's variants - `#[derive(Options)]` lists them in declaration order
-and names each one - and `content` is a match over the same type, so a step
-without a body is a compile error. `active` is strictly controlled: moving on is
+and names each one - and `panel` is a match over the same type, so a step
+without a body is a compile error. `value` is strictly controlled: moving on is
 the caller's, usually from a button inside the step.
 
 ## Usage
@@ -32,11 +32,11 @@ fn Demo() -> Element {
 
     rsx! {
         Stepper {
-            active: stage(),
+            value: stage(),
             onstepclick: move |s| stage.set(Some(s)),
             state: |s: Stage| (s == Stage::Shipping && !address_valid())
                 .then_some(StepState::Error),
-            content: move |s: Stage| match s {
+            panel: move |s: Stage| match s {
                 Stage::Account => rsx! {
                     Button { onclick: move |_| stage.set(Some(Stage::Shipping)), "Continue" }
                 },
@@ -56,9 +56,9 @@ fn Demo() -> Element {
 
 `StepState` is `Pending`, `Active`, `Completed` or `Error`.
 
-- Three are derived from position: steps before `active` are completed,
-  `active` is current, the rest are pending.
-- `active: None` means every step is finished: all show as completed and none is
+- Three are derived from position: steps before `value` are completed,
+  `value` is current, the rest are pending.
+- `value: None` means every step is finished: all show as completed and none is
   current. There is no `Stepper.Completed`; render your own done screen.
 - `state` only overrides. Returning `None` keeps the derived state, so you name
   just the step that differs. It is the only way to say `Error`.
@@ -71,7 +71,7 @@ fn Demo() -> Element {
   region below the strip for the current step. `label_position` puts labels
   `side` (default) or `below` the markers.
 - `vertical`: each step's content sits under the step in a `Collapse`, open only
-  for the current step. `label_position` is ignored. `content` is called for
+  for the current step. `label_position` is ignored. `panel` is called for
   every step here, because a closing step animates out around its content; a
   closed step's content is still never mounted and keeps no state.
 
@@ -79,11 +79,11 @@ fn Demo() -> Element {
 
 | Prop | Type | Default | What |
 |---|---|---|---|
-| `active` | `Option<T>` | required | The current step; `None` = all finished |
-| `content` | `Callback<T, Element>` | - | A step's body |
+| `value` | `Option<T>` | required | The current step; `None` = all finished |
+| `panel` | `Callback<T, Element>` | - | A step's body |
 | `steps` | `Vec<T>` | `T::options()` | The steps to show, in order |
-| `label` | `Callback<T, OptionLabel>` | `T::label()` | Rename a step, or `OptionLabel::rich` to draw it as rsx |
-| `description` | `Callback<T, String>` | - | A second line under the label; `""` prints none |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Rename a step, or `OptionLabel::rich` to draw it as rsx |
+| `option_description` | `Callback<T, String>` | - | A second line under the label; `""` prints none |
 | `state` | `Callback<T, Option<StepState>>` | derived | Override a step's state; the only source of `Error` |
 | `onstepclick` | `EventHandler<T>` | - | Absent: the steps are not interactive |
 | `allow_next_steps` | `bool` | `false` | With `onstepclick`, pending steps are clickable too |

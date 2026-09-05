@@ -86,7 +86,7 @@ being a theme field.
 | Field | Type | Description |
 |---|---|---|
 | `font_family` | `&'static str` | Heading font stack; the theme's sans stack. It does not vary by size. |
-| `sizes` | `Sizes<TitleSize>` | `font_weight`, `font_size` (rem), `letter_spacing`, `line_height` per size. |
+| `sizes` | `Sizes<TitleSizeLevel>` | `font_weight`, `font_size` (rem), `letter_spacing`, `line_height` per size. |
 
 The default ramp runs 0.75rem (`xs`) to 2.125rem (`xxl`), with `letter_spacing`
 tightening to `-0.01em` and `line_height` to `1.3` at the top.

@@ -74,7 +74,7 @@ fn Demo() -> Element {
         Button {
             variant: "outlined",
             onclick: move |_| {
-                prompt.open_with("notes.md").on_result(move |answer| match answer {
+                prompt.open_with("notes.md").onresult(move |answer| match answer {
                     Some(SaveChoice::Save) => { /* save it */ }
                     Some(SaveChoice::Discard) => { /* throw it away */ }
                     None => {}   // dismissed - keep editing
@@ -95,7 +95,7 @@ now, and it awaits to `None`.
 
 ```rust,ignore
 // Attach the consequence to this one opening.
-prompt.open_with("notes.md").on_result(move |answer| { /* ... */ });
+prompt.open_with("notes.md").onresult(move |answer| { /* ... */ });
 
 // Awaited instead - for an answer that gates work which is already async, or
 // several dialogs in sequence.
@@ -196,7 +196,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 | Method | Returns | Description |
 |---|---|---|
-| `on_result(f: impl FnMut(Option<R>))` | `Self` | Runs `f` when this opening settles; `None` if it was dismissed. |
+| `onresult(f: impl FnMut(Option<R>))` | `Self` | Runs `f` when this opening settles; `None` if it was dismissed. |
 | `close()` | `()` | Closes this opening, if it is still the one showing. |
 | `.await` | `Option<R>` | Same outcome, as a future. |
 

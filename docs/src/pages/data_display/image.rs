@@ -32,9 +32,9 @@ pub fn ImagePage() -> Element {
                         .default("follows src")
                         .doc("Source shown in the zoom overlay, if different from the inline image."),
                     prop("fit", "ImageFit").default("cover").doc("Maps onto `object-fit`."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Size")
                         .default("0")
-                        .doc("Corner radius - the radius scale, or any CSS length."),
+                        .doc("Corner radius, a step on the radius scale. Anything else goes through `sx`."),
                     prop("alt", "String").doc("Alt text. Empty marks the image decorative."),
                     prop("zoomable", "bool")
                         .default("false")

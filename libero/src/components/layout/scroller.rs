@@ -70,7 +70,7 @@ fn step_target(offset: f64, amount: f64, forward: bool, max: f64) -> f64 {
 /// Steps a [`Scroller`] from an event handler, the way its own controls do.
 ///
 /// For a strip whose buttons are the caller's own: `controls: "never"`,
-/// `on_edge_change` for their state, and a handle to move it.
+/// `onedgechange` for their state, and a handle to move it.
 ///
 /// ```ignore
 /// let strip = use_scroller();
@@ -279,7 +279,7 @@ base_props! {
         /// Fires when either edge state flips, including the first
         /// measurement.
         #[props(default)]
-        on_edge_change: Option<EventHandler<ScrollerEdges>>,
+        onedgechange: Option<EventHandler<ScrollerEdges>>,
         /// From [`use_scroller`], to step the strip from the caller's own
         /// buttons.
         #[props(default)]
@@ -317,11 +317,11 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let draggable = props.draggable.unwrap_or(theme.scroller.draggable);
 
     let mut edges = use_signal(|| ScrollerEdges::UNMEASURED);
-    let on_edge_change = props.on_edge_change;
+    let onedgechange = props.onedgechange;
     let mut update = move |next: ScrollerEdges| {
         if next != *edges.peek() {
             edges.set(next);
-            if let Some(handler) = &on_edge_change {
+            if let Some(handler) = &onedgechange {
                 handler.call(next);
             }
         }
@@ -361,11 +361,11 @@ pub fn Scroller(props: ScrollerProps) -> Element {
     let mut origin = use_signal(|| 0.0_f64);
     let drag = use_drag(DragOptions {
         capture: viewport,
-        on_start: Callback::new(|_: DragStart| {}),
-        on_move: Callback::new(move |moved: DragMove| {
+        onstart: Callback::new(|_: DragStart| {}),
+        onmove: Callback::new(move |moved: DragMove| {
             area.scroll_to((origin() - moved.delta().x).max(0.0), 0.0);
         }),
-        on_end: Callback::new(|()| {}),
+        onend: Callback::new(|()| {}),
     });
 
     let onpointerdown = move |event: Event<PointerData>| {
@@ -437,7 +437,7 @@ pub fn Scroller(props: ScrollerProps) -> Element {
             id: viewport_id(),
             role: "region",
             aria_label: props.aria_label,
-            on_scroll: move |_| measure(),
+            onscroll: move |_| measure(),
             onresize: resized,
             onpointerdown,
             onpointermove,

@@ -39,25 +39,25 @@ impl ComboboxState {
         (self.id)()
     }
 
-    pub fn opened(&self) -> bool {
+    pub fn is_open(&self) -> bool {
         (self.opened)()
     }
 
-    pub fn set_opened(&self, opened: bool) {
+    pub fn set_open(&self, opened: bool) {
         let mut open = self.opened;
         open.set(opened);
     }
 
     pub fn open(&self) {
-        self.set_opened(true);
+        self.set_open(true);
     }
 
     pub fn close(&self) {
-        self.set_opened(false);
+        self.set_open(false);
     }
 
     pub fn toggle(&self) {
-        self.set_opened(!self.opened());
+        self.set_open(!self.is_open());
     }
 
     /// The row the arrow keys are on - an index into the `options` last handed
@@ -89,7 +89,7 @@ impl ComboboxState {
     /// TextField { attributes: fruit.a11y_attributes(), value: text() }
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
-        let opened = self.opened();
+        let opened = self.is_open();
         // Clamped the way the list clamps its highlight, so the id named here
         // is the row drawn as active.
         let rows = (self.rows)();

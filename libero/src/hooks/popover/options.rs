@@ -1,37 +1,6 @@
-/// Which side of the anchor the floating box sits on.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum Side {
-    Top,
-    #[default]
-    Bottom,
-    Left,
-    Right,
-}
-
-impl Side {
-    pub(super) fn opposite(self) -> Self {
-        match self {
-            Side::Top => Side::Bottom,
-            Side::Bottom => Side::Top,
-            Side::Left => Side::Right,
-            Side::Right => Side::Left,
-        }
-    }
-
-    /// Top and bottom stack along `y`, so their cross axis is `x`.
-    pub(super) fn is_vertical(self) -> bool {
-        matches!(self, Side::Top | Side::Bottom)
-    }
-}
-
-/// Where the floating box lines up along the side's cross axis.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
-pub enum Align {
-    #[default]
-    Start,
-    Center,
-    End,
-}
+// `Side` and `Align` are themed (`TooltipDefaults::side`), so they live in
+// `theme/` and are re-exported here.
+pub use crate::theme::{Align, Side};
 
 /// What the floating box's width follows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]

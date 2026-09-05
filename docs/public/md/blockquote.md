@@ -104,7 +104,7 @@ hold its own `<cite>`.
 | `xxl` | `2rem` | `3rem` | `5px` |
 
 The font size and line height are not `Blockquote`'s own: they come from
-`TextDefaults`' scale, so retuning `theme.texts` retunes quotes with the prose
+`TextDefaults`' scale, so retuning `theme.text` retunes quotes with the prose
 around them. The `<figcaption>` is 0.85 of the same step's font size - spelled
 out per size rather than as an `em`, because it is a sibling of the quote and an
 `em` there would resolve against the `<figure>`.

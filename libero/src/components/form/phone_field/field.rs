@@ -285,7 +285,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     // Nothing is built while the list is closed. 240 rows is a `Vec<Element>`
     // and 240 name lookups per render, and a closed `ComboboxCore` draws none
     // of them - which is exactly the cost [[todos]] 29 is about.
-    let opened = state.opened() && !disabled;
+    let opened = state.is_open() && !disabled;
     let needle = query().trim().to_lowercase();
     let rows: Vec<Element> = match opened {
         false => Vec::new(),
@@ -361,7 +361,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         // search box owns the role, `aria-controls` and the active descendant,
         // and the button keeps only what says a list hangs off it.
         .attr("aria-haspopup", "listbox")
-        .attr("aria-expanded", state.opened().to_string())
+        .attr("aria-expanded", state.is_open().to_string())
         // The content reads `DE +49`, which names a code and not a country.
         .attr("aria-label", format!("Country: {picker_name}"))
         .attr("disabled", disabled)
@@ -395,7 +395,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
                 onactive: move |row| state.set_active(Some(row)),
                 opened,
                 onopened: move |opened: bool| {
-                    state.set_opened(opened);
+                    state.set_open(opened);
                     if !opened {
                         query.set(String::new());
                         // Escape, Enter and Tab all close through here, and the

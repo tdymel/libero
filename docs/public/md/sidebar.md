@@ -107,7 +107,7 @@ the enum's own default and a hardcoded value, not theme fields.
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Sizes<u16>` | Panel extent in px per size step - 200, 240, 280, 320, 400, 480. |
+| `sizes` | `Sizes<u16>` | Panel extent in px per size step - 200, 240, 280, 320, 400, 480. |
 
 ## CSS variables
 

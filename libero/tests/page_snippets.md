@@ -3552,7 +3552,7 @@ fn Snippet() -> Element {
 let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
 
 rsx! {
-Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, label: |step: Step| OptionLabel::rich(
+Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, option_label: |step: Step| OptionLabel::rich(
     step.label(),
     rsx! {
         Box {
@@ -3626,12 +3626,12 @@ use std::time::Duration;
 
 #[component]
 fn Snippet() -> Element {
-let opened = use_signal(|| false);
+let open = use_signal(|| false);
 
 rsx! {
 Paper {
     id: "burger-demo-panel",
-    sx: sx().padding("sm").display(if opened() { "block" } else { "none" }),
+    sx: sx().padding("sm").display(if open() { "block" } else { "none" }),
     "Navigation"
 }
 }
@@ -3664,31 +3664,31 @@ let items = vec![
         items: vec![
             MenuItem::new("Cut")
                 .trailing(rsx! { Kbd { "Ctrl X" } })
-                .on_select(pick("Cut"))
+                .onselect(pick("Cut"))
                 .into(),
             MenuItem::new("Copy")
                 .trailing(rsx! { Kbd { "Ctrl C" } })
-                .on_select(pick("Copy"))
+                .onselect(pick("Copy"))
                 .into(),
             MenuItem::new("Paste")
                 .trailing(rsx! { Kbd { "Ctrl V" } })
                 .disabled(true)
-                .on_select(pick("Paste"))
+                .onselect(pick("Paste"))
                 .into(),
         ],
     },
     MenuEntry::Separator,
-    MenuItem::new("Save").on_select(pick("Save")).into(),
-    MenuItem::new("Save as").on_select(pick("Save as")).into(),
+    MenuItem::new("Save").onselect(pick("Save")).into(),
+    MenuItem::new("Save as").onselect(pick("Save as")).into(),
     MenuItem::new("Share")
         .submenu(vec![
-            MenuItem::new("Copy link").on_select(pick("Copy link")).into(),
-            MenuItem::new("Email").on_select(pick("Email")).into(),
-            MenuItem::new("Messages").on_select(pick("Messages")).into(),
+            MenuItem::new("Copy link").onselect(pick("Copy link")).into(),
+            MenuItem::new("Email").onselect(pick("Email")).into(),
+            MenuItem::new("Messages").onselect(pick("Messages")).into(),
         ])
         .into(),
     MenuEntry::Separator,
-    MenuItem::new("Delete").on_select(pick("Delete")).into(),
+    MenuItem::new("Delete").onselect(pick("Delete")).into(),
 ];
 
 rsx! {
@@ -3722,31 +3722,31 @@ let items = vec![
         items: vec![
             MenuItem::new("Cut")
                 .trailing(rsx! { Kbd { "Ctrl X" } })
-                .on_select(pick("Cut"))
+                .onselect(pick("Cut"))
                 .into(),
             MenuItem::new("Copy")
                 .trailing(rsx! { Kbd { "Ctrl C" } })
-                .on_select(pick("Copy"))
+                .onselect(pick("Copy"))
                 .into(),
             MenuItem::new("Paste")
                 .trailing(rsx! { Kbd { "Ctrl V" } })
                 .disabled(true)
-                .on_select(pick("Paste"))
+                .onselect(pick("Paste"))
                 .into(),
         ],
     },
     MenuEntry::Separator,
-    MenuItem::new("Save").on_select(pick("Save")).into(),
-    MenuItem::new("Save as").on_select(pick("Save as")).into(),
+    MenuItem::new("Save").onselect(pick("Save")).into(),
+    MenuItem::new("Save as").onselect(pick("Save as")).into(),
     MenuItem::new("Share")
         .submenu(vec![
-            MenuItem::new("Copy link").on_select(pick("Copy link")).into(),
-            MenuItem::new("Email").on_select(pick("Email")).into(),
-            MenuItem::new("Messages").on_select(pick("Messages")).into(),
+            MenuItem::new("Copy link").onselect(pick("Copy link")).into(),
+            MenuItem::new("Email").onselect(pick("Email")).into(),
+            MenuItem::new("Messages").onselect(pick("Messages")).into(),
         ])
         .into(),
     MenuEntry::Separator,
-    MenuItem::new("Delete").on_select(pick("Delete")).into(),
+    MenuItem::new("Delete").onselect(pick("Delete")).into(),
 ];
 
 rsx! {
@@ -3779,7 +3779,7 @@ fn Snippet() -> Element {
 let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
 let item = move |name: &'static str| -> MenuEntry {
-    MenuItem::new(name).on_select(pick(name)).into()
+    MenuItem::new(name).onselect(pick(name)).into()
 };
 let menus = vec![
     MenubarMenu::new("File", vec![
@@ -3791,7 +3791,7 @@ let menus = vec![
         MenuEntry::Separator,
         MenuItem::new("Save")
             .trailing(rsx! { Kbd { "Ctrl S" } })
-            .on_select(pick("Save"))
+            .onselect(pick("Save"))
             .into(),
     ]),
     MenubarMenu::new("Edit", vec![
@@ -3869,7 +3869,7 @@ fn Snippet() -> Element {
 let mut stage = use_signal(|| Some(Stage::Account));
 
 rsx! {
-Stepper { active: stage(), content: move |s: Stage| match s {
+Stepper { value: stage(), panel: move |s: Stage| match s {
     Stage::Account => rsx! {
         Flex { gap: "sm", align: "flex-start",
             Text { "Who is ordering?" }
@@ -3920,7 +3920,7 @@ fn Snippet() -> Element {
 let mut stage = use_signal(|| Some(Stage::Account));
 
 rsx! {
-Stepper { active: stage(), content: |_: Stage| rsx! {}, description: |s: Stage| match s {
+Stepper { value: stage(), panel: |_: Stage| rsx! {}, option_description: |s: Stage| match s {
     Stage::Account => "Who you are".to_string(),
     Stage::Shipping => "Where it goes".to_string(),
     Stage::Review => "Check and pay".to_string(),
@@ -3956,7 +3956,7 @@ fn Snippet() -> Element {
 let mut stage = use_signal(|| Some(Stage::Account));
 
 rsx! {
-Stepper { active: stage(), content: |_: Stage| rsx! {}, state: |s: Stage| (s == Stage::Shipping).then_some(StepState::Error) }
+Stepper { value: stage(), panel: |_: Stage| rsx! {}, state: |s: Stage| (s == Stage::Shipping).then_some(StepState::Error) }
 }
 }
 ```
@@ -4018,7 +4018,7 @@ fn Snippet() -> Element {
 let mut section = use_signal(|| Section::Account);
 
 rsx! {
-Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, label: |section: Section| -> OptionLabel {
+Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, option_label: |section: Section| -> OptionLabel {
     match section {
         Section::Account => "Konto".into(),
         Section::Admin => "Verwaltung".into(),
@@ -4057,7 +4057,7 @@ fn Snippet() -> Element {
 let mut section = use_signal(|| Section::Account);
 
 rsx! {
-Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, label: |section: Section| OptionLabel::rich(
+Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, option_label: |section: Section| OptionLabel::rich(
     section.label(),
     rsx! {
         Icon { variant: "transparent", size: "sm", FileIcon {} }
@@ -4330,7 +4330,7 @@ let prompt = use_save_prompt("Discard");
 rsx! {
 Button {
     onclick: move |_| {
-        prompt.open_with("notes.md").on_result(move |answer| match answer {
+        prompt.open_with("notes.md").onresult(move |answer| match answer {
             Some(SaveChoice::Save) => save(),
             Some(SaveChoice::Discard) => discard(),
             None => {}   // dismissed - keep editing

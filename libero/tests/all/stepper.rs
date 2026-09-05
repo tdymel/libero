@@ -63,7 +63,7 @@ fn headers(html: &str) -> Vec<BTreeMap<String, String>> {
 fn middle_app() -> Element {
     rsx! {
         LiberoProvider {
-            Stepper::<Stage> { id: "checkout", active: Some(Stage::Shipping), content: content }
+            Stepper::<Stage> { id: "checkout", value: Some(Stage::Shipping), panel: content }
         }
     }
 }
@@ -119,7 +119,7 @@ fn only_reached_steps_are_buttons_by_default() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Stepper::<Stage> { active: Some(Stage::Shipping), onstepclick: |_| {} }
+                Stepper::<Stage> { value: Some(Stage::Shipping), onstepclick: |_| {} }
             }
         }
     }
@@ -141,7 +141,7 @@ fn allow_next_steps_makes_every_step_a_button() {
         rsx! {
             LiberoProvider {
                 Stepper::<Stage> {
-                    active: Some(Stage::Account),
+                    value: Some(Stage::Account),
                     onstepclick: |_| {},
                     allow_next_steps: true,
                 }
@@ -157,7 +157,7 @@ fn no_active_step_means_every_step_is_finished() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Stepper::<Stage> { active: None, content: content }
+                Stepper::<Stage> { value: None, panel: content }
             }
         }
     }
@@ -177,7 +177,7 @@ fn the_state_override_adds_an_error_without_moving_the_current_step() {
         rsx! {
             LiberoProvider {
                 Stepper::<Stage> {
-                    active: Some(Stage::Shipping),
+                    value: Some(Stage::Shipping),
                     state: |stage: Stage| (stage == Stage::Shipping).then_some(StepState::Error),
                 }
             }
@@ -218,10 +218,10 @@ fn vertical_content_collapses_under_each_step() {
             LiberoProvider {
                 Stepper::<Stage> {
                     id: "checkout",
-                    active: Some(Stage::Shipping),
+                    value: Some(Stage::Shipping),
                     orientation: "vertical",
                     label_position: "below",
-                    content: content,
+                    panel: content,
                 }
             }
         }
@@ -256,8 +256,8 @@ fn a_rich_label_is_drawn_hidden_and_named_in_text() {
         rsx! {
             LiberoProvider {
                 Stepper::<Stage> {
-                    active: Some(Stage::Account),
-                    label: |stage: Stage| OptionLabel::rich(stage.label(), rsx! { b { "drawn" } }),
+                    value: Some(Stage::Account),
+                    option_label: |stage: Stage| OptionLabel::rich(stage.label(), rsx! { b { "drawn" } }),
                 }
             }
         }
@@ -277,8 +277,8 @@ fn a_description_prints_and_an_empty_one_does_not() {
         rsx! {
             LiberoProvider {
                 Stepper::<Stage> {
-                    active: Some(Stage::Account),
-                    description: |stage: Stage| match stage {
+                    value: Some(Stage::Account),
+                    option_description: |stage: Stage| match stage {
                         Stage::Account => "Who you are".to_string(),
                         _ => String::new(),
                     },
@@ -319,7 +319,7 @@ fn a_colour_override_sets_the_accent_and_its_contrast() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Stepper::<Stage> { active: Some(Stage::Account), color: "success" }
+                Stepper::<Stage> { value: Some(Stage::Account), color: "success" }
             }
         }
     }
@@ -353,9 +353,9 @@ fn a_caller_id_that_is_no_css_identifier_still_names_the_steps() {
             LiberoProvider {
                 Stepper::<Stage> {
                     id: "1-faq",
-                    active: Some(Stage::Shipping),
+                    value: Some(Stage::Shipping),
                     onstepclick: |_| {},
-                    content: content,
+                    panel: content,
                 }
             }
         }

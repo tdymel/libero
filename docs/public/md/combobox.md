@@ -72,8 +72,8 @@ pass in as `state` and can drive yourself at any time:
 ```rust,ignore
 let fruit = use_combobox();
 
-fruit.opened();           // is the list showing
-fruit.open();             // .close(), .toggle(), .set_opened(bool)
+fruit.is_open();           // is the list showing
+fruit.open();             // .close(), .toggle(), .set_open(bool)
 fruit.active();           // the row the arrow keys are on
 fruit.a11y_attributes();  // the aria wiring for whatever control you use
 ```
@@ -308,8 +308,8 @@ it goes into event handlers by value.
 | Method | Returns | Description |
 |---|---|---|
 | `id()` | `String` | The id every part of the wiring is built from. |
-| `opened()` | `bool` | Whether the list is showing. |
-| `open()` / `close()` / `toggle()` / `set_opened(bool)` | - | Drive it. |
+| `is_open()` | `bool` | Whether the list is showing. |
+| `open()` / `close()` / `toggle()` / `set_open(bool)` | - | Drive it. |
 | `active()` | `usize` | The row the arrow keys are on, indexing `options`. |
 | `set_active(usize)` | - | Move the highlight. |
 | `a11y_attributes()` | `Vec<Attribute>` | The trigger's aria wiring, to spread with `attributes:`. |

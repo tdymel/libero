@@ -40,7 +40,7 @@ const CHILDREN: &str = r#"Flex { direction: "row", gap: "sm", wrap: "nowrap",
     }
 }"#;
 
-/// The edge report, printed under the strip. `on_edge_change` is in `fixed`;
+/// The edge report, printed under the strip. `onedgechange` is in `fixed`;
 /// this adds the signal it writes and the text that reads it. Under
 /// `controls: "never"` also the handle and the caller's own two buttons. A
 /// column, so the report sits below the strip rather than beside it.
@@ -104,7 +104,7 @@ fn ScrollerDemo(values: DemoValues) -> Element {
                     _ => Input::from(fade),
                 },
                 draggable: values.str("draggable") == "true",
-                on_edge_change: move |next| edges.set(Some(next)),
+                onedgechange: move |next| edges.set(Some(next)),
                 // Always bound, not only under `never`: an element handle is
                 // attached on mount, so one passed later is never mounted.
                 handle: strip,
@@ -166,7 +166,7 @@ pub fn ScrollerPage() -> Element {
                     prop("draggable", "bool")
                         .default(theme.scroller.draggable.to_string())
                         .doc("Mouse drag-to-pan. Touch and trackpad scroll natively either way."),
-                    prop("on_edge_change", "EventHandler<ScrollerEdges>")
+                    prop("onedgechange", "EventHandler<ScrollerEdges>")
                         .doc("Fires when either edge state flips, including the first measurement."),
                     prop("handle", "ScrollerHandle")
                         .doc("From use_scroller(). Its step_forward() and step_back() move the strip as the controls do, for buttons of your own."),
@@ -191,7 +191,7 @@ pub fn ScrollerPage() -> Element {
                     "keeps focus if it had it."
                 }
                 Text {
-                    Code { source: "on_edge_change" }
+                    Code { source: "onedgechange" }
                     " reports whether the strip rests against either end, once it is first "
                     "measured and again whenever that changes; the line under the strip "
                     "prints it. With "
@@ -212,7 +212,7 @@ pub fn ScrollerPage() -> Element {
                 children_code: CHILDREN.to_string(),
                 fixed: vec![
                     r#"aria_label: "Tags""#.to_string(),
-                    "on_edge_change: move |next| edges.set(Some(next))".to_string(),
+                    "onedgechange: move |next| edges.set(Some(next))".to_string(),
                 ],
                 controls: vec![
                     Control::slider("scroll_amount", ["120", "200", "320", "480"])

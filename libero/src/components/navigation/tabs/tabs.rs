@@ -32,10 +32,10 @@ pub struct TabsProps<T: Options> {
     /// draws it and names it, because the rsx is what a screen reader cannot
     /// use.
     #[props(default)]
-    label: Option<Callback<T, OptionLabel>>,
+    option_label: Option<Callback<T, OptionLabel>>,
     /// Tabs that render but cannot be picked.
     #[props(default)]
-    disabled: Vec<T>,
+    disabled_options: Vec<T>,
     #[props(default, into)]
     size: Input<Size>,
     /// Indicator and selected-label colour.
@@ -80,7 +80,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
     let tabs: Vec<TabSpec> = values
         .iter()
         .map(|value| {
-            let label = match &props.label {
+            let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
             };
@@ -88,7 +88,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             TabSpec {
                 content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
                 name,
-                disabled: props.disabled.contains(value),
+                disabled: props.disabled_options.contains(value),
             }
         })
         .collect();

@@ -18,4 +18,4 @@ pub use overlay::{Overlay, OverlayProps};
 pub use spotlight::{
     SpotlightAction, SpotlightHandle, SpotlightOptions, spotlight_filter, use_spotlight,
 };
-pub use tooltip::{Tooltip, TooltipPlacement, TooltipProps};
+pub use tooltip::{Tooltip, TooltipProps};

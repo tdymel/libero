@@ -128,7 +128,7 @@ fn rich_app() -> Element {
             Accordion::<Step> {
                 onchange: |_| {},
                 panel: panel,
-                label: rich,
+                option_label: rich,
             }
         }
     }
@@ -148,7 +148,7 @@ fn disabled_app() -> Element {
             Accordion::<Step> {
                 onchange: |_| {},
                 panel: panel,
-                disabled: vec![Step::Payment],
+                disabled_options: vec![Step::Payment],
             }
         }
     }

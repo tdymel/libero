@@ -56,15 +56,15 @@ fn aria_expanded_appears_only_when_opened_is_some() {
         rsx! { LiberoProvider { Burger {} } }
     }
     fn closed() -> Element {
-        rsx! { LiberoProvider { Burger { opened: false, "aria-controls": "nav" } } }
+        rsx! { LiberoProvider { Burger { open: false, "aria-controls": "nav" } } }
     }
     fn open() -> Element {
-        rsx! { LiberoProvider { Burger { opened: true, "aria-controls": "nav" } } }
+        rsx! { LiberoProvider { Burger { open: true, "aria-controls": "nav" } } }
     }
 
     assert!(
         !attributes_of(&body(&render(unset)), "button").contains_key("aria-expanded"),
-        "an unset `opened` must emit no aria-expanded at all"
+        "an unset `open` must emit no aria-expanded at all"
     );
     assert_eq!(
         attributes_of(&body(&render(closed)), "button")
@@ -85,15 +85,15 @@ fn aria_expanded_appears_only_when_opened_is_some() {
 #[test]
 fn the_accessible_name_comes_from_the_theme_and_follows_opened() {
     fn english_closed() -> Element {
-        rsx! { LiberoProvider { Burger { opened: false, "aria-controls": "nav" } } }
+        rsx! { LiberoProvider { Burger { open: false, "aria-controls": "nav" } } }
     }
     fn english_open() -> Element {
-        rsx! { LiberoProvider { Burger { opened: true, "aria-controls": "nav" } } }
+        rsx! { LiberoProvider { Burger { open: true, "aria-controls": "nav" } } }
     }
     fn german_open() -> Element {
         rsx! {
             LiberoProvider { theme: &GERMAN,
-                Burger { opened: true, "aria-controls": "nav" }
+                Burger { open: true, "aria-controls": "nav" }
             }
         }
     }
@@ -118,9 +118,9 @@ fn the_label_callback_overrides_the_theme_on_both_states() {
         rsx! {
             LiberoProvider { theme: &GERMAN,
                 Burger {
-                    opened: true,
+                    open: true,
                     "aria-controls": "nav",
-                    label: move |opened: bool| match opened {
+                    label: move |open: bool| match open {
                         true => "fermer".to_string(),
                         false => "ouvrir".to_string(),
                     },
@@ -132,9 +132,9 @@ fn the_label_callback_overrides_the_theme_on_both_states() {
         rsx! {
             LiberoProvider {
                 Burger {
-                    opened: false,
+                    open: false,
                     "aria-controls": "nav",
-                    label: move |opened: bool| match opened {
+                    label: move |open: bool| match open {
                         true => "fermer".to_string(),
                         false => "ouvrir".to_string(),
                     },
@@ -160,7 +160,7 @@ fn the_label_callback_overrides_the_theme_on_both_states() {
 #[test]
 fn aria_controls_is_the_callers_and_reaches_the_button() {
     fn app() -> Element {
-        rsx! { LiberoProvider { Burger { opened: true, "aria-controls": "site-nav" } } }
+        rsx! { LiberoProvider { Burger { open: true, "aria-controls": "site-nav" } } }
     }
 
     let html = body(&render(app));
@@ -178,7 +178,7 @@ fn aria_controls_is_the_callers_and_reaches_the_button() {
 #[test]
 fn the_opened_state_lands_on_the_glyph() {
     fn open() -> Element {
-        rsx! { LiberoProvider { Burger { opened: true, "aria-controls": "nav" } } }
+        rsx! { LiberoProvider { Burger { open: true, "aria-controls": "nav" } } }
     }
     fn closed() -> Element {
         rsx! { LiberoProvider { Burger {} } }
@@ -188,7 +188,7 @@ fn the_opened_state_lands_on_the_glyph() {
         attributes_of(&body(&render(open)), "span")
             .get("data-state")
             .map(String::as_str),
-        Some("opened")
+        Some("open")
     );
     assert!(
         !attributes_of(&body(&render(closed)), "span").contains_key("data-state"),

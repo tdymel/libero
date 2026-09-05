@@ -285,7 +285,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let required = props.required.unwrap_or(false);
 
     let state = use_combobox();
-    let opened = state.opened() && !disabled && !readonly;
+    let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
     // One index per level. `[2, 0]` highlights the first child of the third
@@ -513,7 +513,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .attr("tabindex", (!disabled).then_some("0"))
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
-                toggle(!state.opened());
+                toggle(!state.is_open());
             }
         })
         // While searchable the focus moves into the search box, so closing on
@@ -628,7 +628,7 @@ impl CascaderKeys {
         if self.disabled {
             return;
         }
-        if !self.state.opened() {
+        if !self.state.is_open() {
             self.closed(event);
             return;
         }
@@ -1018,10 +1018,10 @@ fn open_handler(
         // `Signal` is `Copy`, so a local copy is what lets an `Fn` closure
         // write one.
         let mut cursor = cursor;
-        if next && !state.opened() {
+        if next && !state.is_open() {
             cursor.set(seed.clone().unwrap_or_default());
         }
-        state.set_opened(next);
+        state.set_open(next);
     })
 }
 

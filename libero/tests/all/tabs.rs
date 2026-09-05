@@ -22,7 +22,7 @@ fn tabs_wire_the_selected_tab_to_its_panel_and_render_only_that_one() {
                 Tabs {
                     value: Section::Admin,
                     onchange: move |_| {},
-                    disabled: vec![Section::Billing],
+                    disabled_options: vec![Section::Billing],
                     panel: |section: Section| match section {
                         Section::Account => rsx! { "account body" },
                         Section::Admin => rsx! { "admin body" },
@@ -75,7 +75,7 @@ fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
                     value: Section::Account,
                     onchange: move |_| {},
                     tabs: vec![Section::Account, Section::Billing],
-                    label: |section: Section| OptionLabel::rich(
+                    option_label: |section: Section| OptionLabel::rich(
                         format!("t:{}", section.label()),
                         rsx! { span { "rich" } },
                     ),
@@ -104,7 +104,7 @@ fn a_value_outside_the_tabs_leaves_the_first_enabled_tab_as_the_tab_stop() {
                     value: Section::Admin,
                     onchange: move |_| {},
                     tabs: vec![Section::Account, Section::Billing],
-                    disabled: vec![Section::Account],
+                    disabled_options: vec![Section::Account],
                     panel: |_: Section| rsx! {},
                 }
             }

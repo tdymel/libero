@@ -112,8 +112,8 @@ pub enum NotificationLive {
 /// Per notification. Every field defaults to the host's answer.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct NotificationOptions {
-    /// The stack it joins. `None` is the `Notifications` host's `position`.
-    pub position: Option<Placement>,
+    /// The stack it joins. `None` is the `Notifications` host's `placement`.
+    pub placement: Option<Placement>,
     /// `None` is the host's `auto_close`.
     pub auto_close: Option<AutoClose>,
     /// Whether the template offers a close control. The default template
@@ -125,7 +125,7 @@ pub struct NotificationOptions {
 impl Default for NotificationOptions {
     fn default() -> Self {
         Self {
-            position: None,
+            placement: None,
             auto_close: None,
             closable: true,
             live: NotificationLive::default(),
@@ -181,7 +181,7 @@ struct Entry {
     /// The template with `T` still known, called by the notification's own
     /// scope.
     draw: Draw,
-    position: Option<Placement>,
+    placement: Option<Placement>,
     auto_close: Option<AutoClose>,
     live: NotificationLive,
     /// Closing: the exit is running, and it is removed when that ends.
@@ -383,7 +383,7 @@ impl<T: 'static> NotificationHandle<T> {
             id,
             args,
             draw,
-            position: options.position,
+            placement: options.placement,
             auto_close: options.auto_close,
             live: options.live,
             leaving: false,
@@ -496,7 +496,7 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
             variant: data.variant,
             icon: data.icon,
             onclose: s.closable().then(|| EventHandler::new(move |()| s.close())),
-            close_label: theme.notification.close_label,
+            close_label: theme.notifications.close_label,
             sx: &DEFAULT_TEMPLATE_SX,
             children: message,
         }
@@ -527,15 +527,15 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 #[component]
 pub fn Notifications(
     /// The stack a notification joins unless it names its own. Defaults to
-    /// `theme.notification.position`.
+    /// `theme.notifications.placement`.
     #[props(default, into)]
-    position: Input<Placement>,
+    placement: Input<Placement>,
     /// Shown at once per stack; the rest wait. Defaults to
-    /// `theme.notification.limit`.
+    /// `theme.notifications.limit`.
     #[props(default)]
     limit: Option<usize>,
     /// Unless a notification says otherwise. Defaults to
-    /// `theme.notification.auto_close`.
+    /// `theme.notifications.auto_close`.
     #[props(default)]
     auto_close: Option<AutoClose>,
     /// Draws the stacks inside this host's box, a `position: relative` block
@@ -558,19 +558,19 @@ pub fn Notifications(
         }
     });
 
-    let position = position.copied_or(theme.notification.position);
-    let limit = limit.unwrap_or(theme.notification.limit);
-    let auto_close = auto_close.unwrap_or(theme.notification.auto_close);
-    let exit_ms = theme.notification.transition_duration;
+    let host_placement = placement.copied_or(theme.notifications.placement);
+    let limit = limit.unwrap_or(theme.notifications.limit);
+    let auto_close = auto_close.unwrap_or(theme.notifications.auto_close);
+    let exit_ms = theme.notifications.transition_duration;
 
     let entries = store.entries.read();
-    // Every position, always: both live regions of a stack have to be in the
+    // Every placement, always: both live regions of a stack have to be in the
     // document before anything is added to them, or nothing is announced. So
     // a stack cannot appear with its first notification.
     let stacks = Placement::ALL.iter().map(|&placement| {
         let items = entries
             .iter()
-            .filter(|entry| entry.position.unwrap_or(position) == placement)
+            .filter(|entry| entry.placement.unwrap_or(host_placement) == placement)
             .take(limit)
             .map(|entry| ItemProps {
                 store,

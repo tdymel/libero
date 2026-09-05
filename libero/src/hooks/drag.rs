@@ -47,9 +47,9 @@ pub struct DragOptions {
     pub capture: ElementHandle,
     /// The geometry a drag needs may take a round-trip to measure, so this
     /// cannot veto by returning - call [`DragStart::cancel`] once it knows.
-    pub on_start: Callback<DragStart>,
-    pub on_move: Callback<DragMove>,
-    pub on_end: Callback<()>,
+    pub onstart: Callback<DragStart>,
+    pub onmove: Callback<DragMove>,
+    pub onend: Callback<()>,
 }
 
 /// The one pointer a drag follows, and where it went down.
@@ -79,9 +79,9 @@ pub struct Drag {
 pub fn use_drag(options: DragOptions) -> Drag {
     let DragOptions {
         capture,
-        on_start,
-        on_move,
-        on_end,
+        onstart,
+        onmove,
+        onend,
     } = options;
 
     let mut active = use_signal(|| Option::<ActiveDrag>::None);
@@ -107,7 +107,7 @@ pub fn use_drag(options: DragOptions) -> Drag {
             y: coordinates.y,
         };
 
-        // Active before `on_start`, so a `cancel` it makes synchronously - a
+        // Active before `onstart`, so a `cancel` it makes synchronously - a
         // disabled control refusing the drag - clears it rather than being
         // overwritten.
         active.set(Some(ActiveDrag {
@@ -116,7 +116,7 @@ pub fn use_drag(options: DragOptions) -> Drag {
         }));
         dragging.set(true);
 
-        on_start.call(DragStart { client, cancel });
+        onstart.call(DragStart { client, cancel });
         if active.peek().is_none() {
             return;
         }
@@ -136,7 +136,7 @@ pub fn use_drag(options: DragOptions) -> Drag {
         }
         let coordinates = event.client_coordinates();
 
-        on_move.call(DragMove {
+        onmove.call(DragMove {
             start: drag.start,
             client: DragPoint {
                 x: coordinates.x,
@@ -154,7 +154,7 @@ pub fn use_drag(options: DragOptions) -> Drag {
         }
         active.set(None);
         dragging.set(false);
-        on_end.call(());
+        onend.call(());
     });
 
     Drag {

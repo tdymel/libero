@@ -8,9 +8,9 @@ pub const SPLITTER_HIT_SIZE: SizeCss = SizeCss::new("--lsx-splitter-hit-size-");
 pub struct SplitterDefaults {
     /// Which size level `divider_size` uses when unset.
     pub size: Size,
-    pub divider_size: Sizes<u8>,
+    pub divider_sizes: Sizes<u8>,
     /// Invisible hit-target thickness, fixed regardless of `divider_size`.
-    pub hit_size: Sizes<u8>,
+    pub hit_sizes: Sizes<u8>,
     /// Percent floor applied to both panes.
     pub min_size: f64,
     /// Percent moved per arrow key press.
@@ -22,8 +22,8 @@ pub struct SplitterDefaults {
 impl SplitterDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Sm,
-        divider_size: Sizes::new(1, 1, 2, 3, 4, 6),
-        hit_size: Sizes::new(10, 10, 12, 14, 16, 20),
+        divider_sizes: Sizes::new(1, 1, 2, 3, 4, 6),
+        hit_sizes: Sizes::new(10, 10, 12, 14, 16, 20),
         min_size: 10.0,
         step: 1.0,
         big_step: 10.0,
@@ -33,9 +33,9 @@ impl SplitterDefaults {
 impl ToCssDeclarations for SplitterDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = self
-            .divider_size
+            .divider_sizes
             .to_css_declarations(SPLITTER_DIVIDER_SIZE, "px");
-        declarations.extend(self.hit_size.to_css_declarations(SPLITTER_HIT_SIZE, "px"));
+        declarations.extend(self.hit_sizes.to_css_declarations(SPLITTER_HIT_SIZE, "px"));
         declarations
     }
 }

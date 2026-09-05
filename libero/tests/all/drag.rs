@@ -1,8 +1,8 @@
 //! `use_drag` driven with synthetic pointer events.
 //!
-//! A `cancel` made synchronously inside `on_start` is how a disabled `Slider`
+//! A `cancel` made synchronously inside `onstart` is how a disabled `Slider`
 //! refuses a drag. It used to be overwritten by the drag starting after
-//! `on_start` returned, so the disabled slider still followed the pointer and
+//! `onstart` returned, so the disabled slider still followed the pointer and
 //! reported its end.
 
 use std::cell::{Cell, RefCell};
@@ -29,13 +29,13 @@ fn app() -> Element {
     let capture = use_element();
     let drag = use_drag(DragOptions {
         capture,
-        on_start: Callback::new(|event: DragStart| {
+        onstart: Callback::new(|event: DragStart| {
             if CANCEL_ON_START.with(Cell::get) {
                 event.cancel.call(());
             }
         }),
-        on_move: Callback::new(|_| MOVES.with(|moves| moves.set(moves.get() + 1))),
-        on_end: Callback::new(|()| ENDS.with(|ends| ends.set(ends.get() + 1))),
+        onmove: Callback::new(|_| MOVES.with(|moves| moves.set(moves.get() + 1))),
+        onend: Callback::new(|()| ENDS.with(|ends| ends.set(ends.get() + 1))),
     });
     DRAG.with(|slot| *slot.borrow_mut() = Some(drag));
 

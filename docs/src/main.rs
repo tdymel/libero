@@ -302,7 +302,7 @@ fn AppShell() -> Element {
                 // wrapper holds the handle.
                 div { display: "contents", onmounted: burger.mount(),
                     Burger {
-                        opened: open(),
+                        open: open(),
                         "aria-controls": "docs-nav",
                         onclick: move |_| open.set(!open()),
                         // No `variant`/`color` prop - the underlying ActionIcon

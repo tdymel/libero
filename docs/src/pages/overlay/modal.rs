@@ -48,7 +48,7 @@ const OPEN_EXAMPLE: &str = r#"let prompt = use_save_prompt("Discard");
 
 Button {
     onclick: move |_| {
-        prompt.open_with("notes.md").on_result(move |answer| match answer {
+        prompt.open_with("notes.md").onresult(move |answer| match answer {
             Some(SaveChoice::Save) => save(),
             Some(SaveChoice::Discard) => discard(),
             None => {}   // dismissed - keep editing
@@ -147,7 +147,7 @@ pub fn ModalPage() -> Element {
                     Button {
                         variant: "outlined",
                         onclick: move |_| {
-                            prompt("notes.md").on_result(move |result| {
+                            prompt("notes.md").onresult(move |result| {
                                 answer.set(
                                     match result {
                                         Some(SaveChoice::Save) => "saved",

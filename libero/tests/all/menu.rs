@@ -25,18 +25,18 @@ fn items() -> Vec<MenuEntry> {
         MenuEntry::Group {
             label: "Edit".into(),
             items: vec![
-                MenuItem::new("Copy").on_select(|_| {}).into(),
+                MenuItem::new("Copy").onselect(|_| {}).into(),
                 MenuItem::new("Paste")
                     .disabled(true)
-                    .on_select(|_| {})
+                    .onselect(|_| {})
                     .into(),
             ],
         },
         MenuEntry::Separator,
         MenuItem::new("Export")
-            .submenu(vec![MenuItem::new("PNG").on_select(|_| {}).into()])
+            .submenu(vec![MenuItem::new("PNG").onselect(|_| {}).into()])
             .into(),
-        MenuItem::new("Delete").on_select(|_| {}).into(),
+        MenuItem::new("Delete").onselect(|_| {}).into(),
     ]
 }
 

@@ -6,11 +6,11 @@ Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/layout
 Index: [index.md](index.md) - every other component's markdown page
 Description: A scrollable region that fills its parent, with themed scrollbars, percent-based scroll positions, per-edge events, and row virtualization through `Virtualize`.
 
-Scrolls its content, filling the parent by default. `on_scroll` reports the
+Scrolls its content, filling the parent by default. `onscroll` reports the
 position as a percent of each axis - `Start`/`End` bracket one scroll, `Change`
 carries the rest - and `scroll_position_x`/`scroll_position_y` scroll it to a
-percent. Each edge has its own event: `on_top_reached`, `on_bottom_reached`,
-`on_left_reached`, `on_right_reached`.
+percent. Each edge has its own event: `ontopreached`, `onbottomreached`,
+`onleftreached`, `onrightreached`.
 
 It is `width: 100%; height: 100%`, so it needs a parent with a real size - inside
 a box that shrink-wraps its content there is nothing to scroll.
@@ -51,9 +51,9 @@ fn Demo() -> Element {
                 sx: sx().height("160px").width("100%").border("1px solid var(--lsx-grey-3)"),
                 ScrollArea {
                     handle: area,
-                    on_scroll: move |event: ScrollPositionEvent| position.set(event),
-                    on_top_reached: move |_| edge.set("top"),
-                    on_bottom_reached: move |_| edge.set("bottom"),
+                    onscroll: move |event: ScrollPositionEvent| position.set(event),
+                    ontopreached: move |_| edge.set("top"),
+                    onbottomreached: move |_| edge.set("bottom"),
                     Box {
                         sx: sx().width("150%").padding("md"),
                         for i in 0..20 {
@@ -165,11 +165,11 @@ unreachable, so use it only when something else provides the scrolling.
 | `scroll_position_y` | `f64` | - | Percent (0-100) along the vertical axis - see `scroll_position_x`. |
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Scrolls the area from a handler, in percent or px, on every call. |
 | `focusable` | `bool` | `false` | Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed. |
-| `on_scroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
-| `on_top_reached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
-| `on_bottom_reached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |
-| `on_left_reached` | `EventHandler<()>` | - | Fires once when the left edge is reached. |
-| `on_right_reached` | `EventHandler<()>` | - | Fires once when the right edge is reached. |
+| `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
+| `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
+| `onbottomreached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |
+| `onleftreached` | `EventHandler<()>` | - | Fires once when the left edge is reached. |
+| `onrightreached` | `EventHandler<()>` | - | Fires once when the right edge is reached. |
 | `children` | `Element` | required | The scrollable content. |
 
 `Virtualize` takes no styling props - it renders no element of its own.

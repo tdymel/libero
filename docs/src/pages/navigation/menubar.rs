@@ -12,7 +12,7 @@ use libero::{
 const PREAMBLE: &str = r#"let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
 let item = move |name: &'static str| -> MenuEntry {
-    MenuItem::new(name).on_select(pick(name)).into()
+    MenuItem::new(name).onselect(pick(name)).into()
 };
 
 let menus = vec![
@@ -25,7 +25,7 @@ let menus = vec![
         MenuEntry::Separator,
         MenuItem::new("Save")
             .trailing(rsx! { Kbd { "Ctrl S" } })
-            .on_select(pick("Save"))
+            .onselect(pick("Save"))
             .into(),
     ]),
     MenubarMenu::new("Edit", vec![
@@ -92,7 +92,7 @@ fn MenubarDemo(
     let mut last = use_signal(|| String::from("nothing yet"));
     let pick = move |name: &'static str| move |_| last.set(name.to_string());
     let item =
-        move |name: &'static str| -> MenuEntry { MenuItem::new(name).on_select(pick(name)).into() };
+        move |name: &'static str| -> MenuEntry { MenuItem::new(name).onselect(pick(name)).into() };
 
     let menus = vec![
         MenubarMenu::new(
@@ -106,7 +106,7 @@ fn MenubarDemo(
                 MenuEntry::Separator,
                 MenuItem::new("Save")
                     .trailing(rsx! { Kbd { "Ctrl S" } })
-                    .on_select(pick("Save"))
+                    .onselect(pick("Save"))
                     .into(),
             ],
         ),

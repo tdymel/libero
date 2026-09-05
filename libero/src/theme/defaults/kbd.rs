@@ -12,7 +12,7 @@ pub const KBD_COLOR: CssVar = CssVar::new("--lsx-kbd-color");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KbdDefaults {
-    pub font_size: Sizes<u16>,
+    pub font_sizes: Sizes<u16>,
     pub font_family: &'static str,
     pub background: &'static str,
     pub border: &'static str,
@@ -21,7 +21,7 @@ pub struct KbdDefaults {
 
 impl KbdDefaults {
     pub const DEFAULT: Self = Self {
-        font_size: Sizes::new(10, 12, 14, 16, 20, 24),
+        font_sizes: Sizes::new(10, 12, 14, 16, 20, 24),
         font_family: MONO_FONT_FAMILY,
         background: "#f6f8fa",
         border: "#d0d7de",
@@ -54,7 +54,7 @@ impl KbdDefaults {
 
 impl ToCssDeclarations for KbdDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let mut declarations = self.font_size.to_css_declarations(KBD_FONT_SIZE, "px");
+        let mut declarations = self.font_sizes.to_css_declarations(KBD_FONT_SIZE, "px");
         declarations.push(KBD_FONT_FAMILY.declare(self.font_family));
         declarations.push(KBD_BACKGROUND.declare(self.background));
         declarations.push(KBD_BORDER.declare(self.border));

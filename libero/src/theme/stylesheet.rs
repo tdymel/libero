@@ -139,8 +139,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         timeline,
         tabs,
         stepper,
-        titles,
-        texts,
+        title,
+        text,
         tooltip,
         code,
         code_block,
@@ -200,7 +200,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         skeleton,
         spotlight,
         marquee,
-        notification,
+        notifications,
         // Emitted by global_reset_scopes, not as a `:root` var.
         font_smoothing: _,
     } = theme;
@@ -241,7 +241,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(skeleton.to_css_declarations());
     declarations.extend(spotlight.to_css_declarations());
     declarations.extend(marquee.to_css_declarations());
-    declarations.extend(notification.to_css_declarations());
+    declarations.extend(notifications.to_css_declarations());
     declarations.extend(lightbox.to_css_declarations());
     declarations.extend(switch.to_css_declarations());
     declarations.extend(checkbox.to_css_declarations());
@@ -262,8 +262,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(timeline.to_css_declarations());
     declarations.extend(tabs.to_css_declarations());
     declarations.extend(stepper.to_css_declarations());
-    declarations.extend(titles.to_css_declarations());
-    declarations.extend(texts.to_css_declarations());
+    declarations.extend(title.to_css_declarations());
+    declarations.extend(text.to_css_declarations());
     declarations.extend(tooltip.to_css_declarations());
     declarations.extend(code.to_css_declarations());
     declarations.extend(code_block.to_css_declarations());

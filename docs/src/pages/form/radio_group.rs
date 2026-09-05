@@ -41,6 +41,8 @@ const PLAN_DESCRIPTION: &str = r#"option_description: move |plan: Plan| match pl
 }
 .to_string()"#;
 
+const DISABLED_OPTIONS: &str = "disabled_options: vec![Plan::Team]";
+
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
 }
@@ -68,6 +70,8 @@ pub fn RadioGroupPage() -> Element {
                         .doc("Overrides what the derive named an option. Runs during render, so it can read a locale from context."),
                     prop("option_description", "Callback<T, String>")
                         .doc("A line under each option's label; an empty string renders none. What makes a card option worth its surface."),
+                    prop("disabled_options", "Vec<T>")
+                        .doc("Options that render but cannot be picked. The arrow keys step over them."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
                         .doc("`card` draws every option as a bordered surface that is its own hit area. A row of cards stretches them to one height."),
@@ -188,6 +192,14 @@ pub fn RadioGroupPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
+                    // `disabled_options` is a `Vec<T>`, not a bool, so the
+                    // switch stands for one named option rather than the prop.
+                    Control::switch("disabled_options").code(|_, values| {
+                        match is_on(values, "disabled_options") {
+                            true => vec![DISABLED_OPTIONS.to_string()],
+                            false => vec![],
+                        }
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     RadioGroup {
@@ -210,6 +222,10 @@ pub fn RadioGroupPage() -> Element {
                         },
                         required: is_on(&values, "required").then_some(true),
                         disabled: is_on(&values, "disabled").then_some(true),
+                        disabled_options: match is_on(&values, "disabled_options") {
+                            true => vec![Plan::Team],
+                            false => Vec::new(),
+                        },
                         value: plan(),
                         onchange: move |next| plan.set(Some(next)),
                     }

@@ -41,10 +41,10 @@ pub enum AutoClose {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct NotificationDefaults {
+pub struct NotificationsDefaults {
     /// The stack a notification joins when neither the host nor the
     /// notification names one.
-    pub position: Placement,
+    pub placement: Placement,
     pub auto_close: AutoClose,
     /// How many notifications one stack shows at once. The rest wait, in
     /// order, and appear as the shown ones close.
@@ -60,11 +60,11 @@ pub struct NotificationDefaults {
     pub close_label: &'static str,
 }
 
-impl NotificationDefaults {
+impl NotificationsDefaults {
     pub const DEFAULT: Self = Self {
         // Mantine's default corner, and the one least likely to cover a
         // page's own header and primary actions.
-        position: Placement::BottomEnd,
+        placement: Placement::BottomEnd,
         auto_close: AutoClose::After(4000),
         limit: 5,
         width: "360px",
@@ -75,7 +75,7 @@ impl NotificationDefaults {
     };
 }
 
-impl ToCssDeclarations for NotificationDefaults {
+impl ToCssDeclarations for NotificationsDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![
             NOTIFICATION_WIDTH.declare(self.width),

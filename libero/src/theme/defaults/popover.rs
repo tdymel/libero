@@ -1,8 +1,48 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
+use crate::str_enum::str_enum;
 use crate::theme::CssVar;
 
 pub const POPOVER_GAP: CssVar = CssVar::new("--lsx-popover-gap");
 pub const POPOVER_PADDING: CssVar = CssVar::new("--lsx-popover-padding");
+
+str_enum! {
+    /// Which side of the anchor the floating box sits on.
+    #[state_prefix = "side"]
+    pub enum Side {
+        Top = "top",
+        #[default]
+        Bottom = "bottom",
+        Left = "left",
+        Right = "right",
+    }
+}
+
+impl Side {
+    pub(crate) fn opposite(self) -> Self {
+        match self {
+            Side::Top => Side::Bottom,
+            Side::Bottom => Side::Top,
+            Side::Left => Side::Right,
+            Side::Right => Side::Left,
+        }
+    }
+
+    /// Top and bottom stack along `y`, so their cross axis is `x`.
+    pub(crate) fn is_vertical(self) -> bool {
+        matches!(self, Side::Top | Side::Bottom)
+    }
+}
+
+str_enum! {
+    /// Where the floating box lines up along the side's cross axis.
+    #[state_prefix = "align"]
+    pub enum Align {
+        #[default]
+        Start = "start",
+        Center = "center",
+        End = "end",
+    }
+}
 
 /// What every popover is placed by: how far it sits off its anchor, and how
 /// close to a viewport edge it may come before it flips or shifts.

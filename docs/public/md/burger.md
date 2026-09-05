@@ -19,9 +19,9 @@ position, so snapping between them stays legible.
 
 | Prop | Type | Default | Does |
 |---|---|---|---|
-| `opened` | `bool` | unset | `true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it for a burger that opens something that is not one |
+| `open` | `bool` | unset | `true` draws the X, and either value emits `aria-expanded`, which makes the button a disclosure. Omit it for a burger that opens something that is not one |
 | `onclick` | `EventHandler<MouseEvent>` | | `Burger` never owns the open state |
-| `label` | `Callback<bool, String>` | theme | Replaces the theme's two labels, keyed by `opened` |
+| `label` | `Callback<bool, String>` | theme | Replaces the theme's two labels, keyed by `open` |
 | `size` | `ThemeAwareValue` | `md` | The glyph's width and height; the bars are a twelfth of it thick, and the button is one `spacing.xs` larger |
 | `color` | `ThemeAwareValue` | `currentColor` | The bars. Unset they inherit |
 | `disabled` | `bool` | `false` | Passed through to the button |
@@ -36,13 +36,13 @@ use libero::theme::Size;
 
 #[component]
 fn Demo() -> Element {
-    let mut opened = use_signal(|| false);
+    let mut open = use_signal(|| false);
 
     rsx! {
         Burger {
-            opened: opened(),
+            open: open(),
             "aria-controls": "site-nav",
-            onclick: move |_| opened.toggle(),
+            onclick: move |_| open.toggle(),
             sx: sx().breakpoint(Size::Sm, sx().display("none")),
         }
         Sidebar { id: "site-nav", side: "left", role: "navigation",
@@ -62,19 +62,19 @@ a static sidebar must not steal focus.
 
 ## Accessibility
 
-**Leave `opened` unset when the burger opens a modal.** `opened` makes the
+**Leave `open` unset when the burger opens a modal.** `open` makes the
 button a disclosure with `aria-expanded`; a modal is not expanded by its
 trigger, it replaces the page.
 
 ```rust,ignore
-// No `opened`: nothing is expanded, so nothing announces a state.
+// No `open`: nothing is expanded, so nothing announces a state.
 Burger { onclick: move |_| modal.open() }
 ```
 
-**Spread `aria-controls` whenever `opened` is set**, naming the element that
+**Spread `aria-controls` whenever `open` is set**, naming the element that
 opens, or `Burger` warns. Nothing sets it internally.
 
-**The accessible name is the theme's**, and it changes with `opened`. Translate
+**The accessible name is the theme's**, and it changes with `open`. Translate
 it once in `BurgerLabels`, or per burger with `label` when the locale is only
 known at runtime:
 
@@ -89,8 +89,8 @@ Theme {
 
 // Or, when the locale is only known at runtime:
 Burger {
-    opened: opened(),
-    label: move |opened| t(if opened { "nav.close" } else { "nav.open" }),
+    open: open(),
+    label: move |open| t(if open { "nav.close" } else { "nav.open" }),
 }
 ```
 

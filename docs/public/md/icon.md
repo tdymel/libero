@@ -90,7 +90,7 @@ Like every component, `Icon` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
-| `size` | `Sizes<u16>` | Badge width/height in px per size step - `16, 20, 24, 32, 40, 48` by default. |
+| `sizes` | `Sizes<u16>` | Badge width/height in px per size step - `16, 20, 24, 32, 40, 48` by default. |
 
 The `variant`, `color`, `size` and `radius` fallbacks are the component's own
 (`filled`, `primary`, `md`, `sm`), not theme fields.

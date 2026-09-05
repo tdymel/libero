@@ -68,8 +68,8 @@ pixels.
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Default `size` when the prop is omitted. |
-| `gap` | `Sizes<u8>` | Gap between items, per size, in px. |
-| `indent` | `Sizes<u8>` | Left padding of a nested list, per size, in px. |
+| `gaps` | `Sizes<u8>` | Gap between items, per size, in px. |
+| `indents` | `Sizes<u8>` | Left padding of a nested list, per size, in px. |
 
 ## CSS variables
 

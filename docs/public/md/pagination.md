@@ -169,8 +169,8 @@ different reasons - the `DateDefaults` arrangement.
 | `color` | `Color` | Current-page fill. The readable text is its `-contrast` twin |
 | `siblings` / `boundaries` | `u8` | Range shape |
 | `gap` | `Size` | Space between controls |
-| `control_size` | `Sizes<u16>` | Control box per size step, in px |
-| `font_size` | `Sizes<u16>` | Font size per size step, in px |
+| `control_sizes` | `Sizes<u16>` | Control box per size step, in px |
+| `font_sizes` | `Sizes<u16>` | Font size per size step, in px |
 | `border` | `&'static str` | Control border colour |
 
 `PaginationLabels` on `theme.pagination_labels`, English by default and swapped

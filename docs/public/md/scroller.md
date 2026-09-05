@@ -49,7 +49,7 @@ Scroller { aria_label: "Tags", fade_color: "grey.1", /* .. */ }
 
 ## Reacting to the edges
 
-`on_edge_change` reports whether the strip rests against either end, once it
+`onedgechange` reports whether the strip rests against either end, once it
 is first measured and again whenever that changes. With `controls: "never"` it
 is the whole affordance, for a strip that should say so in its own words.
 
@@ -67,7 +67,7 @@ fn Demo() -> Element {
         Scroller {
             aria_label: "Tags",
             controls: "never",
-            on_edge_change: move |next| edges.set(Some(next)),
+            onedgechange: move |next| edges.set(Some(next)),
             Flex { direction: "row", gap: "sm", wrap: "nowrap",
                 for tag in TAGS {
                     Chip { key: "{tag}", "{tag}" }
@@ -96,7 +96,7 @@ let strip = use_scroller();
 
 rsx! {
     Scroller { aria_label: "Tags", controls: "never", handle: strip,
-        on_edge_change: move |next| edges.set(Some(next)),
+        onedgechange: move |next| edges.set(Some(next)),
         // ...
     }
     Button { onclick: move |_| strip.step_back(), "Back" }
@@ -123,7 +123,7 @@ A call before the strip has mounted does nothing.
 | `control_size` | `Size` | `md` | Width of each control strip and its glyph. |
 | `fade_color` | `ThemeAwareValue` | paper background | What the gradient under a control fades from. Set it to the surface the strip sits on. |
 | `draggable` | `bool` | `false` | Mouse drag-to-pan. Touch and trackpad scroll natively either way. |
-| `on_edge_change` | `EventHandler<ScrollerEdges>` | - | Fires when either edge state flips, including the first measurement. `ScrollerEdges { at_start, at_end }`; both `true` means nothing overflows. |
+| `onedgechange` | `EventHandler<ScrollerEdges>` | - | Fires when either edge state flips, including the first measurement. `ScrollerEdges { at_start, at_end }`; both `true` means nothing overflows. |
 | `handle` | `ScrollerHandle` | - | From `use_scroller()`. `step_forward()`/`step_back()` move the strip as the controls do. |
 | `children` | `Element` | - | The strip. |
 

@@ -64,7 +64,7 @@ static BURGER_GLYPH_SX: StaticSx = StaticSx::new(|| {
         .selector("&::before", outer.clone().top(up.clone()))
         .selector("&::after", outer.top(down.clone()))
         .when(
-            "opened",
+            "open",
             sx().background_color("transparent")
                 .selector(
                     "&::before",
@@ -91,8 +91,8 @@ fn button_size(glyph_size: Option<&String>) -> String {
 /// A burger that announces itself as expanded while naming no panel. Almost
 /// always an oversight - `aria-controls` is the caller's to spread (it rides
 /// `GlobalAttributes`), so this is the only place that can notice it missing.
-fn is_orphan_disclosure(opened: Option<bool>, attributes: &[Attribute]) -> bool {
-    opened.is_some()
+fn is_orphan_disclosure(open: Option<bool>, attributes: &[Attribute]) -> bool {
+    open.is_some()
         && !attributes
             .iter()
             .any(|attribute| attribute.name == "aria-controls")
@@ -104,7 +104,7 @@ base_props! {
         /// `None` emits no `aria-expanded` at all, so a `Burger` can open
         /// something that is not a disclosure. `Button::selected`'s rule.
         #[props(default)]
-        opened: Option<bool>,
+        open: Option<bool>,
         /// `Option`, not a bare `EventHandler` - see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
@@ -128,15 +128,15 @@ base_props! {
 /// A three-bar button that morphs into an X: an [`ActionIcon`] with an
 /// animated glyph and the three ARIA facts a disclosure needs.
 ///
-/// It does not own `opened` - the panel does, and the caller already holds
+/// It does not own `open` - the panel does, and the caller already holds
 /// that signal to drive the panel itself. `aria-controls` rides
 /// `GlobalAttributes`, so spread it:
 ///
 /// ```rust,ignore
 /// Burger {
-///     opened: opened(),
+///     open: open(),
 ///     "aria-controls": "site-nav",
-///     onclick: move |_| opened.toggle(),
+///     onclick: move |_| open.toggle(),
 /// }
 /// ```
 ///
@@ -146,19 +146,19 @@ base_props! {
 #[component]
 pub fn Burger(props: BurgerProps) -> Element {
     let theme = use_theme();
-    let opened = props.opened.unwrap_or(false);
+    let open = props.open.unwrap_or(false);
 
     let aria_label = match props.label {
-        Some(label) => label.call(opened),
-        None => match opened {
+        Some(label) => label.call(open),
+        None => match open {
             true => theme.burger.labels.close.to_string(),
             false => theme.burger.labels.open.to_string(),
         },
     };
 
-    if is_orphan_disclosure(props.opened, &props.attributes) {
+    if is_orphan_disclosure(props.open, &props.attributes) {
         warn(
-            "Burger: `opened` is set but no `aria-controls` was spread, so nothing says which panel this button expands.",
+            "Burger: `open` is set but no `aria-controls` was spread, so nothing says which panel this button expands.",
         );
     }
 
@@ -169,7 +169,7 @@ pub fn Burger(props: BurgerProps) -> Element {
         .with(BURGER_SIZE.override_var(), glyph_size)
         .with(BURGER_COLOR, props.color.resolve(None))
         .into();
-    let glyph_states: Input<States> = States::default().with("opened", opened).into();
+    let glyph_states: Input<States> = States::default().with("open", open).into();
 
     let glyph = use_box()
         .framework_sx(&BURGER_GLYPH_SX)
@@ -183,9 +183,9 @@ pub fn Burger(props: BurgerProps) -> Element {
     rsx! {
         ActionIcon {
             aria_label,
-            // Only when `opened` is `Some`: without it this is a plain
+            // Only when `open` is `Some`: without it this is a plain
             // button, which is what opening a modal wants.
-            "aria-expanded": props.opened.map(|opened| opened.to_string()),
+            "aria-expanded": props.open.map(|open| open.to_string()),
             onclick: move |event| {
                 if let Some(onclick) = onclick {
                     onclick.call(event);
@@ -232,15 +232,15 @@ mod tests {
     }
 
     /// The whole glyph is one element: the outer two bars are its pseudo-
-    /// elements, and only `opened` moves them.
+    /// elements, and only `open` moves them.
     #[test]
     fn opened_fades_the_middle_bar_and_rotates_the_outer_two() {
         let css = Stylesheet::from(&BURGER_GLYPH_SX).as_str().to_string();
 
         for rule in [
-            "[data-state~=\"opened\"]{background-color:transparent;}",
-            "[data-state~=\"opened\"]::before{transform:translateY(",
-            "[data-state~=\"opened\"]::after{transform:translateY(",
+            "[data-state~=\"open\"]{background-color:transparent;}",
+            "[data-state~=\"open\"]::before{transform:translateY(",
+            "[data-state~=\"open\"]::after{transform:translateY(",
         ] {
             assert!(css.contains(rule), "missing {rule} in {css}");
         }
@@ -271,7 +271,7 @@ mod tests {
             )]
         };
 
-        // Unset `opened` is not a disclosure, so it owes nothing.
+        // Unset `open` is not a disclosure, so it owes nothing.
         assert!(!is_orphan_disclosure(None, &[]));
         assert!(!is_orphan_disclosure(None, &names("aria-controls")));
         // `Some(false)` still emits `aria-expanded`, so it does.

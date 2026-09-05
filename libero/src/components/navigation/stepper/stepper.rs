@@ -21,24 +21,24 @@ pub struct StepperProps<T: Options> {
     /// The current step. `None` means every step is finished: all of them
     /// show as completed and none is current. Strictly controlled.
     #[props(!optional)]
-    active: Option<T>,
+    value: Option<T>,
     /// A step's body. Horizontal: called for the current step only, and
     /// shown below the strip. Vertical: called for every step, and shown
     /// under its own step while current - a closing step animates out around
     /// its content, so it has to have some. A closed step's rsx is never
     /// mounted either way, so it keeps no state.
     #[props(default)]
-    content: Option<Callback<T, Element>>,
+    panel: Option<Callback<T, Element>>,
     /// The steps to show, in order. Defaults to every `Options::options()`.
     #[props(default)]
     steps: Option<Vec<T>>,
-    /// Overrides `Options::label`, like `Tabs::label`. `OptionLabel::rich`
+    /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
     /// draws a label as rsx and still names it.
     #[props(default)]
-    label: Option<Callback<T, OptionLabel>>,
+    option_label: Option<Callback<T, OptionLabel>>,
     /// A second line under a step's label. An empty string means none.
     #[props(default)]
-    description: Option<Callback<T, String>>,
+    option_description: Option<Callback<T, String>>,
     /// Overrides the state a step's position gives it. `None` keeps the
     /// derived one, so a caller names only the step that differs - and this is
     /// the only way to say `StepState::Error`.
@@ -75,10 +75,10 @@ pub struct StepperProps<T: Options> {
 }
 
 /// The stages of a process over an enum, with the current one's content.
-/// Controlled: it renders `active` and reports a picked step through
+/// Controlled: it renders `value` and reports a picked step through
 /// `onstepclick`; moving on is the caller's.
 ///
-/// The steps are `T::options()` unless `steps` narrows them, and `content`
+/// The steps are `T::options()` unless `steps` narrows them, and `panel`
 /// is a match over `T` - so a step without a body is a compile error.
 /// Completed, current and pending come from the order; `state` adds errors.
 ///
@@ -86,9 +86,9 @@ pub struct StepperProps<T: Options> {
 /// let mut stage = use_signal(|| Some(Stage::Account));
 /// rsx! {
 ///     Stepper {
-///         active: stage(),
+///         value: stage(),
 ///         onstepclick: move |s| stage.set(Some(s)),
-///         content: |s: Stage| match s {
+///         panel: |s: Stage| match s {
 ///             Stage::Account => rsx! { AccountForm {} },
 ///             Stage::Shipping => rsx! { AddressForm {} },
 ///             Stage::Review => rsx! { OrderSummary {} },
@@ -107,12 +107,12 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let vertical = orientation == Orientation::Vertical;
 
     let values = props.steps.clone().unwrap_or_else(|| T::options().to_vec());
-    let (reached, current) = match &props.active {
+    let (reached, current) = match &props.value {
         None => (values.len(), None),
         Some(active) => match values.iter().position(|value| value == active) {
             Some(index) => (index, Some(index)),
             None => {
-                warn("Stepper: `active` is not one of the steps, so none is current.");
+                warn("Stepper: `value` is not one of the steps, so none is current.");
                 (0, None)
             }
         },
@@ -122,7 +122,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
         .iter()
         .enumerate()
         .map(|(index, value)| {
-            let label = match &props.label {
+            let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
             };
@@ -131,7 +131,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
                 name: label.name,
                 rich: label.content,
                 description: props
-                    .description
+                    .option_description
                     .as_ref()
                     .map(|description| description.call(value.clone()))
                     .filter(|description| !description.is_empty()),
@@ -140,7 +140,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
                     .as_ref()
                     .and_then(|state| state.call(value.clone()))
                     .unwrap_or(derived),
-                content: match &props.content {
+                content: match &props.panel {
                     Some(content) if vertical => content.call(value.clone()),
                     _ => rsx! {},
                 },
@@ -148,7 +148,7 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
         })
         .collect();
 
-    let content = match (&props.content, &props.active, current, vertical) {
+    let content = match (&props.panel, &props.value, current, vertical) {
         (Some(content), Some(active), Some(_), false) => Some(content.call(active.clone())),
         _ => None,
     };

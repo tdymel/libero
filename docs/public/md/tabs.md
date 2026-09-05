@@ -12,7 +12,7 @@ and names each one - and `panel` is a match over the same type, so a forgotten o
 misspelled tab is a compile error rather than a blank page. Only the selected
 panel is built at all; the others cost nothing until they are picked.
 
-`label` overrides what the derive named a tab, and it runs during render - so it
+`option_label` overrides what the derive named a tab, and it runs during render - so it
 can read a locale from a signal or from context, and the strip repaints when that
 changes. Return a string to rename a tab, or `OptionLabel::rich` to draw it as rsx
 (an icon, a badge) - that one asks for the name as well, since the rsx is what a
@@ -58,7 +58,7 @@ asks for the next one. Without `onchange` the selection can never change, and
 without `panel` there is nothing below the strip - the library warns about
 either.
 
-`label` renames the whole strip at once. Because it runs during render, reading a
+`option_label` renames the whole strip at once. Because it runs during render, reading a
 locale signal inside it is enough to make the strip follow the language:
 
 ```rust
@@ -80,7 +80,7 @@ fn Demo() -> Element {
         Tabs {
             value: section(),
             onchange: move |next| section.set(next),
-            label: |section: Section| -> OptionLabel {
+            option_label: |section: Section| -> OptionLabel {
                 match section {
                     Section::Account => "Konto".into(),
                     Section::Admin => "Verwaltung".into(),
@@ -121,7 +121,7 @@ fn Demo() -> Element {
         Tabs {
             value: section(),
             onchange: move |next| section.set(next),
-            label: |section: Section| OptionLabel::rich(
+            option_label: |section: Section| OptionLabel::rich(
                 section.label(),
                 rsx! {
                     Icon { variant: "transparent", size: "sm", FileIcon {} }
@@ -137,7 +137,7 @@ fn Demo() -> Element {
 `FileIcon` there is your own icon component - any `svg` will do; `Icon` is what
 sizes it.
 
-`tabs` narrows the strip to a subset of the enum's variants, and `disabled` lists
+`tabs` narrows the strip to a subset of the enum's variants, and `disabled_options` lists
 tabs that render but cannot be picked.
 
 ## Accessibility
@@ -159,8 +159,8 @@ draws is what a screen reader cannot use, and that name becomes the tab's
 | `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
 | `panel` | `Callback<T, Element>` | - | The body of the selected tab. Called for `value` only, so the other panels cost nothing. |
 | `tabs` | `Vec<T>` | `T::options()` | The tabs to show. |
-| `label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
-| `disabled` | `Vec<T>` | - | Tabs that render but cannot be picked. |
+| `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
+| `disabled_options` | `Vec<T>` | - | Tabs that render but cannot be picked. |
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |

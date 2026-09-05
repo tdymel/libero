@@ -110,7 +110,7 @@ pub fn DocPage(
                     onchange: move |next| tab.set(next),
                     size: "lg",
                     full_width: true,
-                    label: |selected: DocTab| OptionLabel::rich(
+                    option_label: |selected: DocTab| OptionLabel::rich(
                         selected.label(),
                         rsx! {
                             Icon { variant: "transparent", size: "md",

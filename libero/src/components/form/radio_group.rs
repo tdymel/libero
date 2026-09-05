@@ -33,14 +33,21 @@ fn focus_option(root: &ElementHandle, index: usize) {
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
 }
 
-/// The next selectable option in `step`'s direction, wrapping. `None` when the
-/// group holds nothing to move to.
-fn neighbour(count: usize, current: usize, step: isize) -> Option<usize> {
+/// The next option in `step`'s direction that can be picked, wrapping and
+/// stepping over the disabled ones. `None` when nothing else can be picked.
+fn neighbour(disabled: &[bool], current: usize, step: isize) -> Option<usize> {
+    let count = disabled.len() as isize;
     if count == 0 {
         return None;
     }
-    let count = count as isize;
-    Some((((current as isize + step) % count + count) % count) as usize)
+    let mut index = current as isize;
+    for _ in 0..count {
+        index = ((index + step) % count + count) % count;
+        if !disabled[index as usize] {
+            return Some(index as usize);
+        }
+    }
+    None
 }
 
 field_props! {
@@ -74,6 +81,10 @@ field_props! {
         /// makes a `Card` option worth its surface.
         #[props(default)]
         option_description: Option<Callback<T, String>>,
+        /// Options that render but cannot be picked. `disabled` disables all
+        /// of them.
+        #[props(default)]
+        disabled_options: Vec<T>,
         /// `Card` draws every option as a bordered surface that is its own
         /// hit area. A row of cards stretches them to one height.
         #[props(default, into)]
@@ -177,12 +188,21 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         })
     };
 
+    let disabled_options: Vec<bool> = values
+        .iter()
+        .map(|value| props.disabled_options.contains(value))
+        .collect();
     // One tab stop for the whole group: the selected option, or the first one
-    // when nothing is selected yet. Arrow keys move between them from there.
-    let tab_stop = selected.unwrap_or(0);
-    let count = values.len();
+    // that can be picked. A disabled input takes no focus, so a selected
+    // option the caller has disabled cannot hold the stop - the group would
+    // drop out of the Tab order. Arrow keys move between them from there.
+    let tab_stop = selected
+        .filter(|&index| !disabled_options[index])
+        .or_else(|| disabled_options.iter().position(|off| !off))
+        .unwrap_or(0);
 
     let arrows = {
+        let disabled_options = disabled_options.clone();
         move |event: Event<KeyboardData>| {
             if disabled {
                 return;
@@ -201,7 +221,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             if readonly {
                 return;
             }
-            let Some(next) = neighbour(count, tab_stop, step) else {
+            let Some(next) = neighbour(&disabled_options, tab_stop, step) else {
                 return;
             };
             pick.call(next);
@@ -241,7 +261,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 variant,
                 color: color.clone(),
                 checked: selected == Some(index),
-                disabled,
+                disabled: disabled || disabled_options[index],
                 readonly,
                 tab_stop: index == tab_stop,
                 pick,

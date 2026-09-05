@@ -19,7 +19,7 @@ enum Section {
 // snippet: after SECTION_ENUM
 // snippet: let mut section = use_signal(|| Section::Account);
 // snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
-const RENAMED: &str = r#"label: |section: Section| -> OptionLabel {
+const RENAMED: &str = r#"option_label: |section: Section| -> OptionLabel {
     match section {
         Section::Account => "Konto".into(),
         Section::Admin => "Verwaltung".into(),
@@ -33,7 +33,7 @@ const RENAMED: &str = r#"label: |section: Section| -> OptionLabel {
 // snippet: item #[component] fn FileIcon() -> Element { rsx! {} }
 // snippet: let mut section = use_signal(|| Section::Account);
 // snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
-const RICH: &str = r#"label: |section: Section| OptionLabel::rich(
+const RICH: &str = r#"option_label: |section: Section| OptionLabel::rich(
     section.label(),
     rsx! {
         Icon { variant: "transparent", size: "sm", FileIcon {} }
@@ -82,10 +82,10 @@ pub fn TabsPage() -> Element {
                     prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
                     prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Called for `value` only, so the other panels cost nothing."),
                     prop("tabs", "Vec<T>").default("T::options()").doc("The tabs to show."),
-                    prop("label", "Callback<T, OptionLabel>")
+                    prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed."),
-                    prop("disabled", "Vec<T>").doc("Tabs that render but cannot be picked."),
+                    prop("disabled_options", "Vec<T>").doc("Tabs that render but cannot be picked."),
                     prop("size", "Size").default("md").doc("Tab strip size."),
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
@@ -108,7 +108,7 @@ pub fn TabsPage() -> Element {
                     "all; the others cost nothing until they are picked."
                 }
                 Text {
-                    Code { source: "label" }
+                    Code { source: "option_label" }
                     " overrides what the derive named a tab, and it runs during render - so it "
                     "can read a locale from a signal or from context, and the strip repaints when "
                     "that changes. Return a string to rename a tab, or "
@@ -149,7 +149,7 @@ pub fn TabsPage() -> Element {
                         },
                         size: values.str("size"),
                         full_width: values.str("full_width") == "true",
-                        label: match values.str("labels").as_str() {
+                        option_label: match values.str("labels").as_str() {
                             "renamed" => Some(Callback::new(renamed)),
                             "rich" => Some(Callback::new(rich)),
                             _ => None,

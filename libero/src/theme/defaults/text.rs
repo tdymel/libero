@@ -12,7 +12,7 @@ pub const TEXT_LETTER_SPACING: SizeCss = SizeCss::new("--lsx-text-letter-spacing
 pub const TEXT_LINE_HEIGHT: SizeCss = SizeCss::new("--lsx-text-line-height-");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct TextSize {
+pub struct TextSizeLevel {
     pub font_weight: &'static str,
     pub font_size: &'static str, // in rem
     pub letter_spacing: &'static str,
@@ -22,44 +22,44 @@ pub struct TextSize {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextDefaults {
     pub font_family: &'static str,
-    pub sizes: Sizes<TextSize>,
+    pub sizes: Sizes<TextSizeLevel>,
 }
 
 impl TextDefaults {
     pub const DEFAULT: Self = Self {
         font_family: SANS_FONT_FAMILY,
         sizes: Sizes::new(
-            TextSize {
+            TextSizeLevel {
                 font_weight: "400",
                 font_size: "0.75rem",
                 letter_spacing: "0em",
                 line_height: "1.4",
             }, // xs
-            TextSize {
+            TextSizeLevel {
                 font_weight: "400",
                 font_size: "0.875rem",
                 letter_spacing: "0em",
                 line_height: "1.45",
             }, // sm
-            TextSize {
+            TextSizeLevel {
                 font_weight: "400",
                 font_size: "1rem",
                 letter_spacing: "0em",
                 line_height: "1.5",
             }, // md (default)
-            TextSize {
+            TextSizeLevel {
                 font_weight: "400",
                 font_size: "1.125rem",
                 letter_spacing: "0em",
                 line_height: "1.55",
             }, // lg
-            TextSize {
+            TextSizeLevel {
                 font_weight: "400",
                 font_size: "1.25rem",
                 letter_spacing: "0em",
                 line_height: "1.6",
             }, // xl
-            TextSize {
+            TextSizeLevel {
                 font_weight: "400",
                 font_size: "1.375rem",
                 letter_spacing: "0em",

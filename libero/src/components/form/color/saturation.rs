@@ -120,7 +120,7 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
 
     let drag = use_drag(DragOptions {
         capture: panel_element,
-        on_start: Callback::new(move |event: DragStart| {
+        onstart: Callback::new(move |event: DragStart| {
             if !interactive {
                 event.cancel.call(());
                 return;
@@ -149,12 +149,12 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
                 }
             });
         }),
-        on_move: Callback::new(move |event: DragMove| {
+        onmove: Callback::new(move |event: DragMove| {
             if let Some(point) = at.call((event.client.x, event.client.y)) {
                 slide.call(point);
             }
         }),
-        on_end: Callback::new(move |_| {
+        onend: Callback::new(move |_| {
             emit.call(SliderChangeEvent::End(latest.get()));
         }),
     });

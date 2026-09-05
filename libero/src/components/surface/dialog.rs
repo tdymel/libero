@@ -54,7 +54,10 @@ fn dialog_variables(props: &DialogProps) -> Variables {
     variables()
         .with(
             DIALOG_RADIUS_VAR,
-            props.radius.resolve(Some(SizeCss::RADIUS)),
+            props
+                .radius
+                .as_ref()
+                .map(|&radius| SizeCss::RADIUS.value(radius)),
         )
         .with(
             DIALOG_SIZE.override_var(),
@@ -77,7 +80,7 @@ base_props! {
         #[props(default, into)]
         close_label: Option<String>,
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         /// Layered onto Dialog's own - e.g. `Drawer`'s anchor/size vars.

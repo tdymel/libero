@@ -76,7 +76,7 @@ fn dismissing_a_modal_settles_its_opening_with_no_result() {
             let mut outcome = outcome;
             modal
                 .open()
-                .on_result(move |result| outcome.set(Some(result)));
+                .onresult(move |result| outcome.set(Some(result)));
             modal.close();
         });
 

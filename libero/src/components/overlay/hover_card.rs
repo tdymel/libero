@@ -67,14 +67,14 @@ base_props! {
         /// Forces the card open or closed; `None` leaves it to hover and
         /// focus. A card forced open cannot be dismissed.
         #[props(default)]
-        opened: Option<bool>,
+        open: Option<bool>,
         #[props(default, into)]
         radius: Input<Size>,
         #[props(default, into)]
         shadow: Input<Size>,
         /// Renders `children` bare - no wrapper, no card.
         #[props(default)]
-        disabled: bool,
+        disabled: Option<bool>,
         /// The trigger. `class`/`sx`/`states`/`attributes` land on the *card*.
         children: Element,
     }
@@ -102,7 +102,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // one the pointer is still over.
     let mut hovered = use_signal(|| false);
     let mut focused = use_signal(|| false);
-    let open = !props.disabled && props.opened.unwrap_or(hovered() || focused());
+    let open = !props.disabled.unwrap_or(false) && props.open.unwrap_or(hovered() || focused());
 
     let anchor = use_element();
     let popover = use_popover(
@@ -132,7 +132,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     // focus leaving must clear only `focused`. A card forced open takes no
     // Escape, so it never sits on the Escape stack above a `Modal` it cannot
     // leave.
-    let dismissible = props.opened.is_none();
+    let dismissible = props.open.is_none();
     let dismiss = use_dismiss(
         anchor,
         floating,
@@ -239,7 +239,7 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
         .style(popover.style())
         .prepare();
 
-    if props.disabled {
+    if props.disabled.unwrap_or(false) {
         return props.children;
     }
 

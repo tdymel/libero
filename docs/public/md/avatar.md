@@ -161,8 +161,8 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 |---|---|---|---|
 | `avatar.size` | `Size` | `md` | Default `size` when the prop is omitted. |
 | `avatar.radius` | `&'static str` | `9999px` | CSS length, not a `Size`: the default is a circle, which is off the radius scale. |
-| `avatar.size_scale` | `Sizes<u16>` | `20, 28, 38, 56, 84, 120` | The square's side, in px, per size step. |
-| `avatar.font_size` | `Sizes<u16>` | `8, 11, 15, 22, 34, 48` | Placeholder font size, derived from the square at `side / 2.5`. |
+| `avatar.sizes` | `Sizes<u16>` | `20, 28, 38, 56, 84, 120` | The square's side, in px, per size step. |
+| `avatar.font_sizes` | `Sizes<u16>` | `8, 11, 15, 22, 34, 48` | Placeholder font size, derived from the square at `side / 2.5`. |
 | `avatar_group.spacing` | `Size` | `sm` | How far each circle is pulled over the one before it. |
 | `avatar_group.ring` | `&'static str` | `2px` | Width of the ring in the page colour that separates two overlapping members. |
 

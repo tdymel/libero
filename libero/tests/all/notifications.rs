@@ -17,7 +17,7 @@ use libero::{
         NotificationOptions, NotificationScope, Notifications, Placement, use_notifications,
         use_notifications_with,
     },
-    theme::{AutoClose, NotificationDefaults, Theme},
+    theme::{AutoClose, NotificationsDefaults, Theme},
 };
 
 /// Each `<li>` in `html`, open tag to close tag.
@@ -117,7 +117,7 @@ fn the_options_pick_the_stack_the_region_and_the_close_button() {
             notify.show_with(
                 "Connection lost",
                 NotificationOptions {
-                    position: Some(Placement::TopStart),
+                    placement: Some(Placement::TopStart),
                     live: NotificationLive::Assertive,
                     closable: false,
                     ..Default::default()
@@ -273,10 +273,10 @@ fn a_store_write_redraws_only_the_notification_it_concerns() {
 
 /// Short enough that a test waits milliseconds, not seconds.
 static FAST: Theme = Theme {
-    notification: NotificationDefaults {
+    notifications: NotificationsDefaults {
         auto_close: AutoClose::After(30),
         transition_duration: 30,
-        ..Theme::DEFAULT.notification
+        ..Theme::DEFAULT.notifications
     },
     ..Theme::DEFAULT
 };

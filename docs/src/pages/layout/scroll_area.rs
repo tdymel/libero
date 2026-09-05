@@ -45,9 +45,9 @@ const CONTENT: &str = r#"Box {
 /// `position` and `edge` are declared in `PREAMBLE`.
 const FIXED: [&str; 4] = [
     "handle: area",
-    "on_scroll: move |event: ScrollPositionEvent| position.set(event)",
-    r#"on_top_reached: move |_| edge.set("top")"#,
-    r#"on_bottom_reached: move |_| edge.set("bottom")"#,
+    "onscroll: move |event: ScrollPositionEvent| position.set(event)",
+    r#"ontopreached: move |_| edge.set("top")"#,
+    r#"onbottomreached: move |_| edge.set("bottom")"#,
 ];
 
 /// A raw `{event:?}` prints an unrounded `f64` and reflows the row on every
@@ -122,12 +122,12 @@ pub fn ScrollAreaPage() -> Element {
                 prop("focusable", "bool")
                     .default("false")
                     .doc("Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed."),
-                prop("on_scroll", "EventHandler<ScrollPositionEvent>")
+                prop("onscroll", "EventHandler<ScrollPositionEvent>")
                     .doc("Fires on every scroll tick with the position as a percent of each axis's scrollable range."),
-                prop("on_top_reached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
-                prop("on_bottom_reached", "EventHandler<()>").doc("Fires once when the bottom edge is reached."),
-                prop("on_left_reached", "EventHandler<()>").doc("Fires once when the left edge is reached."),
-                prop("on_right_reached", "EventHandler<()>").doc("Fires once when the right edge is reached."),
+                prop("ontopreached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
+                prop("onbottomreached", "EventHandler<()>").doc("Fires once when the bottom edge is reached."),
+                prop("onleftreached", "EventHandler<()>").doc("Fires once when the left edge is reached."),
+                prop("onrightreached", "EventHandler<()>").doc("Fires once when the right edge is reached."),
                 prop("children", "Element").doc("The scrollable content."),
             ]), props("Virtualize", vec![
                 prop("count", "usize")
@@ -143,7 +143,7 @@ pub fn ScrollAreaPage() -> Element {
             lead: rsx! {
                 Text {
                     "Scrolls its content, filling the parent by default. "
-                    Code { source: "on_scroll" }
+                    Code { source: "onscroll" }
                     " reports the position as a percent of each axis - "
                     Code { source: "Start" }
                     "/"
@@ -157,13 +157,13 @@ pub fn ScrollAreaPage() -> Element {
                     " scroll it to a percent, re-applied only when the value changes. The buttons use "
                     Code { source: "let area = use_scroll_area();" }
                     " instead, a handle whose every call scrolls, in percent or in px. Each edge has its own event; the demo wires "
-                    Code { source: "on_top_reached" }
+                    Code { source: "ontopreached" }
                     " and "
-                    Code { source: "on_bottom_reached" }
+                    Code { source: "onbottomreached" }
                     ", and "
-                    Code { source: "on_left_reached" }
+                    Code { source: "onleftreached" }
                     "/"
-                    Code { source: "on_right_reached" }
+                    Code { source: "onrightreached" }
                     " work the same way."
                 }
             },
@@ -213,11 +213,11 @@ pub fn ScrollAreaPage() -> Element {
                                     color => Input::from(color),
                                 },
                                 handle: area,
-                                on_scroll: move |event: ScrollPositionEvent| {
+                                onscroll: move |event: ScrollPositionEvent| {
                                     position.set(event)
                                 },
-                                on_top_reached: move |_| edge.set("top"),
-                                on_bottom_reached: move |_| edge.set("bottom"),
+                                ontopreached: move |_| edge.set("top"),
+                                onbottomreached: move |_| edge.set("bottom"),
                                 if values.str("virtualize") == "true" {
                                     List {
                                         Virtualize {

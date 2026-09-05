@@ -24,7 +24,7 @@ use libero::components::{MenuEntry, MenuItem, Menubar, MenubarMenu};
 
 #[component]
 fn Demo() -> Element {
-    let item = |name: &str| -> MenuEntry { MenuItem::new(name).on_select(|_| {}).into() };
+    let item = |name: &str| -> MenuEntry { MenuItem::new(name).onselect(|_| {}).into() };
     let menus = vec![
         MenubarMenu::new("File", vec![
             item("New"),

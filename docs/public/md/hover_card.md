@@ -55,7 +55,7 @@ fn Demo() -> Element {
 | `align` | `Align` | `Start` | Where the card lines up along that side. |
 | `open_delay` | `u32` | `0` | Milliseconds the pointer must rest on the trigger before the card opens. |
 | `close_delay` | `u32` | `150` | Milliseconds the card waits after the pointer leaves - also the time the pointer has to cross into the card, so `0` makes it unreachable by pointer. |
-| `opened` | `Option<bool>` | `None` | Forces the card open or closed. A card forced open cannot be dismissed. |
+| `open` | `Option<bool>` | `None` | Forces the card open or closed. A card forced open cannot be dismissed. |
 | `radius` | `Size` | `sm` | Corner radius. |
 | `shadow` | `Size` | `md` | Elevation. |
 | `disabled` | `bool` | `false` | Renders `children` bare. |

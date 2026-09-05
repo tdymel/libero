@@ -164,7 +164,7 @@ fn auto_close_code(value: &str) -> String {
 fn wrap_demo(values: &DemoValues, _: &str) -> String {
     let contained = values.str("contained") == "true";
     let template = values.str("template");
-    let position = values.str("position");
+    let position = values.str("placement");
     let auto_close = values.str("auto_close");
     let upload = template == "upload";
 
@@ -174,7 +174,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     if contained {
         let mut fields = vec!["contained: true".to_string()];
         if position != "bottom-end" {
-            fields.push(format!("position: {position:?}"));
+            fields.push(format!("placement: {position:?}"));
         }
         let limit = values.str("limit");
         if limit != "5" {
@@ -197,7 +197,7 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
     } else {
         host.push_str(
             "// App-wide, `contained` is left out: one host near the root is the\n\
-             // outlet for every handle below it, and its `position`, `limit` and\n\
+             // outlet for every handle below it, and its `placement`, `limit` and\n\
              // `auto_close` are the defaults for every notification.\n\
              LiberoProvider {\n    \
                  Router::<Route> {}\n    \
@@ -240,11 +240,11 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
         )
     };
 
-    // The options. A contained host answers `position` and `auto_close`, so
+    // The options. A contained host answers `placement` and `auto_close`, so
     // only the app-wide case names them per notification.
     let mut options = Vec::new();
     if !contained && position != "bottom-end" {
-        options.push(format!("position: Some({position:?}.into())"));
+        options.push(format!("placement: Some({position:?}.into())"));
     }
     if upload {
         options.push("// A progress notification waits for its own end.".to_string());
@@ -345,7 +345,7 @@ fn Examples(
     let placement = Placement::from(position.as_str());
     let auto_close = auto_close_of(&auto_close);
     let options = move |sticky: bool| NotificationOptions {
-        position: (!host_answers).then_some(placement),
+        placement: (!host_answers).then_some(placement),
         auto_close: match sticky {
             true => Some(AutoClose::Never),
             false => (!host_answers).then_some(auto_close),
@@ -428,7 +428,7 @@ fn Examples(
                 } else {
                     "No host here: contained is left out, so this went to the one "
                     "app-wide host this site renders near the root - look at the edge of "
-                    "the window. That host answers position, limit and auto_close for "
+                    "the window. That host answers placement, limit and auto_close for "
                     "every handle; this notification names its own."
                 }
             }
@@ -445,7 +445,7 @@ pub fn NotificationsPage() -> Element {
             markdown: "/md/notifications.md",
             properties: vec![
                 props("Notifications", vec![
-                    prop("position", "Input<Placement>")
+                    prop("placement", "Input<Placement>")
                         .default("theme: bottom-end")
                         .doc("The stack a notification joins unless it names its own."),
                     prop("limit", "Option<usize>")
@@ -461,7 +461,7 @@ pub fn NotificationsPage() -> Element {
                         .doc("Rendered inside a contained host, before its stacks."),
                 ]),
                 props("NotificationOptions", vec![
-                    prop("position", "Option<Placement>").doc("The stack it joins; `None` is the host's."),
+                    prop("placement", "Option<Placement>").doc("The stack it joins; `None` is the host's."),
                     prop("auto_close", "Option<AutoClose>").doc("`None` is the host's."),
                     prop("closable", "bool").default("true").doc("Whether the template draws a close control."),
                     prop("live", "NotificationLive").default("Polite").doc("Which live region announces it."),
@@ -495,7 +495,7 @@ pub fn NotificationsPage() -> Element {
                 component: "Notifications",
                 children_text: "",
                 controls: vec![
-                    Control::select("position", [
+                    Control::select("placement", [
                         "top-start",
                         "top-center",
                         "top-end",
@@ -548,7 +548,7 @@ pub fn NotificationsPage() -> Element {
                             closable: values.str("closable") == "true",
                             live: values.str("live"),
                             template: values.str("template"),
-                            position: values.str("position"),
+                            position: values.str("placement"),
                             auto_close: values.str("auto_close"),
                             contained,
                         }
@@ -558,7 +558,7 @@ pub fn NotificationsPage() -> Element {
                             if contained {
                                 Notifications {
                                     contained: true,
-                                    position: values.str("position"),
+                                    placement: values.str("placement"),
                                     limit: values.str("limit").parse::<usize>().ok(),
                                     auto_close: auto_close_of(&values.str("auto_close")),
                                     {examples}

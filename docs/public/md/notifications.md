@@ -47,7 +47,7 @@ fn SaveButton() -> Element {
                     ..Default::default()
                 });
                 notify.show_with("Copied", NotificationOptions {
-                    position: Some(Placement::TopCenter),
+                    placement: Some(Placement::TopCenter),
                     auto_close: Some(AutoClose::After(2000)),
                     ..Default::default()
                 });
@@ -72,7 +72,7 @@ created below it a queue of their own: a `use_notifications()` inside it shows
 its notifications there, not in the app's host. The docs preview is one.
 
 ```rust,ignore
-Notifications { contained: true, position: "top-end",
+Notifications { contained: true, placement: "top-end",
     SaveButton {} // its `use_notifications()` shows them in this box
 }
 ```
@@ -196,7 +196,7 @@ pub fn use_notifications_with<T: 'static>(
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `position` | `Option<Placement>` | `None` | The stack. `None` is the host's `position`. |
+| `placement` | `Option<Placement>` | `None` | The stack. `None` is the host's `placement`. |
 | `auto_close` | `Option<AutoClose>` | `None` | `None` is the host's `auto_close`. |
 | `closable` | `bool` | `true` | Whether the template draws a close control. |
 | `live` | `NotificationLive` | `Polite` | `Polite` or `Assertive`: which live region announces it. |
@@ -207,7 +207,7 @@ pub fn use_notifications_with<T: 'static>(
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `position` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
+| `placement` | `Placement` | `bottom-end` | The stack a notification joins unless it names its own. |
 | `limit` | `Option<usize>` | `5` | Shown at once per stack. |
 | `auto_close` | `Option<AutoClose>` | `After(4000)` | Unless a notification says otherwise. |
 | `contained` | `bool` | `false` | Draw the stacks in this host's own box, and give the handles below it a queue of their own. Read once, at mount. |
@@ -215,11 +215,11 @@ pub fn use_notifications_with<T: 'static>(
 
 ## Theme defaults
 
-`NotificationDefaults` on the theme, as `notification`.
+`NotificationsDefaults` on the theme, as `notifications`.
 
 | Field | Type | Description |
 |---|---|---|
-| `position` | `Placement` | `BottomEnd`. |
+| `placement` | `Placement` | `BottomEnd`. |
 | `auto_close` | `AutoClose` | `After(4000)`. |
 | `limit` | `usize` | `5`. |
 | `width` | `&'static str` | `360px`, capped at the viewport's (or the contained host's) width minus both offsets. |
@@ -235,10 +235,10 @@ dropdowns opened inside them.
 
 | Variable | Description |
 |---|---|
-| `--lsx-notification-width` | From `NotificationDefaults::width`. |
-| `--lsx-notification-gap` | From `NotificationDefaults::gap`. |
-| `--lsx-notification-offset` | From `NotificationDefaults::offset`. |
-| `--lsx-notification-transition` | From `NotificationDefaults::transition_duration`. |
+| `--lsx-notification-width` | From `NotificationsDefaults::width`. |
+| `--lsx-notification-gap` | From `NotificationsDefaults::gap`. |
+| `--lsx-notification-offset` | From `NotificationsDefaults::offset`. |
+| `--lsx-notification-transition` | From `NotificationsDefaults::transition_duration`. |
 | `--lsx-z-index-notification` | From `ZIndexDefaults::notification`. |
 
 ## Data attributes

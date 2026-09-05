@@ -31,7 +31,7 @@ fn tooltip_wraps_its_trigger_and_labels_it() {
 
     assert_eq!(bubble["role"], "tooltip");
     assert_eq!(bubble["id"], "copy-tip");
-    assert_eq!(bubble["data-state"], "placement-top size-sm");
+    assert_eq!(bubble["data-state"], "side-top size-sm");
     assert!(wrapper["style"].contains("--lsx-tooltip-open-delay:300ms;"));
     assert!(wrapper["style"].contains("--lsx-tooltip-gap:var(--lsx-spacing-sm);"));
     // The trigger stays a real button inside the wrapper.
@@ -49,14 +49,14 @@ fn tooltip_wraps_its_trigger_and_labels_it() {
 }
 
 /// The whole component is these two rules: hover/focus opens the bubble, and
-/// an explicit `opened` has to be able to beat them at equal specificity - so
+/// an explicit `open` has to be able to beat them at equal specificity - so
 /// it must come *later* in the sheet.
 #[test]
 fn tooltip_opens_on_hover_and_a_controlled_state_wins_by_source_order() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Tooltip { label: rsx! { "t" }, opened: true, "x" }
+                Tooltip { label: rsx! { "t" }, open: true, "x" }
             }
         }
     }
@@ -73,17 +73,14 @@ fn tooltip_opens_on_hover_and_a_controlled_state_wins_by_source_order() {
     let focus = html
         .find(&format!(".{wrapper} > :focus-visible ~ [role=\"tooltip\"]"))
         .expect("a keyboard-focus rule");
-    let opened = html
+    let open = html
         .find(&format!(
-            ".{wrapper}[data-state~=\"opened\"] > [role=\"tooltip\"]"
+            ".{wrapper}[data-state~=\"open\"] > [role=\"tooltip\"]"
         ))
         .expect("an opened rule");
 
-    assert!(
-        opened > hover && opened > focus,
-        "the override must sort last"
-    );
-    assert_eq!(attributes_of(&html, "span")["data-state"], "opened");
+    assert!(open > hover && open > focus, "the override must sort last");
+    assert_eq!(attributes_of(&html, "span")["data-state"], "open");
 }
 
 /// Todo 237: a hidden bubble is still an absolutely positioned box, and that

@@ -181,7 +181,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let required = props.required.unwrap_or(false);
 
     let state = use_combobox();
-    let opened = state.opened() && !disabled && !readonly;
+    let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
     // The query lives here, beside the open and highlight state. The skins
@@ -223,14 +223,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .position(|index| props.selected.get(*index).copied().unwrap_or(false))
         .unwrap_or(0);
     let open = move |next: bool| {
-        if next && !state.opened() {
+        if next && !state.is_open() {
             state.set_active(Some(first_selected));
             // One `aria-activedescendant`, one owner: the open list takes it.
             // A local copy, so `open` stays `Fn` for the callers that share it.
             let mut cursor = cursor;
             cursor.set(None);
         }
-        state.set_opened(next);
+        state.set_open(next);
     };
 
     use_refocus_on_close(opened, searchable, trigger_element, query);
@@ -376,7 +376,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .attr("tabindex", (!disabled).then_some("0"))
         .event("onclick", move |_: MouseEvent| {
             if !disabled && !readonly {
-                open(!state.opened());
+                open(!state.is_open());
             }
         })
         // Two keyboards on one element. The chips answer Left, Right and
@@ -416,11 +416,11 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                 // `ComboboxCore` opens on ArrowDown; a select-only combobox
                 // opens on Enter and Space as well. Enter on an *open* list is
                 // the core's pick.
-                Key::Enter if !state.opened() => {
+                Key::Enter if !state.is_open() => {
                     event.prevent_default();
                     open(true);
                 }
-                Key::Character(ref key) if key == " " && !state.opened() => {
+                Key::Character(ref key) if key == " " && !state.is_open() => {
                     event.prevent_default();
                     open(true);
                 }
