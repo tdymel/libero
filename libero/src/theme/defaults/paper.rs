@@ -54,17 +54,24 @@ impl PaperDefaults {
         sx().box_shadow(SizeCss::SHADOW.value(shadow))
     }
 
+    /// The surface colour, for a component that paints itself as one without
+    /// being a `Paper` - a field frame, `Button`'s `Elevated` arm. Always take
+    /// this, never `background(PAPER_BACKGROUND.value())` alone: the var is
+    /// opaque to `sx`, so the `--lsx-focus-contrast` that `background("white")`
+    /// used to publish for free has to be declared by hand, or every focus
+    /// ring on the surface falls back to the primary shade.
+    pub(crate) fn background_sx() -> Sx {
+        sx().background(PAPER_BACKGROUND.value()).var(
+            CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+            PAPER_CONTRAST.value(),
+        )
+    }
+
     /// The base declarations name the themed vars, so a surface that sets no
     /// `radius`/`shadow` carries no `data-state` at all; the folds below only
     /// come into play once a caller names a step.
     pub fn theme_vars() -> Sx {
-        sx().background(PAPER_BACKGROUND.value())
-            // What `background("white")` used to publish for free, before the
-            // colour moved behind a var.
-            .var(
-                CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
-                PAPER_CONTRAST.value(),
-            )
+        Self::background_sx()
             .border_radius(PAPER_RADIUS.value())
             .box_shadow(PAPER_SHADOW.value())
             .per_radius(Self::radius_sx)

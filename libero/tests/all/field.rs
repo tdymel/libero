@@ -1106,3 +1106,43 @@ fn a_select_without_a_name_emits_no_hidden_input() {
 
     assert!(!body(&render(app)).contains(r#"type="hidden""#));
 }
+
+/// The frame paints the surface colour through a var, which `sx` cannot infer
+/// a focus contrast from, so the frame has to publish its own - or its ring
+/// falls back to the primary shade. And the var it publishes must have a
+/// referent, or the ring is not recoloured but erased.
+#[test]
+fn the_frame_reads_the_surface_and_publishes_its_focus_contrast() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { TextField { label: "Name" } }
+        }
+    }
+
+    let html = render(app);
+    let markup = body(&html);
+    let input = markup.find("<input").expect("the control rendered");
+    let frame = markup[..input].rfind("<div").expect("the frame");
+    let class = attributes_of(&markup[frame..], "div")["class"]
+        .split_whitespace()
+        .next()
+        .expect("a framework class")
+        .to_string();
+
+    let start = html
+        .find(&format!(".{class}{{"))
+        .expect("the frame's base rule");
+    let rule = &html[start..start + html[start..].find('}').expect("a closed rule")];
+    assert!(
+        rule.contains("background:var(--lsx-paper-background);"),
+        "{rule}"
+    );
+    assert!(
+        rule.contains("--lsx-focus-contrast:var(--lsx-paper-contrast);"),
+        "{rule}"
+    );
+    assert!(
+        html.contains("--lsx-paper-contrast:"),
+        "no referent declared"
+    );
+}

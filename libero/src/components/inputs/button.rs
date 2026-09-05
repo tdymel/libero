@@ -13,7 +13,10 @@ use crate::{
     },
     hooks::{ripple_sx, use_cache, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
-    theme::{BUTTON_HEIGHT, ButtonDefaults, ColorShade, CssVar, LOADER_SIZE, Size, SizeCss},
+    theme::{
+        BUTTON_HEIGHT, ButtonDefaults, ColorShade, CssVar, LOADER_SIZE, PAPER_BACKGROUND,
+        PaperDefaults, Size, SizeCss,
+    },
     utils::warn,
 };
 
@@ -90,8 +93,10 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
         // The *surface*, not a tint of the colour - M3's elevated button is
         // separated from the page by its shadow alone, and the label carries
         // the accent. An opaque background is what the shadow needs to sit on.
+        // The shadow stays M3's own pair of steps rather than Paper's resting
+        // one: the hover lift is a fixed step above it.
         Variant::Elevated => sx()
-            .background("white")
+            .and(PaperDefaults::background_sx())
             .border_color("transparent")
             .color(color.value())
             .box_shadow(SizeCss::SHADOW.value(ELEVATED_REST)),
@@ -114,7 +119,7 @@ pub(crate) fn interactive_variant_sx(variant: Variant, vars: &VariantVars, hover
 
     let fallback = match variant {
         Variant::Filled | Variant::Tonal => color.value(),
-        Variant::Elevated => "white".to_string(),
+        Variant::Elevated => PAPER_BACKGROUND.value(),
         Variant::Outlined | Variant::Standard => "transparent".to_string(),
     };
 

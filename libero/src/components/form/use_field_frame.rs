@@ -7,7 +7,7 @@ use crate::{
         layout::{BoxStyle, use_box},
     },
     sx::{StaticSx, Sx, sx},
-    theme::{FieldDefaults, SizeCss},
+    theme::{FieldDefaults, PaperDefaults, SizeCss},
 };
 
 /// The bordered box a control sits in. Shared by every framed field, so the
@@ -21,7 +21,9 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .border_style("solid")
         .border_width("1px")
         .border_color("grey.5")
-        .background("white")
+        // The surface's own colour rather than a control token of its own: a
+        // field sits on a surface and matches it until a theme says otherwise.
+        .and(PaperDefaults::background_sx())
         .color("black")
         .focus_within(sx().border_color("primary.6"))
         // The ring is the frame's, because focus lands on a child - the

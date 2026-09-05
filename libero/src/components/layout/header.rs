@@ -9,7 +9,10 @@ use crate::{
     },
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ColorShade, ColorValue, CssVar, HEADER_HEIGHT, NamedColorCss, Size, Z_INDEX_HEADER},
+    theme::{
+        ColorShade, ColorValue, CssVar, HEADER_HEIGHT, NamedColorCss, PAPER_BACKGROUND, Size,
+        Z_INDEX_HEADER,
+    },
 };
 
 str_enum! {
@@ -59,7 +62,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .height(HEADER_HEIGHT.overridable(Size::Md))
         .padding_left("md")
         .padding_right("md")
-        .background(HEADER_BACKGROUND_VAR.value_or("white"))
+        .background(HEADER_BACKGROUND_VAR.value_or(PAPER_BACKGROUND.value()))
         .color(HEADER_COLOR_VAR.value_or("inherit"))
         .border_bottom("1px solid")
         .border_bottom_color("grey.4")

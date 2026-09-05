@@ -139,3 +139,36 @@ fn a_button_defaults_to_type_button_and_yields_to_the_caller() {
         Some("submit")
     );
 }
+
+/// `Elevated` paints the surface colour through a var, which `sx` cannot
+/// infer a focus contrast from, so the arm publishes its own - and one with a
+/// declared referent, since a set var that resolves to nothing erases the
+/// ring rather than recolouring it.
+#[test]
+fn the_elevated_variant_reads_the_surface_and_publishes_its_focus_contrast() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { variant: "elevated", "Save" } }
+        }
+    }
+
+    let html = render(app);
+    let class = classes_of(&body(&html), "button")
+        .into_iter()
+        .next()
+        .expect("a framework class");
+
+    let selector = format!(r#".{class}[data-state~="elevated"]{{"#);
+    let start = html.find(&selector).expect("the elevated arm's rule");
+    let rule = &html[start..start + html[start..].find('}').expect("a closed rule")];
+    assert!(
+        rule.contains(
+            "background:var(--lsx-paper-background);--lsx-focus-contrast:var(--lsx-paper-contrast);"
+        ),
+        "{rule}"
+    );
+    assert!(
+        html.contains("--lsx-paper-contrast:"),
+        "no referent declared"
+    );
+}
