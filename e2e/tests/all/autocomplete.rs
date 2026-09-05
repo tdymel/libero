@@ -1,0 +1,157 @@
+//! `Autocomplete`: the combobox archetype, fully assembled.
+//!
+//! The pilot for the whole suite. It was chosen because it is **portaled** -
+//! its listbox renders at an outlet on the document root, so it is no
+//! descendant of its trigger. That breaks the obvious "snapshot the subtree"
+//! approach, and finding that out on component one rather than component twelve
+//! is the entire reason this component went first.
+//!
+//! The shape to copy for a new component: one `Suite` call for the generic
+//! battery, then hand-written tests only for what this component uniquely
+//! promises.
+
+use e2e::archetypes::Combobox;
+use e2e::browser::block_on;
+use e2e::passes::{contrast, dismissal, keyboard, live_region, motion};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
+
+const TRIGGER: &str = "[role=combobox]";
+const LISTBOX: &str = "[role=listbox]";
+const STATUS: &str = "[role=status]";
+const OPTION_COUNT: usize = 6;
+
+/// Contrast, focus rings, the accessibility tree and a clean console, at both
+/// viewports. Everything here is generic; nothing in it knows what a combobox
+/// is.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("autocomplete", "/autocomplete")
+        .focusable(TRIGGER)
+        .waive(contrast::TODO_297)
+        // The open state is the interesting one: a tree that is right closed
+        // and wrong open is the normal shape of these bugs.
+        .state(
+            "open",
+            &[Step::TabTo(TRIGGER), Step::Press(keyboard::ARROW_DOWN)],
+            LISTBOX,
+        )
+        .targets("[role=option]")
+        .run();
+}
+
+/// Keyboard, focus management and the aria contract, at both viewports.
+#[test]
+fn it_honours_the_combobox_contract() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/autocomplete", viewport).await.unwrap();
+
+            // The archetype tabs to the trigger itself, so reachability by
+            // keyboard is part of the contract rather than a precondition the
+            // caller has to remember.
+            Combobox {
+                trigger: TRIGGER,
+                option_count: OPTION_COUNT,
+                tab_budget: 10,
+            }
+            .assert_contract(&fixture.page)
+            .await
+            .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
+
+            fixture
+                .console
+                .assert_clean(&format!("the combobox contract at {}", viewport.name()))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// A dismissed listbox must not stay readable.
+///
+/// Nothing animates a popover today, so this passes trivially - which is the
+/// point of writing it now. The first animated dropdown inherits the assertion
+/// instead of inheriting a note in a brain file that somebody has to remember.
+#[test]
+fn a_dismissed_list_leaves_the_accessibility_tree() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete", Viewport::Desktop)
+            .await
+            .unwrap();
+
+        keyboard::tab_to(&fixture.page, TRIGGER, 10).await.unwrap();
+        keyboard::press(&fixture.page, keyboard::ARROW_DOWN)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, LISTBOX).await.unwrap();
+
+        keyboard::press(&fixture.page, keyboard::ESCAPE)
+            .await
+            .unwrap();
+        wait::for_hidden(&fixture.page, LISTBOX).await.unwrap();
+
+        dismissal::assert_gone_from_at(&fixture.page, LISTBOX)
+            .await
+            .expect("the dismissed listbox");
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The status region exists, is polite, and is mounted before it has anything
+/// to say.
+///
+/// That last part is the design: a region that mounts together with its text is
+/// skipped by some screen readers, so `ComboboxCore` keeps an always-mounted
+/// empty one (`codebase/components/combobox`). An assertion that the region
+/// merely exists while it is speaking would not catch a regression to the
+/// mount-with-text shape.
+#[test]
+fn its_status_region_is_mounted_and_silent_at_rest() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete", Viewport::Desktop)
+            .await
+            .unwrap();
+
+        live_region::assert_politeness(&fixture.page, STATUS, "polite")
+            .await
+            .expect("the status region");
+
+        let text = live_region::text_of(&fixture.page, STATUS).await.unwrap();
+        assert!(
+            text.trim().is_empty(),
+            "the status region should be silent at rest, but it says {text:?}"
+        );
+
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The list must open under `prefers-reduced-motion: reduce`.
+///
+/// A component that drives its own open state from a transition or animation
+/// event breaks here and nowhere else - `transitionend` is already known to be
+/// an unreliable finish signal (`codebase/components/collapse`).
+#[test]
+fn it_opens_with_reduced_motion() {
+    block_on(async {
+        let fixture = Fixture::open("/autocomplete", Viewport::Desktop)
+            .await
+            .unwrap();
+        motion::set_reduced_motion(&fixture.page, true)
+            .await
+            .unwrap();
+
+        keyboard::tab_to(&fixture.page, TRIGGER, 10).await.unwrap();
+        keyboard::press(&fixture.page, keyboard::ARROW_DOWN)
+            .await
+            .unwrap();
+
+        wait::for_visible(&fixture.page, LISTBOX)
+            .await
+            .expect("the list should open with reduced motion");
+
+        fixture.close().await.unwrap();
+    });
+}

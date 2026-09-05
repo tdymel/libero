@@ -1,0 +1,6 @@
+# Extracted from vendor/axe.zip by the runner on first use.
+vendor/axe.min.js
+vendor/LICENSE-MPL-2.0.txt
+
+# Snapshots insta has written but nobody has reviewed yet.
+*.snap.new

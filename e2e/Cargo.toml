@@ -1,0 +1,32 @@
+[package]
+name = "e2e"
+version = "0.1.0"
+edition = "2024"
+# Never published. It is a test harness, and it is excluded from the merge
+# gate (`cargo check --workspace --all-targets --exclude e2e`) so that adding
+# chromiumoxide and tokio here does not tax a command every developer runs
+# before every handback.
+publish = false
+
+[dependencies]
+# Raw CDP rather than a Playwright binding: every pass we need is a CDP domain
+# (`Input` for pointer, `Emulation` for reduced motion, `DOM` for the box
+# model, `Runtime`/`Log` for console, `Accessibility` for the tree), so there
+# is no capability cliff to discover halfway through. See
+# [[plans/13-e2e-pass/overview]] for the decision and what it costs us.
+chromiumoxide = "0.9"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "process", "net", "sync"] }
+futures = "0.3"
+anyhow = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Snapshot baselines for the accessibility tree. `cargo insta review` is the
+# accept-or-reject workflow. A normal dependency rather than a dev one so that
+# `Suite` can take a snapshot on a component's behalf - this whole crate is
+# test-only, so there is nothing to keep out of a release build.
+insta = "1.48"
+# Extracting the vendored axe archive. A crate rather than shelling out to
+# `unzip`, for the same reason the runner does its own HTTP instead of calling
+# `curl`: a harness that fails when a system binary is missing fails for a
+# reason that has nothing to do with the code under test.
+zip = { version = "2", default-features = false, features = ["deflate"] }

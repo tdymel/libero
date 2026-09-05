@@ -1,0 +1,4 @@
+[web.app]
+# `dx` concatenates its title into an existing <title>; naming it here keeps
+# the fixture pages from rendering as "e2e-fixturesdioxus | ⛺".
+title = "libero e2e fixtures"

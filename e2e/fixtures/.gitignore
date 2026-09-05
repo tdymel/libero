@@ -1,0 +1,3 @@
+# The fixture app builds into the workspace target dir; dx also writes a dist.
+dist
+.dioxus

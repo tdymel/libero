@@ -1,0 +1,19 @@
+---
+source: e2e/src/suite.rs
+description: tabs at desktop (second)
+expression: tree
+---
+tablist
+  tab "Account" [selected=false]
+    StaticText "Account"
+  tab "Billing" [selected]
+    StaticText "Billing"
+  tab "Admin" [selected=false]
+    StaticText "Admin"
+tabpanel "Billing"
+  paragraph
+    StaticText "panel for Billing"
+--> aria-controls [id="lsx-N-panel-1"]
+tabpanel "Billing"
+  paragraph
+    StaticText "panel for Billing"

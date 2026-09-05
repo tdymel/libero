@@ -1,0 +1,7 @@
+---
+source: e2e/src/suite.rs
+description: modal at desktop (open)
+expression: tree
+---
+button "Close editor"
+  StaticText "Close editor"

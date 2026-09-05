@@ -1,5 +1,5 @@
 [workspace]
-members = ["libero", "libero-macros", "docs"]
+members = ["libero", "libero-macros", "docs", "e2e", "e2e/fixtures"]
 exclude = [".dioxus-fork", ".dioxus-main", ".dioxus-active", ".blitz-fork"]
 resolver = "3"
 

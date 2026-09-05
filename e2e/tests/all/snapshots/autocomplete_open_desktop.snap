@@ -1,0 +1,25 @@
+---
+source: e2e/src/suite.rs
+description: autocomplete at desktop (open)
+expression: tree
+---
+LabelText
+  StaticText "City"
+generic
+  combobox "City" [expanded] [haspopup=listbox]
+    generic
+status [atomic] [live=polite]
+--> aria-controls [id="lsx-N-listbox"]
+listbox
+  option "Amsterdam" [selected]
+    StaticText "Amsterdam"
+  option "Berlin" [selected=false]
+    StaticText "Berlin"
+  option "Copenhagen" [selected=false]
+    StaticText "Copenhagen"
+  option "Dublin" [selected=false]
+    StaticText "Dublin"
+  option "Edinburgh" [selected=false]
+    StaticText "Edinburgh"
+  option "Florence" [selected=false]
+    StaticText "Florence"

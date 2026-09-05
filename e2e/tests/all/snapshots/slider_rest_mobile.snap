@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: slider at mobile (rest)
+expression: tree
+---
+generic
+  generic
+    generic
+    slider "Volume" [valuemax=100] [valuemin=0]
+    tooltip "40"
+      StaticText "40"

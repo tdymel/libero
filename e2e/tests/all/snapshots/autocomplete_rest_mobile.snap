@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: autocomplete at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "City"
+generic
+  combobox "City" [expanded=false] [haspopup=listbox]
+    generic
+status [atomic] [live=polite]
