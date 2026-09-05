@@ -450,6 +450,7 @@ mod tests {
     /// contradicted the client that hydrated it. Both engines now mark the
     /// `if` inside `éif`, which is what Prism's grammars were written for.
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn a_keyword_after_a_non_ascii_letter_tokenizes_as_it_does_on_the_web() {
         let spans = flat("éif x; if y\n", lang("rust"));
 
