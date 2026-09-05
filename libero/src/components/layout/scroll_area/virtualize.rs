@@ -1,6 +1,8 @@
 use dioxus::prelude::*;
 
-use super::viewport::{ContentOffsets, ScrollViewport, Window, probed_pitch, window};
+use super::viewport::{
+    ContentOffsets, ScrollGeometry, ScrollViewport, Window, probed_pitch, window,
+};
 use crate::{hooks::use_theme, platform::ElementApi, utils::warn};
 
 /// Rows in the second probe render. Enough that a per-row gap is a real part
@@ -11,6 +13,16 @@ const PROBE_ROWS: usize = 8;
 /// box is still `display: contents`, which has no box to measure. Each retry
 /// costs one frame, and giving up renders every row.
 const PROBE_ATTEMPTS: usize = 8;
+
+/// The geometry assumed while there is a pitch but the `ScrollArea` has not
+/// measured itself yet: the first render, and every server render. Scrolled to
+/// the top of a full 1080p screen, so a first paint at any common height has
+/// no blank rows below the last one, while a 50,000-row list still renders a
+/// few dozen.
+const UNMEASURED: ScrollGeometry = ScrollGeometry {
+    offset: 0.0,
+    viewport: 1080.0,
+};
 
 /// How the row pitch is being arrived at.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -143,10 +155,13 @@ pub fn Virtualize(
         .as_ref()
         .and_then(|viewport| *viewport.geometry.read());
     let visible = match (owned, stage, geometry) {
-        (true, Probe::Settled(Some(pitch)), Some(geometry)) => window(
+        // A given `item_size` settles the probe before the ScrollArea has
+        // measured anything, and waiting for that rendered every row - on the
+        // first render, and on every server render, which never measures.
+        (true, Probe::Settled(Some(pitch)), geometry) => window(
             count,
             pitch,
-            geometry,
+            geometry.unwrap_or(UNMEASURED),
             overscan.unwrap_or(theme.scroll_area.overscan),
         ),
         // Still probing: render just enough to measure, for one frame.

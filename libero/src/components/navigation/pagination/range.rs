@@ -65,6 +65,12 @@ pub fn pagination_range(
     //   `total - boundaries - 2·siblings - 1 >= boundaries + 3` and
     //   `total - boundaries - 1 >= boundaries + 2·siblings + 3`, both above
     //   zero.
+    // - **No addition overflows.** `page + siblings` can pass `u32::MAX` when
+    //   `page` sits within `siblings` of it, so it saturates. That changes
+    //   nothing: saturating only happens above `u32::MAX >= total`, and the
+    //   upper bound of its clamp is below `total`, so the clamp lands on the
+    //   same value either way. Every other sum is of `siblings` and
+    //   `boundaries`, which are widened `u8`s and cannot reach it.
     //
     // - **The rendered width is the same for every `page`**, which is what keeps
     //   the strip from reflowing as you click through it. **This rests on the
@@ -82,11 +88,14 @@ pub fn pagination_range(
     // `window` for every `total`. A reader who sees only the sweep will take
     // the bound for empirical and re-run it after any change.
     //
-    // Proved rather than sampled: a u32 underflow panics in debug and wraps in
-    // release, and neither shows up in a test that only walks the pinned table.
+    // Proved rather than sampled: a u32 underflow or overflow panics in debug
+    // and wraps in release, and neither shows up in a test that only walks the
+    // pinned table.
     let left = (page.saturating_sub(siblings))
         .clamp(boundaries + 2, total - boundaries - 2 * siblings - 1);
-    let right = (page + siblings).clamp(boundaries + 2 * siblings + 2, total - boundaries - 1);
+    let right = page
+        .saturating_add(siblings)
+        .clamp(boundaries + 2 * siblings + 2, total - boundaries - 1);
 
     let mut items = Vec::with_capacity(window as usize);
     items.extend((1..=boundaries).map(PaginationItem::Page));
@@ -156,6 +165,29 @@ mod tests {
                 "total={total} siblings={siblings} boundaries={boundaries} page={page}"
             );
         }
+    }
+
+    /// `page + siblings` overflowed here. The strip keeps its width and ends on
+    /// the last page.
+    #[test]
+    fn the_last_pages_of_u32_max_do_not_overflow() {
+        let max = u32::MAX;
+        for siblings in [0, 1, 2, u8::MAX] {
+            for page in [max, max - 1, max - u32::from(siblings)] {
+                let items = pagination_range(max, page, siblings, 1);
+                assert_eq!(
+                    items.len(),
+                    2 * usize::from(siblings) + 5,
+                    "siblings={siblings} page={page}"
+                );
+                assert_eq!(items.last(), Some(&PaginationItem::Page(max)));
+            }
+        }
+        assert_eq!(
+            strip(max, max, 1, 1),
+            format!("1 … {} {} {} {} {max}", max - 4, max - 3, max - 2, max - 1)
+        );
+        assert_eq!(strip(max, max - 1, 2, 1), strip(max, max, 2, 1));
     }
 
     /// `boundaries: 0` is clamped to 1. Both references emit leading dots with

@@ -267,3 +267,31 @@ fn control(html: &str, name: &str) -> String {
     let end = at + html[at..].find('>').expect("an unterminated tag");
     html[start..=end].to_string()
 }
+
+/// Next on the last page used `page + 1`, which overflows at `u32::MAX`. The
+/// range's own edge is tested beside `pagination_range`.
+#[test]
+fn a_total_of_u32_max_renders_on_its_last_page() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Pagination {
+                    total: u32::MAX,
+                    page: u32::MAX,
+                    aria_label: "Pages",
+                    with_controls: true,
+                    onchange: |_| {},
+                }
+            }
+        }
+    }
+
+    let html = markup(app);
+    let next = control(&html, "Go to next page");
+
+    assert!(next.contains("disabled"), "next on the last page: {next}");
+    assert!(
+        html.contains(&format!(">{}<", u32::MAX)),
+        "the last page is drawn: {html}"
+    );
+}

@@ -423,7 +423,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
                                             }
                                         }
                                         if with_controls {
-                                            {arrow(PaginationLabel::Next, (page + 1).min(total), page == total, rsx! { NextIcon {} })}
+                                            {arrow(PaginationLabel::Next, page.saturating_add(1).min(total), page == total, rsx! { NextIcon {} })}
                                         }
                                         if with_edges {
                                             {arrow(PaginationLabel::Last, total, page == total, rsx! { LastIcon {} })}
