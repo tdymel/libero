@@ -11,8 +11,11 @@ use crate::{
         variables,
     },
     context::WindowHost,
-    hooks::{DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_element, use_id},
-    platform::{ElementApi, key_taken},
+    hooks::{
+        DragMove, DragOptions, DragStart, drag_handle_sx, escape_closes, use_drag, use_element,
+        use_id,
+    },
+    platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{CssVar, PAPER_BORDER_COLOR, Size, SizeCss},
 };
@@ -367,9 +370,10 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     // Not a dismiss layer: a window is non-modal and hears only presses from
     // inside it. It still skips one that something inside already took - an
     // open `Select` closing its list, or on the web a `HoverCard` answering at
-    // the document - so one Escape closes one layer, as in `Modal`.
+    // the document - so one Escape closes one layer, as in `Modal`. A held
+    // Escape's repeats and a composing one are not closes either.
     let onkeydown = move |event: Event<KeyboardData>| {
-        if event.key() == Key::Escape && !key_taken(&event) {
+        if escape_closes(&event) {
             event.stop_propagation();
             onclose.call(());
         }

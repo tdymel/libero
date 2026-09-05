@@ -28,7 +28,7 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{ElementHandle, FocusReturn, focus_return::use_focus_return},
-    platform::{ElementApi, KeySubscription, keyboard, next_task},
+    platform::{ElementApi, KeySubscription, key_taken, keyboard, next_task},
 };
 
 /// One open dismissible layer, identified only by when it opened.
@@ -152,6 +152,19 @@ impl Drop for LayerGuard {
             layers.retain(|id| *id != self.id);
         }
     }
+}
+
+/// Whether an overlay that keeps its own Escape transport - `Modal`,
+/// `FloatingWindow` - should close on this press. The same filters the
+/// element listener in [`use_dismiss`] applies: a held Escape is one intent,
+/// so its auto-repeats do not walk on to the next layer out, and Escape
+/// mid-composition cancels the composition. And a press something inside
+/// already took ([`key_taken`]) is not this overlay's.
+pub(crate) fn escape_closes(event: &Event<KeyboardData>) -> bool {
+    event.key() == Key::Escape
+        && !event.is_auto_repeating()
+        && !event.is_composing()
+        && !key_taken(event)
 }
 
 /// A layer id for this component. Push it with [`DismissLayer::push`] and keep
@@ -804,9 +817,13 @@ mod tests {
         fn remove(&mut self) {}
     }
 
-    /// A stand-in for the renderer's key event; only Escape is ever pressed.
-    #[derive(Clone, Copy)]
-    struct FakeEscape;
+    /// A stand-in for the renderer's key event; only Escape is ever pressed,
+    /// plain unless a test asks for a held or a composing one.
+    #[derive(Clone, Copy, Default)]
+    struct FakeEscape {
+        repeat: bool,
+        composing: bool,
+    }
 
     impl HasKeyboardData for FakeEscape {
         fn key(&self) -> Key {
@@ -819,10 +836,10 @@ mod tests {
             dioxus::html::input_data::keyboard_types::Location::Standard
         }
         fn is_auto_repeating(&self) -> bool {
-            false
+            self.repeat
         }
         fn is_composing(&self) -> bool {
-            false
+            self.composing
         }
         fn as_any(&self) -> &dyn std::any::Any {
             self
@@ -838,8 +855,9 @@ mod tests {
     struct EscapeConverter;
 
     impl dioxus::html::HtmlEventConverter for EscapeConverter {
-        fn convert_keyboard_data(&self, _event: &PlatformEventData) -> dioxus::html::KeyboardData {
-            dioxus::html::KeyboardData::new(FakeEscape)
+        fn convert_keyboard_data(&self, event: &PlatformEventData) -> dioxus::html::KeyboardData {
+            let press = event.downcast::<FakeEscape>().copied().unwrap_or_default();
+            dioxus::html::KeyboardData::new(press)
         }
         fn convert_animation_data(&self, _e: &PlatformEventData) -> dioxus::html::AnimationData {
             unimplemented!()
@@ -913,7 +931,7 @@ mod tests {
     }
 
     fn escape() -> Rc<dyn std::any::Any> {
-        Rc::new(PlatformEventData::new(Box::new(FakeEscape)))
+        Rc::new(PlatformEventData::new(Box::new(FakeEscape::default())))
     }
 
     /// Just the marker line the app prints, so a failure message is readable -
@@ -941,6 +959,22 @@ mod tests {
             .handle_event("keydown", Event::new(escape(), true), target);
         settle(dom);
     }
+
+    fn press_as(dom: &mut VirtualDom, target: ElementId, press: FakeEscape) {
+        let data: Rc<dyn std::any::Any> = Rc::new(PlatformEventData::new(Box::new(press)));
+        dom.runtime()
+            .handle_event("keydown", Event::new(data, true), target);
+        settle(dom);
+    }
+
+    const HELD: FakeEscape = FakeEscape {
+        repeat: true,
+        composing: false,
+    };
+    const COMPOSING: FakeEscape = FakeEscape {
+        repeat: false,
+        composing: true,
+    };
 
     /// How many `<div>`s are open at `at`, so two elements can be shown to be
     /// siblings rather than nested. Nesting of other tags does not affect it.
@@ -1284,6 +1318,66 @@ mod tests {
             "state: window=true list=false",
             "one Escape must close the list and not the window around it"
         );
+
+        press(&mut dom, dropdown);
+        assert_eq!(state(&dom), "state: window=false list=false");
+    }
+
+    /// Todo 318. Escape held down over an open list: the first press closes
+    /// the list, and its auto-repeats must not go on to close the modal. A
+    /// composing Escape cancels the composition and closes nothing. The last,
+    /// plain press is the control that the modal still answers.
+    #[test]
+    fn a_held_or_composing_escape_does_not_close_the_modal() {
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(dropdown_in_modal);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        let dropdown = find.dropdown.expect("the dropdown stand-in");
+
+        press(&mut dom, dropdown);
+        press_as(&mut dom, dropdown, HELD);
+        assert_eq!(
+            state(&dom),
+            "state: modal=true list=false",
+            "a held Escape's repeat must not close the modal after the list"
+        );
+
+        press_as(&mut dom, dropdown, COMPOSING);
+        assert_eq!(state(&dom), "state: modal=true list=false");
+
+        press(&mut dom, dropdown);
+        assert_eq!(state(&dom), "state: modal=false list=false");
+    }
+
+    /// Todo 318's `FloatingWindow` half, with the same control.
+    #[test]
+    fn a_held_or_composing_escape_does_not_close_the_window() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { DropdownInWindow {} } }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        for _ in 0..4 {
+            dom.process_events();
+            dom.render_immediate(&mut find);
+        }
+        let dropdown = find.dropdown.expect("the dropdown stand-in");
+
+        press(&mut dom, dropdown);
+        press_as(&mut dom, dropdown, HELD);
+        assert_eq!(
+            state(&dom),
+            "state: window=true list=false",
+            "a held Escape's repeat must not close the window after the list"
+        );
+
+        press_as(&mut dom, dropdown, COMPOSING);
+        assert_eq!(state(&dom), "state: window=true list=false");
 
         press(&mut dom, dropdown);
         assert_eq!(state(&dom), "state: window=false list=false");

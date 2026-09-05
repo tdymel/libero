@@ -8,8 +8,7 @@ use crate::{
         variables,
     },
     context::ModalContext,
-    hooks::{use_dismiss_layer, use_modal_z_index},
-    platform::key_taken,
+    hooks::{escape_closes, use_dismiss_layer, use_modal_z_index},
     sx::{StaticSx, sx},
     theme::CssVar,
 };
@@ -118,8 +117,10 @@ pub fn Modal(props: ModalProps) -> Element {
             // Cascader, the date and colour fields - is never on the stack at
             // all: it closes its list from a handler inside this modal and
             // lets the press bubble on. Both prevent the press's default when
-            // they take it, and `key_taken` reads that on every backend.
-            if event.key() == Key::Escape && layer.is_top() && !key_taken(&event) {
+            // they take it, and `escape_closes` reads that on every backend.
+            // It also drops a held Escape's repeats, which would otherwise
+            // close this modal right after the list inside it.
+            if escape_closes(&event) && layer.is_top() {
                 close();
             }
         })

@@ -20,7 +20,9 @@ mod typeahead;
 
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
-pub(crate) use dismiss::{DismissHandle, DismissOptions, use_dismiss, use_dismiss_layer};
+pub(crate) use dismiss::{
+    DismissHandle, DismissOptions, escape_closes, use_dismiss, use_dismiss_layer,
+};
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
 pub use drawer::{DrawerOptions, use_drawer};
 pub use element::{ElementHandle, use_element};

@@ -85,3 +85,37 @@ fn tooltip_opens_on_hover_and_a_controlled_state_wins_by_source_order() {
     );
     assert_eq!(attributes_of(&html, "span")["data-state"], "opened");
 }
+
+/// Todo 237: a hidden bubble is still an absolutely positioned box, and that
+/// widens its scroll container. At rest it is scaled to nothing, and it grows
+/// back only as it becomes visible. Measured in Chromium on the Avatar page;
+/// this pins the rules that measurement depends on.
+#[test]
+fn a_hidden_bubble_is_scaled_to_nothing() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tooltip { label: rsx! { "t" }, "x" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let wrapper = classes_of(&html, "span")
+        .into_iter()
+        .find(|class| html.contains(&format!(".{class}:hover")))
+        .expect("the wrapper class");
+    // The bubble's resting rule: the one that places it and hides it.
+    let rest = html
+        .split('}')
+        .find(|rule| rule.contains("position:absolute;") && rule.contains("visibility:hidden;"))
+        .expect("the bubble's resting rule");
+    assert!(rest.contains("scale:0;"), "{rest}");
+
+    let open = &html[html
+        .find(&format!(".{wrapper}:hover > [role=\"tooltip\"]"))
+        .expect("the hover rule")..];
+    let open = &open[..open.find('}').unwrap()];
+    assert!(open.contains("scale:1;"), "{open}");
+    assert!(open.contains("scale 0s linear"), "{open}");
+}

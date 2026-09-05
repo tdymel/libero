@@ -31,16 +31,26 @@ fn gap() -> String {
 
 /// `visibility` flips at the *end* of the fade out, and at the start of the
 /// wait going in - so a bubble on its way out stays hoverable until it is gone.
+///
+/// `scale` flips with it. A hidden bubble is still an absolutely positioned
+/// box, and that counts toward its scroll container's overflow whether it is
+/// visible or not, so a tooltip near an edge gave the container a scrollbar.
+/// Scaled to 0 it has no area to add. The individual property, so it composes
+/// with the placement's `transform` rather than replacing it.
 fn closed_transition() -> String {
     let delay = TOOLTIP_CLOSE_DELAY_VAR.value_or("0ms");
     let duration = TOOLTIP_DURATION.value();
 
-    format!("opacity {duration} ease {delay}, visibility 0s linear calc({delay} + {duration})")
+    format!(
+        "opacity {duration} ease {delay}, visibility 0s linear calc({delay} + {duration}), \
+         scale 0s linear calc({delay} + {duration})"
+    )
 }
 
 fn closed_sx() -> Sx {
     sx().opacity("0")
         .visibility("hidden")
+        .with("scale", "0")
         .transition(closed_transition())
 }
 
@@ -48,9 +58,12 @@ fn open_sx() -> Sx {
     let delay = TOOLTIP_OPEN_DELAY_VAR.value_or("0ms");
     let duration = TOOLTIP_DURATION.value();
 
-    sx().opacity("1").visibility("visible").transition(format!(
-        "opacity {duration} ease {delay}, visibility 0s linear {delay}"
-    ))
+    sx().opacity("1")
+        .visibility("visible")
+        .with("scale", "1")
+        .transition(format!(
+            "opacity {duration} ease {delay}, visibility 0s linear {delay}, scale 0s linear {delay}"
+        ))
 }
 
 static TOOLTIP_WRAPPER_SX: StaticSx = StaticSx::new(|| {
@@ -131,6 +144,7 @@ static TOOLTIP_BUBBLE_SX: StaticSx = StaticSx::new(|| {
         .selector("&::before", sx().content("\"\"").position("absolute"))
         .opacity("0")
         .visibility("hidden")
+        .with("scale", "0")
         .transition(closed_transition());
 
     TooltipPlacement::ALL.iter().fold(base, |base, &placement| {
