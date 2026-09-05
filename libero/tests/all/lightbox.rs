@@ -267,7 +267,7 @@ fn a_zoomed_image_is_a_single_picture_viewer() {
     let trigger = attributes_of(&html, "button");
 
     assert_eq!(trigger["aria-label"], "Zoom in: A lake");
-    assert_eq!(trigger["aria-pressed"], "false");
+    assert_eq!(trigger["aria-haspopup"], "dialog");
     // Closed: nothing but the trigger's own picture.
     assert_eq!(all_attributes_of(&html, "img").len(), 1);
     assert!(!html.contains("role=\"dialog\""));

@@ -116,7 +116,7 @@ color.
 | `copyable` | `bool` | `true` | Without `header`, floats in the top-right corner. |
 | `max_lines` | `Option<u32>` | - | Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless. |
 | `line_numbers` | `bool` | `true` | Toggles the line-number gutter. |
-| `highlight_lines` | `Option<String>` | - | 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed segments are skipped, not rejected. |
+| `highlight_lines` | `Option<String>` | - | 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed segments are skipped, not rejected. A range past the last line stops at it. |
 | `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row and is stripped from what's shown, highlighted and copied. Wins over `highlight_lines`. |
 
 Like every component, `CodeBlock` also takes the shared props `sx`, `class`,

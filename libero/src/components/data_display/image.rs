@@ -2,12 +2,12 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        ClassList, HtmlTag, Input, States, Variables,
         common::{base_props, focus_ring_sx, input_from_str, states, variables},
         layout::use_box,
     },
     hooks::{LightboxItem, LightboxOptions, use_lightbox, use_theme},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, SizeCss},
 };
 
@@ -78,16 +78,6 @@ fn zoom_label(alt: &str, zoomed: bool) -> String {
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
-    // Above the early return, and unconditional: hook slots are positional. So
-    // every `Image` holds one modal registration, zoomable or not - as the
-    // bespoke zoom modal this replaced did.
-    let zoom = use_lightbox(LightboxOptions {
-        thumbnails: false,
-        captions: false,
-        controls: false,
-        aria_label: (!props.alt.is_empty()).then(|| props.alt.clone()),
-        ..LightboxOptions::default()
-    });
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
@@ -106,75 +96,115 @@ pub fn Image(props: ImageProps) -> Element {
 
     let decorative_role = props.alt.is_empty().then_some("presentation");
 
-    // Both paths' styling is resolved here, above the branch: `prepare` is a
-    // hook. The root is the `<img>` itself when it can't zoom, and the zoom
-    // `<button>` when it can, so the two differ in every input.
-    let img_states: Input<States> = match props.zoomable {
-        true => states().with(fit.state_name(), true).into(),
-        false => props
-            .states
-            .clone()
-            .unwrap_or_default()
-            .with(fit.state_name(), true)
-            .into(),
+    // One `use_box` on both paths, so `zoomable` can flip without moving a
+    // hook: the `<img>` is the root when it can't zoom, and the picture inside
+    // `ZoomButton`, which takes the caller's styling, when it can.
+    let no_class = Input::None;
+    let no_sx = Input::None;
+    let (class, user_sx, img_states): (_, _, Input<States>) = match props.zoomable {
+        true => (
+            &no_class,
+            &no_sx,
+            states().with(fit.state_name(), true).into(),
+        ),
+        false => (
+            &props.class,
+            &props.sx,
+            props
+                .states
+                .clone()
+                .unwrap_or_default()
+                .with(fit.state_name(), true)
+                .into(),
+        ),
     };
-    let button_states: Input<States> = props
+    let image = use_box()
+        .framework_sx(&IMAGE_BASE_SX)
+        .class(class)
+        .sx(user_sx)
+        .states(&img_states)
+        .variables(&variables)
+        .prepare();
+    let image = image.event("onerror", move |_: Event<ImageData>| {
+        errored_src.set(Some(on_error_src.clone()))
+    });
+
+    if !props.zoomable {
+        return image
+            .attr("src", src)
+            .attr("alt", props.alt)
+            .attr("role", decorative_role)
+            .render(HtmlTag::Img, props.attributes, ());
+    }
+    let item = LightboxItem::new(
+        props.zoomed_src.clone().unwrap_or_else(|| src.clone()),
+        props.alt.clone(),
+    );
+    let image = image
+        .attr("src", src)
+        .attr("alt", "")
+        .attr("role", "presentation")
+        .render(HtmlTag::Img, Vec::new(), ());
+
+    rsx! {
+        ZoomButton {
+            item,
+            alt: props.alt,
+            class: props.class,
+            sx: props.sx,
+            states: props.states,
+            attributes: props.attributes,
+            {image}
+        }
+    }
+}
+
+#[derive(Props, Clone, PartialEq)]
+struct ZoomButtonProps {
+    item: LightboxItem,
+    alt: String,
+    class: Input<ClassList>,
+    sx: Input<Sx>,
+    states: Input<States>,
+    attributes: Vec<Attribute>,
+    children: Element,
+}
+
+/// A zoomable `Image`'s root, split out so only a zoomable one pays for
+/// `use_lightbox` and its modal registration.
+#[component]
+fn ZoomButton(props: ZoomButtonProps) -> Element {
+    let zoom = use_lightbox(LightboxOptions {
+        thumbnails: false,
+        captions: false,
+        controls: false,
+        aria_label: (!props.alt.is_empty()).then(|| props.alt.clone()),
+        ..LightboxOptions::default()
+    });
+    let states: Input<States> = props
         .states
         .clone()
         .unwrap_or_default()
         .with("zoomed", zoom.is_open())
         .into();
-
-    let (root_sx, root_states, root_variables) = match props.zoomable {
-        true => (&ZOOM_BUTTON_SX, &button_states, &Input::None),
-        false => (&IMAGE_BASE_SX, &img_states, &variables),
-    };
     let root = use_box()
-        .framework_sx(root_sx)
+        .framework_sx(&ZOOM_BUTTON_SX)
         .class(&props.class)
         .sx(&props.sx)
-        .states(root_states)
-        .variables(root_variables)
-        .prepare();
-    // Only the zoomable path renders it, but the hook runs either way.
-    let inner_image = use_box()
-        .framework_sx(&IMAGE_BASE_SX)
-        .states(&img_states)
-        .variables(&variables)
+        .states(&states)
         .prepare();
 
-    if !props.zoomable {
-        return root
-            .attr("src", src)
-            .attr("alt", props.alt)
-            .attr("role", decorative_role)
-            .event("onerror", move |_: Event<ImageData>| {
-                errored_src.set(Some(on_error_src.clone()))
-            })
-            .render(HtmlTag::Img, props.attributes, ());
-    }
-    let zoomed = LightboxItem::new(
-        props.zoomed_src.clone().unwrap_or_else(|| src.clone()),
-        props.alt.clone(),
-    );
     let label = zoom_label(&props.alt, zoom.is_open());
-
-    let image = inner_image
-        .attr("src", src.clone())
-        .attr("alt", "")
-        .attr("role", "presentation")
-        .event("onerror", move |_: Event<ImageData>| {
-            errored_src.set(Some(on_error_src.clone()))
-        })
-        .render(HtmlTag::Img, Vec::new(), ());
-
+    let item = props.item.clone();
+    // A dialog opener, not a toggle: the open state lives in the modal
+    // `Lightbox`, never on this button.
     root.attr("type", "button")
-        .attr("aria-pressed", zoom.is_open().to_string())
+        .attr("aria-haspopup", "dialog")
         .attr("aria-label", label)
         .event("onclick", move |_: Event<MouseData>| {
-            zoom.open_with(zoomed.clone());
+            zoom.open_with(item.clone());
         })
-        .render(HtmlTag::Button, props.attributes, image)
+        .render(HtmlTag::Button, props.attributes, props.children)
 }
 
 #[cfg(test)]

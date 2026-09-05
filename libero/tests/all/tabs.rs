@@ -94,3 +94,33 @@ fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
     assert_eq!(body.matches("rich").count(), 2);
     assert!(!body.contains(">Account<"));
 }
+
+#[test]
+fn a_value_outside_the_tabs_leaves_the_first_enabled_tab_as_the_tab_stop() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    value: Section::Admin,
+                    onchange: move |_| {},
+                    tabs: vec![Section::Account, Section::Billing],
+                    disabled: vec![Section::Account],
+                    panel: |_: Section| rsx! {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    // Nothing is selected, but the strip keeps one tab stop, on the first
+    // tab that can be picked.
+    assert_eq!(body.matches("aria-selected=\"true\"").count(), 0);
+    assert_eq!(body.matches("tabindex=\"0\"").count(), 1);
+    let stop = body
+        .split("<button")
+        .find(|tab| tab.contains("tabindex=\"0\""))
+        .unwrap();
+    assert!(stop.contains("aria-label=\"Billing\""));
+}

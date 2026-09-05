@@ -127,6 +127,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
     } = view;
 
     let enabled: Vec<usize> = (0..tabs.len()).filter(|i| !tabs[*i].disabled).collect();
+    // One tab stop for the strip: the selected tab, or the first enabled one
+    // when `value` is not among the tabs, so the strip stays reachable.
+    let tab_stop = selected.or_else(|| enabled.first().copied());
     let root_element = use_element();
     let keydown_root = root.clone();
     let onkeydown = use_callback(move |event: Event<KeyboardData>| {
@@ -197,7 +200,7 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
                             // stays reachable, it just cannot be picked.
                             "aria-disabled": if tab.disabled { "true" } else { "false" },
                             "aria-label": tab.name.clone(),
-                            tabindex: if selected == Some(index) { "0" } else { "-1" },
+                            tabindex: if tab_stop == Some(index) { "0" } else { "-1" },
                             onclick: {
                                 let disabled = tab.disabled;
                                 move |_| {

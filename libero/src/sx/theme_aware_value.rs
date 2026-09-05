@@ -3,6 +3,7 @@ use crate::tokens::{
 };
 
 use super::BreakpointValue;
+use crate::utils::warn;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ThemeAwareValue {
@@ -88,6 +89,16 @@ impl ThemeAwareValue {
     }
 }
 
+/// `gray` is a CSS keyword, and the palette name is `grey`: the one spelling
+/// that falls through to an off-theme colour without a sound.
+fn warn_misspelled_palette(value: &str) {
+    if value.eq_ignore_ascii_case("gray") {
+        warn(&format!(
+            "`{value}` is the CSS keyword, not a palette colour; the palette name is `grey`."
+        ));
+    }
+}
+
 impl From<String> for ThemeAwareValue {
     fn from(value: String) -> Self {
         if let Some(parsed) = Self::parse_borrowed(value.as_str()) {
@@ -96,7 +107,10 @@ impl From<String> for ThemeAwareValue {
 
         match HexColor::parse(value.as_str()) {
             Some(hex) => Self::RawColor(value, hex),
-            None => Self::String(value),
+            None => {
+                warn_misspelled_palette(&value);
+                Self::String(value)
+            }
         }
     }
 }
@@ -111,7 +125,10 @@ impl From<&str> for ThemeAwareValue {
 
         match HexColor::parse(value) {
             Some(hex) => Self::RawColor(value.to_string(), hex),
-            None => Self::String(value.to_string()),
+            None => {
+                warn_misspelled_palette(value);
+                Self::String(value.to_string())
+            }
         }
     }
 }
@@ -185,6 +202,22 @@ mod tests {
     use crate::tokens::CssVar;
 
     use super::*;
+
+    #[test]
+    fn gray_stays_the_css_keyword_but_warns() {
+        crate::utils::take_warnings();
+        assert_eq!(
+            ThemeAwareValue::from("gray"),
+            ThemeAwareValue::String("gray".to_string())
+        );
+        assert_eq!(
+            ThemeAwareValue::from("grey"),
+            ThemeAwareValue::Color(Color::Grey)
+        );
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("`grey`"));
+    }
 
     #[test]
     fn theme_aware_value_parses_css_vars() {
