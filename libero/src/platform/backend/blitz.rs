@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use blitz_dom::BaseDocument;
 use blitz_traits::events::UiEvent;
-use dioxus::prelude::MountedData;
+use dioxus::prelude::*;
 use dioxus_native_dom::{NodeHandle, NodeId};
 
 use crate::platform::{Dimensions, DocumentApi, ElementApi, PlatformError, Read};
@@ -23,10 +23,66 @@ pub(super) fn element(mounted: &Rc<MountedData>) -> Option<Box<dyn ElementApi>> 
 thread_local! {
     /// A `NodeHandle` is the only way to reach the Blitz document, and
     /// `use_modal` has to ask where focus is without owning an element. So the
-    /// first handle we ever resolve is kept as an anchor: its node may since
-    /// have unmounted, but the document it points into outlives it, and only
+    /// first handle we ever see is kept as an anchor: its node may since have
+    /// unmounted, but the document it points into outlives it, and only
     /// document-wide calls are made through it.
+    ///
+    /// [`Outlet`] fills it when `LiberoProvider` mounts. Waiting for the first
+    /// element handle to be *called* left it empty until then, so the first
+    /// popover was never placed and the first modal returned focus nowhere
+    /// (todo 191, seen in a native window).
     static ANCHOR: RefCell<Option<NodeHandle>> = const { RefCell::new(None) };
+
+    /// Commands that found the document borrowed, oldest first. See
+    /// [`BlitzElement::command`].
+    static DEFERRED: RefCell<Vec<Deferred>> = const { RefCell::new(Vec::new()) };
+
+    /// Bumped to remount [`Outlet`]'s flush element. `None` until it renders.
+    static FLUSHES: RefCell<Option<Signal<u64>>> = const { RefCell::new(None) };
+}
+
+type Deferred = (NodeHandle, Box<dyn FnOnce(&mut BaseDocument)>);
+
+/// Mounted once by `LiberoProvider`. Its first mount is the document anchor;
+/// every later one runs the deferred commands.
+///
+/// A mount is the one place dioxus-native calls back into user code with the
+/// document free while no event is being dispatched:
+/// `DioxusDocument::poll` fires `onmounted` after it drops the borrow it held
+/// across `render_immediate`. So deferring bumps `FLUSHES`, the keyed element
+/// below is replaced, and its `onmounted` runs the queue at the end of the
+/// same poll (seen in a native window: a modal's focus return, deferred and
+/// then run, before the next event).
+#[component]
+pub(super) fn Outlet() -> Element {
+    let flushes = use_hook(|| {
+        let flushes = Signal::new(0u64);
+        FLUSHES.with(|slot| *slot.borrow_mut() = Some(flushes));
+        flushes
+    });
+    use_drop(|| FLUSHES.with(|slot| *slot.borrow_mut() = None));
+
+    rsx! {
+        for flush in [flushes()] {
+            div {
+                key: "{flush}",
+                display: "none",
+                onmounted: move |event| {
+                    if let Some(handle) = event.data().downcast::<NodeHandle>() {
+                        remember_document(handle);
+                    }
+                    run_deferred();
+                },
+            }
+        }
+    }
+}
+
+fn run_deferred() {
+    let deferred = DEFERRED.with(|queue| std::mem::take(&mut *queue.borrow_mut()));
+    for (anchor, command) in deferred {
+        command(&mut anchor.doc_mut());
+    }
 }
 
 fn remember_document(handle: &NodeHandle) {
@@ -103,6 +159,36 @@ impl BlitzElement {
         Box::pin(std::future::ready(answer))
     }
 
+    /// **A command runs now if it can, and at the end of this poll if not.**
+    /// Every dioxus task - anything `spawn`ed, and every timer callback - is
+    /// polled inside `render_immediate`, which `DioxusDocument::poll` calls
+    /// while it holds the document mutably (`dioxus_document.rs:233-236` in
+    /// native-dom). A command from there cannot take the document, and
+    /// `doc_mut()` panicked: `FocusReturn::restore` closing any modal did
+    /// exactly that (todo 189, seen in a native window). An event handler finds
+    /// it free.
+    ///
+    /// `try_doc` is how to ask - there is no `try_doc_mut` - and it fails only
+    /// while the document is borrowed mutably, which is the case that matters:
+    /// nothing in libero holds a shared borrow across a command.
+    fn command(&self, run: impl FnOnce(&mut BaseDocument) + 'static) {
+        if self.anchor.try_doc().is_some() {
+            run(&mut self.anchor.doc_mut());
+            return;
+        }
+        DEFERRED.with(|queue| {
+            queue
+                .borrow_mut()
+                .push((self.anchor.clone(), Box::new(run)))
+        });
+        FLUSHES.with(|slot| {
+            if let Some(mut flushes) = *slot.borrow() {
+                let next = flushes.peek().wrapping_add(1);
+                flushes.set(next);
+            }
+        });
+    }
+
     fn at(&self, node_id: NodeId) -> Box<dyn ElementApi> {
         Box::new(BlitzElement {
             anchor: self.anchor.clone(),
@@ -112,21 +198,21 @@ impl BlitzElement {
 }
 
 impl ElementApi for BlitzElement {
-    // Focus and scrolling take the document mutably. Called from a handler
-    // that is safe: the borrow is gone by the time it runs. Called from a
-    // spawned task it may not be - Blitz's `EventDriver` holds the document
-    // while dioxus drains those tasks, which is why reads use `try_doc()`.
-    // Unverified for commands; see todo 189.
     fn focus(&self) -> Result<(), PlatformError> {
-        self.anchor.doc_mut().set_focus_to(self.node_id);
+        let node_id = self.node_id;
+        self.command(move |doc| {
+            doc.set_focus_to(node_id);
+        });
         Ok(())
     }
 
     fn blur(&self) -> Result<(), PlatformError> {
-        let mut doc = self.anchor.doc_mut();
-        if doc.get_focussed_node_id() == Some(self.node_id) {
-            doc.clear_focus();
-        }
+        let node_id = self.node_id;
+        self.command(move |doc| {
+            if doc.get_focussed_node_id() == Some(node_id) {
+                doc.clear_focus();
+            }
+        });
         Ok(())
     }
 
@@ -136,9 +222,8 @@ impl ElementApi for BlitzElement {
     /// mid-dispatch anyway. The shell runs it on its next turn, through the
     /// whole pipeline. Like every command here, "queued" is the answer.
     fn click(&self) -> Result<(), PlatformError> {
-        self.anchor
-            .doc_mut()
-            .queue_ui_event(UiEvent::Activate(self.node_id));
+        let node_id = self.node_id;
+        self.command(move |doc| doc.queue_ui_event(UiEvent::Activate(node_id)));
         Ok(())
     }
 
@@ -215,14 +300,23 @@ impl ElementApi for BlitzElement {
         })
     }
 
-    /// Blitz only scrolls by a delta, so this reads the current offset first.
+    /// Blitz only scrolls by a delta, so this reads the current offset first -
+    /// when the command runs, which may be after it was asked for.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError> {
-        let mut doc = self.anchor.doc_mut();
-        let offset = *doc
-            .get_node(self.node_id)
-            .ok_or(PlatformError::NotFound)?
-            .scroll_offset();
-        doc.scroll_node_by(self.node_id, x - offset.x, y - offset.y, |_| {});
+        if self
+            .anchor
+            .try_doc()
+            .is_some_and(|doc| doc.get_node(self.node_id).is_none())
+        {
+            return Err(PlatformError::NotFound);
+        }
+        let node_id = self.node_id;
+        self.command(move |doc| {
+            let Some(offset) = doc.get_node(node_id).map(|node| *node.scroll_offset()) else {
+                return;
+            };
+            doc.scroll_node_by(node_id, x - offset.x, y - offset.y, |_| {});
+        });
         Ok(())
     }
 

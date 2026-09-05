@@ -120,15 +120,14 @@ impl FocusReturn {
             return;
         };
 
+        // Through the backend, not `MountedData::set_focus`: under Blitz that
+        // takes the document mutably, which a task never finds free, and only
+        // the backend knows to defer the command (todo 189).
         spawn(async move {
-            match target {
-                Trigger::Mounted(data) => {
-                    let _ = data.set_focus(true).await;
-                }
-                Trigger::Active(element) => {
-                    let _ = element.focus();
-                }
-            }
+            let _ = match target {
+                Trigger::Mounted(data) => backend::element(&data).focus(),
+                Trigger::Active(element) => element.focus(),
+            };
         });
     }
 }

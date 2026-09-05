@@ -14,7 +14,7 @@
 
 use std::rc::Rc;
 
-use dioxus::prelude::{Event, KeyboardData, MountedData, MouseData, TransitionData};
+use dioxus::prelude::{Element, Event, KeyboardData, MountedData, MouseData, TransitionData};
 
 use super::{DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
@@ -39,6 +39,19 @@ pub(crate) fn element(mounted: &Rc<MountedData>) -> Box<dyn ElementApi> {
     }
 
     Box::new(mounted::MountedElement(mounted.clone()))
+}
+
+/// Whatever the renderer needs mounted at the root, rendered once by
+/// `LiberoProvider`. Only Blitz needs anything: an element to reach its
+/// document through from the first frame, and one to run the commands it had
+/// to defer (see `blitz::Outlet`). Everywhere else this renders nothing.
+#[allow(non_snake_case)]
+pub(crate) fn Outlet() -> Element {
+    use dioxus::prelude::*;
+    #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
+    return rsx! { blitz::Outlet {} };
+    #[cfg(not(all(not(target_arch = "wasm32"), feature = "native")))]
+    return rsx! {};
 }
 
 pub(crate) fn document() -> Option<Box<dyn DocumentApi>> {

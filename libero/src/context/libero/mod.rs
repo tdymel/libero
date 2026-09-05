@@ -7,7 +7,7 @@ use stylesheet_registry::StylesheetRegistry;
 pub(crate) use stylesheet_registry::{SheetRank, StylesheetKey};
 
 use super::{ModalHost, PortalHost, PortalOutlet, WindowHost};
-use crate::{css::Stylesheet, theme::Theme};
+use crate::{css::Stylesheet, platform::backend, theme::Theme};
 
 mod css_layer;
 mod stylesheet_registry;
@@ -101,5 +101,6 @@ pub fn LiberoProvider(
         {children}
         PortalOutlet {}
         StyleOutlet {}
+        backend::Outlet {}
     }
 }
