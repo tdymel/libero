@@ -29,12 +29,12 @@ pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
 ///
 /// It covers its containing block - the nearest positioned ancestor, which
 /// must be the element the ring belongs to - and is styled there with
-/// [`ring_overlay_sx`].
+/// [`ring_overlay_sx`]. Hidden from assistive tech, and never a tab stop.
 pub(crate) fn ring_overlay() -> dioxus::prelude::Element {
     use dioxus::prelude::*;
 
     rsx! {
-        span { "data-ring": true }
+        span { "data-ring": true, "aria-hidden": "true" }
     }
 }
 
