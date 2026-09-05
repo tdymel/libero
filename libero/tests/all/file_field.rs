@@ -138,8 +138,8 @@ fn switching_variant_at_runtime_swaps_the_control_and_its_styles() {
 
 /// A removed row hands focus to the next row's button, found by
 /// `{id}-remove-{n}` on the field's id, and a caller's id need not be a CSS
-/// identifier. The lookup selects by attribute (todo 248); rows need picked
-/// files, which SSR cannot supply, so this pins the field id they build on.
+/// identifier. The lookup selects by attribute (todo 248); the focus move
+/// needs a renderer, so this pins the field id the rows build on.
 #[test]
 fn a_caller_id_that_is_no_css_identifier_is_the_field_id() {
     fn app() -> Element {
