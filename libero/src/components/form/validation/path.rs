@@ -215,9 +215,12 @@ impl<T> fmt::Display for FieldName<T> {
 
 impl<Root, T> From<FieldPath<Root, T>> for FieldName<T> {
     fn from(path: FieldPath<Root, T>) -> Self {
+        // A spelling with no steps is `FieldPath::new`'s, which cannot bind.
+        // Only the root, spelled empty, binds with no steps: the whole value.
+        let bindable = path.path.is_empty() || !path.steps.is_empty();
         Self {
+            steps: bindable.then_some(path.steps),
             path: path.path,
-            steps: Some(path.steps),
             _type: PhantomData,
         }
     }
@@ -338,5 +341,16 @@ mod tests {
         let joined = address.join(zip);
         assert_eq!(joined.as_str(), "address.zip");
         assert_eq!(joined.steps.len(), 2);
+    }
+
+    #[test]
+    fn a_path_by_spelling_alone_names_but_does_not_bind() {
+        let email: FieldName<String> = FieldPath::<Signup, String>::new("email").into();
+        assert_eq!(email.as_str(), "email");
+        assert!(email.steps().is_none());
+
+        // The root a derive builds on is spelled empty and binds the whole value.
+        let root: FieldName<Signup> = FieldPath::<Signup, Signup>::new("").into();
+        assert!(root.steps().is_some_and(<[Step]>::is_empty));
     }
 }

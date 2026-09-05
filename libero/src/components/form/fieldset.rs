@@ -8,7 +8,9 @@ use crate::{
         common::base_props,
         form::{
             Binding, Disabled, FieldName, FieldStatus, FormScope, FormValue, Source, Validators,
-            issues_of, worst,
+            issues_of,
+            use_field::{caption_content, join_ids, slot_node, status_node},
+            worst,
         },
         layout::use_box,
     },
@@ -130,46 +132,26 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
     let status = worst(props.status.as_ref().cloned().unwrap_or_default(), unnamed);
 
     let id = crate::hooks::use_root_id(&props.attributes)();
-    let slot = |slot: &'static str, caption: &Caption| {
-        (!caption.is_none()).then(|| {
-            let named = caption.text().is_some().then(|| format!("{id}-{slot}"));
-            let content = match caption {
-                Caption::Text(text) => rsx! { "{text}" },
-                Caption::Node(node) => node.clone(),
-                Caption::None => rsx! {},
-            };
-            rsx! { span { "data-slot": slot, id: named, {content} } }
-        })
-    };
-    let describedby = [
-        ("description", props.description.text().is_some()),
-        ("helper", props.helper.text().is_some()),
-        ("status", status.message().is_some()),
-    ]
-    .iter()
-    .filter(|(_, present)| *present)
-    .map(|(slot, _)| format!("{id}-{slot}"))
-    .collect::<Vec<_>>()
-    .join(" ");
-
+    // The same chrome a field draws around its control, from the same helpers.
+    let describedby = join_ids(
+        &id,
+        [
+            ("description", props.description.text().is_some()),
+            ("helper", props.helper.text().is_some()),
+            ("status", status.message().is_some()),
+        ],
+    );
     let legend = (!props.label.is_none()).then(|| {
-        let content = match &props.label {
-            Caption::Text(text) => rsx! { "{text}" },
-            Caption::Node(node) => node.clone(),
-            Caption::None => rsx! {},
-        };
+        let content = caption_content(&props.label);
         rsx! { legend { {content} } }
-    });
-    let status_node = status.message().map(|message| {
-        rsx! { span { "data-slot": "status", id: "{id}-status", "{message}" } }
     });
 
     let mut children = Vec::with_capacity(5);
     children.extend(legend);
-    children.extend(slot("description", &props.description));
+    children.extend(slot_node("description", &id, &props.description));
     children.push(props.children);
-    children.extend(slot("helper", &props.helper));
-    children.extend(status_node);
+    children.extend(slot_node("helper", &id, &props.helper));
+    children.extend(status_node(&id, Some(&status)));
 
     let mut states = props.states.as_ref().cloned().unwrap_or_default();
     if let Some(state) = status.state() {
@@ -185,9 +167,6 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .prepare()
         .attr("id", id.clone())
         .attr("disabled", disabled)
-        .attr(
-            "aria-describedby",
-            (!describedby.is_empty()).then_some(describedby),
-        )
+        .attr("aria-describedby", describedby)
         .render(HtmlTag::Fieldset, props.attributes, children)
 }

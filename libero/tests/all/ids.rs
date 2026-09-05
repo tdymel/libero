@@ -3,7 +3,7 @@ use crate::common::{body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{FocusTrap, ScrollArea, Splitter, Tree, TreeNode},
+    components::{FocusTrap, ScrollArea, Splitter, TextField, Tree, TreeNode},
 };
 
 /// These four reach their own root element, which they used to do by
@@ -40,4 +40,28 @@ fn a_root_element_component_leaves_the_id_to_its_caller() {
         "a generated id shadowed the caller's:\n{body}"
     );
     assert!(body.contains("aria-controls=\"lsx-"), "{body}");
+}
+
+/// Two caller ids render as one, and `Box` keeps the first. The component's
+/// own aria wiring has to point at that same one.
+#[test]
+fn a_components_wiring_follows_the_first_of_two_caller_ids() {
+    fn app() -> Element {
+        // What a wrapper that sets an id and forwards its caller's passes on.
+        let ids = vec![
+            Attribute::new("id", "first", None, false),
+            Attribute::new("id", "second", None, false),
+        ];
+        rsx! {
+            LiberoProvider {
+                TextField { label: "Email", attributes: ids }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("id=\"first\""), "{body}");
+    assert!(!body.contains("id=\"second\""), "{body}");
+    assert!(body.contains("for=\"first\""), "{body}");
 }

@@ -95,9 +95,12 @@ fn spawn_on_root(future: impl Future<Output = ()> + 'static) {
     runtime.spawn(ScopeId::ROOT, future);
 }
 
-/// One thread per sleep. The count is tiny by construction - a few
-/// notifications, one carousel autoplay - and a shared scheduler is the thing
-/// to build if that ever stops being true.
+/// One thread per sleep, and a cancelled timer's still sleeps out its delay:
+/// typeahead restarts one per keystroke and `Menu` one per hover, so the live
+/// count is the delay times the event rate. Measured 2026-09-18 (release):
+/// a spawn costs 30-45 us, off the render path, and keys 15 ms apart under a
+/// 100 ms pause peaked at 6 extra threads, all gone after the pause. A shared
+/// scheduler is the thing to build if that ever grows.
 fn sleep(duration: Duration) -> Sleep {
     let state = Arc::new(SleepState {
         elapsed: AtomicBool::new(false),

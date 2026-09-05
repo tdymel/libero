@@ -327,6 +327,11 @@ fn render_cost_per_component() {
         "ActionIcon" { ActionIcon { aria_label: "a", "x" } }
         "NativeSelect" { NativeSelect { value: CostPane::One, onchange: move |_| {} } }
         "Select" { Select { value: CostPane::One, onchange: move |_| {} } }
+        // Closed, re-rendered: every closed portal holder on the page still
+        // publishes its empty slot. `NativeSelect pick` is the same change
+        // with no portal.
+        "Select pick" { Select { value: if flip() { CostPane::Two } else { CostPane::One }, onchange: move |_| {} } }
+        "NativeSelect pick" { NativeSelect { value: if flip() { CostPane::Two } else { CostPane::One }, onchange: move |_| {} } }
         "MultiSelect" { MultiSelect { value: vec![CostPane::One], onchange: move |_| {} } }
         "Autocomplete" { Autocomplete { value: "", options: vec![CostPane::One], oninput: move |_| {} } }
         "TextField" { TextField { oninput: move |_| {} } }

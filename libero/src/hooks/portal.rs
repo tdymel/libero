@@ -30,6 +30,17 @@ impl PortalSlot {
     /// a cross-scope read, and a real hazard if your scope unmounts first.
     pub(crate) fn show(&self, content: Option<Element>) {
         let mut host = self.host;
+        // A closed slot re-rendered closed: a write would re-render the
+        // outlet for nothing, once per closed `Select` or `Menu` on the page.
+        let unchanged = content.is_none()
+            && host
+                .entries
+                .peek()
+                .iter()
+                .any(|entry| entry.id == self.id && entry.render.is_none());
+        if unchanged {
+            return;
+        }
         let mut entries = host.entries.write();
         match entries.iter_mut().find(|entry| entry.id == self.id) {
             Some(entry) => entry.render = content,

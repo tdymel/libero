@@ -883,7 +883,7 @@ fn caller_names_the_description(attributes: &[Attribute]) -> bool {
         .any(|attribute| attribute.name == "aria-describedby")
 }
 
-fn join_ids(id: &str, slots: [(&'static str, bool); 3]) -> Option<String> {
+pub(super) fn join_ids(id: &str, slots: [(&'static str, bool); 3]) -> Option<String> {
     let present = || slots.iter().filter(|(_, present)| *present);
     let capacity: usize = present()
         .map(|(slot, _)| id.len() + slot.len() + 2)
@@ -904,7 +904,7 @@ fn join_ids(id: &str, slots: [(&'static str, bool); 3]) -> Option<String> {
     Some(names)
 }
 
-fn caption_content(caption: &Caption) -> Element {
+pub(super) fn caption_content(caption: &Caption) -> Element {
     match caption {
         Caption::None => rsx! {},
         Caption::Text(text) => rsx! { "{text}" },
@@ -958,7 +958,7 @@ fn label_node(
     })
 }
 
-fn slot_node(slot: &'static str, id: &str, caption: &Caption) -> Option<Element> {
+pub(super) fn slot_node(slot: &'static str, id: &str, caption: &Caption) -> Option<Element> {
     if caption.is_none() {
         return None;
     }
@@ -971,7 +971,7 @@ fn slot_node(slot: &'static str, id: &str, caption: &Caption) -> Option<Element>
     })
 }
 
-fn status_node(id: &str, status: Option<&FieldStatus>) -> Option<Element> {
+pub(super) fn status_node(id: &str, status: Option<&FieldStatus>) -> Option<Element> {
     let message = status.and_then(FieldStatus::message)?;
 
     Some(rsx! {
