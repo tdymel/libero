@@ -139,6 +139,10 @@ impl ElementApi for ElementHandle {
         self.get()?.scroll_to(x, y)
     }
 
+    fn scroll_into_view(&self, smooth: bool) -> Result<(), PlatformError> {
+        self.get()?.scroll_into_view(smooth)
+    }
+
     fn set_pointer_capture(&self, pointer_id: i32) -> Result<(), PlatformError> {
         self.get()?.set_pointer_capture(pointer_id)
     }

@@ -35,6 +35,9 @@ pub fn DocPage(
     let mut tab = use_signal(|| DocTab::Usage);
 
     rsx! {
+        // Every route is a `DocPage`, so this names each one; `App`'s bare
+        // "Libero" only shows before the first page renders.
+        document::Title { "{title} - Libero" }
         Flex {
             direction: "column",
             gap: "xxl",

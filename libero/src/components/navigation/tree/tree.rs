@@ -61,6 +61,18 @@ fn visible_order<'a>(
     out
 }
 
+/// The ids from a root down to `id`, both ends included.
+fn path_to<'a>(nodes: &'a [TreeNodeErased], id: &str) -> Option<Vec<&'a str>> {
+    nodes.iter().find_map(|node| {
+        if node.id == id {
+            return Some(vec![node.id.as_str()]);
+        }
+        let mut path = path_to(&node.children, id)?;
+        path.insert(0, node.id.as_str());
+        Some(path)
+    })
+}
+
 fn sibling_id(order: &[VisibleNode], current: &str, offset: isize) -> Option<String> {
     let index = order.iter().position(|node| node.id == current)?;
     let target = index as isize + offset;
@@ -180,6 +192,12 @@ base_props! {
         /// Seeds `Tree`'s internal state once. Not a controlled prop.
         #[props(default)]
         default_expanded: HashSet<String>,
+        /// The id of the node where the user is - a nav's current page. Tab
+        /// into the tree lands on it rather than on the first row, until the
+        /// arrow keys move on; when it changes, the tab stop follows it. Inside
+        /// a collapsed branch, the tab stop goes to the branch.
+        #[props(default, into)]
+        current: Option<String>,
         /// Notification only - it doesn't drive rendering.
         #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
@@ -239,6 +257,7 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
             data: erased_data,
             render_node: erased_render_node,
             default_expanded: props.default_expanded,
+            current: props.current,
             onexpandedchange: props.onexpandedchange,
         }
     }
@@ -255,6 +274,8 @@ base_props! {
         #[props(default)]
         default_expanded: HashSet<String>,
         #[props(default)]
+        current: Option<String>,
+        #[props(default)]
         onexpandedchange: Option<EventHandler<HashSet<String>>>,
     }
 }
@@ -264,17 +285,36 @@ base_props! {
 fn TreeCore(props: TreeCoreProps) -> Element {
     let theme = use_theme();
     let root = use_element();
-    let active_id = use_signal(|| None::<String>);
+    let mut active_id = use_signal(|| None::<String>);
     let expanded = use_signal(|| props.default_expanded.clone());
 
     let size = props.size.copied_or(theme.tree.size);
 
     let order = visible_order(&props.data, &expanded.read());
+    let visible = |id: &String| order.iter().any(|node| node.id == id);
     let resolved_active = active_id
         .read()
         .clone()
-        .filter(|id| order.iter().any(|node| node.id == id))
+        .filter(visible)
+        .or_else(|| {
+            // Inside a collapsed branch, the branch that hides it.
+            let path = path_to(&props.data, props.current.as_deref()?)?;
+            path.into_iter()
+                .rev()
+                .map(str::to_string)
+                .find(|id| visible(id))
+        })
         .or_else(|| order.first().map(|node| node.id.to_string()));
+
+    // A new `current` (the route changed) wins over wherever the arrow keys
+    // left the tab stop. `peek`, so the mount run writes nothing.
+    let current = props.current.clone();
+    use_effect(use_reactive!(|current| {
+        let _ = current;
+        if active_id.peek().is_some() {
+            active_id.set(None);
+        }
+    }));
 
     let onexpandedchange = props.onexpandedchange;
     let data_for_keydown = props.data.clone();

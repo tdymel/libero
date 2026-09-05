@@ -345,6 +345,8 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
                         .selector("& ul", sx().gap("0").padding_left("0")),
                     data,
                     default_expanded,
+                    // The tab stop starts on the current page, not "About".
+                    current: current_path,
                     render_node: move |args: TreeNodeRenderArgs<NavEntry>| {
                         if args.expanded.is_some() {
                             return default_tree_render(args);

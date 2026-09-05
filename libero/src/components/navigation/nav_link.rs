@@ -4,8 +4,8 @@ use crate::{
     components::{
         HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
     },
-    hooks::use_theme,
-    platform::prefers_reduced_motion,
+    hooks::{use_element, use_theme},
+    platform::{ElementApi, prefers_reduced_motion},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Color, ColorShade, ColorValue, CssVar, Size, SizeCss},
 };
@@ -120,32 +120,18 @@ pub fn NavLink(props: NavLinkProps) -> Element {
     let aria_current = is_active.then_some("page");
 
     let scroll_into_view = props.scroll_into_view.unwrap_or(false);
-    let mut mounted = use_signal(|| None::<MountedEvent>);
+    let element = use_element();
 
-    // `is_active` is a plain bool, hence `use_reactive!`; `mounted` is a
-    // signal and tracks itself. Together they cover both "active on mount"
-    // and "became active later" in one path.
+    // `is_active` is a plain bool, hence `use_reactive!`; `element` is read
+    // through a signal and tracks itself. Together they cover both "active
+    // on mount" and "became active later" in one path.
     use_effect(use_reactive!(|is_active| {
-        if scroll_into_view
-            && is_active
-            && let Some(event) = mounted()
-        {
-            // `Instant` under reduced motion: an explicit `Smooth` overrides
-            // whatever the stylesheet says.
-            let behavior = if prefers_reduced_motion() {
-                ScrollBehavior::Instant
-            } else {
-                ScrollBehavior::Smooth
-            };
-            spawn(async move {
-                let _ = event
-                    .scroll_to_with_options(ScrollToOptions {
-                        behavior,
-                        vertical: ScrollLogicalPosition::Nearest,
-                        horizontal: ScrollLogicalPosition::Nearest,
-                    })
-                    .await;
-            });
+        if scroll_into_view && is_active && element.is_mounted() {
+            // Not the DOM's `scrollIntoView`: in Chromium it moves the Tab
+            // starting point onto this link, so a fresh page's first Tab
+            // skipped everything above the nav. Instant under reduced motion:
+            // an explicit smooth scroll overrides the stylesheet.
+            let _ = element.scroll_into_view(!prefers_reduced_motion());
         }
     }));
 
@@ -175,7 +161,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
             states,
             variables,
             "aria-current": aria_current,
-            onmounted: move |event| mounted.set(Some(event)),
+            onmounted: element.mount(),
             attributes: props.attributes,
             {props.children}
         }

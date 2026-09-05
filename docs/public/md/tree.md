@@ -120,6 +120,7 @@ never move to. `TreeItem` does that for you.
 | `data` | `Vec<TreeNode<T>>` | required | The tree's data, entirely your own shape. |
 | `render_node` | `Callback<TreeNodeRenderArgs<T>, Element>` | `default_tree_render` | Each visible row's content. The default can also be called selectively - say, default branches and `NavLink` leaves. |
 | `default_expanded` | `HashSet<String>` | - | Seeds `Tree`'s internal state once. Not a controlled prop. |
+| `current` | `Option<String>` | - | The id of the node where the user is - a nav's current page. Tab into the tree lands on it rather than on the first row, until the arrow keys move on; when it changes, the tab stop follows it. Inside a collapsed branch, the tab stop goes to the branch. |
 | `onexpandedchange` | `EventHandler<HashSet<String>>` | - | Notification only - it doesn't drive rendering. |
 
 Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,

@@ -154,6 +154,9 @@ pub fn TreePage() -> Element {
                         .default("default_tree_render")
                         .doc("Each visible row's content. The default can also be called selectively - say, default branches and `NavLink` leaves."),
                     prop("default_expanded", "HashSet<String>").doc("Seeds `Tree`'s internal state once. Not a controlled prop."),
+                    prop("current", "Option<String>").doc(
+                        "The id of the node where the user is - a nav's current page. Tab into the tree lands on it rather than on the first row, until the arrow keys move on; when it changes, the tab stop follows it. Inside a collapsed branch, the tab stop goes to the branch.",
+                    ),
                     prop("onexpandedchange", "EventHandler<HashSet<String>>")
                         .doc("Notification only - it doesn't drive rendering."),
                 ]),

@@ -343,6 +343,64 @@ impl ElementApi for WebElement {
         Ok(())
     }
 
+    fn scroll_into_view(&self, smooth: bool) -> Result<(), PlatformError> {
+        let window = web_sys::window().ok_or(PlatformError::NotFound)?;
+        let style = |element: &web_sys::Element, property: &str| {
+            window
+                .get_computed_style(element)
+                .ok()
+                .flatten()
+                .and_then(|style| style.get_property_value(property).ok())
+                .unwrap_or_default()
+        };
+        let rect = self.element.get_bounding_client_rect();
+        // Not rendered (`display: none` somewhere above): there is nothing to
+        // show, and a zero rect would scroll an ancestor to its top.
+        if rect.width() == 0.0 && rect.height() == 0.0 {
+            return Ok(());
+        }
+        let mut ancestor = self.element.parent_element();
+        let scroller = loop {
+            let Some(element) = ancestor else {
+                return Ok(());
+            };
+            if element.scroll_height() > element.client_height()
+                && matches!(style(&element, "overflow-y").as_str(), "auto" | "scroll")
+            {
+                break element;
+            }
+            ancestor = element.parent_element();
+        };
+        let margin = |side: &str| {
+            style(&self.element, &format!("scroll-margin-{side}"))
+                .trim_end_matches("px")
+                .parse::<f64>()
+                .unwrap_or(0.0)
+        };
+        let top = rect.top() - margin("top");
+        let bottom = rect.bottom() + margin("bottom");
+        let view_top = scroller.get_bounding_client_rect().top() + scroller.client_top() as f64;
+        let view_bottom = view_top + scroller.client_height() as f64;
+        // `nearest`: the edge that is out of view, and the top one if the
+        // element is taller than the view.
+        let delta = if top < view_top || bottom - top > view_bottom - view_top {
+            top - view_top
+        } else if bottom > view_bottom {
+            bottom - view_bottom
+        } else {
+            return Ok(());
+        };
+        let options = web_sys::ScrollToOptions::new();
+        options.set_top(scroller.scroll_top() as f64 + delta);
+        options.set_behavior(if smooth {
+            web_sys::ScrollBehavior::Smooth
+        } else {
+            web_sys::ScrollBehavior::Instant
+        });
+        scroller.scroll_to_with_scroll_to_options(&options);
+        Ok(())
+    }
+
     fn set_pointer_capture(&self, pointer_id: i32) -> Result<(), PlatformError> {
         self.element
             .set_pointer_capture(pointer_id)

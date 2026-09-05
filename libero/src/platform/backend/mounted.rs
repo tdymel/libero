@@ -78,6 +78,27 @@ impl ElementApi for MountedElement {
         })
     }
 
+    /// dioxus's own is `scrollIntoView`, focus side effect included where the
+    /// renderer has one; it is the only way a mounted handle can scroll an
+    /// ancestor.
+    fn scroll_into_view(&self, smooth: bool) -> Result<(), PlatformError> {
+        let element = self.0.clone();
+        let behavior = if smooth {
+            ScrollBehavior::Smooth
+        } else {
+            ScrollBehavior::Instant
+        };
+        queue(async move {
+            element
+                .scroll_to_with_options(ScrollToOptions {
+                    behavior,
+                    vertical: ScrollLogicalPosition::Nearest,
+                    horizontal: ScrollLogicalPosition::Nearest,
+                })
+                .await
+        })
+    }
+
     /// dioxus exposes pointer capture on no mounted handle, so a drag only
     /// keeps tracking outside the element where a richer backend answered.
     fn set_pointer_capture(&self, _pointer_id: i32) -> Result<(), PlatformError> {

@@ -10,6 +10,7 @@ use libero::{
         SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
     hooks::use_element,
+    platform::ElementApi,
     sx::sx,
     theme::{HEADER_HEIGHT, PAPER_BACKGROUND, Size},
 };
@@ -277,6 +278,16 @@ fn AppShell() -> Element {
             // Header sits flush against the content below - no rounding to
             // the nearest Size step here, this needs to stay exactly 0.
             sx: sx().gap("0"),
+            // Escape closes the mobile drawer from anywhere it can be pressed
+            // while open: the burger (which holds focus right after opening)
+            // or the nav. `main` is inert then, so nothing else hears it.
+            // Focus goes back to the burger, as after a page link.
+            onkeydown: move |event: KeyboardEvent| {
+                if open() && event.key() == Key::Escape {
+                    open.set(false);
+                    let _ = burger.query_selector("button").and_then(|button| button.focus());
+                }
+            },
             Header {
                 color: "primary",
                 sx: sx().gap("md"),

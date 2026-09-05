@@ -226,6 +226,12 @@ impl ElementApi for BlitzElement {
         Ok(())
     }
 
+    /// Not written: finding the scrolling ancestor needs Blitz's overflow
+    /// styles, and nothing native has asked for it.
+    fn scroll_into_view(&self, _smooth: bool) -> Result<(), PlatformError> {
+        Err(PlatformError::Unsupported)
+    }
+
     /// Blitz has no `FileList`, and nothing native posts a form anyway.
     fn set_files(&self, _files: &[dioxus::html::FileData]) -> Result<(), PlatformError> {
         Err(PlatformError::Unsupported)

@@ -82,6 +82,13 @@ pub trait ElementApi {
     /// Sets this element's scroll offset, in pixels.
     fn scroll_to(&self, x: f64, y: f64) -> Result<(), PlatformError>;
 
+    /// Scrolls the nearest scrollable ancestor, vertically, just far enough to
+    /// show this element and its `scroll-margin` - `scrollIntoView`'s
+    /// `nearest`, without calling it. Chromium moves its sequential focus
+    /// starting point to whatever `scrollIntoView` shows, so on page load the
+    /// next Tab would start from there rather than from the top of the page.
+    fn scroll_into_view(&self, smooth: bool) -> Result<(), PlatformError>;
+
     /// Replaces this `<input type="file">`'s own file list.
     ///
     /// A `FileList` is the only thing a form posts, and it cannot be edited:
