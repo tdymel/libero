@@ -93,16 +93,21 @@ pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     return None;
 }
 
-/// Only the web can name a finished transition's property today - see
-/// [`transition_property`](crate::platform::transition_property) for why this
-/// has to be asked of the platform at all.
+/// The web reads the `web_sys` event; every other renderer is asked for the
+/// payload the desktop and Android WebView deliver, which carries the property
+/// across the IPC. Blitz and a server hand over something else and answer
+/// `None` - see [`transition_property`](crate::platform::transition_property)
+/// for why this has to be asked of the platform at all.
 pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<String> {
-    #[cfg(not(target_arch = "wasm32"))]
-    let _ = event;
     #[cfg(target_arch = "wasm32")]
     return web::transition_property(event);
     #[cfg(not(target_arch = "wasm32"))]
-    return None;
+    return {
+        use dioxus::html::{HasTransitionData, SerializedTransitionData};
+        event
+            .downcast::<SerializedTransitionData>()
+            .map(HasTransitionData::property_name)
+    };
 }
 
 /// Only the web has a document key listener that can take a press ahead of

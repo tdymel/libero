@@ -36,6 +36,7 @@ pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
 };
 pub use portal::use_portal;
+pub(crate) use presence::use_presence_timed;
 pub use presence::{Presence, use_presence};
 pub(crate) use ripple::{ripple_sx, use_ripple};
 pub use stylesheet::use_stylesheet;

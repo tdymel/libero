@@ -4312,6 +4312,7 @@ dependencies = [
  "blitz-traits",
  "chrono",
  "dioxus",
+ "dioxus-html",
  "dioxus-native-dom",
  "dioxus-ssr",
  "fast_qr",

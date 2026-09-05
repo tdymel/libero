@@ -93,21 +93,9 @@ Use it when there is nothing to preserve - content built from a closure, or a
 long list you would rather not pay for while it is hidden - and expect the state
 inside to be gone on reopen.
 
-Two limits of that mode, both about the `transitionend` it unmounts on:
-
-- Under `@media (prefers-reduced-motion: reduce)` there is no transition, so no
-  `transitionend` ever arrives and the children stay mounted after the close.
-  They are still `visibility: hidden`, so unreachable and unannounced - the mode
-  degrades to `keep_mounted: true` rather than breaking.
-- `duration: 0` is handled: a zero-length transition never runs either, so
-  `Collapse` unmounts straight from `open` instead of waiting for an event that
-  cannot come.
-- A `Collapse` **nested inside another one's content** can unmount the outer
-  one's children early. `transitionend` bubbles, and the filter discriminates on
-  the property name rather than on the element the event came from, so an inner
-  panel's `grid-template-rows` event reaches the outer root. If both are closing
-  and the inner one is faster, the outer unmounts at the inner one's end time.
-  Only `keep_mounted: false` is affected.
+Under `prefers-reduced-motion: reduce`, and with `duration: 0`, there is no
+animation to wait for, so the children go at once. A `Collapse` nested inside
+another one's content ends only its own close, never the outer one's.
 
 ## Returning focus when it closes
 

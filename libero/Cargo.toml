@@ -48,6 +48,13 @@ wasm-bindgen-futures = "0.4"
 web-sys = { version = "0.3", features = ["Window", "Document", "Element", "EventTarget", "HtmlElement", "HtmlFormElement", "HtmlImageElement", "HtmlInputElement", "HtmlSelectElement", "HtmlTextAreaElement", "DataTransfer", "DataTransferItem", "DataTransferItemList", "File", "FileList", "NodeList", "Navigator", "ScrollBehavior", "ScrollToOptions", "Clipboard", "CssStyleDeclaration", "DomRect", "KeyboardEvent", "MediaQueryList", "MouseEvent", "TransitionEvent", "console"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# Only for `serialize`, which is what defines `SerializedTransitionData` - the
+# type the desktop and Android WebView hand every `transitionend` over as, so
+# `platform::transition_property` can read the property there. A desktop app
+# turns it on anyway through dioxus-desktop. Adds `serde_json` and
+# `serde_repr` to a native build; the wasm32 graph is untouched (measured
+# 2026-09-19, todo 36a).
+dioxus-html = { path = "../.dioxus-active/packages/html", default-features = false, features = ["serialize"] }
 regex = "1"
 # Blitz's `NodeHandle`, which is what a `MountedData` downcasts to under
 # dioxus-native - the whole `platform::ElementApi` is answerable from it, DOM

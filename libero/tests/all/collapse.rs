@@ -4,6 +4,10 @@
 
 use crate::common::{attributes_of, body, render};
 
+use std::cell::Cell;
+use std::thread;
+use std::time::{Duration, Instant};
+
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
@@ -254,4 +258,118 @@ fn a_false_aria_expanded_is_still_rendered_on_the_trigger() {
     // resolve to the panel that is still in the DOM while closed.
     assert!(html.contains(r#"aria-controls="shipping-panel""#), "{html}");
     assert!(html.contains(r#"id="shipping-panel""#), "{html}");
+}
+
+thread_local! {
+    /// How many times [`Counted`] was created: a remount discards the
+    /// content's state, which is what a stale fallback would do.
+    static MOUNTS: Cell<usize> = const { Cell::new(0) };
+}
+
+#[component]
+fn Counted() -> Element {
+    use_hook(|| MOUNTS.with(|mounts| mounts.set(mounts.get() + 1)));
+    rsx! { "panel body" }
+}
+
+/// A `Collapse` whose `open` the test flips from outside, through the signal
+/// the app puts in context. `keep_mounted: false`, so the content's presence
+/// in the markup is the hook's `mounted()`.
+fn toggled_app(duration: u32) -> Element {
+    let open = use_context_provider(|| Signal::new(true));
+    rsx! {
+        LiberoProvider {
+            Collapse { open: open(), keep_mounted: false, duration, Counted {} }
+        }
+    }
+}
+
+fn toggled_30ms() -> Element {
+    toggled_app(30)
+}
+
+fn toggled_0ms() -> Element {
+    toggled_app(0)
+}
+
+fn set_open(dom: &mut VirtualDom, value: bool) {
+    let mut open = dom.in_scope(ScopeId::APP, consume_context::<Signal<bool>>);
+    dom.in_runtime(|| open.set(value));
+}
+
+/// Polls `dom` until `done` holds for its markup or `limit` runs out.
+/// `process_events` drains the task the timer delivers through.
+fn drive_until(dom: &mut VirtualDom, limit: Duration, done: impl Fn(&str) -> bool) -> String {
+    let start = Instant::now();
+    loop {
+        dom.process_events();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = body(&dioxus_ssr::render(dom));
+        if done(&html) || start.elapsed() > limit {
+            return html;
+        }
+        thread::sleep(Duration::from_millis(2));
+    }
+}
+
+/// No renderer here fires `transitionend`, which is exactly the position of a
+/// suppressed exit: before the fallback timer the content stayed mounted for
+/// good (todo 36b).
+#[test]
+fn a_close_with_no_transitionend_unmounts_after_the_duration() {
+    let mut dom = VirtualDom::new(toggled_30ms);
+    dom.rebuild_in_place();
+    let html = drive_until(&mut dom, Duration::from_millis(50), |_| false);
+    assert!(html.contains("panel body"), "{html}");
+
+    set_open(&mut dom, false);
+    let start = Instant::now();
+    // Still there straight after the close: the exit is running.
+    let html = drive_until(&mut dom, Duration::ZERO, |_| true);
+    assert!(
+        html.contains("panel body"),
+        "unmounted before the exit: {html}"
+    );
+
+    let html = drive_until(&mut dom, Duration::from_secs(2), |html| {
+        !html.contains("panel body")
+    });
+    assert!(!html.contains("panel body"), "never unmounted: {html}");
+    // Not before the duration plus the slack.
+    assert!(
+        start.elapsed() >= Duration::from_millis(30 + 150),
+        "{:?}",
+        start.elapsed()
+    );
+}
+
+#[test]
+fn a_zero_duration_close_unmounts_without_waiting() {
+    let mut dom = VirtualDom::new(toggled_0ms);
+    dom.rebuild_in_place();
+    set_open(&mut dom, false);
+
+    let html = drive_until(&mut dom, Duration::from_millis(100), |html| {
+        !html.contains("panel body")
+    });
+    assert!(!html.contains("panel body"), "{html}");
+}
+
+/// Reopening mid-exit drops the fallback. A stale one unmounts the open
+/// panel, and the open arm then mounts it again at once - so the markup heals
+/// and only the mount count shows the content's state was thrown away.
+#[test]
+fn reopening_before_the_fallback_keeps_the_content() {
+    let mut dom = VirtualDom::new(toggled_30ms);
+    dom.rebuild_in_place();
+    set_open(&mut dom, false);
+    // Long enough for the close effect to arm the 180ms fallback.
+    drive_until(&mut dom, Duration::from_millis(60), |_| false);
+    set_open(&mut dom, true);
+
+    // Well past the 180ms the dropped timer was due at.
+    let html = drive_until(&mut dom, Duration::from_millis(400), |_| false);
+    assert!(html.contains("panel body"), "{html}");
+    assert_eq!(MOUNTS.with(Cell::get), 1, "the content was remounted");
+    assert_eq!(attributes_of(&html, "div")["data-state"], "open", "{html}");
 }

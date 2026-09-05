@@ -10,9 +10,10 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Button, Checkbox, ColorCode, ColorField, Dialog, FileField, Form, Marquee,
-        MultiSelect, NumberField, Options, PinField, RangeSlider, Rule, SegmentedControl, Slider,
-        SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form,
+        ActionIcon, Box, Button, Checkbox, Collapse, ColorCode, ColorField, Dialog, FileField,
+        Form, Marquee, MultiSelect, NumberField, Options, PinField, RangeSlider, Rule,
+        SegmentedControl, Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty,
+        use_form,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -28,6 +29,7 @@ struct FindClickListener {
     input: Option<ElementId>,
     keydown: Vec<ElementId>,
     mousedown: Vec<ElementId>,
+    transitionend: Vec<ElementId>,
 }
 
 impl WriteMutations for FindClickListener {
@@ -50,6 +52,9 @@ impl WriteMutations for FindClickListener {
         }
         if name == "mousedown" {
             self.mousedown.extend(self.last);
+        }
+        if name == "transitionend" {
+            self.transitionend.extend(self.last);
         }
     }
     fn child(&mut self, _index: usize) {}
@@ -142,8 +147,16 @@ impl dioxus::html::HtmlEventConverter for TestConverter {
     fn convert_touch_data(&self, _event: &PlatformEventData) -> dioxus::html::TouchData {
         unimplemented!()
     }
-    fn convert_transition_data(&self, _event: &PlatformEventData) -> dioxus::html::TransitionData {
-        unimplemented!()
+    fn convert_transition_data(&self, event: &PlatformEventData) -> dioxus::html::TransitionData {
+        let fake = event
+            .downcast::<FakeTransition>()
+            .expect("not a FakeTransition");
+        // Wrapped the way dioxus-desktop wraps it, so the WebView arm of
+        // `platform::transition_property` reads the property.
+        let serialized = dioxus::html::SerializedTransitionData::from(
+            &dioxus::html::TransitionData::new(fake.clone()),
+        );
+        dioxus::html::TransitionData::new(serialized)
     }
     fn convert_visible_data(&self, _event: &PlatformEventData) -> dioxus::html::VisibleData {
         unimplemented!()
@@ -214,6 +227,30 @@ impl dioxus::html::point_interaction::ModifiersInteraction for FakeKey {
     fn modifiers(&self) -> dioxus::html::keyboard_types::Modifiers {
         Default::default()
     }
+}
+
+/// A stand-in for the renderer's `transitionend` payload: the property that
+/// finished, which is all the presence hook reads.
+#[derive(Clone)]
+struct FakeTransition(&'static str);
+
+impl dioxus::html::HasTransitionData for FakeTransition {
+    fn property_name(&self) -> String {
+        self.0.to_string()
+    }
+    fn pseudo_element(&self) -> String {
+        String::new()
+    }
+    fn elapsed_time(&self) -> f32 {
+        0.0
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+fn transition_end_event(property: &'static str) -> Rc<dyn std::any::Any> {
+    Rc::new(PlatformEventData::new(Box::new(FakeTransition(property))))
 }
 
 fn key_event(key: Key) -> Rc<dyn std::any::Any> {
@@ -1407,4 +1444,68 @@ fn a_read_only_file_field_removes_nothing() {
     );
 
     assert_eq!(click_clear(readonly_files_clear), None);
+}
+
+/// Two `keep_mounted: false` collapses, one inside the other, both closing.
+/// The inner one is the faster, so its `transitionend` arrives first, and it
+/// bubbles. Before todo 36d it reached the outer root too and unmounted the
+/// outer content mid-close.
+fn nested_collapse_app() -> Element {
+    let open = use_context_provider(|| Signal::new(true));
+    rsx! {
+        LiberoProvider {
+            Collapse { open: open(), keep_mounted: false, duration: 5000,
+                "outer body"
+                Collapse { open: open(), keep_mounted: false, duration: 5000, "inner body" }
+            }
+        }
+    }
+}
+
+#[test]
+fn an_inner_collapse_ending_its_exit_does_not_end_the_outer_one() {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(nested_collapse_app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    // Registered parent first: the outer root is created before its children.
+    let [_outer, inner] = find.transitionend[..] else {
+        panic!(
+            "expected two transitionend listeners, got {:?}",
+            find.transitionend
+        );
+    };
+
+    let mut open = dom.in_scope(ScopeId::APP, consume_context::<Signal<bool>>);
+    dom.in_runtime(|| open.set(false));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    let end = |dom: &mut VirtualDom, property| {
+        dom.runtime().handle_event(
+            "transitionend",
+            Event::new(transition_end_event(property), true),
+            inner,
+        );
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    };
+
+    // The content's own opacity is not the exit, for either collapse.
+    end(&mut dom, "opacity");
+    let html = body(&dioxus_ssr::render(&dom));
+    assert!(
+        html.contains("inner body"),
+        "an opacity end unmounted: {html}"
+    );
+
+    end(&mut dom, "grid-template-rows");
+
+    let html = body(&dioxus_ssr::render(&dom));
+    assert!(
+        !html.contains("inner body"),
+        "the inner exit did not end: {html}"
+    );
+    assert!(
+        html.contains("outer body"),
+        "the inner exit ended the outer one: {html}"
+    );
 }

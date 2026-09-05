@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -6,23 +8,21 @@ use crate::{
         common::{base_props, variables},
         layout::use_box,
     },
-    hooks::{use_presence, use_theme},
+    hooks::{use_presence_timed, use_theme},
     sx::{StaticSx, sx},
     theme::{COLLAPSE_DURATION, COLLAPSE_EASING, COLLAPSE_OPACITY_CLOSED},
 };
 
 /// The property the exit transition is measured on, and the one
-/// [`use_presence`] filters `transitionend` by. The content's own `opacity`
-/// bubbles a second event to this same root; it shares `COLLAPSE_DURATION`, so
-/// the two finish together rather than one arriving early, but the filter is
-/// what keeps either from standing in for the other.
+/// [`use_presence`](crate::hooks::use_presence) filters `transitionend` by.
+/// The content's own `opacity` bubbles a second event to this same root; it
+/// shares `COLLAPSE_DURATION`, so the two finish together rather than one
+/// arriving early, but the filter is what keeps either from standing in for
+/// the other.
 ///
-/// The filter discriminates on the property name, **not on the target**, so a
-/// nested `Collapse` inside this one's children bubbles a matching
-/// `grid-template-rows` event to this root. If both are closing and the inner
-/// one is faster, this one unmounts its children at the inner one's end time.
-/// Unfixable here - `TransitionData` exposes no target - and only reachable
-/// with `keep_mounted: false`. See todo 41.
+/// A nested `Collapse` bubbles a matching `grid-template-rows` event towards
+/// this root, and the hook stops it at the inner root, so an inner exit never
+/// ends this one's (todo 36d).
 const EXIT_PROPERTY: &str = "grid-template-rows";
 
 const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
@@ -161,17 +161,16 @@ pub fn Collapse(props: CollapseProps) -> Element {
 
     // Unconditional, as every hook must be: the `keep_mounted: true` path
     // ignores `mounted()` but still reads `visible()`, which is what makes the
-    // grid row animate from `0fr` instead of snapping.
-    let presence = use_presence(props.open, EXIT_PROPERTY);
+    // grid row animate from `0fr` instead of snapping. The duration is the
+    // hook's fallback for an exit that never fires `transitionend` - a zero
+    // duration, reduced motion, or a renderer that runs no transitions.
+    let presence = use_presence_timed(
+        props.open,
+        EXIT_PROPERTY,
+        Some(Duration::from_millis(duration.into())),
+    );
     let visible = presence.visible();
-    let mounted = keep_mounted
-        || match duration {
-            // A zero-duration transition never runs, so no `transitionend`
-            // ever arrives and the hook would hold the content mounted for
-            // good. Nothing is animating, so `open` is the whole answer.
-            0 => props.open,
-            _ => presence.mounted(),
-        };
+    let mounted = keep_mounted || presence.mounted();
 
     let states: Input<States> = props
         .states
