@@ -370,14 +370,18 @@ pub fn FileField(props: FileFieldProps) -> Element {
     // Which chip the keyboard is on. Only the `Input` variant has one: the
     // dropzone's cards sit outside the control, so their remove buttons are
     // ordinary tab stops and need no cursor at all.
-    let cursor = use_signal(|| None::<usize>);
+    let mut cursor = use_signal(|| None::<usize>);
     let count = value.len();
-    // Removing the chip under the cursor leaves the index pointing at the one
-    // that took its place, and past the end it clamps.
-    let chip_cursor = match count {
-        0 => None,
-        count => cursor().map(|index| index.min(count - 1)),
-    };
+    let chip_cursor = chip_cursor(cursor(), count, cards);
+    // A cursor set in the `Input` variant means nothing to the dropzone, and
+    // coming back must not show a chip the keyboard never picked there. The
+    // dropzone ignores it above, so clearing it one render late is unseen.
+    use_effect(use_reactive!(|(variant,)| {
+        let _ = variant;
+        if cursor.peek().is_some() {
+            cursor.set(None);
+        }
+    }));
     let id_prefix = format!("{}-file", field.id());
 
     // Prepared unconditionally, the way every `use_box` must be, and used
@@ -817,6 +821,17 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
     }
 }
 
+/// The chip the keyboard is on, of `count`. Removing the chip under the
+/// cursor leaves the index pointing at the one that took its place, and past
+/// the end it clamps. A dropzone has no chips, so no cursor.
+fn chip_cursor(cursor: Option<usize>, count: usize, cards: bool) -> Option<usize> {
+    match count {
+        _ if cards => None,
+        0 => None,
+        count => cursor.map(|index| index.min(count - 1)),
+    }
+}
+
 /// The control's keyboard. Two keyboards on one element, the way
 /// `MultiSelect`'s trigger has them: the chips answer Left, Right, Backspace
 /// and Delete, and everything else opens the picker.
@@ -1095,5 +1110,25 @@ fn default_card(
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chip_cursor;
+
+    #[test]
+    fn the_cursor_clamps_to_the_chips_left() {
+        assert_eq!(chip_cursor(Some(1), 3, false), Some(1));
+        assert_eq!(chip_cursor(Some(4), 3, false), Some(2));
+        assert_eq!(chip_cursor(Some(0), 0, false), None);
+        assert_eq!(chip_cursor(None, 3, false), None);
+    }
+
+    /// Todo 245: a cursor left over from the `Input` variant named a chip id
+    /// the dropzone never draws, through `aria-activedescendant`.
+    #[test]
+    fn a_dropzone_has_no_cursor_whatever_is_left_over() {
+        assert_eq!(chip_cursor(Some(1), 3, true), None);
     }
 }
