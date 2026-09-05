@@ -11,9 +11,9 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Box, Button, Checkbox, Chip, Collapse, ColorCode, ColorField, Dialog,
-        FileField, Form, Marquee, MultiSelect, NumberField, Options, PinField, RadioGroup,
-        RangeSlider, Rule, SegmentedControl, Slider, SliderChangeEvent, Tabs, TagsField, TextField,
-        not_empty, use_form,
+        FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NumberField, Options, PinField,
+        RadioGroup, RangeSlider, Rule, SegmentedControl, Slider, SliderChangeEvent, Tabs,
+        TagsField, TextField, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -118,7 +118,7 @@ impl dioxus::html::HtmlEventConverter for TestConverter {
         unimplemented!()
     }
     fn convert_focus_data(&self, _event: &PlatformEventData) -> dioxus::html::FocusData {
-        unimplemented!()
+        dioxus::html::FocusData::new(FakeFocus)
     }
     fn convert_image_data(&self, _event: &PlatformEventData) -> dioxus::html::ImageData {
         unimplemented!()
@@ -226,6 +226,15 @@ impl dioxus::html::HasKeyboardData for FakeKey {
 impl dioxus::html::point_interaction::ModifiersInteraction for FakeKey {
     fn modifiers(&self) -> dioxus::html::keyboard_types::Modifiers {
         Default::default()
+    }
+}
+
+/// A stand-in for the renderer's focus payload, which carries nothing read.
+struct FakeFocus;
+
+impl dioxus::html::HasFocusData for FakeFocus {
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
     }
 }
 
@@ -1691,4 +1700,144 @@ fn a_chip_with_a_path_name_writes_its_forms_value() {
     assert_eq!(checked_states(&html), [true]);
     let input = attributes_of(&body(&html), "input");
     assert_eq!(input.get("name").map(String::as_str), Some("open"));
+}
+
+/// Each element's `keydown` and `focusout` listeners, and each menu item's
+/// `data-menu-index`, so a test can address one level of a `Menu`.
+#[derive(Default)]
+struct MenuListeners {
+    last: Option<ElementId>,
+    keydown: Vec<ElementId>,
+    focusout: Vec<ElementId>,
+    items: Vec<(ElementId, String)>,
+}
+
+impl WriteMutations for MenuListeners {
+    fn push_id(&mut self, id: ElementId) {
+        self.last = Some(id);
+    }
+    fn set_id(&mut self, id: ElementId) {
+        self.last = Some(id);
+    }
+    fn add_event_listener(&mut self, name: &str) {
+        match name {
+            "keydown" => self.keydown.extend(self.last),
+            "focusout" => self.focusout.extend(self.last),
+            _ => {}
+        }
+    }
+    fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+        if let (Some(id), "data-menu-index", AttributeValue::Text(value)) = (self.last, name, value)
+        {
+            self.items.push((id, value.clone()));
+        }
+    }
+    fn child(&mut self, _index: usize) {}
+    fn pop(&mut self) {}
+    fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+    fn create_text(&mut self, _value: &str) {}
+    fn clone(&mut self) {}
+    fn append_children(&mut self, _m: usize) {}
+    fn replace_with(&mut self, _m: usize) {}
+    fn insert_after(&mut self, _m: usize) {}
+    fn insert_before(&mut self, _m: usize) {}
+    fn set_text(&mut self, _value: &str) {}
+    fn remove_event_listener(&mut self, _name: &str) {}
+    fn remove(&mut self) {}
+}
+
+fn submenu_app() -> Element {
+    let menu = use_menu();
+    use_hook(|| menu.open());
+    rsx! {
+        LiberoProvider {
+            Menu {
+                state: menu,
+                items: vec![
+                    MenuItem::new("Recent")
+                        .submenu(vec![MenuItem::new("notes.md").on_select(|_| {}).into()])
+                        .into(),
+                ],
+                Button { attributes: menu.a11y_attributes(), "File" }
+            }
+            "menus:{menu.opened()}"
+        }
+    }
+}
+
+fn open_menus(html: &str) -> usize {
+    html.matches("role=\"menu\"").count()
+}
+
+/// The root menu open with its submenu open on top, and what addresses them.
+fn open_submenu() -> (VirtualDom, MenuListeners) {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(submenu_app);
+    let mut find = MenuListeners::default();
+    dom.rebuild(&mut find);
+    settle_menu(&mut dom, &mut find);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(open_menus(&html), 1, "the root menu opens");
+
+    let recent = newest_first_item(&find);
+    dom.runtime().handle_event(
+        "keydown",
+        Event::new(key_event(Key::ArrowRight), true),
+        recent,
+    );
+    settle_menu(&mut dom, &mut find);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(open_menus(&html), 2, "ArrowRight opens the submenu");
+    (dom, find)
+}
+
+/// The newest item at index 0: the root's before its submenu opens, the
+/// submenu's after.
+fn newest_first_item(find: &MenuListeners) -> ElementId {
+    find.items
+        .iter()
+        .rev()
+        .find(|(_, index)| index == "0")
+        .expect("an item at index 0")
+        .0
+}
+
+fn settle_menu(dom: &mut VirtualDom, find: &mut MenuListeners) {
+    for _ in 0..4 {
+        dom.process_events();
+        dom.render_immediate(find);
+    }
+}
+
+/// Focus leaving a submenu for somewhere outside the menu closes the whole
+/// menu, not only the submenu (todo 322). Off the web no element ever counts
+/// as focused, so every focusout here is focus leaving the whole tree - the
+/// case that left the root open. Focus moving between levels, which must
+/// close nothing, needs a real browser.
+#[test]
+fn focus_leaving_a_submenu_closes_the_whole_menu() {
+    let (mut dom, mut find) = open_submenu();
+    let submenu = *find.focusout.last().expect("the submenu's box listens");
+    dom.runtime().handle_event(
+        "focusout",
+        Event::new(Rc::new(PlatformEventData::new(Box::new(FakeFocus))), true),
+        submenu,
+    );
+    settle_menu(&mut dom, &mut find);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(open_menus(&html), 0, "no level stays open");
+    assert!(html.contains("menus:false"), "the root's state closed too");
+}
+
+/// Escape is not focus leaving: it closes the submenu alone, as before.
+#[test]
+fn escape_in_a_submenu_closes_only_the_submenu() {
+    let (mut dom, mut find) = open_submenu();
+    let item = newest_first_item(&find);
+    dom.runtime()
+        .handle_event("keydown", Event::new(key_event(Key::Escape), true), item);
+    settle_menu(&mut dom, &mut find);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(open_menus(&html), 1, "the root menu stays");
+    assert!(html.contains("menus:true"));
 }

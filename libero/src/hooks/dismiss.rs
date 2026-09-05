@@ -242,6 +242,11 @@ pub(crate) struct DismissOptions {
     /// returns `Ok(())` on the `visibility: hidden` box a popover renders
     /// before it has been measured, and does nothing.
     pub initial_focus: Option<ElementHandle>,
+    /// Called in place of `onclose` when focus left the box on its own
+    /// ([`Dismissal::FocusMoved`]). `None` calls `onclose`, as for every other
+    /// close. A submenu uses it: where focus went decides whether only it
+    /// closes or the whole menu does, and only this close knows focus left.
+    pub focus_moved: Option<Callback<()>>,
 }
 
 impl Default for DismissOptions {
@@ -251,6 +256,7 @@ impl Default for DismissOptions {
             outside: true,
             return_focus: true,
             initial_focus: None,
+            focus_moved: None,
         }
     }
 }
@@ -293,6 +299,7 @@ pub(crate) struct DismissHandle {
     global: bool,
     inside: Signal<Vec<(u64, ElementHandle)>>,
     inside_next: Signal<u64>,
+    focus_moved: Option<Callback<()>>,
 }
 
 impl DismissHandle {
@@ -490,7 +497,7 @@ impl DismissHandle {
     /// *descendant*, and `is_focused()` catches the element itself - which is
     /// the common case for an anchor, since a trigger is usually the focusable
     /// element rather than a wrapper around one.
-    fn holds_focus(&self) -> bool {
+    pub(crate) fn holds_focus(&self) -> bool {
         let inside = |element: &ElementHandle| {
             element.is_focused() || element.query_selector(":focus").is_ok()
         };
@@ -544,7 +551,11 @@ impl DismissHandle {
 
         let handle = *self;
         spawn(async move {
-            if let Some(onclose) = handle.onclose {
+            let onclose = match reason {
+                Dismissal::FocusMoved => handle.focus_moved.or(handle.onclose),
+                _ => handle.onclose,
+            };
+            if let Some(onclose) = onclose {
                 onclose.call(());
             }
             if restore {
@@ -629,6 +640,7 @@ pub(crate) fn use_dismiss(
         global,
         inside,
         inside_next,
+        focus_moved: options.focus_moved,
     };
 
     // The document subscription and the stack membership have exactly the same

@@ -637,13 +637,27 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
     );
     let floating = *popover.floating();
     let placed = popover.placed();
+    // Focus left a submenu. Onto another level of this menu, only the submenu
+    // closes; anywhere else, the whole menu does. The root's box never saw
+    // focus go - it was in the portaled submenu - so without this an outside
+    // click left the root open (todo 322). The root's `holds_focus` covers
+    // every level, since each one registers with every level above it.
+    let root = props.parents.0.first().copied();
+    let (onclose, close_all) = (props.onclose, props.close_all);
+    let focus_moved = use_callback(move |()| match (root, close_all) {
+        (Some(root), Some(close_all)) if !root.holds_focus() => close_all.call(false),
+        _ => onclose.call(()),
+    });
     let dismiss = use_dismiss(
         props.anchor,
         floating,
         open,
         placed,
         Some(props.onclose),
-        DismissOptions::default(),
+        DismissOptions {
+            focus_moved: Some(focus_moved),
+            ..Default::default()
+        },
     );
     // A submenu is portaled beside its parent, not inside it, so focus moving
     // into it reads as focus leaving every menu above it. Registered for as
