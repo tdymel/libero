@@ -2,12 +2,13 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ActionIcon, Caption, ClassList, HtmlTag, Input, NumberValue, States,
-        form::{FIELD_CONTROL_SX, FieldStatus, use_bound, use_field, use_field_frame},
+        ActionIcon, HtmlTag, Input, NumberValue,
+        common::field_props,
+        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{StaticSx, ThemeAwareValue, sx},
     theme::Size,
     utils::warn,
 };
@@ -32,86 +33,50 @@ const fn stepper_size(size: Size) -> Size {
     }
 }
 
-// Hand-written rather than `field_props!`. The macro has been generic since
-// 2026-09-11; converting these props is todo 319.
-#[derive(Props, Clone, PartialEq)]
-pub struct NumberFieldProps<T: NumberValue> {
-    /// The number in the field; strictly controlled. `None` is the empty
-    /// field - nobody has typed anything yet.
-    #[props(default)]
-    value: Option<T>,
-    /// Called with the number the caller should hold next. Silent while the
-    /// buffer is not yet a number, so `"-"` and `"1."` never reach it.
-    #[props(default)]
-    onchange: Option<EventHandler<T>>,
-    /// Rules over the number, shown once the field loses focus or its form is
-    /// submitted.
-    #[props(default, into)]
-    validate: crate::components::Validators<Option<T>>,
-    /// Floor, enforced on typing and on the steppers alike.
-    #[props(default)]
-    min: Option<T>,
-    /// Ceiling, same.
-    #[props(default)]
-    max: Option<T>,
-    /// What one press of a stepper moves by. Defaults to
-    /// `T::default_step()` - `1` for an integer, `1.0` for a float.
-    #[props(default)]
-    step: Option<T>,
-    /// What the field posts as. A path - `Signup::FIELDS.age()` - also
-    /// binds it to the surrounding `Form`'s value when the field has no
-    /// `onchange`.
-    #[props(default, into)]
-    name: crate::components::FieldName<Option<T>>,
-    #[props(default, into)]
-    placeholder: Option<String>,
-    /// Shows the minus/plus buttons in the trailing slot. Off by default: a
-    /// number is usually typed, the arrow keys step it either way, and two
-    /// buttons are the most expensive thing a field can carry.
-    #[props(default)]
-    steppers: bool,
-    /// Announced on the stepper that raises the value.
-    #[props(default, into)]
-    increment_label: Option<String>,
-    /// Announced on the stepper that lowers it.
-    #[props(default, into)]
-    decrement_label: Option<String>,
-    /// The field's caption, above the control.
-    #[props(default, into)]
-    label: Caption,
-    /// Between the label and the control. What to enter.
-    #[props(default, into)]
-    description: Caption,
-    /// Under the control. Units, ranges, what the number means.
-    #[props(default, into)]
-    helper: Caption,
-    /// Validation state, under the helper. A bare `&str` is an error.
-    #[props(default, into)]
-    status: Input<FieldStatus>,
-    #[props(default, into)]
-    size: Input<Size>,
-    /// Corner radius, independent of `size`.
-    #[props(default, into)]
-    radius: Input<Size>,
-    /// `None` is "not stated" - what a `Fieldset` will cascade into later.
-    #[props(default)]
-    disabled: Option<bool>,
-    #[props(default)]
-    required: Option<bool>,
-    /// Focusable and posted with the form, but not editable.
-    /// `disabled` instead drops the field from the tab order and
-    /// from the post, which is wrong for a review-your-answers
-    /// view. `None` is "not stated".
-    #[props(default)]
-    readonly: Option<bool>,
-    #[props(extends = GlobalAttributes, extends = input)]
-    attributes: Vec<Attribute>,
-    #[props(default, into)]
-    class: Input<ClassList>,
-    #[props(default, into)]
-    sx: Input<Sx>,
-    #[props(default, into)]
-    states: Input<States>,
+field_props! {
+    extends(input);
+    pub struct NumberFieldProps<T: NumberValue> {
+        /// The number in the field; strictly controlled. `None` is the empty
+        /// field - nobody has typed anything yet.
+        #[props(default)]
+        value: Option<T>,
+        /// Called with the number the caller should hold next. Silent while the
+        /// buffer is not yet a number, so `"-"` and `"1."` never reach it.
+        #[props(default)]
+        onchange: Option<EventHandler<T>>,
+        /// Rules over the number, shown once the field loses focus or its form is
+        /// submitted.
+        #[props(default, into)]
+        validate: crate::components::Validators<Option<T>>,
+        /// Floor, enforced on typing and on the steppers alike.
+        #[props(default)]
+        min: Option<T>,
+        /// Ceiling, same.
+        #[props(default)]
+        max: Option<T>,
+        /// What one press of a stepper moves by. Defaults to
+        /// `T::default_step()` - `1` for an integer, `1.0` for a float.
+        #[props(default)]
+        step: Option<T>,
+        /// What the field posts as. A path - `Signup::FIELDS.age()` - also
+        /// binds it to the surrounding `Form`'s value when the field has no
+        /// `onchange`.
+        #[props(default, into)]
+        name: crate::components::FieldName<Option<T>>,
+        #[props(default, into)]
+        placeholder: Option<String>,
+        /// Shows the minus/plus buttons in the trailing slot. Off by default: a
+        /// number is usually typed, the arrow keys step it either way, and two
+        /// buttons are the most expensive thing a field can carry.
+        #[props(default)]
+        steppers: bool,
+        /// Announced on the stepper that raises the value.
+        #[props(default, into)]
+        increment_label: Option<String>,
+        /// Announced on the stepper that lowers it.
+        #[props(default, into)]
+        decrement_label: Option<String>,
+    }
 }
 
 /// A numeric field over the caller's own number type, with optional steppers

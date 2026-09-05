@@ -11,7 +11,7 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Box, Button, Checkbox, Collapse, ColorCode, ColorField, Dialog, FileField,
-        Form, Marquee, MultiSelect, NumberField, Options, PinField, RangeSlider, Rule,
+        Form, Marquee, MultiSelect, NumberField, Options, PinField, RadioGroup, RangeSlider, Rule,
         SegmentedControl, Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty,
         use_form,
     },
@@ -1444,6 +1444,52 @@ fn a_read_only_file_field_removes_nothing() {
     );
 
     assert_eq!(click_clear(readonly_files_clear), None);
+}
+
+fn readonly_radio_group() -> Element {
+    rsx! {
+        LiberoProvider {
+            RadioGroup {
+                label: "Emphasis",
+                value: Some(Emphasis::Bold),
+                readonly: READ_ONLY.get(),
+                onchange: move |next: Emphasis| heard(next == Emphasis::Italic),
+            }
+        }
+    }
+}
+
+/// Todo 320: a read-only group refused the arrows by returning early, and so
+/// left the browser's own arrow in place - which moves focus to the next radio
+/// and checks it natively. Measured in Chromium: the selection held, but focus
+/// walked onto options whose `tabindex` is -1. The arrow has to be cancelled
+/// either way; only whether it also picks depends on `readonly`.
+#[test]
+fn a_read_only_radio_group_cancels_the_native_arrow() {
+    for readonly in [false, true] {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        READ_ONLY.set(readonly);
+        HEARD.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(readonly_radio_group);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+
+        let arrow = Event::new(key_event(Key::ArrowDown), true);
+        dom.runtime()
+            .handle_event("keydown", arrow.clone(), last_keydown(&find));
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        assert!(
+            !arrow.default_action_enabled(),
+            "readonly {readonly}: the browser's own arrow was left to run"
+        );
+        let expected: &[String] = if readonly { &[] } else { &["true".to_string()] };
+        assert_eq!(
+            HEARD.with_borrow(Clone::clone),
+            expected,
+            "readonly {readonly}"
+        );
+    }
 }
 
 /// Two `keep_mounted: false` collapses, one inside the other, both closing.

@@ -184,7 +184,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let arrows = {
         move |event: Event<KeyboardData>| {
-            if disabled || readonly {
+            if disabled {
                 return;
             }
             let step = match event.key() {
@@ -192,13 +192,18 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 Key::ArrowUp | Key::ArrowLeft => -1,
                 _ => return,
             };
+            // The web moves and selects on its own for a native radio group;
+            // cancelling it keeps one code path, and gives Blitz - which does
+            // neither - the same behaviour. Read-only too: the native arrow
+            // would otherwise walk focus onto an option that is not the tab
+            // stop, while the selection stays put (todo 320, measured).
+            event.prevent_default();
+            if readonly {
+                return;
+            }
             let Some(next) = neighbour(count, tab_stop, step) else {
                 return;
             };
-            // The web moves and selects on its own for a native radio group;
-            // cancelling it keeps one code path, and gives Blitz - which does
-            // neither - the same behaviour.
-            event.prevent_default();
             pick.call(next);
             focus_option(&root, next);
         }
