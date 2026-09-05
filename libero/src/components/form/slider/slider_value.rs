@@ -111,7 +111,10 @@ impl From<f64> for SliderMark {
 }
 
 /// Where the value went, and how far along the interaction is. `Start` and
-/// `End` bracket one pointer drag; a key press emits a lone `Change`.
+/// `End` bracket one pointer drag; a key press emits `Change` then `End`,
+/// because it settles on its value at once. So `End` always means a value the
+/// user is done choosing, whichever way they chose it, and committing on it
+/// is enough.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SliderChangeEvent<V = f64> {
     Start(V),

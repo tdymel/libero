@@ -294,3 +294,35 @@ fn a_sliders_format_prop_renames_its_mark_captions_too() {
     assert!(!body.contains("Low"));
     assert!(!body.contains("High"));
 }
+
+/// `min` defaults to 0, so `max: -10.0` alone is an inverted range - and
+/// `f64::clamp` panics on one. A range computed from data is ordinary
+/// (`items.len() as f64 - 1.0` is `-1` for an empty list), so it has to warn
+/// and draw empty rather than take the page down.
+#[test]
+fn an_inverted_or_non_finite_range_renders_instead_of_panicking() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider { max: -10.0, aria_label: "Empty", oninput: move |_| {} }
+                Slider { min: 10.0, max: 0.0, aria_label: "Inverted", oninput: move |_| {} }
+                Slider { min: f64::NAN, aria_label: "Broken min", oninput: move |_| {} }
+                Slider { value: f64::NAN, aria_label: "Broken value", oninput: move |_| {} }
+                RangeSlider {
+                    min: 10.0,
+                    max: 0.0,
+                    aria_label: "Inverted range",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    // Five sliders, six thumbs: the `RangeSlider` mounts two.
+    assert_eq!(html.matches(r#"role="slider""#).count(), 6, "{html}");
+    // A collapsed range has no position, and nothing writes `NaN`.
+    assert!(!html.contains("NaN"));
+    assert!(html.contains("--lsx-slider-filled:0;"));
+}

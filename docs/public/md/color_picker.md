@@ -64,8 +64,10 @@ survives as long as the caller keeps the value it was handed.
 
 Carries a `SliderChangeEvent<ColorCode>`, the `Slider` shape: `Start` and `End`
 bracket a drag on the panel or on a slider, `Change` carries every color in
-between. A key press and a swatch click emit a lone `Change`. Read
-`event.value()` for the color; match on the phase to commit only on `End`.
+between. A key press and a swatch click emit `Change` then `End`, because
+either settles on its color at once. Read `event.value()` for the color; match
+on the phase to commit only on `End` - every way of choosing a color ends
+there.
 
 ## Alpha
 
@@ -158,7 +160,7 @@ and draws `children` in black or white, whichever reads on the color.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `ColorCode` | required | Strictly controlled. |
-| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | | Every new color, bracketed by `Start`/`End` on a drag. |
+| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | | Every new color, bracketed by `Start`/`End` on a drag. A key press or a swatch click emits `Change` then `End`. |
 | `with_alpha` | `bool` | `false` | Alpha slider and preview swatch. |
 | `swatches` | `Swatches` | | Preset colors; `ColorCode`s or CSS strings. |
 | `swatches_per_row` | `usize` | | Caps swatches per row; unset, they wrap. |

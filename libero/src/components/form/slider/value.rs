@@ -1,5 +1,7 @@
 //! The value scale, kept out of the component so it is testable without a DOM.
 
+use crate::utils::warn;
+
 /// Decimals `step` is written with - `0.1` -> 1. Rust's shortest-repr `f64`
 /// formatting is what makes this exact.
 pub(super) fn decimals(step: f64) -> usize {
@@ -14,12 +16,33 @@ pub(super) fn round_to(value: f64, decimals: usize) -> f64 {
     (value * factor).round() / factor
 }
 
+/// Bounds `snap` may clamp with: finite, and in order. `f64::clamp` panics on
+/// `min > max` or a non-finite bound, and a slider snaps on every render, so a
+/// caller's `max: items.len() as f64 - 1.0` on an empty list would take the
+/// page down. A broken range collapses to a point instead and draws empty,
+/// which is what `ProgressBar` already does with the same mistake.
+pub(super) fn sane_bounds(min: f64, max: f64) -> (f64, f64) {
+    if min.is_finite() && max.is_finite() && min <= max {
+        return (min, max);
+    }
+    warn("Slider: `min` must be finite, and `max` finite and not below it.");
+    let min = if min.is_finite() { min } else { 0.0 };
+    let max = if max.is_finite() { max.max(min) } else { min };
+    (min, max)
+}
+
 /// The nearest valid value to `raw`: snapped to the `step` grid from `min`,
 /// clamped, and rounded to that grid's precision.
 ///
 /// `step: 0` is continuous - no grid, and no rounding either, or every value
 /// would land on a whole number.
+///
+/// `min` and `max` must have been through [`sane_bounds`]. A `NaN` `raw` reads
+/// as `min`, the same empty position `fraction` gives it.
 pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
+    if raw.is_nan() {
+        return min;
+    }
     if step <= 0.0 {
         return raw.clamp(min, max);
     }
@@ -175,6 +198,38 @@ mod tests {
         assert_eq!(snap(1.5, 0.5, 10.0, 1.0), 1.5);
         assert_eq!(snap(2.4, 0.5, 10.0, 1.0), 2.5);
         assert_eq!(snap(0.1, 0.05, 1.0, 0.1), 0.15);
+    }
+
+    /// `Slider { max: -10.0 }` alone is already inverted, because `min`
+    /// defaults to 0 - and `f64::clamp` panics on that.
+    #[test]
+    fn a_broken_range_collapses_instead_of_panicking() {
+        assert_eq!(sane_bounds(0.0, 100.0), (0.0, 100.0));
+        assert_eq!(sane_bounds(0.0, -10.0), (0.0, 0.0));
+        assert_eq!(sane_bounds(10.0, 0.0), (10.0, 10.0));
+        assert_eq!(sane_bounds(f64::NAN, 100.0), (0.0, 100.0));
+        assert_eq!(sane_bounds(5.0, f64::NAN), (5.0, 5.0));
+        assert_eq!(sane_bounds(f64::NEG_INFINITY, f64::INFINITY), (0.0, 0.0));
+        // A zero-width range is legal input, not a repair.
+        assert_eq!(sane_bounds(5.0, 5.0), (5.0, 5.0));
+    }
+
+    /// The whole point of the repair: these called `f64::clamp` and took the
+    /// page down.
+    #[test]
+    fn a_repaired_range_snaps_without_panicking() {
+        let (min, max) = sane_bounds(0.0, -10.0);
+        assert_eq!(snap(7.0, min, max, 1.0), 0.0);
+        let (min, max) = sane_bounds(f64::NAN, f64::NAN);
+        assert_eq!(snap(7.0, min, max, 0.0), 0.0);
+    }
+
+    /// A `NaN` value would otherwise reach the CSS as `NaN%`.
+    #[test]
+    fn a_nan_value_reads_as_min() {
+        assert_eq!(snap(f64::NAN, 5.0, 10.0, 1.0), 5.0);
+        assert_eq!(snap(f64::NAN, 5.0, 10.0, 0.0), 5.0);
+        assert_eq!(fraction(snap(f64::NAN, 5.0, 10.0, 1.0), 5.0, 10.0), 0.0);
     }
 
     #[test]

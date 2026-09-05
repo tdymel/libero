@@ -18,7 +18,9 @@ captions all come from that list.
 ## Usage
 
 A controlled continuous slider. `oninput` carries a `SliderChangeEvent`:
-`Start` and `End` bracket one drag, `Change` carries every value in between.
+`Start` and `End` bracket one drag, `Change` carries every value in between. A
+key press emits `Change` then `End`, so committing on `End` catches a keyboard
+edit too.
 
 ```rust
 use dioxus::prelude::*;
@@ -170,7 +172,7 @@ through `attributes` lands on the field wrapper instead of the thumb. Pass
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Adds `aria-required` to the thumb and marks the label. |
 | `name` | `String` | - | Emits a hidden input of that name, so the value posts with a form. |
-| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value. |
+| `oninput` | `EventHandler<SliderChangeEvent<V>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value. A key press emits `Change` then `End`. |
 
 Like every component, `Slider` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

@@ -2,6 +2,7 @@
 //! onto the `f64` engine, and the spacing the field's stacked layout needs.
 
 use super::slider_value::{SliderMark, SliderStep, SliderValue};
+use super::value::sane_bounds;
 use crate::{
     components::Input,
     sx::{Sx, sx},
@@ -31,9 +32,13 @@ impl Scale {
         step: Option<V::Step>,
     ) -> Self {
         let Some(options) = V::options() else {
+            // Sanitised here rather than in the core, so the skins' marks and
+            // their `V::at(min)` fallback see the same repaired range.
+            let (min, max) =
+                sane_bounds(min.map_or(0.0, V::position), max.map_or(100.0, V::position));
             return Self::Continuous {
-                min: min.map_or(0.0, V::position),
-                max: max.map_or(100.0, V::position),
+                min,
+                max,
                 step: step.map_or(1.0, SliderStep::as_f64),
             };
         };

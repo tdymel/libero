@@ -70,3 +70,31 @@ fn splitter_survives_a_min_size_past_the_midpoint() {
     assert!(body.contains("aria-valuemin=\"50\""));
     assert!(body.contains("--lsx-splitter-a:50%;"));
 }
+
+/// `f64::clamp` panics on a `NaN` bound, and keeps a `NaN` receiver - so a
+/// `min_size` of `NaN` took the page down and an `initial_size` of `NaN`
+/// (`a / (a + b)` with both at 0) wrote `--lsx-splitter-a:NaN%`, leaving both
+/// panes without a size. Both fall back with a warning instead.
+#[test]
+fn a_non_finite_size_falls_back_instead_of_panicking() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Splitter {
+                    min_size: f64::NAN,
+                    initial_size: f64::NAN,
+                    aria_label: "Resize",
+                    panel_a: rsx! { div { "left" } },
+                    panel_b: rsx! { div { "right" } },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+
+    assert!(body.contains("left"));
+    assert!(body.contains("--lsx-splitter-a:50%;"));
+    assert!(!body.contains("NaN"));
+}

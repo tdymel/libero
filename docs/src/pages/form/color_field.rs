@@ -26,7 +26,7 @@ pub fn ColorFieldPage() -> Element {
                     prop("value", "ColorCode")
                         .doc("Strictly controlled - pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
-                        .doc("A drag in the dropdown brackets its moves with `Start`/`End`. Typed text that parses, a key press, a swatch and the eyedropper emit a lone `Change`."),
+                        .doc("A drag in the dropdown brackets its moves with `Start`/`End`, and a key press or a swatch in the dropdown emits `Change` then `End`. Typed text that parses and the eyedropper emit a lone `Change`."),
                     prop("format", "ColorFormat")
                         .default("hex, or hexa with alpha")
                         .doc("How the text shows the color, and so what `name` posts. Typing accepts every form either way."),

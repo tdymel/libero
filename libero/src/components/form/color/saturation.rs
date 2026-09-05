@@ -176,9 +176,11 @@ pub(super) fn Saturation(props: SaturationProps) -> Element {
             _ => return,
         };
         event.prevent_default();
-        emit.call(SliderChangeEvent::Change(
-            value.with_saturation_value(moved.0, moved.1),
-        ));
+        // `Change` then `End`, as everywhere a key settles a value at once:
+        // a caller that commits on `End` must not miss a keyboard edit.
+        let moved = value.with_saturation_value(moved.0, moved.1);
+        emit.call(SliderChangeEvent::Change(moved));
+        emit.call(SliderChangeEvent::End(moved));
     };
 
     let panel_variables: Input<Variables> = variables()

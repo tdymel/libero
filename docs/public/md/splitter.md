@@ -68,7 +68,9 @@ fn Demo() -> Element {
 
 `on_resize` reports both panes' resulting percentages, A first -
 `SplitterResizeEvent::Start`/`Change`/`End`, so a drag is bracketed the same way
-a scroll is.
+a scroll is. A key press emits `Change` then `End`, because it settles on its
+size at once - so persisting the layout on `End` also catches a keyboard
+resize.
 
 ## Accessibility
 
@@ -88,7 +90,7 @@ its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 | `min_size` | `f64` | `10` | % floor applied to both panes, capped at 50. |
 | `divider_size` | `Size` | `sm` | Which size level the divider uses. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
-| `on_resize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. |
+| `on_resize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`. |
 | `aria_label` | `String` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
 | `panel_a` | `Element` | required | Pane A (left/top). |
 | `panel_b` | `Element` | required | Pane B (right/bottom). Nest another `Splitter` in a pane for more than two. |

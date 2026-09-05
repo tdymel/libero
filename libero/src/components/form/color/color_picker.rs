@@ -81,7 +81,8 @@ base_props! {
         /// Strictly controlled - pair it with `oninput`.
         value: ColorCode,
         /// `Start`/`End` bracket a drag on the panel or a slider; a key press
-        /// or a swatch click emits a lone `Change`.
+        /// or a swatch click emits `Change` then `End`, because either
+        /// settles on its color at once. So committing on `End` is enough.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
         /// Shows the alpha slider and the preview swatch beside it.
@@ -329,7 +330,11 @@ fn SwatchRow(props: SwatchRowProps) -> Element {
                 tabindex: (!focusable).then_some("-1"),
                 onclick: move |_| {
                     if let Some(oninput) = &oninput {
+                        // A pick is settled the moment it is made, so it
+                        // brackets itself: a caller committing on `End` sees
+                        // a swatch the same way it sees a finished drag.
                         oninput.call(SliderChangeEvent::Change(color));
+                        oninput.call(SliderChangeEvent::End(color));
                     }
                     if let Some(onswatchclick) = &onswatchclick {
                         onswatchclick.call(color);

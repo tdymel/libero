@@ -250,7 +250,7 @@ pub fn SliderPage() -> Element {
                     prop("name", "String")
                         .doc("Emits a hidden input of that name, so the value posts with a form."),
                     prop("oninput", "EventHandler<SliderChangeEvent<V>>")
-                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value."),
+                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new value. A key press emits `Change` then `End`."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name the thumb."),
                     prop("description", "Caption")

@@ -98,6 +98,16 @@ macro_rules! number_value {
                     1.0
                 }
 
+                /// Rust's `from_str` accepts `nan`, `inf` and `infinity` in
+                /// any case, and the field can do nothing sensible with
+                /// either: every comparison with `NaN` is false, so it slips
+                /// past both `min` and `max` in `clamp_to`, and once it is
+                /// committed the steppers are stuck - `NaN + step` is `NaN`,
+                /// and so is `inf - step`. So they are not a number.
+                fn parse(text: &str) -> Option<Self> {
+                    text.trim().parse::<Self>().ok().filter(|value| value.is_finite())
+                }
+
                 fn step_up(self, by: Self) -> Self {
                     rounded(self + by, self, by)
                 }
@@ -128,4 +138,26 @@ macro_rules! number_value {
 number_value! {
     float: f32, f64;
     int: i8, i16, i32, i64, i128, isize, u8, u16, u32, u64, u128, usize,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::NumberValue;
+
+    /// `f64::from_str` accepts them, `clamp_to` cannot hold them - every
+    /// comparison with `NaN` is false, so it passed both bounds, and `inf`
+    /// passed an open `max`. The field then showed `NaN`, reported
+    /// `aria-valuenow="NaN"`, and its steppers were stuck.
+    #[test]
+    fn a_float_field_does_not_accept_nan_or_infinity() {
+        for text in ["nan", "NaN", "inf", "-inf", "infinity", "INFINITY"] {
+            assert_eq!(<f64 as NumberValue>::parse(text), None, "{text}");
+            assert_eq!(<f32 as NumberValue>::parse(text), None, "{text}");
+        }
+
+        assert_eq!(<f64 as NumberValue>::parse(" 1.5 "), Some(1.5));
+        assert_eq!(<f64 as NumberValue>::parse("1."), Some(1.0));
+        assert_eq!(<f64 as NumberValue>::parse("-"), None);
+        assert_eq!(<f64 as NumberValue>::zero(), Some(0.0));
+    }
 }

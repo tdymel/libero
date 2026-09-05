@@ -72,7 +72,7 @@ pub fn ColorPickerPage() -> Element {
                     prop("value", "ColorCode")
                         .doc("Strictly controlled - pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
-                        .doc("`Start`/`End` bracket a drag on the panel or a slider. A key press or a swatch click emits a lone `Change`."),
+                        .doc("`Start`/`End` bracket a drag on the panel or a slider. A key press or a swatch click emits `Change` then `End`, so committing on `End` is enough."),
                     prop("with_alpha", "bool")
                         .default("false")
                         .doc("Shows the alpha slider and the preview swatch beside it."),

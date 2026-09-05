@@ -42,8 +42,9 @@ field_props! {
         /// path `name` can supply it instead.
         #[props(default)]
         value: ColorCode,
-        /// A drag in the dropdown brackets its moves with `Start`/`End`; typed
-        /// text that parses, a key press, a swatch and the eyedropper emit a
+        /// A drag in the dropdown brackets its moves with `Start`/`End`, and
+        /// a key press or a swatch in the dropdown emits `Change` then `End`;
+        /// typed text that parses, a key press, a swatch and the eyedropper emit a
         /// lone `Change`.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,

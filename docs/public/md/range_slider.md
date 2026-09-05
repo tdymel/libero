@@ -16,7 +16,8 @@ never cross - each stops at the other, or `min_range` short of it.
 ## Usage
 
 `oninput` carries a `SliderChangeEvent<(V, V)>`: `Start` and `End` bracket one
-drag, `Change` carries every pair in between.
+drag, `Change` carries every pair in between. A key press emits `Change` then
+`End`, so committing on `End` catches a keyboard edit too.
 
 ```rust
 use dioxus::prelude::*;
@@ -156,7 +157,7 @@ words do not fit, and `format` where a bare number does not say the unit.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Adds `aria-required` to both thumbs and marks the label. |
 | `name` | `String` | - | Emits two hidden inputs of that name, in track order, so the pair posts with a form. |
-| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new pair. |
+| `oninput` | `EventHandler<SliderChangeEvent<(V, V)>>` | - | Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new pair. A key press emits `Change` then `End`. |
 
 Like every component, `RangeSlider` also takes the shared props `sx`, `class`,
 `style`, `states`, and any extra HTML attributes.

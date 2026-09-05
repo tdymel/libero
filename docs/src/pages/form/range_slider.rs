@@ -255,7 +255,7 @@ pub fn RangeSliderPage() -> Element {
                     prop("name", "String")
                         .doc("Emits two hidden inputs of that name, in track order, so the pair posts with a form - `FormData::get_all` reads it back."),
                     prop("oninput", "EventHandler<SliderChangeEvent<(V, V)>>")
-                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new pair."),
+                        .doc("Fires per value - a drag is the DOM's `input` event. `Start`/`End` bracket a drag, `Change` carries every new pair. A key press emits `Change` then `End`."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the track. Named by `aria-labelledby`, since `for` cannot name a thumb."),
                     prop("description", "Caption")

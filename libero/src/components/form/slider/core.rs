@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use super::slider_value::{SliderChangeEvent, SliderMark};
-use super::value::{SliderCoreValue, fraction};
+use super::value::{SliderCoreValue, fraction, sane_bounds};
 use crate::{
     CssLayer,
     components::{
@@ -271,7 +271,11 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     // slider simply never mounts the second.
     let thumb_elements = [use_element(), use_element()];
 
-    let (min, max, step) = (props.min, props.max, props.step.max(0.0));
+    // `snap` clamps on every render, and `f64::clamp` panics on an inverted
+    // or non-finite range - which `max: items.len() as f64 - 1.0` is for an
+    // empty list. `step.max(0.0)` already maps a NaN step to 0 (continuous).
+    let (min, max) = sane_bounds(props.min, props.max);
+    let step = props.step.max(0.0);
     let min_range = props.min_range.max(0.0);
     let size = props.size.copied_or(theme.slider.size);
     let color = base_color(props.color.as_ref());
@@ -422,11 +426,14 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
             theme.slider.step
         } * step;
 
+        // `Change` then `End`: a key press settles on its value the moment it
+        // lands, so a caller that commits on `End` - which is what the docs
+        // ask for - has to hear about a keyboard edit too.
         let go_to = |raw: f64| {
             event.prevent_default();
-            emit.call(SliderChangeEvent::Change(
-                value.moved(index, raw, min, max, step, min_range),
-            ));
+            let moved = value.moved(index, raw, min, max, step, min_range);
+            emit.call(SliderChangeEvent::Change(moved));
+            emit.call(SliderChangeEvent::End(moved));
         };
 
         let thumb = value.thumb(index);

@@ -12,7 +12,7 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
-    utils::use_name_warning,
+    utils::{use_name_warning, warn},
 };
 
 /// Both panes' resulting sizes as percentages, `A` (left/top) first.
@@ -24,6 +24,17 @@ pub enum SplitterResizeEvent {
 }
 
 const SPLITTER_A_VAR: CssVar = CssVar::new("--lsx-splitter-a");
+
+/// `value`, or `fallback` with a warning - a bad number from a caller falls
+/// back, it does not crash the page. The theme's own defaults are finite, so
+/// the fallback always is.
+fn finite_or(value: f64, fallback: f64, message: &str) -> f64 {
+    if value.is_finite() {
+        return value;
+    }
+    warn(message);
+    fallback
+}
 
 static SPLITTER_BASE_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
@@ -59,7 +70,7 @@ fn resolve_panels(
     panel_b: Option<Element>,
     children: Vec<Element>,
 ) -> (Element, Element) {
-    use crate::{components::Box, utils::warn};
+    use crate::components::Box;
 
     if let (Some(a), Some(b)) = (panel_a, panel_b) {
         return (a, b);
@@ -151,14 +162,25 @@ pub fn Splitter(props: SplitterProps) -> Element {
     let vertical = orientation == Orientation::Vertical;
 
     // Both panes get the same floor, so anything above 50 leaves no range -
-    // and `f64::clamp` asserts `min <= max`.
-    let min_size = props
-        .min_size
-        .copied_or(theme.splitter.min_size)
-        .clamp(0.0, 50.0);
+    // and `f64::clamp` asserts `min <= max`. `clamp` keeps a NaN receiver, so
+    // a non-finite floor has to be dropped before it becomes a bound below.
+    let min_size = finite_or(
+        props.min_size.copied_or(theme.splitter.min_size),
+        theme.splitter.min_size,
+        "Splitter: `min_size` must be a finite number.",
+    )
+    .clamp(0.0, 50.0);
     let size = props.divider_size.copied_or(theme.splitter.size);
 
-    let mut a = use_signal(|| props.initial_size.clamp(min_size, 100.0 - min_size));
+    // `NaN` survives a `clamp` as its receiver, and `a / (a + b)` is `NaN`
+    // when both are 0 - which would write `--lsx-splitter-a:NaN%` and leave
+    // both panes without a size.
+    let initial_size = finite_or(
+        props.initial_size,
+        50.0,
+        "Splitter: `initial_size` must be a finite number.",
+    );
+    let mut a = use_signal(|| initial_size.clamp(min_size, 100.0 - min_size));
     // Container width (vertical) or height (horizontal), measured once at
     // pointerdown to turn the drag's pixel delta into a percentage.
     let mut container_size = use_signal(|| 0.0_f64);
@@ -218,11 +240,14 @@ pub fn Splitter(props: SplitterProps) -> Element {
         };
 
         let current = a();
+        // `Change` then `End`: a key press settles on its size at once, and
+        // `End` is where the docs tell a caller to persist the layout.
         let mut go_to = |new_a: f64| {
             event.prevent_default();
             let new_a = new_a.clamp(min_size, 100.0 - min_size);
             a.set(new_a);
             notify(SplitterResizeEvent::Change(new_a, 100.0 - new_a));
+            notify(SplitterResizeEvent::End(new_a, 100.0 - new_a));
         };
 
         match event.key() {
