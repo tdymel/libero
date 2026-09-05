@@ -32,6 +32,15 @@ Flex {
 }
 ```
 
+## about/getting_started.rs `FEATURES_EXAMPLE`
+
+```rust,ignore
+libero = { version = "*", default-features = false, features = [
+    "code-lang-rust",
+    "full-polymorphism",
+] }
+```
+
 ## about/getting_started.rs `QUICK_START_EXAMPLE`
 
 ```rust,no_run

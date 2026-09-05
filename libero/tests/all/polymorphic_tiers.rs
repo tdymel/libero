@@ -31,3 +31,42 @@ fn the_default_tier_renders_its_own_element() {
         );
     }
 }
+
+/// Todo 278: `Box { component: "footer" }` used to render a `<div>`, and in a
+/// release build it did so silently. These are the semantic tags the default
+/// tier grew on 2026-09-19, one per family, so a regression that pushed any
+/// of them back behind `full-polymorphism` fails here.
+#[test]
+fn the_promoted_semantic_tags_render_on_default_features() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Box { component: "footer", "footer" }
+                Box { component: "address", "address" }
+                Box { component: "strong", "strong" }
+                Box { component: "em", "em" }
+                Box { component: "small", "small" }
+                Box { component: "time", "time" }
+                Box { component: "abbr", "abbr" }
+                Box { component: "del", "del" }
+                Box { component: "details", "details" }
+                Box { component: "summary", "summary" }
+                Box { component: "dialog", "dialog" }
+                Box { component: "progress" }
+                Box { component: "hr" }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    for tag in [
+        "footer", "address", "strong", "em", "small", "time", "abbr", "del", "details", "summary",
+        "dialog", "progress", "hr",
+    ] {
+        assert!(
+            html.contains(&format!("<{tag} ")),
+            "<{tag}> missing in {html}"
+        );
+    }
+}

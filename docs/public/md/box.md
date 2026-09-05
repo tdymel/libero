@@ -53,6 +53,13 @@ fn Demo() -> Element {
 }
 ```
 
+`component` takes any of the 111 HTML5 element names, and 83 of them - every
+sectioning, text-level, list, table and form element - render on default
+features. The other 28 (document metadata, embedded and media content,
+`template`/`slot`, and the bidi and ruby set) need the `full-polymorphism`
+feature; without it they render as a `div`, silently in a release build. See
+[getting_started.md](getting_started.md#feature-flags) for the full list.
+
 ## Accessibility
 
 `Box` adds no roles, so the semantics are whatever tag `component` names.

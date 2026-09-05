@@ -37,7 +37,7 @@ pub fn BoxPage() -> Element {
                     .doc("Per-instance CSS custom properties on the `style` attribute, so `sx` can reference a varying value without a class per value."),
                 prop("component", "HtmlTag")
                     .default("div")
-                    .doc("Which element to render as."),
+                    .doc("Which element to render as. Any of the 111 HTML5 element names; the 28 outside the default tier (document metadata, embedded and media content, `template`/`slot`, bidi and ruby) need the `full-polymorphism` feature and render as a `div` without it."),
                 prop("framework_sx", "&'static StaticSx")
                     .doc("Base styles of a component built on `Box`, on their own CSS layer - below `sx`, so a caller's override still wins."),
                 prop("style", "String")

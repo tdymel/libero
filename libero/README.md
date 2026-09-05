@@ -34,6 +34,21 @@ fn app() -> Element {
 }
 ```
 
+## Features
+
+All additive. The default set is five `code-lang-*` highlighter grammars
+(Rust, Bash, Markdown, HTML and CSS).
+
+- `code-lang-*` - one hand-ported grammar each for `Code` and `CodeBlock`, 30
+  in all. With `default-features = false` you compile only the ones you name.
+- `full-polymorphism` - `Box`'s `component` prop accepts all 111 HTML5 element
+  names, and 83 of them (every sectioning, text-level, list, table and form
+  element) render on default features. This adds the remaining 28: document
+  metadata, embedded and media content, `template`/`slot`, and the bidi and
+  ruby set. Without it those render as a `div`, silently in a release build.
+- `native` - reach elements through Blitz when running under `dioxus-native`,
+  instead of Dioxus's portable mounted handle.
+
 ## Status
 
 Libero is a work in progress. APIs may change between `0.x` releases.

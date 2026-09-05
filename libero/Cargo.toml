@@ -92,14 +92,19 @@ default = [
     "code-lang-css",
 ]
 # `Box` (and anything built on it - `Title`, `Text`, `Icon`, ...) can render
-# as any of the full HTML5 element set via `component: HtmlTag::...`/a tag
-# name string, but `render_polymorphic` only compiles a match arm per tag
-# that's actually reachable - without this, only the tags `libero`'s own
-# components (and `docs`) use internally get a real arm (see
-# `polymorphic.rs`'s `html_tags!` invocation); everything else silently
-# renders as `<div>` instead of failing to compile. Turn this on if your own
-# app passes a `full`-tier tag (e.g. `"table"`, `"nav"`, `"textarea"`) to
-# `component`.
+# as any of the 111 HTML5 elements via `component: HtmlTag::...`/a tag name
+# string, but `render_polymorphic` only compiles a match arm per tag in the
+# `default` tier - the 83 elements a page is written out of. This feature
+# compiles the remaining 28: document metadata (`head`, `meta`, `title`,
+# `script`, `style`, `link`, `base`, `body`, `noscript`), embedded and media
+# content (`iframe`, `canvas`, `audio`, `video`, `picture`, `source`,
+# `track`, `embed`, `object`, `param`, `map`, `area`), web components
+# (`template`, `slot`) and the bidi/ruby set (`bdi`, `bdo`, `ruby`, `rp`,
+# `rt`). See `polymorphic.rs`'s `html_tags!` invocation for the two lists.
+#
+# A `full`-tier tag always type-checks; without the feature it renders as a
+# `<div>` and warns in a debug build (and silently in release), so turn this
+# on if your own app passes one to `component`.
 full-polymorphism = []
 # Each turns on one hand-ported grammar in `components/typography/code/languages/`
 # (see `language_catalog.rs`) - only the languages you enable are compiled in.

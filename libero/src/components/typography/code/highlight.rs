@@ -413,6 +413,58 @@ mod tests {
         }
     }
 
+    /// Todo 279: the non-web arm rewrites `\b`, `\w` and `\d` into their
+    /// ASCII sets so it agrees with the browser's `RegExp`
+    /// (`platform::regex::ascii_semantics`). A rewrite that produced invalid
+    /// syntax would panic in the compile cache, so every pattern of every
+    /// compiled-in grammar is built here - including the nested ones, which
+    /// a sample text may never reach.
+    #[test]
+    fn every_grammar_pattern_still_compiles_after_the_ascii_rewrite() {
+        fn compile(grammar: Grammar, label: &str, depth: usize) {
+            assert!(
+                depth < 8,
+                "{label}: `inside` grammars nest suspiciously deep"
+            );
+            let text = PreparedText::new("");
+            for rule in grammar {
+                for pattern in rule.patterns {
+                    // A compile failure panics inside the cache; a `None`
+                    // here just means the empty haystack did not match.
+                    regex_api().find(pattern.pattern, pattern.case_insensitive, &text, 0);
+                    if let Some(inside) = pattern.inside {
+                        compile(inside(), label, depth + 1);
+                    }
+                }
+            }
+        }
+
+        for entry in LANGUAGE_CATALOG.iter() {
+            compile((entry.grammar)(), entry.label, 0);
+        }
+    }
+
+    /// Review 6 S1: `é` is a word character to the `regex` crate and not to
+    /// `RegExp`, so before the rewrite this line highlighted differently on
+    /// the web than it did here - and under `fullstack`, the server's markup
+    /// contradicted the client that hydrated it. Both engines now mark the
+    /// `if` inside `éif`, which is what Prism's grammars were written for.
+    #[test]
+    fn a_keyword_after_a_non_ascii_letter_tokenizes_as_it_does_on_the_web() {
+        let spans = flat("éif x; if y\n", lang("rust"));
+
+        assert_eq!(
+            spans,
+            vec![
+                ("é".to_string(), None),
+                ("if".to_string(), Some("lsx-tok-keyword")),
+                (" x; ".to_string(), None),
+                ("if".to_string(), Some("lsx-tok-keyword")),
+                (" y".to_string(), None),
+            ]
+        );
+    }
+
     fn flat(source: &str, language: Language) -> Vec<(String, Option<&'static str>)> {
         highlight(source, language).into_iter().flatten().collect()
     }

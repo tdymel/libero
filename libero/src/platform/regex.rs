@@ -293,7 +293,8 @@ fn find_impl(
         let regex = cache
             .entry(CompiledKey::new(pattern, case_insensitive))
             .or_insert_with(|| {
-                regex::RegexBuilder::new(pattern)
+                let source = ascii_semantics(pattern);
+                regex::RegexBuilder::new(&source)
                     .case_insensitive(case_insensitive)
                     .build()
                     .unwrap_or_else(|err| panic!("invalid regex pattern {pattern:?}: {err}"))
@@ -317,9 +318,81 @@ fn find_impl(
     })
 }
 
+/// Rewrites the shorthands the `regex` crate reads as Unicode into the ASCII
+/// ones JS's `RegExp` has, so both arms tokenize the same source the same way.
+///
+/// The web arm is the one that cannot move. JS has no flag that makes `\b`,
+/// `\w` or `\d` Unicode-aware - `u` changes `.`, escapes and case folding,
+/// not those - and the grammars are ports of Prism's, which were written
+/// against exactly these ASCII semantics. So `regex` comes to JS, not the
+/// other way round.
+///
+/// Without this, `Code { language: "rust", source: "éif x" }` highlights the
+/// `if` inside `éif` as a keyword on the web and not natively: `é` is a word
+/// character to `regex` and not to `RegExp`, so only one of them sees a
+/// boundary before the `i`. Under `fullstack` that is a server render the
+/// client then contradicts.
+///
+/// `\s` and `\S` are deliberately left alone: JS's `\s` is already Unicode
+/// whitespace without `u`, so the two only disagree on `\u{feff}`, and a
+/// negated ASCII class cannot be written inside a character class anyway.
+///
+/// Rewriting happens once per pattern, inside the compile cache's miss arm.
+#[cfg(not(target_arch = "wasm32"))]
+fn ascii_semantics(pattern: &str) -> std::borrow::Cow<'_, str> {
+    if !pattern.contains('\\') {
+        return std::borrow::Cow::Borrowed(pattern);
+    }
+
+    let mut out = String::with_capacity(pattern.len());
+    // A character class needs the bare ranges, not a nested class: `[\da-f]`
+    // becomes `[0-9a-f]`. Only the outermost `[`/`]` toggle it, since a `[`
+    // inside a class is a literal to `RegExp` - the dialect these are written
+    // in.
+    let mut in_class = false;
+    let mut chars = pattern.chars();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\\' => match chars.next() {
+                Some('b') if !in_class => out.push_str("(?-u:\\b)"),
+                Some('B') if !in_class => out.push_str("(?-u:\\B)"),
+                Some('w') => out.push_str(match in_class {
+                    true => "0-9A-Za-z_",
+                    false => "[0-9A-Za-z_]",
+                }),
+                Some('d') => out.push_str(match in_class {
+                    true => "0-9",
+                    false => "[0-9]",
+                }),
+                // Negated: expressible outside a class only. Both engines
+                // then agree, since `[^...]` is Unicode-aware in each.
+                Some('W') if !in_class => out.push_str("[^0-9A-Za-z_]"),
+                Some('D') if !in_class => out.push_str("[^0-9]"),
+                Some(other) => {
+                    out.push('\\');
+                    out.push(other);
+                }
+                None => out.push('\\'),
+            },
+            '[' if !in_class => {
+                in_class = true;
+                out.push('[');
+            }
+            ']' if in_class => {
+                in_class = false;
+                out.push(']');
+            }
+            _ => out.push(ch),
+        }
+    }
+
+    std::borrow::Cow::Owned(out)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{resolve_spans, utf16_to_byte_offsets};
+    use super::{PreparedText, ascii_semantics, regex_api, resolve_spans, utf16_to_byte_offsets};
 
     /// 'é' is 2 bytes / 1 code unit, '😀' 4 bytes / 2 code units.
     const MIXED: &str = "aé😀b";
@@ -348,6 +421,55 @@ mod tests {
     #[test]
     fn an_offset_past_the_end_is_the_length() {
         assert_eq!(utf16_to_byte_offsets(MIXED, &[99]), vec![MIXED.len()]);
+    }
+
+    /// The web arm has no such rewrite: `RegExp` already reads these as
+    /// ASCII, which is what the rewrite is making `regex` agree with.
+    #[test]
+    fn the_unicode_shorthands_are_rewritten_to_their_ascii_sets() {
+        assert_eq!(
+            ascii_semantics(r"\b(?:true|false)\b"),
+            r"(?-u:\b)(?:true|false)(?-u:\b)"
+        );
+        assert_eq!(ascii_semantics(r"\w+"), "[0-9A-Za-z_]+");
+        assert_eq!(ascii_semantics(r"\d+"), "[0-9]+");
+        assert_eq!(ascii_semantics(r"\W\D"), "[^0-9A-Za-z_][^0-9]");
+    }
+
+    /// `[\da-fA-F]` has to become `[0-9a-fA-F]`, not `[[0-9]a-fA-F]`.
+    #[test]
+    fn a_shorthand_inside_a_class_becomes_bare_ranges() {
+        assert_eq!(ascii_semantics(r"0x[\da-fA-F]+"), "0x[0-9a-fA-F]+");
+        assert_eq!(ascii_semantics(r"[-\w]+"), "[-0-9A-Za-z_]+");
+        assert_eq!(ascii_semantics(r"[^\d]"), "[^0-9]");
+    }
+
+    /// An escaped backslash is not an escape sequence, and `\s` is left as it
+    /// is because `RegExp` reads that one as Unicode too.
+    #[test]
+    fn nothing_else_is_touched() {
+        assert_eq!(ascii_semantics(r"\\w"), r"\\w");
+        assert_eq!(ascii_semantics(r"[\s\S]*?"), r"[\s\S]*?");
+        assert_eq!(
+            ascii_semantics(r#""(?:[^"\\]|\\.)*""#),
+            r#""(?:[^"\\]|\\.)*""#
+        );
+    }
+
+    /// Review 6 S1, todo 279. `é` is a word character to `regex` and not to
+    /// `RegExp`, so before the rewrite only the web saw a boundary before the
+    /// `i` and marked the `if` inside `éif` as a keyword. Probed in Node:
+    /// `/\b(?:as|fn|let|if)\b/d` matches `"éif x"` at index 1.
+    #[test]
+    fn a_word_boundary_after_a_non_ascii_letter_matches_as_it_does_on_the_web() {
+        let text = PreparedText::new("éif x; if y");
+
+        let matched = regex_api()
+            .find(r"\b(?:as|fn|let|if)\b", false, &text, 0)
+            .expect("the keyword inside `éif` matches, as it does on the web");
+
+        // `é` is two bytes, so the `if` inside `éif` starts at byte 2.
+        assert_eq!((matched.start, matched.end), (2, 4));
     }
 
     #[test]
