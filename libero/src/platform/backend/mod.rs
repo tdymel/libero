@@ -54,7 +54,7 @@ pub(crate) fn Outlet() -> Element {
     return rsx! {};
 }
 
-pub(crate) fn document() -> Option<Box<dyn DocumentApi>> {
+pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(target_arch = "wasm32")]
     return web::document();
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
@@ -65,7 +65,7 @@ pub(crate) fn document() -> Option<Box<dyn DocumentApi>> {
 
 /// Only the web can report a scroll today. Off it this is `None`, which is the
 /// house rule for an absent capability - never an `Unsupported` stub.
-pub(crate) fn scroll() -> Option<Box<dyn ScrollApi>> {
+pub(crate) fn scroll() -> Option<&'static dyn ScrollApi> {
     #[cfg(target_arch = "wasm32")]
     return web::scroll();
     #[cfg(not(target_arch = "wasm32"))]
@@ -76,7 +76,7 @@ pub(crate) fn scroll() -> Option<Box<dyn ScrollApi>> {
 /// [`thread`]'s sleeping thread on every other renderer - it needs nothing
 /// from the renderer beyond dioxus's own task queue, so Blitz and the WebView
 /// floor are both covered by the one arm.
-pub(crate) fn timer() -> Option<Box<dyn TimerApi>> {
+pub(crate) fn timer() -> Option<&'static dyn TimerApi> {
     #[cfg(target_arch = "wasm32")]
     return web::timer();
     #[cfg(not(target_arch = "wasm32"))]
@@ -86,7 +86,7 @@ pub(crate) fn timer() -> Option<Box<dyn TimerApi>> {
 /// Only the web can report a document-level key press today, for the same
 /// reason [`scroll`] cannot: the notification has to come from the renderer,
 /// and Blitz's would be fork work.
-pub(crate) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
+pub(crate) fn keyboard() -> Option<&'static dyn KeyboardApi> {
     #[cfg(target_arch = "wasm32")]
     return web::keyboard();
     #[cfg(not(target_arch = "wasm32"))]

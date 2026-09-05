@@ -54,7 +54,8 @@ impl From<&str> for Input<Language> {
             Some(language) => Input::Value(language),
             None => {
                 crate::utils::warn(&format!(
-                    "Code: unrecognized language {value:?}, rendering without highlighting.                      Its `code-lang-*` feature may be off."
+                    "Code: unrecognized language {value:?}, rendering without highlighting. \
+                     Its `code-lang-*` feature may be off."
                 ));
                 Input::None
             }

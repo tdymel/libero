@@ -12,7 +12,7 @@ pub(crate) type PortalEntries = Signal<Vec<PortalEntry>>;
 
 /// Registry of portaled content, provided by [`crate::LiberoProvider`].
 #[derive(Clone, Copy)]
-pub struct PortalHost {
+pub(crate) struct PortalHost {
     pub(crate) entries: PortalEntries,
 }
 
@@ -25,7 +25,7 @@ impl PortalHost {
 /// Renders everything registered via [`crate::hooks::use_portal`] that
 /// currently returns `Some`. Rendered once by [`crate::LiberoProvider`].
 #[component]
-pub fn PortalOutlet() -> Element {
+pub(crate) fn PortalOutlet() -> Element {
     let host = use_context::<PortalHost>();
 
     rsx! {

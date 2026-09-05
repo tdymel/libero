@@ -28,11 +28,13 @@ use crate::platform::{TimerApi, TimerSubscription};
 /// task - the same house rule as any other absent capability. That is a bare
 /// test, not a server render: SSR has a runtime, so it gets a timer that
 /// schedules and never fires.
-pub(super) fn timer() -> Option<Box<dyn TimerApi>> {
-    Runtime::try_current().map(|_| Box::new(ThreadTimer) as Box<dyn TimerApi>)
+pub(super) fn timer() -> Option<&'static dyn TimerApi> {
+    Runtime::try_current().map(|_| &TIMER as &'static dyn TimerApi)
 }
 
 struct ThreadTimer;
+
+static TIMER: ThreadTimer = ThreadTimer;
 
 impl TimerApi for ThreadTimer {
     fn after(&self, delay: Duration, callback: Box<dyn FnOnce()>) -> Box<dyn TimerSubscription> {

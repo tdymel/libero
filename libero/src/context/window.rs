@@ -8,7 +8,7 @@ use dioxus::prelude::*;
 /// a modal and its overlay cover every window even with more windows open
 /// than the gap between the two layers holds; the ones past the cap then tie.
 #[derive(Clone, Copy)]
-pub struct WindowHost {
+pub(crate) struct WindowHost {
     stack: Signal<Vec<u64>>,
     base: i32,
     step: i32,

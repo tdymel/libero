@@ -4,11 +4,11 @@ use super::PlatformError;
 
 /// The write only resolves once the platform accepted it, so this is a
 /// future - reporting success synchronously would lie about a rejection.
-pub type Write = Pin<Box<dyn Future<Output = Result<(), PlatformError>>>>;
+pub(crate) type Write = Pin<Box<dyn Future<Output = Result<(), PlatformError>>>>;
 
 /// Not element-scoped at all, hence its own capability rather than a place on
 /// [`ElementApi`](super::ElementApi).
-pub trait ClipboardApi {
+pub(crate) trait ClipboardApi {
     fn write_text(&self, text: String) -> Write;
 }
 

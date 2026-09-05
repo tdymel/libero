@@ -92,7 +92,7 @@ pub trait KeyboardApi {
 /// `None` where the renderer cannot report a document-level key press -
 /// everything but the web today, the same hole [`scroll`](super::scroll) has and
 /// for the same reason.
-pub fn keyboard() -> Option<Box<dyn KeyboardApi>> {
+pub fn keyboard() -> Option<&'static dyn KeyboardApi> {
     backend::keyboard()
 }
 

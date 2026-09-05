@@ -109,7 +109,12 @@ sx().width("100%")
 // Or at a Size's breakpoint:
 sx().container_breakpoint("demo-card", Size::Md, sx().width("388px"))"#;
 
-const LAYER_ORDER: &str = "@layer lsx-framework, lsx-user-static, lsx-user-custom;";
+const LAYER_ORDER: &str = "@layer lsx-base, lsx-framework, lsx-user-static, lsx-user-custom;";
+
+/// The order an app declares for itself, when it wants its own layers ranked
+/// against Libero's rather than below them.
+const APP_LAYER_ORDER: &str =
+    "@layer lsx-base, app-base, lsx-framework, lsx-user-static, lsx-user-custom, app-overrides;";
 
 const STATIC_SX: &str = r#"static CARD_SX: StaticSx = StaticSx::new(|| {
     sx().padding("md")
@@ -461,18 +466,30 @@ pub fn StylingPage() -> Element {
             DocSection {
                 title: "Cascade layers",
                 Text {
-                    "Nothing here is settled by specificity or source order. Libero emits "
-                    "one "
+                    "Nothing that styles an element is settled by specificity or source "
+                    "order. Libero emits one "
                     Code { source: "@layer" }
-                    " statement up front, and every rule it writes goes into one of those "
-                    "layers - a later layer beats an earlier one however weak its selector "
-                    "is, and specificity only decides ties "
+                    " statement up front, and every rule it writes that styles an element "
+                    "goes into one of those layers - a later layer beats an earlier one "
+                    "however weak its selector is, and specificity only decides ties "
                     Code { source: "within" }
-                    " a layer."
+                    " a layer. The theme's custom properties on "
+                    Code { source: ":root" }
+                    " and its "
+                    Code { source: "@keyframes" }
+                    " stay outside it: neither is a cascaded rule, so a layer would only "
+                    "make them harder to override."
                 }
                 CodeBlock { source: LAYER_ORDER, language: "css" }
                 DataList {
                     orientation: "horizontal",
+                    DataListItem {
+                        label: rsx! {
+                            Code { source: "lsx-base" }
+                        },
+                        "The theme's reset and its body rules. First, so everything "
+                        "else outranks them."
+                    }
                     DataListItem {
                         label: rsx! {
                             Code { source: "lsx-framework" }
@@ -509,13 +526,34 @@ pub fn StylingPage() -> Element {
                     " for stylesheets you already own."
                 }
                 Text {
-                    "It also means a utility framework like Tailwind composes with Libero "
-                    "rather than fighting it: its utilities are unlayered, so a "
+                    "Layers rank by first mention, and Libero declares its own when "
+                    Code { source: "LiberoProvider" }
+                    " mounts - after anything already in "
+                    Code { source: "<head>" }
+                    ". So a stylesheet of yours that declares layers has them ranked "
+                    "below every lsx layer, and a layered "
+                    Code { source: "body {{ margin: 2rem }}" }
+                    " of yours still loses to "
+                    Code { source: "lsx-base" }
+                    ". Leave the rule unlayered and it wins - that is what moving the "
+                    "reset into a layer bought you - or declare the whole order yourself, "
+                    "in a stylesheet the browser sees first, and put your own layers "
+                    "wherever you want them. Both measured in Chromium."
+                }
+                CodeBlock { source: APP_LAYER_ORDER, language: "css" }
+                Text {
+                    "A utility framework like Tailwind composes with Libero, but which one "
+                    "wins depends on its version. Tailwind v3's utilities are unlayered, so "
+                    "a "
                     Code { source: "class: \"mt-4\"" }
-                    " wins over both the component's own margin and anything an "
-                    Code { source: "sx" }
-                    " set. That works in theory and we do not test it - using Tailwind "
-                    "alongside Libero is unsupported, not forbidden."
+                    " outranks every Libero layer. Tailwind v4 puts them in "
+                    Code { source: "@layer utilities" }
+                    ", and layers rank by first mention: a stylesheet the browser sees "
+                    "before Libero's statement has its layers sorted first, so there "
+                    "Libero's own layers win and an unlayered rule or "
+                    Code { source: "!important" }
+                    " is the way out. That works in theory and we do not test it - using "
+                    "Tailwind alongside Libero is unsupported, not forbidden."
                 }
             }
 

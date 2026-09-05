@@ -82,11 +82,13 @@ pub(super) fn prefers_reduced_motion() -> bool {
         .is_some_and(|query| query.matches())
 }
 
-pub(super) fn document() -> Option<Box<dyn DocumentApi>> {
-    Some(Box::new(WebDocument))
+pub(super) fn document() -> Option<&'static dyn DocumentApi> {
+    Some(&DOCUMENT)
 }
 
 struct WebDocument;
+
+static DOCUMENT: WebDocument = WebDocument;
 
 impl DocumentApi for WebDocument {
     fn active_element(&self) -> Option<Box<dyn ElementApi>> {
@@ -108,11 +110,13 @@ impl DocumentApi for WebDocument {
     }
 }
 
-pub(super) fn scroll() -> Option<Box<dyn ScrollApi>> {
-    Some(Box::new(WebScroll))
+pub(super) fn scroll() -> Option<&'static dyn ScrollApi> {
+    Some(&SCROLL)
 }
 
 struct WebScroll;
+
+static SCROLL: WebScroll = WebScroll;
 
 impl ScrollApi for WebScroll {
     /// **In the capture phase, on the window.** A `scroll` event does not
@@ -437,11 +441,13 @@ impl ElementApi for WebElement {
     }
 }
 
-pub(super) fn timer() -> Option<Box<dyn TimerApi>> {
-    Some(Box::new(WebTimer))
+pub(super) fn timer() -> Option<&'static dyn TimerApi> {
+    Some(&TIMER)
 }
 
 struct WebTimer;
+
+static TIMER: WebTimer = WebTimer;
 
 /// `set_timeout` takes an `i32` of milliseconds. A delay past that is 24 days
 /// out and a browser would not honour it anyway, so it saturates rather than
@@ -531,11 +537,13 @@ impl Drop for WebTimerSubscription {
     }
 }
 
-pub(super) fn keyboard() -> Option<Box<dyn KeyboardApi>> {
-    Some(Box::new(WebKeyboard))
+pub(super) fn keyboard() -> Option<&'static dyn KeyboardApi> {
+    Some(&KEYBOARD)
 }
 
 struct WebKeyboard;
+
+static KEYBOARD: WebKeyboard = WebKeyboard;
 
 /// Whether this event landed in something the user types into - the rule
 /// itself is [`takes_typing`], plus `contenteditable`.

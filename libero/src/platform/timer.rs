@@ -37,7 +37,7 @@ pub trait TimerApi {
 /// **A server render is `Some` and inert**, not `None` - SSR has a runtime, and
 /// the render ends long before a delay does. So nothing fires there rather than
 /// nothing being scheduled, and a consumer gets no branch to write against it.
-pub fn timer() -> Option<Box<dyn TimerApi>> {
+pub fn timer() -> Option<&'static dyn TimerApi> {
     backend::timer()
 }
 

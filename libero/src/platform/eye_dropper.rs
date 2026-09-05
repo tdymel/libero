@@ -4,14 +4,14 @@ use super::PlatformError;
 
 /// Resolves once the user clicked a pixel, to its color as `#rrggbb`. A
 /// dismissed picker (Escape) is [`PlatformError::Denied`].
-pub type Pick = Pin<Box<dyn Future<Output = Result<String, PlatformError>>>>;
+pub(crate) type Pick = Pin<Box<dyn Future<Output = Result<String, PlatformError>>>>;
 
 /// Picks a color off the screen. Not element-scoped, hence its own capability
 /// rather than a place on [`ElementApi`](super::ElementApi).
 ///
 /// Answers a hex string, not a color type: the platform layer sits below the
 /// components that own one.
-pub trait EyeDropperApi {
+pub(crate) trait EyeDropperApi {
     fn pick(&self) -> Pick;
 }
 

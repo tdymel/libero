@@ -5,7 +5,7 @@ mod window;
 
 pub(crate) use libero::{CssLayer, SheetRank, StylesheetKey};
 pub use libero::{LiberoContext, LiberoProvider};
-pub use modal::{ModalContext, ModalHost};
-pub(crate) use portal::PortalEntry;
-pub use portal::{PortalHost, PortalOutlet};
-pub use window::WindowHost;
+pub use modal::ModalContext;
+pub(crate) use modal::ModalHost;
+pub(crate) use portal::{PortalEntry, PortalHost, PortalOutlet};
+pub(crate) use window::WindowHost;

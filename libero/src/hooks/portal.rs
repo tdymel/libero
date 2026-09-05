@@ -6,7 +6,7 @@ use crate::context::{PortalEntry, PortalHost};
 
 static NEXT_PORTAL_ID: AtomicU64 = AtomicU64::new(0);
 
-/// One component's claim on a slot in [`crate::context::PortalOutlet`].
+/// One component's claim on a slot in `PortalOutlet`.
 ///
 /// Handed out by [`use_portal_slot`], and written through [`show`](Self::show)
 /// as often as the owner likes - which is what lets a caller decide what to
@@ -65,7 +65,7 @@ pub(crate) fn use_portal_slot() -> PortalSlot {
     PortalSlot { id, host }
 }
 
-/// Renders `content` via [`crate::context::PortalOutlet`], escaping any
+/// Renders `content` via `PortalOutlet`, escaping any
 /// ancestor stacking/clipping context. Re-registers each call; deregisters on
 /// drop.
 ///

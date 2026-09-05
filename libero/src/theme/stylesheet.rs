@@ -1,3 +1,4 @@
+use crate::CssLayer;
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
 
 use super::{
@@ -20,11 +21,26 @@ const SHADES: [ColorShade; 9] = [
 ];
 
 impl From<&Theme> for Stylesheet {
+    /// The vars and the keyframes stay unlayered - a custom property and an
+    /// `@keyframes` name are not cascaded rules, so a layer would only make
+    /// them harder to override. The reset and the `body` rules go into
+    /// `lsx-base`, the first layer: unlayered they would beat *every* layered
+    /// rule, so an app whose own base styles sit in a layer (Tailwind v4's
+    /// `@layer base`, any `@layer reset`) could not restyle `body` without
+    /// `!important`.
     fn from(theme: &Theme) -> Self {
-        let mut scopes = vec![CssScope::new(":root", theme_declarations(theme))];
-        scopes.extend(global_reset_scopes(theme));
-        scopes.push(body_scope(theme));
-        let mut css = Stylesheet::new(scopes).as_str().to_string();
+        let mut css = Stylesheet::new(vec![CssScope::new(":root", theme_declarations(theme))])
+            .as_str()
+            .to_string();
+
+        let mut base_scopes = global_reset_scopes(theme);
+        base_scopes.push(body_scope(theme));
+        css.push_str(&format!(
+            "@layer {}{{{}}}",
+            CssLayer::Base.css_name(),
+            Stylesheet::new(base_scopes).as_str()
+        ));
+
         css.push_str(RIPPLE_KEYFRAMES);
         css.push_str(PROGRESS_BAR_KEYFRAMES);
         css.push_str(LOADER_KEYFRAMES);
@@ -528,6 +544,29 @@ mod tests {
         assert!(css.contains("color:var(--lsx-black);"));
         assert!(css.contains("font-family:var(--lsx-text-font-family);"));
         assert!(css.contains("font-size:var(--lsx-text-font-size-md);"));
+    }
+
+    /// The vars and the keyframes stay unlayered, the reset and `body` do
+    /// not: unlayered they outrank every layered rule an app writes.
+    #[test]
+    fn theme_css_layers_the_reset_and_body_but_not_the_vars() {
+        let css = Stylesheet::from(&Theme::DEFAULT);
+        let css = css.as_str();
+
+        let layer = css
+            .split_once("@layer lsx-base{")
+            .expect("the theme sheet opens an lsx-base layer")
+            .1;
+        let layer = &layer[..layer.find("}}").expect("the layer block closes") + 2];
+
+        assert!(layer.contains("html{box-sizing:border-box;"));
+        assert!(layer.contains("*, *::before, *::after{box-sizing:inherit;}"));
+        assert!(layer.contains("body{margin:0;"));
+        assert!(!layer.contains(":root{"));
+        assert!(!layer.contains("@keyframes"));
+
+        assert!(css.starts_with(":root{"));
+        assert!(css.contains(RIPPLE_KEYFRAMES));
     }
 
     #[test]

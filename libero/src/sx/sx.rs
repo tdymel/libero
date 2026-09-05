@@ -54,18 +54,6 @@ impl Sx {
         self.selector(":focus-within", nested)
     }
 
-    /// [`focus_within`](Self::focus_within), restricted to the focus the
-    /// browser would draw a ring for - so a mouse click does not get one.
-    /// There is no `:focus-visible-within`, hence the `:has`.
-    ///
-    /// **Web only.** Native rendering never matches it: stylo rejects
-    /// `:has()` at parse time. libero's own components do not use it; they
-    /// put an element after the focusable child and style that with a
-    /// sibling rule, `:focus-visible ~ ..`.
-    pub fn has_focus_visible(self, nested: Sx) -> Self {
-        self.selector(":has(:focus-visible)", nested)
-    }
-
     pub fn when(self, condition: impl Into<String>, nested: Sx) -> Self {
         self.modifier(
             SxModifierKey::Condition(canonical_condition(&condition.into())),

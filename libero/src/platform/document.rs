@@ -16,6 +16,6 @@ pub trait DocumentApi {
 
 /// `None` where the renderer exposes no document - a webview, where Rust holds
 /// no handle to the DOM at all, and any headless build.
-pub fn document() -> Option<Box<dyn DocumentApi>> {
+pub fn document() -> Option<&'static dyn DocumentApi> {
     backend::document()
 }

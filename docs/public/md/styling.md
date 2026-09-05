@@ -237,17 +237,21 @@ Box {
 
 ## Cascade layers
 
-Nothing here is settled by specificity or source order. Libero emits one
-`@layer` statement up front, and every rule it writes goes into one of those
-layers - a later layer beats an earlier one however weak its selector is, and
-specificity only decides ties *within* a layer.
+Nothing that styles an element is settled by specificity or source order.
+Libero emits one `@layer` statement up front, and every rule it writes that
+styles an element goes into one of those layers - a later layer beats an earlier
+one however weak its selector is, and specificity only decides ties *within* a
+layer. The theme's custom properties on `:root` and its `@keyframes` stay
+outside it: neither is a cascaded rule, so a layer would only make them harder
+to override.
 
 ```css
-@layer lsx-framework, lsx-user-static, lsx-user-custom;
+@layer lsx-base, lsx-framework, lsx-user-static, lsx-user-custom;
 ```
 
 | Layer | What it holds |
 |---|---|
+| `lsx-base` | The theme's reset and its `body` rules. First, so everything else outranks them. |
 | `lsx-framework` | Each component's own styling, and its focus ring. |
 | `lsx-user-static` | Your `sx` prop. Beats the component's own styling, always. |
 | `lsx-user-custom` | A stylesheet you registered yourself with `use_stylesheet()`. |
@@ -258,10 +262,32 @@ the cascade layers at all, and CSS puts unlayered rules above every layered one.
 So `class` is the heaviest hammer on the page - reach for `sx` first, and keep
 `class` for stylesheets you already own.
 
-It also means a utility framework like Tailwind composes with Libero rather than
-fighting it: its utilities are unlayered, so a `class: "mt-4"` wins over both the
-component's own margin and anything an `sx` set. That works in theory and we do
-not test it - using Tailwind alongside Libero is unsupported, not forbidden.
+Layers rank by first mention, and Libero declares its own when
+`LiberoProvider` mounts - after anything already in `<head>`. So a stylesheet
+of yours that declares layers has them ranked *below* every `lsx-*` layer, and
+a layered `body { margin: 2rem }` of yours still loses to `lsx-base`. Two ways
+out, both measured in Chromium:
+
+- Leave the rule unlayered. Unlayered beats every layer, including `lsx-base` -
+  which is what moving the reset into a layer bought you.
+- Declare the whole order yourself, in a stylesheet the browser sees first.
+  Then you decide where your layers sit:
+
+```css
+@layer lsx-base, app-base, lsx-framework, lsx-user-static, lsx-user-custom, app-overrides;
+```
+
+That is what `lsx-base` is for: a rank you can sit above without having to
+outrank a component's own styling.
+
+A utility framework like Tailwind composes with Libero, but which one wins
+depends on its version. Tailwind v3's utilities are unlayered, so a
+`class: "mt-4"` outranks every Libero layer. Tailwind v4 puts them in
+`@layer utilities`, and layers rank by first mention: a stylesheet the browser
+sees before Libero's statement has its layers sorted first, so there Libero's
+own layers win and an unlayered rule or `!important` is the way out. That works
+in theory and we do not test it - using Tailwind alongside Libero is
+unsupported, not forbidden.
 
 ## Static sx
 

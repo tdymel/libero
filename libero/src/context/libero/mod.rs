@@ -26,7 +26,10 @@ pub struct LiberoContext {
 }
 
 impl LiberoContext {
-    pub fn new(theme: &'static Theme, stylesheet_registry_version: Signal<u64>) -> Self {
+    /// `pub(crate)`: `stylesheet_registry_version` is an internal signal, and
+    /// `LiberoProvider` is the only thing that may own one. A caller reaches
+    /// the context through `use_context`, never by building it.
+    pub(crate) fn new(theme: &'static Theme, stylesheet_registry_version: Signal<u64>) -> Self {
         Self {
             theme,
             layer_order_css: CssLayer::order_css(),

@@ -17,7 +17,7 @@ static NEXT_MODAL_ID: AtomicU64 = AtomicU64::new(0);
 /// capped below `popover`, so a dropdown opened inside a modal clears it
 /// even with more modals open than the gap holds; the ones past the cap tie.
 #[derive(Clone, Copy)]
-pub struct ModalHost {
+pub(crate) struct ModalHost {
     stack: Signal<Vec<u64>>,
     base: i32,
     step: i32,

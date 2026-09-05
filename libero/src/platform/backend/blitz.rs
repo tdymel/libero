@@ -94,20 +94,25 @@ fn remember_document(handle: &NodeHandle) {
     });
 }
 
-pub(super) fn document() -> Option<Box<dyn DocumentApi>> {
-    ANCHOR.with(|anchor| {
-        let anchor = anchor.borrow().clone()?;
-        Some(Box::new(BlitzDocument { anchor }) as Box<dyn DocumentApi>)
-    })
+pub(super) fn document() -> Option<&'static dyn DocumentApi> {
+    anchor().map(|_| &DOCUMENT as &'static dyn DocumentApi)
 }
 
-struct BlitzDocument {
-    anchor: NodeHandle,
+/// The anchor as of right now. Held in a `thread_local` rather than in
+/// [`BlitzDocument`], so the document can be a `&'static` like every other
+/// capability - and so a handle taken before the first frame is not stale.
+fn anchor() -> Option<NodeHandle> {
+    ANCHOR.with(|anchor| anchor.borrow().clone())
 }
+
+struct BlitzDocument;
+
+static DOCUMENT: BlitzDocument = BlitzDocument;
 
 impl DocumentApi for BlitzDocument {
     fn viewport(&self) -> Read<Dimensions> {
-        let answer = match self.anchor.try_doc() {
+        let anchor = anchor();
+        let answer = match anchor.as_ref().and_then(|anchor| anchor.try_doc()) {
             Some(doc) => {
                 // `window_size` is physical pixels; layout, and so every
                 // rect `client_offset` answers, is in CSS pixels.
@@ -124,11 +129,9 @@ impl DocumentApi for BlitzDocument {
     }
 
     fn active_element(&self) -> Option<Box<dyn ElementApi>> {
-        let node_id = self.anchor.try_doc()?.get_focussed_node_id()?;
-        Some(Box::new(BlitzElement {
-            anchor: self.anchor.clone(),
-            node_id,
-        }))
+        let anchor = anchor()?;
+        let node_id = anchor.try_doc()?.get_focussed_node_id()?;
+        Some(Box::new(BlitzElement { anchor, node_id }))
     }
 }
 

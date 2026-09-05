@@ -33,6 +33,6 @@ pub trait ScrollApi {
 /// hook it needs is a document-side notification the shell can drain - the
 /// shape `UiEvent::Activate` already took for `click()`. That is fork work,
 /// which this change did not open.
-pub fn scroll() -> Option<Box<dyn ScrollApi>> {
+pub fn scroll() -> Option<&'static dyn ScrollApi> {
     backend::scroll()
 }
