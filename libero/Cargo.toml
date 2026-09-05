@@ -19,7 +19,11 @@ categories = ["gui", "wasm", "web-programming"]
 # instead of the crates.io 0.7.10 release, so this crate and the `dx` CLI
 # building it are always built from identical source - avoids wire-protocol
 # version-skew bugs between the two. Fork mode also needs `--features
-# dioxus-fork`; a mismatch is a compile error, not silent breakage.
+# dioxus-fork`, and only one direction of a mismatch is loud: the feature
+# against `.dioxus-main` is a compile error, while the fork tree *without* the
+# feature builds and silently compiles the main arm (`DataListItem` collapses
+# to one `dd`, `Flex` drops `divider`). So let `just` pick the flag - it
+# derives it from the resolved `.dioxus-active` symlink.
 # Unwind back to a crates.io version before any real release - a path dep
 # blocks publishing to crates.io entirely, and neither tree is checked in,
 # so nobody else can build this as-is.
@@ -73,7 +77,8 @@ futures-core = "0.3"
 # Build against `.dioxus-fork` instead of upstream main. Only the fork lets a
 # component declare `children: Vec<Element>`, which is what splits a caller's
 # children into individually wrappable nodes - see `common::Children`. Set by
-# `just mode-fork`; wrong mode is a compile error.
+# `just mode-fork`; on against the main tree is a compile error, off against
+# the fork tree is silent - see the dependency comment above.
 dioxus-fork = []
 # Reach elements through Blitz directly when running under `dioxus-native`.
 # Nothing forces it on: without it `platform::backend` falls back to dioxus's

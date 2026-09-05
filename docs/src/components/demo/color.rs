@@ -75,6 +75,19 @@ pub fn ColorControl(
     let trigger = use_element();
 
     let is_custom = !control.options.contains(&value);
+    // In fork mode every `rsx!` child is its own closure, so a child that
+    // borrows `control` and a later one that reads it again cannot coexist.
+    // Take everything the tree needs off `control` up front: one
+    // (option, fill, tick) triple per theme swatch, and the custom flag.
+    let swatches: Vec<(String, String, String)> = control
+        .options
+        .iter()
+        .map(|option| {
+            let (fill, tick) = swatch(&control, option);
+            (option.clone(), fill, tick)
+        })
+        .collect();
+    let has_custom = control.custom;
     // A custom value is a literal color, the one thing `ColorSwatch` draws.
     let custom_label = if is_custom {
         format!("Custom color, {value}")
@@ -97,7 +110,7 @@ pub fn ColorControl(
                 // Swatches read as separate chips, not one segmented control -
                 // so this is a row of toggle `Button`s, not a
                 // `SegmentedControl`.
-                for option in control.options.iter() {
+                for (option, fill_color, tick_color) in swatches.iter() {
                     Button {
                         key: "{option}",
                         size: "sm",
@@ -116,15 +129,15 @@ pub fn ColorControl(
                         sx: sx().flex("1 1 0").padding("0").hover(sx().background("transparent")),
                         Box {
                             sx: fill()
-                                .background(swatch(&control, option).0)
-                                .color(swatch(&control, option).1),
+                                .background(fill_color.clone())
+                                .color(tick_color.clone()),
                             if value == *option {
                                 CheckmarkIcon {}
                             }
                         }
                     }
                 }
-                if control.custom {
+                if has_custom {
                     // `display: contents`, so the button stays the flex item;
                     // the div is only there to be the handle Escape focuses
                     // through.
@@ -162,7 +175,7 @@ pub fn ColorControl(
                     }
                 }
             }
-            if control.custom && open() {
+            if has_custom && open() {
                 div {
                     // The picker handles arrows itself and lets Escape
                     // bubble, which closes it and hands focus back to the

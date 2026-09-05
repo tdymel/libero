@@ -392,6 +392,9 @@ fn split_into_lines(
 mod tests {
     use super::*;
 
+    /// Only languages whose `code-lang-*` feature is on are in the catalog, so
+    /// every test naming one carries that feature's `cfg` - otherwise
+    /// `--no-default-features` panics here instead of skipping the test.
     fn lang(name: &str) -> Language {
         Language::parse(name).unwrap_or_else(|| panic!("{name} should be in LANGUAGE_CATALOG"))
     }
@@ -461,6 +464,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn highlight_rust_comment_marker_inside_a_string_stays_string() {
         let spans = flat("to: \"https://dioxuslabs.com\", // link\n", lang("rust"));
 
@@ -472,6 +476,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn highlight_rust_quote_and_line_comment_inside_a_comment_stay_comment() {
         let spans = flat("// say \"hi\"\n/* a // b */ x\n", lang("rust"));
 
@@ -480,6 +485,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-bash")]
     fn highlight_shell_hash_inside_a_string_stays_string() {
         let spans = flat("echo \"a#b\" # c\n", lang("bash"));
 
@@ -494,6 +500,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn highlight_rust_classifies_keyword_string_comment_and_number() {
         let spans = flat("let x = 5; // hi\n", lang("rust"));
 
@@ -515,6 +522,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn highlight_rust_string_quotes_share_the_string_class() {
         let spans = flat("\"hi\"\n", lang("rust"));
 
@@ -526,6 +534,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-html")]
     fn highlight_html_classifies_tag_and_attribute() {
         let spans = flat("<div class=\"a\"></div>\n", lang("html"));
 
@@ -551,6 +560,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-css")]
     fn highlight_css_classifies_property_and_color_constant() {
         let spans = flat("a { color: red; }\n", lang("css"));
 
@@ -567,6 +577,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-bash")]
     fn highlight_shell_classifies_keyword_and_string() {
         let spans = flat("echo \"hi\"\n", lang("bash"));
 
@@ -583,6 +594,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-markdown")]
     fn highlight_markdown_classifies_heading_bold_and_italic() {
         let spans = flat("# Title\n\n*a* **b**\n", lang("markdown"));
 
@@ -604,12 +616,14 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn highlight_never_includes_trailing_newline_in_span_text() {
         let spans = flat("let x = 1;\n", lang("rust"));
         assert!(spans.iter().all(|(text, _)| !text.contains('\n')));
     }
 
     #[test]
+    #[cfg(feature = "code-lang-rust")]
     fn highlight_drops_trailing_empty_line_but_keeps_interior_blank_lines() {
         let source = "let a = 1;\n\nlet b = 2;\n";
         let lines = highlight(source, lang("rust"));

@@ -121,7 +121,7 @@ impl ScrollApi for WebScroll {
     /// docs shell scrolls and where this was first noticed. Capture sees every
     /// scroll in the document on its way down.
     fn on_scroll(&self, callback: Box<dyn Fn()>) -> Box<dyn ScrollSubscription> {
-        let closure = Closure::<dyn FnMut()>::new(move || callback());
+        let closure = Closure::<dyn FnMut()>::new(callback);
         let target = web_sys::window().and_then(|window| {
             let target: web_sys::EventTarget = window.into();
             target
@@ -481,7 +481,7 @@ impl TimerApi for WebTimer {
     }
 
     fn every(&self, interval: Duration, callback: Box<dyn Fn()>) -> Box<dyn TimerSubscription> {
-        let closure = Closure::<dyn FnMut()>::new(move || callback());
+        let closure = Closure::<dyn FnMut()>::new(callback);
         // An interval never goes stale on its own - it runs until it is
         // cleared - so nothing has to forget this one.
         let handle = Rc::new(Cell::new(web_sys::window().and_then(|window| {
