@@ -8,7 +8,7 @@ use crate::{
             base_color, base_props, contrast_color, contrast_shade_color, fill_color,
             focus_ring_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
         },
-        form::Activation,
+        form::{Activation, use_bound},
         inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
@@ -139,7 +139,8 @@ base_props! {
         /// Corner radius, independent of `size`.
         #[props(default, into)]
         radius: Input<Size>,
-        /// Strictly controlled - pair it with `onchange`.
+        /// Pair it with `onchange`. Left out, a chip with a `name` keeps its
+        /// own state unless that name binds it to the form around it.
         #[props(default)]
         checked: Option<bool>,
         #[props(default)]
@@ -147,6 +148,11 @@ base_props! {
         /// Called with the value `checked` should take next.
         #[props(default)]
         onchange: Option<EventHandler<bool>>,
+        /// Makes the chip a checkbox that posts under this name. A path -
+        /// `Filters::FIELDS.open()` - also binds it to the surrounding
+        /// `Form`'s value when the chip has no `onchange`, as on `Checkbox`.
+        #[props(default, into)]
+        name: crate::components::FieldName<bool>,
         /// A plain action: renders a `<button>` root.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
@@ -167,22 +173,33 @@ pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
     let variant = props.variant.copied_or_default();
     let color = base_color(props.color.as_ref());
-    let checked = props.checked.unwrap_or(false);
-    let disabled = props.disabled.unwrap_or(false);
+    let bound = use_bound(&props.name, props.onchange.is_some());
+    let checked = bound
+        .value()
+        .or(props.checked)
+        .or(bound.entered())
+        .unwrap_or(false);
 
     let size = props.size.copied_or(theme.chip.size);
     let radius = props.radius.copied_or(theme.chip.radius);
 
-    let selectable = props.onchange.is_some();
+    // A `name` alone makes it a checkbox too: it has something to post.
+    let selectable = props.onchange.is_some() || !props.name.is_empty();
+    // A disabled `Fieldset` around a checkbox chip counts, as for every
+    // field. A plain or button chip keeps only its own `disabled`.
+    let disabled = match selectable {
+        true => bound.disabled(props.disabled),
+        false => props.disabled.unwrap_or(false),
+    };
     let clickable = props.onclick.is_some() || props.to.as_ref().is_some();
 
     if selectable && clickable {
         warn("Chip: `onchange` ignores `onclick`/`to` - a checkbox chip is not a button.");
     }
-    if props.checked.is_some() && !selectable {
+    if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Chip: `checked` without `onchange` can never change.");
     }
-    if selectable && props.checked.is_none() {
+    if props.onchange.is_some() && props.checked.is_none() {
         warn("Chip: `onchange` without `checked` can never appear selected.");
     }
 
@@ -263,20 +280,21 @@ pub fn Chip(props: ChipProps) -> Element {
         );
     }
 
-    let onchange = props.onchange;
+    let onchange = bound.emit(props.onchange);
     // The label is the chip's own, so it wires the label's half of the
     // activation too - the same fix `use_field` gives `Checkbox`.
     let activation = Activation::new(element, move || {
         if let Some(onchange) = &onchange
             && !disabled
         {
-            onchange.call(!checked);
+            onchange(!checked);
         }
     });
     let input = activation
         .wire(input)
         .attr("type", "checkbox")
         .attr("id", id())
+        .attr("name", bound.name().map(str::to_string))
         .attr("checked", checked)
         .attr("disabled", disabled)
         // Void element - `()` costs no dynamic node.

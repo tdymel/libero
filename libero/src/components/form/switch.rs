@@ -14,7 +14,10 @@ use crate::{
     },
     hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W, SwitchDefaults},
+    theme::{
+        ChoiceVariant, CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W,
+        SwitchDefaults,
+    },
     utils::{names_itself, use_name_warning, warn},
 };
 
@@ -39,6 +42,10 @@ static SWITCH_CONTROL_SX: StaticSx = StaticSx::new(|| {
         // because the focus is on the input beside it.
         .selector("& > [data-ring]", ring_overlay_sx())
         .selector("& > input:focus-visible ~ [data-ring]", focus_ring_sx())
+        // A card rings itself: the control stops being the overlay's
+        // containing block, so the same overlay covers the card - as on
+        // `Checkbox`.
+        .when("card", sx().position("static"))
         .when("disabled", sx().opacity("0.5").cursor("not-allowed"))
 });
 
@@ -120,6 +127,12 @@ field_props! {
         name: crate::components::FieldName<bool>,
         #[props(default, into)]
         aria_label: Option<String>,
+        /// `Card` draws the switch as a bordered surface and makes all of it
+        /// the hit area - pair it with a `description`. On the web a link or
+        /// button in the label or captions keeps its own click; natively the
+        /// card cannot tell, and toggles.
+        #[props(default, into)]
+        variant: Input<ChoiceVariant>,
     }
 }
 
@@ -151,6 +164,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     // ours anyway - so it is refused here and said with `aria-readonly`,
     // which the `switch` role inherits from `checkbox`.
     let readonly = props.readonly.unwrap_or(false);
+    let card = props.variant.copied_or_default() == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Switch: `checked` without `onchange` can never change.");
@@ -174,6 +188,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     // platform, so the key is handled here rather than left to the UA.
     let field = use_field()
         .inline()
+        .card(card)
         .activates(use_element(), toggle.clone())
         .enter_activates()
         .label(&props.label)
@@ -243,7 +258,13 @@ pub fn Switch(props: SwitchProps) -> Element {
         span {
             class: track_class,
             "aria-hidden": "true",
-            onclick: move |_| toggle(),
+            // A card takes the click itself, so the track leaves it to the
+            // card rather than toggling twice.
+            onclick: move |_| {
+                if !card {
+                    toggle();
+                }
+            },
             span { class: thumb_class }
         }
     };

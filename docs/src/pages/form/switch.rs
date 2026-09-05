@@ -2,6 +2,10 @@ use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use dioxus::prelude::*;
 use libero::components::{Code, FieldStatus, Switch, Text};
 
+fn describes(values: &DemoValues) -> bool {
+    values.str("description") == "true" || values.str("variant") == "card"
+}
+
 #[component]
 pub fn SwitchPage() -> Element {
     rsx! {
@@ -41,6 +45,9 @@ pub fn SwitchPage() -> Element {
                     .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
+                prop("variant", "ChoiceVariant")
+                    .default("plain")
+                    .doc("`card` draws the switch as a bordered surface and makes all of it the hit area. Pair it with a `description`. On the web a link inside the card keeps its own click; natively it toggles the card."),
             ])],
             lead: rsx! {
                 Text {
@@ -61,6 +68,12 @@ pub fn SwitchPage() -> Element {
                 component: "Switch",
                 children_text: "",
                 controls: vec![
+                    Control::toggle("variant", ["plain", "card"])
+                        .default("plain")
+                        .code(|_, values| match values.str("variant").as_str() {
+                            "card" => vec![r#"variant: "card""#.to_string()],
+                            _ => vec![],
+                        }),
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
@@ -92,10 +105,12 @@ pub fn SwitchPage() -> Element {
                             _ => vec!["aria_label: \"Notifications\"".to_string()],
                         }
                     }),
+                    // A card only reads as one with a description under
+                    // the label, so the card shows one either way.
                     Control::switch("description").code(|_, values| {
-                        match values.str("description").as_str() {
-                            "true" => vec!["description: \"About once a month.\"".to_string()],
-                            _ => vec![],
+                        match describes(values) {
+                            true => vec!["description: \"About once a month.\"".to_string()],
+                            false => vec![],
                         }
                     }),
                     Control::switch("helper").code(|_, values| {
@@ -109,6 +124,7 @@ pub fn SwitchPage() -> Element {
                 ],
                 render: move |values: DemoValues| rsx! {
                     Switch {
+                        variant: values.str("variant"),
                         color: values.str("color"),
                         size: values.str("size"),
                         radius: values.str("radius"),
@@ -125,7 +141,7 @@ pub fn SwitchPage() -> Element {
                             .then(|| "Notifications".to_string()),
                         aria_label: (values.str("label") != "true")
                             .then(|| "Notifications".to_string()),
-                        description: (values.str("description") == "true")
+                        description: describes(&values)
                             .then(|| "About once a month.".to_string()),
                         helper: (values.str("helper") == "true")
                             .then(|| "You can turn this off later.".to_string()),

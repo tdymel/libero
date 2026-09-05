@@ -5,14 +5,16 @@ use crate::{
         HtmlTag, Input, States, Variables, Variant,
         common::base_props,
         common::{base_color, contrast_color, fill_color, text_color},
-        inputs::{VariantVars, interactive_variant_sx, variant_colors},
+        feedback::Loader,
+        inputs::{VariantVars, interactive_variant_sx, variant_colors, variant_selected_sx},
         layout::use_box,
         navigation::InternalAnchor,
         variables,
     },
     hooks::{ripple_sx, use_ripple},
-    sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, SizeCss},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, LOADER_SIZE, SizeCss},
+    utils::warn,
 };
 
 const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
@@ -21,6 +23,7 @@ const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast
 const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
 const ACTION_ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-container");
 const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-container");
+const ACTION_ICON_SELECTED_VAR: CssVar = CssVar::new("--lsx-action-icon-selected");
 
 const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ACTION_ICON_COLOR_VAR,
@@ -62,7 +65,13 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
             // here rather than out there.
             interactive_variant_sx(variant, &ACTION_ICON_VARS, &ACTION_ICON_HOVER_VAR)
                 .border_style("solid")
-                .border_width("1px"),
+                .border_width("1px")
+                // After the variant's `:hover`, which it ties on specificity -
+                // as on `Button`.
+                .when(
+                    "checked",
+                    variant_selected_sx(variant, &ACTION_ICON_COLOR_VAR, &ACTION_ICON_SELECTED_VAR),
+                ),
         )
     });
 
@@ -73,9 +82,35 @@ static ACTION_ICON_BASE_SX: StaticSx = StaticSx::new(|| {
             .cursor("not-allowed")
             .pointer_events("none"),
     )
+    .when("loading", loading_sx())
 });
 
+/// `Button`'s loading shape: the caller's icon stays in the tree, hidden,
+/// because it holds the box and its `aria-label` is the name; the loader sits
+/// on top, centred. An icon fills its whole box, so the loader takes a share
+/// of the box rather than of a line height.
+fn loading_sx() -> Sx {
+    sx().cursor("progress")
+        .selector(
+            "& > span:first-child",
+            sx().display("inline-flex")
+                .width("100%")
+                .height("100%")
+                .opacity("0"),
+        )
+        .selector(
+            "& > span:last-child",
+            sx().position("absolute").inset("0").margin("auto").var(
+                LOADER_SIZE,
+                format!("calc({} * 0.6)", ACTION_ICON_SIZE.overridable()),
+            ),
+        )
+}
+
 fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> Variables {
+    // Only a toggle reads it, and every other icon would pay for the
+    // declaration in its `style` attribute.
+    let selectable = props.selected.is_some();
     let result = variables()
         .with(
             ACTION_ICON_SIZE.override_var(),
@@ -104,6 +139,10 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
         .with(ACTION_ICON_HOVER_VAR, colors.hover)
         .with(ACTION_ICON_CONTAINER_VAR, colors.container)
         .with(ACTION_ICON_ON_CONTAINER_VAR, colors.on_container)
+        .with(
+            ACTION_ICON_SELECTED_VAR,
+            selectable.then_some(colors.selected).flatten(),
+        )
 }
 
 base_props! {
@@ -120,6 +159,17 @@ base_props! {
         aria_label: String,
         #[props(default)]
         disabled: Option<bool>,
+        /// Toggle button: renders `aria-pressed`, and the selected look when a
+        /// `variant` or `color` turns the chrome on. `None` leaves it a plain
+        /// action.
+        #[props(default)]
+        selected: Option<bool>,
+        /// Overlays a `Loader` on the icon and swallows clicks, while leaving
+        /// the button focusable - a busy control is still one the reader can
+        /// find. Renders `aria-busy` and `aria-disabled` rather than native
+        /// `disabled`, which would drop focus mid-wait. Ignored in link mode.
+        #[props(default)]
+        loading: Option<bool>,
         /// `Option`, not a bare `EventHandler` - see `Button`.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
@@ -139,6 +189,20 @@ base_props! {
 #[component]
 pub fn ActionIcon(props: ActionIconProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
+    let selectable = props.selected.is_some();
+    let selected = props.selected.unwrap_or(false);
+    let is_link = props.to.as_ref().is_some();
+    let loading = props.loading.unwrap_or(false) && !is_link;
+
+    if is_link && props.loading == Some(true) {
+        warn("ActionIcon: `loading` is ignored on a link - an `<a>` has nothing to wait for.");
+    }
+    if selectable && is_link {
+        warn(
+            "ActionIcon: a link keeps the `selected` look but not `aria-pressed`, which `<a>` has no use for.",
+        );
+    }
+
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
     let variant = props.variant.copied_or_default();
     let variables: Input<Variables> = action_icon_variables(&props, has_variant_styling).into();
@@ -150,6 +214,8 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         .states
         .unwrap_or_default()
         .with("disabled", disabled)
+        .with("loading", loading)
+        .with("checked", selected)
         .with(variant.state_name(), has_variant_styling);
     let states: Input<States> = match showing.as_ref() {
         Some(ripple) => states.with(ripple.state(), true),
@@ -158,6 +224,12 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     .into();
 
     let handle_click = move |event: Event<MouseData>| {
+        // `prevent_default` as well as returning, as on `Button`: a busy
+        // `type="submit"` would otherwise still submit its form.
+        if loading {
+            event.prevent_default();
+            return;
+        }
         ripple.press(&event);
         if let Some(onclick) = &props.onclick {
             onclick.call(event);
@@ -203,12 +275,29 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
         };
     }
 
+    // The loader is `aria-hidden` - the button already has its name, and
+    // `aria-busy` on it is what says it is waiting.
+    let children = if loading {
+        rsx! {
+            span { {props.children} }
+            Loader { color: "currentColor" }
+        }
+    } else {
+        props.children
+    };
+
     boxed
         .event("onclick", handle_click)
         .attr("aria-label", props.aria_label)
         .attr("disabled", disabled)
+        .attr("aria-busy", loading.then_some("true"))
+        .attr("aria-disabled", loading.then_some("true"))
         .attr_default("type", "button")
-        .render(HtmlTag::Button, props.attributes, props.children)
+        .attr_default(
+            "aria-pressed",
+            selectable.then_some(if selected { "true" } else { "false" }),
+        )
+        .render(HtmlTag::Button, props.attributes, children)
 }
 
 #[cfg(test)]
@@ -228,6 +317,8 @@ mod tests {
             radius: Input::None,
             aria_label: "test".to_string(),
             disabled: None,
+            selected: None,
+            loading: None,
             onclick: None,
             to: Input::None,
             target: None,

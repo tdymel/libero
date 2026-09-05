@@ -27,9 +27,14 @@ pub fn ActionIconPage() -> Element {
                     .doc("Corner radius, independent of size."),
                 prop("aria_label", "String")
                     .doc("Required: an icon-only button has no visible text for a screen reader to announce."),
+                prop("selected", "bool")
+                    .doc("Turns the button into a toggle, rendering `aria-pressed`, and the selected look once `variant` or `color` turns the chrome on. Omit to keep it a plain action."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables interaction and dims the button."),
+                prop("loading", "bool")
+                    .default("false")
+                    .doc("Overlays a `Loader` on the icon and swallows clicks, but keeps the button focusable. The icon stays in the tree and holds the box; the button renders `aria-busy` and `aria-disabled`. Ignored on a link."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler; not called when the button renders as a link."),
                 prop("to", "NavigationTarget")
@@ -77,7 +82,9 @@ pub fn ActionIconPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
                     Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("sm"),
+                    Control::switch("selected"),
                     Control::switch("disabled"),
+                    Control::switch("loading"),
                     // `to` and `target` together, since the preview's link
                     // must not navigate the docs away.
                     Control::switch("link").code(|_, values| match values.str("link").as_str() {
@@ -97,7 +104,14 @@ pub fn ActionIconPage() -> Element {
                         },
                         size: values.str("size"),
                         radius: values.str("radius"),
+                        // `Some(false)` is still a toggle (`aria-pressed="false"`);
+                        // unset is not.
+                        selected: match values.str("selected").as_str() {
+                            "true" => Some(true),
+                            _ => None,
+                        },
                         disabled: values.str("disabled") == "true",
+                        loading: values.str("loading") == "true",
                         to: match values.str("link").as_str() {
                             "true" => Input::from("https://dioxuslabs.com"),
                             _ => Input::None,

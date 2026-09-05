@@ -70,6 +70,27 @@ Two other things moved with it. The page is now at `/form/switch`, and
 like every other field's, so a switch and a text field in one form read at the
 same size.
 
+## Card
+
+`variant: "card"` draws the whole field as a bordered surface, as on
+`Checkbox` and `Radio`, and a click anywhere on it toggles the switch. Pair it
+with a `description`:
+
+```rust,ignore
+Switch {
+    variant: "card",
+    label: "Wi-Fi",
+    description: "Joins known networks on its own.",
+    checked: wifi(),
+    onchange: move |next| wifi.set(next),
+}
+```
+
+The same hidden input, one tab stop, Space and Enter to toggle; the focus
+ring moves from the track to the card. On the web a link or button inside the
+label or a caption keeps its own click. Natively (Blitz) the whole card is one
+click target.
+
 ## Accessibility
 
 Space and Enter toggle it. Without a `label`, pass `aria_label` - but a visible
@@ -94,6 +115,7 @@ label is better. With neither, it warns in a debug build.
 | `disabled` | `bool` | `false` | Disables interaction and dims the switch. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 | `aria_label` | `String` | - | Names the switch when it has no `label`. |
+| `variant` | `ChoiceVariant` | `plain` | `card` draws the switch as a bordered surface that is its own hit area. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes - `name` and `value` among them, since
@@ -126,6 +148,6 @@ label and caption typography comes from `FieldDefaults`.
 ## Data attributes
 
 `data-state` on the wrapper carries `size-*`, `radius-*`, `inline`, and
-`disabled`, `required` and the status token when they apply. The control - the
+`card`, `disabled`, `required` and the status token when they apply. The control - the
 span holding the input and the track - carries those plus `checked`. The caption
 slots are addressed as `data-slot="description" | "helper" | "status"`.

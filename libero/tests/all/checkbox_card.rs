@@ -1,4 +1,4 @@
-//! The card variant of `Checkbox`, `Radio` and `RadioGroup`: the field
+//! The card variant of `Checkbox`, `Switch`, `Radio` and `RadioGroup`: the field
 //! wrapper drawn as a surface that is the hit area. What a click does is only
 //! reachable in a browser; this pins the markup and the rules it relies on.
 
@@ -7,7 +7,7 @@ use crate::common::{attributes_of, body, classes_of, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Checkbox, Options, Radio, RadioGroup},
+    components::{Checkbox, Options, Radio, RadioGroup, Switch},
 };
 
 #[derive(Clone, Copy, PartialEq, Options)]
@@ -171,5 +171,66 @@ fn a_card_radio_group_describes_each_option() {
         body.matches(r#"data-slot="description""#).count(),
         1,
         "{body}"
+    );
+}
+
+/// Todo 222: `Switch` takes the card its siblings have, through the same
+/// `use_field().card()` - so the same wrapper token, and the control hands
+/// its ring to the card the way `Checkbox`'s does.
+#[test]
+fn a_card_switch_marks_its_wrapper_and_hands_its_ring_to_the_card() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Switch {
+                    variant: "card",
+                    label: "Wi-Fi",
+                    description: "Joins known networks.",
+                    checked: true,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+    let body = body(&html);
+    let wrapper = attributes_of(&body, "div");
+    assert!(
+        wrapper["data-state"]
+            .split(' ')
+            .any(|token| token == "card"),
+        "{wrapper:?}"
+    );
+    let input = attributes_of(&body, "input");
+    assert_eq!(input["role"], "switch");
+    assert_eq!(attributes_of(&body, "label")["for"], input["id"]);
+
+    let control = &classes_of(&body, "span")[0];
+    assert!(
+        html.contains(&format!(
+            r#".{control}[data-state~="card"]{{position:static;}}"#
+        )),
+        "{html}"
+    );
+}
+
+#[test]
+fn a_plain_switch_is_not_a_card() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Switch { label: "Wi-Fi", checked: false, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let wrapper = attributes_of(&body, "div");
+    assert!(
+        !wrapper["data-state"]
+            .split(' ')
+            .any(|token| token == "card"),
+        "{wrapper:?}"
     );
 }

@@ -10,10 +10,10 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Button, Checkbox, Collapse, ColorCode, ColorField, Dialog, FileField,
-        Form, Marquee, MultiSelect, NumberField, Options, PinField, RadioGroup, RangeSlider, Rule,
-        SegmentedControl, Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty,
-        use_form,
+        ActionIcon, Box, Button, Checkbox, Chip, Collapse, ColorCode, ColorField, Dialog,
+        FileField, Form, Marquee, MultiSelect, NumberField, Options, PinField, RadioGroup,
+        RangeSlider, Rule, SegmentedControl, Slider, SliderChangeEvent, Tabs, TagsField, TextField,
+        not_empty, use_form,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -1554,4 +1554,141 @@ fn an_inner_collapse_ending_its_exit_does_not_end_the_outer_one() {
         html.contains("outer body"),
         "the inner exit ended the outer one: {html}"
     );
+}
+
+fn busy_action_icon() -> Element {
+    rsx! {
+        LiberoProvider {
+            ActionIcon {
+                aria_label: "Save",
+                // The flag reads as `loading` here.
+                loading: READ_ONLY.get(),
+                onclick: move |_| heard("click"),
+                "S"
+            }
+        }
+    }
+}
+
+/// Todo 222: `ActionIcon` takes `Button`'s `loading` - the click is swallowed,
+/// but the button keeps its tab stop (no native `disabled`) and says it is
+/// busy. The same click on the idle icon is the control.
+#[test]
+fn a_loading_action_icon_swallows_the_click_and_stays_focusable() {
+    let (clicked, _) = send(busy_action_icon, false, "click", last_click, click_event);
+    assert_eq!(clicked, ["\"click\""], "the click is the control");
+    let (heard, html) = send(busy_action_icon, true, "click", last_click, click_event);
+    assert_eq!(heard, Vec::<String>::new());
+
+    let button = attributes_of(&body(&html), "button");
+    assert_eq!(
+        button.get("aria-busy").map(String::as_str),
+        Some("true"),
+        "{button:?}"
+    );
+    assert_eq!(
+        button.get("aria-disabled").map(String::as_str),
+        Some("true")
+    );
+    assert!(
+        button["data-state"]
+            .split(' ')
+            .any(|token| token == "loading")
+    );
+    let tag = &html[html.find("<button").unwrap()..];
+    assert!(
+        !tag[..tag.find('>').unwrap()].contains(" disabled"),
+        "{tag}"
+    );
+}
+
+/// Todo 222: `ActionIcon` takes `Button`'s `selected` - `aria-pressed` both
+/// ways, the `checked` token while pressed, and nothing on a plain action.
+#[test]
+fn a_selected_action_icon_says_pressed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ActionIcon { aria_label: "Bold", variant: "standard", selected: true, "B" }
+                ActionIcon { aria_label: "Italic", variant: "standard", selected: false, "I" }
+                ActionIcon { aria_label: "Save", "S" }
+            }
+        }
+    }
+
+    let html = crate::common::render(app);
+    let tags: Vec<&str> = html
+        .match_indices("<button")
+        .map(|(at, _)| &html[at..at + html[at..].find('>').unwrap()])
+        .collect();
+    assert_eq!(tags.len(), 3, "{html}");
+    assert!(tags[0].contains(r#"aria-pressed="true""#), "{}", tags[0]);
+    assert!(tags[0].contains("checked"), "{}", tags[0]);
+    assert!(tags[1].contains(r#"aria-pressed="false""#), "{}", tags[1]);
+    assert!(!tags[1].contains("checked"), "{}", tags[1]);
+    assert!(!tags[2].contains("aria-pressed"), "{}", tags[2]);
+}
+
+/// Todo 222: a `name` makes a `Chip` a checkbox that posts, and one with no
+/// handler keeps its own state - the way an unbound `Checkbox` does.
+#[test]
+fn a_named_chip_posts_and_toggles_on_its_own() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { name: "open", "Open" }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+
+    let html = dioxus_ssr::render(&dom);
+    let input = attributes_of(&body(&html), "input");
+    assert_eq!(input.get("type").map(String::as_str), Some("checkbox"));
+    assert_eq!(input.get("name").map(String::as_str), Some("open"));
+    assert_eq!(checked_states(&html), [false]);
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), last_click(&find));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [true]);
+}
+
+#[derive(Clone, PartialEq, Default, libero::components::Fields)]
+pub struct Filters {
+    pub open: bool,
+}
+
+/// Todo 222: a path `name` binds a `Chip` to the `Form` around it, as on
+/// `Checkbox` - the click writes the form's value, and the chip renders it.
+#[test]
+fn a_chip_with_a_path_name_writes_its_forms_value() {
+    fn app() -> Element {
+        let filters = use_store(Filters::default);
+        rsx! {
+            LiberoProvider {
+                Form { value: filters,
+                    Chip { name: Filters::FIELDS.open(), "Open" }
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false]);
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), last_click(&find));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(checked_states(&html), [true]);
+    let input = attributes_of(&body(&html), "input");
+    assert_eq!(input.get("name").map(String::as_str), Some("open"));
 }

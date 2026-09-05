@@ -21,12 +21,14 @@ pub fn ChipPage() -> Element {
                     .default("xl")
                     .doc("Corner radius, independent of size."),
                 prop("checked", "bool")
-                    .doc("Strictly controlled selection state - pair it with `onchange`."),
+                    .doc("Selection state - pair it with `onchange`. Left out, a chip with a `name` keeps its own state unless that name binds it to the form around it."),
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables interaction and dims the chip."),
                 prop("onchange", "EventHandler<bool>")
                     .doc("Called with the value `checked` should take next. Its presence makes the chip a real checkbox."),
+                prop("name", "FieldName<bool>")
+                    .doc("Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("A plain action; its presence makes the chip a `button`."),
                 prop("to", "NavigationTarget")

@@ -89,7 +89,9 @@ fn Demo() -> Element {
 | `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
 | `aria_label` | `String` | required | An icon-only button has no visible text for a screen reader to announce. |
+| `selected` | `bool` | - | Turns the button into a toggle: `aria-pressed`, and the selected look once `variant` or `color` turns the chrome on. Omit to keep it a plain action. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the button. |
+| `loading` | `bool` | `false` | Overlays a `Loader` on the icon and swallows clicks, but keeps the button focusable; renders `aria-busy` and `aria-disabled`. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
 | `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. |
 | `target` | `String` | - | The link's `target` attribute, when `to` is set. |
@@ -129,5 +131,7 @@ State tokens on the root's `data-state`, space separated.
 | Token | Condition |
 |---|---|
 | `filled` / `tonal` / `elevated` / `outlined` / `standard` | The `variant` in effect - written only when `variant` or `color` is set. |
+| `checked` | `selected` is `true`. |
 | `disabled` | `disabled` is set. |
+| `loading` | `loading` is set, on a button. |
 | `ripple-a` / `ripple-b` | A click is showing its ripple; the two tokens alternate so consecutive clicks restart the animation. |

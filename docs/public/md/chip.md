@@ -96,9 +96,10 @@ Space toggles a selectable chip. Keep `children` to text and `Icon` - a
 | `variant` | `Variant` | `filled` | The unselected look; a checked chip is a tonal container whatever its variant. |
 | `size` | `Size` | `md` | Controls height, padding, and font size. |
 | `radius` | `Size` | `xl` | Corner radius, independent of `size`. |
-| `checked` | `bool` | - | Strictly controlled selection state - pair it with `onchange`. |
+| `checked` | `bool` | - | Selection state - pair it with `onchange`. Left out, a chip with a `name` keeps its own state unless that name binds it to the form around it. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the chip. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Its presence makes the chip a real checkbox. |
+| `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`. |
 | `onclick` | `EventHandler<MouseEvent>` | - | A plain action; its presence makes the chip a `<button>`. |
 | `to` | `NavigationTarget` | - | Renders a router-aware link instead. Takes precedence over `onclick`. |
 | `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. |
