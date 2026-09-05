@@ -761,6 +761,8 @@ mod tests {
         /// state `a_closed_box_does_not_swallow_escape_from_the_modal_around_it`
         /// is about.
         trigger: Option<ElementId>,
+        /// The element carrying `id="dropdown"`, the field-dropdown stand-in.
+        dropdown: Option<ElementId>,
     }
 
     impl WriteMutations for FindKeydownListeners {
@@ -789,9 +791,12 @@ mod tests {
         fn set_attribute(&mut self, n: &str, _ns: Option<&str>, v: &AttributeValue) {
             if n == "id"
                 && let AttributeValue::Text(value) = v
-                && value == "trigger"
             {
-                self.trigger = self.last;
+                match value.as_str() {
+                    "trigger" => self.trigger = self.last,
+                    "dropdown" => self.dropdown = self.last,
+                    _ => {}
+                }
             }
         }
         fn set_text(&mut self, _value: &str) {}
@@ -912,11 +917,13 @@ mod tests {
     }
 
     /// Just the marker line the app prints, so a failure message is readable -
-    /// the rendered document is mostly the theme stylesheet.
+    /// the rendered document is mostly the theme stylesheet. Cut at the next
+    /// tag, since a portal's outlet can render after it.
     fn state(dom: &VirtualDom) -> String {
         let html = dioxus_ssr::render(dom);
         let at = html.rfind("state:").expect("the state marker");
-        html[at..].to_string()
+        let marker = &html[at..];
+        marker[..marker.find('<').unwrap_or(marker.len())].to_string()
     }
 
     /// Drains tasks and re-renders until nothing is left: a close travels
@@ -1167,6 +1174,119 @@ mod tests {
             "state: modal=true region=false",
             "the press should have stopped at the layer that consumed it"
         );
+    }
+
+    /// What `ComboboxCore`, `Cascader`, the date fields and `ColorField` do
+    /// with Escape: close the list from a handler inside the overlay, prevent
+    /// the default, and let the press bubble on. None of them is on the layer
+    /// stack, so only the prevented default can tell an enclosing overlay the
+    /// press was taken.
+    #[component]
+    fn FieldDropdown(open: Signal<bool>) -> Element {
+        let style = use_box().prepare();
+        style.attr("id", "dropdown").render(
+            HtmlTag::Div,
+            vec![listener("onkeydown", move |event: Event<KeyboardData>| {
+                if event.key() == Key::Escape && open() {
+                    event.prevent_default();
+                    let mut open = open;
+                    open.set(false);
+                }
+            })],
+            rsx! { "list" },
+        )
+    }
+
+    fn dropdown_in_modal() -> Element {
+        let mut modal = use_signal(|| true);
+        let list = use_signal(|| true);
+
+        rsx! {
+            LiberoProvider {
+                if modal() {
+                    Modal { onclose: move |_| modal.set(false),
+                        FieldDropdown { open: list }
+                    }
+                }
+            }
+            "state: modal={modal} list={list}"
+        }
+    }
+
+    /// Todo 249, off the web: the list is not on the stack, so `is_top()`
+    /// answers yes for the modal, and before `key_taken` read the event's own
+    /// flag both closed on one press. The second press, with the list shut,
+    /// is the control: a dropdown that is not open takes nothing.
+    #[test]
+    fn a_field_dropdown_taking_escape_leaves_the_modal_open() {
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(dropdown_in_modal);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+
+        let dropdown = find.dropdown.expect("the dropdown stand-in");
+        assert_eq!(state(&dom), "state: modal=true list=true");
+
+        press(&mut dom, dropdown);
+        assert_eq!(
+            state(&dom),
+            "state: modal=true list=false",
+            "one Escape must close the list and not the modal around it"
+        );
+
+        press(&mut dom, dropdown);
+        assert_eq!(state(&dom), "state: modal=false list=false");
+    }
+
+    #[component]
+    fn DropdownInWindow() -> Element {
+        let list = use_signal(|| true);
+        let window = crate::hooks::use_floating_window(
+            crate::components::FloatingWindowOptions {
+                title: Some("Inspector".into()),
+                ..Default::default()
+            },
+            move |_| rsx! { FieldDropdown { open: list } },
+        );
+        use_hook(|| window.open());
+
+        rsx! { "state: window={window.is_open()} list={list}" }
+    }
+
+    /// Todo 249's `FloatingWindow` half. The window closed on any Escape, so
+    /// with a `Select` open in it one press closed both, on every backend.
+    /// Same control as the modal's: once the list is shut, Escape reaches the
+    /// window.
+    #[test]
+    fn a_field_dropdown_taking_escape_leaves_the_window_open() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { DropdownInWindow {} } }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        // The window opens from a hook after the first render, so its markup
+        // arrives in a later pass, and the finder has to see that one.
+        for _ in 0..4 {
+            dom.process_events();
+            dom.render_immediate(&mut find);
+        }
+
+        let dropdown = find.dropdown.expect("the dropdown stand-in");
+        assert_eq!(state(&dom), "state: window=true list=true");
+
+        press(&mut dom, dropdown);
+        assert_eq!(
+            state(&dom),
+            "state: window=true list=false",
+            "one Escape must close the list and not the window around it"
+        );
+
+        press(&mut dom, dropdown);
+        assert_eq!(state(&dom), "state: window=false list=false");
     }
 
     /// The other side, and the control property the amended push rule exists

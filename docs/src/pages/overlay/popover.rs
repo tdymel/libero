@@ -153,7 +153,7 @@ fn PopoverDemo(
     let mut opened = use_signal(|| false);
     let anchor = use_element();
     // One id, owned here and pointed at from the trigger.
-    let list_id = use_id();
+    let box_id = use_id();
 
     let options = PopoverOptions::new(gap, theme.popover.padding)
         .side(side_of(&side))
@@ -167,8 +167,11 @@ fn PopoverDemo(
     popover.show(opened().then(|| {
         rsx! {
             Box {
-                id: "{list_id}",
-                role: "listbox",
+                id: "{box_id}",
+                // Plain text, so a dialog and not a listbox: a listbox has to
+                // hold options.
+                role: "dialog",
+                aria_label: "Example popover",
                 style: popover.style(),
                 onmounted: floating.mount(),
                 sx: sx()
@@ -189,11 +192,21 @@ fn PopoverDemo(
             Button {
                 onmounted: anchor.mount(),
                 onclick: move |_| opened.toggle(),
-                aria_haspopup: "listbox",
+                // Focus never leaves the trigger, and the box is portaled, so
+                // the trigger is where Escape and Tab arrive.
+                onkeydown: move |event: KeyboardEvent| match event.key() {
+                    Key::Escape if opened() => {
+                        event.prevent_default();
+                        opened.set(false);
+                    }
+                    Key::Tab if opened() => opened.set(false),
+                    _ => {}
+                },
+                aria_haspopup: "dialog",
                 // The same signal the hook is given, never a second copy -
                 // nothing else stops the two disagreeing.
                 aria_expanded: "{opened()}",
-                aria_controls: "{list_id}",
+                aria_controls: "{box_id}",
                 variant: "outlined",
                 if opened() { "Close" } else { "Open popover" }
             }

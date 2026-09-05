@@ -14,7 +14,7 @@ state - `show(None)` is how a closed popover stops rendering.
 
 ## Usage
 
-The trigger's aria is the consumer's, so this snippet carries it - see
+The trigger's aria and its Escape are the consumer's, so this snippet carries both - see
 [Accessibility](#accessibility).
 
 ```rust
@@ -32,7 +32,7 @@ fn Demo() -> Element {
     let mut opened = use_signal(|| false);
     let anchor = use_element();
     // One id, owned here, pointed at from the trigger.
-    let list_id = use_id();
+    let box_id = use_id();
 
     let popover = use_popover(
         anchor,
@@ -45,8 +45,10 @@ fn Demo() -> Element {
 
     popover.show(opened().then(|| rsx! {
         Box {
-            id: "{list_id}",
-            role: "listbox",
+            id: "{box_id}",
+            // Plain text, so a dialog: a listbox has to hold options.
+            role: "dialog",
+            aria_label: "Example popover",
             style: popover.style(),
             onmounted: floating.mount(),
             sx: sx().background("white").padding("var(--lsx-popover-padding)"),
@@ -58,10 +60,20 @@ fn Demo() -> Element {
         Button {
             onmounted: anchor.mount(),
             onclick: move |_| opened.toggle(),
-            aria_haspopup: "listbox",
+            // Focus stays on the trigger and the box is portaled, so the
+            // trigger is where Escape and Tab arrive.
+            onkeydown: move |event: KeyboardEvent| match event.key() {
+                Key::Escape if opened() => {
+                    event.prevent_default();
+                    opened.set(false);
+                }
+                Key::Tab if opened() => opened.set(false),
+                _ => {}
+            },
+            aria_haspopup: "dialog",
             // The same signal the hook is given, never a second copy.
             aria_expanded: "{opened()}",
-            aria_controls: "{list_id}",
+            aria_controls: "{box_id}",
             "Open popover"
         }
     }

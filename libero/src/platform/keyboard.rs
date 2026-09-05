@@ -96,15 +96,17 @@ pub fn keyboard() -> Option<&'static dyn KeyboardApi> {
     backend::keyboard()
 }
 
-/// Whether a [`KeyboardApi`] subscriber already took this press, which it
-/// marks by preventing its default. That listener runs in the capture phase,
-/// ahead of every element handler, so an element handler asks this to learn
-/// that a layer above it has consumed the key.
+/// Whether something nearer the press already took it. Taking a key is marked
+/// the same way everywhere: by preventing its default. An enclosing overlay's
+/// bubbled handler asks this before it closes, so one Escape closes one layer.
 ///
-/// Always `false` off the web, where there is no document listener to take
-/// anything.
+/// Two places can have marked it. An element handler below this one - a field
+/// dropdown closing its list - sets the flag on the event itself, which every
+/// handler later in the same bubble shares, on every backend. On the web the
+/// capture-phase [`KeyboardApi`] listener, which runs ahead of every element
+/// handler, marks the native event instead.
 pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
-    backend::key_taken(event)
+    !event.default_action_enabled() || backend::key_taken(event)
 }
 
 /// Whether an element takes typing, so a hotkey must not fire from it - the

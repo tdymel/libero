@@ -105,8 +105,8 @@ pub(crate) fn transition_property(event: &Event<TransitionData>) -> Option<Strin
     return None;
 }
 
-/// Only the web has a document key listener that can take a press - see
-/// [`key_taken`](crate::platform::key_taken).
+/// Only the web has a document key listener that can take a press ahead of
+/// the element handlers - see [`key_taken`](crate::platform::key_taken).
 pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
     #[cfg(not(target_arch = "wasm32"))]
     let _ = event;

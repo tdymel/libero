@@ -111,13 +111,14 @@ pub fn Modal(props: ModalProps) -> Element {
             // hears the same press on its own box, and without the guard both
             // would close.
             //
-            // On the web a popover hears Escape at the document instead, and
-            // dioxus-web delivers this handler only after that popover has
-            // closed and left the stack, so `is_top()` alone answers yes. Its
-            // listener prevented the press's default when it took it, and that
-            // is what this reads. Off the web `key_taken` is always false and
-            // nothing changes: there a popover's own element handler stops the
-            // press before it reaches this one.
+            // The stack cannot see everything that takes Escape. On the web a
+            // popover hears it at the document, and dioxus-web delivers this
+            // handler only after that popover has closed and left the stack,
+            // so `is_top()` alone answers yes. And a field dropdown - Select,
+            // Cascader, the date and colour fields - is never on the stack at
+            // all: it closes its list from a handler inside this modal and
+            // lets the press bubble on. Both prevent the press's default when
+            // they take it, and `key_taken` reads that on every backend.
             if event.key() == Key::Escape && layer.is_top() && !key_taken(&event) {
                 close();
             }
