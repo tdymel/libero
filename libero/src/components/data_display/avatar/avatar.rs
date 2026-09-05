@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        common::{base_color, base_props, contrast_color, variables},
+        common::{base_color, base_props, contrast_color, fill_color, text_color, variables},
         inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
     },
@@ -16,6 +16,7 @@ use crate::{
 };
 
 pub(super) const AVATAR_COLOR_VAR: CssVar = CssVar::new("--lsx-avatar-color");
+pub(super) const AVATAR_FILL_VAR: CssVar = CssVar::new("--lsx-avatar-fill");
 pub(super) const AVATAR_CONTRAST_VAR: CssVar = CssVar::new("--lsx-avatar-contrast");
 const AVATAR_CONTAINER_VAR: CssVar = CssVar::new("--lsx-avatar-container");
 const AVATAR_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-avatar-on-container");
@@ -28,6 +29,7 @@ pub(super) const DEFAULT_VARIANT: Variant = Variant::Tonal;
 
 const AVATAR_VARS: VariantVars<'static> = VariantVars {
     color: &AVATAR_COLOR_VAR,
+    fill: &AVATAR_FILL_VAR,
     contrast: &AVATAR_CONTRAST_VAR,
     container: &AVATAR_CONTAINER_VAR,
     on_container: &AVATAR_ON_CONTAINER_VAR,
@@ -116,7 +118,8 @@ pub(super) fn avatar_variables(
     let colors = variant_colors(variant, &base);
 
     variables()
-        .with(AVATAR_COLOR_VAR, base.resolve(None))
+        .with(AVATAR_COLOR_VAR, text_color(&base))
+        .with(AVATAR_FILL_VAR, fill_color(&base))
         .with(AVATAR_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(AVATAR_CONTAINER_VAR, colors.container)
         .with(AVATAR_ON_CONTAINER_VAR, colors.on_container)
@@ -271,7 +274,7 @@ mod tests {
         assert!(variables.contains(&format!(
             "{}:{};",
             AVATAR_COLOR_VAR.name(),
-            ColorValue::Shade(Color::Error, ColorShade::S6).value()
+            ColorValue::Text(Color::Error, ColorShade::S6).value()
         )));
         assert!(variables.contains(AVATAR_CONTRAST_VAR.name()));
     }

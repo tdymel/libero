@@ -17,5 +17,5 @@ fn icon_renders_its_variant_and_colour_variables() {
     let attributes = attributes_of(&html, "span");
 
     assert_eq!(attributes["data-state"], "filled");
-    assert!(attributes["style"].contains("--lsx-icon-color:var(--lsx-success-6);"));
+    assert!(attributes["style"].contains("--lsx-icon-color:var(--lsx-success-text-6);"));
 }

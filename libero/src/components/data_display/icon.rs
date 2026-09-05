@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        common::{base_color, base_props, contrast_color},
+        common::{base_color, base_props, contrast_color, fill_color, text_color},
         inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
         variables,
@@ -13,6 +13,7 @@ use crate::{
 };
 
 pub(crate) const ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-icon-color");
+pub(crate) const ICON_FILL_VAR: CssVar = CssVar::new("--lsx-icon-fill");
 pub(crate) const ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-icon-contrast");
 const ICON_RADIUS_VAR: CssVar = CssVar::new("--lsx-icon-radius");
 const ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-container");
@@ -20,6 +21,7 @@ const ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-icon-on-container");
 
 pub(crate) const ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ICON_COLOR_VAR,
+    fill: &ICON_FILL_VAR,
     contrast: &ICON_CONTRAST_VAR,
     container: &ICON_CONTAINER_VAR,
     on_container: &ICON_ON_CONTAINER_VAR,
@@ -48,7 +50,8 @@ fn icon_variables(props: &IconProps) -> Variables {
     let colors = variant_colors(props.variant.copied_or_default(), &base);
 
     variables()
-        .with(ICON_COLOR_VAR, base.resolve(None))
+        .with(ICON_COLOR_VAR, text_color(&base))
+        .with(ICON_FILL_VAR, fill_color(&base))
         .with(ICON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(ICON_CONTAINER_VAR, colors.container)
         .with(ICON_ON_CONTAINER_VAR, colors.on_container)
@@ -128,7 +131,7 @@ mod tests {
         assert!(variables.contains(&format!(
             "{}:{};",
             ICON_COLOR_VAR.name(),
-            ColorValue::Shade(Color::Error, ColorShade::S6).value()
+            ColorValue::Text(Color::Error, ColorShade::S6).value()
         )));
         assert!(variables.contains(ICON_CONTRAST_VAR.name()));
     }

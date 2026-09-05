@@ -39,6 +39,9 @@ impl AnchorDefaults {
 
 impl ToCssDeclarations for AnchorDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        vec![ANCHOR_COLOR.declare(ColorValue::Shade(self.color, ColorShade::DEFAULT).value())]
+        // A link is text, so the colour resolves through the text ramp -
+        // `blue.6` is 3.56:1 on paper and every `Anchor` on the site was set
+        // in it (todo 239).
+        vec![ANCHOR_COLOR.declare(ColorValue::Text(self.color, ColorShade::DEFAULT).value())]
     }
 }

@@ -4,7 +4,7 @@ use super::core::{StepSpec, StepState, StepperView, derived_state, render_steppe
 use crate::{
     components::{
         ClassList, Input, OptionLabel, Options, Orientation, States,
-        common::{base_color, contrast_color, input_from_str},
+        common::{base_color, contrast_color, fill_color, input_from_str, text_color},
     },
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
@@ -166,7 +166,8 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let color = props.color.as_ref().and_then(|color| {
         let base = base_color(Some(color));
         let contrast = contrast_color(&base).and_then(|contrast| contrast.resolve(None));
-        base.resolve(None).map(|base| (base, contrast))
+        let fill = fill_color(&base)?;
+        text_color(&base).map(|text| (text, fill, contrast))
     });
 
     render_stepper(

@@ -16,5 +16,7 @@ pub(crate) use color_shade::ShadeRamp;
 pub use color_value::ColorValue;
 pub use css_var::{ColorCss, CssVar, NamedColorCss, SizeCss};
 pub use hex_color::HexColor;
+#[cfg_attr(not(test), allow(unused_imports))]
+pub(crate) use hex_color::TEXT_CONTRAST;
 pub use size::{NegativeSize, Size};
 pub use sizes::Sizes;

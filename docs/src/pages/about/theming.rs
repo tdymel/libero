@@ -130,6 +130,26 @@ pub fn ThemingPage() -> Element {
                     " stays the mid-grey of borders and dividers. This is the palette of the "
                     "theme this site is running:"
                 }
+                Text {
+                    "A colour is then resolved through the role it is used in, so it stays "
+                    "legible without every call site checking. "
+                    Code { source: "color()" }
+                    " asks for the text role and "
+                    Code { source: "background()" }
+                    " for the fill role, and each is its own ramp: the text ramp starts at "
+                    "the first shade that clears 4.5:1 on the page, the fill ramp at the "
+                    "first whose black-or-white foreground clears it. So "
+                    Code { source: "primary" }
+                    " is still "
+                    Code { source: "#228BE6" }
+                    " as a border, a ring or a decoration, and resolves to "
+                    Code { source: "#1C74C1" }
+                    " as a label or under white text. The greys are taken literally - a grey "
+                    "is picked for how quiet it should look - so text that means to be quiet "
+                    "asks for it by name, with "
+                    Code { source: "text-dimmed" }
+                    "."
+                }
                 Flex {
                     direction: "column",
                     gap: "xs",

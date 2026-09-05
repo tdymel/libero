@@ -4,8 +4,9 @@ use crate::{
     components::{
         HtmlTag, Input, States, Variant,
         common::{
-            base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
-            hover_color, input_from_str, selected_color, shade_color, variables,
+            base_color, base_props, contrast_color, contrast_shade_color, fill_color,
+            focus_ring_sx, hover_color, input_from_str, selected_color, shade_color, text_color,
+            variables,
         },
         feedback::Loader,
         layout::use_box,
@@ -34,6 +35,7 @@ impl From<NavigationTarget> for Input<NavigationTarget> {
 
 // What `interactive_variant_sx` references by name.
 pub(crate) const BUTTON_COLOR_VAR: CssVar = CssVar::new("--lsx-button-color");
+pub(crate) const BUTTON_FILL_VAR: CssVar = CssVar::new("--lsx-button-fill");
 pub(crate) const BUTTON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-button-contrast");
 pub(crate) const BUTTON_HOVER_VAR: CssVar = CssVar::new("--lsx-button-hover");
 pub(crate) const BUTTON_SELECTED_VAR: CssVar = CssVar::new("--lsx-button-selected");
@@ -43,7 +45,12 @@ pub(crate) const BUTTON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-button-on-
 /// The `var()` names the variant chrome reads. `Chip` owns a parallel set
 /// under its own prefix, so it renders the same chrome from its own colour.
 pub(crate) struct VariantVars<'a> {
+    /// The colour in its **text** role: the label of an unfilled variant, and
+    /// the outline that matches that label. Not the brand colour itself -
+    /// see [`crate::tokens::ColorValue`] for why the two differ.
     pub color: &'a CssVar,
+    /// The colour in its **fill** role, under a `contrast` foreground.
+    pub fill: &'a CssVar,
     pub contrast: &'a CssVar,
     pub container: &'a CssVar,
     pub on_container: &'a CssVar,
@@ -52,6 +59,7 @@ pub(crate) struct VariantVars<'a> {
 /// `Button`'s own set, shared with `SegmentedControl`.
 pub(crate) const BUTTON_VARS: VariantVars<'static> = VariantVars {
     color: &BUTTON_COLOR_VAR,
+    fill: &BUTTON_FILL_VAR,
     contrast: &BUTTON_CONTRAST_VAR,
     container: &BUTTON_CONTAINER_VAR,
     on_container: &BUTTON_ON_CONTAINER_VAR,
@@ -73,15 +81,21 @@ const ELEVATED_HOVER: Size = Size::Sm;
 pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
     let VariantVars {
         color,
+        fill,
         contrast,
         container,
         on_container,
     } = vars;
+    // A literal colour publishes neither role, so both fall back to the
+    // colour var, which holds the literal itself.
+    let fill = fill.value_or(color.value());
 
     match variant {
         Variant::Filled => sx()
-            .background(color.value())
-            .border_color(color.value())
+            // The rim is the fill, not the accent: a filled control whose
+            // border sat one ramp step lighter would show a bright hairline.
+            .background(fill.clone())
+            .border_color(fill)
             .color(contrast.value_or("inherit")),
         // M3's secondary-container pairing: a light tint of the colour under
         // the label that reads on it. A literal colour has no ramp, so every
@@ -118,7 +132,7 @@ pub(crate) fn interactive_variant_sx(variant: Variant, vars: &VariantVars, hover
     let color = vars.color;
 
     let fallback = match variant {
-        Variant::Filled | Variant::Tonal => color.value(),
+        Variant::Filled | Variant::Tonal => vars.fill.value_or(color.value()),
         Variant::Elevated => PAPER_BACKGROUND.value(),
         Variant::Outlined | Variant::Standard => "transparent".to_string(),
     };
@@ -296,7 +310,8 @@ pub(crate) fn button_variables(
     let selected = selectable.then_some(colors.selected).flatten();
 
     variables()
-        .with(BUTTON_COLOR_VAR, base.resolve(None))
+        .with(BUTTON_COLOR_VAR, text_color(base))
+        .with(BUTTON_FILL_VAR, fill_color(base))
         .with(BUTTON_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BUTTON_HOVER_VAR, colors.hover)
         .with(BUTTON_SELECTED_VAR, selected)
@@ -508,24 +523,31 @@ mod tests {
         assert!(filled.contains(&format!(
             "{}:{};",
             BUTTON_HOVER_VAR.name(),
-            ColorValue::Shade(Color::Primary, ColorShade::S6.darker()).value()
+            ColorValue::Fill(Color::Primary, ColorShade::S6.darker()).value()
         )));
         assert!(outlined.contains(&format!(
             "{}:{};",
             BUTTON_HOVER_VAR.name(),
-            ColorValue::Shade(Color::Primary, ColorShade::S1).value()
+            ColorValue::Fill(Color::Primary, ColorShade::S1).value()
         )));
     }
 
+    /// One base, two vars: the label reads on the page, the fill reads under
+    /// its foreground, and the caller's shade indexes both ramps.
     #[test]
-    fn the_color_variable_is_the_base_color_itself() {
+    fn the_color_variables_are_the_base_color_in_its_two_roles() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Error, ColorShade::S7));
         let variables = button_variables(Variant::Filled, &base, false);
 
         assert!(variables.starts_with(&format!(
             "{}:{};",
             BUTTON_COLOR_VAR.name(),
-            ColorValue::Shade(Color::Error, ColorShade::S7).value()
+            ColorValue::Text(Color::Error, ColorShade::S7).value()
+        )));
+        assert!(variables.contains(&format!(
+            "{}:{};",
+            BUTTON_FILL_VAR.name(),
+            ColorValue::Fill(Color::Error, ColorShade::S7).value()
         )));
     }
 

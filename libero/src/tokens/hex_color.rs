@@ -2,6 +2,11 @@ use std::fmt::{self, Display};
 
 use super::{ColorShade, ShadeRamp};
 
+/// WCAG 1.4.3 for text below 18.66px bold / 24px. Every colour this library
+/// resolves for a text or fill role is held to it, because a component cannot
+/// know how big the text on it will be.
+pub(crate) const TEXT_CONTRAST: f32 = 4.5;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexColor {
     rgb: u32,
@@ -123,11 +128,109 @@ impl HexColor {
         }
     }
 
+    /// Mantine's `autoContrast`: black or white, picked by perceived
+    /// brightness. It says which foreground *belongs* on this fill, not
+    /// whether that foreground passes - ask [`contrast_ratio`] for that.
+    ///
+    /// [`contrast_ratio`]: Self::contrast_ratio
     pub(crate) const fn contrast(self) -> Self {
         if self.luminance() >= 140 {
             HexColor::new(0x00_00_00)
         } else {
             HexColor::new(0xFF_FF_FF)
+        }
+    }
+
+    /// WCAG 2.x relative luminance. Not [`luminance`](Self::luminance): that
+    /// one is the cheap integer approximation `contrast()` sorts by, and it
+    /// is nowhere near the curve 1.4.3 is defined on.
+    pub(crate) fn relative_luminance(self) -> f32 {
+        fn channel(value: u8) -> f32 {
+            let value = value as f32 / 255.0;
+            if value <= 0.04045 {
+                value / 12.92
+            } else {
+                ((value + 0.055) / 1.055).powf(2.4)
+            }
+        }
+
+        0.2126 * channel(self.r()) + 0.7152 * channel(self.g()) + 0.0722 * channel(self.b())
+    }
+
+    /// WCAG 2.x contrast ratio, 1.0 to 21.0. Symmetric.
+    pub(crate) fn contrast_ratio(self, other: Self) -> f32 {
+        let (a, b) = (self.relative_luminance(), other.relative_luminance());
+        let (lighter, darker) = if a >= b { (a, b) } else { (b, a) };
+        (lighter + 0.05) / (darker + 0.05)
+    }
+
+    /// The foreground for this colour: [`contrast`](Self::contrast)'s pick,
+    /// unless it fails [`TEXT_CONTRAST`] and the other one does better.
+    ///
+    /// The fallback is for the steps the fill ramp is *not* re-based on -
+    /// the mid steps, where the brightness threshold and the WCAG curve
+    /// disagree. It never overrides the pick on a step that passes, which is
+    /// why a `blue` fill still gets white and is darkened instead of being
+    /// labelled in black.
+    pub(crate) fn readable_contrast(self) -> Self {
+        let picked = self.contrast();
+        if self.contrast_ratio(picked) >= TEXT_CONTRAST {
+            return picked;
+        }
+
+        let other = if picked.rgb() == 0x00_00_00 {
+            HexColor::new(0xFF_FF_FF)
+        } else {
+            HexColor::new(0x00_00_00)
+        };
+
+        if self.contrast_ratio(other) > self.contrast_ratio(picked) {
+            other
+        } else {
+            picked
+        }
+    }
+
+    /// The step a *text* use of `shade` resolves to: the first step at or
+    /// below it whose colour passes [`TEXT_CONTRAST`] against `surface`.
+    /// `S9` when the whole ramp fails, because there is nothing darker to
+    /// offer and a wrong-looking colour beats no colour.
+    ///
+    /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
+    pub(crate) fn text_shade(
+        self,
+        ramp: ShadeRamp,
+        shade: ColorShade,
+        surface: HexColor,
+    ) -> ColorShade {
+        self.first_shade_from(shade, |step| {
+            self.shade(step, ramp).contrast_ratio(surface) >= TEXT_CONTRAST
+        })
+    }
+
+    /// The step a *fill* use of `shade` resolves to: the first step at or
+    /// below it on which the foreground [`contrast`](Self::contrast) picks
+    /// passes [`TEXT_CONTRAST`]. Mantine's `autoContrast` stops at picking the
+    /// foreground and leaves a fill like `blue.6` - where white is picked and
+    /// only reaches 3.56:1 - alone; this walks the ramp until the pair works.
+    pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade) -> ColorShade {
+        self.first_shade_from(shade, |step| {
+            let fill = self.shade(step, ramp);
+            fill.contrast_ratio(fill.contrast()) >= TEXT_CONTRAST
+        })
+    }
+
+    fn first_shade_from(
+        self,
+        shade: ColorShade,
+        passes: impl Fn(ColorShade) -> bool,
+    ) -> ColorShade {
+        let mut step = shade;
+        loop {
+            if passes(step) || step == ColorShade::S9 {
+                return step;
+            }
+            step = step.darker();
         }
     }
 
@@ -175,6 +278,52 @@ mod tests {
 
         assert_eq!(SHADE.rgb(), 0xD2_E7_FA);
         assert_eq!(CONTRAST.rgb(), 0xFF_FF_FF);
+    }
+
+    /// The two ratios review 4 measured in Chromium (todo 239), so a change
+    /// to the maths is caught against a browser's own numbers.
+    #[test]
+    fn contrast_ratio_matches_what_the_browser_measured() {
+        const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
+
+        let ratio = |rgb: u32| HexColor::new(rgb).contrast_ratio(WHITE);
+
+        assert!((ratio(0x22_8B_E6) - 3.56).abs() < 0.01, "blue.6");
+        assert!((ratio(0x1C_74_C1) - 4.86).abs() < 0.01, "blue.8");
+        assert!((ratio(0x86_8E_96) - 3.32).abs() < 0.01, "grey.6");
+        assert!((ratio(0x4C_50_55) - 8.12).abs() < 0.01, "grey.7");
+    }
+
+    /// `blue.6` is the case Mantine's `autoContrast` alone cannot fix: white
+    /// is the right foreground for it and only reaches 3.56:1, so the fill
+    /// walks down the ramp instead of relabelling itself in black.
+    #[test]
+    fn the_two_roles_walk_the_ramp_until_they_read() {
+        const BLUE: HexColor = HexColor::new(0x22_8B_E6);
+        const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
+
+        assert_eq!(
+            BLUE.text_shade(ShadeRamp::Chromatic, ColorShade::S6, WHITE),
+            ColorShade::S8
+        );
+        assert_eq!(
+            BLUE.fill_shade(ShadeRamp::Chromatic, ColorShade::S6),
+            ColorShade::S8
+        );
+        // Why `fill_shade` asks `contrast()` and not `readable_contrast()`:
+        // black *does* clear 4.5:1 on `blue.6` (5.90:1), so the readable pick
+        // would keep the fill and label the button in black. White is the
+        // foreground a blue fill wants; the fill moves instead.
+        assert_eq!(BLUE.contrast(), WHITE);
+        assert_eq!(BLUE.readable_contrast(), HexColor::new(0x00_00_00));
+        assert_eq!(HexColor::new(0x1C_74_C1).readable_contrast(), WHITE);
+
+        // `green.6` already carries black, so its fill stays where it is.
+        const GREEN: HexColor = HexColor::new(0x40_C0_57);
+        assert_eq!(
+            GREEN.fill_shade(ShadeRamp::Chromatic, ColorShade::S6),
+            ColorShade::S6
+        );
     }
 
     #[test]

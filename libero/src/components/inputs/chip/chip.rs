@@ -5,8 +5,8 @@ use crate::{
         HtmlTag, Input, States, Variant,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, base_props, contrast_color, contrast_shade_color, focus_ring_sx,
-            ring_overlay, ring_overlay_sx, shade_color, variables,
+            base_color, base_props, contrast_color, contrast_shade_color, fill_color,
+            focus_ring_sx, ring_overlay, ring_overlay_sx, shade_color, text_color, variables,
         },
         form::Activation,
         inputs::{VariantColors, VariantVars, interactive_variant_sx, variant_colors},
@@ -20,6 +20,7 @@ use crate::{
 };
 
 const CHIP_COLOR_VAR: CssVar = CssVar::new("--lsx-chip-color");
+const CHIP_FILL_VAR: CssVar = CssVar::new("--lsx-chip-fill");
 const CHIP_CONTRAST_VAR: CssVar = CssVar::new("--lsx-chip-contrast");
 const CHIP_HOVER_VAR: CssVar = CssVar::new("--lsx-chip-hover");
 const CHIP_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-container");
@@ -27,6 +28,7 @@ const CHIP_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-chip-on-container");
 
 const CHIP_VARS: VariantVars<'static> = VariantVars {
     color: &CHIP_COLOR_VAR,
+    fill: &CHIP_FILL_VAR,
     contrast: &CHIP_CONTRAST_VAR,
     container: &CHIP_CONTAINER_VAR,
     on_container: &CHIP_ON_CONTAINER_VAR,
@@ -113,7 +115,8 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
     };
 
     variables()
-        .with(CHIP_COLOR_VAR, base.resolve(None))
+        .with(CHIP_COLOR_VAR, text_color(&base))
+        .with(CHIP_FILL_VAR, fill_color(&base))
         .with(
             CHIP_CONTRAST_VAR,
             contrast_color(base).and_then(|color| color.resolve(None)),

@@ -1,4 +1,4 @@
-use crate::sx::ThemeAwareValue;
+use crate::sx::{ColorRole, ThemeAwareValue};
 use crate::tokens::{Color, ColorShade, ColorValue};
 
 // A bare color name carries no shade, so it takes this over the sx
@@ -27,6 +27,22 @@ pub(crate) fn base_color(value: Option<&ThemeAwareValue>) -> ThemeAwareValue {
     }
 }
 
+/// `base` as a text colour: the first step of its ramp that reads on the
+/// surface. A literal colour has no ramp and comes back as itself.
+///
+/// This is the same resolution `sx`'s `color()` does for a colour written
+/// straight into a rule; components go through here because their colour
+/// travels to the rule through a custom property, which `sx` cannot type.
+pub(crate) fn text_color(base: &ThemeAwareValue) -> Option<String> {
+    base.in_color_role(ColorRole::Text).resolve(None)
+}
+
+/// `base` as a background: the first step of its ramp that carries a black or
+/// white foreground. Pairs with [`contrast_color`].
+pub(crate) fn fill_color(base: &ThemeAwareValue) -> Option<String> {
+    base.in_color_role(ColorRole::Fill).resolve(None)
+}
+
 /// Auto-contrast text for `base`. `None` for a literal color, which has no
 /// precomputed contrast var.
 pub(crate) fn contrast_color(base: &ThemeAwareValue) -> Option<ThemeAwareValue> {
@@ -52,7 +68,7 @@ pub(crate) fn selected_color(base: &ThemeAwareValue, filled: bool) -> Option<Str
         SELECTED_TINT_SHADE
     };
 
-    Some(ColorValue::Shade(*color, selected).value())
+    Some(ColorValue::Fill(*color, selected).value())
 }
 
 /// A specific shade of `base`'s color, for a variant that pins one rather
@@ -62,7 +78,7 @@ pub(crate) fn shade_color(base: &ThemeAwareValue, shade: ColorShade) -> Option<S
         return None;
     };
 
-    Some(ColorValue::Shade(*color, shade).value())
+    Some(ColorValue::Fill(*color, shade).value())
 }
 
 /// Black or white, whichever reads on `base`'s color at `shade` - the label
@@ -90,7 +106,7 @@ pub(crate) fn hover_color(base: &ThemeAwareValue, filled: bool) -> Option<String
         HOVER_TINT_SHADE
     };
 
-    Some(ColorValue::Shade(*color, hover).value())
+    Some(ColorValue::Fill(*color, hover).value())
 }
 
 #[cfg(test)]
@@ -118,17 +134,39 @@ mod tests {
         assert_eq!(hover_color(&literal, false), None);
     }
 
+    /// On the fill ramp, not the brand one: the resting background is
+    /// `fill-6`, so a hover that named `primary.7` would be a step of the
+    /// wrong ramp and could land on the same colour.
     #[test]
     fn filled_hover_darkens_while_the_rest_tint() {
         let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ColorShade::S6));
 
         assert_eq!(
             hover_color(&base, true),
-            Some(ColorValue::Shade(Color::Primary, ColorShade::S6.darker()).value())
+            Some(ColorValue::Fill(Color::Primary, ColorShade::S6.darker()).value())
         );
         assert_eq!(
             hover_color(&base, false),
-            Some(ColorValue::Shade(Color::Primary, HOVER_TINT_SHADE).value())
+            Some(ColorValue::Fill(Color::Primary, HOVER_TINT_SHADE).value())
         );
+    }
+
+    #[test]
+    fn the_two_roles_resolve_through_their_own_ramps() {
+        let base = ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Primary, ColorShade::S6));
+
+        assert_eq!(
+            text_color(&base).as_deref(),
+            Some("var(--lsx-primary-text-6)")
+        );
+        assert_eq!(
+            fill_color(&base).as_deref(),
+            Some("var(--lsx-primary-fill-6)")
+        );
+
+        // A literal has no ramp: both roles are the colour the caller wrote.
+        let literal = ThemeAwareValue::from("#123456");
+        assert_eq!(text_color(&literal).as_deref(), Some("#123456"));
+        assert_eq!(fill_color(&literal).as_deref(), Some("#123456"));
     }
 }

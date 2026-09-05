@@ -150,7 +150,7 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
             "& [data-slot='cell']",
             button.width("100%").height(format!("calc(1.25 * {day})")),
         )
-        .selector("& [data-outside]", sx().color("grey.6"))
+        .selector("& [data-outside]", sx().color("text-dimmed"))
         .selector("& [data-today]", sx().border_color("primary.6"))
         .selector(
             "& [data-in-range]",

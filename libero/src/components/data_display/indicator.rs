@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color, variables},
+        common::{base_color, base_props, contrast_color, fill_color, variables},
         layout::use_box,
     },
     hooks::use_theme,
@@ -140,7 +140,7 @@ pub fn Indicator(props: IndicatorProps) -> Element {
     let color = base_color(Some(&requested));
     let contrast = contrast_color(&color);
     let variables: Input<Variables> = variables()
-        .with(INDICATOR_COLOR_VAR, color.resolve(None))
+        .with(INDICATOR_COLOR_VAR, fill_color(&color))
         .with(
             INDICATOR_CONTRAST_VAR,
             contrast.and_then(|c| c.resolve(None)),

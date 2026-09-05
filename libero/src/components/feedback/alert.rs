@@ -3,7 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, States, Variables, Variant,
-        common::{CloseIcon, base_color, base_props, contrast_color, variables},
+        common::{
+            CloseIcon, base_color, base_props, contrast_color, fill_color, text_color, variables,
+        },
         inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
         surface::paper_sx,
@@ -17,12 +19,14 @@ use crate::{
 };
 
 const ALERT_COLOR_VAR: CssVar = CssVar::new("--lsx-alert-color");
+const ALERT_FILL_VAR: CssVar = CssVar::new("--lsx-alert-fill");
 const ALERT_CONTRAST_VAR: CssVar = CssVar::new("--lsx-alert-contrast");
 const ALERT_CONTAINER_VAR: CssVar = CssVar::new("--lsx-alert-container");
 const ALERT_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-alert-on-container");
 
 const ALERT_VARS: VariantVars<'static> = VariantVars {
     color: &ALERT_COLOR_VAR,
+    fill: &ALERT_FILL_VAR,
     contrast: &ALERT_CONTRAST_VAR,
     container: &ALERT_CONTAINER_VAR,
     on_container: &ALERT_ON_CONTAINER_VAR,
@@ -110,7 +114,8 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
     let colors = variant_colors(variant, base);
 
     variables()
-        .with(ALERT_COLOR_VAR, base.resolve(None))
+        .with(ALERT_COLOR_VAR, text_color(&base))
+        .with(ALERT_FILL_VAR, fill_color(&base))
         .with(ALERT_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(ALERT_CONTAINER_VAR, colors.container)
         .with(ALERT_ON_CONTAINER_VAR, colors.on_container)

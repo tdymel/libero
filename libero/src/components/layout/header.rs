@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_props, input_from_str},
+        common::{base_props, fill_color, input_from_str},
         layout::use_box,
         variables,
     },
@@ -85,10 +85,10 @@ fn header_variables(props: &HeaderProps) -> Variables {
             HEADER_HEIGHT.override_var(),
             props.size.resolve(Some(HEADER_HEIGHT)),
         )
-        .with(
-            HEADER_BACKGROUND_VAR,
-            base.as_ref().and_then(|v| v.resolve(None)),
-        )
+        // The banner is a fill under `HEADER_COLOR_VAR`, so it resolves
+        // through the fill ramp: a `primary` header used to be `blue.6` with
+        // white text on it, 3.56:1 (todo 239).
+        .with(HEADER_BACKGROUND_VAR, base.as_ref().and_then(fill_color))
         .with(HEADER_COLOR_VAR, contrast.clone())
         // The background comes through a var, so `sx` cannot publish the
         // focus contrast from it (`codebase/sx`): without this every ring in a

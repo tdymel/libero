@@ -178,6 +178,17 @@ impl ColorCss {
     pub fn name(self, shade: ColorShade) -> String {
         format!("{}{}", self.prefix, shade.as_str())
     }
+
+    /// A derived ramp's var, `--lsx-primary-text-6` from `--lsx-primary-`.
+    /// Named by infix rather than by a const of its own, so a palette colour
+    /// keeps one [`ColorCss`] instead of gaining one per role.
+    pub fn role_name(self, infix: &str, shade: ColorShade) -> String {
+        format!("{}{infix}{}", self.prefix, shade.as_str())
+    }
+
+    pub fn role_value(self, infix: &str, shade: ColorShade) -> String {
+        format!("var({})", self.role_name(infix, shade))
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -192,6 +203,10 @@ impl NamedColorCss {
     /// by focus rings, so a ring contrasts against the nearest ancestor
     /// background without either side knowing about the other.
     pub const FOCUS_CONTRAST: NamedColorCss = NamedColorCss::new("--lsx-focus-contrast");
+    /// Secondary text - a placeholder, a hint, a unit, a day outside the
+    /// month. The one name for "this text is quieter"; `grey.6` stays what an
+    /// icon or a chevron is drawn in. Spelled `"text-dimmed"` in an `Sx`.
+    pub const TEXT_DIMMED: NamedColorCss = NamedColorCss::new("--lsx-text-dimmed");
 
     pub const fn new(name: &'static str) -> Self {
         Self {
@@ -210,6 +225,10 @@ impl NamedColorCss {
 
     pub fn name(&self) -> &str {
         self.css_var.name()
+    }
+
+    pub fn var(&self) -> CssVar {
+        self.css_var.clone()
     }
 }
 

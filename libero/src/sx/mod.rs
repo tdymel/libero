@@ -12,5 +12,6 @@ pub(crate) use sx::class_name_from_hash;
 pub use sx::{Sx, sx};
 pub use sx_entry::SxEntry;
 
+pub(crate) use sx_key::ColorRole;
 pub use sx_key::{Property, SxModifierKey, SxPropertyKey};
 pub use theme_aware_value::ThemeAwareValue;

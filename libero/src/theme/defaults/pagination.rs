@@ -64,7 +64,7 @@ impl PaginationDefaults {
 
 impl ToCssDeclarations for PaginationDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
-        let active = ColorValue::Shade(self.color, ACTIVE_SHADE);
+        let active = ColorValue::Fill(self.color, ACTIVE_SHADE);
         let on_active = ColorValue::Contrast(self.color, ACTIVE_SHADE);
 
         let mut declarations = self

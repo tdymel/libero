@@ -6,8 +6,8 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, contrast_color, field_props, focus_ring_sx, ring_overlay, ring_overlay_sx,
-            variables,
+            base_color, contrast_color, field_props, fill_color, focus_ring_sx, ring_overlay,
+            ring_overlay_sx, variables,
         },
         form::{use_bound, use_field},
         layout::use_box,
@@ -78,7 +78,7 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
         .with(
             SWITCH_COLOR_VAR,
             if checked {
-                base.resolve(None)
+                fill_color(base)
             } else {
                 ThemeAwareValue::from("grey.3").resolve(None)
             },

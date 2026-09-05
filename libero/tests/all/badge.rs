@@ -97,7 +97,7 @@ fn a_theme_colour_resolves_a_shade_and_its_contrast_twin() {
     let style = attributes_of(&body(&render(app)), "span")["style"].clone();
 
     assert!(
-        style.contains("--lsx-badge-color:var(--lsx-success-6);"),
+        style.contains("--lsx-badge-color:var(--lsx-success-text-6);"),
         "{style}"
     );
     assert!(

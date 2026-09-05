@@ -2,8 +2,11 @@ use crate::tokens::{
     Color, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, NegativeSize, Size, SizeCss,
 };
 
-use super::BreakpointValue;
+use super::{BreakpointValue, ColorRole};
 use crate::utils::warn;
+
+/// What a caller writes for [`NamedColorCss::TEXT_DIMMED`].
+const DIMMED_TEXT_TOKEN: &str = "text-dimmed";
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ThemeAwareValue {
@@ -38,13 +41,31 @@ impl ThemeAwareValue {
         }
     }
 
+    /// This value in `role`, for the properties that have one. A literal
+    /// colour, a var or a keyword has no ramp to move along and is returned
+    /// unchanged - the caller asked for exactly that colour.
+    pub(crate) fn in_color_role(&self, role: ColorRole) -> Self {
+        let in_role = |value: ColorValue| match role {
+            ColorRole::Text => value.as_text(),
+            ColorRole::Fill => value.as_fill(),
+        };
+
+        match self {
+            Self::Color(color) => {
+                Self::ColorValue(in_role(ColorValue::Shade(*color, ColorShade::DEFAULT)))
+            }
+            Self::ColorValue(value) => Self::ColorValue(in_role(*value)),
+            other => other.clone(),
+        }
+    }
+
     /// Focus-ring color for this value used as a `background`. `None` when
     /// the contrast can't be determined (named colors, `hsl()`, vars,
     /// gradients) - leave the inherited value alone rather than clearing it.
     pub(crate) fn focus_contrast(&self) -> Option<String> {
         match self {
             Self::Color(color) => Some(ColorValue::Contrast(*color, ColorShade::DEFAULT).value()),
-            Self::ColorValue(ColorValue::Shade(color, shade)) => {
+            Self::ColorValue(ColorValue::Shade(color, shade) | ColorValue::Fill(color, shade)) => {
                 Some(ColorValue::Contrast(*color, *shade).value())
             }
             Self::RawColor(_, hex) => Some(if hex.contrast().rgb() == 0x00_00_00 {
@@ -61,6 +82,11 @@ impl ThemeAwareValue {
     /// The variants that borrow nothing, so a `&str` can be classified before
     /// it is allocated. `None` leaves the two owning variants to the caller.
     fn parse_borrowed(value: &str) -> Option<Self> {
+        // Before the palette: a role name, not a colour name.
+        if value == DIMMED_TEXT_TOKEN {
+            return Some(Self::CssVar(NamedColorCss::TEXT_DIMMED.var()));
+        }
+
         if let Some(size) = Size::parse_dynamic(value) {
             return Some(Self::Size(size));
         }
@@ -261,6 +287,44 @@ mod tests {
         assert_eq!(
             ThemeAwareValue::from(crate::tokens::Color::Secondary),
             ThemeAwareValue::Color(crate::tokens::Color::Secondary)
+        );
+    }
+
+    /// Todo 240: the one name for quieter text. It is a var, not a palette
+    /// colour, so no role resolution touches it afterwards.
+    #[test]
+    fn theme_aware_value_parses_the_dimmed_text_token() {
+        assert_eq!(
+            ThemeAwareValue::from("text-dimmed"),
+            ThemeAwareValue::CssVar(crate::tokens::NamedColorCss::TEXT_DIMMED.var())
+        );
+        assert_eq!(
+            ThemeAwareValue::from("text-dimmed")
+                .resolve(None)
+                .as_deref(),
+            Some("var(--lsx-text-dimmed)")
+        );
+    }
+
+    /// A grey is picked for how quiet it looks, so it is taken literally -
+    /// a disabled label and a chevron must not darken into looking enabled.
+    #[test]
+    fn the_text_role_moves_an_accent_and_leaves_a_grey_alone() {
+        use crate::tokens::{Color, ColorShade, ColorValue};
+
+        assert_eq!(
+            ThemeAwareValue::from("primary").in_color_role(ColorRole::Text),
+            ThemeAwareValue::ColorValue(ColorValue::Text(Color::Primary, ColorShade::S6))
+        );
+        assert_eq!(
+            ThemeAwareValue::from("grey.6").in_color_role(ColorRole::Text),
+            ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Grey, ColorShade::S6))
+        );
+        // The fill role has no such exception: a grey fill still has to
+        // carry its foreground.
+        assert_eq!(
+            ThemeAwareValue::from("grey.6").in_color_role(ColorRole::Fill),
+            ThemeAwareValue::ColorValue(ColorValue::Fill(Color::Grey, ColorShade::S6))
         );
     }
 

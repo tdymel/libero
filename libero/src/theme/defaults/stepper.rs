@@ -19,6 +19,10 @@ pub const STEPPER_SPACING: CssVar = CssVar::new("--lsx-stepper-spacing");
 
 pub const STEPPER_COLOR: CssVar = CssVar::new("--lsx-stepper-color");
 pub const STEPPER_COLOR_CONTRAST: CssVar = CssVar::new("--lsx-stepper-color-contrast");
+/// The same colour under the completed step's number, which is drawn in
+/// [`STEPPER_COLOR_CONTRAST`]. [`STEPPER_COLOR`] is the *text* role - the
+/// current step's number and ring - and the two differ by a ramp step.
+pub const STEPPER_FILL: CssVar = CssVar::new("--lsx-stepper-fill");
 pub const STEPPER_PENDING: CssVar = CssVar::new("--lsx-stepper-pending");
 pub const STEPPER_ERROR: CssVar = CssVar::new("--lsx-stepper-error");
 pub const STEPPER_ERROR_CONTRAST: CssVar = CssVar::new("--lsx-stepper-error-contrast");
@@ -165,10 +169,13 @@ impl ToCssDeclarations for StepperDefaults {
         // `primary.6` reaches `:root` as a bare token and silently drops every
         // shorthand that reads it. See `TimelineDefaults`.
         let mut declarations = vec![
-            STEPPER_COLOR.declare(self.color.value()),
+            STEPPER_COLOR.declare(self.color.as_text().value()),
+            STEPPER_FILL.declare(self.color.as_fill().value()),
             STEPPER_COLOR_CONTRAST.declare(contrast_of(self.color).value()),
             STEPPER_PENDING.declare(self.pending_color.value()),
-            STEPPER_ERROR.declare(self.error_color.value()),
+            // Only ever a fill, under the marker's `!` - unlike
+            // `STEPPER_COLOR`, which is also the current step's own number.
+            STEPPER_ERROR.declare(self.error_color.as_fill().value()),
             STEPPER_ERROR_CONTRAST.declare(contrast_of(self.error_color).value()),
             STEPPER_CONNECTOR_COLOR.declare(self.connector_color.value()),
             STEPPER_DESCRIPTION_COLOR.declare(self.description_color.value()),

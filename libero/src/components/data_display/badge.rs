@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        common::{base_color, base_props, contrast_color, variables},
+        common::{base_color, base_props, contrast_color, fill_color, text_color, variables},
         inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
     },
@@ -13,12 +13,14 @@ use crate::{
 };
 
 const BADGE_COLOR_VAR: CssVar = CssVar::new("--lsx-badge-color");
+const BADGE_FILL_VAR: CssVar = CssVar::new("--lsx-badge-fill");
 const BADGE_CONTRAST_VAR: CssVar = CssVar::new("--lsx-badge-contrast");
 const BADGE_CONTAINER_VAR: CssVar = CssVar::new("--lsx-badge-container");
 const BADGE_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-badge-on-container");
 
 const BADGE_VARS: VariantVars<'static> = VariantVars {
     color: &BADGE_COLOR_VAR,
+    fill: &BADGE_FILL_VAR,
     contrast: &BADGE_CONTRAST_VAR,
     container: &BADGE_CONTAINER_VAR,
     on_container: &BADGE_ON_CONTAINER_VAR,
@@ -80,7 +82,8 @@ fn badge_variables(props: &BadgeProps) -> Variables {
     let colors = variant_colors(props.variant.copied_or_default(), &base);
 
     variables()
-        .with(BADGE_COLOR_VAR, base.resolve(None))
+        .with(BADGE_COLOR_VAR, text_color(&base))
+        .with(BADGE_FILL_VAR, fill_color(&base))
         .with(BADGE_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(BADGE_CONTAINER_VAR, colors.container)
         .with(BADGE_ON_CONTAINER_VAR, colors.on_container)

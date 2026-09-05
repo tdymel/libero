@@ -27,7 +27,9 @@ impl CodeBlockDefaults {
         background: "#f6f8fa",
         border: "#d0d7de",
         muted_text: "#57606a",
-        line_number: "#8c959f",
+        // 4.27:1 on the background above; the lighter grey it replaced was
+        // 2.85:1, and a line number is the only way to cite a line (todo 241).
+        line_number: "#6e7781",
         copy_hover_background: "rgba(31, 35, 40, 0.08)",
         copy_hover_text: "#1f2328",
     };
@@ -43,5 +45,41 @@ impl ToCssDeclarations for CodeBlockDefaults {
             CODE_BLOCK_COPY_HOVER_BACKGROUND.declare(self.copy_hover_background),
             CODE_BLOCK_COPY_HOVER_TEXT.declare(self.copy_hover_text),
         ]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::theme::CodeDefaults;
+    use crate::tokens::HexColor;
+
+    fn ratio(color: &str, background: &str) -> f32 {
+        HexColor::parse(color)
+            .expect("a hex")
+            .contrast_ratio(HexColor::parse(background).expect("a hex"))
+    }
+
+    /// Todo 241. Every printed example on the docs site is drawn in these,
+    /// and the block's background is tinted, so GitHub's own numbers - which
+    /// are measured on white - do not carry over.
+    #[test]
+    fn the_code_theme_reads_on_its_own_background() {
+        let background = CodeBlockDefaults::DEFAULT.background;
+
+        assert!(
+            ratio(CodeDefaults::DEFAULT.tok_comment, background) >= 4.5,
+            "comments measured {:.2}:1",
+            ratio(CodeDefaults::DEFAULT.tok_comment, background)
+        );
+        // A line number is incidental - it labels, it does not carry the
+        // content - so it is held to 1.4.11's 3:1 rather than 1.4.3's 4.5:1.
+        // The ramp the theme is built from has nothing between 4.27 and the
+        // muted text the comments now use.
+        assert!(
+            ratio(CodeBlockDefaults::DEFAULT.line_number, background) >= 3.0,
+            "line numbers measured {:.2}:1",
+            ratio(CodeBlockDefaults::DEFAULT.line_number, background)
+        );
     }
 }

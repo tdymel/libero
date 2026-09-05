@@ -325,7 +325,7 @@ fn a_colour_override_sets_the_accent_and_its_contrast() {
     }
     let root = attributes_of(&body(&render(app)), "div");
     assert!(
-        root["style"].contains("--lsx-stepper-color:var(--lsx-success-6)"),
+        root["style"].contains("--lsx-stepper-color:var(--lsx-success-text-6)"),
         "{root:?}"
     );
     assert!(

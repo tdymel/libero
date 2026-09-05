@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{Variables, focus_ring_sx, variables},
+        common::{Variables, focus_ring_sx, text_color, variables},
         layout::use_box,
     },
     hooks::{id_selector, use_element},
@@ -163,7 +163,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         .with(size.state_name(), true)
         .with("full-width", full_width)
         .into();
-    let variables: Input<Variables> = variables().with(TABS_COLOR, color.resolve(None)).into();
+    // The selected tab's own label, so the text role - the underline under
+    // it takes the same colour rather than a second one.
+    let variables: Input<Variables> = variables().with(TABS_COLOR, text_color(&color)).into();
 
     let list_id = format!("{root}-tablist");
     let panel_id = selected.map(|selected| format!("{root}-panel-{selected}"));

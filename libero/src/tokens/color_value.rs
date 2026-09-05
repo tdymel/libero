@@ -1,9 +1,51 @@
-use super::{Color, ColorShade, color::ColorVars};
+use super::{Color, ColorShade, ShadeRamp, color::ColorVars};
 
+/// The var infix of the [`ColorValue::Text`] ramp.
+pub(crate) const TEXT_INFIX: &str = "text-";
+/// The var infix of the [`ColorValue::Fill`] ramp.
+pub(crate) const FILL_INFIX: &str = "fill-";
+
+/// A colour named for what it is about to do. The three roles are three
+/// ramps at `:root`, not three names for one colour: `Shade` is the brand
+/// colour itself, `Text` is the ramp re-based on the first step that reads on
+/// the surface, and `Fill` the ramp re-based on the first step that carries a
+/// black or white foreground. `Contrast` is that foreground.
+///
+/// See `theme::stylesheet` for how each ramp is derived.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum ColorValue {
     Shade(Color, ColorShade),
     Contrast(Color, ColorShade),
+    Text(Color, ColorShade),
+    Fill(Color, ColorShade),
+}
+
+impl ColorValue {
+    /// The same colour in the text role. Only a palette shade has a ramp to
+    /// move along; everything else is already itself.
+    ///
+    /// The neutral ramps are left alone on purpose. An accent is picked for
+    /// *which* colour it is and has to be legible wherever it lands, but a
+    /// grey is picked for how quiet it should look: a disabled label, a
+    /// decorative rule, a chevron. Quietening text is what
+    /// [`NamedColorCss::TEXT_DIMMED`](crate::tokens::NamedColorCss::TEXT_DIMMED)
+    /// (`"text-dimmed"`) is for, and it says so at the call site.
+    pub(crate) fn as_text(self) -> Self {
+        match self {
+            Self::Shade(color, shade) if color.shade_ramp() == ShadeRamp::Chromatic => {
+                Self::Text(color, shade)
+            }
+            other => other,
+        }
+    }
+
+    /// The same colour in the fill role.
+    pub(crate) fn as_fill(self) -> Self {
+        match self {
+            Self::Shade(color, shade) => Self::Fill(color, shade),
+            other => other,
+        }
+    }
 }
 
 impl ColorValue {
@@ -15,6 +57,19 @@ impl ColorValue {
         let (color, shade, contrast) = match self {
             Self::Shade(color, shade) => (color, shade, false),
             Self::Contrast(color, shade) => (color, shade, true),
+            // Black and white have no ramp to re-base, so both roles are the
+            // colour itself.
+            Self::Text(color, shade) | Self::Fill(color, shade) => {
+                let infix = if matches!(self, Self::Text(..)) {
+                    TEXT_INFIX
+                } else {
+                    FILL_INFIX
+                };
+                return match color.vars() {
+                    ColorVars::Palette(own, _) => own.role_name(infix, shade),
+                    ColorVars::Named(own, _) => own.name().to_string(),
+                };
+            }
         };
 
         match color.vars() {

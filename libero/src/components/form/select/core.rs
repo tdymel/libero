@@ -33,7 +33,7 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
                 .text_overflow("ellipsis")
                 .white_space("nowrap"),
         )
-        .selector("& > [data-placeholder]", sx().color("grey.6"))
+        .selector("& > [data-placeholder]", sx().color("text-dimmed"))
         .selector(
             "& > svg",
             sx().flex("0 0 auto")
@@ -92,7 +92,7 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .padding("4px 8px")
         .border_bottom("1px solid")
         .border_color("grey.3")
-        .selector("::placeholder", sx().color("grey.6"))
+        .selector("::placeholder", sx().color("text-dimmed"))
 });
 
 /// What the skin needs to draw the selection: which chip the keyboard is on,

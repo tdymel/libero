@@ -15,8 +15,8 @@ use crate::{
     theme::{
         CssVar, STEPPER_COLOR, STEPPER_COLOR_CONTRAST, STEPPER_CONNECTOR_COLOR,
         STEPPER_CONTENT_PADDING, STEPPER_DESCRIPTION_COLOR, STEPPER_DESCRIPTION_SIZE,
-        STEPPER_ERROR, STEPPER_ERROR_CONTRAST, STEPPER_GAP, STEPPER_LINE_WIDTH, STEPPER_MARKER,
-        STEPPER_PENDING, STEPPER_SPACING, Size, StepLabelPosition, StepperDefaults,
+        STEPPER_ERROR, STEPPER_ERROR_CONTRAST, STEPPER_FILL, STEPPER_GAP, STEPPER_LINE_WIDTH,
+        STEPPER_MARKER, STEPPER_PENDING, STEPPER_SPACING, Size, StepLabelPosition, StepperDefaults,
     },
 };
 
@@ -205,8 +205,8 @@ static STEPPER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             format!("{} [data-step-marker]", step("completed")),
-            sx().background(STEPPER_COLOR.value())
-                .border_color(STEPPER_COLOR.value())
+            sx().background(STEPPER_FILL.value())
+                .border_color(STEPPER_FILL.value())
                 .color(STEPPER_COLOR_CONTRAST.value()),
         )
         .selector(
@@ -256,7 +256,8 @@ pub(crate) struct StepperView {
     pub label_position: StepLabelPosition,
     pub size: Size,
     /// Only a per-instance override; the theme's colour is already on `:root`.
-    pub color: Option<(String, Option<String>)>,
+    /// `(text role, fill role, the foreground on the fill)`.
+    pub color: Option<(String, String, Option<String>)>,
     pub completed_label: &'static str,
     pub error_label: &'static str,
     pub class: Input<ClassList>,
@@ -350,9 +351,10 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         .into();
 
     let mut root_variables = variables();
-    if let Some((color, contrast)) = color {
+    if let Some((color, fill, contrast)) = color {
         root_variables = root_variables
             .with(STEPPER_COLOR, Some(color))
+            .with(STEPPER_FILL, Some(fill))
             .with(STEPPER_COLOR_CONTRAST, contrast);
     }
     let root_variables: Input<Variables> = root_variables.into();

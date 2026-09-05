@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color},
+        common::{base_color, base_props, contrast_color, fill_color},
         layout::use_box,
         variables,
     },
@@ -205,7 +205,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let on_active = contrast_color(&active);
 
     let mut variables: Variables = variables()
-        .with(PAGINATION_ACTIVE_BACKGROUND, active.resolve(None))
+        .with(PAGINATION_ACTIVE_BACKGROUND, fill_color(&active))
         .with(PAGINATION_RADIUS, SizeCss::RADIUS.value(radius));
     if let Some(on_active) = on_active {
         variables = variables.with(PAGINATION_ACTIVE_COLOR, on_active.resolve(None));

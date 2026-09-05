@@ -34,7 +34,10 @@ impl CodeDefaults {
         font_family: MONO_FONT_FAMILY,
         tok_keyword: "#cf222e",
         tok_string: "#0a3069",
-        tok_comment: "#6e7781",
+        // GitHub's own comment grey is 4.27:1 on the block's tinted
+        // background, not the 4.55:1 it clears on white (todo 241). This is
+        // the theme's `muted_text`, 6.0:1 on the same tint.
+        tok_comment: "#57606a",
         tok_number: "#0550ae",
         tok_constant: "#0550ae",
         tok_function: "#8250df",

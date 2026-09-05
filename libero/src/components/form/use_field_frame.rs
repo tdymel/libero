@@ -59,7 +59,10 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .align_items("center")
                 .flex("0 0 auto")
-                .color("grey.6"),
+                // A slot holds text as often as an icon - a unit, a prefix,
+                // `PhoneField`'s country code, which inherits from here - so
+                // it is dimmed text, not a grey (todo 240).
+                .color("text-dimmed"),
         )
 });
 
@@ -87,7 +90,7 @@ pub(crate) fn field_control_sx() -> Sx {
         // The frame's padding sets the height now, so the control contributes
         // exactly one line box and a `Textarea` can contribute several.
         .line_height("1.5")
-        .selector("::placeholder", sx().color("grey.6"))
+        .selector("::placeholder", sx().color("text-dimmed"))
 }
 
 /// The frame around a field's control, with room either side of it.

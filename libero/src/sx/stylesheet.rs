@@ -221,9 +221,21 @@ fn property_declarations(property: &SxPropertyKey, value: &ThemeAwareValue) -> V
 }
 
 fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
-    let scale = match property {
-        SxPropertyKey::Known(property) => property.size_scale(),
-        SxPropertyKey::Raw(_) => None,
+    let (scale, role) = match property {
+        SxPropertyKey::Known(property) => (property.size_scale(), property.color_role()),
+        // A custom property is written by one component and read by another,
+        // so nothing here knows what it will end up styling. The component
+        // names the role when it computes the value.
+        SxPropertyKey::Raw(_) => (None, None),
+    };
+
+    let in_role;
+    let value = match role {
+        Some(role) => {
+            in_role = value.in_color_role(role);
+            &in_role
+        }
+        None => value,
     };
 
     match value.resolve(scale) {
@@ -308,13 +320,14 @@ mod tests {
 
         assert!(css.contains("@media (min-width: 48rem){"));
         assert!(css.contains("@media (min-width: 88rem){"));
-        assert!(css.contains("color:var(--lsx-primary-1);"));
-        assert!(css.contains("color:var(--lsx-secondary-3);"));
-        assert!(!css.contains("color:var(--lsx-primary-7);"));
+        // Through the role ramps: `color` is text, `background` is fill.
+        assert!(css.contains("color:var(--lsx-primary-text-1);"));
+        assert!(css.contains("color:var(--lsx-secondary-text-3);"));
+        assert!(!css.contains("color:var(--lsx-primary-text-7);"));
 
         assert!(css.contains("@media (min-width: 62rem) and (min-width: 75rem){"));
-        assert!(css.contains("background:var(--lsx-secondary-4);"));
-        assert!(!css.contains("background:var(--lsx-secondary-2);"));
+        assert!(css.contains("background:var(--lsx-secondary-fill-4);"));
+        assert!(!css.contains("background:var(--lsx-secondary-fill-2);"));
     }
 
     /// Every query is a `min-width`, so the widest matching one must come
@@ -557,7 +570,38 @@ mod tests {
         let stylesheet = Stylesheet::from(&sx().color("primary"));
         let css = stylesheet.as_str();
 
-        assert!(css.contains("color:var(--lsx-primary-6);"));
+        assert!(css.contains("color:var(--lsx-primary-text-6);"));
+    }
+
+    /// The property decides the ramp. A border is neither role: 1.4.11 asks
+    /// 3:1 of it, which the brand colour already clears, so moving it would
+    /// repaint every outline for nothing.
+    #[test]
+    fn a_palette_color_resolves_through_the_ramp_its_property_needs() {
+        let css = Stylesheet::from(
+            &sx()
+                .color("primary")
+                .background("primary")
+                .border_color("primary"),
+        )
+        .as_str()
+        .to_string();
+
+        assert!(css.contains("color:var(--lsx-primary-text-6);"));
+        assert!(css.contains("background:var(--lsx-primary-fill-6);"));
+        assert!(css.contains("border-color:var(--lsx-primary-6);"));
+    }
+
+    /// A literal colour has no ramp to walk, and a caller who wrote one gets
+    /// exactly it.
+    #[test]
+    fn a_literal_color_is_not_moved_by_either_role() {
+        let css = Stylesheet::from(&sx().color("#228BE6").background("#228BE6"))
+            .as_str()
+            .to_string();
+
+        assert!(css.contains("color:#228BE6;"));
+        assert!(css.contains("background:#228BE6;"));
     }
 
     #[test]
@@ -671,7 +715,7 @@ mod tests {
             .as_str()
             .to_string();
 
-        assert!(css.contains("background-color:var(--lsx-primary-6);"));
+        assert!(css.contains("background-color:var(--lsx-primary-fill-6);"));
         assert!(css.contains(&format!(
             "{}:var(--lsx-primary-contrast-6);",
             NamedColorCss::FOCUS_CONTRAST.name()

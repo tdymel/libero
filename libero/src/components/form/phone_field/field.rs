@@ -42,7 +42,7 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
                 .height("1em")
                 .color("grey.6"),
         )
-        .selector("& > [data-slot='dial']", sx().color("grey.6"))
+        .selector("& > [data-slot='dial']", sx().color("text-dimmed"))
         .when("disabled", sx().cursor("not-allowed"))
 });
 
@@ -66,7 +66,7 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .padding("4px 8px")
         .border_bottom("1px solid")
         .border_color("grey.3")
-        .selector("::placeholder", sx().color("grey.6"))
+        .selector("::placeholder", sx().color("text-dimmed"))
 });
 
 /// One row: the caller's flag if there is one, the country's name, its dial
@@ -83,7 +83,7 @@ static ROW_SX: StaticSx = StaticSx::new(|| {
                 .overflow("hidden")
                 .text_overflow("ellipsis"),
         )
-        .selector("& > [data-slot='dial']", sx().color("grey.6"))
+        .selector("& > [data-slot='dial']", sx().color("text-dimmed"))
 });
 
 field_props! {

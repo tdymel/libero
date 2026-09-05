@@ -153,7 +153,7 @@ fn the_ring_reads_the_paper_token_and_the_fill_its_contrast_twin() {
 
     let style = attributes_of(&body(&html), "span")["style"].clone();
     assert!(
-        style.contains("--lsx-indicator-color:var(--lsx-success-6);"),
+        style.contains("--lsx-indicator-color:var(--lsx-success-fill-6);"),
         "{style}"
     );
     assert!(
@@ -173,7 +173,7 @@ fn the_default_fill_is_the_theme_colour() {
 
     let style = attributes_of(&body(&render(app)), "span")["style"].clone();
     assert!(
-        style.contains("--lsx-indicator-color:var(--lsx-error-6);"),
+        style.contains("--lsx-indicator-color:var(--lsx-error-fill-6);"),
         "{style}"
     );
     assert!(

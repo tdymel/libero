@@ -4,7 +4,7 @@ use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
         common::base_props,
-        common::{base_color, contrast_color},
+        common::{base_color, contrast_color, fill_color, text_color},
         inputs::{VariantVars, interactive_variant_sx, variant_colors},
         layout::use_box,
         navigation::InternalAnchor,
@@ -16,6 +16,7 @@ use crate::{
 };
 
 const ACTION_ICON_COLOR_VAR: CssVar = CssVar::new("--lsx-action-icon-color");
+const ACTION_ICON_FILL_VAR: CssVar = CssVar::new("--lsx-action-icon-fill");
 const ACTION_ICON_CONTRAST_VAR: CssVar = CssVar::new("--lsx-action-icon-contrast");
 const ACTION_ICON_HOVER_VAR: CssVar = CssVar::new("--lsx-action-icon-hover");
 const ACTION_ICON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-container");
@@ -23,6 +24,7 @@ const ACTION_ICON_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-action-icon-on-c
 
 const ACTION_ICON_VARS: VariantVars<'static> = VariantVars {
     color: &ACTION_ICON_COLOR_VAR,
+    fill: &ACTION_ICON_FILL_VAR,
     contrast: &ACTION_ICON_CONTRAST_VAR,
     container: &ACTION_ICON_CONTAINER_VAR,
     on_container: &ACTION_ICON_ON_CONTAINER_VAR,
@@ -93,7 +95,8 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
     let colors = variant_colors(props.variant.copied_or_default(), &base);
 
     result
-        .with(ACTION_ICON_COLOR_VAR, base.resolve(None))
+        .with(ACTION_ICON_COLOR_VAR, text_color(&base))
+        .with(ACTION_ICON_FILL_VAR, fill_color(&base))
         .with(
             ACTION_ICON_CONTRAST_VAR,
             contrast.and_then(|c| c.resolve(None)),

@@ -281,14 +281,20 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(avatar_group.to_css_declarations());
     declarations.extend(anchor.to_css_declarations());
     push_named_color_declarations(&mut declarations, *black, *white);
-    push_color_declarations(&mut declarations, Color::Primary, *primary);
-    push_color_declarations(&mut declarations, Color::Secondary, *secondary);
-    push_color_declarations(&mut declarations, Color::Error, *error);
-    push_color_declarations(&mut declarations, Color::Warning, *warning);
-    push_color_declarations(&mut declarations, Color::Info, *info);
-    push_color_declarations(&mut declarations, Color::Success, *success);
-    push_color_declarations(&mut declarations, Color::Neutral, *neutral);
-    push_color_declarations(&mut declarations, Color::Grey, *grey);
+    // Dimmed text is the grey ramp's own text role, so a re-themed `grey`
+    // carries it - see `NamedColorCss::TEXT_DIMMED`.
+    declarations.push(CssDeclaration::new(
+        NamedColorCss::TEXT_DIMMED.name(),
+        ColorValue::Text(Color::Grey, ColorShade::DEFAULT).value(),
+    ));
+    push_color_declarations(&mut declarations, Color::Primary, *primary, *white);
+    push_color_declarations(&mut declarations, Color::Secondary, *secondary, *white);
+    push_color_declarations(&mut declarations, Color::Error, *error, *white);
+    push_color_declarations(&mut declarations, Color::Warning, *warning, *white);
+    push_color_declarations(&mut declarations, Color::Info, *info, *white);
+    push_color_declarations(&mut declarations, Color::Success, *success, *white);
+    push_color_declarations(&mut declarations, Color::Neutral, *neutral, *white);
+    push_color_declarations(&mut declarations, Color::Grey, *grey, *white);
     declarations
 }
 
@@ -315,18 +321,61 @@ fn push_named_color_declarations(
     ));
 }
 
-fn push_color_declarations(declarations: &mut Vec<CssDeclaration>, color: Color, base: HexColor) {
+/// Three ramps per palette colour, plus the foreground that pairs with the
+/// fill ramp.
+///
+/// `Shade` is the brand colour, untouched - `primary` is `blue.6` wherever a
+/// border, a ring or a decoration asks for it. The other two are the same
+/// ramp **re-based** on an accessible step rather than a lookup that snaps
+/// each step to the first passing one: re-basing keeps the ramp a ramp, so a
+/// filled control's `:hover` (one step darker) is still visibly darker than
+/// its rest state. Snapping collapses `fill-6` and `fill-7` onto the same
+/// colour and the hover disappears.
+///
+/// - `text-N` walks from `base.shade(text_shade(N))`, the first step that
+///   clears 4.5:1 on `surface`.
+/// - `fill-N` walks from `base.shade(fill_shade(N))`, the first step whose
+///   auto-contrast foreground clears 4.5:1 on it.
+/// - `contrast-N` is that foreground, computed on `fill-N` - the two are
+///   always used as a pair.
+///
+/// `surface` is the theme's paper. A dark surface would want the ramp walked
+/// the other way; nothing in the library has one yet (todo 69).
+fn push_color_declarations(
+    declarations: &mut Vec<CssDeclaration>,
+    color: Color,
+    base: HexColor,
+    surface: HexColor,
+) {
+    let ramp = color.shade_ramp();
+    let text_base = base.shade(base.text_shade(ramp, ColorShade::DEFAULT, surface), ramp);
+    let fill_base = base.shade(base.fill_shade(ramp, ColorShade::DEFAULT), ramp);
+
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Shade(color, shade).var_name(),
-            base.shade(shade, color.shade_ramp()).to_string(),
+            base.shade(shade, ramp).to_string(),
+        ));
+    }
+
+    for shade in SHADES {
+        declarations.push(CssDeclaration::new(
+            ColorValue::Text(color, shade).var_name(),
+            text_base.shade(shade, ramp).to_string(),
+        ));
+    }
+
+    for shade in SHADES {
+        declarations.push(CssDeclaration::new(
+            ColorValue::Fill(color, shade).var_name(),
+            fill_base.shade(shade, ramp).to_string(),
         ));
     }
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Contrast(color, shade).var_name(),
-            if base.shade(shade, color.shade_ramp()).contrast().rgb() == 0x00_00_00 {
+            if fill_base.shade(shade, ramp).readable_contrast().rgb() == 0x00_00_00 {
                 ColorValue::Shade(Color::Black, shade).value()
             } else {
                 ColorValue::Shade(Color::White, shade).value()
@@ -339,6 +388,7 @@ fn push_color_declarations(declarations: &mut Vec<CssDeclaration>, color: Color,
 mod tests {
 
     use super::*;
+    use crate::tokens::TEXT_CONTRAST;
 
     /// Every palette name, so the check below cannot be defeated by a colour
     /// nobody thought of.
@@ -365,6 +415,122 @@ mod tests {
     ///
     /// This is the cheap general guard - one test covering every component,
     /// including the ones not written yet.
+    /// Reads the var out of the rendered `:root`, so these assert on what
+    /// ships rather than on the helper that built it.
+    fn root_var(css: &str, name: &str) -> String {
+        let root = css
+            .split_once(":root{")
+            .and_then(|(_, rest)| rest.split_once('}'))
+            .map(|(block, _)| block)
+            .expect("a :root block");
+
+        root.split(';')
+            .find_map(|declaration| declaration.strip_prefix(&format!("{name}:")))
+            .unwrap_or_else(|| panic!("{name} is declared"))
+            .to_string()
+    }
+
+    /// The numbers the Maintainer approved on 2026-09-19 (todo 239): the
+    /// brand colour stays `blue.6`, text on paper lands on `primary.8` at
+    /// 4.86:1, and the fill lands there too, because white on `blue.6` is
+    /// 3.56:1.
+    #[test]
+    fn primary_keeps_its_brand_shade_and_moves_only_in_its_two_roles() {
+        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+        let white = HexColor::new(0xFF_FF_FF);
+
+        assert_eq!(root_var(&css, "--lsx-primary-6"), "#228BE6");
+        assert_eq!(root_var(&css, "--lsx-primary-text-6"), "#1C74C1");
+        assert_eq!(root_var(&css, "--lsx-primary-fill-6"), "#1C74C1");
+
+        let text = HexColor::parse(&root_var(&css, "--lsx-primary-text-6")).expect("a hex");
+        assert!(
+            text.contrast_ratio(white) >= TEXT_CONTRAST,
+            "primary as text measured {:.2}:1 on paper",
+            text.contrast_ratio(white)
+        );
+    }
+
+    /// Snapping each step to the first passing one would give `fill-6` and
+    /// `fill-7` the same colour, and every filled control would lose its
+    /// hover. Re-basing the ramp keeps the steps apart.
+    #[test]
+    fn the_fill_ramp_is_still_a_ramp() {
+        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+
+        assert_ne!(
+            root_var(&css, "--lsx-primary-fill-6"),
+            root_var(&css, "--lsx-primary-fill-7")
+        );
+        assert_ne!(
+            root_var(&css, "--lsx-primary-fill-7"),
+            root_var(&css, "--lsx-primary-fill-8")
+        );
+    }
+
+    /// Every palette colour, so a re-themed one cannot quietly ship a fill
+    /// nobody can label. `warning` and `success` are the two the ramp cannot
+    /// rescue as *text* - see the test below.
+    #[test]
+    fn every_default_fill_carries_its_own_foreground() {
+        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+
+        for name in PALETTE {
+            let fill =
+                HexColor::parse(&root_var(&css, &format!("--lsx-{name}-fill-6"))).expect("a hex");
+            let foreground = match root_var(&css, &format!("--lsx-{name}-contrast-6")).as_str() {
+                "var(--lsx-black)" => HexColor::new(0x00_00_00),
+                "var(--lsx-white)" => HexColor::new(0xFF_FF_FF),
+                other => panic!("unexpected contrast value {other}"),
+            };
+
+            let ratio = fill.contrast_ratio(foreground);
+            assert!(
+                ratio >= TEXT_CONTRAST,
+                "{name} fill {fill} labelled at {ratio:.2}:1"
+            );
+        }
+    }
+
+    /// `warning` and `success` are yellow and green: no step of a 25%-black
+    /// mix reaches 4.5:1 on white, so the text role takes the darkest step it
+    /// has and still falls short. Recorded rather than asserted away - the
+    /// only fix is a different base colour, which is the Maintainer's call.
+    #[test]
+    fn the_text_role_is_the_best_the_ramp_can_do_and_two_colors_fall_short() {
+        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+        let white = HexColor::new(0xFF_FF_FF);
+        let short: Vec<&str> = PALETTE
+            .iter()
+            .filter(|name| {
+                let text = HexColor::parse(&root_var(&css, &format!("--lsx-{name}-text-6")))
+                    .expect("a hex");
+                text.contrast_ratio(white) < TEXT_CONTRAST
+            })
+            .copied()
+            .collect();
+
+        assert_eq!(short, ["warning", "success"]);
+    }
+
+    /// Todo 240: the one name for quieter text, `grey.7` at 8.12:1, not the
+    /// `grey.6` the library used to set real text in.
+    #[test]
+    fn dimmed_text_is_the_grey_ramps_text_role() {
+        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+        let white = HexColor::new(0xFF_FF_FF);
+
+        assert_eq!(
+            root_var(&css, NamedColorCss::TEXT_DIMMED.name()),
+            "var(--lsx-grey-text-6)"
+        );
+        assert_eq!(root_var(&css, "--lsx-grey-text-6"), "#4C5055");
+        assert_eq!(root_var(&css, "--lsx-grey-7"), "#4C5055");
+
+        let dimmed = HexColor::parse(&root_var(&css, "--lsx-grey-text-6")).expect("a hex");
+        assert!(dimmed.contrast_ratio(white) >= TEXT_CONTRAST);
+    }
+
     #[test]
     fn no_root_declaration_ships_a_bare_palette_token() {
         let css = Stylesheet::from(&Theme::DEFAULT);

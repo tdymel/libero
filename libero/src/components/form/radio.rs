@@ -6,7 +6,8 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, field_props, focus_ring_sx, ring_overlay, ring_overlay_sx, variables,
+            base_color, field_props, fill_color, focus_ring_sx, ring_overlay, ring_overlay_sx,
+            variables,
         },
         form::use_field,
         layout::use_box,
@@ -70,7 +71,7 @@ fn radio_variables(checked: bool, base: &ThemeAwareValue) -> String {
         .with(
             RADIO_COLOR,
             match checked {
-                true => base.resolve(None),
+                true => fill_color(base),
                 false => ThemeAwareValue::from("grey.5").resolve(None),
             },
         )

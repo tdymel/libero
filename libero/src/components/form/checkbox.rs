@@ -6,8 +6,8 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, contrast_color, field_props, focus_ring_sx, ring_overlay, ring_overlay_sx,
-            variables,
+            base_color, contrast_color, field_props, fill_color, focus_ring_sx, ring_overlay,
+            ring_overlay_sx, variables,
         },
         form::{use_bound, use_field},
         layout::use_box,
@@ -65,14 +65,14 @@ fn checkbox_variables(on: bool, base: &ThemeAwareValue) -> String {
         .with(
             CHECKBOX_BACKGROUND,
             match on {
-                true => base.resolve(None),
+                true => fill_color(base),
                 false => Some("transparent".to_string()),
             },
         )
         .with(
             CHECKBOX_BORDER,
             match on {
-                true => base.resolve(None),
+                true => fill_color(base),
                 false => off.resolve(None),
             },
         )

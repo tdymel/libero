@@ -166,6 +166,29 @@ properties! {
     VerticalAlign => "vertical-align", vertical_align;
 }
 
+/// What a palette colour is about to be used for, which decides which of the
+/// three ramps at `:root` it resolves through. See [`crate::tokens::ColorValue`].
+///
+/// Only the properties that put a colour *under text* or *in text* have a
+/// role. A border, a ring or a shadow keeps the brand colour: 1.4.11 asks 3:1
+/// of those, which the palette already clears, and moving them would repaint
+/// every outline in the library for nothing.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ColorRole {
+    Text,
+    Fill,
+}
+
+impl Property {
+    pub(crate) const fn color_role(self) -> Option<ColorRole> {
+        match self {
+            Self::Color => Some(ColorRole::Text),
+            Self::Background | Self::BackgroundColor => Some(ColorRole::Fill),
+            _ => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SxPropertyKey {
     Known(Property),

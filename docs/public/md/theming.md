@@ -46,6 +46,16 @@ value, not a ramp you have to design. A bare name is shade 6, the hex itself.
 Every shade also has a `-contrast` twin - black or white, whichever reads on it -
 which is what lets a component pick legible text for a background it was handed.
 
+A colour is then resolved through the role it is used in, so it stays legible
+without every call site checking. `color()` asks for the text role and
+`background()` for the fill role, and each is its own ramp: the text ramp starts
+at the first shade that clears 4.5:1 on the page, the fill ramp at the first
+whose black-or-white foreground clears it. So `primary` is still `#228BE6` as a
+border, a ring or a decoration, and resolves to `#1C74C1` as a label or under
+white text. The greys are taken literally - a grey is picked for how quiet it
+should look - so text that means to be quiet asks for it by name, with
+`text-dimmed`.
+
 The roles are `primary`, `secondary`, `success`, `error`, `warning`, `info`,
 `neutral` and `grey`, plus the plain `black` and `white`. `neutral` is the
 text-dark role a control reaches for when it should not compete with the
@@ -148,8 +158,11 @@ Everything the theme emits lives under the `--lsx-` prefix on `:root`.
 
 | Variable | Description |
 |---|---|
-| `--lsx-<role>-<1..9>` | A shade of a palette role. |
-| `--lsx-<role>-contrast-<1..9>` | Black or white, whichever reads on that shade. |
+| `--lsx-<role>-<1..9>` | A shade of a palette role - the brand colour itself. |
+| `--lsx-<role>-text-<1..9>` | The same ramp re-based on the first shade that reads on the page; what `color()` resolves a palette colour through. |
+| `--lsx-<role>-fill-<1..9>` | The same ramp re-based on the first shade that carries a black or white foreground; what `background()` resolves through. |
+| `--lsx-<role>-contrast-<1..9>` | Black or white, whichever reads on that step of the fill ramp. |
+| `--lsx-text-dimmed` | Secondary text - a placeholder, a hint, a unit. Written `"text-dimmed"` in an `sx`. |
 | `--lsx-spacing-<size>` | A step of the spacing scale. |
 | `--lsx-radius-<size>` | A step of the radius scale. |
 | `--lsx-shadow-<size>` | A step of the elevation scale. |

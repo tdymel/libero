@@ -65,7 +65,7 @@ static FILE_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 .text_overflow("ellipsis")
                 .white_space("nowrap"),
         )
-        .selector("& [data-placeholder]", sx().color("grey.6"))
+        .selector("& [data-placeholder]", sx().color("text-dimmed"))
         // A filename has no spaces to break on, so without this one long one
         // pushes the frame past whatever width its parent allows.
         .selector(
@@ -121,7 +121,7 @@ static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .text_align("center")
         .transition("border-color 150ms, background 150ms")
-        .selector("& [data-slot='hint']", sx().color("grey.6"))
+        .selector("& [data-slot='hint']", sx().color("text-dimmed"))
         // Sized against the text, which is the one thing on the surface that
         // already scales.
         .selector("& > svg", sx().width("2em").height("2em").color("grey.6"))
@@ -177,7 +177,9 @@ static FILE_CARD_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-slot='size']",
-            sx().flex("0 0 auto").color("grey.6").font_size("0.85em"),
+            sx().flex("0 0 auto")
+                .color("text-dimmed")
+                .font_size("0.85em"),
         )
         // `inline-flex`, or the button sits on the text's baseline instead of
         // the row's centre line - the same fix the chip's x needed.

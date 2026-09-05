@@ -65,7 +65,7 @@ fn a_tonal_button_labels_its_container_with_that_shade_s_contrast() {
     let attributes = attributes_of(&html, "button");
 
     assert_eq!(attributes["data-state"], "tonal size-md radius-md");
-    assert!(attributes["style"].contains("--lsx-button-container:var(--lsx-warning-1);"));
+    assert!(attributes["style"].contains("--lsx-button-container:var(--lsx-warning-fill-1);"));
     assert!(
         attributes["style"].contains("--lsx-button-on-container:var(--lsx-warning-contrast-1);")
     );
@@ -107,7 +107,7 @@ fn button_renders_its_class_state_and_variables() {
 
     assert_eq!(attributes["type"], "button");
     assert_eq!(attributes["data-state"], "filled size-md radius-md");
-    assert!(attributes["style"].contains("--lsx-button-color:var(--lsx-error-6);"));
+    assert!(attributes["style"].contains("--lsx-button-color:var(--lsx-error-text-6);"));
     assert!(body(&html).contains(">Save<"));
 
     for class in classes_of(&html, "button") {
