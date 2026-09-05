@@ -5,6 +5,8 @@ use libero::components::{Chip, Code, DataList, DataListItem, Text};
 /// The pairs are the fixture - `orientation` and `gap` are the props - so the
 /// code block prints them verbatim, `for` loop included: that loop is the
 /// multi-description claim the lead makes.
+// snippet: let phones = ["+49 30 1234567"];
+// snippet: in DataList { .. }
 const CHILDREN: &str = r#"DataListItem {
     label: rsx! { "Status" },
     Chip { variant: "filled", color: "success", size: "xs", "Active" }

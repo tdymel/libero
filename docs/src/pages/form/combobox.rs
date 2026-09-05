@@ -13,6 +13,7 @@ use libero::{
 
 /// The fake server the preview asks, printed so the snippet calls nothing it
 /// does not show.
+// snippet: after FRUIT_ENUM
 const FETCHING_SEARCH: &str = r#"/// How long the fake search takes.
 const LATENCY: Duration = Duration::from_millis(700);
 
@@ -30,6 +31,7 @@ fn matching(query: &str) -> Vec<Fruit> {
 
 /// A fetch per keystroke. `loading` is what keeps `empty` from flashing
 /// between the keystroke and the answer.
+// snippet: after FRUIT_ENUM
 const FETCHING_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 let mut results = use_signal(Vec::<Fruit>::new);
@@ -41,6 +43,7 @@ use_drop(move || pending.set(None));
 
 "#;
 
+// snippet: after FRUIT_ENUM, FETCHING_SEARCH, FETCHING_STATE
 const FETCHING_TRIGGER: &str = r#"TextField {
     sx: sx().width("280px"),
     placeholder: "Type a fruit",
@@ -82,11 +85,13 @@ enum Fruit {
 
 "#;
 
+// snippet: after FRUIT_ENUM
 const SELECT_STATE: &str = r#"let fruit = use_combobox();
 let mut picked = use_signal(|| None::<Fruit>);
 
 "#;
 
+// snippet: after FRUIT_ENUM
 const SUGGESTIONS_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 
@@ -98,6 +103,7 @@ let matches: Vec<Fruit> = Fruit::options()
 
 "#;
 
+// snippet: after FRUIT_ENUM, SELECT_STATE
 const SELECT_TRIGGER: &str = r#"Button {
     variant: "outlined",
     sx: sx().width("280px"),
@@ -109,6 +115,7 @@ const SELECT_TRIGGER: &str = r#"Button {
     }
 }"#;
 
+// snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
 const SUGGESTIONS_TRIGGER: &str = r#"TextField {
     sx: sx().width("280px"),
     placeholder: "Type a fruit",
@@ -123,6 +130,8 @@ input { r#type: "hidden", name: "fruit", value: "{text()}" }"#;
 
 /// A row is four combinations of two choices, so the snippet is composed
 /// rather than written out four times.
+// snippet: after FRUIT_ENUM, SELECT_STATE
+// snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. "{o.value.label()}" } } }
 const SELECT_WIRING: &str = r#"        selected: picked() == Some(o.value),
         onpick: move |_| {
             picked.set(Some(o.value));
@@ -130,13 +139,23 @@ const SELECT_WIRING: &str = r#"        selected: picked() == Some(o.value),
         },"#;
 
 /// No `selected`: a suggestion is not a selection.
+// snippet: after FRUIT_ENUM, SUGGESTIONS_STATE
+// snippet: in Combobox { state: suggestions, options: matches, option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. "{o.value.label()}" } } }
 const SUGGESTION_WIRING: &str = r#"        onpick: move |_| {
             text.set(o.value.label());
             suggestions.close();
         },"#;
 
+// snippet: after FRUIT_ENUM
+// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let fruit = use_combobox();
+// snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. } } }
 const PLAIN_ROW: &str = r#"        "{o.value.label()}""#;
 
+// snippet: after FRUIT_ENUM
+// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let fruit = use_combobox();
+// snippet: in Combobox { state: fruit, options: Fruit::options().to_vec(), option: move |o: ComboboxOptionArgs<Fruit>| rsx! { ComboboxOption { .. } } }
 const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "{o.value.emoji()}" }
         Flex {
             direction: "column",

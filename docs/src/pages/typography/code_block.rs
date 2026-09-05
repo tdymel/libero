@@ -9,6 +9,7 @@ const RUST_EXAMPLE: &str = r#"fn shout(word: &str) -> String {
     format!("{}!", word.to_uppercase())
 }"#;
 
+// snippet: ignore - a diff
 const RUST_DIFF: &str = r#"fn shout(word: &str) -> String {
     // Rust
 -    format!("{}", word)

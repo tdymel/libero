@@ -7,6 +7,8 @@ use libero::{
     use_theme,
 };
 
+// snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
+// snippet: item #[component] fn Home() -> Element { rsx! {} }
 const CUSTOM_THEME: &str = r#"static THEME: Theme = Theme {
     primary: HexColor::new(0x7C3AED),
     spacing: Sizes::new(4, 8, 12, 16, 20, 24),
@@ -32,10 +34,12 @@ const COMPONENT_DEFAULTS: &str = r#"static THEME: Theme = Theme {
     ..Theme::DEFAULT
 };"#;
 
+// snippet: ignore - `Control` is the docs site's own
 const READING_THE_THEME: &str = r#"let theme = use_theme();
 
 Control::color("color").default(theme.mark.color.as_str())"#;
 
+// snippet: ignore - CSS
 const EMITTED_CSS: &str = r#":root {
   --lsx-primary-6: #7c3aed;
   --lsx-primary-contrast-6: #ffffff;

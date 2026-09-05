@@ -11,6 +11,7 @@ const CHILD: &str = r#"Box { sx: sx().padding("8px 16px").background("primary"),
 
 /// No width of its own: filling the parent - or not - is what `inline`
 /// decides, so the wrapper below is what supplies the width.
+// snippet: in Center { .. }
 const SX: &str = r#"sx: sx().height("120px").background("primary.1")"#;
 
 /// The preview pane centers and shrink-wraps whatever it holds, so a bare

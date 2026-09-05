@@ -33,6 +33,9 @@ fn people() -> Vec<Person> {
     ]
 }
 
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, age: u32, bonus: f64 }
+// snippet: let people: Vec<Person> = Vec::new();
+// snippet: in Table { aria_label: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
         column("Name").value(|p: &Person| p.name.clone()).sortable(),
         column("Role")

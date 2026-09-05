@@ -21,6 +21,9 @@ enum Step {
 
 /// In `One` mode each step's button opens the next, which closes this one
 /// with focus inside it - the case the component hands focus back for.
+// snippet: after STEP_ENUM
+// snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
+// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), .. }
 const ONE_PANEL: &str = r#"panel: move |step: Step| match step {
     Step::Shipping => rsx! {
         Flex { gap: "sm", align: "flex-start",
@@ -37,6 +40,9 @@ const ONE_PANEL: &str = r#"panel: move |step: Step| match step {
     Step::Review => rsx! { Text { "Check the order, then place it." } },
 }"#;
 
+// snippet: after STEP_ENUM
+// snippet: let mut open = use_signal(|| AccordionOpen::Many(vec![Step::Shipping]));
+// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), .. }
 const MANY_PANEL: &str = r#"panel: |step: Step| match step {
     Step::Shipping => rsx! { Text { "Where should the parcel go?" } },
     Step::Payment => rsx! { Text { "Card, invoice or bank transfer." } },
@@ -47,6 +53,10 @@ const MANY_PANEL: &str = r#"panel: |step: Step| match step {
 // `Box` as a `span`, not a `Flex`, which is a `div`. The inline-flex row is
 // what centres the icon on the label; beside bare text it sits on the
 // baseline.
+// snippet: after STEP_ENUM
+// snippet: item impl Step { fn icon(&self) -> Element { rsx! {} } }
+// snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
+// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, .. }
 const RICH: &str = r#"label: |step: Step| OptionLabel::rich(
     step.label(),
     rsx! {
@@ -60,6 +70,10 @@ const RICH: &str = r#"label: |step: Step| OptionLabel::rich(
 )"#;
 
 /// Printed with the rich label, which calls it.
+// snippet: after STEP_ENUM
+// snippet: item #[component] fn TruckIcon() -> Element { rsx! {} }
+// snippet: item #[component] fn CreditCardIcon() -> Element { rsx! {} }
+// snippet: item #[component] fn ClipboardCheckIcon() -> Element { rsx! {} }
 const STEP_ICON: &str = r#"impl Step {
     fn icon(&self) -> Element {
         match self {

@@ -13,6 +13,7 @@ const PANEL_ID: &str = "burger-demo-panel";
 // pointing at an element that is not in the document is a dangling
 // reference, and a disclosure's panel is the thing that exists and is
 // hidden.
+// snippet: let opened = use_signal(|| false);
 const PANEL: &str = r#"Paper {
     id: "burger-demo-panel",
     sx: sx().padding("sm").display(if opened() { "block" } else { "none" }),

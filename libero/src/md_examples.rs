@@ -6,6 +6,9 @@
 //! names a placeholder like `Route`) is fenced `rust,ignore`. A bare ` ``` `
 //! fence is Rust to rustdoc too, so plain text is fenced `text`.
 //! `tests/all/md_examples.rs` checks that every md file is listed here.
+//!
+//! `PageSnippets` does the same for the snippets the docs pages print from
+//! `const`s, which `tests/all/page_snippets.rs` writes into one md file.
 
 macro_rules! md_pages {
     ($($page:ident => $file:literal,)*) => {
@@ -15,6 +18,11 @@ macro_rules! md_pages {
         )*
     };
 }
+
+/// The `const` snippets the docs pages print, as `tests/all/page_snippets.rs`
+/// writes them out.
+#[doc = include_str!("../tests/page_snippets.md")]
+pub struct PageSnippets;
 
 md_pages! {
     Accordion => "accordion",

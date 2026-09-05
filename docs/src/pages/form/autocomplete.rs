@@ -19,6 +19,10 @@ const CITIES_CONST: &str = r#"const CITIES: [(&str, &str); 6] = [
 
 "#;
 
+// snippet: after CITIES_CONST
+// snippet: item fn country(city: &str) -> String { city.to_string() }
+// snippet: let mut value = use_signal(String::new);
+// snippet: in Autocomplete { options: CITIES.iter().map(|(city, _)| city.to_string()).collect(), value: value(), oninput: move |next| value.set(next), .. }
 const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| rsx! {
     Flex {
         direction: "column",
@@ -31,10 +35,19 @@ const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| 
 
 /// Prefix rather than the default `contains` - the same list, narrowed by a
 /// different rule.
+// snippet: after CITIES_CONST
+// snippet: item fn country(city: &str) -> String { city.to_string() }
+// snippet: let mut value = use_signal(String::new);
+// snippet: in Autocomplete { options: CITIES.iter().map(|(city, _)| city.to_string()).collect(), value: value(), oninput: move |next| value.set(next), .. }
 const CUSTOM_FILTER: &str = r#"filter: move |f: AutocompleteFilterArgs<String>| {
     f.value.to_lowercase().starts_with(&f.query.to_lowercase())
 }"#;
 
+// snippet: after CITIES_CONST
+// snippet: item fn country(city: &str) -> String { city.to_string() }
+// snippet: let mut value = use_signal(String::new);
+// snippet: let mut picked = use_signal(|| None::<String>);
+// snippet: in Autocomplete { options: CITIES.iter().map(|(city, _)| city.to_string()).collect(), value: value(), oninput: move |next| value.set(next), .. }
 const ONPICK: &str = r#"onpick: move |city: String| picked.set(Some(country(&city)))"#;
 
 const CITIES: [(&str, &str); 6] = [

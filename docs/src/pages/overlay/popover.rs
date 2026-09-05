@@ -11,6 +11,7 @@ use libero::{
 
 const GAPS: [&str; 4] = ["0", "4", "8", "16"];
 
+// snippet: ignore - pieces of a component built on `use_popover`
 const CALL_ORDER: &str = r#"// use_popover first: the style it returns is what the box renders with.
 let anchor = use_element();
 let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
@@ -26,6 +27,7 @@ popover.show(opened().then(|| dropdown
     .element(popover.floating())
     .render(HtmlTag::Div, vec![], rsx! { .. })));"#;
 
+// snippet: ignore - pieces of a component built on `use_popover`
 const FOCUS_AFTER_PLACED: &str = r#"// Wrong: the box is mounted but not measured, so it is still
 // `visibility: hidden`. `focus()` answers Ok(()) and nothing moves.
 use_effect(move || {
@@ -42,6 +44,7 @@ use_effect(move || {
     let _ = first_item.focus();
 });"#;
 
+// snippet: ignore - pieces of a component built on `use_popover`
 const CONTEXT_ACROSS_THE_PORTAL: &str = r#"// The box renders at the portal outlet, at the document root, so it
 // inherits none of the context around the call site. Re-provide what
 // the content needs, inside the content itself.
@@ -54,6 +57,7 @@ popover.show(opened().then(|| rsx! {
 let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
 use_drop(move || tick.manually_drop());"#;
 
+// snippet: ignore - pieces of a component built on `use_popover`
 const NESTED: &str = r#"// A submenu is its own popover, anchored to the row that opened it.
 // Geometry needs nothing: both boxes are `position: fixed`, and the one
 // portaled later paints over the earlier one. Containment does - the

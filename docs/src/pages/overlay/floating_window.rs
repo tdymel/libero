@@ -42,6 +42,7 @@ const CONFIRM: &str = r#"let confirm = use_modal(|s: ModalScope<()>| rsx! {
 });
 "#;
 
+// snippet: let last = use_signal(|| None::<WindowRect>);
 const READOUT: &str = r#"if let Some(rect) = last() {
     Text {
         {format!("Last reported: {:.0}, {:.0} - {:.0} x {:.0}", rect.x, rect.y, rect.width, rect.height)}

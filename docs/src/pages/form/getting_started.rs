@@ -5,6 +5,7 @@ use libero::components::{
     Validators, is_email, not_empty,
 };
 
+// snippet: ignore - a diagram
 const SHAPE_CODE: &str = r#"TextField                      // a field: one value, its label, its own rules
   └ PasswordField, EmailField  // specialized: a field with a narrower contract
 AddressFieldset                // composed: specialized fields grouped into one value
@@ -60,6 +61,7 @@ fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<
     }
 }"#;
 
+// snippet: ignore - builds on the page's earlier snippets
 const FORM_CODE: &str = r#"use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -123,6 +125,7 @@ fn required(field: &str) -> Validator<String> {
     not_empty.error(format!("Enter your {field}."))
 }"#;
 
+// snippet: ignore - a list of signatures
 const CATALOG_CODE: &str = r#"use libero::components::{Rule, is_email, max, max_length, min, min_length, not_empty};
 
 not_empty                        // String (whitespace is empty), Option<T>, Vec<T>, bool
@@ -134,6 +137,7 @@ rule.error("..")                 // an error blocks a submit
 rule.warn("..")                  // a warning never does
 rule.and(other) / rule.or(other) // compose before the message"#;
 
+// snippet: ignore - a list of paths, two of them wrong on purpose
 const PATHS_CODE: &str = r#"#[derive(Clone, PartialEq, Default, Fields)]
 struct Order {
     email: String,
@@ -151,6 +155,9 @@ TextField { name: Order::FIELDS.email() }         // binds and posts
 TextField { name: Order::FIELDS.same_billing() }  // does not compile: a TextField holds a String
 rule.on([Order::FIELDS.email()])                  // a composite rule over `Order` names a field"#;
 
+// snippet: item #[derive(Clone, PartialEq, Default, Fields)] struct Address { zip: String }
+// snippet: item #[derive(Clone, PartialEq, Default, Fields)] struct Order { email: String, #[fields(nested)] shipping: Address }
+// snippet: let mut draft = use_signal(String::new);
 const BINDING_CODE: &str = r#"let order = use_store(Order::default);
 
 Form {

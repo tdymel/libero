@@ -7,6 +7,8 @@ use libero::{
 
 /// The whole chip is the caller's, remove control included - so a custom tag
 /// owns its own x, and with it whether that x is in the tab order.
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     Chip { size: "xs", variant: "outlined",
         "#{t.value}"
@@ -23,11 +25,16 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     }
 }"##;
 
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const SUGGESTIONS: &str =
     r#"suggestions: vec!["rust".into(), "dioxus".into(), "wasm".into(), "css".into()]"#;
 
 /// One tag at a time, before it joins the list. The refusal itself is silent,
 /// so the helper is how the caller says something anyway.
+// snippet: let mut topics = use_signal(Vec::<String>::new);
+// snippet: let mut refused = use_signal(|| None::<String>);
+// snippet: in TagsField { value: topics(), onchange: move |next| topics.set(next), .. }
 const TAG_RULES: &str = r#"tag_rules: |tag: String| tag.chars().count() >= 3,
 onrefuse: move |tag: String| refused.set(Some(tag)),
 helper: refused().map(|tag| format!("\"{tag}\" was refused."))"#;

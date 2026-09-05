@@ -7,6 +7,7 @@ use libero::{
 
 /// Printed as a `fixed` line, so the preview and the code block share it: a
 /// container is invisible without a background to see its edges by.
+// snippet: in Container { .. }
 const SX: &str = r#"sx: sx().background("grey.1").padding_top("16px").padding_bottom("16px")"#;
 
 #[component]

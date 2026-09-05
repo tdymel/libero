@@ -19,6 +19,7 @@ pub struct Signup {
     pub terms: bool,
 }
 
+// snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
 const FORM_CODE: &str = r#"use dioxus::prelude::*;
 use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};__IMPORTS__
 
@@ -61,6 +62,7 @@ __BUTTONS__
 
 const SUBMIT_BUTTON: &str = r#"            Button { r#type: "submit", "Create account" }"#;
 
+// snippet: ignore - spliced into `FORM_CODE`
 const HANDLE_BUTTONS: &str = r#"            Text { if form.is_valid() { "Ready to send." } else { "Not ready yet." } }
             Flex { gap: "sm",
                 Button { r#type: "submit", "Create account" }

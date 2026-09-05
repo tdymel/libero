@@ -10,6 +10,7 @@ use libero::{
 
 /// The panel's own content - a subtree, so it is printed verbatim rather than
 /// as `children_text`.
+// snippet: let s: ModalScope<()> = todo!();
 const CONTENT: &str = r#"Flex {
     direction: "column",
     gap: "md",

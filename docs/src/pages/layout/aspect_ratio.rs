@@ -15,6 +15,7 @@ const CHILD: &str = r#"Flex {
 }"#;
 
 /// A ratio only shows against a known width; the box has no size of its own.
+// snippet: in AspectRatio { .. }
 const SX: &str = r#"sx: sx().width("240px")"#;
 
 #[component]

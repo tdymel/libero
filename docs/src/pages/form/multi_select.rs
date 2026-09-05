@@ -22,6 +22,7 @@ enum Topping {
 "#;
 
 /// Only printed while the custom rows are on - the plain snippet never calls it.
+// snippet: ignore
 const TOPPING_IMPL: &str = r#"impl Topping {
     fn emoji(self) -> &'static str { /* "🧀", "🍄", ... */ }
     fn note(self) -> &'static str { /* "Earthy, browns well", ... */ }
@@ -29,6 +30,10 @@ const TOPPING_IMPL: &str = r#"impl Topping {
 
 "#;
 
+// snippet: after TOPPING_ENUM
+// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! {
     Text { component: "span", size: "lg", "{o.value.emoji()}" }
     Text { component: "span", sx: sx().flex("1 1 auto"), "{o.value.label()}" }
@@ -37,6 +42,10 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Topping>| rsx! 
     }
 }"#;
 
+// snippet: after TOPPING_ENUM
+// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rsx! {
     Chip { size: "xs", variant: "outlined",
         "{s.value.emoji()} {s.value.label()}"
@@ -60,6 +69,10 @@ const CUSTOM_SELECTION: &str = r#"selection: move |s: SelectionArgs<Topping>| rs
 /// The point of the switch: a filter can test anything the caller knows, so
 /// this one searches the note as well - "earthy" finds Mushrooms and "divides"
 /// finds Pineapple, though neither word is on the row.
+// snippet: after TOPPING_ENUM
+// snippet: item impl Topping { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Topping>| {
     let query = f.query.to_lowercase();
     f.value.label().to_lowercase().contains(&query)

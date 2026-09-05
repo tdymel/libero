@@ -11,6 +11,7 @@ use libero::{
 
 const HREF: &str = "https://en.wikipedia.org/wiki/Ada_Lovelace";
 
+// snippet: in HoverCard { .., Button { "Ada Lovelace" } }
 const CONTENT: &str = r#"aria_label: "Ada Lovelace",
 content: rsx! {
     Flex {

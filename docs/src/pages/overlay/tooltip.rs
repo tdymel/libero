@@ -10,8 +10,10 @@ use libero::{
 
 const SIZES: [&str; 5] = ["xs", "sm", "md", "lg", "xl"];
 
+// snippet: in Tooltip { .., Button { "Save" } }
 const LABEL: &str = r#"label: rsx! { "Saves the current draft" }"#;
 const TRIGGER: &str = r#"Button { variant: "outlined", "Save" }"#;
+// snippet: in Tooltip { label: rsx! { "Save" }, .., Button { "Save" } }
 const STYLED: &str = r#"sx: sx().background("primary.6").white_space("normal").max_width("12rem")"#;
 
 /// The bubble escapes the trigger's box, and the demo card clips what leaves

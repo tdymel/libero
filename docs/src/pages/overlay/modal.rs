@@ -41,6 +41,9 @@ fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoic
     })
 }"#;
 
+// snippet: after DIALOG_EXAMPLE
+// snippet: item fn save() {}
+// snippet: item fn discard() {}
 const OPEN_EXAMPLE: &str = r#"let prompt = use_save_prompt("Discard");
 
 Button {
@@ -54,6 +57,12 @@ Button {
     "Close editor"
 }"#;
 
+// snippet: after DIALOG_EXAMPLE
+// snippet: item async fn save() {}
+// snippet: item async fn discard() {}
+// snippet: item async fn close_editor() {}
+// snippet: let prompt = use_save_prompt("Discard");
+// snippet: in Button { .., "Close editor" }
 const AWAIT_EXAMPLE: &str = r#"onclick: move |_| async move {
     match prompt.open_with("notes.md").await {
         Some(SaveChoice::Save) => save().await,

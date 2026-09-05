@@ -19,6 +19,7 @@ fn default_variant() -> &'static str {
     Theme::DEFAULT.alert.variant.as_str()
 }
 
+// snippet: ignore - two places: the root, and anywhere below it
 const SETUP_EXAMPLE: &str = r#"// Once, near the root - the one outlet for every handle.
 LiberoProvider {
     Router::<Route> {}
@@ -41,6 +42,7 @@ notify.show_with(
 
 /// The preview's own template for the custom-template switch, printed as it
 /// is written below.
+// snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
 const CARD_EXAMPLE: &str = r#"// A `fn`, not a capturing closure: everything it draws travels in the data.
 fn card_notification(s: NotificationScope<NotificationData>) -> Element {
     let data = s.args();
@@ -94,6 +96,7 @@ fn card_notification(s: NotificationScope<NotificationData>) -> Element {
     }
 }
 
+// snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
 const TEMPLATE_EXAMPLE: &str = r#"#[derive(Clone, PartialEq)]
 struct Upload {
     file: &'static str,

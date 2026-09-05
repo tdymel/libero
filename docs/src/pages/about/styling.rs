@@ -41,6 +41,7 @@ fn card_sx(values: &DemoValues) -> Sx {
         })
 }
 
+// snippet: in Box { states: States::new().active("active"), .. }
 const STATES_SX: &str = r#"sx: sx()
         .padding("sm")
         .border_radius("xl")
@@ -125,6 +126,7 @@ rsx! {
     }
 }"#;
 
+// snippet: let mut open = use_signal(|| false);
 const ESCAPE_HATCHES: &str = r#"Box {
     class: "prose",
     id: "intro",

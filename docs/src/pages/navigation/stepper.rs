@@ -17,6 +17,8 @@ let mut stage = use_signal(|| Some(Stage::Account));
 
 /// Each step's own button moves on, which removes the content it sits in -
 /// the case the component hands focus back for.
+// snippet: after STAGE_ENUM
+// snippet: in Stepper { active: stage(), .. }
 const CONTENT: &str = r#"content: move |s: Stage| match s {
     Stage::Account => rsx! {
         Flex { gap: "sm", align: "flex-start",
@@ -38,12 +40,16 @@ const CONTENT: &str = r#"content: move |s: Stage| match s {
     },
 }"#;
 
+// snippet: after STAGE_ENUM
+// snippet: in Stepper { active: stage(), content: |_: Stage| rsx! {}, .. }
 const DESCRIPTION: &str = r#"description: |s: Stage| match s {
     Stage::Account => "Who you are".to_string(),
     Stage::Shipping => "Where it goes".to_string(),
     Stage::Review => "Check and pay".to_string(),
 }"#;
 
+// snippet: after STAGE_ENUM
+// snippet: in Stepper { active: stage(), content: |_: Stage| rsx! {}, .. }
 const ERROR: &str = r#"state: |s: Stage| (s == Stage::Shipping).then_some(StepState::Error)"#;
 
 #[derive(Clone, PartialEq, Options)]

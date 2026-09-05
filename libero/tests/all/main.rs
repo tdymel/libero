@@ -69,6 +69,7 @@ mod modal;
 mod nav_link;
 mod notifications;
 mod overlay;
+mod page_snippets;
 mod pagination;
 mod paper;
 mod phone_field;

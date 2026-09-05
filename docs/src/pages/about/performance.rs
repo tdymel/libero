@@ -48,6 +48,7 @@ const COSTS: [(&str, &str, &str); 6] = [
     ),
 ];
 
+// snippet: ignore - pseudocode: `Row { .. }` stands for any component
 const MEMOIZE: &str = r#"// Re-renders every time the list does: a bare closure has a
 // fresh identity each render, so the props never compare equal.
 Row { onselect: move |_| selected.set(id), .. }

@@ -21,6 +21,7 @@ enum Fruit {
 "#;
 
 /// Only printed while the custom rows are on - the plain snippet never calls it.
+// snippet: ignore
 const FRUIT_IMPL: &str = r#"impl Fruit {
     fn emoji(self) -> &'static str { /* "🍎", "🍌", ... */ }
     fn note(self) -> &'static str { /* "Crisp, keeps for weeks", ... */ }
@@ -28,6 +29,10 @@ const FRUIT_IMPL: &str = r#"impl Fruit {
 
 "#;
 
+// snippet: after FRUIT_ENUM
+// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(|| None::<Fruit>);
+// snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
     Text { component: "span", size: "xl", "{o.value.emoji()}" }
     Flex {
@@ -39,12 +44,20 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
     }
 }"#;
 
+// snippet: after FRUIT_ENUM
+// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(|| None::<Fruit>);
+// snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_SELECTION: &str =
     r#"selection: move |fruit: Fruit| rsx! { "{fruit.emoji()} {fruit.label()}" }"#;
 
 /// The point of the switch: a filter can test anything the caller knows, so
 /// this one searches the note as well - "thumb" finds Mango, "counter" finds
 /// Banana, and neither word is on the row.
+// snippet: after FRUIT_ENUM
+// snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
+// snippet: let mut value = use_signal(|| None::<Fruit>);
+// snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
 const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Fruit>| {
     let query = f.query.to_lowercase();
     f.value.label().to_lowercase().contains(&query)

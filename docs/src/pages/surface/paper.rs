@@ -14,8 +14,10 @@ Text { "Due 30 September." }"#;
 
 /// Padding is the caller's `sx`, deliberately: `Paper` is the surface, not the
 /// box model. The shadow control rewrites this line when it is turned off.
+// snippet: in Paper { .. }
 const PADDING: &str = r#"sx: sx().padding("lg")"#;
 
+// snippet: in Paper { .. }
 const NO_SHADOW: &str = r#"sx: sx().padding("lg").box_shadow("none")"#;
 
 #[component]

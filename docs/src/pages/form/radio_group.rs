@@ -31,6 +31,9 @@ fn plan_description(plan: Plan) -> String {
     .to_string()
 }
 
+// snippet: after PLAN_ENUM
+// snippet: let mut plan = use_signal(|| None::<Plan>);
+// snippet: in RadioGroup { value: plan(), onchange: move |next| plan.set(Some(next)), .. }
 const PLAN_DESCRIPTION: &str = r#"option_description: move |plan: Plan| match plan {
     Plan::Free => "Three projects, community support.",
     Plan::Pro => "Unlimited projects, email support.",

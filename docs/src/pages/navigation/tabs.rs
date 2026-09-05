@@ -16,6 +16,9 @@ enum Section {
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
 /// closure right below - the block is a promise that the two are the same.
+// snippet: after SECTION_ENUM
+// snippet: let mut section = use_signal(|| Section::Account);
+// snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
 const RENAMED: &str = r#"label: |section: Section| -> OptionLabel {
     match section {
         Section::Account => "Konto".into(),
@@ -26,6 +29,10 @@ const RENAMED: &str = r#"label: |section: Section| -> OptionLabel {
 
 // A tab is a `button`, so its content has to stay phrasing content: `Icon` is
 // an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a `div`.
+// snippet: after SECTION_ENUM
+// snippet: item #[component] fn FileIcon() -> Element { rsx! {} }
+// snippet: let mut section = use_signal(|| Section::Account);
+// snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
 const RICH: &str = r#"label: |section: Section| OptionLabel::rich(
     section.label(),
     rsx! {

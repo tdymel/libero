@@ -48,6 +48,7 @@ let items = vec![
 
 "#;
 
+// snippet: after PREAMBLE
 const TRIGGER: &str = r#"Button {
     variant: "outlined",
     attributes: menu.a11y_attributes(),

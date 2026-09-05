@@ -11,6 +11,8 @@ const TEXTS: [&str; 3] = [
     "Returns are free within thirty days of delivery.",
 ];
 
+// snippet: let mut open = use_signal(|| false);
+// snippet: let trigger = use_focus_return();
 const DONE: &str = r#"Button {
     onclick: move |_| {
         open.set(false);

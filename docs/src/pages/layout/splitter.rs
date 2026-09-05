@@ -7,11 +7,14 @@ use libero::{
     sx::sx,
 };
 
+// snippet: in Splitter { initial_size: 50.0, aria_label: "Resize panes", panel_b: rsx! {}, .. }
 const PANEL_A: &str = r#"panel_a: rsx! { Box { sx: sx().height("100%").padding("md").background("primary.1"), "A" } }"#;
+// snippet: in Splitter { initial_size: 50.0, aria_label: "Resize panes", panel_a: rsx! {}, .. }
 const PANEL_B: &str = r#"panel_b: rsx! { Box { sx: sx().height("100%").padding("md").background("secondary.1"), "B" } }"#;
 
 /// `panel_b` holding a nested `Splitter` - the composed case, printed with the
 /// continuation indent the generated prop list expects.
+// snippet: in Splitter { initial_size: 50.0, aria_label: "Resize panes", panel_a: rsx! {}, .. }
 const NESTED_PANEL_B: &str = r#"panel_b: rsx! {
         Splitter {
             orientation: "horizontal",

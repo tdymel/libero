@@ -20,6 +20,9 @@ enum Alignment {
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
 /// closure right below - the block is a promise that the two are the same.
+// snippet: after ALIGNMENT_ENUM
+// snippet: let mut alignment = use_signal(|| Alignment::Left);
+// snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
 const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
     match alignment {
         Alignment::Left => "Links".into(),
@@ -31,6 +34,12 @@ const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
 // A segment is a `label`, so its content has to stay phrasing content: `Icon`
 // is an inline-flex `span` (and it is what sizes the raw svg), a `Flex` is a
 // `div`.
+// snippet: after ALIGNMENT_ENUM
+// snippet: item #[component] fn AlignLeftIcon() -> Element { rsx! {} }
+// snippet: item #[component] fn AlignCenterIcon() -> Element { rsx! {} }
+// snippet: item #[component] fn AlignRightIcon() -> Element { rsx! {} }
+// snippet: let mut alignment = use_signal(|| Alignment::Left);
+// snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
 const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
     alignment.label(),
     rsx! {

@@ -4,6 +4,7 @@ use libero::components::{Code, FieldStatus, NumberField, NumberValue, Text};
 
 /// Printed above the snippet when the demo is on the custom type - the field
 /// is only as short as it is because the impl exists.
+// snippet: ignore - pseudocode bodies
 const CENTS_IMPL: &str = r#"// Money is not an f64. `Cents` stores whole cents and shows a decimal
 // point, which is the one method a custom `NumberValue` has to write.
 #[derive(Clone, Copy, PartialEq, PartialOrd)]

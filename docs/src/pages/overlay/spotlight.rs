@@ -55,6 +55,8 @@ fn commands(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ]
 }
 
+// snippet: item #[component] fn FileIcon() -> Element { rsx! {} }
+// snippet: item #[component] fn FolderIcon() -> Element { rsx! {} }
 const FILES_CODE: &str = r#"fn files(mut last: Signal<String>) -> Vec<SpotlightAction> {
     ["src", "src/main.rs", "src/lib.rs", "tests", "Cargo.toml", "README.md"]
         .into_iter()

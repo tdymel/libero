@@ -6,6 +6,7 @@ use libero::{
 };
 
 const HREF: &str = "https://dioxuslabs.com";
+// snippet: in Box { .., "Styled entirely via sx" }
 const SX: &str = r#"sx: sx().padding("16px").background("grey.1").border_radius("md")"#;
 
 /// The escape-hatch attributes only exist on some tags, so they follow

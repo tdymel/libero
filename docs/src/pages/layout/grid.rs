@@ -10,6 +10,8 @@ use libero::{
 
 /// The zone's children, printed verbatim - their point is that they are
 /// *different heights*, which is what `masonry` reacts to.
+// snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }
+// snippet: in GridZone { .. }
 const CARDS: &str = r#"GridItem { span: GridSpan::Third, Card { lines: 1, "A" } }
 GridItem { span: GridSpan::TwoThirds, Card { lines: 4, "B" } }
 GridItem { span: GridSpan::Third, Card { lines: 2, "C" } }
@@ -289,6 +291,7 @@ const CARD_SPAN: SpanValue = sp()
     .sm(GridSpan::Half)
     .md(GridSpan::Third);
 
+// snippet: ignore - `SPANS` is a template the page builds out of sight
 const RESPONSIVE_SOURCE: &str = r#"// Three cards, one span value. Wide: three across. Tablet: two, and C
 // wraps. Phone: one per row.
 const CARD_SPAN: SpanValue = sp().base(GridSpan::Full).sm(GridSpan::Half).md(GridSpan::Third);

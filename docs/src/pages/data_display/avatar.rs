@@ -10,6 +10,8 @@ const MISSING_SRC: &str = "/does-not-exist.png";
 /// is not a control, and it is most of what a reader needs. One field per
 /// line: the code block does not wrap, and a one-line struct literal runs off
 /// the right of it.
+// snippet: item const AVATAR_IMAGE: &str = "/ada.png";
+// snippet: in AvatarGroup { .. }
 const PEOPLE: &str = r#"people: vec![
     AvatarSpec {
         name: "Ada Lovelace".into(),
