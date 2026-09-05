@@ -87,7 +87,7 @@ fn every_trigger_is_a_menuitem_wired_to_its_own_closed_menu() {
 }
 
 #[test]
-fn the_bar_is_one_tab_stop_on_the_first_enabled_trigger() {
+fn the_bar_is_one_tab_stop_on_the_first_trigger() {
     let tabbable = |html: &str| -> Vec<usize> {
         tags_with(html, "data-menubar-index")
             .iter()
@@ -97,11 +97,9 @@ fn the_bar_is_one_tab_stop_on_the_first_enabled_trigger() {
             .collect()
     };
     assert_eq!(tabbable(&rendered(false)), vec![0]);
-    assert_eq!(
-        tabbable(&rendered(true)),
-        vec![1],
-        "a disabled one is skipped"
-    );
+    // A disabled trigger is still focusable (APG's menu rule), so it keeps
+    // the tab stop.
+    assert_eq!(tabbable(&rendered(true)), vec![0]);
 }
 
 #[test]

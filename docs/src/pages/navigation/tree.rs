@@ -161,7 +161,7 @@ pub fn TreePage() -> Element {
                     prop("id", "String").doc("The node's identity, used for expansion state and keyboard navigation."),
                     prop("data", "T").doc("The caller's own data for this node."),
                     prop("children", "Vec<TreeNode<T>>").doc("Nested nodes - an empty vec makes this a leaf."),
-                    prop("disabled", "bool").default("false").doc("Skipped by activation, still visible and reachable by arrow keys."),
+                    prop("disabled", "bool").default("false").doc("Reachable by the arrow keys; nothing activates, expands or collapses it."),
                 ]).without_base_props(),
                 props("TreeNodeRenderArgs<T>", vec![
                     prop("id", "String").doc("The node's id."),

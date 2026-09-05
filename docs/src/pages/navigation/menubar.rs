@@ -177,7 +177,7 @@ pub fn MenubarPage() -> Element {
                         .doc("The trigger's text - also what typeahead on the bar matches - and exactly `Menu`'s items."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("The trigger stays in view, opens nothing, and the arrow keys skip it."),
+                        .doc("The trigger stays in view and in the arrow order, and opens nothing."),
                 ]).without_base_props(),
             ],
             lead: rsx! {
@@ -229,7 +229,7 @@ pub fn MenubarPage() -> Element {
                 title: "Keyboard",
                 Text {
                     "The bar is one tab stop. " Kbd { "←" } " " Kbd { "→" }
-                    " move along it, skipping a disabled trigger, and " Kbd { "Home" } " "
+                    " move along it, a disabled trigger included (it takes focus and opens nothing), and " Kbd { "Home" } " "
                     Kbd { "End" } " go to the ends. " Kbd { "Enter" } " " Kbd { "Space" }
                     " and " Kbd { "↓" } " open a menu on its first item, " Kbd { "↑" }
                     " on its last. In an open menu, " Kbd { "←" } " and " Kbd { "→" }

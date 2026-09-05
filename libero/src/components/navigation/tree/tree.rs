@@ -70,6 +70,35 @@ fn sibling_id(order: &[VisibleNode], current: &str, offset: isize) -> Option<Str
     order.get(target as usize).map(|node| node.id.to_string())
 }
 
+/// What ArrowRight or ArrowLeft does on `node`.
+#[derive(Debug, PartialEq)]
+enum Horizontal {
+    Toggle,
+    Go(Option<String>),
+    /// Nothing moves, but the key is still the tree's.
+    Stay,
+}
+
+/// APG's tree arrows, with the rule every navigation widget shares: a disabled
+/// node is walked through like any other, but no key opens or closes it.
+/// `None` for ArrowRight on a leaf, which the tree leaves to the page.
+fn horizontal(
+    order: &[VisibleNode],
+    node: &VisibleNode,
+    is_expanded: bool,
+    forward: bool,
+) -> Option<Horizontal> {
+    let toggles = node.has_children && !node.disabled;
+    Some(match forward {
+        true if !node.has_children => return None,
+        true if is_expanded => Horizontal::Go(sibling_id(order, node.id, 1)),
+        true if toggles => Horizontal::Toggle,
+        true => Horizontal::Stay,
+        false if is_expanded && toggles => Horizontal::Toggle,
+        false => Horizontal::Go(node.parent_id.map(str::to_string)),
+    })
+}
+
 /// The row a typed `query` lands on, through the library's one typeahead
 /// ([`typeahead_match`]): one character cycles from the row after `current`,
 /// a longer query narrows and stays on a row that still matches. Disabled rows
@@ -292,20 +321,16 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 event.prevent_default();
                 go_to(order.last().map(|node| node.id.to_string()));
             }
-            Key::ArrowRight if node.has_children => {
+            key @ (Key::ArrowRight | Key::ArrowLeft) => {
+                let forward = key == Key::ArrowRight;
+                let Some(step) = horizontal(&order, node, is_expanded, forward) else {
+                    return;
+                };
                 event.prevent_default();
-                if is_expanded {
-                    go_to(sibling_id(&order, &current, 1));
-                } else {
-                    toggle_expanded(&current, expanded, onexpandedchange);
-                }
-            }
-            Key::ArrowLeft => {
-                event.prevent_default();
-                if node.has_children && is_expanded {
-                    toggle_expanded(&current, expanded, onexpandedchange);
-                } else {
-                    go_to(node.parent_id.map(str::to_string));
+                match step {
+                    Horizontal::Toggle => toggle_expanded(&current, expanded, onexpandedchange),
+                    Horizontal::Go(target) => go_to(target),
+                    Horizontal::Stay => {}
                 }
             }
             Key::Enter => {
@@ -423,6 +448,55 @@ mod tests {
         assert_eq!(typeahead_target(&order, "a", "se").as_deref(), Some("e"));
         assert_eq!(typeahead_target(&order, "b", "st").as_deref(), Some("b"));
         assert_eq!(typeahead_target(&order, "a", "sc"), None);
+    }
+
+    fn branch<'a>(id: &'a str, parent_id: Option<&'a str>, disabled: bool) -> VisibleNode<'a> {
+        VisibleNode {
+            id,
+            parent_id,
+            has_children: true,
+            disabled,
+            label: id,
+        }
+    }
+
+    #[test]
+    fn the_arrows_open_and_close_an_enabled_branch() {
+        let order = [branch("a", Some("root"), false), node("a1", "Child", false)];
+        let a = &order[0];
+        assert_eq!(horizontal(&order, a, false, true), Some(Horizontal::Toggle));
+        assert_eq!(horizontal(&order, a, true, false), Some(Horizontal::Toggle));
+        assert_eq!(
+            horizontal(&order, a, true, true),
+            Some(Horizontal::Go(Some("a1".into())))
+        );
+        assert_eq!(
+            horizontal(&order, a, false, false),
+            Some(Horizontal::Go(Some("root".into())))
+        );
+    }
+
+    /// Review 3 A5: ArrowRight and ArrowLeft used to open and close a disabled
+    /// branch that a click, Enter and Space all refused.
+    #[test]
+    fn the_arrows_walk_through_a_disabled_branch_without_toggling_it() {
+        let order = [branch("a", Some("root"), true), node("a1", "Child", false)];
+        let a = &order[0];
+        assert_eq!(horizontal(&order, a, false, true), Some(Horizontal::Stay));
+        assert_eq!(
+            horizontal(&order, a, true, true),
+            Some(Horizontal::Go(Some("a1".into())))
+        );
+        assert_eq!(
+            horizontal(&order, a, true, false),
+            Some(Horizontal::Go(Some("root".into())))
+        );
+    }
+
+    #[test]
+    fn arrow_right_on_a_leaf_is_left_to_the_page() {
+        let leaf = node("a", "Leaf", false);
+        assert_eq!(horizontal(&[], &leaf, false, true), None);
     }
 
     #[test]

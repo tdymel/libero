@@ -103,7 +103,7 @@ example, not something the component provides.
 Arrow keys move between visible rows, `Left`/`Right` collapse/expand (or jump
 to the parent/first child), `Home`/`End` jump to the first/last row, and typing
 a letter jumps to the next row whose `tree_label` matches. A disabled node is
-skipped by activation but still reachable by the arrows.
+still reachable by the arrows, but nothing activates, expands or collapses it.
 
 The tree is one roving tab stop, so any interactive element `render_node`
 renders must take `args.tabindex`, or it becomes a second stop the arrow keys
@@ -132,7 +132,7 @@ Like every component, `Tree` also takes the shared props `sx`, `class`, `style`,
 | `id` | `String` | required | The node's identity, used for expansion state and keyboard navigation. |
 | `data` | `T` | required | The caller's own data for this node. |
 | `children` | `Vec<TreeNode<T>>` | - | Nested nodes - an empty vec makes this a leaf. |
-| `disabled` | `bool` | `false` | Skipped by activation, still visible and reachable by arrow keys. |
+| `disabled` | `bool` | `false` | Reachable by the arrow keys; nothing activates, expands or collapses it. |
 
 ### `TreeNodeRenderArgs<T>`
 

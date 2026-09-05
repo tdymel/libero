@@ -83,8 +83,17 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
     breakpoint_scopes.sort_by_key(|(size, _): &(Size, CssScope)| size.index());
     scopes.extend(breakpoint_scopes.into_iter().map(|(_, scope)| scope));
 
+    let mut widest_breakpoint = None::<Size>;
     for entry in sx.entries() {
         if let SxEntry::Nested { modifier, sx } = entry {
+            if let SxModifierKey::Breakpoint(size) = modifier {
+                match widest_breakpoint {
+                    Some(widest) if widest.index() > size.index() => {
+                        warn_breakpoint_order(widest, *size);
+                    }
+                    _ => widest_breakpoint = Some(*size),
+                }
+            }
             let next = apply_modifier(context, modifier);
             // An all-whitespace `when()`/`selector()` expands to nothing, and
             // a scope with no selector renders as a `{..}` block the browser
@@ -98,6 +107,18 @@ fn collect_scopes(scopes: &mut Vec<CssScope>, sx: &Sx, context: &CssContext) {
             collect_scopes(scopes, sx, &next);
         }
     }
+}
+
+/// Nested `.breakpoint(..)` blocks keep the position they were declared at
+/// (unlike `bp()`, which `collect_scopes` sorts), and every query is a `min-width`, so a
+/// narrower block after a wider one beats it wherever both match. Sorting them
+/// would move blocks whose position is the documented contract; the warning
+/// asks the caller to write them smallest first instead.
+fn warn_breakpoint_order(widest: Size, size: Size) {
+    warn(&format!(
+        "Sx: breakpoint({size:?}) comes after breakpoint({widest:?}), so it wins over it \
+         wherever both match. Write nested breakpoints smallest first."
+    ));
 }
 
 fn apply_modifier(context: &CssContext, modifier: &SxModifierKey) -> CssContext {
@@ -310,6 +331,40 @@ mod tests {
 
         assert!(at("(min-width: 48rem){") < at("(min-width: 62rem){"));
         assert!(at("(min-width: 62rem){") < at("(min-width: 88rem){"));
+    }
+
+    /// Todo 225: nested blocks keep their position, so a narrower one after
+    /// a wider one wins wherever both match. That is warned about, not sorted.
+    #[test]
+    fn a_narrower_breakpoint_after_a_wider_one_warns_and_keeps_its_place() {
+        crate::utils::take_warnings();
+        let css = Stylesheet::from(
+            &sx()
+                .breakpoint(Size::Xl, sx().color("red"))
+                .breakpoint(Size::Sm, sx().color("blue")),
+        )
+        .as_str()
+        .to_string();
+
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains("breakpoint(Sm) comes after breakpoint(Xl)"));
+        assert!(css.find("(min-width: 88rem)").unwrap() < css.find("(min-width: 48rem)").unwrap());
+    }
+
+    #[test]
+    fn breakpoints_written_smallest_first_do_not_warn() {
+        crate::utils::take_warnings();
+        let _ = Stylesheet::from(
+            &sx()
+                .breakpoint(Size::Sm, sx().color("blue"))
+                .hover(sx().breakpoint(Size::Xl, sx().color("red")))
+                .breakpoint(Size::Md, sx().color("green"))
+                .breakpoint(Size::Xl, sx().color("red")),
+        );
+        // A block nested in another modifier is its own `Sx`: the `Md` after
+        // the hover's `Xl` compares against `Sm`, not against it.
+        assert_eq!(crate::utils::take_warnings(), Vec::<String>::new());
     }
 
     /// `padding` after a `padding-top` query would swallow it at `md`.

@@ -318,7 +318,9 @@ pub fn StylingPage() -> Element {
                     " under a "
                     Code { source: "min-width" }
                     " media query, so the unnested declarations are the small-screen ones "
-                    "and each breakpoint overrides upwards."
+                    "and each breakpoint overrides upwards. Several blocks apply in the order "
+                    "they are written, so write them smallest first; a debug build warns when a "
+                    "wider one comes before a narrower one."
                 }
                 CodeBlock { source: RESPONSIVE, language: "rust" }
                 Text {

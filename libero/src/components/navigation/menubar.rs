@@ -82,7 +82,7 @@ pub struct MenubarMenu {
     pub label: String,
     /// Exactly [`Menu`]'s item model.
     pub items: Vec<MenuEntry>,
-    /// The trigger stays in view, opens nothing, and the arrow keys skip it.
+    /// The trigger stays in view and in the arrow order, and opens nothing.
     pub disabled: bool,
 }
 
@@ -144,34 +144,10 @@ impl Row {
         self.disabled.get(index).is_some_and(|disabled| !disabled)
     }
 
-    fn first(&self) -> Option<usize> {
-        (0..self.disabled.len()).find(|&index| self.enabled(index))
-    }
-
-    fn last(&self) -> Option<usize> {
-        (0..self.disabled.len())
-            .rev()
-            .find(|&index| self.enabled(index))
-    }
-
-    /// The next enabled trigger from `from`, or `None` at an end that does
-    /// not wrap.
+    /// The next trigger from `from`, disabled ones included, or `None` at an
+    /// end that does not wrap.
     fn step(&self, from: usize, forward: bool) -> Option<usize> {
-        let len = self.disabled.len();
-        let mut index = from;
-        for _ in 1..len {
-            index = match (forward, index) {
-                (true, index) if index + 1 < len => index + 1,
-                (true, _) if self.loop_focus => 0,
-                (false, 0) if self.loop_focus => len - 1,
-                (false, index) if index > 0 => index - 1,
-                _ => return None,
-            };
-            if self.enabled(index) {
-                return Some(index);
-            }
-        }
-        None
+        step(self.disabled.len(), from, forward, self.loop_focus)
     }
 
     fn open_index(&self) -> Option<usize> {
@@ -204,11 +180,18 @@ impl Row {
         self.states[index].open_at(focus);
     }
 
-    /// Focus, or the open menu, moves to `index`.
+    /// Focus, or the open menu, moves to `index`. A disabled trigger takes
+    /// focus and opens nothing, so the open menu closes behind it.
     fn go(&self, index: usize) {
         match self.open_index() {
-            Some(open) if open != index => self.switch(index, MenuFocus::First),
-            _ => self.focus(index),
+            Some(open) if open != index && self.enabled(index) => {
+                self.switch(index, MenuFocus::First)
+            }
+            Some(_) => {
+                self.focus(index);
+                self.close_others(index);
+            }
+            None => self.focus(index),
         }
     }
 }
@@ -254,12 +237,11 @@ pub fn Menubar(props: MenubarProps) -> Element {
     };
 
     // The single tab stop: the open menu's trigger, else the one focused
-    // last, else the first enabled one.
+    // last, else the first.
     let tabbable = row
         .open_index()
         .or(current())
-        .filter(|&index| row.enabled(index))
-        .or_else(|| row.first())
+        .filter(|&index| index < len)
         .unwrap_or(0);
 
     let labels: Rc<Vec<Option<String>>> = Rc::new(
@@ -281,7 +263,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
             let row = row.clone();
             Callback::new(move |edge: MenuEdge| {
                 if let Some(next) = row.step(index, edge == MenuEdge::Next) {
-                    row.switch(next, MenuFocus::First);
+                    row.go(next);
                 }
             })
         };
@@ -294,8 +276,8 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 let target = match event.key() {
                     Key::ArrowRight => row.step(index, true),
                     Key::ArrowLeft => row.step(index, false),
-                    Key::Home => row.first(),
-                    Key::End => row.last(),
+                    Key::Home => (len > 0).then_some(0),
+                    Key::End => len.checked_sub(1),
                     Key::Character(ref text) if !has_shortcut_modifier(&event) => {
                         let Some(ch) = text.chars().next() else {
                             return;
@@ -415,4 +397,40 @@ pub fn Menubar(props: MenubarProps) -> Element {
 fn has_shortcut_modifier(event: &KeyboardEvent) -> bool {
     let modifiers = event.modifiers();
     modifiers.ctrl() || modifiers.alt() || modifiers.meta()
+}
+
+/// The trigger after (or before) `from` in a row of `len`, or `None` at an end
+/// that does not wrap and for a lone trigger. Disabled triggers count: they
+/// take focus like any other.
+fn step(len: usize, from: usize, forward: bool, loop_focus: bool) -> Option<usize> {
+    let next = match (forward, from) {
+        (true, from) if from + 1 < len => from + 1,
+        (true, _) if loop_focus => 0,
+        (false, 0) if loop_focus => len.checked_sub(1)?,
+        (false, from) if from > 0 => from - 1,
+        _ => return None,
+    };
+    (next != from).then_some(next)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::step;
+
+    #[test]
+    fn the_arrows_walk_every_trigger_and_wrap_only_when_asked() {
+        assert_eq!(step(3, 0, true, false), Some(1));
+        assert_eq!(step(3, 2, true, false), None);
+        assert_eq!(step(3, 2, true, true), Some(0));
+        assert_eq!(step(3, 0, false, false), None);
+        assert_eq!(step(3, 0, false, true), Some(2));
+        assert_eq!(step(3, 1, false, true), Some(0));
+    }
+
+    #[test]
+    fn a_lone_trigger_goes_nowhere() {
+        assert_eq!(step(1, 0, true, true), None);
+        assert_eq!(step(1, 0, false, true), None);
+        assert_eq!(step(1, 0, true, false), None);
+    }
 }

@@ -116,7 +116,9 @@ sx()
 
 `breakpoint` nests a whole `Sx` under a `min-width` media query, so the
 unnested declarations are the small-screen ones and each breakpoint overrides
-upwards.
+upwards. Several blocks apply in the order they are written, so write them
+smallest first; a debug build warns when a wider one comes before a narrower
+one.
 
 ```rust,ignore
 sx()

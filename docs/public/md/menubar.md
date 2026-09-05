@@ -41,9 +41,10 @@ fn Demo() -> Element {
 
 ## Keyboard
 
-On a trigger: ArrowLeft/ArrowRight move along the bar, skipping disabled
-triggers and wrapping unless `loop_focus` is off; if a menu is open the new one
-opens. Home/End go to the first/last enabled trigger. Enter, Space and
+On a trigger: ArrowLeft/ArrowRight move along the bar, wrapping unless
+`loop_focus` is off; if a menu is open the new one opens. A disabled trigger
+takes focus like the others but opens nothing, so moving onto it closes the
+open menu. Home/End go to the first/last trigger. Enter, Space and
 ArrowDown open the menu on its first item, ArrowUp on its last. Typing jumps to
 a trigger by its label.
 
