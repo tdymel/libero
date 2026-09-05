@@ -1,4 +1,4 @@
-use crate::common::{attributes_of, body, render};
+use crate::common::{attributes_of, body, classes_of, has_rule_for, render};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::FileField};
@@ -71,4 +71,67 @@ fn a_dropzone_file_field_renders_its_prompt_instead_of_a_frame() {
     // The prompt says what the attribute enforces, read off the attribute.
     assert!(body.contains(r#"data-slot="hint""#), "{body}");
     assert!(body.contains(">images<"), "{body}");
+}
+
+/// The two variants prepare different boxes, so their hooks must not share one
+/// scope's slots: each draws in a scope of its own, and a `variant` switch
+/// remounts it. This flips the variant on every pass. Each pass must draw the
+/// variant it names, and the `Input` control's rule must go when the dropzone
+/// takes over - with shared slots the `Input` arm's second box stayed
+/// registered under the dropzone, its drop never run.
+#[test]
+fn switching_variant_at_runtime_swaps_the_control_and_its_styles() {
+    #[component]
+    fn Switching() -> Element {
+        let mut step = use_signal(|| 0u8);
+        use_effect(move || {
+            if step() < 3 {
+                step += 1;
+            }
+        });
+        let variant = match step() % 2 {
+            0 => "input",
+            _ => "dropzone",
+        };
+        rsx! {
+            div { "step {step}" }
+            FileField { label: "Attachment", variant, onchange: move |_| {} }
+        }
+    }
+
+    fn app() -> Element {
+        rsx! { LiberoProvider { Switching {} } }
+    }
+
+    // The control's classes: the one element with `role="button"`.
+    fn control_classes(body: &str) -> Vec<String> {
+        let at = body.find(r#"role="button""#).expect("a control");
+        let start = body[..at].rfind('<').expect("its tag");
+        classes_of(&body[start..], "div")
+    }
+
+    let mut dom = VirtualDom::new(app);
+    dom.rebuild_in_place();
+    let input_classes = control_classes(&body(&dioxus_ssr::render(&dom)));
+    let mut seen = Vec::new();
+    for _ in 0..4 {
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let html = dioxus_ssr::render(&dom);
+        let body = body(&html);
+        let step = body
+            .split("step ")
+            .nth(1)
+            .and_then(|rest| rest.chars().next());
+        let dropzone = body.contains("Drop a file here, or click to pick");
+        let input_rules = input_classes.iter().any(|class| has_rule_for(&html, class));
+        seen.push((step, dropzone, input_rules));
+    }
+
+    assert_eq!(seen.last(), Some(&(Some('3'), true, false)), "{seen:?}");
+    for (step, dropzone, input_rules) in &seen {
+        let odd = step
+            .and_then(|step| step.to_digit(10))
+            .is_some_and(|step| step % 2 == 1);
+        assert_eq!((*dropzone, *input_rules), (odd, !odd), "{seen:?}");
+    }
 }

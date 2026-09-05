@@ -470,38 +470,33 @@ pub fn FileField(props: FileFieldProps) -> Element {
     };
 
     match variant {
+        // Each variant draws its control in a scope of its own: the two
+        // prepare different boxes, and hooks in one scope are positional, so
+        // a `variant` switch must remount rather than reuse the other's slots.
         FileFieldVariant::Input => {
-            let frame = use_field_frame()
-                .trailing(&trailing)
-                .states(field.states())
-                .prepare();
-            // The frame draws the ring, so the control must not draw a second.
-            let style = use_box()
-                .framework_sx(&FILE_CONTROL_SX)
-                .focus_ring(false)
-                .states(&states)
-                .prepare();
             // The input's files are the control's own contents.
             let placeholder = props.placeholder.clone().unwrap_or_default();
             let value_slot = chip_slot(drawn, &placeholder);
-            field.render(frame.render(control.render(
-                style,
-                rsx! {
+            let frame_states = field.states().clone();
+            field.render(rsx! {
+                FileInputControl {
+                    control,
+                    trailing,
+                    frame_states,
+                    states,
                     {value_slot}
                     {input}
-                },
-            )))
+                }
+            })
         }
         FileFieldVariant::Dropzone => {
-            let style = use_box()
-                .framework_sx(&FILE_DROPZONE_SX)
-                .states(&states)
-                .prepare();
             let prompt = dropzone_prompt(&props, loading.then_some(size));
             // The cards sit under the surface, not in it: a dropzone that
             // grows with its own contents stops being a target to aim at.
             // The input stays mounted either way - it is what posts.
-            let drop_target = surface.then(|| control.render(style, prompt));
+            let drop_target = rsx! {
+                FileDropzoneControl { control, states, shown: surface, {prompt} }
+            };
             let card_list = has_files.then(|| {
                 card_list(
                     card_list_style,
@@ -825,7 +820,7 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
 /// The control's keyboard. Two keyboards on one element, the way
 /// `MultiSelect`'s trigger has them: the chips answer Left, Right, Backspace
 /// and Delete, and everything else opens the picker.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 struct SurfaceKeys {
     input: ElementHandle,
     interactive: bool,
@@ -889,6 +884,7 @@ impl SurfaceKeys {
 
 /// The focusable control both variants draw: the one-line input, or the drop
 /// surface. A click or Enter opens the picker; a drop takes the files.
+#[derive(Clone)]
 struct Surface {
     element: ElementHandle,
     labelledby: Option<String>,
@@ -950,6 +946,55 @@ impl Surface {
                 }
             })
             .render(HtmlTag::Div, self.attributes, children)
+    }
+}
+
+// The variants' props carry `children`, which never compares equal, so they
+// redraw with `FileField` whatever this says.
+impl PartialEq for Surface {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+/// The `Input` variant's control inside its frame.
+#[component]
+fn FileInputControl(
+    control: Surface,
+    trailing: Option<Element>,
+    frame_states: Input<States>,
+    states: Input<States>,
+    children: Element,
+) -> Element {
+    let frame = use_field_frame()
+        .trailing(&trailing)
+        .states(&frame_states)
+        .prepare();
+    // The frame draws the ring, so the control must not draw a second.
+    let style = use_box()
+        .framework_sx(&FILE_CONTROL_SX)
+        .focus_ring(false)
+        .states(&states)
+        .prepare();
+    frame.render(control.render(style, children))
+}
+
+/// The `Dropzone` variant's surface. `shown` is false once a single-file
+/// dropzone holds its file; the box is prepared either way.
+#[component]
+fn FileDropzoneControl(
+    control: Surface,
+    states: Input<States>,
+    shown: bool,
+    children: Element,
+) -> Element {
+    let style = use_box()
+        .framework_sx(&FILE_DROPZONE_SX)
+        .states(&states)
+        .prepare();
+    match shown {
+        true => control.render(style, children),
+        false => rsx! {},
     }
 }
 
