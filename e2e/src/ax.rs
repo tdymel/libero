@@ -45,18 +45,41 @@ pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
     let mut out = String::new();
     render(root, &by_id, 0, &mut out);
 
-    // Follow `aria-controls` out of the subtree. The portaled box is a sibling
-    // of the app root, so nothing above would have reached it.
+    // Follow `aria-controls` out of the subtree, for a caller whose root does
+    // not hold the portal outlet. A target the walk above already rendered is
+    // named but not rendered twice - the fixture's own root holds the outlet
+    // (`fixtures/src/main.rs`), so for `Suite` that is every target, and the
+    // line records the relation rather than the content.
     for target in controlled_selectors(page, selector).await? {
         if let Ok(id) = backend_node_id(page, &target).await
             && let Some(node) = nodes.iter().find(|n| n.backend_dom_node_id == Some(id))
         {
-            out.push_str(&format!("--> aria-controls {}\n", stable(&target)));
-            render(node, &by_id, 0, &mut out);
+            if contains(page, selector, &target).await? {
+                out.push_str(&format!(
+                    "--> aria-controls {} (rendered above)\n",
+                    stable(&target)
+                ));
+            } else {
+                out.push_str(&format!("--> aria-controls {}\n", stable(&target)));
+                render(node, &by_id, 0, &mut out);
+            }
         }
     }
 
     Ok(out)
+}
+
+/// Whether the element at `inner` sits inside the one at `outer`.
+async fn contains(page: &Page, outer: &str, inner: &str) -> Result<bool> {
+    Ok(page
+        .evaluate(format!(
+            "(() => {{ const o = document.querySelector({}); const i = document.querySelector({}); \
+             return !!o && !!i && o.contains(i); }})()",
+            serde_json::to_string(outer)?,
+            serde_json::to_string(inner)?
+        ))
+        .await?
+        .into_value()?)
 }
 
 /// The ids named by any `aria-controls` inside the subtree, as selectors.

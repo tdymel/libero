@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: radio_group at mobile (third)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+LabelText
+  StaticText "Plan"
+radiogroup "Plan"
+  radio "Free" [checked=false]
+  radio "Pro" [checked=false]
+  radio "Team" [checked]
+button "After"
+  StaticText "After"

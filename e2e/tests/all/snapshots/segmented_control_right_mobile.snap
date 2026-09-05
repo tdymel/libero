@@ -1,0 +1,21 @@
+---
+source: e2e/src/suite.rs
+description: segmented_control at mobile (right)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+LabelText
+  StaticText "Alignment"
+radiogroup "Alignment"
+  radio "Left" [checked=false]
+  LabelText
+    StaticText "Left"
+  radio "Center" [checked=false]
+  LabelText
+    StaticText "Center"
+  radio "Right" [checked]
+  LabelText
+    StaticText "Right"
+button "After"
+  StaticText "After"

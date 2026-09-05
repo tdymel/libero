@@ -1,8 +1,9 @@
 //! The APG roving-tabindex pattern.
 //!
 //! A composite widget is **one** tab stop, and the arrow keys move within it.
-//! `Tabs`, `RadioGroup`, `Menubar`, `SegmentedControl`, `Toolbar` and `Tree`
-//! are all this, which makes it the most reused contract in the library.
+//! `Tabs`, `Menubar` and `Toolbar` are this, and `Tree` shares part of it (todo
+//! 310). A radio group is not: selection follows focus and Home and End are
+//! not in its pattern, so `RadioGroup` and `SegmentedControl` use `RadioSet`.
 //!
 //! ## What this is checked against
 //!

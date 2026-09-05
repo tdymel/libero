@@ -13,7 +13,4 @@ tablist
 tabpanel "Billing"
   paragraph
     StaticText "panel for Billing"
---> aria-controls [id="lsx-N-panel-1"]
-tabpanel "Billing"
-  paragraph
-    StaticText "panel for Billing"
+--> aria-controls [id="lsx-N-panel-1"] (rendered above)

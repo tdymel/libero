@@ -1,0 +1,7 @@
+---
+source: e2e/src/suite.rs
+description: drawer at mobile (rest)
+expression: tree
+---
+button "Open navigation"
+  StaticText "Open navigation"

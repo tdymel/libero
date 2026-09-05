@@ -1,0 +1,31 @@
+---
+source: e2e/src/suite.rs
+description: spotlight at mobile (open)
+expression: tree
+---
+button "Open the palette"
+  StaticText "Open the palette"
+paragraph
+  StaticText "Or press Ctrl K."
+generic
+  generic
+    generic
+    generic
+      dialog "Command palette" [modal]
+        combobox "Command palette" [expanded] [haspopup=listbox]
+          generic
+        listbox "Command palette"
+          group "Pages"
+            StaticText "Pages"
+            option "Home The start page" [selected=false]
+              StaticText "Home"
+              StaticText "The start page"
+            option "Changelog" [selected=false]
+              StaticText "Changelog"
+          group "Commands"
+            StaticText "Commands"
+            option "New file Ctrl N" [selected=false]
+              StaticText "New file"
+              generic
+                StaticText "Ctrl N"
+--> aria-controls [id="lsx-N-listbox"] (rendered above)

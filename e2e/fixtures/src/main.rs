@@ -19,6 +19,9 @@
 //!   renders, and the harness waits for it.
 
 mod broken;
+mod combobox;
+mod overlay;
+mod roving;
 
 use dioxus::prelude::*;
 use libero::{
@@ -58,6 +61,30 @@ enum Route {
     FocusContrastPage {},
     #[route("/tree")]
     TreePage {},
+    #[route("/radio-group")]
+    RadioGroupPage {},
+    #[route("/segmented-control")]
+    SegmentedControlPage {},
+    #[route("/menubar")]
+    MenubarPage {},
+    #[route("/select")]
+    SelectPage {},
+    #[route("/multi-select")]
+    MultiSelectPage {},
+    #[route("/tags-field")]
+    TagsFieldPage {},
+    #[route("/drawer")]
+    DrawerPage {},
+    #[route("/menu")]
+    MenuPage {},
+    #[route("/spotlight")]
+    SpotlightPage {},
+
+    // A real component with one defect planted through a prop. Most plants
+    // are injected by the test instead (`tests/all/planted.rs`); these are
+    // the ones only a prop can make.
+    #[route("/planted/segmented-control-readonly")]
+    PlantedSegmentedReadonly {},
 
     // Deliberately broken, one per pass. See `broken.rs`: these exist so the
     // suite can prove each pass is able to fail.
@@ -118,6 +145,15 @@ fn NotificationsPage() -> Element {
     }
 }
 
+use combobox::{MultiSelectPage, SelectPage, TagsFieldPage};
+use overlay::{DrawerPage, MenuPage, SpotlightPage};
+use roving::{MenubarPage, RadioGroupPage, SegmentedControlPage};
+
+#[component]
+fn PlantedSegmentedReadonly() -> Element {
+    rsx! { SegmentedControlPage { readonly: true } }
+}
+
 #[component]
 fn BrokenFocusRing() -> Element {
     rsx! { broken::NoFocusRing {} }
@@ -154,11 +190,20 @@ fn BrokenActiveDescendant() -> Element {
 /// Wraps every fixture in the provider and the ready marker, and nothing else.
 /// No shell, no navigation, no styling of its own - anything here would be
 /// measured as though it were the component.
+///
+/// The marker goes **outside** the provider. `Suite` scopes axe and the
+/// accessibility snapshot to it, and the provider renders its portal outlet
+/// beside its children - so with the marker inside, every dialog, menu and
+/// listbox was outside the scope. axe never saw one (a listbox planted with
+/// `#ddd` text on white passed), and the modal's "open" baseline recorded the
+/// trigger alone. Found 2026-09-19 by Olaf95.
 #[component]
 fn Fixture() -> Element {
     rsx! {
-        LiberoProvider {
-            div { "data-fixture-ready": "true", padding: "24px", Outlet::<Route> {} }
+        div { "data-fixture-ready": "true",
+            LiberoProvider {
+                div { padding: "24px", Outlet::<Route> {} }
+            }
         }
     }
 }

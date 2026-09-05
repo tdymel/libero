@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: tags_field at mobile (rest)
+expression: tree
+---
+LabelText
+  StaticText "Topics"
+generic
+  StaticText "rust"
+  button "Remove rust"
+  combobox "Topics" [expanded=false] [haspopup=listbox]
+    generic
+status [atomic] [live=polite]

@@ -13,7 +13,4 @@ tablist
 tabpanel "Account"
   paragraph
     StaticText "panel for Account"
---> aria-controls [id="lsx-N-panel-0"]
-tabpanel "Account"
-  paragraph
-    StaticText "panel for Account"
+--> aria-controls [id="lsx-N-panel-0"] (rendered above)

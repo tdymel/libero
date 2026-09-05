@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: multi_select at desktop (rest)
+expression: tree
+---
+LabelText
+  StaticText "Fruit"
+generic
+  combobox "Fruit" = Cherry Remove Cherry [expanded=false] [haspopup=listbox]
+    generic
+      StaticText "Cherry"
+      button "Remove Cherry"
+status [atomic] [live=polite]

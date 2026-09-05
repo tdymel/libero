@@ -1,0 +1,15 @@
+---
+source: e2e/src/suite.rs
+description: menubar at desktop (rest)
+expression: tree
+---
+menubar "Editor"
+  generic
+    menuitem "File" [expanded=false] [haspopup=menu]
+      StaticText "File"
+  generic
+    menuitem "Edit" [expanded=false] [haspopup=menu]
+      StaticText "Edit"
+  generic
+    menuitem "View" [expanded=false] [haspopup=menu]
+      StaticText "View"

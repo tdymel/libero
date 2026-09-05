@@ -70,8 +70,10 @@ impl Suite {
         Suite {
             name,
             route,
-            // Everything the fixture renders. A component's own root would
-            // miss a portaled popover, which is the whole scoping problem.
+            // Everything the fixture renders, portal outlet included - the
+            // marker wraps the provider for exactly that reason. A component's
+            // own root would miss a portaled popover, which is the whole
+            // scoping problem.
             root: "[data-fixture-ready]",
             focusable: Vec::new(),
             targets: Vec::new(),

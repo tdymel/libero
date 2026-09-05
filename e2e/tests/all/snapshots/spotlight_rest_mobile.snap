@@ -1,0 +1,9 @@
+---
+source: e2e/src/suite.rs
+description: spotlight at mobile (rest)
+expression: tree
+---
+button "Open the palette"
+  StaticText "Open the palette"
+paragraph
+  StaticText "Or press Ctrl K."

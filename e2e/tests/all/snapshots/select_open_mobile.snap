@@ -1,0 +1,25 @@
+---
+source: e2e/src/suite.rs
+description: select at mobile (open)
+expression: tree
+---
+LabelText
+  StaticText "Fruit"
+generic
+  combobox "Fruit" = Banana [expanded] [haspopup=listbox]
+    StaticText "Banana"
+status [atomic] [live=polite]
+generic
+  generic
+    listbox
+      option "Apple" [selected=false]
+        StaticText "Apple"
+      option "Banana" [selected]
+        StaticText "Banana"
+      option "Cherry" [selected=false]
+        StaticText "Cherry"
+      option "Damson" [selected=false]
+        StaticText "Damson"
+      option "Elderberry" [selected=false]
+        StaticText "Elderberry"
+--> aria-controls [id="lsx-N-listbox"] (rendered above)

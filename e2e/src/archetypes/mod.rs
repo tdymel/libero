@@ -7,7 +7,8 @@
 //! | Archetype | Components that are one |
 //! |---|---|
 //! | [`Combobox`] | `Autocomplete`, `TagsField`, `Select`, `MultiSelect`, `Cascader` |
-//! | [`RovingTabindex`] | `Tabs`, `RadioGroup`, `Menubar`, `SegmentedControl`, `Toolbar`, `Tree` |
+//! | [`RovingTabindex`] | `Tabs`, `Menubar`, `Toolbar`, `Tree` |
+//! | [`RadioSet`] | `RadioGroup`, `SegmentedControl` |
 //! | [`Overlay`] | `Modal`, `Drawer`, `Menu`, `Lightbox`, `Spotlight`, `FloatingWindow` |
 //!
 //! So the keyboard and focus contract is written once per pattern and
@@ -27,8 +28,10 @@
 
 mod combobox;
 mod overlay;
+mod radio_set;
 mod roving;
 
 pub use combobox::Combobox;
 pub use overlay::Overlay;
+pub use radio_set::RadioSet;
 pub use roving::{Orientation, RovingTabindex};
