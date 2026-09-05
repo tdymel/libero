@@ -11,10 +11,25 @@ const VALUE_NOW: &str = "document.querySelector('[role=slider]').getAttribute('a
 
 const THUMB: &str = "[role=slider]";
 
-/// The generic battery. **No `targets()`**: the thumb measures 16x16 and WCAG
-/// 2.5.8 wants 24x24, which is a real finding filed as a todo rather than
-/// something to assert green here. Add `.targets(THUMB)` when it is fixed, and
-/// this test starts guarding it.
+/// The generic battery.
+///
+/// **Two known defects are visible here, and neither is desired output.**
+///
+/// * **No `targets()`.** The thumb measures 16x16 and WCAG 2.5.8 wants 24x24
+///   (**todo 302**). Asserting it would go red every run for a decision nobody
+///   has made, so it is omitted. Add `.targets(THUMB)` once 302 is settled and
+///   this test starts guarding it.
+/// * **The accessibility baseline contains `tooltip "40"`** - the value bubble
+///   is a `role="tooltip"` that nothing references, so assistive technology
+///   sees an ownerless tooltip (**todo 309**). It is in the snapshot because a
+///   snapshot records what *is*, and a reviewer reading that line needs to know
+///   it is a recorded defect rather than the shape we want. When 309 is fixed
+///   the baseline changes and that is correct, not a regression.
+///
+/// This is the cost of snapshots that the contrast pass covers and they do not:
+/// a snapshot detects *change*, so a defect present when the baseline was taken
+/// is accepted forever unless somebody writes down that it is one. This comment
+/// is that writing down.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("slider", "/slider").focusable(THUMB).run();

@@ -150,10 +150,31 @@ fn render(node: &AxNode, by_id: &HashMap<AxNodeId, &AxNode>, depth: usize, out: 
         .and_then(|v| v.as_str())
         .unwrap_or("");
 
+    // `value` is a **field** of the node, not one of its `properties`.
+    //
+    // This is why filtering for a property called `valuenow` did nothing: the
+    // list gained the word and the output never changed. A slider's whole state
+    // lives here, so a baseline without it stays green on a slider that has
+    // stopped reporting where it is - the exact regression the snapshot exists
+    // to catch.
+    let value = node
+        .value
+        .as_ref()
+        .and_then(|v| v.value.as_ref())
+        .map(|v| {
+            v.as_str()
+                .map(str::to_string)
+                .unwrap_or_else(|| v.to_string())
+        })
+        .filter(|v| !v.is_empty());
+
     out.push_str(&"  ".repeat(depth));
     out.push_str(role);
     if !name.is_empty() {
         out.push_str(&format!(" \"{name}\""));
+    }
+    if let Some(value) = value {
+        out.push_str(&format!(" = {value}"));
     }
     for state in states(node) {
         out.push_str(&format!(" [{state}]"));
@@ -191,11 +212,6 @@ fn states(node: &AxNode) -> Vec<String> {
         "level",
         "valuemin",
         "valuemax",
-        // The current value. Omitting this was the first snapshot's worst
-        // defect: a slider's whole state is `valuenow`, and a baseline without
-        // it would have gone green on a slider that stopped reporting where it
-        // was.
-        "valuenow",
         "valuetext",
         "haspopup",
         "live",
