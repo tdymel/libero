@@ -115,8 +115,8 @@ fn chip_variables(variant: Variant, checked: bool, base: &ThemeAwareValue) -> St
     };
 
     variables()
-        .with(CHIP_COLOR_VAR, text_color(&base))
-        .with(CHIP_FILL_VAR, fill_color(&base))
+        .with(CHIP_COLOR_VAR, text_color(base))
+        .with(CHIP_FILL_VAR, fill_color(base))
         .with(
             CHIP_CONTRAST_VAR,
             contrast_color(base).and_then(|color| color.resolve(None)),

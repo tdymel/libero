@@ -114,8 +114,8 @@ fn alert_variables(props: &AlertProps, base: &ThemeAwareValue, variant: Variant)
     let colors = variant_colors(variant, base);
 
     variables()
-        .with(ALERT_COLOR_VAR, text_color(&base))
-        .with(ALERT_FILL_VAR, fill_color(&base))
+        .with(ALERT_COLOR_VAR, text_color(base))
+        .with(ALERT_FILL_VAR, fill_color(base))
         .with(ALERT_CONTRAST_VAR, contrast.and_then(|c| c.resolve(None)))
         .with(ALERT_CONTAINER_VAR, colors.container)
         .with(ALERT_ON_CONTAINER_VAR, colors.on_container)
