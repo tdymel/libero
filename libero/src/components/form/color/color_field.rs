@@ -42,10 +42,10 @@ field_props! {
         /// path `name` can supply it instead.
         #[props(default)]
         value: ColorCode,
-        /// A drag in the dropdown brackets its moves with `Start`/`End`, and
-        /// a key press or a swatch in the dropdown emits `Change` then `End`;
-        /// typed text that parses, a key press, a swatch and the eyedropper emit a
-        /// lone `Change`.
+        /// A drag in the dropdown brackets its moves with `Start`/`End`.
+        /// Everything else settles at once and emits `Change` then `End`:
+        /// a key press or a swatch in the dropdown, typed text each time it
+        /// parses, and the eyedropper.
         #[props(default)]
         oninput: Option<EventHandler<SliderChangeEvent<ColorCode>>>,
         /// Rules over the color, shown once the field loses focus or its form
@@ -122,6 +122,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     let with_picker = props.with_picker.unwrap_or(true);
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
+    // Like the other dropdown fields: the text takes the native `readonly`,
+    // the dropdown refuses to open and the eyedropper stands down.
+    let readonly = props.readonly.unwrap_or(false);
     let has_dropdown = (with_picker || !props.swatches.is_empty()) && !disabled;
 
     let mut opened = use_signal(|| false);
@@ -144,7 +147,12 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             false => color.opaque(),
         };
         match (&oninput, &setter) {
-            (Some(oninput), _) => oninput.call(SliderChangeEvent::Change(color)),
+            // Settled the moment it lands, so a caller that commits on `End`
+            // hears it too - as a key press in the dropdown does (todo 291).
+            (Some(oninput), _) => {
+                oninput.call(SliderChangeEvent::Change(color));
+                oninput.call(SliderChangeEvent::End(color));
+            }
             (None, Some(setter)) => setter.set(color),
             (None, None) => {}
         }
@@ -179,7 +187,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     });
 
     let icon_size: Input<ThemeAwareValue> = ThemeAwareValue::Size(size).into();
-    let trailing = (with_eye_dropper && has_eye_dropper() && !disabled).then(|| {
+    let trailing = (with_eye_dropper && has_eye_dropper() && !disabled && !readonly).then(|| {
         rsx! {
             ActionIcon {
                 aria_label: "Pick a color from the screen",
@@ -221,7 +229,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // Every one of these is a hook, so all of them run before anything
     // branches on `opened`.
     let anchor = use_element();
-    let showing = opened() && has_dropdown;
+    let showing = opened() && has_dropdown && !readonly;
     let popover = use_popover(
         anchor,
         showing,
@@ -244,7 +252,7 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
         .attr("required", required)
-        .attr("readonly", disallow_input)
+        .attr("readonly", disallow_input || readonly)
         .attr("autocomplete", "off")
         .attr("spellcheck", "false")
         .attr("aria-haspopup", has_dropdown.then_some("dialog"))

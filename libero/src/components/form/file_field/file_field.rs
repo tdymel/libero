@@ -296,18 +296,14 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
     let interactive = (props.onchange.is_some() || bound.is_bound()) && !disabled;
+    // Two gates, because `interactive` also drives the tab stop and the
+    // input's `disabled`, and a read-only field keeps both - it is reached
+    // and it posts. `editable` is what refuses the picker, the drop, the
+    // clear button and every remove.
+    let editable = interactive && !props.readonly.unwrap_or(false);
 
     if props.onchange.is_none() && !bound.is_bound() && !disabled {
         warn("FileField: `value` without `onchange` can never change.");
-    }
-    // As on `NativeSelect`: the prop is on every field, and the gate this
-    // field would need is a second one beside `interactive`, which also drives
-    // `tabindex` and the input's `disabled` - so reusing it would disable the
-    // field rather than freeze it. Warned rather than ignored - todo pending.
-    if props.readonly.unwrap_or(false) {
-        warn(
-            "FileField: `readonly` is not honoured yet - the picker and the remove buttons still work.",
-        );
     }
 
     let value = bound.value().unwrap_or_else(|| props.value.clone());
@@ -337,6 +333,9 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let mut owed = use_signal(|| None::<FocusDebt>);
 
     let take = use_callback(move |files: Vec<FileData>| {
+        if !editable {
+            return;
+        }
         let kept = keep_accepted(files, &accept, multiple);
         if !kept.is_empty() {
             owed.set(Some(FocusDebt::Took));
@@ -372,7 +371,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let chip_size = size.step_down();
     let trailing = trailing_slot(
         loading.then_some(chip_size),
-        clearable && has_files && interactive,
+        clearable && has_files && editable,
         size,
         surface_element,
         emit,
@@ -419,7 +418,12 @@ pub fn FileField(props: FileFieldProps) -> Element {
         (field.label_id(), field.describedby(), field.invalid());
 
     let files = value.clone();
+    // Guarded here as well as by hiding the x: a caller's own `selection`
+    // gets `remove` too.
     let remove_at = use_callback(move |index: usize| {
+        if !editable {
+            return;
+        }
         owed.set(Some(FocusDebt::Removed(index)));
         emit.call(files.without(index));
     });
@@ -429,7 +433,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
         remove_at,
         cards,
         multiple,
-        interactive,
+        editable,
         icon_size: ThemeAwareValue::Size(size).into(),
         size,
         // Only once the surface is gone: otherwise the loader is on the
@@ -468,11 +472,13 @@ pub fn FileField(props: FileFieldProps) -> Element {
         invalid,
         required,
         interactive,
+        editable,
         loading,
         active_descendant: chip_cursor.map(|index| format!("{id_prefix}-{index}")),
         keys: SurfaceKeys {
             input: input_element,
             interactive,
+            editable,
             // A dropzone has no chips - its cards are ordinary tab stops
             // outside the control - so it only ever opens.
             chips: !cards && interactive,
@@ -715,7 +721,8 @@ struct FileRows {
     remove_at: Callback<usize>,
     cards: bool,
     multiple: bool,
-    interactive: bool,
+    /// Draws the x at all. Off while disabled or read-only.
+    editable: bool,
     icon_size: Input<ThemeAwareValue>,
     /// The field's; the chips step down from it themselves.
     size: Size,
@@ -751,11 +758,11 @@ impl FileRows {
                     &file,
                     remove,
                     self.icon_size.clone(),
-                    self.interactive,
+                    self.editable,
                     self.card_loader,
                     format!("{}-remove-{index}", self.field_id),
                 ),
-                false => default_chip(&file, remove, self.size, self.multiple, self.interactive),
+                false => default_chip(&file, remove, self.size, self.multiple, self.editable),
             },
         };
         match self.cards {
@@ -848,6 +855,9 @@ fn chip_cursor(cursor: Option<usize>, count: usize, cards: bool) -> Option<usize
 struct SurfaceKeys {
     input: ElementHandle,
     interactive: bool,
+    /// The keys that open or remove. The chip cursor only reads, so a
+    /// read-only field still walks it.
+    editable: bool,
     chips: bool,
     count: usize,
     chip_cursor: Option<usize>,
@@ -860,6 +870,7 @@ impl SurfaceKeys {
         let SurfaceKeys {
             input,
             interactive,
+            editable,
             chips,
             count,
             chip_cursor,
@@ -887,17 +898,17 @@ impl SurfaceKeys {
                     _ => None,
                 });
             }
-            Key::Backspace | Key::Delete if chips && count > 0 => {
+            Key::Backspace | Key::Delete if editable && chips && count > 0 => {
                 event.prevent_default();
                 remove_at.call(chip_cursor.unwrap_or(count - 1));
             }
             // A `role="button"` answers Enter and Space itself - the browser
             // does that only for a real `<button>`, which the chips rule out.
-            Key::Enter => {
+            Key::Enter if editable => {
                 event.prevent_default();
                 let _ = input.click();
             }
-            Key::Character(ref character) if character == " " => {
+            Key::Character(ref character) if editable && character == " " => {
                 event.prevent_default();
                 let _ = input.click();
             }
@@ -916,6 +927,7 @@ struct Surface {
     invalid: bool,
     required: bool,
     interactive: bool,
+    editable: bool,
     loading: bool,
     active_descendant: Option<String>,
     keys: SurfaceKeys,
@@ -929,6 +941,7 @@ impl Surface {
         let Surface {
             element,
             interactive,
+            editable,
             keys,
             take,
             dragging,
@@ -949,23 +962,25 @@ impl Surface {
             .attr("aria-busy", self.loading.then_some("true"))
             .attr("aria-activedescendant", self.active_descendant)
             .event("onclick", move |_: MouseEvent| {
-                if interactive {
+                if editable {
                     let _ = input.click();
                 }
             })
             .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
             .event("ondragover", move |event: DragEvent| {
                 if interactive {
-                    // Without this the browser opens the file instead.
+                    // Without this the browser opens the file instead - which
+                    // on a read-only field would navigate away from the form
+                    // being reviewed, so it is taken and then refused below.
                     event.prevent_default();
-                    dragging_over.set(true);
+                    dragging_over.set(editable);
                 }
             })
             .event("ondragleave", move |_: DragEvent| dragging_off.set(false))
             .event("ondrop", move |event: DragEvent| {
                 event.prevent_default();
                 dragging.set(false);
-                if interactive {
+                if editable {
                     take.call(event.files());
                 }
             })
@@ -1030,7 +1045,7 @@ fn default_chip(
     remove: Callback<()>,
     size: Size,
     multiple: bool,
-    interactive: bool,
+    editable: bool,
 ) -> Element {
     let name = file.name();
     if !multiple {
@@ -1042,7 +1057,7 @@ fn default_chip(
     }
     // The chip `MultiSelect` and `TagsField` draw. Its press guard keeps the
     // focus on the control, so a mouse removal needs no repair.
-    removable_chip(name, remove, size, !interactive)
+    removable_chip(name, remove, size, !editable)
 }
 
 /// One picked file as a row under the dropzone: the name, its size, and an x.
@@ -1052,7 +1067,7 @@ fn default_card(
     file: &FileData,
     remove: Callback<()>,
     icon_size: Input<ThemeAwareValue>,
-    interactive: bool,
+    editable: bool,
     loading: Option<Size>,
     id: String,
 ) -> Element {
@@ -1064,7 +1079,7 @@ fn default_card(
         if let Some(size) = loading {
             Loader { size }
         }
-        if interactive {
+        if editable {
             span { "data-slot": "remove",
                 ActionIcon {
                     // The id is how the focus finds the row that takes this

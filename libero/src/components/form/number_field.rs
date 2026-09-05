@@ -32,8 +32,8 @@ const fn stepper_size(size: Size) -> Size {
     }
 }
 
-// Hand-written rather than `field_props!`, which is not generic - as
-// `NativeSelectProps` is.
+// Hand-written rather than `field_props!`. The macro has been generic since
+// 2026-09-11; converting these props is todo 319.
 #[derive(Props, Clone, PartialEq)]
 pub struct NumberFieldProps<T: NumberValue> {
     /// The number in the field; strictly controlled. `None` is the empty
@@ -98,6 +98,12 @@ pub struct NumberFieldProps<T: NumberValue> {
     disabled: Option<bool>,
     #[props(default)]
     required: Option<bool>,
+    /// Focusable and posted with the form, but not editable.
+    /// `disabled` instead drops the field from the tab order and
+    /// from the post, which is wrong for a review-your-answers
+    /// view. `None` is "not stated".
+    #[props(default)]
+    readonly: Option<bool>,
     #[props(extends = GlobalAttributes, extends = input)]
     attributes: Vec<Attribute>,
     #[props(default, into)]
@@ -133,6 +139,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
+    // The native `readonly` stops typing; the arrow keys and the steppers are
+    // ours, so they are refused here.
+    let readonly = props.readonly.unwrap_or(false);
     let current = bound.value().unwrap_or(props.value);
 
     if props.onchange.is_none() && !bound.is_bound() {
@@ -168,6 +177,9 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     };
     let typed_publish = publish.clone();
     let nudge = move |up: bool| {
+        if readonly {
+            return;
+        }
         // An empty field steps from zero, unless the type has none.
         let Some(from) = value.or_else(T::zero) else {
             return;
@@ -221,7 +233,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
                 // Not a tab stop: the field is, and the arrow keys do the same
                 // job from there.
                 tabindex: "-1",
-                disabled,
+                disabled: disabled || readonly,
                 onclick: move |_| decrement(false),
                 MinusIcon {}
             }
@@ -229,7 +241,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
                 aria_label: increment_label,
                 size: ThemeAwareValue::Size(stepper_size(size)),
                 tabindex: "-1",
-                disabled,
+                disabled: disabled || readonly,
                 onclick: move |_| increment(true),
                 PlusIcon {}
             }
@@ -262,6 +274,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
+        .attr("readonly", readonly)
         .attr("required", required)
         .event("oninput", move |event: FormEvent| {
             let text = event.value();

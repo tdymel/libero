@@ -163,6 +163,7 @@ through `attributes` lands on the field wrapper instead of the thumb. Pass
 | `size` | `Size` | `md` | Controls track, thumb, and font size. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the slider. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 | `format` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets the thumb's `aria-valuetext`. |
 | `marks` | `Vec<SliderMark<V>>` | one per option, discretely | Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives. |
 | `aria_label` | `String` | - | Names the thumb when the field has no `label` - an `aria_label` in `attributes` would land on the wrapper instead. |
@@ -228,4 +229,5 @@ below, space separated.
 | `size-<size>` | The `size` in effect. |
 | `dragging` | A pointer drag is in progress. |
 | `disabled` | `disabled` is set. |
+| `readonly` | `readonly` is set: the thumbs keep their tab stop, and neither a key nor a drag moves them. |
 | `marks-labeled` | At least one mark carries a label, so the captions need room. |

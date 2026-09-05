@@ -240,6 +240,9 @@ pub fn RangeSliderPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables interaction and dims the slider."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                     prop("format", "Callback<V, String>")
                         .default("bare value, or SliderValue::label")
                         .doc("Formats the bubble shown on hover, drag and keyboard focus, and sets each thumb's `aria-valuetext`."),

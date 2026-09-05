@@ -26,7 +26,7 @@ pub fn ColorFieldPage() -> Element {
                     prop("value", "ColorCode")
                         .doc("Strictly controlled - pair it with `oninput`."),
                     prop("oninput", "EventHandler<SliderChangeEvent<ColorCode>>")
-                        .doc("A drag in the dropdown brackets its moves with `Start`/`End`, and a key press or a swatch in the dropdown emits `Change` then `End`. Typed text that parses and the eyedropper emit a lone `Change`."),
+                        .doc("A drag in the dropdown brackets its moves with `Start`/`End`, and everything else - a key press or a swatch in the dropdown, typed text that parses, the eyedropper - emits `Change` then `End`."),
                     prop("format", "ColorFormat")
                         .default("hex, or hexa with alpha")
                         .doc("How the text shows the color, and so what `name` posts. Typing accepts every form either way."),
@@ -60,6 +60,7 @@ pub fn ColorFieldPage() -> Element {
                         .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
                     prop("required", "bool").default("false").doc("Adds `required` to the input and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
             ],
             lead: rsx! {

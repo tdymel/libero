@@ -172,6 +172,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
             size: props.size,
             color: props.color,
             disabled: Some(bound.disabled(props.disabled)),
+            readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
             aria_label: props.aria_label_from,
             aria_label_to: props.aria_label_to,

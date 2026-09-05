@@ -191,6 +191,8 @@ pub(crate) struct SegmentedControlView {
     /// `false` keeps the radios out of the tab order and stops a label click
     /// from focusing its radio.
     pub focusable: bool,
+    /// Focusable and posted, but no click, key or arrow picks a segment.
+    pub readonly: bool,
     /// What the radios post as, and what makes them one exclusive set.
     pub name: String,
     /// The field's wiring, which lands on the `radiogroup` because that is
@@ -259,6 +261,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         radius,
         gap,
         focusable,
+        readonly,
         name,
         labelledby,
         describedby,
@@ -303,7 +306,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                     }
                 },
                 move || {
-                    if !disabled {
+                    if !disabled && !readonly {
                         onselect.call(index);
                     }
                 },
@@ -327,7 +330,15 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                     Key::ArrowUp | Key::ArrowLeft => -1,
                     _ => return,
                 };
+                // Cancelled even when read-only: the browser's own arrow would
+                // move focus and check the next radio.
                 event.prevent_default();
+                // The arrows move *and* select, so read-only refuses them
+                // outright, as `RadioGroup` does - moving focus alone would
+                // leave the checked radio, and so the tab stop, behind.
+                if readonly {
+                    return;
+                }
                 if let Some(next) = neighbour(&disabled_segments, index, step) {
                     onselect.call(next);
                     focus_segment(&element, &root, next);
@@ -381,6 +392,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", invalid.then_some("true"))
         .attr("aria-required", required.then_some("true"))
+        .attr("aria-readonly", readonly.then_some("true"))
         .render(
             HtmlTag::Div,
             attributes,

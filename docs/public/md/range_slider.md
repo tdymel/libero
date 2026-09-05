@@ -147,6 +147,7 @@ words do not fit, and `format` where a bare number does not say the unit.
 | `size` | `Size` | `md` | Controls track, thumb, and font size. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the slider. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 | `format` | `Callback<V, String>` | bare value, or `SliderValue::label` | Formats the bubble shown on hover, drag and keyboard focus, and sets each thumb's `aria-valuetext`. |
 | `marks` | `Vec<SliderMark<V>>` | one per option, discretely | Ticks on the track; a labeled one gets a caption below it. Replaces the marks a discrete scale derives. |
 | `aria_label_from` | `String` | `Minimum` | Names the lower thumb, which the field's label cannot tell apart from the upper one. |
@@ -186,5 +187,5 @@ Every variable a `Slider` sets, plus the two the second thumb needs.
 
 ## Data attributes
 
-The same tokens a `Slider` carries - `size-*`, `dragging`, `disabled` and
-`marks-labeled`.
+The same tokens a `Slider` carries - `size-*`, `dragging`, `disabled`,
+`readonly` and `marks-labeled`.

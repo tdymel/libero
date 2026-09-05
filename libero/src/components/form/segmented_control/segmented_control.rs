@@ -200,6 +200,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
             radius,
             gap: props.gap.as_ref().copied(),
             focusable: props.focusable.unwrap_or(true),
+            readonly: props.readonly.unwrap_or(false),
             name,
             labelledby: field.label_id(),
             describedby: field.describedby(),

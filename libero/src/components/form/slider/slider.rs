@@ -166,6 +166,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
             size: props.size,
             color: props.color,
             disabled: Some(bound.disabled(props.disabled)),
+            readonly: props.readonly.unwrap_or(false),
             label: labelled.then_some(label),
             aria_label: props.aria_label,
             labelledby: field.label_id(),

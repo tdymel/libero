@@ -70,6 +70,7 @@ pub fn FileFieldPage() -> Element {
                         .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
                     prop("required", "bool").default("false").doc("Adds `aria-required` to the control and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables picking and dropping, and dims the field."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
                 props("SelectionArgs", vec![
                     prop("value", "FileData").doc("The file this call draws."),

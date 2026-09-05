@@ -69,6 +69,9 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
                 .cursor("not-allowed")
                 .pointer_events("none"),
         )
+        // Nothing to grab: the track's pointer and the thumb's grab hand would
+        // promise a drag that `on_start` refuses.
+        .when("readonly", sx().selector("& *", sx().cursor("default")))
         // The track is the scale, so the thumb must read against any color on
         // it: white ring, dark halo, the picked color as its face.
         .when(
@@ -230,6 +233,9 @@ pub(in crate::components::form) struct SliderCoreProps {
     size: Input<Size>,
     color: Input<ThemeAwareValue>,
     disabled: Option<bool>,
+    /// Focusable and posted, but no key or drag moves a thumb.
+    #[props(default)]
+    readonly: bool,
     /// `None` leaves the bubble showing the bare value and sets no
     /// `aria-valuetext`.
     label: Option<Callback<f64, String>>,
@@ -283,6 +289,9 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
 
     let value = props.value.snapped(min, max, step);
     let interactive = props.oninput.is_some() && !disabled;
+    // `interactive` keeps the tab stop, `editable` moves the value: a
+    // read-only thumb is still reached, read and posted.
+    let editable = interactive && !props.readonly;
     let focusable = props.focusable;
 
     if props.oninput.is_none() && !disabled {
@@ -359,7 +368,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     let drag = use_drag(DragOptions {
         capture: root_element,
         on_start: Callback::new(move |event: DragStart| {
-            if !interactive {
+            if !editable {
                 event.cancel.call(());
                 return;
             }
@@ -417,7 +426,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     // One handler for both thumbs: the focused thumb is the one the keys
     // move, so the index comes from whichever element fired.
     let onkeydown = use_callback(move |(index, event): (usize, Event<KeyboardData>)| {
-        if !interactive {
+        if !editable {
             return;
         }
         let distance = if event.modifiers().shift() {
@@ -456,6 +465,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
         .with(size.state_name(), true)
         .with("dragging", (drag.dragging)())
         .with("disabled", disabled)
+        .with("readonly", props.readonly)
         .with("marks-labeled", marks_labeled)
         .with("plain", props.plain)
         .into();
@@ -538,6 +548,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
             .attr("aria-invalid", props.invalid.then_some("true"))
             .attr("aria-required", props.required.then_some("true"))
             .attr("aria-disabled", !interactive)
+            .attr("aria-readonly", props.readonly.then_some("true"))
             .element(&thumb_elements[index])
             .event("onkeydown", move |event: Event<KeyboardData>| {
                 onkeydown.call((index, event))

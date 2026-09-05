@@ -35,8 +35,9 @@ fn Demo() -> Element {
 
 The input accepts every form `ColorCode` parses - hex, `rgb()`, `hsl()`, with
 or without alpha - whatever `format` is. Text is kept exactly as typed while the
-field has focus, and every time it parses the color is emitted as a lone
-`Change`. On blur the text goes back to `value` in `format`.
+field has focus, and every time it parses the color is emitted as `Change`
+then `End`, as a swatch or a key press in the dropdown is. On blur the text
+goes back to `value` in `format`.
 
 Text that does not parse is dropped on blur by default (`fix_on_blur: true`).
 `fix_on_blur: false` keeps it on screen, so a caller can show a status for it;
@@ -96,7 +97,7 @@ color is opaque; a dismissed pick changes nothing.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `value` | `ColorCode` | required | Strictly controlled. |
-| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | | Every new color. |
+| `oninput` | `EventHandler<SliderChangeEvent<ColorCode>>` | | Every new color. A drag in the dropdown brackets its moves with `Start`/`End`; typed text that parses, a key press, a swatch and the eyedropper emit `Change` then `End`. |
 | `format` | `ColorFormat` | `hex` / `hexa` | The text's form, and what posts. |
 | `with_alpha` | `bool` | `false` | Alpha slider; keeps typed alpha. |
 | `swatches` | `Swatches` | | Preset colors in the dropdown. |
@@ -114,6 +115,7 @@ color is opaque; a dismissed pick changes nothing.
 | `status` | `FieldStatus` | `Valid` | Validation state. |
 | `required` | `bool` | `false` | `required` plus an asterisk. |
 | `disabled` | `bool` | `false` | No typing, no dropdown. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
 Plus `class`, `sx`, `states` and every `input` attribute.
 

@@ -159,6 +159,9 @@ pub fn SegmentedControlPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every segment and dims the captions."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
                 props("OptionLabel", vec![
                     prop("name", "String").doc("The segment's accessible name, and its text when there is no `content`."),

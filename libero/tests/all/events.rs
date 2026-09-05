@@ -10,8 +10,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Button, Checkbox, Dialog, FileField, Form, Marquee, MultiSelect, Options,
-        PinField, Rule, SegmentedControl, Tabs, TagsField, TextField, not_empty, use_form,
+        ActionIcon, Box, Button, Checkbox, ColorCode, ColorField, Dialog, FileField, Form, Marquee,
+        MultiSelect, NumberField, Options, PinField, RangeSlider, Rule, SegmentedControl, Slider,
+        SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -1064,4 +1065,346 @@ fn a_read_only_checkbox_refuses_its_own_activation() {
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
 
     assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false]);
+}
+
+thread_local! {
+    /// Whether the next `readonly_*` app mounts read-only. The apps are plain
+    /// `fn`s, so the same one serves as its own positive control.
+    static READ_ONLY: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// What the field's handler heard, one entry per call.
+    static HEARD: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+fn heard(what: impl std::fmt::Debug) {
+    HEARD.with_borrow_mut(|seen| seen.push(format!("{what:?}")));
+}
+
+/// Mounts `app` with `readonly` as given, sends `name` with `data` to the
+/// element `pick` chooses, and returns what the handler heard and the markup
+/// afterwards. Run once each way, so a refusal is only believed next to the
+/// same event being answered.
+fn send(
+    app: fn() -> Element,
+    readonly: bool,
+    name: &str,
+    pick: fn(&FindClickListener) -> ElementId,
+    data: fn() -> Rc<dyn std::any::Any>,
+) -> (Vec<String>, String) {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    READ_ONLY.set(readonly);
+    HEARD.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let target = pick(&find);
+    dom.runtime()
+        .handle_event(name, Event::new(data(), true), target);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    (HEARD.with_borrow(Clone::clone), dioxus_ssr::render(&dom))
+}
+
+fn first_keydown(find: &FindClickListener) -> ElementId {
+    find.keydown[0]
+}
+
+fn last_keydown(find: &FindClickListener) -> ElementId {
+    *find.keydown.last().expect("registered no keydown listener")
+}
+
+fn last_click(find: &FindClickListener) -> ElementId {
+    find.click.expect("registered no click listener")
+}
+
+fn input_listener(find: &FindClickListener) -> ElementId {
+    find.input.expect("registered no input listener")
+}
+
+fn readonly_slider() -> Element {
+    rsx! {
+        LiberoProvider {
+            Slider {
+                aria_label: "Volume",
+                value: 40.0,
+                readonly: READ_ONLY.get(),
+                oninput: move |event: SliderChangeEvent<f64>| heard(event),
+            }
+        }
+    }
+}
+
+fn readonly_range_slider() -> Element {
+    rsx! {
+        LiberoProvider {
+            RangeSlider {
+                aria_label_from: "Minimum",
+                aria_label_to: "Maximum",
+                value: (20.0, 80.0),
+                readonly: READ_ONLY.get(),
+                oninput: move |event: SliderChangeEvent<(f64, f64)>| heard(event),
+            }
+        }
+    }
+}
+
+/// Todo 306: a read-only thumb keeps its tab stop and says it is read-only,
+/// and no key moves it. Each key is checked against the same slider editable,
+/// where it must move.
+#[test]
+fn a_read_only_slider_answers_no_key() {
+    for app in [readonly_slider, readonly_range_slider] {
+        for key in [
+            Key::ArrowRight,
+            Key::ArrowLeft,
+            Key::Home,
+            Key::End,
+            Key::PageUp,
+            Key::PageDown,
+        ] {
+            let data = match key {
+                Key::ArrowRight => || key_event(Key::ArrowRight),
+                Key::ArrowLeft => || key_event(Key::ArrowLeft),
+                Key::Home => || key_event(Key::Home),
+                Key::End => || key_event(Key::End),
+                Key::PageUp => || key_event(Key::PageUp),
+                _ => || key_event(Key::PageDown),
+            };
+            for pick in [first_keydown, last_keydown] {
+                let (moved, _) = send(app, false, "keydown", pick, data);
+                assert!(
+                    !moved.is_empty(),
+                    "{key:?} moved nothing on an editable slider"
+                );
+                let (heard, html) = send(app, true, "keydown", pick, data);
+                assert_eq!(heard, Vec::<String>::new(), "{key:?}");
+
+                let thumbs: Vec<_> = html.match_indices("role=\"slider\"").collect();
+                assert!(!thumbs.is_empty());
+                for (at, _) in thumbs {
+                    let start = html[..at].rfind('<').unwrap();
+                    let tag = &html[start..start + html[start..].find('>').unwrap()];
+                    assert!(tag.contains("tabindex=\"0\""), "{tag}");
+                    assert!(tag.contains("aria-readonly=\"true\""), "{tag}");
+                    assert!(!tag.contains("aria-disabled"), "{tag}");
+                }
+            }
+        }
+    }
+}
+
+fn readonly_segments() -> Element {
+    let mut value = use_signal(|| Emphasis::Bold);
+    rsx! {
+        LiberoProvider {
+            SegmentedControl {
+                label: "Emphasis",
+                value: value(),
+                readonly: READ_ONLY.get(),
+                onchange: move |next| {
+                    heard(next == Emphasis::Italic);
+                    value.set(next);
+                },
+            }
+        }
+    }
+}
+
+/// Todo 306: the arrows move *and* select, so a read-only strip refuses them
+/// outright, as `RadioGroup` does - and the click, Enter and Space with them.
+#[test]
+fn a_read_only_segmented_control_picks_nothing() {
+    let (_, html) = send(readonly_segments, false, "keydown", first_keydown, || {
+        key_event(Key::ArrowRight)
+    });
+    assert_eq!(
+        checked_states(&html),
+        [false, true],
+        "the arrow is the control"
+    );
+    let (heard, html) = send(readonly_segments, true, "keydown", first_keydown, || {
+        key_event(Key::ArrowRight)
+    });
+    assert_eq!(heard, Vec::<String>::new());
+    assert_eq!(checked_states(&html), [true, false]);
+    assert!(html.contains("role=\"radiogroup\""), "{html}");
+    assert!(html.contains("aria-readonly=\"true\""), "{html}");
+
+    let (_, html) = send(readonly_segments, false, "click", last_click, click_event);
+    assert_eq!(
+        checked_states(&html),
+        [false, true],
+        "the click is the control"
+    );
+    let (heard, html) = send(readonly_segments, true, "click", last_click, click_event);
+    assert_eq!(heard, Vec::<String>::new());
+    assert_eq!(checked_states(&html), [true, false]);
+
+    for key in [
+        || key_event(Key::Enter),
+        || key_event(Key::Character(" ".into())),
+    ] {
+        let (picked, _) = send(readonly_segments, false, "keydown", last_keydown, key);
+        assert_eq!(picked, ["true"], "the key is the control");
+        let (heard, _) = send(readonly_segments, true, "keydown", last_keydown, key);
+        assert_eq!(heard, Vec::<String>::new());
+    }
+}
+
+fn readonly_number() -> Element {
+    rsx! {
+        LiberoProvider {
+            NumberField {
+                label: "Quantity",
+                value: 3,
+                steppers: true,
+                readonly: READ_ONLY.get(),
+                onchange: move |next: i32| heard(next),
+            }
+        }
+    }
+}
+
+/// Todo 306 (review 3 C2): the native `readonly` stops typing, but the arrows
+/// and the steppers are the field's own, so they are refused in Rust.
+#[test]
+fn a_read_only_number_field_does_not_step() {
+    let arrow = || key_event(Key::ArrowUp);
+    let (stepped, _) = send(readonly_number, false, "keydown", last_keydown, arrow);
+    assert_eq!(stepped, ["4"], "the arrow is the control");
+    let (heard, html) = send(readonly_number, true, "keydown", last_keydown, arrow);
+    assert_eq!(heard, Vec::<String>::new());
+
+    let input = &html[html.find("<input").unwrap()..];
+    let input = &input[..input.find('>').unwrap()];
+    assert!(input.contains("readonly=true"), "{input}");
+    assert!(!input.contains("disabled"), "{input}");
+
+    let (stepped, _) = send(readonly_number, false, "click", last_click, click_event);
+    assert_eq!(stepped, ["4"], "the stepper is the control");
+    let (heard, _) = send(readonly_number, true, "click", last_click, click_event);
+    assert_eq!(heard, Vec::<String>::new());
+}
+
+fn readonly_color() -> Element {
+    rsx! {
+        LiberoProvider {
+            ColorField {
+                label: "Accent",
+                value: "#ff0000".parse::<ColorCode>().unwrap(),
+                readonly: READ_ONLY.get(),
+                oninput: move |event: SliderChangeEvent<ColorCode>| {
+                    heard(match event {
+                        SliderChangeEvent::Start(_) => "Start",
+                        SliderChangeEvent::Change(_) => "Change",
+                        SliderChangeEvent::End(_) => "End",
+                    })
+                },
+            }
+        }
+    }
+}
+
+/// Todo 306: the text takes the native `readonly`, and the dropdown - the
+/// other editor - refuses to open, as every dropdown field's does.
+#[test]
+fn a_read_only_color_field_opens_no_dropdown() {
+    let expanded = |html: &str| {
+        attributes_of(&body(html), "input")
+            .get("aria-expanded")
+            .cloned()
+    };
+    let (_, html) = send(readonly_color, false, "click", last_click, click_event);
+    assert_eq!(
+        expanded(&html).as_deref(),
+        Some("true"),
+        "the click is the control"
+    );
+    let (_, html) = send(readonly_color, true, "click", last_click, click_event);
+    assert_eq!(expanded(&html).as_deref(), Some("false"));
+    let input = &html[html.find("<input").unwrap()..];
+    assert!(
+        input[..input.find('>').unwrap()].contains("readonly=true"),
+        "{html}"
+    );
+}
+
+/// Todo 291: typed text that parses is settled the moment it lands, so it
+/// emits `Change` then `End`, like a key press or a swatch in the dropdown - a
+/// caller committing on `End` used to miss every typed color.
+#[test]
+fn typing_a_color_emits_change_then_end() {
+    let (heard, _) = send(readonly_color, false, "input", input_listener, || {
+        input_event("#00ff00")
+    });
+    assert_eq!(heard, ["\"Change\"", "\"End\""]);
+}
+
+fn readonly_files() -> Element {
+    rsx! {
+        LiberoProvider {
+            FileField {
+                label: "Attachments",
+                multiple: true,
+                clearable: true,
+                value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                readonly: READ_ONLY.get(),
+                onchange: move |files: libero::components::Files| heard(files.len()),
+            }
+        }
+    }
+}
+
+fn readonly_files_clear() -> Element {
+    rsx! {
+        LiberoProvider {
+            FileField {
+                label: "Attachments",
+                multiple: true,
+                clearable: true,
+                value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                readonly: true,
+                onchange: move |files: libero::components::Files| {
+                    CLEARED.with_borrow_mut(|seen| seen.push(files.len()));
+                },
+            }
+        }
+    }
+}
+
+/// Todo 305: a read-only file field keeps its tab stop and its post - the
+/// input is not `disabled` - while the keys that remove a chip or open the
+/// picker, and the clear button, stand down.
+#[test]
+fn a_read_only_file_field_removes_nothing() {
+    let backspace = || key_event(Key::Backspace);
+    let (removed, _) = send(readonly_files, false, "keydown", first_keydown, backspace);
+    assert_eq!(removed, ["1"], "Backspace is the control");
+    let (heard, html) = send(readonly_files, true, "keydown", first_keydown, backspace);
+    assert_eq!(heard, Vec::<String>::new());
+
+    let tag_at = |html: &str, marker: &str| -> Vec<String> {
+        html.match_indices(marker)
+            .map(|(at, _)| {
+                let start = html[..at].rfind('<').unwrap();
+                html[start..start + html[start..].find('>').unwrap()].to_string()
+            })
+            .collect()
+    };
+    let surface = tag_at(&html, "role=\"button\"");
+    assert_eq!(surface.len(), 1, "{surface:?}");
+    assert!(surface[0].contains("tabindex=\"0\""), "{surface:?}");
+    assert!(!surface[0].contains("aria-disabled"), "{surface:?}");
+    let file = tag_at(&html, "type=\"file\"");
+    assert!(
+        !file[0].contains("disabled"),
+        "a read-only field still posts: {file:?}"
+    );
+    // Both chips' x stand down with the field.
+    let removes = tag_at(&html, "aria-label=\"Remove");
+    assert_eq!(removes.len(), 2, "{removes:?}");
+    assert!(
+        removes.iter().all(|x| x.contains("disabled")),
+        "{removes:?}"
+    );
+
+    assert_eq!(click_clear(readonly_files_clear), None);
 }

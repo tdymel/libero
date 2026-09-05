@@ -257,6 +257,7 @@ name the options, not the question. With neither, it warns in a debug build.
 | `status` | `FieldStatus` | `Valid` | Validation state, rendered under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Adds `aria-required` to the group and marks the label. |
 | `disabled` | `bool` | `false` | Disables every segment and dims the captions. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
 ### OptionLabel
 
