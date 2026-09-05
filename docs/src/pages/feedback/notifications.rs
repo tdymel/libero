@@ -5,13 +5,13 @@ use crate::icons::DismissIcon;
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Box, Button, Code, CodeBlock, Flex, Input, NotificationData, NotificationLive,
+        ActionIcon, Box, Button, Code, Flex, Input, Kbd, NotificationData, NotificationLive,
         NotificationOptions, NotificationScope, Notifications, Paper, ProgressBar, Text, Variant,
         use_notifications, use_notifications_with,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
-    theme::{AutoClose, Theme},
+    theme::{AutoClose, Placement, Theme},
 };
 
 /// What the variant control starts on, and prints nothing for.
@@ -19,29 +19,8 @@ fn default_variant() -> &'static str {
     Theme::DEFAULT.alert.variant.as_str()
 }
 
-// snippet: ignore - two places: the root, and anywhere below it
-const SETUP_EXAMPLE: &str = r#"// Once, near the root - the one outlet for every handle.
-LiberoProvider {
-    Router::<Route> {}
-    Notifications {}
-}
-
-// Anywhere below it.
-let notify = use_notifications();
-notify.show("Saved.");
-notify.show_with(
-    NotificationData {
-        title: Some("Upload failed".into()),
-        message: "archive.zip is over the 10 MB limit.".into(),
-        color: "error".into(),
-        ..Default::default()
-    },
-    // Interrupts a screen reader; everything else waits its turn.
-    NotificationOptions { live: NotificationLive::Assertive, ..Default::default() },
-);"#;
-
-/// The preview's own template for the custom-template switch, printed as it
-/// is written below.
+/// The preview's own template for the card option, printed as it is written
+/// below.
 // snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
 const CARD_EXAMPLE: &str = r#"// A `fn`, not a capturing closure: everything it draws travels in the data.
 fn card_notification(s: NotificationScope<NotificationData>) -> Element {
@@ -96,6 +75,8 @@ fn card_notification(s: NotificationScope<NotificationData>) -> Element {
     }
 }
 
+/// The upload option's type and template, printed above the hook. The ticker
+/// that drives it is printed by `wrap_demo`.
 // snippet: item #[component] fn DismissIcon() -> Element { rsx! {} }
 const TEMPLATE_EXAMPLE: &str = r#"#[derive(Clone, PartialEq)]
 struct Upload {
@@ -122,13 +103,7 @@ fn upload_notification(s: NotificationScope<Upload>) -> Element {
             }
         }
     }
-}
-
-let uploads = use_notifications_with(upload_notification);
-let id = uploads.show_with(Upload { file: "archive.zip", percent: 0.0 },
-    NotificationOptions { auto_close: Some(AutoClose::Never), ..Default::default() });
-// ...as it progresses:
-uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });"#;
+}"#;
 
 #[derive(Clone, PartialEq)]
 struct Upload {
@@ -176,37 +151,72 @@ fn auto_close_of(value: &str) -> AutoClose {
     value.parse().map_or(AutoClose::Never, AutoClose::After)
 }
 
-/// The host with the controls' props, the one `show` the plain buttons make,
-/// and the template when the switch picks one. The other buttons differ from
-/// that `show` only in their data and options, all printed further down.
-fn wrap_demo(values: &DemoValues, _: &str) -> String {
-    let mut host = vec!["contained: true".to_string()];
-    let position = values.str("position");
-    if position != "bottom-end" {
-        host.push(format!("position: {position:?}"));
+/// `AutoClose` as the caller would type it.
+fn auto_close_code(value: &str) -> String {
+    match value {
+        "never" => "AutoClose::Never".to_string(),
+        ms => format!("AutoClose::After({ms})"),
     }
-    let limit = values.str("limit");
-    if limit != "5" {
-        host.push(format!("limit: {limit}"));
-    }
-    match values.str("auto_close").as_str() {
-        "4000" => {}
-        "never" => host.push("auto_close: AutoClose::Never".to_string()),
-        ms => host.push(format!("auto_close: AutoClose::After({ms})")),
-    }
-    let host: String = host
-        .iter()
-        .map(|line| format!("        {line},\n"))
-        .collect();
+}
 
-    let template = values.str("template") == "true";
-    let hook = if template {
-        "use_notifications_with(card_notification)"
+/// The whole snippet: the host (contained here, app-wide near the root), the
+/// handle, and the one `show` the button makes.
+fn wrap_demo(values: &DemoValues, _: &str) -> String {
+    let contained = values.str("contained") == "true";
+    let template = values.str("template");
+    let position = values.str("position");
+    let auto_close = values.str("auto_close");
+    let upload = template == "upload";
+
+    // The host. Contained, it takes the three defaults as props; app-wide it
+    // is one line near the root and the notification names its own.
+    let mut host = String::new();
+    if contained {
+        let mut fields = vec!["contained: true".to_string()];
+        if position != "bottom-end" {
+            fields.push(format!("position: {position:?}"));
+        }
+        let limit = values.str("limit");
+        if limit != "5" {
+            fields.push(format!("limit: {limit}"));
+        }
+        if auto_close != "4000" {
+            fields.push(format!("auto_close: {}", auto_close_code(&auto_close)));
+        }
+        let fields: String = fields
+            .iter()
+            .map(|field| format!("        {field},\n"))
+            .collect();
+        host.push_str(&format!(
+            "// A contained host draws its stacks in its own box and keeps them to\n\
+             // itself: every handle made below it - in `Examples` here - feeds it.\n\
+             Box {{ sx: sx().width(\"100%\"),\n    \
+                 Notifications {{\n{fields}        Examples {{}}\n    }}\n\
+             }}\n\n"
+        ));
     } else {
-        "use_notifications()"
+        host.push_str(
+            "// App-wide, `contained` is left out: one host near the root is the\n\
+             // outlet for every handle below it, and its `position`, `limit` and\n\
+             // `auto_close` are the defaults for every notification.\n\
+             LiberoProvider {\n    \
+                 Router::<Route> {}\n    \
+                 Notifications {}\n\
+             }\n\n",
+        );
+    }
+
+    // The handle and its data.
+    let hook = match template.as_str() {
+        "card" => "use_notifications_with(card_notification)",
+        "upload" => "use_notifications_with(upload_notification)",
+        _ => "use_notifications()",
     };
     let mut fields = Vec::new();
-    if !template {
+    if values.str("title") == "true" {
+        fields.push("title: Some(\"Saved\".into())".to_string());
+    }
+    if template == "alert" {
         let color = values.str("color");
         if color != UNSET {
             fields.push(format!("color: {color:?}.into()"));
@@ -216,48 +226,98 @@ fn wrap_demo(values: &DemoValues, _: &str) -> String {
             fields.push(format!("variant: {variant:?}.into()"));
         }
     }
-    let data = if fields.is_empty() {
-        "\"Saved.\"".to_string()
+    let data = if upload {
+        "Upload { file: \"archive.zip\", percent: 0.0 }".to_string()
+    } else if fields.is_empty() {
+        "\"Your changes are safe.\"".to_string()
     } else {
         let fields: String = fields
             .iter()
             .map(|field| format!("        {field},\n"))
             .collect();
         format!(
-            "NotificationData {{\n        message: \"Saved.\".into(),\n{fields}        ..Default::default()\n    }}"
-        )
-    };
-    let show = if values.str("closable") == "true" {
-        format!("notify.show({data});")
-    } else {
-        format!(
-            "notify.show_with(\n    {data},\n    NotificationOptions {{ closable: false, ..Default::default() }},\n);"
+            "NotificationData {{\n        message: \"Your changes are safe.\".into(),\n{fields}        ..Default::default()\n    }}"
         )
     };
 
-    let mut code = format!(
-        "// The host draws its stacks in its own box, and every handle created\n\
-         // below it - in `Examples` here - shows notifications there.\n\
-         Box {{ sx: sx().width(\"100%\"),\n    \
-             Notifications {{\n{host}        Examples {{}}\n    }}\n\
-         }}\n\n\
-         // In `Examples`, a 420px-tall column of the buttons:\n\
-         let notify = {hook};\n\
-         {show}"
-    );
-    if template {
-        code.push_str("\n\n");
+    // The options. A contained host answers `position` and `auto_close`, so
+    // only the app-wide case names them per notification.
+    let mut options = Vec::new();
+    if !contained && position != "bottom-end" {
+        options.push(format!("position: Some({position:?}.into())"));
+    }
+    if upload {
+        options.push("// A progress notification waits for its own end.".to_string());
+        options.push("auto_close: Some(AutoClose::Never)".to_string());
+    } else if !contained && auto_close != "4000" {
+        options.push(format!(
+            "auto_close: Some({})",
+            auto_close_code(&auto_close)
+        ));
+    }
+    if values.str("closable") == "false" {
+        options.push("closable: false".to_string());
+    }
+    if values.str("live") == "assertive" {
+        options.push("// Interrupts a screen reader; polite waits its turn.".to_string());
+        options.push("live: NotificationLive::Assertive".to_string());
+    }
+
+    let show = if options.is_empty() {
+        format!("notify.show({data});")
+    } else {
+        let options: String = options
+            .iter()
+            .map(|option| match option.starts_with("//") {
+                true => format!("        {option}\n"),
+                false => format!("        {option},\n"),
+            })
+            .collect();
+        format!(
+            "notify.show_with(\n    {data},\n    NotificationOptions {{\n{options}        ..Default::default()\n    }},\n);"
+        )
+    };
+
+    let mut code = host;
+    if template == "card" {
         code.push_str(CARD_EXAMPLE);
+        code.push_str("\n\n");
+    }
+    if upload {
+        code.push_str(TEMPLATE_EXAMPLE);
+        code.push_str("\n\n");
+    }
+    let binding = match upload {
+        true => "let id = ",
+        false => "",
+    };
+    code.push_str(&format!("let notify = {hook};\n{binding}{show}"));
+    if upload {
+        code.push_str(
+            "\n\n// ...as it progresses. `update` redraws that one notification.\nnotify.update(id, Upload { file: \"archive.zip\", percent: 40.0 });",
+        );
     }
     code
 }
 
-/// The buttons, below the contained host so their handles feed it. A
+/// The trigger, below the host when there is one, so its handle feeds it. A
 /// component of its own: `Demo` calls `render` in its own scope, where the
 /// hooks would be invisible.
 #[component]
-fn Examples(color: String, variant: String, closable: bool, template: bool) -> Element {
-    let notify = if template {
+#[allow(clippy::too_many_arguments)]
+fn Examples(
+    color: String,
+    variant: String,
+    title: bool,
+    closable: bool,
+    live: String,
+    template: String,
+    position: String,
+    auto_close: String,
+    contained: bool,
+) -> Element {
+    // One hook either way: `use_notifications()` is the default template.
+    let notify = if template == "card" {
         use_notifications_with(card_notification)
     } else {
         use_notifications()
@@ -274,30 +334,33 @@ fn Examples(color: String, variant: String, closable: bool, template: bool) -> E
         UNSET => Input::None,
         color => Input::from(color),
     };
-    // Every `Alert` the buttons raise takes the variant; only the plain ones
-    // take the colour, since the others name their own.
     let variant = Input::<Variant>::from(variant.as_str()).copied_or(Variant::Tonal);
-    let plain = move |message: &str| NotificationData {
-        message: message.into(),
-        color: color.clone(),
-        variant: Input::Value(variant),
-        ..Default::default()
+    let live = match live.as_str() {
+        "assertive" => NotificationLive::Assertive,
+        _ => NotificationLive::Polite,
     };
-    let options = move |options: NotificationOptions| NotificationOptions {
+    // A contained host answers both, so only the app-wide case names them per
+    // notification - the one this site renders near the root has the defaults.
+    let host_answers = contained;
+    let placement = Placement::from(position.as_str());
+    let auto_close = auto_close_of(&auto_close);
+    let options = move |sticky: bool| NotificationOptions {
+        position: (!host_answers).then_some(placement),
+        auto_close: match sticky {
+            true => Some(AutoClose::Never),
+            false => (!host_answers).then_some(auto_close),
+        },
         closable,
-        ..options
+        live,
     };
 
-    let start_upload = move |_| {
+    let show_upload = move || {
         let id = uploads.show_with(
             Upload {
                 file: "archive.zip",
                 percent: 0.0,
             },
-            NotificationOptions {
-                auto_close: Some(AutoClose::Never),
-                ..Default::default()
-            },
+            options(true),
         );
         let Some(api) = timer() else {
             return;
@@ -323,104 +386,51 @@ fn Examples(color: String, variant: String, closable: bool, template: bool) -> E
         tickers.borrow_mut().push(ticker);
     };
 
+    let upload = template == "upload";
+    let show = move |_| {
+        if upload {
+            show_upload();
+            return;
+        }
+        notify.show_with(
+            NotificationData {
+                title: title.then(|| "Saved".into()),
+                message: "Your changes are safe.".into(),
+                color: color.clone(),
+                variant: Input::Value(variant),
+                ..Default::default()
+            },
+            options(false),
+        );
+    };
+
     rsx! {
         // At the top: the stacks default to the bottom edge, so on a phone the
-        // wrapped buttons leave them room.
+        // buttons leave them room.
         Flex {
             direction: "column",
             align: "center",
             justify: "start",
             gap: "sm",
-            sx: sx().height("420px"),
-            Flex {
-                direction: "row",
-                justify: "center",
-                gap: "sm",
-                wrap: "wrap",
-                Button {
-                    variant: "outlined",
-                    onclick: {
-                        let plain = plain.clone();
-                        move |_| {
-                            notify.show_with(plain("Saved."), options(Default::default()));
-                        }
-                    },
-                    "Show one"
-                }
-                Button {
-                    variant: "outlined",
-                    color: "success",
-                    onclick: move |_| {
-                        notify.show_with(
-                            NotificationData {
-                                title: Some("Published".into()),
-                                message: "Your post is live.".into(),
-                                color: "success".into(),
-                                variant: Input::Value(variant),
-                                ..Default::default()
-                            },
-                            options(Default::default()),
-                        );
-                    },
-                    "Success"
-                }
-                Button {
-                    variant: "outlined",
-                    color: "error",
-                    onclick: move |_| {
-                        notify.show_with(
-                            NotificationData {
-                                title: Some("Upload failed".into()),
-                                message: "archive.zip is over the 10 MB limit.".into(),
-                                color: "error".into(),
-                                variant: Input::Value(variant),
-                                ..Default::default()
-                            },
-                            options(NotificationOptions {
-                                live: NotificationLive::Assertive,
-                                ..Default::default()
-                            }),
-                        );
-                    },
-                    "Error, announced at once"
-                }
-            }
-            Flex {
-                direction: "row",
-                justify: "center",
-                gap: "sm",
-                wrap: "wrap",
-                Button {
-                    variant: "outlined",
-                    onclick: {
-                        let plain = plain.clone();
-                        move |_| {
-                            notify.show_with(
-                                plain("Stays until you close it."),
-                                options(NotificationOptions {
-                                    auto_close: Some(AutoClose::Never),
-                                    ..Default::default()
-                                }),
-                            );
-                        }
-                    },
-                    "Sticky"
-                }
-                Button {
-                    variant: "outlined",
-                    onclick: move |_| {
-                        notify.show_with(
-                            plain("Gone in two seconds."),
-                            options(NotificationOptions {
-                                auto_close: Some(AutoClose::After(2000)),
-                                ..Default::default()
-                            }),
-                        );
-                    },
-                    "Two seconds"
-                }
-                Button { variant: "outlined", onclick: start_upload, "Upload" }
+            sx: sx().height(match contained {
+                true => "420px",
+                false => "auto",
+            }),
+            Flex { direction: "row", justify: "center", gap: "sm", wrap: "wrap",
+                Button { variant: "outlined", onclick: show, "Show one" }
                 Button { variant: "text", onclick: move |_| notify.clear(), "Clear all" }
+            }
+            Text { size: "sm",
+                if contained {
+                    "This host is contained, so its stacks are drawn in its own box and "
+                    "every handle below it feeds that one. The preview needs that; an app "
+                    "does not."
+                } else {
+                    "No host here: contained is left out, so this went to the one "
+                    "app-wide host this site renders near the root - look at the edge of "
+                    "the window. That host answers position, limit and auto_close for "
+                    "every handle; this notification names its own."
+                }
             }
         }
     }
@@ -456,6 +466,13 @@ pub fn NotificationsPage() -> Element {
                     prop("closable", "bool").default("true").doc("Whether the template draws a close control."),
                     prop("live", "NotificationLive").default("Polite").doc("Which live region announces it."),
                 ]),
+                props("NotificationHandle", vec![
+                    prop("show(args)", "NotificationId").doc("Shows one with the host's options."),
+                    prop("show_with(args, options)", "NotificationId").doc("Shows one with its own options."),
+                    prop("update(id, args)", "()").doc("Redraws that one notification with new data."),
+                    prop("hide(id)", "()").doc("Runs its exit, then removes it."),
+                    prop("clear()", "()").doc("Removes every notification, shown and queued."),
+                ]),
             ],
             lead: rsx! {
                 Text {
@@ -463,11 +480,15 @@ pub fn NotificationsPage() -> Element {
                     Code { source: "Notifications {{}}" }
                     " once near the root, and "
                     Code { source: "use_notifications()" }
-                    " hands back a handle that shows them from anywhere. A notification outlives "
-                    "the component that raised it. Hovering or focusing one pauses every timer, "
-                    "and each starts over from its full time when you leave. Nothing takes focus: "
-                    "a close button is reached by Tab, and each stack has a polite and an "
-                    "assertive live region, both mounted before anything is announced into them."
+                    " hands back a handle that shows them from anywhere - a notification "
+                    "outlives the component that raised it. "
+                    Code { source: "use_notifications_with" }
+                    " takes your own data type and a "
+                    Code { source: "fn" }
+                    " template instead, which is what "
+                    Code { source: "update(id, data)" }
+                    " redraws in place. Hovering or focusing one pauses every timer, and "
+                    "each starts over from its full time when you leave."
                 }
             },
             Demo {
@@ -486,38 +507,64 @@ pub fn NotificationsPage() -> Element {
                         "bottom-end",
                     ])
                     .default("bottom-end"),
-                    Control::slider("limit", ["1", "2", "3", "4", "5"]).default("5"),
+                    // A host prop, and the preview only has a host of its own
+                    // while it is contained.
+                    Control::slider("limit", ["1", "2", "3", "4", "5"])
+                        .default("5")
+                        .hidden_when(|values| values.str("contained") != "true"),
                     Control::toggle("auto_close", ["2000", "4000", "never"])
                         .labels(["2s", "4s", "Never"])
-                        .default("4000"),
-                    // The `Alert`'s kind. Your own template draws no `Alert`,
-                    // so both controls go with it.
+                        .default("4000")
+                        .hidden_when(|values| values.str("template") == "upload"),
+                    // The default template is an `Alert`; your own draws none,
+                    // so both of its controls go with it.
+                    Control::toggle("template", ["alert", "card", "upload"])
+                        .labels(["Alert", "Card", "Upload"])
+                        .default("alert"),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard"],
                     )
                     .labels(["Filled", "Tonal", "Elevated", "Outlined", "Standard"])
                     .default(default_variant())
-                    .hidden_when(|values| values.str("template") == "true"),
-                    // The plain buttons' colour; the others name their own.
+                    .hidden_when(|values| values.str("template") != "alert"),
                     Control::color("color")
                         .with_unset()
-                        .hidden_when(|values| values.str("template") == "true"),
+                        .hidden_when(|values| values.str("template") != "alert"),
+                    Control::toggle("live", ["polite", "assertive"])
+                        .labels(["Polite", "Assertive"])
+                        .default("polite"),
+                    Control::switch("title").hidden_when(|values| values.str("template") == "upload"),
                     Control::switch("closable").default("true"),
-                    Control::switch("template"),
+                    Control::switch("contained"),
                 ],
-                render: move |values: DemoValues| rsx! {
-                    Box { sx: sx().width("100%"),
-                        Notifications {
-                            contained: true,
+                render: move |values: DemoValues| {
+                    let contained = values.str("contained") == "true";
+                    let examples = rsx! {
+                        Examples {
+                            color: values.str("color"),
+                            variant: values.str("variant"),
+                            title: values.str("title") == "true",
+                            closable: values.str("closable") == "true",
+                            live: values.str("live"),
+                            template: values.str("template"),
                             position: values.str("position"),
-                            limit: values.str("limit").parse::<usize>().ok(),
-                            auto_close: auto_close_of(&values.str("auto_close")),
-                            Examples {
-                                color: values.str("color"),
-                                variant: values.str("variant"),
-                                closable: values.str("closable") == "true",
-                                template: values.str("template") == "true",
+                            auto_close: values.str("auto_close"),
+                            contained,
+                        }
+                    };
+                    rsx! {
+                        Box { sx: sx().width("100%"),
+                            if contained {
+                                Notifications {
+                                    contained: true,
+                                    position: values.str("position"),
+                                    limit: values.str("limit").parse::<usize>().ok(),
+                                    auto_close: auto_close_of(&values.str("auto_close")),
+                                    {examples}
+                                }
+                            } else {
+                                {examples}
                             }
                         }
                     }
@@ -526,25 +573,20 @@ pub fn NotificationsPage() -> Element {
                 wide_preview: true,
             }
             DocSection {
-                title: "In an app",
+                title: "Accessibility",
                 Text {
-                    "The preview's host is contained, so it keeps its notifications to itself. "
-                    "An app renders one host that is not, near the root, and every handle "
-                    "shows its notifications at the edge of the window."
+                    "Nothing takes focus. Each stack holds a polite and an assertive live "
+                    "region, both mounted before anything is announced into them, and "
+                    Code { source: "live" }
+                    " picks which one. A close button is reached with "
+                    Kbd { "Tab" }
+                    " in document order, and focusing one pauses its timer. Your own "
+                    "template draws that button itself: read "
+                    Code { source: "s.closable()" }
+                    " and give it an "
+                    Code { source: "aria_label" }
+                    ", the way the Card and Upload options here do."
                 }
-                CodeBlock { source: SETUP_EXAMPLE, language: "rust" }
-            }
-            DocSection {
-                title: "Updating in place",
-                Text {
-                    Code { source: "use_notifications_with" }
-                    " takes your data type and a template. The template is a "
-                    Code { source: "fn" }
-                    ", so a notification that outlives its caller holds nothing of the caller's. "
-                    Code { source: "update(id, data)" }
-                    " redraws that one notification: the Upload button above runs this."
-                }
-                CodeBlock { source: TEMPLATE_EXAMPLE, language: "rust" }
             }
         }
     }

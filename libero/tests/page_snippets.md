@@ -614,30 +614,6 @@ Table { aria_label: "Team members", data: people, columns: vec![
 }
 ```
 
-## feedback/notifications.rs `SETUP_EXAMPLE`
-
-```rust,ignore
-// Once, near the root - the one outlet for every handle.
-LiberoProvider {
-    Router::<Route> {}
-    Notifications {}
-}
-
-// Anywhere below it.
-let notify = use_notifications();
-notify.show("Saved.");
-notify.show_with(
-    NotificationData {
-        title: Some("Upload failed".into()),
-        message: "archive.zip is over the 10 MB limit.".into(),
-        color: "error".into(),
-        ..Default::default()
-    },
-    // Interrupts a screen reader; everything else waits its turn.
-    NotificationOptions { live: NotificationLive::Assertive, ..Default::default() },
-);
-```
-
 ## feedback/notifications.rs `CARD_EXAMPLE`
 
 ```rust,no_run
@@ -726,11 +702,6 @@ fn upload_notification(s: NotificationScope<Upload>) -> Element {
 
 #[component]
 fn Snippet() -> Element {
-let uploads = use_notifications_with(upload_notification);
-let id = uploads.show_with(Upload { file: "archive.zip", percent: 0.0 },
-    NotificationOptions { auto_close: Some(AutoClose::Never), ..Default::default() });
-// ...as it progresses:
-uploads.update(id, Upload { file: "archive.zip", percent: 40.0 });
 
 rsx! {
 }

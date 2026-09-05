@@ -133,6 +133,11 @@ pub struct SpotlightOptions {
     /// way to a loader, and the status region says the theme's loading text,
     /// so a search-as-you-type palette never flashes "nothing found" first.
     pub loading: bool,
+    /// Highlight the first row after every keystroke, so `Enter` runs it
+    /// without an `ArrowDown` first - a page search's common case. Off, a
+    /// fresh query arms nothing and `Enter` is inert until the arrows pick a
+    /// row, which is safer for a palette whose actions do something.
+    pub highlight_first_on_query: bool,
     /// Called with the new query on every keystroke, from the input event
     /// rather than a render - where a search-as-you-type palette sets
     /// `loading` and starts its fetch, so the very next frame is already busy.
@@ -151,6 +156,7 @@ impl Default for SpotlightOptions {
             aria_label: None,
             shortcut: Some('k'),
             loading: false,
+            highlight_first_on_query: true,
             onquery: None,
         }
     }
@@ -227,6 +233,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
 
     let labels = theme.spotlight.labels;
     let close_on_action = options.close_on_action;
+    let highlight_first = options.highlight_first_on_query;
     let onquery = options.onquery;
     let options_for_render = options.clone();
     let modal = use_modal(move |scope: ModalScope<()>| {
@@ -294,8 +301,9 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                             Some(row) => row - 1,
                         }));
                     }
-                    // Nothing highlighted, nothing runs: a fresh query never
-                    // runs an action the user did not look at.
+                    // Nothing highlighted, nothing runs. With
+                    // `highlight_first_on_query` (the default) a query always
+                    // leaves the first row highlighted, so Enter runs it.
                     Key::Enter => {
                         if let Some(row) = active {
                             event.prevent_default();
@@ -412,8 +420,13 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                             if let Some(onquery) = onquery {
                                 onquery.call(event.value());
                             }
-                            // The `Autocomplete` rule: a new query arms nothing.
-                            state.set_active(None);
+                            // The first row, so Enter runs the obvious hit
+                            // without an ArrowDown first. Off, the
+                            // `Autocomplete` rule: a new query arms nothing.
+                            // Either way the row is clamped against the new
+                            // count below, so `Some(0)` on an empty result is
+                            // no highlight.
+                            state.set_active(highlight_first.then_some(0));
                         },
                         onkeydown,
                         ..state.a11y_attributes(),

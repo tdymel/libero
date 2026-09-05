@@ -126,8 +126,10 @@ let spotlight = use_spotlight(SpotlightOptions {
 - Focus stays in the search box the whole time.
 - ArrowDown / ArrowUp move the highlight, wrapping at both ends. Home and End
   are left to the caret.
-- Enter runs the highlighted action. Typing clears the highlight, so Enter
-  never runs a row the user did not look at.
+- Enter runs the highlighted action. By default every keystroke highlights the
+  first row (`highlight_first_on_query`), so Enter runs the obvious hit.
+  Turned off, typing clears the highlight instead, and Enter never runs a row
+  the user did not look at.
 - Escape or a click outside closes; focus returns to what opened it.
 
 ## API
@@ -147,6 +149,7 @@ pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<Spotlig
 | `clear_on_close` | `bool` | `true` | Start each opening with an empty query. |
 | `aria_label` | `Option<String>` | theme (`"Command palette"`) | Names the dialog. |
 | `shortcut` | `Option<char>` | `Some('k')` | Ctrl/Cmd + this key toggles the palette. A browser key warns in a debug build. |
+| `highlight_first_on_query` | `bool` | `true` | Highlight the first row after every keystroke, so Enter runs it without an ArrowDown first. Off, a fresh query arms nothing. |
 | `loading` | `bool` | `false` | Results are still coming: a loader replaces the rows and "Nothing found", and the status region says so. |
 | `onquery` | `Option<Callback<String>>` | `None` | Called with the new query on every keystroke, from the input event. Start a search here. |
 

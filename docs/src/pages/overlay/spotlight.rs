@@ -145,6 +145,9 @@ fn option_lines(values: &DemoValues) -> Vec<String> {
     if values.str("clear_on_close") == "false" {
         lines.push("clear_on_close: false,".into());
     }
+    if values.str("highlight_first_on_query") == "false" {
+        lines.push("highlight_first_on_query: false,".into());
+    }
     lines.push(match values.str("shortcut").as_str() {
         "none" => "shortcut: None,".into(),
         key => format!("shortcut: Some('{key}'),"),
@@ -155,7 +158,7 @@ fn option_lines(values: &DemoValues) -> Vec<String> {
 /// The code of the example opened last. The preview's buttons pick it.
 fn wrap_example(values: &DemoValues, _: &str) -> String {
     let example = values.str("example");
-    let (handle, actions, actions_code, label) = EXAMPLES
+    let (handle, actions, actions_code, _) = EXAMPLES
         .into_iter()
         .find(|(name, ..)| *name == example)
         .unwrap_or(EXAMPLES[0]);
@@ -209,7 +212,7 @@ fn wrap_example(values: &DemoValues, _: &str) -> String {
          {setup}\
          let {handle} = use_spotlight(SpotlightOptions {{\n{}}});\n\n\
          rsx! {{\n    \
-             Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), {label:?} }}\n\
+             Button {{ variant: \"outlined\", onclick: move |_| {handle}.open(), \"Show\" }}\n\
          {hint}    \
              Text {{ size: \"sm\", \"Last run: {{last()}}\" }}\n\
          }}",
@@ -222,6 +225,7 @@ struct SpotlightDemoProps {
     limit: Option<usize>,
     close_on_action: bool,
     clear_on_close: bool,
+    highlight_first_on_query: bool,
     shortcut: Option<char>,
     values: DemoValues,
 }
@@ -233,6 +237,7 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         limit,
         close_on_action,
         clear_on_close,
+        highlight_first_on_query,
         shortcut,
         values,
     } = props;
@@ -243,6 +248,7 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         limit,
         close_on_action,
         clear_on_close,
+        highlight_first_on_query,
         shortcut: shortcut.filter(|_| example == name),
         ..Default::default()
     };
@@ -301,30 +307,18 @@ fn SpotlightDemo(props: SpotlightDemoProps) -> Element {
         ..options("search")
     });
 
+    // One trigger: the `example` control picks which palette it opens, and the
+    // code block follows the same value.
     let handles = [commands, files, issues, search];
+    let picked = EXAMPLES
+        .iter()
+        .position(|(name, ..)| *name == example)
+        .unwrap_or(0);
+    let handle = handles[picked];
 
     rsx! {
         Flex { direction: "column", align: "center", gap: "md",
-            Flex {
-                direction: "row",
-                justify: "center",
-                gap: "sm",
-                wrap: "wrap",
-                for ((name, _, _, label), handle) in EXAMPLES.into_iter().zip(handles) {
-                    Button {
-                        key: "{name}",
-                        variant: "outlined",
-                        onclick: {
-                            let values = values.clone();
-                            move |_| {
-                                values.set("example", name);
-                                handle.open();
-                            }
-                        },
-                        "{label}"
-                    }
-                }
-            }
+            Button { variant: "outlined", onclick: move |_| handle.open(), "Show" }
             if let Some(key) = shortcut {
                 Text { size: "sm",
                     Kbd { "Ctrl" }
@@ -355,6 +349,7 @@ pub fn SpotlightPage() -> Element {
                     prop("clear_on_close", "bool").default("true").doc("Start every opening with an empty query."),
                     prop("aria_label", "Option<String>").default("\"Command palette\"").doc("Names the dialog."),
                     prop("shortcut", "Option<char>").default("Some('k')").doc("Ctrl (Cmd on a Mac) plus this key toggles the palette from anywhere on the page. `None` for no hotkey. Web only. A key the browser already uses (L, T, W, R, F, ...) warns in a debug build."),
+                    prop("highlight_first_on_query", "bool").default("true").doc("Highlight the first row after every keystroke, so `Enter` runs it without an `ArrowDown` first. Off, a fresh query arms nothing."),
                     prop("loading", "bool").default("false").doc("The results are still coming. A loader replaces the rows and \"nothing found\", and the status region says \"Searching\" (the theme's label)."),
                     prop("onquery", "Option<Callback<String>>").doc("Called with the new query on every keystroke, from the input event. Set `loading` and start the search here."),
                 ]),
@@ -387,8 +382,10 @@ pub fn SpotlightPage() -> Element {
                     " is called with the live query and returns the rows, so a fixed list and "
                     "search results are the same prop. "
                     Code { source: "spotlight_filter" }
-                    " is the common case, label hits first. The code block follows the last "
-                    "button you pressed. The hotkey here is J or P, because this site's own "
+                    " is the common case, label hits first. The "
+                    Code { source: "example" }
+                    " control picks which palette the button opens, and the code block follows "
+                    "it. The hotkey here is J or P, because this site's own "
                     "search already owns "
                     Kbd { "Ctrl" }
                     " + "
@@ -400,19 +397,22 @@ pub fn SpotlightPage() -> Element {
                 component: "SpotlightOptions",
                 children_text: "",
                 controls: vec![
-                    // Set by the preview's buttons, never by the panel.
+                    // Not a prop: which palette the one button opens, and the
+                    // example the code block prints.
                     Control::toggle("example", ["commands", "files", "issues", "search"])
-                        .hidden_when(|_| true),
+                        .labels(["Commands", "Files", "200 issues", "Slow search"]),
                     Control::toggle("shortcut", ["j", "p", "none"]),
                     Control::slider("limit", ["3", "5", "10", "none"]).default("none"),
                     Control::switch("close_on_action").default("true"),
                     Control::switch("clear_on_close").default("true"),
+                    Control::switch("highlight_first_on_query").default("true"),
                 ],
                 render: move |values: DemoValues| rsx! {
                     SpotlightDemo {
                         limit: values.str("limit").parse().ok(),
                         close_on_action: values.str("close_on_action") == "true",
                         clear_on_close: values.str("clear_on_close") == "true",
+                        highlight_first_on_query: values.str("highlight_first_on_query") == "true",
                         shortcut: values.str("shortcut").chars().next().filter(|_| values.str("shortcut") != "none"),
                         values: values.clone(),
                     }
@@ -420,12 +420,15 @@ pub fn SpotlightPage() -> Element {
                 wrap: Wrap(wrap_example),
             }
             DocSection {
-                title: "Keyboard",
+                title: "Accessibility",
                 Text {
                     "Focus stays in the search box. " Kbd { "↓" } " " Kbd { "↑" }
                     " move the highlight, wrapping at both ends. " Kbd { "Enter" }
-                    " runs the highlighted action; typing clears the highlight, so Enter never "
-                    "runs a row you did not look at. " Kbd { "Esc" }
+                    " runs the highlighted action, which by default is the first row of the "
+                    "last query. Turn "
+                    Code { source: "highlight_first_on_query" }
+                    " off for a palette whose actions do something, and typing then arms "
+                    "nothing until you press " Kbd { "↓" } ". " Kbd { "Esc" }
                     " or a click outside closes, and focus goes back to what opened it. The "
                     "hotkey is ignored while you type in another text field, and while a dialog "
                     "or popover is open."
