@@ -92,7 +92,8 @@ field_props! {
         /// The box's colour when checked.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Strictly controlled - pair it with `onchange`.
+        /// Pair it with `onchange`. Left out, the box keeps its own state
+        /// unless a `name` binds it to the form around it.
         #[props(default)]
         checked: Option<bool>,
         /// Draws the mixed state and reads as `aria-checked="mixed"`. Outranks
@@ -127,10 +128,10 @@ field_props! {
 /// A checkbox, with its label beside the box and the description, helper text
 /// and validation message under both.
 ///
-/// Strictly controlled: pass `checked` and handle `onchange`. The browser
-/// never toggles the input itself - a label click and Space are taken in Rust
-/// - so the property, `:checked`, assistive tech and form submission never
-/// drift apart.
+/// The browser never toggles the input itself - a label click and Space are
+/// taken in Rust - so the property, `:checked`, assistive tech and form
+/// submission never drift apart. Pass `checked` and handle `onchange` to own
+/// the state; with neither, and outside a form binding, the box keeps its own.
 #[component]
 pub fn Checkbox(props: CheckboxProps) -> Element {
     let theme = use_theme();
@@ -141,8 +142,16 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let required = props.required.unwrap_or(false);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
-    let checked = bound.value().or(props.checked).unwrap_or(false);
+    let checked = bound
+        .value()
+        .or(props.checked)
+        .or(bound.entered())
+        .unwrap_or(false);
     let indeterminate = props.indeterminate.unwrap_or(false);
+    // HTML's `readonly` does not apply to a checkbox, and the activation is
+    // ours anyway - so it is refused here and said with `aria-readonly`,
+    // which WAI-ARIA 1.2 supports on the `checkbox` role.
+    let readonly = props.readonly.unwrap_or(false);
     let card = props.variant.copied_or_default() == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
@@ -157,6 +166,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     let toggle = move || {
         if let Some(onchange) = &onchange
             && !disabled
+            && !readonly
         {
             onchange(next);
         }
@@ -216,6 +226,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
         .attr("aria-checked", indeterminate.then_some("mixed"))
         .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
+        .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
         .attr("aria-label", props.aria_label)
         // Void element - `()` costs no dynamic node.

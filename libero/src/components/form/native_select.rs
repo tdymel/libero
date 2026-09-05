@@ -80,6 +80,15 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     if props.onchange.is_none() && !bound.is_bound() {
         warn("NativeSelect: without `onchange` the selection can never change.");
     }
+    // `field_props!` gives every field `readonly`, and this one cannot keep
+    // the promise yet: HTML has no `readonly` for a `<select>`, and the only
+    // ways to stop a native picker either take the field out of the tab order
+    // or out of the form post. Warned rather than ignored - todo pending.
+    if props.readonly.unwrap_or(false) {
+        warn(
+            "NativeSelect: `readonly` is not honoured yet - a native `<select>` has no read-only state.",
+        );
+    }
 
     let values = props
         .options

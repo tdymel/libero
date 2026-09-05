@@ -80,6 +80,7 @@ pub fn DateFieldPage() -> Element {
                         .doc("Validation state. Text the field cannot accept shows `DateDefaults::invalid_date` instead."),
                     prop("required", "bool").default("false").doc("Adds `required` to the input and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables typing and the dropdown, and dims the field."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
             ],
             lead: rsx! {

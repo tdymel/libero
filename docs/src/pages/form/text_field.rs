@@ -42,6 +42,9 @@ pub fn TextFieldPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables interaction and dims the field."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
             ],
             lead: rsx! {

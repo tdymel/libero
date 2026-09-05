@@ -124,7 +124,7 @@ whatever the text shows: `2026-02-01`, `13:05:00`, `2026-02-01T13:05:00`, and
 | `name` | `FieldName<Option<V>>` | - | Posts ISO 8601; a path binds to a `Form`. |
 | `validate` | `Validators<Option<V>>` | - | Rules over the value. |
 | `placeholder` | `String` | - | Shown while empty. |
-| `size`, `radius`, `label`, `description`, `helper`, `status`, `required`, `disabled` | | | The shared field props. |
+| `size`, `radius`, `label`, `description`, `helper`, `status`, `required`, `disabled`, `readonly` | | | The shared field props. `readonly` keeps the field focusable and posted, refuses the typing and does not open the picker. |
 
 Props that only some value types use are ignored by the rest.
 

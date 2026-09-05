@@ -136,7 +136,7 @@ Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `value` | `Store<V>` | - | The whole form's value, which `validate` checks and fields named by a path read and write. `V` is inferred from it. |
+| `value` | `Store<V>` | - | The whole form's value, which `validate` checks and fields named by a path read and write. `V` is inferred from it. Handing over a different store mounts the fields again on it. |
 | `validate` | `Validators<V>` | - | Composite rules over `value` - one rule, or an array. |
 | `onsubmit` | `EventHandler<FormEvent>` | - | Fires on a submit nothing blocks. |
 | `summary_title` | `String` | - | A heading over the error summary. |

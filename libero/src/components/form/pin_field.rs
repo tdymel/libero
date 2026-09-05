@@ -85,9 +85,6 @@ field_props! {
         /// Focuses the first cell on mount.
         #[props(default)]
         autofocus: Option<bool>,
-        /// The pin can be read and copied, but not changed.
-        #[props(default)]
-        readonly: Option<bool>,
     }
 }
 
@@ -276,13 +273,18 @@ pub fn PinField(props: PinFieldProps) -> Element {
                     event.prevent_default();
                     focus_cell(&root, length - 1, length);
                 }
+                // Read-only cells still take every key that only moves:
+                // the native `readonly` stops typing, but a handler that
+                // clears a cell itself is not typing and it does not stop.
                 Key::Delete => {
                     event.prevent_default();
-                    edit(index, None);
+                    if !readonly {
+                        edit(index, None);
+                    }
                 }
                 Key::Backspace => {
                     event.prevent_default();
-                    match cells[index].is_some() {
+                    match cells[index].is_some() && !readonly {
                         true => {
                             edit(index, None);
                             // The last cell keeps focus: it is where the next

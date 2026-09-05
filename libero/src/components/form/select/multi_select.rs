@@ -99,6 +99,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let onchange = bound.emit(props.onchange);
     let size = props.size.copied_or(theme.multi_select.size);
     let disabled = bound.disabled(props.disabled);
+    let readonly = props.readonly.unwrap_or(false);
     let picked = held.clone();
     let draw_selection = props.selection;
     let chip_change = onchange.clone();
@@ -110,7 +111,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
                 match &draw_selection {
                     Some(selection) => selection.call(SelectionArgs { value, remove }),
-                    None => removable_chip(value.label(), remove, size, disabled),
+                    None => removable_chip(value.label(), remove, size, disabled || readonly),
                 }
             });
             rsx! {
@@ -196,6 +197,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             size,
             radius: props.radius.copied_or(theme.multi_select.radius),
             disabled: Some(disabled),
+            readonly: props.readonly,
             required: props.required,
             class: props.class,
             sx: props.sx,

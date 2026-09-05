@@ -3,14 +3,15 @@
 //! that conversion type-checks and passes an SSR test, but panics on the first
 //! real click - see `BoxBuilder::event`.
 
+use crate::common::{attributes_of, body};
 use dioxus::core::{AttributeValue, ElementId, WriteMutations};
 use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Button, Dialog, FileField, Marquee, MultiSelect, Options,
-        SegmentedControl, Tabs, TagsField,
+        ActionIcon, Box, Button, Checkbox, Dialog, FileField, Form, Marquee, MultiSelect, Options,
+        PinField, Rule, SegmentedControl, Tabs, TagsField, TextField, not_empty, use_form,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -22,6 +23,9 @@ use std::rc::Rc;
 struct FindClickListener {
     last: Option<ElementId>,
     click: Option<ElementId>,
+    first_click: Option<ElementId>,
+    input: Option<ElementId>,
+    keydown: Vec<ElementId>,
     mousedown: Vec<ElementId>,
 }
 
@@ -35,6 +39,13 @@ impl WriteMutations for FindClickListener {
     fn add_event_listener(&mut self, name: &str) {
         if name == "click" {
             self.click = self.last;
+            self.first_click = self.first_click.or(self.last);
+        }
+        if name == "input" {
+            self.input = self.last;
+        }
+        if name == "keydown" {
+            self.keydown.extend(self.last);
         }
         if name == "mousedown" {
             self.mousedown.extend(self.last);
@@ -68,8 +79,13 @@ impl dioxus::html::HtmlEventConverter for TestConverter {
     fn convert_drag_data(&self, _event: &PlatformEventData) -> dioxus::html::DragData {
         unimplemented!()
     }
-    fn convert_form_data(&self, _event: &PlatformEventData) -> dioxus::html::FormData {
-        unimplemented!()
+    fn convert_form_data(&self, event: &PlatformEventData) -> dioxus::html::FormData {
+        dioxus::html::FormData::new(
+            event
+                .downcast::<FakeInput>()
+                .expect("not a FakeInput")
+                .clone(),
+        )
     }
     fn convert_mounted_data(&self, _event: &PlatformEventData) -> dioxus::html::MountedData {
         unimplemented!()
@@ -101,8 +117,8 @@ impl dioxus::html::HtmlEventConverter for TestConverter {
     fn convert_image_data(&self, _event: &PlatformEventData) -> dioxus::html::ImageData {
         unimplemented!()
     }
-    fn convert_keyboard_data(&self, _event: &PlatformEventData) -> dioxus::html::KeyboardData {
-        unimplemented!()
+    fn convert_keyboard_data(&self, event: &PlatformEventData) -> dioxus::html::KeyboardData {
+        dioxus::html::KeyboardData::new(event.downcast::<FakeKey>().expect("not a FakeKey").clone())
     }
     fn convert_media_data(&self, _event: &PlatformEventData) -> dioxus::html::MediaData {
         unimplemented!()
@@ -139,6 +155,74 @@ impl dioxus::html::HtmlEventConverter for TestConverter {
 /// The web renderer's payload: a `PlatformEventData` wrapping the concrete data.
 fn click_event() -> Rc<dyn std::any::Any> {
     Rc::new(PlatformEventData::new(Box::new(FakeMouse)))
+}
+
+/// A stand-in for the renderer's `input` payload: the text the control now
+/// holds, which is all any field reads off it.
+#[derive(Clone)]
+struct FakeInput(String);
+
+impl dioxus::html::HasFormData for FakeInput {
+    fn value(&self) -> String {
+        self.0.clone()
+    }
+    fn valid(&self) -> bool {
+        true
+    }
+    fn values(&self) -> Vec<(String, dioxus::html::FormValue)> {
+        Vec::new()
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+impl dioxus::html::HasFileData for FakeInput {
+    fn files(&self) -> Vec<dioxus::html::FileData> {
+        Vec::new()
+    }
+}
+
+/// A stand-in for the renderer's key payload. Only the key itself is ever
+/// read; nothing under test looks at the code or the modifiers.
+#[derive(Clone)]
+struct FakeKey(Key);
+
+impl dioxus::html::HasKeyboardData for FakeKey {
+    fn key(&self) -> Key {
+        self.0.clone()
+    }
+    fn code(&self) -> Code {
+        Code::Unidentified
+    }
+    fn location(&self) -> dioxus::html::input_data::keyboard_types::Location {
+        dioxus::html::input_data::keyboard_types::Location::Standard
+    }
+    fn is_auto_repeating(&self) -> bool {
+        false
+    }
+    fn is_composing(&self) -> bool {
+        false
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+impl dioxus::html::point_interaction::ModifiersInteraction for FakeKey {
+    fn modifiers(&self) -> dioxus::html::keyboard_types::Modifiers {
+        Default::default()
+    }
+}
+
+fn key_event(key: Key) -> Rc<dyn std::any::Any> {
+    Rc::new(PlatformEventData::new(Box::new(FakeKey(key))))
+}
+
+fn input_event(text: &str) -> Rc<dyn std::any::Any> {
+    Rc::new(PlatformEventData::new(Box::new(FakeInput(
+        text.to_string(),
+    ))))
 }
 
 /// Empty where the component set no state at all - an unstyled `ActionIcon`
@@ -739,4 +823,245 @@ fn an_empty_field_draws_no_clear_button() {
     }
 
     assert_eq!(click_clear(app), None);
+}
+
+/// A field with rules, no value of its own and no place in a form's value used
+/// to validate `T::default()` for ever, so inside a `Form` it cancelled every
+/// submit however the user answered it (todo 185). The checkbox is the case
+/// where the browser keeps no state either: what the user ticked lives only in
+/// the field, so it is both what renders and what the rules judge.
+#[test]
+fn ticking_an_uncontrolled_checkbox_satisfies_its_own_rules() {
+    fn app() -> Element {
+        let handle = use_form();
+        let valid = use_signal(|| true);
+
+        rsx! {
+            LiberoProvider {
+                // Before the form, so the checkbox's label keeps the last
+                // click listener - which is how the test addresses it.
+                Button {
+                    onclick: move |_| {
+                        let mut valid = valid;
+                        valid.set(handle.validate());
+                    },
+                    "Submit"
+                }
+                Form::<()> { form: handle,
+                    Checkbox { label: "Agree", validate: (|on: &bool| *on).error("Tick it") }
+                }
+                "valid: {valid}"
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let submit = find.first_click.expect("registered no click listener");
+    let checkbox = find.click.expect("registered no click listener");
+
+    let click = |dom: &mut VirtualDom, id| {
+        dom.runtime()
+            .handle_event("click", Event::new(click_event(), true), id);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    };
+
+    click(&mut dom, submit);
+    assert!(
+        dioxus_ssr::render(&dom).contains("valid: false"),
+        "an unticked required checkbox must block the submit"
+    );
+
+    click(&mut dom, checkbox);
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [true]);
+
+    click(&mut dom, submit);
+    assert!(
+        dioxus_ssr::render(&dom).contains("valid: true"),
+        "the rules must judge what was ticked, not the default"
+    );
+}
+
+/// The same defect on the field the todo names first: a `TextField` with rules,
+/// no `value` and no binding. The browser keeps its text, so only the rules
+/// need what was typed - the `value` attribute stays off it.
+#[test]
+fn typing_into_an_uncontrolled_text_field_satisfies_its_own_rules() {
+    fn app() -> Element {
+        let handle = use_form();
+        let valid = use_signal(|| true);
+
+        rsx! {
+            LiberoProvider {
+                Button {
+                    onclick: move |_| {
+                        let mut valid = valid;
+                        valid.set(handle.validate());
+                    },
+                    "Submit"
+                }
+                Form::<()> { form: handle,
+                    TextField {
+                        label: "Email",
+                        validate: (|text: &String| not_empty(text)).error("Enter your email"),
+                    }
+                }
+                "valid: {valid}"
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let submit = find.first_click.expect("registered no click listener");
+    let field = find.input.expect("registered no input listener");
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), submit);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert!(
+        dioxus_ssr::render(&dom).contains("valid: false"),
+        "an empty required field must block the submit"
+    );
+
+    dom.runtime().handle_event(
+        "input",
+        Event::new(input_event("tom@libero.dev"), true),
+        field,
+    );
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    let html = dioxus_ssr::render(&dom);
+    assert!(
+        !attributes_of(&body(&html), "input").contains_key("value"),
+        "the field is still uncontrolled - the browser owns the text"
+    );
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), submit);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert!(
+        dioxus_ssr::render(&dom).contains("valid: true"),
+        "the rules must judge what was typed, not the default"
+    );
+}
+
+thread_local! {
+    static PIN_EDITS: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// The native `readonly` stops typing into a cell, but Backspace and Delete
+/// are answered by the field itself and used to clear one anyway - so a pin
+/// that "can be read and copied, but not changed" could be erased (todo 209).
+#[test]
+fn a_read_only_pin_field_answers_no_key_that_edits() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                PinField {
+                    label: "Code",
+                    length: 4,
+                    value: "1234",
+                    readonly: true,
+                    oninput: move |next: String| {
+                        PIN_EDITS.with_borrow_mut(|edits| edits.push(next));
+                    },
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    PIN_EDITS.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let second = find.keydown[1];
+
+    for key in [Key::Backspace, Key::Delete] {
+        dom.runtime()
+            .handle_event("keydown", Event::new(key_event(key), true), second);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+
+    assert_eq!(PIN_EDITS.with_borrow(Clone::clone), Vec::<String>::new());
+}
+
+/// `Form` took its `value` store once, so a parent that handed over a
+/// different one - another record in an edit view - kept fields reading and
+/// writing the old store while the form's own rules read the new one (todo
+/// 190). `Store`'s equality is its identity, so the swap is recognisable.
+#[test]
+fn swapping_the_forms_value_swaps_what_its_fields_read() {
+    fn app() -> Element {
+        let first = use_store(|| crate::validation::Order {
+            name: "Tom".into(),
+            ..Default::default()
+        });
+        let second = use_store(|| crate::validation::Order {
+            name: "Ada".into(),
+            ..Default::default()
+        });
+        let mut second_record = use_signal(|| false);
+
+        rsx! {
+            LiberoProvider {
+                Button { onclick: move |_| second_record.toggle(), "Next record" }
+                Form {
+                    value: if second_record() { second } else { first },
+                    TextField { name: crate::validation::Order::FIELDS.name() }
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let next = find.first_click.expect("registered no click listener");
+
+    let value = |dom: &VirtualDom| {
+        attributes_of(&body(&dioxus_ssr::render(dom)), "input")
+            .get("value")
+            .cloned()
+    };
+
+    assert_eq!(value(&dom).as_deref(), Some("Tom"));
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), next);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    assert_eq!(value(&dom).as_deref(), Some("Ada"));
+}
+
+/// A read-only checkbox keeps its tab stop and its place in the post, so the
+/// one thing that must not happen is the toggle - and the activation is ours,
+/// not the browser's, so only Rust can refuse it (todo 209).
+#[test]
+fn a_read_only_checkbox_refuses_its_own_activation() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Checkbox { label: "Agree", readonly: true }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let label = find.click.expect("registered no click listener");
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), label);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    assert_eq!(checked_states(&dioxus_ssr::render(&dom)), [false]);
 }

@@ -105,6 +105,11 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
+    // In a radio group the arrow keys *are* the change - APG has them move and
+    // select in one press - so read-only refuses them outright rather than
+    // moving focus without selecting, which would leave the roving `tabindex`
+    // on an option that is not focused. Each option refuses its own click too.
+    let readonly = props.readonly.unwrap_or(false);
     let current = bound.value().unwrap_or_else(|| props.value.clone());
 
     if props.onchange.is_none() && !bound.is_bound() && !disabled {
@@ -179,7 +184,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let arrows = {
         move |event: Event<KeyboardData>| {
-            if disabled {
+            if disabled || readonly {
                 return;
             }
             let step = match event.key() {
@@ -232,6 +237,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 color: color.clone(),
                 checked: selected == Some(index),
                 disabled,
+                readonly,
                 tab_stop: index == tab_stop,
                 pick,
             }
@@ -240,6 +246,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 
     let group = group
         .attr("role", "radiogroup")
+        .attr("aria-readonly", readonly.then_some("true"))
         .attr("aria-labelledby", label_id)
         .attr("aria-describedby", describedby)
         .attr("aria-invalid", invalid.then_some("true"))
@@ -270,6 +277,7 @@ struct GroupRadioProps {
     color: Input<ThemeAwareValue>,
     checked: bool,
     disabled: bool,
+    readonly: bool,
     tab_stop: bool,
     pick: Callback<usize>,
 }
@@ -286,6 +294,7 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
         color,
         checked,
         disabled,
+        readonly,
         tab_stop,
         pick,
     } = props;
@@ -299,6 +308,7 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
             color,
             checked,
             disabled,
+            readonly,
             tabindex: if tab_stop { "0" } else { "-1" },
             onselect: move |_| pick.call(index),
             "data-radio-index": "{index}",

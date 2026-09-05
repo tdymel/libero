@@ -169,6 +169,13 @@ impl IntoChildren for Vec<Element> {
 /// `class` is `None` for a caller that carries the class itself - the router
 /// `Link`, which renders its own `class` slot. A caller's `class` attribute is
 /// then left where it is, since there is nothing here to merge it into.
+///
+/// `aria-describedby` is merged for the same reason and by the same rule: it
+/// is a list of ids, so racing the caller's against the component's drops one
+/// of them - which took a field's validation message away from AT whenever the
+/// caller pointed at a hint of their own. The first occurrence keeps its
+/// place, and the component's attributes are appended after the caller's, so
+/// the caller's ids come first.
 pub(crate) fn styling_attributes(
     class: Option<String>,
     data_state: Option<String>,
@@ -177,6 +184,9 @@ pub(crate) fn styling_attributes(
 ) -> Vec<Attribute> {
     let mut class = class;
     let mut style = style;
+    // Everything after the first `aria-describedby`, to append to it.
+    let mut described: Option<String> = None;
+    let mut describes = false;
 
     attributes.retain_mut(|attribute| match (attribute.name, &attribute.value) {
         ("class", AttributeValue::Text(value)) => match &mut class {
@@ -193,8 +203,28 @@ pub(crate) fn styling_attributes(
             }
             false
         }
+        ("aria-describedby", AttributeValue::Text(value)) if describes => {
+            match &mut described {
+                Some(described) => join(described, value, ' '),
+                None => described = Some(value.clone()),
+            }
+            false
+        }
+        ("aria-describedby", AttributeValue::Text(_)) => {
+            describes = true;
+            true
+        }
         _ => true,
     });
+
+    if let Some(rest) = described
+        && let Some(first) = attributes
+            .iter_mut()
+            .find(|attribute| attribute.name == "aria-describedby")
+        && let AttributeValue::Text(value) = &mut first.value
+    {
+        join(value, &rest, ' ');
+    }
 
     // Pushed then rotated to the front: prepending in place is a memmove,
     // where `splice` at index 0 is a generic reallocating path.

@@ -8,9 +8,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Checkbox, Fields, Form, MultiSelect, NativeSelect, NumberField, NumberValue, Options,
-        PasswordField, PinField, Radio, RadioGroup, SegmentedControl, Select, Slider, Switch,
-        TextField, Textarea,
+        Checkbox, Fields, Fieldset, Form, MultiSelect, NativeSelect, NumberField, NumberValue,
+        Options, PasswordField, PinField, Radio, RadioGroup, SegmentedControl, Select, Slider,
+        Switch, TextField, Textarea,
     },
 };
 
@@ -96,14 +96,18 @@ fn a_warning_is_described_but_not_invalid() {
     assert!(body.contains("Unusual."));
 }
 
+/// `aria-describedby` is a list, so the caller's ids join the field's rather
+/// than replacing them - dropping ours took the validation message away from
+/// AT on a field that is `aria-invalid`.
 #[test]
-fn the_callers_own_described_by_wins_outright() {
+fn the_callers_own_described_by_joins_the_fields_own() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
                 TextField {
                     label: "Name",
-                    helper: "Ours would name this.",
+                    helper: "Ours names this.",
+                    status: "Too short.",
                     "aria-describedby": "elsewhere",
                 }
             }
@@ -112,11 +116,47 @@ fn the_callers_own_described_by_wins_outright() {
 
     let body = body(&render(app));
     let input = attributes_of(&body, "input");
+    let id = &input["id"];
 
-    assert_eq!(input["aria-describedby"], "elsewhere");
-    // Still rendered - the caption props stay visual when the caller takes
-    // over the wiring.
-    assert!(body.contains("Ours would name this."));
+    // The caller's first: their hint is the one they asked to be read first.
+    assert_eq!(
+        input["aria-describedby"],
+        format!("elsewhere {id}-helper {id}-status")
+    );
+    assert_eq!(input["aria-invalid"], "true");
+    assert!(body.contains("Ours names this."));
+
+    // One attribute, not two. This is what makes the fix renderer-independent:
+    // a duplicate is raced, and SSR keeps the first while the DOM keeps the
+    // last, so the same markup would be wrong differently in each. With one
+    // attribute there is nothing to race.
+    assert_eq!(body.matches("aria-describedby=").count(), 1, "{body}");
+}
+
+/// The same rule on the other side of the pair: `Fieldset` set only its own,
+/// and a component's attribute beats the caller's, so there the caller's ids
+/// were the ones that went missing.
+#[test]
+fn a_fieldsets_described_by_joins_the_callers_too() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Fieldset::<()> { label: "Address", helper: "Ours names this.", "aria-describedby": "elsewhere",
+                    TextField { label: "Street" }
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    let fieldset = attributes_of(&body, "fieldset");
+    let id = &fieldset["id"];
+
+    assert_eq!(
+        fieldset["aria-describedby"],
+        format!("elsewhere {id}-helper")
+    );
+    assert_eq!(body.matches("aria-describedby=").count(), 1, "{body}");
 }
 
 #[test]
@@ -1145,4 +1185,80 @@ fn the_frame_reads_the_surface_and_publishes_its_focus_contrast() {
         html.contains("--lsx-paper-contrast:"),
         "no referent declared"
     );
+}
+
+/// `readonly` is one prop with one meaning on every field - focusable, posted,
+/// not editable - so it has to reach the control the way that control
+/// expresses it. HTML's `readonly` does not apply to a checkbox, and an
+/// attribute that does not apply must not be written at all, so there it is
+/// `aria-readonly` instead (WAI-ARIA 1.2 supports it on the `checkbox` role).
+#[test]
+fn read_only_reaches_each_control_the_way_that_control_says_it() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TextField { label: "Name", readonly: true }
+                Textarea { label: "Notes", readonly: true }
+                Checkbox { label: "Agree", readonly: true }
+                Switch { label: "On", readonly: true }
+            }
+        }
+    }
+
+    // A boolean attribute renders unquoted, which `attributes_of` cannot
+    // split - so this one reads the markup.
+    let body = body(&render(app));
+    let tag = |needle: &str| {
+        let at = body
+            .find(needle)
+            .unwrap_or_else(|| panic!("no {needle}\n{body}"));
+        body[at..]
+            .split_once('>')
+            .expect("an unterminated tag")
+            .0
+            .to_string()
+    };
+
+    assert!(tag("<input").contains("readonly=true"), "{body}");
+    assert!(tag("<textarea").contains("readonly=true"), "{body}");
+
+    // The two checkables say it the ARIA way, and neither writes the attribute
+    // HTML says does not apply to them.
+    assert_eq!(body.matches(r#"aria-readonly="true""#).count(), 2, "{body}");
+    assert_eq!(body.matches("readonly=true").count(), 2, "{body}");
+
+    // Still a tab stop and still posted - that is the whole difference from
+    // `disabled`.
+    assert!(!body.contains("disabled"), "{body}");
+}
+
+/// A read-only field is still in the tab order and still posts, so the one
+/// thing that must change is the editing.
+#[test]
+fn a_read_only_select_keeps_its_tab_stop() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Select {
+                    label: "Size",
+                    name: "size",
+                    value: Pick::First,
+                    readonly: true,
+                    onchange: move |_: Option<Pick>| {},
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains(r#"tabindex="0""#), "{body}");
+    assert!(body.contains(r#"aria-readonly="true""#), "{body}");
+    assert!(!body.contains(r#"aria-disabled="true""#), "{body}");
+
+    // And still posts: the hidden input is how a control that is not a form
+    // element gets into the form data at all, and `readonly` must not touch
+    // it the way `disabled` does.
+    assert!(body.contains(r#"name="size""#), "{body}");
+    assert!(!body.contains("disabled"), "{body}");
 }

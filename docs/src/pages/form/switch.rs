@@ -18,7 +18,7 @@ pub fn SwitchPage() -> Element {
                     .default("xl")
                     .doc("Track corner radius; the thumb is always a circle."),
                 prop("checked", "bool")
-                    .doc("Strictly controlled - pair it with `onchange`."),
+                    .doc("Pair it with `onchange`. Left out, the switch keeps its own state unless a `name` binds it to the form around it."),
                 prop("onchange", "EventHandler<bool>")
                     .doc("Called with the value `checked` should take next."),
                 prop("label", "Caption")
@@ -36,6 +36,9 @@ pub fn SwitchPage() -> Element {
                 prop("disabled", "bool")
                     .default("false")
                     .doc("Disables interaction and dims the switch."),
+                prop("readonly", "bool")
+                    .default("false")
+                    .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 prop("aria_label", "String")
                     .doc("Names the switch when it has no `label`."),
             ])],
@@ -45,12 +48,13 @@ pub fn SwitchPage() -> Element {
                     Code { source: "input" }
                     " does the real work, so it is announced as a switch, and Space and Enter "
                     "both toggle it. It takes the same slots every field takes, with the track "
-                    "where a checkbox puts its box. Strictly controlled: "
+                    "where a checkbox puts its box. The browser never toggles the input "
+                    "itself, so the track, the DOM property and the form submission can never "
+                    "disagree with Rust. "
                     Code { source: "checked" }
-                    " drives the look and "
+                    " drives the look when you pass it, paired with "
                     Code { source: "onchange" }
-                    " reports the value it should take next, so the track, the DOM property and "
-                    "the form submission can never disagree with Rust."
+                    "; with neither, and outside a form binding, the switch keeps its own state."
                 }
             },
             Demo {

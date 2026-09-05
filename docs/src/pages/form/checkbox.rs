@@ -23,7 +23,7 @@ pub fn CheckboxPage() -> Element {
                         .default("sm")
                         .doc("Corner radius of the box, independent of size."),
                     prop("checked", "bool")
-                        .doc("Strictly controlled - pair it with `onchange`."),
+                        .doc("Pair it with `onchange`. Left out, the box keeps its own state unless a `name` binds it to the form around it."),
                     prop("indeterminate", "bool")
                         .default("false")
                         .doc("Draws the mixed state and reads as `aria-checked=\"mixed\"`. Outranks `checked` visually; toggling from it gives `true`."),
@@ -44,6 +44,9 @@ pub fn CheckboxPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables interaction and dims the checkbox."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                     prop("aria_label", "String")
                         .doc("Names the checkbox when it has no `label`."),
                     prop("variant", "ChoiceVariant")
@@ -57,12 +60,12 @@ pub fn CheckboxPage() -> Element {
                     "and validation message under both. It takes the same slots every field has; "
                     "what it does not take is a frame - the box "
                     Code { source: "is" }
-                    " the control. Strictly controlled: "
+                    " the control. The browser never toggles the input itself, so the box, "
+                    "the DOM property and the form submission can never disagree with Rust. "
                     Code { source: "checked" }
-                    " drives the look and "
+                    " drives the look when you pass it, paired with "
                     Code { source: "onchange" }
-                    " reports the value it should take next, so the box, the DOM property and "
-                    "the form submission can never disagree with Rust."
+                    "; with neither, and outside a form binding, the box keeps its own state."
                 }
             },
             Demo {

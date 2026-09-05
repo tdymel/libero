@@ -103,8 +103,8 @@ announce a working field as broken.
 
 Leave `label` unset only when something else already names the field; a bare
 input with no accessible name is a defect. A caller-supplied
-`aria-describedby` replaces the one built from the caption slots, leaving them
-purely visual.
+`aria-describedby` joins the one built from the caption slots - the caller's
+ids first - so the validation message is never lost.
 
 ## What it does not do yet
 
@@ -130,10 +130,12 @@ modes of this one.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes - `name`, `readonly`, `maxlength`,
-`autocomplete` and `type` among them, since the props extend `input`'s own.
+`states`, and any extra HTML attributes - `name`, `maxlength`, `autocomplete`
+and `type` among them, since the props extend `input`'s own. `readonly` is a
+prop of its own, not one of those.
 
 ## Theme defaults
 

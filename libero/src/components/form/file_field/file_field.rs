@@ -300,6 +300,15 @@ pub fn FileField(props: FileFieldProps) -> Element {
     if props.onchange.is_none() && !bound.is_bound() && !disabled {
         warn("FileField: `value` without `onchange` can never change.");
     }
+    // As on `NativeSelect`: the prop is on every field, and the gate this
+    // field would need is a second one beside `interactive`, which also drives
+    // `tabindex` and the input's `disabled` - so reusing it would disable the
+    // field rather than freeze it. Warned rather than ignored - todo pending.
+    if props.readonly.unwrap_or(false) {
+        warn(
+            "FileField: `readonly` is not honoured yet - the picker and the remove buttons still work.",
+        );
+    }
 
     let value = bound.value().unwrap_or_else(|| props.value.clone());
     let accept = props.accept.clone().unwrap_or_default();

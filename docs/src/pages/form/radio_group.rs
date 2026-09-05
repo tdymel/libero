@@ -93,6 +93,9 @@ pub fn RadioGroupPage() -> Element {
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Disables every option and dims the group."),
+                    prop("readonly", "bool")
+                        .default("false")
+                        .doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
                 props("Radio", vec![
                     prop("checked", "bool")

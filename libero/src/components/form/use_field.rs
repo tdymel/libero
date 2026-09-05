@@ -9,7 +9,10 @@ use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
         common::input_from_str,
-        form::{Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, worst},
+        form::{
+            Binding, Caption, Disabled, FieldEntry, FieldName, FieldStatus, FormScope, Validators,
+            worst,
+        },
         layout::{BoxStyle, use_box},
     },
     hooks::{ElementHandle, use_root_id},
@@ -305,8 +308,9 @@ impl<'a> FieldBuilder<'a> {
         self
     }
 
-    /// The caller's attributes, read for an `id` to adopt and for an
-    /// `aria-describedby` that outranks ours.
+    /// The caller's attributes, read for an `id` to adopt. A caller's own
+    /// `aria-describedby` is not read here: it is merged with the field's in
+    /// `styling_attributes`, so neither side loses its ids.
     #[inline]
     pub fn attributes(mut self, attributes: &'a [Attribute]) -> Self {
         self.attributes = attributes;
@@ -398,10 +402,7 @@ impl<'a> FieldBuilder<'a> {
             ("helper", helper.text().is_some()),
             ("status", status.and_then(FieldStatus::message).is_some()),
         ];
-        let describedby = match caller_names_the_description(self.attributes) {
-            true => None,
-            false => join_ids(&id_value, described),
-        };
+        let describedby = join_ids(&id_value, described);
 
         let mut wrapper = use_box().framework_sx(&FIELD_SX).states(&states);
         if let Some(class) = self.class {
@@ -496,6 +497,7 @@ impl FieldHook {
 /// hand the result to [`FieldBuilder::bound`].
 pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: bool) -> Bound<T> {
     let hook = use_hook(FieldHook::new);
+    let entered = use_hook(|| Signal::new(None::<T>));
     let full = (!name.is_empty())
         .then(|| crate::components::form::validation_join(hook.binding.prefix(), name.as_str()));
     let active = !controlled && name.steps().is_some() && hook.binding.is_bound();
@@ -503,6 +505,8 @@ pub(crate) fn use_bound<T: Clone + 'static>(name: &FieldName<T>, controlled: boo
         name: active.then(|| name.clone()),
         hook,
         full,
+        entered,
+        owns: !controlled && !active,
     }
 }
 
@@ -511,6 +515,12 @@ pub(crate) struct Bound<T> {
     /// The name, kept only while it binds.
     name: Option<FieldName<T>>,
     full: Option<String>,
+    /// What the user last entered, for a field whose value lives nowhere else.
+    /// `None` until the first edit.
+    entered: Signal<Option<T>>,
+    /// Whether `entered` is a value source at all: with a handler or a binding
+    /// the value belongs to the caller or the form, and this is never read.
+    owns: bool,
 }
 
 impl<T> Bound<T> {
@@ -556,17 +566,53 @@ impl<T: Clone + 'static> Bound<T> {
     }
 
     /// What the field calls with its next value: the caller's `handler`, or,
-    /// bound and without one, a write into the form's value.
+    /// bound and without one, a write into the form's value - and, with
+    /// neither, a note of what the user entered, which is then the field's
+    /// only value. See [`entered`](Self::entered).
     pub fn emit(&self, handler: Option<EventHandler<T>>) -> Option<impl Fn(T) + Clone + 'static> {
         let setter = self.setter();
-        if handler.is_none() && setter.is_none() {
+        let entered = self.owns.then_some(self.entered);
+        if handler.is_none() && setter.is_none() && entered.is_none() {
             return None;
         }
-        Some(move |next: T| match (&handler, &setter) {
-            (Some(handler), _) => handler.call(next),
-            (None, Some(setter)) => setter.set(next),
-            (None, None) => {}
+        Some(move |next: T| {
+            // Copied out, so the closure stays an `Fn` - a handler a field
+            // holds across renders cannot be `FnMut`.
+            if let Some(mut entered) = entered {
+                entered.set(Some(next.clone()));
+            }
+            match (&handler, &setter) {
+                (Some(handler), _) => handler.call(next),
+                (None, Some(setter)) => setter.set(next),
+                (None, None) => {}
+            }
         })
+    }
+
+    /// What the user last entered, for a field with no handler and no place in
+    /// a form's value. Without it such a field has no value at all: its rules
+    /// would judge `T::default()` for ever, and inside a `Form` that default
+    /// cancels every submit.
+    ///
+    /// A control the browser keeps no state for - a checkbox, a switch - also
+    /// *renders* from it, and so becomes usable uncontrolled. One that keeps
+    /// its own text does not: writing the text back would move the caret.
+    pub fn entered(&self) -> Option<T> {
+        self.owns.then(|| self.entered.cloned()).flatten()
+    }
+
+    /// The status the field's own rules give it, over the value they must
+    /// judge: the form's value when bound, else `value`, else what the user
+    /// entered. Nothing is read without rules, so a field that has none never
+    /// re-renders on a keystroke.
+    pub fn check(&self, rules: &Validators<T>, value: Option<T>) -> Option<FieldStatus>
+    where
+        T: Default,
+    {
+        if rules.is_empty() {
+            return None;
+        }
+        Some(rules.validate(&value.or_else(|| self.entered()).unwrap_or_default()))
     }
 }
 
@@ -878,14 +924,6 @@ fn attribute_text(attributes: &[Attribute], name: &str) -> Option<String> {
             (found, AttributeValue::Text(value)) if found == name => Some(value.clone()),
             _ => None,
         })
-}
-
-/// A caller's own `aria-describedby` wins outright - ours is dropped rather
-/// than merged, so the caption props become purely visual.
-fn caller_names_the_description(attributes: &[Attribute]) -> bool {
-    attributes
-        .iter()
-        .any(|attribute| attribute.name == "aria-describedby")
 }
 
 pub(super) fn join_ids(id: &str, slots: [(&'static str, bool); 3]) -> Option<String> {

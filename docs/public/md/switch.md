@@ -4,7 +4,7 @@ Crate: `libero`
 Import: `use libero::components::Switch;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/switch.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: A strictly controlled on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
+Description: An on/off toggle - a visually hidden checkbox with `role="switch"`, drawn as a track and thumb, wearing the field slots.
 
 A checkbox styled as a track and thumb. A visually hidden `<input>` does the
 real work, so it is announced as a switch, and Space and Enter both toggle it.
@@ -34,14 +34,24 @@ fn Demo() -> Element {
 }
 ```
 
-## Controlled, always
+## Who owns the on state
 
-`checked` in, `onchange` out, with no uncontrolled mode. The browser never
-toggles the input itself: a click on the label is cancelled, and Space and Enter
-are answered on `keydown`, so the switch only moves when its state does - the
-browser's own flip never gets to disagree with Rust. `checked` without
-`onchange` can never change, and `onchange` without `checked` can never appear
-on; the library warns about either alone.
+The browser never toggles the input itself: a click on the label is cancelled,
+and Space and Enter are answered on `keydown`, so the switch only moves when
+its state does - the browser's own flip never gets to disagree with Rust. That
+does not change.
+
+What changes is who holds the state:
+
+- `checked` given: it wins, and the caller owns it. Pair it with `onchange` or
+  the switch cannot move.
+- A `name` that is a path into the surrounding `Form`'s value: the form owns
+  it.
+- None of those: the switch remembers the user's own activation, so it moves
+  and its `validate` rules judge where it was left.
+
+`checked` without `onchange` can never change, and `onchange` without `checked`
+can never appear on; the library warns about either alone.
 
 ## Migrating from the pre-field Switch
 
@@ -74,7 +84,7 @@ label is better. With neither, it warns in a debug build.
 | `color` | `ThemeAwareValue` | `primary` | Track color when checked; a theme color name or a literal CSS color. Unchecked is always `grey.3`. |
 | `size` | `Size` | `md` | Controls track and thumb size, and the label beside them. |
 | `radius` | `Size` | `xl` | Track corner radius; the thumb is always a circle. |
-| `checked` | `bool` | - | Strictly controlled - pair it with `onchange`. |
+| `checked` | `bool` | - | Pair it with `onchange`. Left out, the switch keeps its own state unless a `name` binds it to the form around it. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |
 | `label` | `Caption` | - | The caption beside the track. Names the switch through a `for`/`id` pair. |
 | `description` | `Caption` | - | Under the label: what turning it on does. |
@@ -82,6 +92,7 @@ label is better. With neither, it warns in a debug build.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the switch. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 | `aria_label` | `String` | - | Names the switch when it has no `label`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,

@@ -110,6 +110,10 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
 
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
+    // The text is the value, so the native `readonly` covers typing; the
+    // suggestion list is the other way to change it, and a read-only field
+    // does not open it.
+    let readonly = props.readonly.unwrap_or(false);
     let text = bound.value().unwrap_or_else(|| props.value.clone());
 
     if props.oninput.is_none() && !bound.is_bound() {
@@ -238,6 +242,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
+        .attr("readonly", readonly)
         .attr("required", required)
         .attr("autocomplete", "off")
         .event("oninput", move |event: FormEvent| {
@@ -259,7 +264,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             rows,
             active: state.active(),
             onactive: move |row| state.set_active(Some(row)),
-            opened: state.opened() && !disabled,
+            opened: state.opened() && !disabled && !readonly,
             onopened: move |opened| state.set_opened(opened),
             state,
             empty: props.empty,

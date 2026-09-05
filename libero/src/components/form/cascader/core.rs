@@ -279,10 +279,13 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     let size = props.size.copied_or(theme.cascader.size);
     let radius = props.radius.copied_or(theme.cascader.radius);
     let disabled = props.disabled.unwrap_or(false);
+    // Like `SelectCore`: the tree is the only editor, so read-only leaves the
+    // trigger focusable and posting and refuses to open it.
+    let readonly = props.readonly.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
     let state = use_combobox();
-    let opened = state.opened() && !disabled;
+    let opened = state.opened() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
     // One index per level. `[2, 0]` highlights the first child of the third
@@ -348,7 +351,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .prepare();
 
     let clear = clear_button(
-        props.clearable && committed.is_some() && !disabled,
+        props.clearable && committed.is_some() && !disabled && !readonly,
         size,
         trigger_element,
         move |_| {
@@ -376,7 +379,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         state,
         open: open.clone(),
         commit: commit.clone(),
-        disabled,
+        disabled: disabled || readonly,
         searchable,
         any_level,
         layout,
@@ -506,9 +509,10 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .element(&trigger_element)
         .attr("aria-labelledby", field.label_id())
         .attr("aria-disabled", disabled.then_some("true"))
+        .attr("aria-readonly", readonly.then_some("true"))
         .attr("tabindex", (!disabled).then_some("0"))
         .event("onclick", move |_: MouseEvent| {
-            if !disabled {
+            if !disabled && !readonly {
                 toggle(!state.opened());
             }
         })

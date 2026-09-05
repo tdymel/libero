@@ -101,7 +101,8 @@ field_props! {
         /// The track colour when checked.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// Strictly controlled - pair it with `onchange`.
+        /// Pair it with `onchange`. Left out, the switch keeps its own state
+        /// unless a `name` binds it to the form around it.
         #[props(default)]
         checked: Option<bool>,
         /// Called with the value `checked` should take next.
@@ -125,10 +126,11 @@ field_props! {
 /// A checkbox styled as a track and thumb, with its label beside it and the
 /// description, helper text and validation message under both.
 ///
-/// Strictly controlled: pass `checked` and handle `onchange`. The browser
-/// never toggles the input itself - a label click, Space and Enter are taken
-/// in Rust - so the track, the DOM property, assistive tech and form
-/// submission never drift apart.
+/// The browser never toggles the input itself - a label click, Space and
+/// Enter are taken in Rust - so the track, the DOM property, assistive tech
+/// and form submission never drift apart. Pass `checked` and handle `onchange`
+/// to own the state; with neither, and outside a form binding, the switch
+/// keeps its own.
 #[component]
 pub fn Switch(props: SwitchProps) -> Element {
     let theme = use_theme();
@@ -139,7 +141,16 @@ pub fn Switch(props: SwitchProps) -> Element {
     let required = props.required.unwrap_or(false);
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
-    let checked = bound.value().or(props.checked).unwrap_or(false);
+    let checked = bound
+        .value()
+        .or(props.checked)
+        .or(bound.entered())
+        .unwrap_or(false);
+
+    // HTML's `readonly` does not apply to a checkbox, and the activation is
+    // ours anyway - so it is refused here and said with `aria-readonly`,
+    // which the `switch` role inherits from `checkbox`.
+    let readonly = props.readonly.unwrap_or(false);
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Switch: `checked` without `onchange` can never change.");
@@ -152,6 +163,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     let toggle = move || {
         if let Some(onchange) = &onchange
             && !disabled
+            && !readonly
         {
             onchange(!checked);
         }
@@ -217,6 +229,7 @@ pub fn Switch(props: SwitchProps) -> Element {
         .attr("data-controlled", true)
         .attr("name", bound.name().map(str::to_string))
         .attr("disabled", disabled)
+        .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
         .attr("aria-label", props.aria_label)
         // Void element - `()` costs no dynamic node.

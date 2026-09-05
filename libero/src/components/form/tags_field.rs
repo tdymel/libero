@@ -137,6 +137,10 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
 
     let bound = use_bound(&props.name, props.onchange.is_some());
     let disabled = bound.disabled(props.disabled);
+    // Three ways to change the list, so three refusals: the draft input
+    // (native `readonly`), the keys that commit or delete a tag, and the
+    // chips' own remove buttons. The clear button stands down with them.
+    let readonly = props.readonly.unwrap_or(false);
     let held = bound.value().unwrap_or_else(|| props.value.clone());
 
     if props.onchange.is_none() && !bound.is_bound() {
@@ -219,7 +223,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         });
         match &draw_tag {
             Some(tag) => tag.call(SelectionArgs { value, remove }),
-            None => removable_chip(value, remove, size, disabled),
+            None => removable_chip(value, remove, size, disabled || readonly),
         }
     });
     let tags = rsx! {
@@ -265,7 +269,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     let clear_change = onchange.clone();
     let clearable = props.clearable.unwrap_or(false);
     let clear = clear_button(
-        clearable && !(held.is_empty() && text().is_empty()) && !disabled,
+        clearable && !(held.is_empty() && text().is_empty()) && !disabled && !readonly,
         size,
         input_element,
         move |_| {
@@ -319,6 +323,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             (held.is_empty()).then_some(props.placeholder).flatten(),
         )
         .attr("disabled", disabled)
+        .attr("readonly", readonly)
         .attr("required", (required && held.is_empty()).then_some(true))
         .attr("autocomplete", "off")
         .event("oninput", move |event: FormEvent| {
@@ -345,7 +350,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
             }
         })
         .event("onkeydown", move |event: KeyboardEvent| {
-            if disabled {
+            if disabled || readonly {
                 return;
             }
             match event.key() {
@@ -381,7 +386,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         // it off, and one for "discard my typing" is not worth the line.
         .event("onblur", move |_: FocusEvent| {
             let draft = text();
-            if !draft.trim().is_empty() {
+            if !readonly && !draft.trim().is_empty() {
                 blurring(vec![draft]);
                 text.set(String::new());
             }

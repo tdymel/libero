@@ -67,6 +67,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
 
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
+    let readonly = props.readonly.unwrap_or(false);
     let value = bound.value().or_else(|| props.value.clone());
 
     let field = use_field()
@@ -74,7 +75,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .description(&props.description)
         .helper(&props.helper)
         .status(&props.status)
-        .rules(props.validate.check(&value.clone().unwrap_or_default()))
+        .rules(bound.check(&props.validate, value.clone()))
         .bound(&bound)
         .required(required)
         .disabled(disabled)
@@ -104,6 +105,7 @@ pub fn Textarea(props: TextareaProps) -> Element {
         .attr("rows", props.rows.to_string())
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
+        .attr("readonly", readonly)
         .attr("required", required)
         .event(
             "oninput",

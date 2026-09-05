@@ -300,6 +300,11 @@ fn render_cost_per_component() {
         "Leaf" { Leaf { "x" } }
 
         "Box" { Box { "x" } }
+        // Every caller attribute is walked once by `styling_attributes`, which
+        // merges `class`, `style` and `aria-describedby` and passes the rest
+        // through. Six is more than a real call site spreads, so this is the
+        // pessimistic end of what that walk costs.
+        "Box+attributes" { Box { id: "i", role: "note", tabindex: "0", "aria-label": "a", "aria-describedby": "d", "data-x": "1", "x" } }
         "Flex" { Flex { "x" } }
         "GridZone" { GridZone { GridItem { "x" } } }
         "Center" { Center { "x" } }

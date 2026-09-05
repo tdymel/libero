@@ -58,6 +58,12 @@ macro_rules! field_props {
                 disabled: Option<bool>,
                 #[props(default)]
                 required: Option<bool>,
+                /// Focusable and posted with the form, but not editable.
+                /// `disabled` instead drops the field from the tab order and
+                /// from the post, which is wrong for a review-your-answers
+                /// view. `None` is "not stated".
+                #[props(default)]
+                readonly: Option<bool>,
             }
         }
     };

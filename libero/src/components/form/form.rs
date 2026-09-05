@@ -24,6 +24,11 @@ pub trait FormValue: Clone + PartialEq + Default + 'static {}
 
 impl<T: Clone + PartialEq + Default + 'static> FormValue for T {}
 
+/// The root binding a `Store` gives the fields, with its type erased.
+fn root_binding<V: FormValue>(value: Option<Store<V>>) -> Binding {
+    Binding::root(value.map(|value| Rc::new(value) as Rc<dyn Source>))
+}
+
 static FORM_SX: StaticSx = StaticSx::new(|| {
     FormDefaults::theme_vars()
         .display("flex")
@@ -50,6 +55,9 @@ base_props! {
         /// whose `name` is a path into it - `Signup::FIELDS.email()` - reads
         /// and writes its place in it, unless it has a handler of its own.
         /// A `Store`, so typing into one field re-renders that field only.
+        /// Handing over a different store - another record in an edit view -
+        /// mounts the fields again on it, so nothing is left reading the old
+        /// one.
         #[props(default)]
         value: Option<Store<V>>,
         /// Composite rules over `value`. Name the fields a rule concerns with
@@ -84,10 +92,31 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     use_context_provider(|| handle);
     let key = use_hook(|| scope.key());
     use_drop(move || scope.withdraw(key));
-    // Taken once: the fields resolve their binding when they mount.
-    let binding =
-        use_hook(|| Binding::root(props.value.map(|value| Rc::new(value) as Rc<dyn Source>)));
-    use_context_provider(|| binding);
+    // A field resolves its binding when it mounts, so the binding is keyed on
+    // the store: a caller that hands over a *different* `Store` - another
+    // record in an edit view, or `None` then `Some` - gets the fields mounted
+    // again on it, because their binding, their form scope and their touched
+    // state all belong to the store they resolved against. `Store`'s equality
+    // is its identity and not its contents, so a write is not a swap.
+    let mut store = use_hook(|| CopyValue::new(props.value));
+    let mut record = use_hook(|| CopyValue::new(0u32));
+    let swapped = *store.peek() != props.value;
+    if swapped {
+        store.set(props.value);
+        let next = *record.peek() + 1;
+        record.set(next);
+    }
+    let mut binding = use_hook(|| CopyValue::new(root_binding(props.value)));
+    if swapped {
+        binding.set(root_binding(props.value));
+    }
+    let current = binding.peek().clone();
+    use_context_provider(|| current.clone());
+    if swapped {
+        // The fields about to mount read it out of the context, so it has to
+        // be the new one before they do.
+        provide_context(current);
+    }
     // Read only with rules to run, so a form without any does not re-render on
     // every keystroke.
     let issues = match (props.validate.is_empty(), props.value) {
@@ -102,10 +131,11 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
     let summary_element = use_element();
     let summary = use_hook(|| {
         let summary = Summary::new(focus_requests);
-        let value = props.value;
         handle.attach(Control {
+            // Through `store`, so a reset clears the value the fields are on
+            // and not the one the form mounted with.
             reset_value: Rc::new(move || {
-                if let Some(mut value) = value {
+                if let Some(mut value) = *store.peek() {
                     value.set(V::default());
                 }
             }),
@@ -183,7 +213,19 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
 
     // Always two children: a summary slot that appears would otherwise shift
     // the fields, and dioxus would remount them - new ids, touched state lost.
-    let children = vec![summary_node.unwrap_or_else(VNode::empty), props.children];
+    // The fields are keyed on the record instead, which is the one time they
+    // *must* be remounted.
+    // Both keyed, or dioxus refuses to diff the pair: a key on one sibling
+    // makes the whole list keyed. The summary's never changes.
+    let summary_key = "summary";
+    let children = vec![
+        rsx! {
+            Fragment { key: "{summary_key}", {summary_node.unwrap_or_else(VNode::empty)} }
+        },
+        rsx! {
+            Fragment { key: "{record.peek()}", {props.children} }
+        },
+    ];
 
     use_box()
         .framework_sx(&FORM_SX)

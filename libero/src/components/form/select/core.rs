@@ -174,10 +174,14 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let size = props.size.copied_or(theme.select.size);
     let radius = props.radius.copied_or(theme.select.radius);
     let disabled = props.disabled.unwrap_or(false);
+    // The list is the only editor, so read-only keeps the trigger focusable
+    // and posting and refuses to open it. The chip keys and the clear button
+    // go with it, and `aria-readonly` says so on the `combobox` role.
+    let readonly = props.readonly.unwrap_or(false);
     let required = props.required.unwrap_or(false);
 
     let state = use_combobox();
-    let opened = state.opened() && !disabled;
+    let opened = state.opened() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
 
     // The query lives here, beside the open and highlight state. The skins
@@ -252,7 +256,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let onclear = props.onclear;
     let onremove = props.onremove;
     let clear = clear_button(
-        props.clearable && has_selection && !disabled,
+        props.clearable && has_selection && !disabled && !readonly,
         size,
         trigger_element,
         move |_| onclear.call(()),
@@ -368,9 +372,10 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .element(&trigger_element)
         .attr("aria-labelledby", field.label_id())
         .attr("aria-disabled", disabled.then_some("true"))
+        .attr("aria-readonly", readonly.then_some("true"))
         .attr("tabindex", (!disabled).then_some("0"))
         .event("onclick", move |_: MouseEvent| {
-            if !disabled {
+            if !disabled && !readonly {
                 open(!state.opened());
             }
         })
@@ -379,7 +384,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         // rest. While `searchable` and open the focus is in the search box, so
         // none of this fires and Backspace only ever edits the query.
         .event("onkeydown", move |event: KeyboardEvent| {
-            if disabled {
+            if disabled || readonly {
                 return;
             }
             match event.key() {

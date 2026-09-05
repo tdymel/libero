@@ -127,6 +127,9 @@ pub fn Radio(props: RadioProps) -> Element {
     let disabled = props.disabled.unwrap_or(false);
     let required = props.required.unwrap_or(false);
     let checked = props.checked.unwrap_or(false);
+    // As on `Checkbox`: HTML's `readonly` does not apply to a radio, so the
+    // activation is refused here and said with `aria-readonly`.
+    let readonly = props.readonly.unwrap_or(false);
     let card = props.variant.copied_or_default() == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onselect.is_none() {
@@ -140,6 +143,7 @@ pub fn Radio(props: RadioProps) -> Element {
         if let Some(onselect) = &onselect
             && !checked
             && !disabled
+            && !readonly
         {
             onselect.call(());
         }
@@ -194,6 +198,7 @@ pub fn Radio(props: RadioProps) -> Element {
         .attr("checked", checked)
         .attr("data-controlled", true)
         .attr("disabled", disabled)
+        .attr("aria-readonly", readonly.then_some("true"))
         .attr("required", required)
         .attr("aria-label", props.aria_label)
         // Void element - `()` costs no dynamic node.

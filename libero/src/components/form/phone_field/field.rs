@@ -169,6 +169,9 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
 
     let bound = use_bound(&props.name, props.oninput.is_some());
     let disabled = bound.disabled(props.disabled);
+    // Two editors, so two refusals: the national text (native `readonly`) and
+    // the country picker, whose pick rewrites the E.164 value.
+    let readonly = props.readonly.unwrap_or(false);
     let current = bound.value().or_else(|| props.value.clone());
 
     // The country the user picked, which only the picker writes. The prop is
@@ -369,7 +372,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             event.prevent_default()
         })
         .event("onclick", move |_: MouseEvent| {
-            if !disabled {
+            if !disabled && !readonly {
                 state.toggle();
             }
         })
@@ -441,6 +444,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .attr("data-controlled", true)
         .attr("placeholder", props.placeholder)
         .attr("disabled", disabled)
+        .attr("readonly", readonly)
         .attr("required", required)
         .event("oninput", move |event: FormEvent| {
             let raw = event.value();

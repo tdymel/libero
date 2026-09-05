@@ -77,10 +77,12 @@ Leave `label` unset only when something else already names the field.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
-`states`, and any extra HTML attributes - `name`, `readonly`, `maxlength` and
-`wrap` among them, since the props extend `textarea`'s own.
+`states`, and any extra HTML attributes - `name`, `maxlength` and `wrap` among
+them, since the props extend `textarea`'s own. `readonly` is a prop of its own,
+not one of those.
 
 ## Theme defaults
 

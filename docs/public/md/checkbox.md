@@ -31,17 +31,24 @@ fn Demo() -> Element {
 }
 ```
 
-## Controlled, always
+## Who owns the checked state
 
-`checked` in, `onchange` out, with no uncontrolled mode. The browser never
-toggles the input itself - a click on the label is cancelled and Space is
-answered on `keydown` - and the DOM is re-rendered from Rust, so the box, the
-`checked` DOM property, `:checked`, assistive tech and form submission cannot
-drift apart.
-A caller that ignores `onchange` gets a checkbox that does not move - which is
-the honest outcome, not a bug.
+The browser never toggles the input itself - a click on the label is cancelled
+and Space is answered on `keydown` - and the DOM is re-rendered from Rust, so
+the box, the `checked` DOM property, `:checked`, assistive tech and form
+submission cannot drift apart. That does not change.
 
-Passing one half of the pair warns in debug builds: `checked` without
+What changes is who holds the state:
+
+- `checked` given: it wins, and the caller owns it. Pair it with `onchange` or
+  the box cannot move.
+- A `name` that is a path into the surrounding `Form`'s value: the form owns
+  it.
+- None of those: the checkbox remembers the user's own activation, so it ticks
+  and its `validate` rules judge what was ticked. A required checkbox outside a
+  store therefore works, where before it read unticked for ever.
+
+Passing one half of the pair still warns in debug builds: `checked` without
 `onchange` can never change, `onchange` without `checked` can never appear
 checked.
 
@@ -109,7 +116,7 @@ Space toggles it. Without a `label`, give it an `aria_label`.
 | `color` | `ThemeAwareValue` | `primary` | The box's color when checked. |
 | `size` | `Size` | `md` | The size of the box, and of the label and captions beside it. |
 | `radius` | `Size` | `sm` | Corner radius of the box, independent of `size`. |
-| `checked` | `bool` | - | Strictly controlled - pair it with `onchange`. |
+| `checked` | `bool` | - | Pair it with `onchange`. Left out, the box keeps its own state unless a `name` binds it to the form around it. |
 | `indeterminate` | `bool` | `false` | Draws the mixed state and reads as `aria-checked="mixed"`. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. |
 | `label` | `Caption` | - | The caption beside the box. Names the checkbox through a `for`/`id` pair. |
@@ -118,6 +125,7 @@ Space toggles it. Without a `label`, give it an `aria_label`.
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the checkbox. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 | `aria_label` | `String` | - | Names the checkbox when it has no `label`. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws the checkbox as a bordered surface that is its own hit area. |
 

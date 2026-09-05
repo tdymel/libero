@@ -115,7 +115,7 @@ alone, so they move the search box's caret.
 ## Props
 
 Everything `field_props!` gives every field - `label`, `description`, `helper`,
-`status`, `size`, `radius`, `required`, `disabled`, `class`, `sx`, `states`,
+`status`, `size`, `radius`, `required`, `disabled`, `readonly`, `class`, `sx`, `states`,
 `attributes` - plus:
 
 | Prop | Type | Default | What it does |

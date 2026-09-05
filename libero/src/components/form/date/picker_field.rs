@@ -194,6 +194,7 @@ pub(super) struct PickerField<'a, V: 'static> {
     pub radius: Input<Size>,
     pub required: Option<bool>,
     pub disabled: Option<bool>,
+    pub readonly: Option<bool>,
     pub class: &'a Input<ClassList>,
     pub sx: &'a Input<Sx>,
     pub states: &'a Input<States>,
@@ -228,6 +229,7 @@ macro_rules! picker_field {
             radius: $props.radius.clone(),
             required: $props.required,
             disabled: $props.disabled,
+            readonly: $props.readonly,
             class: &$props.class,
             sx: &$props.sx,
             states: &$props.states,
@@ -255,6 +257,10 @@ pub(super) fn use_picker_field<V: FieldValue>(
     let required = field.required.unwrap_or(false);
     let bound = use_bound(field.name, field.onchange.is_some());
     let disabled = bound.disabled(field.disabled);
+    // Two editors again: the text (native `readonly`) and the dropdown, which
+    // is refused rather than opened - so focus, Tab and the form post are
+    // untouched.
+    let readonly = field.readonly.unwrap_or(false);
     let value = bound.value().unwrap_or(field.value);
     let today = use_today(field.today);
 
@@ -333,7 +339,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
     // Every one of these is a hook, so all of them run before anything
     // branches on `opened`.
     let anchor = use_element();
-    let showing = opened() && !disabled;
+    let showing = opened() && !disabled && !readonly;
     let popover = use_popover(
         anchor,
         showing,
@@ -389,6 +395,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("data-controlled", true)
         .attr("placeholder", field.placeholder)
         .attr("disabled", disabled)
+        .attr("readonly", readonly)
         .attr("required", required)
         .attr("autocomplete", "off")
         .attr("aria-haspopup", "dialog")
@@ -397,16 +404,23 @@ pub(super) fn use_picker_field<V: FieldValue>(
             rejected.set(false);
             draft.set(Some(event.value()));
         })
-        .event("onfocus", move |_: FocusEvent| match returning() {
-            true => returning.set(false),
-            false => opened.set(true),
+        .event("onfocus", move |_: FocusEvent| {
+            match (returning(), readonly) {
+                (true, _) | (_, true) => returning.set(false),
+                (false, false) => opened.set(true),
+            }
         })
-        .event("onclick", move |_: MouseEvent| opened.set(true))
+        .event("onclick", move |_: MouseEvent| {
+            if !readonly {
+                opened.set(true);
+            }
+        })
         .event("onblur", move |_: FocusEvent| {
             commit_on_blur();
             settle();
         })
         .event("onkeydown", move |event: KeyboardEvent| match event.key() {
+            _ if readonly => {}
             Key::Enter => commit_on_enter(),
             Key::ArrowDown => {
                 event.prevent_default();

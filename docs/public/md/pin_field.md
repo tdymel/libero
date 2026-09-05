@@ -124,18 +124,18 @@ group, and the cells carry no names of their own.
 | `separator` | `Element` | - | Rendered between the cells. |
 | `name` | `String` | - | Emits a hidden input of that name, so the pin posts with a form. |
 | `autofocus` | `bool` | `false` | Focuses the first cell on mount. |
-| `readonly` | `bool` | `false` | The pin can be read and copied, but not changed. |
 | `label` | `Caption` | - | The field's caption, above the cells. Names the group through `aria-labelledby`. |
 | `description` | `Caption` | - | Between the label and the cells. |
 | `helper` | `Caption` | - | Under the cells. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `aria-required` on the group and marks the label. |
 | `disabled` | `bool` | `false` | Disables every cell and dims the field. |
+| `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes. Unlike the other fields, those
 attributes land on the group, not on an input - the field owns several, so
-`readonly`, `autofocus` and `name` are props of its own instead.
+`autofocus` and `name` are props of its own instead.
 
 ## Theme defaults
 

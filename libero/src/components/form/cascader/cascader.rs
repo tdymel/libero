@@ -264,6 +264,7 @@ pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {
             size: props.size.copied_or(theme.cascader.size),
             radius: props.radius.copied_or(theme.cascader.radius),
             disabled: Some(bound.disabled(props.disabled)),
+            readonly: props.readonly,
             required: props.required,
             class: props.class,
             sx: props.sx,

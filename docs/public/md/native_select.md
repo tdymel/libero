@@ -179,8 +179,8 @@ option needs a listbox rather than a native `<select>`.
 
 Leave `label` unset only when something else already names the select; a bare
 `<select>` with no accessible name is a defect. A caller-supplied
-`aria-describedby` replaces the one built from the caption slots, rather than
-joining it.
+`aria-describedby` joins the one built from the caption slots - the caller's
+ids first - so the validation message is never lost.
 
 ## Props
 

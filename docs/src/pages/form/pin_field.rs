@@ -28,7 +28,6 @@ pub fn PinFieldPage() -> Element {
                     prop("separator", "Element").doc("Rendered between the cells - a dash, a wider gap."),
                     prop("name", "String").doc("Emits a hidden input of that name, so the pin posts with a form. The cells cannot carry it - there are several of them."),
                     prop("autofocus", "bool").default("false").doc("Focuses the first cell on mount."),
-                    prop("readonly", "bool").default("false").doc("The pin can be read and copied, but not changed."),
                     prop("label", "Caption")
                         .doc("The field's caption, above the cells. Names the group through `aria-labelledby` - a `div` is not labelable."),
                     prop("description", "Caption").doc("Between the label and the cells: where the code came from."),
@@ -38,6 +37,7 @@ pub fn PinFieldPage() -> Element {
                         .doc("Validation state, rendered under the helper. A bare `&str` is an error."),
                     prop("required", "bool").default("false").doc("Adds `aria-required` to the group and an asterisk to the label."),
                     prop("disabled", "bool").default("false").doc("Disables every cell and dims the field."),
+                    prop("readonly", "bool").default("false").doc("Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post."),
                 ]),
             ],
             lead: rsx! {

@@ -87,6 +87,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             radius: props.radius,
             disabled: props.disabled,
             required: props.required,
+            readonly: props.readonly,
             name: props.name,
             value: props.value,
             oninput: props.oninput,
