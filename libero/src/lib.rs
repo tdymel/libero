@@ -6,6 +6,8 @@
 pub mod components;
 pub mod context;
 pub mod hooks;
+#[cfg(doctest)]
+mod md_examples;
 pub mod platform;
 
 mod css;

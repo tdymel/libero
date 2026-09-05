@@ -14,7 +14,7 @@ the caller's, usually from a button inside the step.
 
 ## Usage
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Button, Options, StepState, Stepper, Text};
 

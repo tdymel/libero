@@ -120,7 +120,7 @@ for a keyboard user. Nothing can detect this for you: `.bullet()` takes any
 
 `align` puts content on either side of the rail, or alternates it:
 
-```rust
+```rust,ignore
 Timeline { align: "alternate", items: vec![/* .. */] }
 ```
 

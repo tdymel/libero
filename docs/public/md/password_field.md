@@ -54,7 +54,7 @@ be able to ask for, and a caller that wants plain text wants a `TextField`.
 a password nobody can read back is this field's worst papercut - and worth
 turning off for a confirmation field, which adds nothing beside a revealed twin:
 
-```rust
+```rust,ignore
 PasswordField {
     label: "Repeat password",
     reveal_button: false,

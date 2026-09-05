@@ -53,7 +53,7 @@ last. The windows sit on the viewport, not in the preview: a window is
 
 Reporting the geometry, with one callback for both events:
 
-```rust
+```rust,ignore
 let mut last = use_signal(|| None::<WindowRect>);
 let report = use_callback(move |rect: WindowRect| last.set(Some(rect)));
 let inspector = use_floating_window(

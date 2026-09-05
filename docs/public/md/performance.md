@@ -66,7 +66,7 @@ values, `Signal`s and a `use_callback` do; a bare closure never does, and neithe
 does `children` - two `Element`s compare by pointer, so a component that takes
 children can never memoize.
 
-```rust
+```rust,ignore
 // Re-renders every time the list does: a bare closure has a
 // fresh identity each render, so the props never compare equal.
 Row { onselect: move |_| selected.set(id), .. }

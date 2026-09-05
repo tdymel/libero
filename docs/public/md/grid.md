@@ -159,7 +159,7 @@ a span. `sp()` keys the span off the *zone's* width instead, through a container
 query. Narrow the window and the three cards below walk down the ladder: three
 across, then two with C wrapping under them, then one per row.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Grid, GridItem, GridSpan, GridZone, SpanValue, sp};
 

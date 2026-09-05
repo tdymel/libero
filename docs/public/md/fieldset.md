@@ -57,7 +57,7 @@ fn AddressFieldset() -> Element {
 Give the group a `path`. Field names and rule paths inside are relative to it.
 On its own a fieldset takes a `value` store instead.
 
-```rust
+```rust,ignore
 Form {
     value: order,
     Fieldset {

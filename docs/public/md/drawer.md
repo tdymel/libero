@@ -57,7 +57,7 @@ The argument and result types are the modal's, so a drawer takes per-opening
 data and answers its caller exactly like any other dialog - see
 [Modal](modal.md) for `open_with`, `Opening`, `on_result` and `.await`.
 
-```rust
+```rust,ignore
 let details = use_drawer(
     DrawerOptions {
         anchor: "right".into(),
@@ -100,7 +100,7 @@ owns its own dismissal.
 
 ### `use_drawer`
 
-```rust
+```rust,ignore
 pub fn use_drawer<S: Clone + 'static, R: Clone + 'static>(
     options: DrawerOptions,
     render: impl FnMut(ModalScope<S, R>) -> Element + 'static,

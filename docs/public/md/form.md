@@ -13,7 +13,7 @@ paths and binding fit together is explained in
 
 ## Usage
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};
 
@@ -64,7 +64,7 @@ a line leaves once it is fixed, and none is added until the next submit.
 `use_form()` makes a handle to pass as `form`. Inside a form,
 `use_form_context()` returns the same handle.
 
-```rust
+```rust,ignore
 #[component]
 fn TermsForm() -> Element {
     let terms = use_store(Terms::default);
@@ -120,7 +120,7 @@ checkout: pass `aria-labelledby` pointing at a visible heading, or
 `aria-label`. Intro text can join through `aria-describedby`. A form without a
 name is still valid.
 
-```rust
+```rust,ignore
 h2 { id: "checkout-title", "Checkout" }
 Form { "aria-labelledby": "checkout-title", value: order, /* .. */ }
 ```

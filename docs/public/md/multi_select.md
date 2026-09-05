@@ -47,7 +47,7 @@ fn Demo() -> Element {
 comma-joined text, a count, or a chip of your own. `option` works as on
 `Select`; its `selected` flag is there for a checkmark.
 
-```rust
+```rust,ignore
 MultiSelect {
     value: value(),
     onchange: move |next| value.set(next),
@@ -123,7 +123,7 @@ the search box Backspace only edits the query.
 `contains` over `Options::label`. `SelectFilterArgs<T>` carries `value` and
 `query`.
 
-```rust
+```rust,ignore
 MultiSelect {
     label: "Toppings",
     searchable: true,
@@ -137,7 +137,7 @@ MultiSelect {
 match can test anything the caller knows rather than only the label - here a
 note that is never drawn, which is what the demo's `filter` switch turns on:
 
-```rust
+```rust,ignore
 MultiSelect {
     searchable: true,
     value: value(),

@@ -49,7 +49,7 @@ button. Without `clearable` nothing produces `None`.
 `Element`. They sit where they do on every other field: the label and the
 description above the trigger, the helper and the status below it.
 
-```rust
+```rust,ignore
 Select {
     label: "Fruit",
     description: "Delivered with your next box.",
@@ -65,7 +65,7 @@ Select {
 `aria-selected`, its click - stays the component's, so a custom row cannot break
 the wiring:
 
-```rust
+```rust,ignore
 Select {
     value: value(),
     onchange: move |next| value.set(next),
@@ -90,7 +90,7 @@ closures.
 `searchable` puts a search box at the top of the list. The trigger is unchanged -
 it still shows the selection - so a closed select looks exactly as it did.
 
-```rust
+```rust,ignore
 Select {
     label: "Fruit",
     searchable: true,
@@ -104,7 +104,7 @@ By default it narrows case-insensitively on `Options::label`. `filter` replaces
 that test, so a search can match anything the caller knows - a synonym, a code,
 a record's id:
 
-```rust
+```rust,ignore
 Select {
     searchable: true,
     value: value(),
@@ -137,7 +137,7 @@ so the select takes part in a plain `<form>` submit. The trigger is a
 `<div role="combobox">` and cannot carry a `name` itself, which is why this is a
 prop and not an attribute you can spread.
 
-```rust
+```rust,ignore
 Select { label: "Fruit", name: "fruit", value: fruit(), onchange: move |next| fruit.set(next) }
 ```
 

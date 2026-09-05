@@ -54,7 +54,7 @@ two line up in one form by construction.
 `label`, `description` and `helper` are `Caption`s, so each takes either a string
 or an `Element`:
 
-```rust
+```rust,ignore
 NativeSelect {
     label: "Plan",
     description: "Billed monthly.",
@@ -121,7 +121,7 @@ a `Select`'s hidden input posts in a native form, so override it when the label
 is text a backend should never receive. The derive overrides it already: for an
 enum the wire value is the variant's name, never a customised label.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Options, NativeSelect};
 
@@ -161,7 +161,7 @@ loses its selection the moment one of those fields changes underneath it.
 Labels that need data the value does not carry go through `option_label`, which
 runs during render - so it can read a lookup table or a locale from context:
 
-```rust
+```rust,ignore
 NativeSelect {
     value: selected(),
     options: order_ids(),

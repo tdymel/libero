@@ -48,7 +48,7 @@ spacing for `padding`/`margin`/`gap`, radius for the `border_radius` family.
 Prefix it with a `-` to read the same scale in the negative direction.
 Everything else is CSS text, untouched.
 
-```rust
+```rust,ignore
 sx()
     .background("primary")        // shade 6, the base hex
     .border_color("primary.2")    // shades 1-9, generated from it
@@ -102,7 +102,7 @@ including after an ancestor. A pattern without one is appended, making
 `":hover"` and `"&:hover"` the same thing, and a comma list expands to one rule
 per part.
 
-```rust
+```rust,ignore
 sx()
     .hover(sx().background("primary.7"))                  // == selector(":hover", ..)
     .selector("& svg", sx().width("18px"))                // a descendant
@@ -118,7 +118,7 @@ sx()
 unnested declarations are the small-screen ones and each breakpoint overrides
 upwards.
 
-```rust
+```rust,ignore
 sx()
     .flex_direction("column")
     .gap("sm")
@@ -128,7 +128,7 @@ sx()
 When only one property changes, `bp()` puts the breakpoints inside the value
 instead of wrapping a block around it:
 
-```rust
+```rust,ignore
 sx().width(bp().sm("480px").lg("720px"))
 ```
 
@@ -155,7 +155,7 @@ query cannot read a CSS custom property:
 the general form `breakpoint` is the shorthand of, and the reason it exists is
 `prefers-reduced-motion`:
 
-```rust
+```rust,ignore
 sx()
     .transition("transform 200ms ease")
     .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
@@ -171,7 +171,7 @@ the one outside. A condition appends `[data-state~="open"]`, so it is one class
 and one attribute (0-2-0) against a bare class (0-1-0), and the flat form loses
 no matter where it sits in the file:
 
-```rust
+```rust,ignore
 // Wrong - the transition still plays under reduced motion.
 sx().when("open", sx().transition("transform 200ms ease"))
     .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
@@ -200,7 +200,7 @@ about it by name. The name is required: an anonymous container binds the query t
 the nearest ancestor container, which picks the wrong one as soon as containers
 nest.
 
-```rust
+```rust,ignore
 // The ancestor whose width the answer depends on:
 sx().container("demo-card")
 
@@ -224,7 +224,7 @@ container. Like `@media`, the condition cannot read a CSS custom property.
 element for CSS you already have, and any attribute or event a
 `GlobalAttributes` element accepts is forwarded to the rendered tag.
 
-```rust
+```rust,ignore
 Box {
     class: "prose",
     id: "intro",

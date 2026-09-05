@@ -38,7 +38,7 @@ fn Demo() -> Element {
 scale - a `2px` corner, or no shadow at all - is an `sx` override rather than a
 prop value:
 
-```rust
+```rust,ignore
 Paper { sx: sx().padding("lg").box_shadow("none"), "Flat" }
 ```
 

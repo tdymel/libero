@@ -53,7 +53,7 @@ defaults to zero, which lets the thumbs meet. The track's own `min` and `max`
 win over the gap, so a range too narrow to hold one never puts a thumb off the
 track.
 
-```rust
+```rust,ignore
 RangeSlider {
     label: "Price",
     value: price(),
@@ -114,7 +114,7 @@ from the lower thumb rather than from the track's start.
 `name` renders two hidden inputs under that one name, in track order, so the
 pair posts natively and reads back as a pair:
 
-```rust
+```rust,ignore
 RangeSlider { name: "price", value: price(), oninput: move |e| price.set(e.value()) }
 ```
 

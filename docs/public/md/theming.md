@@ -21,7 +21,7 @@ Only the fields you name change; the rest come from `Theme::DEFAULT`, which is a
 `'static` lifetime, so the theme is never cloned per component - reading it is a
 pointer copy.
 
-```rust
+```rust,ignore
 static THEME: Theme = Theme {
     primary: HexColor::new(0x7C3AED),
     spacing: Sizes::new(4, 8, 12, 16, 20, 24),
@@ -86,7 +86,7 @@ buttons are always pill-shaped" is a theme change, not a prop repeated at every
 call site. Nested struct update works the same way, seeded from the component's own
 `DEFAULT`.
 
-```rust
+```rust,ignore
 static THEME: Theme = Theme {
     // Every component's own defaults are a struct of their own.
     mark: MarkDefaults { color: Color::Info },
@@ -105,7 +105,7 @@ values they cannot express as CSS (`z_index`, a default that changes which eleme
 renders); this docs site uses it so a demo control can open on the theme's real
 default instead of a hardcoded one.
 
-```rust
+```rust,ignore
 let theme = use_theme();
 
 Control::color("color", [..]).default(theme.mark.color.as_str())

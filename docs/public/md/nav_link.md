@@ -17,7 +17,7 @@ its own whether it is the page you are on.
 Two links, so `active`'s auto-detection can be seen deciding *between* them: the
 one whose `to` matches the current route gets the tint and `aria-current="page"`.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::{components::{Flex, NavLink}, sx::sx};
 

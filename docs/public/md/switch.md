@@ -48,7 +48,7 @@ on; the library warns about either alone.
 The label used to be `children`. It is now `label`, the same `Caption` every
 field takes:
 
-```rust
+```rust,ignore
 // before
 Switch { checked: on(), onchange: move |next| on.set(next), "Notifications" }
 // after

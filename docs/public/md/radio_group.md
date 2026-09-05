@@ -96,7 +96,7 @@ one being turned on.
 anywhere on it picks the option. Give each one a line of its own with
 `option_description` - a card without one is only a border:
 
-```rust
+```rust,ignore
 RadioGroup {
     variant: "card",
     orientation: "horizontal",

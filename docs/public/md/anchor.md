@@ -35,7 +35,7 @@ Pass a typed route and the link navigates through the router instead of reloadin
 the page. With a router mounted and `target` unset or `"_blank"`, an internal
 target gets SPA navigation; otherwise it degrades to a plain `href`.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::Anchor;
 

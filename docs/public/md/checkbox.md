@@ -49,7 +49,7 @@ checked.
 
 `indeterminate` is the parent of a partly checked group:
 
-```rust
+```rust,ignore
 Checkbox {
     label: "All channels",
     checked: mail() && sms(),
@@ -79,7 +79,7 @@ helper and status stack under the label rather than under the box. That is
 background, border colour and radius - and a click anywhere on it toggles the
 checkbox. Pair it with a `description`; the card is what makes room for one:
 
-```rust
+```rust,ignore
 Checkbox {
     variant: "card",
     label: "Priority support",

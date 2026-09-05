@@ -93,7 +93,7 @@ fn Demo() -> Element {
 `Opening` is inert: it can neither fire its handler nor close what is on screen
 now, and it awaits to `None`.
 
-```rust
+```rust,ignore
 // Attach the consequence to this one opening.
 prompt.open_with("notes.md").on_result(move |answer| { /* ... */ });
 
@@ -125,7 +125,7 @@ component that needs a dialog simply calls the hook itself.
 The handle is `Copy`, so a trigger elsewhere in the tree can take it as a prop.
 For one shared instance behind several triggers, provide it from your own hook:
 
-```rust
+```rust,ignore
 fn use_save_prompt(discard_label: &'static str) -> ModalHandle<String, SaveChoice> {
     let handle = use_modal(/* ... */);
     use_context_provider(|| handle);
@@ -163,7 +163,7 @@ Escape or a backdrop click dismisses the modal, settling the `Opening` with
 
 ### `use_modal`
 
-```rust
+```rust,ignore
 pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
     render: impl FnMut(ModalScope<S, R>) -> Element + 'static,
 ) -> ModalHandle<S, R>
@@ -204,7 +204,7 @@ pub fn use_modal<S: Clone + 'static, R: Clone + 'static>(
 
 ### `use_modal_close`
 
-```rust
+```rust,ignore
 pub fn use_modal_close() -> Callback<()>
 ```
 

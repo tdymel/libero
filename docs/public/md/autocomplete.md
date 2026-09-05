@@ -42,7 +42,7 @@ generic is inferred from `options`, so no call site ever annotates it.
 By default the component narrows `options` itself, case-insensitively, on
 `Options::label`. Two props change that:
 
-```rust
+```rust,ignore
 // A different test - prefix instead of contains.
 Autocomplete {
     options: cities,
@@ -70,7 +70,7 @@ Autocomplete {
 stays the component's. `onpick` fires after `oninput` with the whole value, which
 is how a caller reaches the id behind the label:
 
-```rust
+```rust,ignore
 Autocomplete {
     options: airports(),
     value: text(),
@@ -91,7 +91,7 @@ A list with no rows and no `empty` renders nothing at all, which is usually what
 you want while the field is still being typed into. Pass `empty` to say so out
 loud:
 
-```rust
+```rust,ignore
 Autocomplete {
     options: cities,
     value: city(),

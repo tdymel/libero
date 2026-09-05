@@ -40,7 +40,7 @@ fn Demo() -> Element {
 `Files` takes a `FileData`, an `Option<FileData>` or a `Vec<FileData>`, so a
 caller who holds one file needs no wrapper of their own:
 
-```rust
+```rust,ignore
 let mut avatar = use_signal(|| None::<FileData>);
 
 FileField { value: avatar(), onchange: move |files: Files| avatar.set(files.one()) }
@@ -59,7 +59,7 @@ A drop carrying several files onto a single-file field keeps the first.
 replaces its own selection, and the component does not second-guess that - so a
 `multiple` field that should accumulate merges in its handler:
 
-```rust
+```rust,ignore
 onchange: move |picked: Files| {
     let mut all = files().into_vec();
     all.extend(picked.into_vec());
@@ -86,7 +86,7 @@ nothing left to ask for, so the card takes the surface's place and removing the
 file brings it back. A `multiple` one keeps its surface, since it keeps taking
 files.
 
-```rust
+```rust,ignore
 FileField {
     label: "Attachments",
     variant: "dropzone",
@@ -134,7 +134,7 @@ callback shape `MultiSelect` takes. Override it to draw a thumbnail, a size or
 an upload progress bar; the remove control is yours to place, and `args.remove`
 is the wiring.
 
-```rust
+```rust,ignore
 FileField {
     multiple: true,
     value: files(),

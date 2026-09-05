@@ -126,7 +126,7 @@ fn Demo() -> Element {
 
 Three renames, all mechanical:
 
-```rust
+```rust,ignore
 // before
 Slider { value: v(), label: Callback::new(..), on_change: move |e| .. }
 // after

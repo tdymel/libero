@@ -13,7 +13,7 @@ at the app's root, so it outlives the component that raised it.
 
 ## Usage
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
@@ -71,7 +71,7 @@ page instead of the window. It draws its nine stacks inside its own
 created below it a queue of their own: a `use_notifications()` inside it shows
 its notifications there, not in the app's host. The docs preview is one.
 
-```rust
+```rust,ignore
 Notifications { contained: true, position: "top-end",
     SaveButton {} // its `use_notifications()` shows them in this box
 }
@@ -86,7 +86,7 @@ queue goes with it, and a handle that outlives it does nothing.
 The template draws the content, and the host keeps the list item, the live
 region, the timers and the hover pause.
 
-```rust
+```rust,ignore
 #[derive(Clone, PartialEq)]
 struct Upload {
     file: &'static str,
@@ -150,7 +150,7 @@ timers and the host compile once.
 
 ### `use_notifications` / `use_notifications_with`
 
-```rust
+```rust,ignore
 pub fn use_notifications() -> NotificationHandle<NotificationData>
 pub fn use_notifications_with<T: 'static>(
     template: fn(NotificationScope<T>) -> Element,

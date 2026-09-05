@@ -108,7 +108,7 @@ and change the picture with it.
 
 ### `use_lightbox`
 
-```rust
+```rust,ignore
 pub fn use_lightbox(options: LightboxOptions) -> ModalHandle<LightboxOpening>
 ```
 

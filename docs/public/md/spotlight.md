@@ -65,7 +65,7 @@ K, because the docs site's own search owns Ctrl+K.
 
 A flat list with icons and custom texts:
 
-```rust
+```rust,ignore
 let files: Vec<SpotlightAction> = ["src", "src/main.rs", "Cargo.toml"]
     .into_iter()
     .map(|path| SpotlightAction::new(path).icon(rsx! { FileIcon {} }))
@@ -101,7 +101,7 @@ loading and "Nothing found" never flashes before the answer. While `loading`,
 the rows and "Nothing found" give way to a loader, and the status region says
 "Searching" once:
 
-```rust
+```rust,ignore
 let mut results = use_signal(Vec::<SpotlightAction>::new);
 let mut loading = use_signal(|| false);
 let spotlight = use_spotlight(SpotlightOptions {
@@ -132,7 +132,7 @@ let spotlight = use_spotlight(SpotlightOptions {
 
 ## API
 
-```rust
+```rust,ignore
 pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle;
 pub fn spotlight_filter(query: &str, actions: &[SpotlightAction]) -> Vec<SpotlightAction>;
 ```

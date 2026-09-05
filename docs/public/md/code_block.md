@@ -90,7 +90,7 @@ so a build only pays for what it highlights. The default set covers `rust`,
 name - or a recognized one whose feature is off - falls back to plain,
 unhighlighted text, which is also what leaving `language` off does.
 
-```
+```text
 bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java, javascript,
 json, kotlin, lua, markdown, objective-c, perl, php, powershell, python, r,
 ruby, rust, scala, sql, swift, toml, typescript, yaml

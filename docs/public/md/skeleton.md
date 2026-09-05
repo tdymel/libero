@@ -68,7 +68,7 @@ A skeleton says nothing to a screen reader, on purpose. While it covers, its
 content is hidden, and `aria-busy` on a hidden element reaches nobody. Mark the
 region you are filling `aria-busy` while it waits - the same rule as `Loader`.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Box, Skeleton};
 

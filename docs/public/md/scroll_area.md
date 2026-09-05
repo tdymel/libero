@@ -141,7 +141,7 @@ Name it as well as focusing it. APG's scrollable-region pattern wants a `role`
 and an accessible name on a focusable region, and `ScrollArea` sets no `role` of
 its own, so both go through the attribute spread:
 
-```rust
+```rust,ignore
 ScrollArea {
     focusable: true,
     role: "region",

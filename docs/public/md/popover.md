@@ -70,7 +70,7 @@ fn Demo() -> Element {
 
 ## Call order
 
-```rust
+```rust,ignore
 // use_popover first: the style it returns is what the box renders with.
 let anchor = use_element();
 let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
@@ -89,7 +89,7 @@ popover.show(opened().then(|| dropdown
 
 ## Focus after placed, never after mount
 
-```rust
+```rust,ignore
 // Wrong: the box is mounted but not measured, so it is still
 // `visibility: hidden`. `focus()` answers Ok(()) and nothing moves.
 use_effect(move || {
@@ -109,7 +109,7 @@ use_effect(move || {
 
 ## Context across the portal
 
-```rust
+```rust,ignore
 // The box renders at the portal outlet, at the document root, so it
 // inherits none of the context around the call site. Re-provide what
 // the content needs, inside the content itself.
@@ -125,7 +125,7 @@ use_drop(move || tick.manually_drop());
 
 ## Nested popovers
 
-```rust
+```rust,ignore
 // A submenu is its own popover, anchored to the row that opened it.
 // Geometry needs nothing: both boxes are `position: fixed`, and the one
 // portaled later paints over the earlier one. Containment does - the

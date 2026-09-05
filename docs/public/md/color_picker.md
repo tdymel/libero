@@ -37,7 +37,7 @@ One type for every CSS form. It parses from `#rgb`, `#rgba`, `#rrggbb`,
 or space separated, alpha as a number or a percentage - and converts back to
 any of them:
 
-```rust
+```rust,ignore
 let color: ColorCode = "#228be6".parse()?;
 
 color.to_hex();    // "#228be6"
@@ -117,7 +117,7 @@ keep focus - which is how `ColorField` uses it.
 
 The picker's parts, public on their own.
 
-```rust
+```rust,ignore
 HueSlider {
     value: hue(),                      // degrees, 0-360
     oninput: move |event: SliderChangeEvent| hue.set(event.value()),

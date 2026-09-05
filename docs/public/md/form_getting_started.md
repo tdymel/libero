@@ -34,7 +34,7 @@ wraps one and fixes part of its contract. libero does this itself:
 built the same way - an email, an IBAN, a phone number - with their rules built
 in, so no form repeats them.
 
-```rust
+```rust,ignore
 use libero::components::{FieldName, Rule, TextField, Validators, is_email};
 
 /// A text field that only accepts email addresses.
@@ -69,7 +69,7 @@ names its fields relative to its own type, and carries the rules that concern
 only its own fields. It knows nothing about the form it ends up in, so the same
 part serves the shipping and the billing address.
 
-```rust
+```rust,ignore
 use libero::components::{FieldName, Fields, Fieldset, Rule, TextField, not_empty};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -101,7 +101,7 @@ fn AddressFieldset(#[props(into)] label: String, #[props(into)] path: FieldName<
 The form then only arranges parts, and adds what only the whole value can
 decide:
 
-```rust
+```rust,ignore
 use libero::components::{Button, Checkbox, Fields, Form, Rule, Text, not_empty};
 
 #[derive(Clone, PartialEq, Default, Fields)]
@@ -214,7 +214,7 @@ how to reach it, and its spelling. `#[fields(nested)]` continues into a field
 whose type derives `Fields` too, and the spelling becomes a dotted name like
 `shipping.zip`.
 
-```rust
+```rust,ignore
 #[derive(Clone, PartialEq, Default, Fields)]
 struct Order {
     email: String,
@@ -249,7 +249,7 @@ whatever reads the whole value, such as the form's own rules. A `Fieldset` with 
 one level down, which is what lets a composed part use paths rooted at its own
 type.
 
-```rust
+```rust,ignore
 let order = use_store(Order::default);
 
 Form {

@@ -13,7 +13,7 @@ has.
 
 ## Usage
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::PinField;
 
@@ -89,7 +89,7 @@ numeric keypad on a phone, and no spinner, which `type="number"` would add.
 plain `<form>`. The cells cannot carry the name themselves: there are several of
 them and each holds one character.
 
-```rust
+```rust,ignore
 PinField { label: "Code", name: "otp", length: 6 }
 ```
 

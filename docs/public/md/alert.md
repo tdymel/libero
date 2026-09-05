@@ -30,7 +30,7 @@ fn Demo() -> Element {
 Severity is yours to state. The default color is `info`; pass `error`,
 `warning` or `success` when the message is one.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::Alert;
 

@@ -37,7 +37,7 @@ fn Demo() -> Element {
 string every caller special-cases. With `None` there is nothing for `T` to be
 inferred from, so that call site needs `None::<i32>` and an annotated handler:
 
-```rust
+```rust,ignore
 let mut quantity = use_signal(|| None::<i32>);
 
 NumberField {
@@ -66,7 +66,7 @@ wins - which is what makes the field controlled.
 type implements `default_step` and inherits the rest from its `FromStr` and
 `Display`, overriding `format` only when the display differs from the parse:
 
-```rust
+```rust,ignore
 use libero::components::NumberValue;
 
 /// Money is not an f64: whole cents, shown with a decimal point.
@@ -97,7 +97,7 @@ by side - which lower and raise the value by `step`, defaulting to
 `T::default_step()`. It is **off by default**: a number is usually typed, and
 two buttons are the most expensive thing a field can carry.
 
-```rust
+```rust,ignore
 NumberField {
     label: "Quantity",
     steppers: true,
@@ -106,7 +106,9 @@ NumberField {
     value: quantity(),
     onchange: move |next| quantity.set(Some(next)),
 }
-``` Arrow Up and Arrow Down do the same from the keyboard,
+```
+
+Arrow Up and Arrow Down do the same from the keyboard,
 with the default prevented so the caret does not jump. Both paths clamp to
 `min`/`max`, and an empty field steps from `T::zero()`.
 

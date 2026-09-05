@@ -141,7 +141,11 @@ pub fn CarouselPage() -> Element {
                         .default("1.5")
                         .code(|_, values| match values.str("per_view").as_str() {
                             "1" => vec![],
-                            value => vec![format!("per_view: {value}")],
+                            // `{:?}` keeps the `.0` a whole step needs.
+                            value => {
+                                let per_view = value.parse::<f64>().unwrap_or(1.0);
+                                vec![format!("per_view: {per_view:?}")]
+                            }
                         }),
                     Control::slider("gap", ["xs", "sm", "md", "lg", "xl"])
                         .default(theme.carousel.gap.as_str()),

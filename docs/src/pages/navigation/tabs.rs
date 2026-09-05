@@ -16,10 +16,12 @@ enum Section {
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
 /// closure right below - the block is a promise that the two are the same.
-const RENAMED: &str = r#"label: |section: Section| match section {
-    Section::Account => "Konto".into(),
-    Section::Admin => "Verwaltung".into(),
-    Section::Billing => "Rechnung".into(),
+const RENAMED: &str = r#"label: |section: Section| -> OptionLabel {
+    match section {
+        Section::Account => "Konto".into(),
+        Section::Admin => "Verwaltung".into(),
+        Section::Billing => "Rechnung".into(),
+    }
 }"#;
 
 // A tab is a `button`, so its content has to stay phrasing content: `Icon` is

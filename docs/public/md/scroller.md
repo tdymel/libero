@@ -43,7 +43,7 @@ fn Demo() -> Element {
 On a surface that is not the page's paper, pass that surface's colour as
 `fade_color`, or the control strip shows as a band:
 
-```rust
+```rust,ignore
 Scroller { aria_label: "Tags", fade_color: "grey.1", /* .. */ }
 ```
 
@@ -91,7 +91,7 @@ To drive the strip from buttons of your own, create a handle with
 move the strip exactly as the built-in controls do: by `scroll_amount`, from
 where the strip is now, and never past either end.
 
-```rust
+```rust,ignore
 let strip = use_scroller();
 
 rsx! {

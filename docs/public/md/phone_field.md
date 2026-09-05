@@ -58,7 +58,7 @@ right length anyway.
 
 A rule over the number is an ordinary `validate` line over the E.164:
 
-```rust
+```rust,ignore
 PhoneField {
     label: "Mobile",
     validate: Rule::required().error("Enter a phone number."),
@@ -95,7 +95,7 @@ No flags ship with it. Emoji flags render as two regional-indicator letters on
 Windows, and an inline SVG sprite of every flag costs about 44 KB gzipped, so
 `flag` is a closure a caller fills:
 
-```rust
+```rust,ignore
 PhoneField {
     label: "Mobile",
     countries: vec!["DE".into(), "FR".into()],
@@ -111,7 +111,7 @@ instead, the shape [Slider](slider.md) and [PinField](pin_field.md) already use.
 A `FieldName` built from a path also binds the number to the form's own value,
 so a bound field needs no `oninput`:
 
-```rust
+```rust,ignore
 Form {
     value: signup,
     PhoneField { label: "Mobile", country: "DE", name: Signup::FIELDS.phone() }

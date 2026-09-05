@@ -63,7 +63,7 @@ Strings sort as text and align left. Every integer and float sorts numerically
 and aligns right. `bool` prints `true`/`false`. `Option<V>` keeps the inner
 type's alignment, renders `None` as empty, and sorts it last in both directions.
 
-```rust
+```rust,ignore
 |p: &Person| p.name.clone()  // String      -> text sort, start-aligned
 |p: &Person| p.age          // u32         -> numeric sort, end-aligned
 |p: &Person| p.bonus        // Option<f64> -> None renders empty, sorts last

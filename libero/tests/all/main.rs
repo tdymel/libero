@@ -62,6 +62,7 @@ mod list;
 mod loader;
 mod mark;
 mod marquee;
+mod md_examples;
 mod menu;
 mod menubar;
 mod modal;

@@ -80,10 +80,12 @@ fn Demo() -> Element {
         Tabs {
             value: section(),
             onchange: move |next| section.set(next),
-            label: |section: Section| match section {
-                Section::Account => "Konto".into(),
-                Section::Admin => "Verwaltung".into(),
-                Section::Billing => "Rechnung".into(),
+            label: |section: Section| -> OptionLabel {
+                match section {
+                    Section::Account => "Konto".into(),
+                    Section::Admin => "Verwaltung".into(),
+                    Section::Billing => "Rechnung".into(),
+                }
             },
             panel: |section: Section| match section {
                 Section::Account => rsx! { "Konto" },
@@ -100,7 +102,7 @@ fn Demo() -> Element {
 inline-flex `<span>`, while a [Flex](flex.md) is a `<div>` and does not belong
 there.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Icon, OptionLabel, Options, Tabs};
 

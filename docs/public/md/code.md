@@ -42,7 +42,7 @@ plain, unhighlighted text, which is also what leaving `language` off does.
 The full set, spelled as the `code-lang-*` feature suffix (`language` also
 takes aliases the feature names do not, such as `rs`, `py`, `c#`):
 
-```
+```text
 bash, c, cpp, csharp, css, dart, go, graphql, haskell, html, java,
 javascript, json, kotlin, lua, markdown, objective-c, perl, php,
 powershell, python, r, ruby, rust, scala, sql, swift, toml, typescript, yaml

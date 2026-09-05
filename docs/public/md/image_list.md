@@ -18,7 +18,7 @@ own `alt`; the bar is sibling content and never becomes one.
 
 ## Usage
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Box, Image, ImageBar, ImageItem, ImageList};
 use libero::sx::sx;
@@ -48,7 +48,7 @@ fn Demo(photos: Vec<Photo>) -> Element {
 
 Every prop set:
 
-```rust
+```rust,ignore
 ImageList {
     cols: 3u8,
     variant: "masonry",
@@ -67,7 +67,7 @@ slot: a caption is content, and a component that shapes it is only ever in the
 way of the next design. `ImageBar` keeps the two things the *cell* owns - where
 the strip sits, and the scrim behind it.
 
-```rust
+```rust,ignore
 ImageBar::new(rsx! {
     Box { sx: sx().flex("1 1 auto").min_width("0"), "Breakfast" }
     // A `<button>` inherits no color, and an overlay bar's color comes from
@@ -95,7 +95,7 @@ you a bare transparent strip in the right place. `below` never had a scrim.
 
 A cell's size is a per-item value, not a prop on the list:
 
-```rust
+```rust,ignore
 ImageItem::new(rsx! { Image { src, alt, fit: "cover" } })
     .span(GridSpan::Half) // width, in twelfths - the same GridItem takes
     .rows(2)              // height, in rows - `quilted` only
@@ -111,7 +111,7 @@ so honouring a manual one there would leave the cell overlapping its neighbours.
 `ImageItem::to` makes the whole tile a hit target. **The anchor is the picture**,
 and a stretched `::after { inset: 0 }` extends the hit area over the cell.
 
-```rust
+```rust,ignore
 ImageItem::new(rsx! { Image { src, alt: "Breakfast", fit: "cover" } })
     .bar(ImageBar::new(caption))
     .to(Route::Photo { id })

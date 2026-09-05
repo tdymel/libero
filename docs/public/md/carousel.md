@@ -42,7 +42,7 @@ fn Demo() -> Element {
                     }
                 })
                 .collect(),
-            per_view: 3,
+            per_view: 3.0,
             indicators: true,
         }
     }
@@ -83,7 +83,7 @@ so switching `align` moves that slide to the left, the middle or the right.
 A vertical carousel has nothing to take its height from, so `height` is
 required there:
 
-```rust
+```rust,ignore
 Carousel {
     aria_label: "Product photos",
     orientation: "vertical",
@@ -112,7 +112,7 @@ of you would disagree forever, with your code pushing the same unreachable value
 back on every render and nothing ever converging. An uncontrolled carousel stays
 quiet, because there is no second party holding a wrong value.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Carousel, Image, Text};
 
@@ -143,7 +143,7 @@ hovering helps neither a keyboard nor a touch user. While it rotates unattended
 the live region is `aria-live="off"`, and it becomes polite again the moment it
 stops.
 
-```rust
+```rust,ignore
 Carousel { aria_label: "Offers", autoplay: true, autoplay_delay: 6000, slides: slides() }
 ```
 

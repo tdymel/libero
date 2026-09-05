@@ -69,7 +69,7 @@ What open state there is lives in **your** scope. `use_combobox()` returns a
 `ComboboxState` - three signals and the id that ties them together - which you
 pass in as `state` and can drive yourself at any time:
 
-```rust
+```rust,ignore
 let fruit = use_combobox();
 
 fruit.opened();           // is the list showing
@@ -98,10 +98,10 @@ not have to gate `opened` on it.
 `children` is the trigger, and anything that has to travel with it - a hidden
 `input` for a plain form post, say:
 
-```rust
+```rust,ignore
 Combobox {
     // ..
-    TextField { value: text(), onchange: move |next| text.set(next) }
+    TextField { value: text(), oninput: move |next| text.set(next) }
     input { r#type: "hidden", name: "fruit", value: "{text()}" }
 }
 ```
@@ -146,7 +146,7 @@ matches, capped however the data wants capping.
 There is no `filter` prop and no search field. Narrowing a list is filtering a
 `Vec`, and the caller already has the query - it is the trigger's own value:
 
-```rust
+```rust,ignore
 let suggestions = use_combobox();
 
 let matches: Vec<Fruit> = Fruit::options()
@@ -168,7 +168,7 @@ rsx! {
         TextField {
             attributes: suggestions.a11y_attributes(),
             value: text(),
-            onchange: move |next| { text.set(next); suggestions.open(); },
+            oninput: move |next| { text.set(next); suggestions.open(); },
         }
     }
 }
@@ -187,11 +187,28 @@ async list's `options` is empty between a keystroke and its answer, and without
 replaced too: they belong to the previous query, and the arrows and Enter skip
 them.
 
-```rust
+```rust,ignore
+/// How long the fake search takes.
+const LATENCY: Duration = Duration::from_millis(700);
+
+/// Stands in for the server: the fruit whose label contains `query`.
+fn matching(query: &str) -> Vec<Fruit> {
+    let query = query.to_lowercase();
+    Fruit::options()
+        .iter()
+        .copied()
+        .filter(|fruit| fruit.label().to_lowercase().contains(&query))
+        .collect()
+}
+
 let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 let mut results = use_signal(Vec::<Fruit>::new);
 let mut loading = use_signal(|| false);
+// The answer still on its way. Replacing it drops the older one, so a slow
+// answer never overwrites a newer query's.
+let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+use_drop(move || pending.set(None));
 
 rsx! {
     Combobox {
@@ -213,10 +230,16 @@ rsx! {
                 text.set(next.clone());
                 suggestions.open();
                 loading.set(true);
-                spawn(async move {
-                    results.set(search(&next).await);
-                    loading.set(false);
+                let answer = timer().map(|timer| {
+                    timer.after(
+                        LATENCY,
+                        Box::new(move || {
+                            results.set(matching(&next));
+                            loading.set(false);
+                        }),
+                    )
                 });
+                pending.set(answer);
             },
         }
     }
@@ -237,11 +260,11 @@ highlight, so typing keeps working. The trigger is the one element `Combobox`
 does not render, so spread `state.a11y_attributes()` on it. Without that the
 list is not tied to the trigger for a screen reader:
 
-```rust
+```rust,ignore
 TextField {
     attributes: suggestions.a11y_attributes(),
     value: text(),
-    onchange: move |next| { text.set(next); suggestions.open(); },
+    oninput: move |next| { text.set(next); suggestions.open(); },
 }
 ```
 

@@ -56,7 +56,7 @@ When the loader is the only content of a region, mark the region busy and keep
 the loader silent. Say the wait in a `role="status"` region that is always
 mounted and sits outside the busy element, and fill it only while loading:
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Box, Loader, VisuallyHidden};
 

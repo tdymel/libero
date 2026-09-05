@@ -85,7 +85,7 @@ segment is a `<label>`, so its content has to stay phrasing content: an
 [Icon](icon.md) is an inline-flex `span` (and it is what sizes the raw svg), a
 [Flex](flex.md) is a `div`.
 
-```rust
+```rust,ignore
 use dioxus::prelude::*;
 use libero::components::{Icon, OptionLabel, Options, SegmentedControl};
 

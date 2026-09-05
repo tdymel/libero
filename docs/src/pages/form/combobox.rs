@@ -11,12 +11,33 @@ use libero::{
     sx::sx,
 };
 
+/// The fake server the preview asks, printed so the snippet calls nothing it
+/// does not show.
+const FETCHING_SEARCH: &str = r#"/// How long the fake search takes.
+const LATENCY: Duration = Duration::from_millis(700);
+
+/// The fruit whose label contains `query`, case-insensitively.
+fn matching(query: &str) -> Vec<Fruit> {
+    let query = query.to_lowercase();
+    Fruit::options()
+        .iter()
+        .copied()
+        .filter(|fruit| fruit.label().to_lowercase().contains(&query))
+        .collect()
+}
+
+"#;
+
 /// A fetch per keystroke. `loading` is what keeps `empty` from flashing
 /// between the keystroke and the answer.
 const FETCHING_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
 let mut results = use_signal(Vec::<Fruit>::new);
 let mut loading = use_signal(|| false);
+// The answer still on its way. Replacing it drops the older one, so a slow
+// answer never overwrites a newer query's.
+let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
+use_drop(move || pending.set(None));
 
 "#;
 
@@ -29,10 +50,16 @@ const FETCHING_TRIGGER: &str = r#"TextField {
         text.set(next.clone());
         suggestions.open();
         loading.set(true);
-        spawn(async move {
-            results.set(search(&next).await);
-            loading.set(false);
+        let answer = timer().map(|timer| {
+            timer.after(
+                LATENCY,
+                Box::new(move || {
+                    results.set(matching(&next));
+                    loading.set(false);
+                }),
+            )
         });
+        pending.set(answer);
     },
 }"#;
 
@@ -87,7 +114,7 @@ const SUGGESTIONS_TRIGGER: &str = r#"TextField {
     placeholder: "Type a fruit",
     value: text(),
     attributes: suggestions.a11y_attributes(),
-    onchange: move |next| {
+    oninput: move |next| {
         text.set(next);
         suggestions.open();
     },
@@ -183,12 +210,12 @@ fn trigger_code(values: &DemoValues) -> String {
 }
 
 fn preamble(values: &DemoValues, source: &str) -> String {
-    let state = match values.str("mode").as_str() {
-        "fetching" => FETCHING_STATE,
-        "suggestions" => SUGGESTIONS_STATE,
-        _ => SELECT_STATE,
+    let (search, state) = match values.str("mode").as_str() {
+        "fetching" => (FETCHING_SEARCH, FETCHING_STATE),
+        "suggestions" => ("", SUGGESTIONS_STATE),
+        _ => ("", SELECT_STATE),
     };
-    format!("{FRUIT_ENUM}{state}{source}")
+    format!("{FRUIT_ENUM}{search}{state}{source}")
 }
 
 #[derive(Clone, Copy, PartialEq, Options)]

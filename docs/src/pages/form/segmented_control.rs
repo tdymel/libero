@@ -20,10 +20,12 @@ enum Alignment {
 
 /// Printed verbatim when the `labels` control asks for it, and rendered by the
 /// closure right below - the block is a promise that the two are the same.
-const RENAMED: &str = r#"option_label: |alignment: Alignment| match alignment {
-    Alignment::Left => "Links".into(),
-    Alignment::Center => "Mitte".into(),
-    Alignment::Right => "Rechts".into(),
+const RENAMED: &str = r#"option_label: |alignment: Alignment| -> OptionLabel {
+    match alignment {
+        Alignment::Left => "Links".into(),
+        Alignment::Center => "Mitte".into(),
+        Alignment::Right => "Rechts".into(),
+    }
 }"#;
 
 // A segment is a `label`, so its content has to stay phrasing content: `Icon`

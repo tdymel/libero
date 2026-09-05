@@ -35,7 +35,7 @@ fn Demo() -> Element {
 `value` is required and is an `Option<f64>`: a bare number works through
 `into`, and `value: None` is the indeterminate bar.
 
-```rust
+```rust,ignore
 ProgressBar { aria_label: "Connecting", value: None }
 ```
 

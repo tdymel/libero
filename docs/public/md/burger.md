@@ -66,7 +66,7 @@ a static sidebar must not steal focus.
 button a disclosure with `aria-expanded`; a modal is not expanded by its
 trigger, it replaces the page.
 
-```rust
+```rust,ignore
 // No `opened`: nothing is expanded, so nothing announces a state.
 Burger { onclick: move |_| modal.open() }
 ```
@@ -78,7 +78,7 @@ opens, or `Burger` warns. Nothing sets it internally.
 it once in `BurgerLabels`, or per burger with `label` when the locale is only
 known at runtime:
 
-```rust
+```rust,ignore
 Theme {
     burger: BurgerDefaults {
         labels: BurgerLabels { open: "Menü öffnen", close: "Menü schließen" },
