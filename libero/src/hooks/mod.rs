@@ -34,6 +34,7 @@ pub use lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox}
 pub(crate) use local_state::{LocalState, use_local_state};
 pub(crate) use modal::use_modal_z_index;
 pub use modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close};
+pub(crate) use popover::use_popover_on;
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
 };

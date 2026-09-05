@@ -380,7 +380,24 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let last = count.saturating_sub(1);
     let mut index = use_signal(|| opening.index.min(last));
     let mut zoom = use_signal(|| Zoom::fitted(usize::MAX));
-    // A second `open_with` while this one shows replaces the gallery in place.
+    // The opening `index` and `zoom` were last reset for, and whether a
+    // picture held focus when a new one arrived.
+    let settled = use_hook(|| Rc::new(RefCell::new((opening.clone(), false))));
+    // A second `open_with` while this one shows replaces the gallery in place,
+    // but the effect below only resets `index` after this render. Until then
+    // the new gallery is drawn at its own index: the new frames are keyed
+    // `<img>`s, and one created `eager` around the old index fetches at once
+    // and cannot be taken back (todo 227).
+    let pending = settled.borrow().0 != opening;
+    if pending {
+        // The last render in which the old pictures are still in the document.
+        // Their `<img>`s are about to be replaced, so focus on one would drop
+        // to the page.
+        let focused = stage
+            .query_selector("[data-lightbox-frame] img:focus")
+            .is_ok();
+        settled.borrow_mut().1 = focused;
+    }
     // A zoom is keyed by index only, so it would carry onto whichever new
     // picture lands at the same index.
     use_effect(use_reactive!(|opening| {
@@ -391,6 +408,12 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         if *zoom.peek() != fitted {
             zoom.set(fitted);
         }
+        let refocus = std::mem::replace(&mut *settled.borrow_mut(), (opening, false)).1;
+        if refocus
+            && let Ok(image) = stage.query_selector(&id_selector(&image_id(&base_id(), target)))
+        {
+            let _ = image.focus();
+        }
     }));
 
     // Measured whenever a zoom starts, so a zoomed picture always has bounds
@@ -398,13 +421,17 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let fit = use_signal(|| None::<Fit>);
     let mut gesture = use_signal(|| None::<Gesture>);
 
-    let current = index();
+    // Read either way, so this render stays subscribed to the reset.
+    let current = match index() {
+        _ if pending => opening.index.min(last),
+        settled => settled,
+    };
     let held = move || match *zoom.peek() {
         held if held.index == *index.peek() => held,
         _ => Zoom::fitted(*index.peek()),
     };
     let active = match zoom() {
-        held if held.index == current => held,
+        held if held.index == current && !pending => held,
         _ => Zoom::fitted(current),
     };
     let max_zoom = options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0);
@@ -517,8 +544,13 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
             false => "lazy",
         };
 
+        // Keyed by picture, so a gallery swapped in by a second `open_with`
+        // gets new `<img>`s: Chromium fetches a new `src` at once on an
+        // element that has loaded before, whatever `loading` says (todo 227).
+        // `Carousel` keys its slide wrappers by position, so the strip and its
+        // scroll stay put and only what is inside a wrapper is replaced.
         rsx! {
-            Box { framework_sx: &LIGHTBOX_FRAME_SX, "data-lightbox-frame": i,
+            Box { key: "{item.src}", framework_sx: &LIGHTBOX_FRAME_SX, "data-lightbox-frame": i,
                 Box {
                     component: "img",
                     framework_sx: &LIGHTBOX_IMAGE_SX,

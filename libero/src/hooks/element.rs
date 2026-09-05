@@ -56,6 +56,14 @@ impl ElementHandle {
         }
     }
 
+    /// A handle owned by `owner`, for one made in a child's render that an
+    /// ancestor of the child has to read - `Menu`'s submenu boxes.
+    pub(crate) fn new_in_scope(owner: ScopeId) -> Self {
+        Self {
+            mounted: Signal::new_in_scope(None, owner),
+        }
+    }
+
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
         match self.mounted.read().as_ref() {
             Some(mounted) => Ok(backend::element(mounted)),

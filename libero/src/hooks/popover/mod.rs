@@ -117,7 +117,20 @@ impl PopoverHandle {
 /// hidden or closed. Closing is the caller's business - this hook owns no open
 /// state.
 pub fn use_popover(anchor: ElementHandle, open: bool, options: PopoverOptions) -> PopoverHandle {
-    let floating = use_element();
+    use_popover_on(anchor, use_element(), open, options)
+}
+
+/// [`use_popover`] on a floating handle the caller made, for a box some scope
+/// other than this one has to read. A handle is owned by the scope that made
+/// it, and dioxus warns when a scope that is not its descendant reads it: a
+/// `Menu` level's box is read by every level above it, so the root `Menu`
+/// owns them all.
+pub(crate) fn use_popover_on(
+    anchor: ElementHandle,
+    floating: ElementHandle,
+    open: bool,
+    options: PopoverOptions,
+) -> PopoverHandle {
     let mut placed = use_signal(|| None::<Placed>);
     let mut anchor_width = use_signal(|| None::<f64>);
     let slot = use_portal_slot();

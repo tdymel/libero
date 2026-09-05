@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{
         Align, DismissHandle, DismissOptions, ElementHandle, PopoverOptions, Side, TYPEAHEAD_RESET,
-        Typeahead, typeahead_match, use_dismiss, use_element, use_popover, use_theme,
+        Typeahead, typeahead_match, use_dismiss, use_element, use_popover_on, use_theme,
         use_typeahead,
     },
     platform::{ElementApi, TimerSubscription, timer},
@@ -177,6 +177,8 @@ pub fn Menu(props: MenuProps) -> Element {
     let id = state.id();
 
     let wrapper = use_element();
+    let floating = use_element();
+    let owner = use_hook(dioxus::core::current_scope_id);
     let wrapper_box = use_box().prepare();
 
     let opened = state.opened();
@@ -238,6 +240,8 @@ pub fn Menu(props: MenuProps) -> Element {
             id: menu_id(&id),
             labelledby: trigger_id(&id),
             anchor: wrapper,
+            floating,
+            root: owner,
             wrapper,
             open,
             request: state.request().0,
@@ -569,6 +573,12 @@ struct MenuLevelProps {
     id: String,
     labelledby: String,
     anchor: ElementHandle,
+    /// This level's box. Every level above it reads the box to tell whether
+    /// focus is still inside, so it is owned by `root`, the root `Menu`'s scope,
+    /// never by the level itself: a handle read by a scope that is not a
+    /// descendant of its owner is a dioxus warning (todo 283).
+    floating: ElementHandle,
+    root: ScopeId,
     /// The root `Menu`'s wrapper, which holds the trigger.
     wrapper: ElementHandle,
     open: bool,
@@ -617,8 +627,9 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
 
     // Every one of these is a hook, so all of them run before anything
     // branches on `open`.
-    let popover = use_popover(
+    let popover = use_popover_on(
         props.anchor,
+        props.floating,
         open,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding)
             .side(props.side)
@@ -692,14 +703,17 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
             .collect(),
     );
 
-    // One element handle per item that opens a submenu - the submenu's
-    // anchor. Kept across renders so a submenu's anchor never changes under
-    // it; created on first need, owned by this scope.
-    let anchors: Rc<RefCell<Vec<ElementHandle>>> = use_hook(|| Rc::new(RefCell::new(Vec::new())));
+    // Two element handles per item that opens a submenu - the submenu's
+    // anchor and its box. Kept across renders so neither changes under the
+    // submenu; created on first need. The anchor is owned by this scope, the
+    // box by the root `Menu`, which every level that reads it descends from.
+    let root = props.root;
+    let anchors: Rc<RefCell<Vec<(ElementHandle, ElementHandle)>>> =
+        use_hook(|| Rc::new(RefCell::new(Vec::new())));
     let anchor_of = |index: usize| {
         let mut anchors = anchors.borrow_mut();
         while anchors.len() <= index {
-            anchors.push(ElementHandle::new());
+            anchors.push((ElementHandle::new(), ElementHandle::new_in_scope(root)));
         }
         anchors[index]
     };
@@ -712,7 +726,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
 
     let mut index = 0usize;
     let mut group = 0usize;
-    let mut submenus: Vec<(usize, Vec<MenuEntry>, ElementHandle)> = Vec::new();
+    let mut submenus: Vec<(usize, Vec<MenuEntry>, (ElementHandle, ElementHandle))> = Vec::new();
 
     let mut draw_item = |item: &MenuItem, index: usize| -> Element {
         let submenu = item.submenu_items().cloned();
@@ -721,9 +735,10 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         let on_select = item.on_select_callback();
         let item_id = format!("{level_id}-item-{index}");
         let child_id = format!("{level_id}-{index}");
-        let anchor = has_submenu.then(|| anchor_of(index));
-        if let (Some(items), Some(anchor)) = (submenu, anchor) {
-            submenus.push((index, items, anchor));
+        let handles = has_submenu.then(|| anchor_of(index));
+        let anchor = handles.map(|(anchor, _)| anchor);
+        if let (Some(items), Some(handles)) = (submenu, handles) {
+            submenus.push((index, items, handles));
         }
         let is_expanded = has_submenu && expanded == Some(index);
         let opens = (has_submenu && !disabled).then_some(index);
@@ -834,13 +849,15 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
     let onclose_child = use_callback(move |()| open_child.set(None));
 
     rsx! {
-        for (index, items, anchor) in submenus {
+        for (index, items, (anchor, floating)) in submenus {
             MenuLevel {
                 key: "{index}",
                 items,
                 id: format!("{}-{index}", props.id),
                 labelledby: format!("{}-item-{index}", props.id),
                 anchor,
+                floating,
+                root,
                 wrapper: props.wrapper,
                 open: open && expanded == Some(index),
                 request: match child_request() {
