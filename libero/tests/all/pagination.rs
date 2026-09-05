@@ -5,7 +5,7 @@
 //! markup contract that four of the plan's five a11y claims live in, and the
 //! part a caller re-derives and gets wrong.
 
-use crate::common::{body, render};
+use crate::common::{attributes_of, body, render};
 
 use dioxus::prelude::*;
 use libero::{LiberoProvider, components::Pagination};
@@ -31,6 +31,9 @@ fn it_is_a_named_landmark_around_a_list() {
         "the nav has to be nameable - two paginations on one page must differ: {html}"
     );
     assert!(html.contains("<ul"), "expected a list: {html}");
+    // Explicit, because Safari with VoiceOver drops list semantics from a
+    // `list-style: none` list.
+    assert_eq!(attributes_of(&html, "ul")["role"], "list", "{html}");
     assert!(html.contains("<li"), "expected list items: {html}");
 }
 

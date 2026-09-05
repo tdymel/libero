@@ -606,6 +606,9 @@ pub fn Notifications(
                 Box {
                     component: HtmlTag::Ol,
                     framework_sx: &LIST_SX,
+                    // Both: Safari with VoiceOver drops list semantics from a
+                    // `list-style: none` list.
+                    role: "list",
                     "aria-live": "assertive",
                     for item in assertive {
                         NotificationItem {
@@ -623,6 +626,7 @@ pub fn Notifications(
                 Box {
                     component: HtmlTag::Ol,
                     framework_sx: &LIST_SX,
+                    role: "list",
                     "aria-live": "polite",
                     for item in polite {
                         NotificationItem {

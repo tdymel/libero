@@ -369,6 +369,9 @@ pub fn Pagination(props: PaginationProps) -> Element {
                             list_box
                                 .clone()
                                 .element(&list)
+                                // Safari with VoiceOver drops list semantics
+                                // from a `list-style: none` list.
+                                .attr("role", "list")
                                 .render(
                                     HtmlTag::Ul,
                                     vec![],

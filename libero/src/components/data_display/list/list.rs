@@ -42,5 +42,8 @@ pub fn List(props: ListProps) -> Element {
         .sx(&props.sx)
         .states(&states)
         .prepare()
+        // Not redundant: Safari with VoiceOver drops list semantics from a
+        // `list-style: none` list. A caller's own `role` still wins.
+        .attr_default("role", "list")
         .render(HtmlTag::Ul, props.attributes, props.children)
 }

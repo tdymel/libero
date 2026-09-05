@@ -61,6 +61,10 @@ fn every_stack_renders_both_live_regions_before_anything_is_shown() {
         "{html}"
     );
     assert!(items(&html).is_empty(), "{html}");
+    // Every live region is an `<ol>` with `list-style: none`, which Safari with
+    // VoiceOver stops announcing as a list without an explicit role.
+    assert_eq!(html.matches("<ol").count(), 18, "{html}");
+    assert_eq!(html.matches(r#"role="list""#).count(), 18, "{html}");
 }
 
 #[test]

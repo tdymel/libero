@@ -619,6 +619,9 @@ fn card_list(
         )
         .attr("aria-busy", (loading && !surface).then_some("true"))
         .element(&list_element)
+        // Safari with VoiceOver drops list semantics from a `list-style: none`
+        // list.
+        .attr("role", "list")
         .render(HtmlTag::Ul, Vec::new(), rsx! { {drawn.into_iter()} })
 }
 

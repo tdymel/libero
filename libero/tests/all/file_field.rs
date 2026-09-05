@@ -184,3 +184,27 @@ fn a_multiple_file_field_draws_the_shared_removable_chip() {
     assert_eq!(x["aria-label"], "Remove b.txt", "{x:?}");
     assert_eq!(x["tabindex"], "-1", "{x:?}");
 }
+
+/// The dropzone's cards are a `list-style: none` list, which Safari with
+/// VoiceOver stops announcing as a list without an explicit role.
+#[test]
+fn a_dropzones_card_list_keeps_its_list_semantics() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    variant: "dropzone",
+                    multiple: true,
+                    value: fake_files(&["a.txt", "b.txt"]),
+                    onchange: move |_| {},
+                    "Drop files here"
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    assert_eq!(attributes_of(&body, "ul")["role"], "list", "{body}");
+    assert_eq!(body.matches("<li").count(), 2, "{body}");
+}
