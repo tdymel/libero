@@ -155,7 +155,7 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
                         li {
                             match &item.target {
                                 Some(id) => {
-                                    let target = id_selector(id);
+                                    let target = crate::hooks::id_selector(id);
                                     rsx! {
                                         a {
                                             href: "#{id}",
@@ -195,23 +195,4 @@ pub fn Form<V: FormValue>(props: FormProps<V>) -> Element {
         .attr("novalidate", true)
         .event("onsubmit", handler)
         .render(HtmlTag::Form, props.attributes, children)
-}
-
-/// `#id` only takes a CSS identifier, and a caller's id need not be one
-/// (`1-email`, `user.email`). An attribute selector takes any string.
-fn id_selector(id: &str) -> String {
-    let escaped = id.replace('\\', "\\\\").replace('"', "\\\"");
-    format!("[id=\"{escaped}\"]")
-}
-
-#[cfg(test)]
-mod tests {
-    use super::id_selector;
-
-    #[test]
-    fn the_summary_finds_a_field_by_any_id() {
-        assert_eq!(id_selector("1-email"), r#"[id="1-email"]"#);
-        assert_eq!(id_selector("user.email"), r#"[id="user.email"]"#);
-        assert_eq!(id_selector(r#"a"b\c"#), r#"[id="a\"b\\c"]"#);
-    }
 }

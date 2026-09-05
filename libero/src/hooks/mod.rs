@@ -26,6 +26,7 @@ pub use drawer::{DrawerOptions, use_drawer};
 pub use element::{ElementHandle, use_element};
 pub use floating_window::{FloatingWindowHandle, use_floating_window};
 pub use focus_return::{FocusReturn, use_focus_return};
+pub(crate) use id::id_selector;
 pub use id::{use_id, use_root_id};
 pub use lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox};
 pub(crate) use local_state::{LocalState, use_local_state};

@@ -9,7 +9,8 @@ use crate::{
     },
     hooks::{
         DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxOpening,
-        LightboxOptions, drag_handle_sx, use_drag, use_element, use_id, use_modal_close, use_theme,
+        LightboxOptions, drag_handle_sx, id_selector, use_drag, use_element, use_id,
+        use_modal_close, use_theme,
     },
     platform::{Dimensions, ElementApi},
     sx::{StaticSx, sx},
@@ -413,7 +414,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         }
         index.set(target);
         if refocus
-            && let Ok(image) = stage.query_selector(&format!("#{}", image_id(&base_id(), target)))
+            && let Ok(image) = stage.query_selector(&id_selector(&image_id(&base_id(), target)))
         {
             let _ = image.focus();
         }
@@ -690,7 +691,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         event.prevent_default();
                         go(target, false);
                         if let Ok(thumbnail) =
-                            stage.query_selector(&format!("#{}", thumbnail_id(&base_id(), target)))
+                            stage.query_selector(&id_selector(&thumbnail_id(&base_id(), target)))
                         {
                             let _ = thumbnail.focus();
                         }

@@ -8,7 +8,7 @@ use crate::{
         common::{CheckIcon, CloseIcon, Rail, RailInset, focus_ring_sx, variables},
         layout::{Collapse, use_box},
     },
-    hooks::use_element,
+    hooks::{id_selector, use_element},
     platform::ElementApi,
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
@@ -321,7 +321,10 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         if *previous != current {
             if let Some(closed) = *previous
                 && root_element
-                    .query_selector(&format!("#{root}-content-{closed} :focus"))
+                    .query_selector(&format!(
+                        "{} :focus",
+                        id_selector(&format!("{root}-content-{closed}"))
+                    ))
                     .is_ok()
             {
                 *owed.borrow_mut() = Some(current.unwrap_or(closed));
@@ -334,7 +337,7 @@ pub(crate) fn render_stepper(view: StepperView, root: String) -> Element {
         let _ = current;
         if let Some(index) = owed.borrow_mut().take() {
             let _ = root_element
-                .query_selector(&format!("#{focus_root}-step-{index}"))
+                .query_selector(&id_selector(&format!("{focus_root}-step-{index}")))
                 .and_then(|header| header.focus());
         }
     }));

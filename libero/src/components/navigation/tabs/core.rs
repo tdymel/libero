@@ -6,7 +6,7 @@ use crate::{
         common::{Variables, focus_ring_sx, variables},
         layout::use_box,
     },
-    hooks::use_element,
+    hooks::{id_selector, use_element},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -151,7 +151,9 @@ pub(crate) fn render_tabs(view: TabsView, root: String) -> Element {
         onselect.call(next);
         // Auto activation: focus follows the selection, so the strip behaves
         // like one control rather than a row of buttons.
-        if let Ok(tab) = root_element.query_selector(&format!("#{keydown_root}-tab-{next}")) {
+        if let Ok(tab) =
+            root_element.query_selector(&id_selector(&format!("{keydown_root}-tab-{next}")))
+        {
             let _ = tab.focus();
         }
     });

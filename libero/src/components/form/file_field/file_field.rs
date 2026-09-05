@@ -14,7 +14,9 @@ use crate::{
         },
         layout::{BoxStyle, use_box},
     },
-    hooks::{ElementHandle, LocalState, use_css, use_element, use_local_state, use_theme},
+    hooks::{
+        ElementHandle, LocalState, id_selector, use_css, use_element, use_local_state, use_theme,
+    },
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
@@ -682,7 +684,8 @@ fn use_focus_debt(
         };
         match target {
             Some(index) => {
-                if let Ok(button) = list_element.query_selector(&format!("#{focus_prefix}-{index}"))
+                if let Ok(button) =
+                    list_element.query_selector(&id_selector(&format!("{focus_prefix}-{index}")))
                 {
                     let _ = button.focus();
                 }

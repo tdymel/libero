@@ -124,3 +124,28 @@ fn a_value_outside_the_tabs_leaves_the_first_enabled_tab_as_the_tab_stop() {
         .unwrap();
     assert!(stop.contains("aria-label=\"Billing\""));
 }
+
+/// The arrow keys focus a tab by `{id}-tab-{n}`, and a caller's id need not be
+/// a CSS identifier. The lookup selects by attribute (todo 248), which only
+/// works while the tabs carry exactly that id.
+#[test]
+fn a_caller_id_that_is_no_css_identifier_still_names_the_tabs() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    id: "1-faq",
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    panel: |_: Section| rsx! { "body" },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    for n in 0..3 {
+        assert!(body.contains(&format!("id=\"1-faq-tab-{n}\"")), "{body}");
+    }
+}

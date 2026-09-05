@@ -8,7 +8,7 @@ use crate::{
         common::{ChevronDownIcon, focus_ring_sx},
         layout::{Collapse, use_box},
     },
-    hooks::use_element,
+    hooks::{id_selector, use_element},
     platform::ElementApi,
     sx::{StaticSx, sx},
     theme::{
@@ -174,7 +174,10 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
             let closed = previous.iter().find(|i| {
                 !open.contains(i)
                     && root_element
-                        .query_selector(&format!("#{root}-region-{i} :focus"))
+                        .query_selector(&format!(
+                            "{} :focus",
+                            id_selector(&format!("{root}-region-{i}"))
+                        ))
                         .is_ok()
             });
             if let Some(closed) = closed {
@@ -189,7 +192,7 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
         let _ = open;
         if let Some(index) = focus_owed.borrow_mut().take() {
             let _ = root_element
-                .query_selector(&format!("#{focus_root}-trigger-{index}"))
+                .query_selector(&id_selector(&format!("{focus_root}-trigger-{index}")))
                 .and_then(|trigger| trigger.focus());
         }
     }));
@@ -222,7 +225,7 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
             };
             event.prevent_default();
             let _ = root_element
-                .query_selector(&format!("#{key_root}-trigger-{to}"))
+                .query_selector(&id_selector(&format!("{key_root}-trigger-{to}")))
                 .and_then(|trigger| trigger.focus());
         };
         let disabled = section.disabled;

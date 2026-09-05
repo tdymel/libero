@@ -341,3 +341,28 @@ fn a_colour_override_sets_the_accent_and_its_contrast() {
         "{plain:?}"
     );
 }
+
+/// Focus return finds a step by `{id}-step-{n}` and its content by
+/// `{id}-content-{n}`, and a caller's id need not be a CSS identifier. The
+/// lookup selects by attribute (todo 248), which only works while the step
+/// headers carry exactly that id.
+#[test]
+fn a_caller_id_that_is_no_css_identifier_still_names_the_steps() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Stepper::<Stage> {
+                    id: "1-faq",
+                    active: Some(Stage::Shipping),
+                    onstepclick: |_| {},
+                    content: content,
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert!(body.contains("id=\"1-faq-step-0\""), "{body}");
+    assert!(body.contains("id=\"1-faq-content-1\""), "{body}");
+}

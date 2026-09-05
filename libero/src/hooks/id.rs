@@ -39,3 +39,24 @@ fn caller_id(attributes: &[Attribute]) -> Option<String> {
             _ => None,
         })
 }
+
+/// A selector for the element with `id`. `#id` only takes a CSS identifier,
+/// and an id built on a caller's `id` need not be one (`1-faq`, `user.email`):
+/// `#1-faq` throws, so the lookup finds nothing. An attribute selector takes
+/// any string.
+pub(crate) fn id_selector(id: &str) -> String {
+    let escaped = id.replace('\\', "\\\\").replace('"', "\\\"");
+    format!("[id=\"{escaped}\"]")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::id_selector;
+
+    #[test]
+    fn an_id_selector_takes_any_id() {
+        assert_eq!(id_selector("1-email"), r#"[id="1-email"]"#);
+        assert_eq!(id_selector("user.email"), r#"[id="user.email"]"#);
+        assert_eq!(id_selector(r#"a"b\c"#), r#"[id="a\"b\\c"]"#);
+    }
+}

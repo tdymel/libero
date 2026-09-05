@@ -253,3 +253,32 @@ fn the_accessors_read_either_mode() {
     assert_eq!(many.one(), None);
     assert_eq!(many.values(), &[Step::Shipping, Step::Review]);
 }
+
+/// Focus moves find a trigger by `{id}-trigger-{n}`, and a caller's id need
+/// not be a CSS identifier. The lookup selects by attribute (todo 248), which
+/// only works while the triggers carry exactly that id.
+#[test]
+fn a_caller_id_that_is_no_css_identifier_still_names_the_triggers() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Accordion::<Step> {
+                    id: "1-faq",
+                    open: AccordionOpen::One(Some(Step::Shipping)),
+                    onchange: |_| {},
+                    panel: panel,
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    for n in 0..3 {
+        assert!(
+            body.contains(&format!("id=\"1-faq-trigger-{n}\"")),
+            "{body}"
+        );
+    }
+    assert!(body.contains("id=\"1-faq-region-0\""), "{body}");
+}
