@@ -24,7 +24,7 @@ pub struct TabsProps<T: Options> {
     panel: Option<Callback<T, Element>>,
     /// The tabs to show. Defaults to every `Options::options()`.
     #[props(default)]
-    tabs: Option<Vec<T>>,
+    options: Option<Vec<T>>,
     /// Overrides `Options::label`. Runs during render, so it can read a
     /// locale from context - which is how a renamed strip stays renamed.
     ///
@@ -57,7 +57,7 @@ pub struct TabsProps<T: Options> {
 /// A strip of tabs over an enum, with the selected one's panel below it.
 /// Controlled: it renders `value` and asks for a new one through `onchange`.
 ///
-/// The tabs are `T::options()` unless `tabs` narrows them, and `panel` is a
+/// The tabs are `T::options()` unless `options` narrows them, and `panel` is a
 /// match over `T` - so a forgotten or misspelled tab is a compile error.
 #[component]
 pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
@@ -71,7 +71,10 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
         warn("Tabs: without `panel` there is nothing below the tabs to show.");
     }
 
-    let values = props.tabs.clone().unwrap_or_else(|| T::options().to_vec());
+    let values = props
+        .options
+        .clone()
+        .unwrap_or_else(|| T::options().to_vec());
     let selected = values.iter().position(|value| *value == props.value);
     if selected.is_none() {
         warn("Tabs: `value` is not one of the tabs, so none is selected.");

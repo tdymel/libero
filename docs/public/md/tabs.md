@@ -139,7 +139,7 @@ fn Demo() -> Element {
 `FileIcon` there is your own icon component - any `svg` will do; `Icon` is what
 sizes it.
 
-`tabs` narrows the strip to a subset of the enum's variants, and `disabled_options` lists
+`options` narrows the strip to a subset of the enum's variants, and `disabled_options` lists
 tabs that render but cannot be picked.
 
 ## Accessibility
@@ -160,7 +160,7 @@ draws is what a screen reader cannot use, and that name becomes the tab's
 | `value` | `T` | required | The selected tab. Strictly controlled - pair it with `onchange`. |
 | `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
 | `panel` | `Callback<T, Element>` | - | The body of the selected tab. Called for `value` only, so the other panels cost nothing. |
-| `tabs` | `Vec<T>` | `T::options()` | The tabs to show. |
+| `options` | `Vec<T>` | `T::options()` | The tabs to show. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
 | `disabled_options` | `Vec<T>` | - | Tabs that render but cannot be picked. |
 | `size` | `Size` | `md` | Tab strip size. |

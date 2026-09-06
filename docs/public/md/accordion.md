@@ -63,7 +63,7 @@ them back.
 | `open` | `AccordionOpen<T>` | `One(None)` | Which sections are expanded; the variant is the mode |
 | `onchange` | `EventHandler<AccordionOpen<T>>` | - | The new open set |
 | `panel` | `Callback<T, Element>` | - | A section's body. Closed content is never mounted |
-| `sections` | `Vec<T>` | `T::options()` | The sections to show |
+| `options` | `Vec<T>` | `T::options()` | The sections to show |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Rename a section, or `OptionLabel::rich` to draw it as rsx |
 | `disabled_options` | `Vec<T>` | `[]` | Render, cannot toggle; still tab stops |
 | `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1`..`h6` |

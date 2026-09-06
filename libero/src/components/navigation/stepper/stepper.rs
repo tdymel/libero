@@ -31,7 +31,7 @@ pub struct StepperProps<T: Options> {
     panel: Option<Callback<T, Element>>,
     /// The steps to show, in order. Defaults to every `Options::options()`.
     #[props(default)]
-    steps: Option<Vec<T>>,
+    options: Option<Vec<T>>,
     /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
     /// draws a label as rsx and still names it.
     #[props(default)]
@@ -78,7 +78,7 @@ pub struct StepperProps<T: Options> {
 /// Controlled: it renders `value` and reports a picked step through
 /// `onstepclick`; moving on is the caller's.
 ///
-/// The steps are `T::options()` unless `steps` narrows them, and `panel`
+/// The steps are `T::options()` unless `options` narrows them, and `panel`
 /// is a match over `T` - so a step without a body is a compile error.
 /// Completed, current and pending come from the order; `state` adds errors.
 ///
@@ -114,7 +114,10 @@ pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let vertical = orientation == Orientation::Vertical;
 
-    let values = props.steps.clone().unwrap_or_else(|| T::options().to_vec());
+    let values = props
+        .options
+        .clone()
+        .unwrap_or_else(|| T::options().to_vec());
     let (reached, current) = match &props.value {
         None => (values.len(), None),
         Some(active) => match values.iter().position(|value| value == active) {

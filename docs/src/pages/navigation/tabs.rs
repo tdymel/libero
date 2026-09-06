@@ -81,7 +81,7 @@ pub fn TabsPage() -> Element {
                     prop("value", "T").doc("The selected tab. Strictly controlled - pair it with `onchange`."),
                     prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
                     prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Called for `value` only, so the other panels cost nothing."),
-                    prop("tabs", "Vec<T>").default("T::options()").doc("The tabs to show."),
+                    prop("options", "Vec<T>").default("T::options()").doc("The tabs to show."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed."),

@@ -83,7 +83,7 @@ fn Demo() -> Element {
 |---|---|---|---|
 | `value` | `Option<T>` | required | The current step; `None` = all finished |
 | `panel` | `Callback<T, Element>` | - | A step's body |
-| `steps` | `Vec<T>` | `T::options()` | The steps to show, in order |
+| `options` | `Vec<T>` | `T::options()` | The steps to show, in order |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Rename a step, or `OptionLabel::rich` to draw it as rsx |
 | `option_description` | `Callback<T, String>` | - | A second line under the label; `""` prints none |
 | `state` | `Callback<T, Option<StepState>>` | derived | Override a step's state; the only source of `Error` |

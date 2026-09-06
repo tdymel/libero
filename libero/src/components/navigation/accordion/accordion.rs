@@ -91,7 +91,7 @@ base_props! {
         panel: Option<Callback<T, Element>>,
         /// The sections to show. Defaults to every `Options::options()`.
         #[props(default)]
-        sections: Option<Vec<T>>,
+        options: Option<Vec<T>>,
         /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
         /// draws a trigger as rsx and still names it.
         #[props(default)]
@@ -112,7 +112,7 @@ base_props! {
 /// panel. Controlled: it renders `open` and asks for a new set through
 /// `onchange`.
 ///
-/// The sections are `T::options()` unless `sections` narrows them, and `panel`
+/// The sections are `T::options()` unless `options` narrows them, and `panel`
 /// is a match over `T` - so a forgotten section is a compile error.
 ///
 /// ```no_run
@@ -163,7 +163,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
     };
 
     let values = props
-        .sections
+        .options
         .clone()
         .unwrap_or_else(|| T::options().to_vec());
 

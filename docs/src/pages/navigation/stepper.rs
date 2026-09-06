@@ -89,7 +89,7 @@ pub fn StepperPage() -> Element {
                 props("Stepper", vec![
                     prop("value", "Option<T>").doc("The current step. `None` means every step is finished. Required and strictly controlled."),
                     prop("panel", "Callback<T, Element>").doc("A step's body. Horizontal shows the current one below the strip; vertical shows it under its own step and collapses the rest. A closed step's content is not mounted."),
-                    prop("steps", "Vec<T>").default("T::options()").doc("The steps to show, in order."),
+                    prop("options", "Vec<T>").default("T::options()").doc("The steps to show, in order."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a step. `OptionLabel::rich` draws it as rsx and still names it."),

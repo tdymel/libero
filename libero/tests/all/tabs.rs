@@ -74,7 +74,7 @@ fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
                 Tabs {
                     value: Section::Account,
                     onchange: move |_| {},
-                    tabs: vec![Section::Account, Section::Billing],
+                    options: vec![Section::Account, Section::Billing],
                     option_label: |section: Section| OptionLabel::rich(
                         format!("t:{}", section.label()),
                         rsx! { span { "rich" } },
@@ -87,7 +87,7 @@ fn a_rich_tab_label_draws_its_content_and_still_names_the_tab() {
 
     let body = body(&render(app));
 
-    // `tabs` narrows the strip; `label` names them; `render_label` fills them.
+    // `options` narrows the strip; `option_label` names them; `render_label` fills them.
     assert_eq!(body.matches("role=\"tab\"").count(), 2);
     assert!(body.contains("aria-label=\"t:Account\""));
     assert!(body.contains("aria-label=\"t:Billing\""));
@@ -103,7 +103,7 @@ fn a_value_outside_the_tabs_leaves_the_first_enabled_tab_as_the_tab_stop() {
                 Tabs {
                     value: Section::Admin,
                     onchange: move |_| {},
-                    tabs: vec![Section::Account, Section::Billing],
+                    options: vec![Section::Account, Section::Billing],
                     disabled_options: vec![Section::Account],
                     panel: |_: Section| rsx! {},
                 }

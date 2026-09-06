@@ -141,7 +141,7 @@ pub fn AccordionPage() -> Element {
                         .doc("Which sections are expanded. The variant is the mode: `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Strictly controlled - pair it with `onchange`."),
                     prop("onchange", "EventHandler<AccordionOpen<T>>").doc("Called with the whole new open set, in the same mode, ready to store."),
                     prop("panel", "Callback<T, Element>").doc("A section's body. A closed panel's content is never mounted, so it keeps no state."),
-                    prop("sections", "Vec<T>").default("T::options()").doc("The sections to show."),
+                    prop("options", "Vec<T>").default("T::options()").doc("The sections to show."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
