@@ -50,19 +50,32 @@ pub async fn snapshot(page: &Page, selector: &str) -> Result<String> {
     // named but not rendered twice - the fixture's own root holds the outlet
     // (`fixtures/src/main.rs`), so for `Suite` that is every target, and the
     // line records the relation rather than the content.
+    //
+    // A target that is not there is written down too, so that a baseline taken
+    // while a reference dangles records the dangling (review 7, E7).
     for target in controlled_selectors(page, selector).await? {
-        if let Ok(id) = backend_node_id(page, &target).await
-            && let Some(node) = nodes.iter().find(|n| n.backend_dom_node_id == Some(id))
-        {
-            if contains(page, selector, &target).await? {
-                out.push_str(&format!(
-                    "--> aria-controls {} (rendered above)\n",
-                    stable(&target)
-                ));
-            } else {
-                out.push_str(&format!("--> aria-controls {}\n", stable(&target)));
-                render(node, &by_id, 0, &mut out);
-            }
+        let Ok(id) = backend_node_id(page, &target).await else {
+            out.push_str(&format!(
+                "--> aria-controls {} (missing)\n",
+                stable(&target)
+            ));
+            continue;
+        };
+        let Some(node) = nodes.iter().find(|n| n.backend_dom_node_id == Some(id)) else {
+            out.push_str(&format!(
+                "--> aria-controls {} (not in the accessibility tree)\n",
+                stable(&target)
+            ));
+            continue;
+        };
+        if contains(page, selector, &target).await? {
+            out.push_str(&format!(
+                "--> aria-controls {} (rendered above)\n",
+                stable(&target)
+            ));
+        } else {
+            out.push_str(&format!("--> aria-controls {}\n", stable(&target)));
+            render(node, &by_id, 0, &mut out);
         }
     }
 
@@ -85,8 +98,8 @@ async fn contains(page: &Page, outer: &str, inner: &str) -> Result<bool> {
 /// The ids named by any `aria-controls` inside the subtree, as selectors.
 ///
 /// Returned even when the target does not exist, so that a dangling reference
-/// shows up in the snapshot as a missing section rather than silently
-/// disappearing. Todo 101 was exactly that bug: `aria-activedescendant` named
+/// shows up in the snapshot as `(missing)` rather than silently disappearing.
+/// Todo 101 was exactly that bug: `aria-activedescendant` named
 /// an option that was not in the DOM.
 async fn controlled_selectors(page: &Page, selector: &str) -> Result<Vec<String>> {
     let ids: Vec<String> = page

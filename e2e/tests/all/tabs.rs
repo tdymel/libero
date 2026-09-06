@@ -11,6 +11,9 @@ use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
 
 const TAB: &str = "[role=tab]";
+/// What the "second" state waits on. Not `TAB`: that is visible at rest, so
+/// waiting on it returned at once and the snapshot raced the re-render.
+const SECOND_SELECTED: &str = "[role=tablist] > [role=tab]:nth-child(2)[aria-selected=true]";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -22,7 +25,7 @@ fn it_meets_the_baseline() {
         .state(
             "second",
             &[Step::TabTo(TAB), Step::Press(keyboard::ARROW_RIGHT)],
-            TAB,
+            SECOND_SELECTED,
         )
         .run();
 }

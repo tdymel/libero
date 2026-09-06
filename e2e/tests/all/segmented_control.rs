@@ -11,9 +11,10 @@ use e2e::{Fixture, Suite, Viewport, passes::keyboard};
 
 pub const RADIOS: &str = "[role=radiogroup] input[type=radio]";
 const CHECKED: &str = "[role=radiogroup] input[type=radio]:checked";
-/// What a state waits on. Not `CHECKED`: the radio is visually hidden, so it
-/// never counts as visible, and the drawn segment is its label.
-const CHECKED_SEGMENT: &str = "[role=radiogroup] label[data-state~=checked]";
+/// What the "right" state waits on: the last segment's label, checked. Not
+/// `CHECKED`, since the radio is visually hidden and never counts as visible,
+/// and not any checked label, since the middle one is checked at rest.
+const RIGHT_CHECKED: &str = "[role=radiogroup] label[for$=\"-segment-2\"][data-state~=checked]";
 
 #[test]
 fn it_meets_the_baseline() {
@@ -23,7 +24,7 @@ fn it_meets_the_baseline() {
         .state(
             "right",
             &[Step::TabTo(CHECKED), Step::Press(keyboard::ARROW_RIGHT)],
-            CHECKED_SEGMENT,
+            RIGHT_CHECKED,
         )
         .run();
 }

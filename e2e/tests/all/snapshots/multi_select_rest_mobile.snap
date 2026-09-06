@@ -11,3 +11,4 @@ generic
       StaticText "Cherry"
       button "Remove Cherry"
 status [atomic] [live=polite]
+--> aria-controls [id="lsx-N-listbox"] (missing)

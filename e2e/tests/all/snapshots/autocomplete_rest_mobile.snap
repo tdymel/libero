@@ -9,3 +9,4 @@ generic
   combobox "City" [expanded=false] [haspopup=listbox]
     generic
 status [atomic] [live=polite]
+--> aria-controls [id="lsx-N-listbox"] (missing)

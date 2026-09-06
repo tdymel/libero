@@ -337,3 +337,50 @@ fn the_suite_rejects_a_state_settling_outside_its_root() {
         )
         .run();
 }
+
+/// Review 7, E8: a state whose `settled` selector is visible before its steps
+/// run. Tabs' "second" state waited on `[role=tab]` that way, so reaching it
+/// returned at once and the snapshot raced the re-render.
+#[test]
+#[should_panic(expected = "already visible before its steps")]
+fn the_suite_rejects_a_state_that_waits_on_nothing() {
+    e2e::Suite::new("broken_settled", "/tabs")
+        .no_snapshot()
+        .state(
+            "second",
+            &[
+                e2e::suite::Step::TabTo("[role=tab]"),
+                e2e::suite::Step::Press(keyboard::ARROW_RIGHT),
+            ],
+            "[role=tab]",
+        )
+        .run();
+}
+
+/// Review 7, E7: an `aria-controls` naming an element that does not exist.
+/// The snapshot used to drop it without a line, so a baseline taken while it
+/// dangled recorded nothing to notice.
+#[test]
+fn the_snapshot_records_a_dangling_aria_controls() {
+    block_on(async {
+        let fixture = Fixture::open("/tabs", Viewport::Desktop).await.unwrap();
+        fixture
+            .page
+            .evaluate(
+                "document.querySelector('[role=tab]:nth-child(2)')\
+                 .setAttribute('aria-controls', 'planted-nowhere')",
+            )
+            .await
+            .unwrap();
+
+        let tree = e2e::ax::snapshot(&fixture.page, "[data-fixture-ready]")
+            .await
+            .unwrap();
+        let _ = fixture.close().await;
+
+        assert!(
+            tree.contains("--> aria-controls [id=\"planted-nowhere\"] (missing)"),
+            "the snapshot does not name the dangling reference:\n{tree}"
+        );
+    });
+}

@@ -27,8 +27,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Autocomplete, Button, Dialog, Flex, NotificationOptions, Notifications, Options, Slider,
-        SliderChangeEvent, Tabs, Text, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
+        Autocomplete, Button, Collapse, Dialog, Flex, NotificationOptions, Notifications, Options,
+        Slider, SliderChangeEvent, Tabs, Text, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
         use_notifications,
     },
     hooks::{ModalScope, use_modal},
@@ -79,6 +79,8 @@ enum Route {
     MenuPage {},
     #[route("/spotlight")]
     SpotlightPage {},
+    #[route("/collapse")]
+    CollapsePage {},
 
     // A real component with one defect planted through a prop. Most plants
     // are injected by the test instead (`tests/all/planted.rs`); these are
@@ -294,6 +296,29 @@ enum Section {
     Account,
     Billing,
     Admin,
+}
+
+/// The motion fixture: a `Collapse` whose open and close both run a
+/// transition, so a reduced-motion test has something to switch off.
+/// `keep_mounted: false`, so closing also exercises the unmount that
+/// `use_presence` ties to the exit.
+#[component]
+fn CollapsePage() -> Element {
+    let mut open = use_signal(|| false);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "toggle-details",
+                variant: "outlined",
+                onclick: move |_| open.toggle(),
+                "Shipping details"
+            }
+            Collapse { id: "details", open: open(), keep_mounted: false,
+                Text { id: "details-text", "Shipping is calculated at checkout." }
+            }
+        }
+    }
 }
 
 /// The roving-tabindex archetype: one tab stop, arrows inside.

@@ -53,14 +53,63 @@ impl Overlay<'_> {
         }
 
         keyboard::press(page, keyboard::ESCAPE).await?;
-        wait::for_hidden(page, self.panel).await?;
+        let focus_returned = self.wait_for_close_signal(page).await?;
 
-        // The assertion that silently fails everywhere else.
-        focus::assert_focused(page, self.trigger, "Escape closing the overlay").await?;
-
-        // And it must not still be readable after dismissal.
+        // It must not still be readable once it says it is closed. Read at the
+        // close signal, not after the panel has gone: waiting for it to be
+        // hidden first waited for exactly what this asserts, so a phantom
+        // panel failed as a timeout, or never (review 7, E6).
         dismissal::assert_gone_from_at(page, self.panel).await?;
+
+        // The assertion that silently fails everywhere else. Given time to
+        // land, since a component may return focus once its exit has ended.
+        if !focus_returned {
+            let _ = self.wait_for_focus_on_trigger(page).await;
+        }
+        focus::assert_focused(page, self.trigger, "Escape closing the overlay").await?;
         Ok(())
+    }
+
+    /// Wait for the overlay to report itself closed. Returns whether focus is
+    /// already back on the trigger.
+    ///
+    /// A trigger with `aria-expanded` says so there: a menu's or a popover's.
+    /// A dialog's trigger carries no state, and returning focus to it is the
+    /// dialog's own close signal (APG). When that never comes, the wait gives
+    /// up quietly and the focus assertion below reports it.
+    async fn wait_for_close_signal(&self, page: &Page) -> Result<bool> {
+        let trigger = serde_json::to_string(self.trigger)?;
+        let has_state: bool = page
+            .evaluate(format!(
+                "(() => {{ const t = document.querySelector({trigger}); \
+                 return !!t && t.hasAttribute('aria-expanded'); }})()"
+            ))
+            .await?
+            .into_value()?;
+        if has_state {
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelector({trigger})?.getAttribute('aria-expanded') === 'false'"
+                ),
+                &format!("Escape to set aria-expanded=\"false\" on {}", self.trigger),
+            )
+            .await?;
+            return Ok(false);
+        }
+        Ok(self.wait_for_focus_on_trigger(page).await.is_ok())
+    }
+
+    async fn wait_for_focus_on_trigger(&self, page: &Page) -> Result<()> {
+        wait::for_js_true(
+            page,
+            &format!(
+                "document.activeElement === document.querySelector({})",
+                serde_json::to_string(self.trigger)?
+            ),
+            &format!("focus to return to {}", self.trigger),
+        )
+        .await
     }
 
     /// Focus must land inside the panel, not stay on the trigger.

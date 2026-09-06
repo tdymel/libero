@@ -5,7 +5,7 @@
 //! components animate (`Collapse`, `Accordion`, `Skeleton`, `Marquee`,
 //! `Indicator`) and their reduced arms are otherwise only read in source.
 
-use anyhow::Result;
+use anyhow::{Result, bail};
 use chromiumoxide::Page;
 use chromiumoxide::cdp::browser_protocol::emulation::{MediaFeature, SetEmulatedMediaParams};
 
@@ -23,5 +23,64 @@ pub async fn set_reduced_motion(page: &Page, reduced: bool) -> Result<()> {
             .build(),
     )
     .await?;
+    Ok(())
+}
+
+/// The page must report `prefers-reduced-motion: reduce`.
+///
+/// Called after [`set_reduced_motion`], so a test that believes it runs
+/// reduced proves it does. Without it an emulation that silently did nothing
+/// leaves every reduced-motion test measuring the animated arm.
+pub async fn assert_reduced_motion_matches(page: &Page) -> Result<()> {
+    let matches: bool = page
+        .evaluate("matchMedia('(prefers-reduced-motion: reduce)').matches")
+        .await?
+        .into_value()?;
+    if !matches {
+        bail!(
+            "the page does not match (prefers-reduced-motion: reduce); the emulation did nothing"
+        );
+    }
+    Ok(())
+}
+
+/// Nothing under `selector`, itself included, may run a transition or an
+/// animation: every computed `transition-duration` and `animation-duration`
+/// must be zero.
+///
+/// **WCAG 2.3.3 Animation from Interactions**: under reduced motion, motion
+/// triggered by an interaction can be switched off. A reduced arm that is
+/// declared but lost - moved to another selector, outranked, or never
+/// emitted - leaves the component animating, and nothing else notices.
+pub async fn assert_still(page: &Page, selector: &str) -> Result<()> {
+    let moving: Option<Vec<String>> = page
+        .evaluate(format!(
+            r#"(() => {{
+                const root = document.querySelector({});
+                if (!root) return null;
+                const moving = s => s.split(',').some(d => parseFloat(d) > 0);
+                const out = [];
+                for (const el of [root, ...root.querySelectorAll('*')]) {{
+                    const s = getComputedStyle(el);
+                    if (moving(s.transitionDuration))
+                        out.push(`${{el.tagName.toLowerCase()}}.${{el.className}}: transition ${{s.transitionProperty}} ${{s.transitionDuration}}`);
+                    if (s.animationName !== 'none' && moving(s.animationDuration))
+                        out.push(`${{el.tagName.toLowerCase()}}.${{el.className}}: animation ${{s.animationName}} ${{s.animationDuration}}`);
+                }}
+                return out;
+            }})()"#,
+            serde_json::to_string(selector)?
+        ))
+        .await?
+        .into_value()?;
+    let Some(moving) = moving else {
+        bail!("no element matches {selector}");
+    };
+    if !moving.is_empty() {
+        bail!(
+            "{selector} still animates under reduced motion:\n  {}",
+            moving.join("\n  ")
+        );
+    }
     Ok(())
 }

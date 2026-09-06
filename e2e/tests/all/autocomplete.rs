@@ -12,7 +12,7 @@
 
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;
-use e2e::passes::{contrast, dismissal, keyboard, live_region, motion};
+use e2e::passes::{contrast, dismissal, keyboard, live_region};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -89,7 +89,18 @@ fn a_dismissed_list_leaves_the_accessibility_tree() {
         keyboard::press(&fixture.page, keyboard::ESCAPE)
             .await
             .unwrap();
-        wait::for_hidden(&fixture.page, LISTBOX).await.unwrap();
+        // The close signal, not the list's disappearance: waiting for it to be
+        // hidden waited for what the check asserts (review 7, E6).
+        wait::for_js_true(
+            &fixture.page,
+            &format!(
+                "document.querySelector({:?}).getAttribute('aria-expanded') === 'false'",
+                TRIGGER
+            ),
+            "Escape to collapse the combobox",
+        )
+        .await
+        .unwrap();
 
         dismissal::assert_gone_from_at(&fixture.page, LISTBOX)
             .await
@@ -123,34 +134,6 @@ fn its_status_region_is_mounted_and_silent_at_rest() {
             text.trim().is_empty(),
             "the status region should be silent at rest, but it says {text:?}"
         );
-
-        fixture.close().await.unwrap();
-    });
-}
-
-/// The list must open under `prefers-reduced-motion: reduce`.
-///
-/// A component that drives its own open state from a transition or animation
-/// event breaks here and nowhere else - `transitionend` is already known to be
-/// an unreliable finish signal (`codebase/components/collapse`).
-#[test]
-fn it_opens_with_reduced_motion() {
-    block_on(async {
-        let fixture = Fixture::open("/autocomplete", Viewport::Desktop)
-            .await
-            .unwrap();
-        motion::set_reduced_motion(&fixture.page, true)
-            .await
-            .unwrap();
-
-        keyboard::tab_to(&fixture.page, TRIGGER, 10).await.unwrap();
-        keyboard::press(&fixture.page, keyboard::ARROW_DOWN)
-            .await
-            .unwrap();
-
-        wait::for_visible(&fixture.page, LISTBOX)
-            .await
-            .expect("the list should open with reduced motion");
 
         fixture.close().await.unwrap();
     });

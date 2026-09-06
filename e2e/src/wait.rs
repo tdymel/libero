@@ -105,24 +105,28 @@ pub async fn for_selector(page: &Page, selector: &str) -> Result<()> {
 /// success* (`codebase/use-popover`). So the suite waits on placed, never on
 /// mounted.
 pub async fn for_visible(page: &Page, selector: &str) -> Result<()> {
-    until(&format!("{selector} to be visible"), || async {
-        let visible: bool = page
-            .evaluate(format!(
-                r#"(() => {{
-                    const el = document.querySelector({});
-                    if (!el) return false;
-                    const s = getComputedStyle(el);
-                    if (s.visibility === 'hidden' || s.display === 'none' || s.opacity === '0') return false;
-                    const r = el.getBoundingClientRect();
-                    return r.width > 0 && r.height > 0;
-                }})()"#,
-                serde_json::to_string(selector)?
-            ))
-            .await?
-            .into_value()?;
-        Ok(visible)
+    until(&format!("{selector} to be visible"), || {
+        is_visible(page, selector)
     })
     .await
+}
+
+/// Whether `selector` is visible right now, by `for_visible`'s definition.
+pub async fn is_visible(page: &Page, selector: &str) -> Result<bool> {
+    Ok(page
+        .evaluate(format!(
+            r#"(() => {{
+                const el = document.querySelector({});
+                if (!el) return false;
+                const s = getComputedStyle(el);
+                if (s.visibility === 'hidden' || s.display === 'none' || s.opacity === '0') return false;
+                const r = el.getBoundingClientRect();
+                return r.width > 0 && r.height > 0;
+            }})()"#,
+            serde_json::to_string(selector)?
+        ))
+        .await?
+        .into_value()?)
 }
 
 /// Wait for an element to be gone from the DOM, or present but invisible.

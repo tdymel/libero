@@ -45,12 +45,28 @@ fn main() -> Result<()> {
         );
     }
 
-    // Artifacts (failure screenshots) go in a directory of this run's own,
-    // emptied first. Without that they accumulate in /tmp forever and a stale
-    // PNG from three runs ago gets read as evidence for this one.
-    let artifacts = std::env::temp_dir().join("e2e-artifacts");
+    // Every build the runner starts goes where the runner itself was built.
+    // Neither `dx run` nor the nested `cargo test` sees `--target-dir` on the
+    // outer `cargo run`, so without this both fell back to the root config's
+    // shared `target/main` (todo 328).
+    let target_dir = own_target_dir()?;
+    eprintln!("e2e: building into {}", target_dir.display());
+
+    // Artifacts (failure screenshots, dx.log) go in a directory of this run's
+    // own, named by its port. One shared directory, emptied at start, let a
+    // second agent's run delete the first one's evidence, and a `dx.log` read
+    // afterwards could belong to the other worktree (todo 329).
+    let artifacts = std::env::temp_dir()
+        .join("e2e-artifacts")
+        .join(format!("port-{port}"));
+    prune_old_runs(
+        artifacts
+            .parent()
+            .context("the artifacts directory has a parent")?,
+    );
     let _ = std::fs::remove_dir_all(&artifacts);
     std::fs::create_dir_all(&artifacts).context("create the artifacts directory")?;
+    eprintln!("e2e: artifacts go to {}", artifacts.display());
 
     // dx's own output, kept rather than discarded: when the fixture crate fails
     // to compile, this file is the only place that says why.
@@ -77,6 +93,9 @@ fn main() -> Result<()> {
         // uses them: full debug info is most of what a build writes, and the
         // write load stalls the machine.
         .env("CARGO_PROFILE_DEV_DEBUG", "line-tables-only")
+        // The env var, since `dx` takes no `--target-dir`. `RUSTC_WRAPPER` is
+        // left alone: `dx` drives it itself for hot-patching.
+        .env("CARGO_TARGET_DIR", &target_dir)
         .stdout(Stdio::from(
             log_handle.try_clone().context("clone the log handle")?,
         ))
@@ -110,7 +129,11 @@ fn main() -> Result<()> {
     let passthrough: Vec<String> = std::env::args().skip(1).collect();
     let status = Command::new(env!("CARGO"))
         .current_dir(&root)
-        .args(["test", "-p", "e2e", "--test", "all", "--"])
+        .args(["test", "-p", "e2e", "--test", "all", "--target-dir"])
+        .arg(&target_dir)
+        // Before the `--`: after it, `--target-dir` would go to the test
+        // binary and cargo would build into `target/main` without a word.
+        .arg("--")
         .args(&passthrough)
         .env("E2E_BASE_URL", &base_url)
         .env("E2E_CHROME_PROFILE", &profile)
@@ -309,6 +332,44 @@ fn each_matching_pid(needle: &str, mut act: impl FnMut(u32)) -> usize {
 unsafe extern "C" {
     #[link_name = "kill"]
     fn libc_kill(pid: i32, sig: i32) -> i32;
+}
+
+/// The target directory this runner was built into.
+///
+/// Cargo passes a `--target-dir` flag to nothing it runs, so the runner reads
+/// it off its own path: the nearest ancestor of the executable holding the
+/// `CACHEDIR.TAG` cargo writes at every target directory's root. That covers
+/// the flag, `CARGO_TARGET_DIR`, the root config's default and a `--target`
+/// triple alike.
+fn own_target_dir() -> Result<std::path::PathBuf> {
+    let exe = std::env::current_exe().context("locate the runner's executable")?;
+    exe.ancestors()
+        .skip(1)
+        .find(|dir| dir.join("CACHEDIR.TAG").is_file())
+        .map(Path::to_path_buf)
+        .with_context(|| format!("no cargo target directory above {}", exe.display()))
+}
+
+/// Delete other runs' artifact directories once they are a day old.
+///
+/// Never a younger one: a parallel run may still be writing to it, or its owner
+/// may not have read it yet. A day keeps /tmp from growing without bound.
+fn prune_old_runs(parent: &Path) {
+    const MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+    let Ok(entries) = std::fs::read_dir(parent) else {
+        return;
+    };
+    for entry in entries.flatten() {
+        let old = entry
+            .metadata()
+            .and_then(|m| m.modified())
+            .ok()
+            .and_then(|at| at.elapsed().ok())
+            .is_some_and(|age| age > MAX_AGE);
+        if old && entry.path().is_dir() {
+            let _ = std::fs::remove_dir_all(entry.path());
+        }
+    }
 }
 
 fn workspace_root() -> Result<std::path::PathBuf> {

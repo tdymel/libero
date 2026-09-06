@@ -19,7 +19,7 @@
 
 use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex};
 use e2e::browser::block_on;
-use e2e::passes::{contrast, focus, keyboard, target_size};
+use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
 use e2e::{Fixture, Viewport, wait};
 
 /// Open `route`, plant `defect` (JavaScript, run once the app has mounted),
@@ -348,6 +348,104 @@ fn spotlight_with_a_leaking_trap_fails_the_overlay_contract() {
                     tab_budget: 5,
                 }
                 .assert_contract(&fixture.page)
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// A phantom panel: when the overlay closes, an `opacity: 0` copy of it stays
+/// behind, still in the accessibility tree. The check has to run at the close
+/// signal and fail with the dismissal message. Behind a wait for the panel to
+/// be hidden it failed as a timeout instead, or not at all (review 7, E6).
+fn phantom(panel: &str) -> String {
+    format!(
+        "(() => {{ const sel = {}; let done = false; \
+         new MutationObserver(records => {{ if (done) return; \
+         for (const r of records) for (const n of r.removedNodes) {{ \
+         if (n.nodeType !== 1) continue; \
+         const hit = n.matches(sel) ? n : n.querySelector(sel); if (!hit) continue; \
+         done = true; const ghost = hit.cloneNode(true); \
+         ghost.style.opacity = '0'; ghost.style.pointerEvents = 'none'; \
+         document.body.append(ghost); return; }} }}) \
+         .observe(document.body, {{ subtree: true, childList: true }}); }})()",
+        serde_json::to_string(panel).unwrap()
+    )
+}
+
+/// The phantom on `Menu`, whose trigger reports the close in `aria-expanded`.
+#[test]
+fn menu_leaving_a_phantom_panel_fails_the_dismissal_check() {
+    block_on(async {
+        must_fail(
+            "/menu",
+            Some(&phantom("[role=menu]")),
+            "is still in the accessibility tree",
+            |fixture| async move {
+                let result = Overlay {
+                    trigger: crate::menu::TRIGGER,
+                    panel: "[role=menu]",
+                    traps_focus: false,
+                    tab_budget: 5,
+                }
+                .assert_contract(&fixture.page)
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// The phantom on `Drawer`, whose trigger carries no state: focus returning
+/// to it is the close signal.
+#[test]
+fn drawer_leaving_a_phantom_panel_fails_the_dismissal_check() {
+    block_on(async {
+        must_fail(
+            "/drawer",
+            Some(&phantom("[role=dialog]")),
+            "is still in the accessibility tree",
+            |fixture| async move {
+                let result = Overlay {
+                    trigger: crate::drawer::TRIGGER,
+                    panel: "[role=dialog]",
+                    traps_focus: true,
+                    tab_budget: 5,
+                }
+                .assert_contract(&fixture.page)
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `Collapse` with its reduced-motion guard lost: a transition declared
+/// outside the `prefers-reduced-motion` arm, which is the move
+/// `collapse.rs` warns about.
+#[test]
+fn collapse_animating_under_reduced_motion_fails_the_motion_check() {
+    block_on(async {
+        must_fail(
+            "/collapse",
+            Some(&stylesheet(
+                "@media (prefers-reduced-motion: reduce) { \
+                 #details { transition: grid-template-rows 400ms ease !important; } }",
+            )),
+            "still animates under reduced motion",
+            |fixture| async move {
+                let result = async {
+                    let page = &fixture.page;
+                    motion::set_reduced_motion(page, true).await?;
+                    motion::assert_reduced_motion_matches(page).await?;
+                    pointer::click(page, crate::collapse::TOGGLE).await?;
+                    wait::for_visible(page, "#details-text").await?;
+                    motion::assert_still(page, crate::collapse::ROOT).await
+                }
                 .await;
                 (fixture, result)
             },

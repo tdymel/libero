@@ -48,6 +48,7 @@ struct State {
     steps: &'static [Step],
     /// What must become visible before the state counts as reached. Waiting on
     /// *placed* rather than on a sleep is what keeps this from being flaky.
+    /// It must not be visible before the steps run, or the wait proves nothing.
     settled: &'static str,
 }
 
@@ -250,6 +251,17 @@ impl Suite {
     }
 
     async fn reach(&self, page: &chromiumoxide::Page, state: &State) -> anyhow::Result<()> {
+        // A `settled` selector visible before the steps run waits on nothing:
+        // the wait returns at once and the snapshot races the re-render. Tabs'
+        // "second" state settled on `[role=tab]` that way (review 7, E8).
+        if crate::wait::is_visible(page, state.settled).await? {
+            anyhow::bail!(
+                "the {:?} state settles on {}, which is already visible before its steps, \
+                 so reaching it waits on nothing. Name what the steps change.",
+                state.name,
+                state.settled
+            );
+        }
         for step in state.steps {
             match *step {
                 Step::TabTo(selector) => {
