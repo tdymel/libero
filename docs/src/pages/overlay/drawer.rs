@@ -83,7 +83,7 @@ pub fn DrawerPage() -> Element {
     rsx! {
         DocPage {
             title: "Drawer",
-            source: "libero/src/hooks/drawer.rs",
+            source: "libero/src/components/overlay/use_drawer.rs",
             markdown: "/md/drawer.md",
             properties: vec![
                 props("DrawerOptions", vec![

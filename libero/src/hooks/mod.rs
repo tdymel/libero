@@ -2,14 +2,10 @@ mod cache;
 mod clipboard;
 mod dismiss;
 mod drag;
-mod drawer;
 mod element;
-mod floating_window;
 mod focus_return;
 mod id;
-mod lightbox;
 mod local_state;
-mod modal;
 mod popover;
 mod portal;
 mod presence;
@@ -25,16 +21,11 @@ pub(crate) use dismiss::{
     use_field_list_layer,
 };
 pub use drag::{Drag, DragMove, DragOptions, DragPoint, DragStart, drag_handle_sx, use_drag};
-pub use drawer::{DrawerOptions, use_drawer};
 pub use element::{ElementHandle, use_element};
-pub use floating_window::{FloatingWindowHandle, use_floating_window};
 pub use focus_return::{FocusReturn, use_focus_return};
 pub(crate) use id::id_selector;
 pub use id::{use_id, use_root_id};
-pub use lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox};
 pub(crate) use local_state::{LocalState, use_local_state};
-pub(crate) use modal::use_modal_z_index;
-pub use modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close};
 pub(crate) use popover::use_popover_on;
 pub use popover::{
     Align, Placed, Placement, PopoverHandle, PopoverOptions, PopoverWidth, Rect, Side, use_popover,
@@ -47,3 +38,13 @@ pub use stylesheet::use_stylesheet;
 pub(crate) use stylesheet::{SxSource, use_box_css, use_css};
 pub use theme::use_theme;
 pub(crate) use typeahead::{TYPEAHEAD_RESET, Typeahead, typeahead_match, use_typeahead};
+
+// The overlay hooks render a component, so they live beside it (todo 178).
+// Re-exported here, where they have always been public. The layer-order
+// guard (`tests/all/layer_order.rs`) allows these lines and nothing else.
+pub use crate::components::overlay::{
+    use_drawer::{DrawerOptions, use_drawer},
+    use_floating_window::{FloatingWindowHandle, use_floating_window},
+    use_lightbox::{LightboxItem, LightboxOpening, LightboxOptions, use_lightbox},
+    use_modal::{ModalHandle, ModalScope, Opening, OpeningFuture, use_modal, use_modal_close},
+};

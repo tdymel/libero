@@ -8,7 +8,7 @@ mod layout;
 #[cfg(all(test, debug_assertions))]
 mod name_warning_tests;
 mod navigation;
-mod overlay;
+pub(crate) mod overlay;
 mod surface;
 mod typography;
 

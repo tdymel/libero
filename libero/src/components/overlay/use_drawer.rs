@@ -1,8 +1,8 @@
 use dioxus::prelude::*;
 
+use super::use_modal::{ModalHandle, ModalScope, use_modal};
 use crate::{
     components::{Drawer, DrawerAnchor, Input},
-    hooks::{ModalHandle, ModalScope, use_modal},
     sx::ThemeAwareValue,
     theme::Size,
 };

@@ -82,6 +82,7 @@ mod timeline;
 mod title;
 mod tooltip;
 mod tree;
+mod variant;
 mod z_index;
 
 // The font stacks the typography defaults share.
@@ -312,6 +313,7 @@ pub use tooltip::{
     TOOLTIP_BACKGROUND, TOOLTIP_COLOR, TOOLTIP_DURATION, TOOLTIP_FONT_SIZE, TooltipDefaults,
 };
 pub use tree::TreeDefaults;
+pub use variant::Variant;
 pub use z_index::{
     Z_INDEX_FLOAT, Z_INDEX_HEADER, Z_INDEX_MODAL, Z_INDEX_NOTIFICATION, Z_INDEX_OVERLAY,
     Z_INDEX_POPOVER, Z_INDEX_WINDOW, ZIndexDefaults,

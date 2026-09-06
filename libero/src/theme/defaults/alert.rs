@@ -1,7 +1,6 @@
-use crate::components::Variant;
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss};
+use crate::theme::{CssVar, Size, SizeCss, Variant};
 
 pub const ALERT_RADIUS: CssVar = CssVar::new("--lsx-alert-radius");
 pub const ALERT_PADDING: CssVar = CssVar::new("--lsx-alert-padding");

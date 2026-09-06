@@ -126,7 +126,7 @@ pub fn ModalPage() -> Element {
     rsx! {
         DocPage {
             title: "Modal",
-            source: "libero/src/hooks/modal.rs",
+            source: "libero/src/components/overlay/use_modal.rs",
             markdown: "/md/modal.md",
             lead: rsx! {
                 Text {

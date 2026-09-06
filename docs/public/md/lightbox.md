@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{LightboxItem, LightboxOptions, use_lightbox};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/lightbox.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_lightbox.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A modal image viewer - `use_modal` with a gallery around it: zoom, pan, captions and a thumbnail strip.
 

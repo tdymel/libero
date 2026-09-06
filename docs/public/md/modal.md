@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::hooks::{ModalHandle, ModalScope, use_modal};`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/hooks/modal.rs>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/overlay/use_modal.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A modal is a hook, not a component - `use_modal` registers a render closure and returns a handle that opens it, with per-opening arguments, results and handlers.
 

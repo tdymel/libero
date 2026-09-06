@@ -259,7 +259,7 @@ pub fn FloatingWindowPage() -> Element {
     rsx! {
         DocPage {
             title: "Floating window",
-            source: "libero/src/hooks/floating_window.rs",
+            source: "libero/src/components/overlay/use_floating_window.rs",
             markdown: "/md/floating_window.md",
             properties: vec![
                 props("FloatingWindowOptions", vec![

@@ -57,6 +57,7 @@ mod image;
 mod image_list;
 mod indicator;
 mod kbd;
+mod layer_order;
 mod lightbox;
 mod list;
 mod loader;
