@@ -78,6 +78,10 @@ pub struct Ring {
     /// that looks only at outline and box-shadow reports "no focus ring" for a
     /// component whose indicator is perfectly visible.
     pub border_color: String,
+    /// A `[data-ring]` overlay: the sibling that draws a field's or a
+    /// checkbox's keyboard ring, since focus lands on a child of the box the
+    /// ring belongs to (`ring_overlay` in `components/common/util.rs`).
+    pub overlay: bool,
     /// The background this ring is drawn against, resolved by walking up until
     /// a non-transparent one is found.
     pub against: String,
@@ -115,32 +119,48 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
 
     let after = ring_chain(page, selector).await?;
 
-    let changed: Vec<(&Ring, &Ring)> = before
+    // A drawn ring, outline or shadow, wins over a border that changed colour.
+    // A field frame's border turns on `:focus-within`, which a click shows as
+    // well, and the keyboard ring is drawn by its `[data-ring]` overlay. With
+    // the border counted first, deleting the overlay's rule left every field
+    // green (review 7, E4). So a border counts only where there is no overlay
+    // to carry the ring.
+    let pairs: Vec<(&Ring, &Ring)> = before.iter().zip(after.iter()).collect();
+    let drawn = pairs
         .iter()
-        .zip(after.iter())
-        .filter(|(b, a)| {
-            b.outline != a.outline
-                || b.box_shadow != a.box_shadow
-                || b.border_color != a.border_color
-        })
-        .collect();
+        .find(|(b, a)| b.outline != a.outline || b.box_shadow != a.box_shadow);
+    let has_overlay = after.iter().any(|r| r.overlay);
+    let bordered = pairs
+        .iter()
+        .find(|(b, a)| b.border_color != a.border_color)
+        .filter(|_| !has_overlay);
 
-    let Some((_, ring)) = changed.into_iter().next() else {
+    let Some((_, ring)) = drawn.or(bordered) else {
         let shown = after
             .iter()
             .map(|r| {
                 format!(
-                    "\n    {} outline={:?} box-shadow={:?} border-color={:?}",
-                    r.selector, r.outline, r.box_shadow, r.border_color
+                    "\n    {}{} outline={:?} box-shadow={:?} border-color={:?}",
+                    r.selector,
+                    if r.overlay { " (ring overlay)" } else { "" },
+                    r.outline,
+                    r.box_shadow,
+                    r.border_color
                 )
             })
             .collect::<String>();
         bail!(
-            "tabbing to {selector} produced no visible ring anywhere on it or its ancestors:{shown}"
+            "tabbing to {selector} produced no visible ring anywhere on it, its ancestors or \
+             their ring overlays{}:{shown}",
+            if has_overlay {
+                " (a border change does not count where a [data-ring] overlay exists)"
+            } else {
+                ""
+            }
         );
     };
 
-    Ok(ring.clone())
+    Ok((*ring).clone())
 }
 
 /// WCAG 1.4.11: a focus indicator is a non-text contrast case, so 3:1 against
@@ -163,13 +183,27 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
 pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
     // Whichever property actually carries the indicator.
     let indicator = if has_visible_outline(&ring.outline) {
-        &ring.outline_color
+        ring.outline_color.as_str()
+    } else if ring.box_shadow != "none" {
+        shadow_color(&ring.box_shadow)
     } else {
-        &ring.border_color
+        ring.border_color.as_str()
     };
-    let (Some(fg), Some(bg)) = (parse_rgb(indicator), parse_rgb(&ring.against)) else {
-        // A ring drawn with box-shadow only has no outline colour to read.
-        return Ok(());
+    // An indicator colour that cannot be read is a failure, not a pass. This
+    // returned Ok once, so a box-shadow ring was never measured at all.
+    let Some(fg) = parse_rgb(indicator) else {
+        bail!(
+            "the focus indicator on {} has a colour this pass cannot read ({indicator:?}), \
+             so its contrast is unmeasured",
+            ring.selector
+        );
+    };
+    let Some(bg) = parse_rgb(&ring.against) else {
+        bail!(
+            "the surface behind the focus ring on {} cannot be read ({:?})",
+            ring.selector,
+            ring.against
+        );
     };
     let ratio = contrast(fg, bg);
     if ratio < 3.0 {
@@ -188,7 +222,7 @@ async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
             r#"(() => {{
                 const start = document.querySelector({});
                 if (!start) return [];
-                const describe = (el) => {{
+                const describe = (el, overlay) => {{
                     const s = getComputedStyle(el);
                     // Start at the PARENT, not at the element.
                     //
@@ -200,8 +234,14 @@ async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                     // button's blue, when what the user sees is the ring
                     // against the page behind it. A border's outer edge meets
                     // the parent too.
+                    //
+                    // An overlay covers its owner, its containing block, so its
+                    // ring sits outside the owner: start at the owner's parent.
                     let against = 'rgba(0, 0, 0, 0)';
-                    for (let p = el.parentElement; p; p = p.parentElement) {{
+                    const from = overlay
+                        ? (el.offsetParent || el.parentElement).parentElement
+                        : el.parentElement;
+                    for (let p = from; p; p = p.parentElement) {{
                         const bg = getComputedStyle(p).backgroundColor;
                         if (bg && !bg.startsWith('rgba(0, 0, 0, 0')) {{ against = bg; break; }}
                     }}
@@ -215,6 +255,7 @@ async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                         outline_width: parseFloat(s.outlineWidth) || 0,
                         box_shadow: s.boxShadow,
                         border_color: s.borderColor,
+                        overlay,
                         against,
                     }};
                 }};
@@ -222,7 +263,14 @@ async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
                 let el = start;
                 // Four levels is enough for a field frame; more would start
                 // reporting the page's own chrome as the component's ring.
-                for (let i = 0; el && i < 5; i++, el = el.parentElement) out.push(describe(el));
+                //
+                // Each level's following `[data-ring]` siblings too: that is
+                // where a field draws its keyboard ring.
+                for (let i = 0; el && i < 5; i++, el = el.parentElement) {{
+                    out.push(describe(el, false));
+                    for (let sib = el.nextElementSibling; sib; sib = sib.nextElementSibling)
+                        if (sib.hasAttribute('data-ring')) out.push(describe(sib, true));
+                }}
                 return out;
             }})()"#,
             serde_json::to_string(selector)?
@@ -237,6 +285,18 @@ async fn ring_chain(page: &Page, selector: &str) -> Result<Vec<Ring>> {
 /// non-empty string proves nothing.
 fn has_visible_outline(outline: &str) -> bool {
     !outline.is_empty() && !outline.contains("none") && !outline.starts_with("0px")
+}
+
+/// The colour of the first shadow, as Chromium computes it:
+/// `rgb(34, 139, 230) 0px 0px 0px 2px`.
+fn shadow_color(shadow: &str) -> &str {
+    shadow
+        .find("rgb")
+        .and_then(|start| {
+            let end = shadow[start..].find(')')?;
+            Some(&shadow[start..=start + end])
+        })
+        .unwrap_or(shadow)
 }
 
 fn parse_rgb(value: &str) -> Option<(f64, f64, f64)> {
@@ -282,4 +342,44 @@ fn contrast(a: (f64, f64, f64), b: (f64, f64, f64)) -> f64 {
 /// (`principles/focus-after-removal`).
 pub async fn assert_focus_returned(page: &Page, trigger: &str) -> Result<()> {
     assert_focused(page, trigger, "the overlay closed").await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn ring(outline: &str, outline_color: &str, box_shadow: &str) -> Ring {
+        Ring {
+            selector: "x".into(),
+            outline: outline.into(),
+            outline_color: outline_color.into(),
+            outline_width: 2.0,
+            box_shadow: box_shadow.into(),
+            border_color: "rgb(0, 0, 0)".into(),
+            overlay: false,
+            against: "rgb(255, 255, 255)".into(),
+        }
+    }
+
+    #[test]
+    fn a_shadow_ring_is_measured_by_its_own_colour() {
+        let faint = ring(
+            "rgb(0, 0, 0) none 0px",
+            "rgb(0, 0, 0)",
+            "rgb(238, 238, 238) 0px 0px 0px 2px",
+        );
+        assert!(assert_ring_contrast(&faint).is_err());
+        let strong = ring(
+            "rgb(0, 0, 0) none 0px",
+            "rgb(0, 0, 0)",
+            "rgb(34, 139, 230) 0px 0px 0px 2px",
+        );
+        assert!(assert_ring_contrast(&strong).is_ok());
+    }
+
+    #[test]
+    fn an_unreadable_indicator_colour_fails() {
+        let odd = ring("oklch(0.5 0.1 200) solid 2px", "oklch(0.5 0.1 200)", "none");
+        assert!(assert_ring_contrast(&odd).is_err());
+    }
 }

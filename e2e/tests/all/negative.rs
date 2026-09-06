@@ -66,6 +66,39 @@ fn the_focus_ring_pass_catches_a_missing_ring() {
     });
 }
 
+/// WCAG 1.4.11 on a field: the ring is on the `[data-ring]` overlay, not on
+/// the frame's border, and a faint one must fail even though the border
+/// changes strongly.
+#[test]
+fn the_focus_ring_pass_catches_a_faint_field_ring() {
+    block_on(async {
+        must_fail(
+            "/broken/faint-field-ring",
+            "assert_focus_ring + assert_ring_contrast",
+            |fixture| async move {
+                let result = async {
+                    let ring = focus::assert_focus_ring(&fixture.page, "#faint-input", 5).await?;
+                    anyhow::ensure!(
+                        ring.overlay,
+                        "measured {} instead of the ring overlay",
+                        ring.selector
+                    );
+                    focus::assert_ring_contrast(&ring)
+                }
+                .await;
+                if let Err(error) = &result {
+                    assert!(
+                        format!("{error:#}").contains("WCAG 1.4.11"),
+                        "failed, but not on contrast: {error:#}"
+                    );
+                }
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
 /// WCAG 2.5.8 Target Size (Minimum).
 #[test]
 fn the_target_size_pass_catches_a_small_target() {
@@ -123,6 +156,37 @@ fn the_console_recorder_catches_a_mount_time_error() {
         println!("console recorder correctly caught: {messages:?}");
 
         fixture.close().await.unwrap();
+    });
+}
+
+/// A `console.warn` must fail the console pass. Dioxus reports a misused
+/// scope at warn level (todo 283), and the pass used to keep only errors.
+#[test]
+fn the_console_pass_catches_a_warning() {
+    block_on(async {
+        let fixture = Fixture::open("/broken/console-warning", Viewport::Desktop)
+            .await
+            .unwrap();
+        let _ = wait::until("a console warning to arrive", || async {
+            Ok(!fixture.console.peek().is_empty())
+        })
+        .await;
+
+        let outcome = fixture.console.assert_clean("mounting a warning fixture");
+        fixture.close().await.unwrap();
+        match outcome {
+            Ok(()) => panic!(
+                "the console pass stayed clean on a fixture that warns while mounting. \
+                 Every warning the library or dioxus logs is unguarded."
+            ),
+            Err(error) => {
+                assert!(
+                    format!("{error:#}").contains("deliberate mount-time warning"),
+                    "{error:#}"
+                );
+                println!("console pass correctly caught: {error:#}");
+            }
+        }
     });
 }
 

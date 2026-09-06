@@ -10,6 +10,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{SpotlightAction, SpotlightOptions, spotlight_filter, use_spotlight},
+    theme::{Size, SpotlightDefaults, Theme},
 };
 
 thread_local! {
@@ -177,4 +178,40 @@ fn loading_says_searching_in_the_status_region_instead_of_rows() {
     // The loader itself is silent: the region's text is what is said.
     let loader = tags_with(status, "aria-hidden");
     assert!(!loader.is_empty(), "{status}");
+}
+
+/// The theme's radius reaches the dialog as a size step. Spotlight used to
+/// pass it as a CSS var string into `Dialog`'s `Size` prop, which could not
+/// parse it, warned "unknown size" on every open and fell back to md - so a
+/// themed radius was ignored (found by the E2E console pass, 2026-09-19).
+#[test]
+fn the_themed_radius_reaches_the_dialog() {
+    static ROUND: Theme = Theme {
+        spotlight: SpotlightDefaults {
+            radius: Size::Xl,
+            ..Theme::DEFAULT.spotlight
+        },
+        ..Theme::DEFAULT
+    };
+    fn round() -> Element {
+        rsx! { LiberoProvider { theme: &ROUND, Palette {} } }
+    }
+
+    QUERY.with(|q| q.borrow_mut().clear());
+    LIMIT.set(None);
+    LOADING.set(false);
+    let mut dom = VirtualDom::new(round);
+    dom.rebuild_in_place();
+    for _ in 0..3 {
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+    let html = body(&dioxus_ssr::render(&dom));
+
+    let dialog = tags_with(&html, r#"role="dialog""#);
+    assert_eq!(dialog.len(), 1, "{html}");
+    assert!(
+        dialog[0].contains("--lsx-dialog-radius:var(--lsx-radius-xl)"),
+        "{}",
+        dialog[0]
+    );
 }

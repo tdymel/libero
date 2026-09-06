@@ -90,6 +90,12 @@ pub async fn drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<(
     Ok(())
 }
 
+/// Move the pointer onto an element's centre, pressing nothing.
+pub async fn hover(page: &Page, selector: &str) -> Result<()> {
+    let at = centre_of(page, selector).await?;
+    mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await
+}
+
 /// Click an element at its centre.
 pub async fn click(page: &Page, selector: &str) -> Result<()> {
     let at = centre_of(page, selector).await?;

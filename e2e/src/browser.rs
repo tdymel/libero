@@ -9,7 +9,9 @@ use std::sync::OnceLock;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
-use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
+use chromiumoxide::cdp::browser_protocol::emulation::{
+    SetDeviceMetricsOverrideParams, SetFocusEmulationEnabledParams,
+};
 use chromiumoxide::cdp::browser_protocol::page::{
     CaptureScreenshotFormat, CaptureScreenshotParams,
 };
@@ -145,9 +147,22 @@ impl Fixture {
             .await
             .expect("navigation semaphore");
 
+        // In the background, so a new page never takes activation from the
+        // pages other tests are driving. Focus emulation alone (below) stopped
+        // the blur, but runs with it and foreground pages timed out on
+        // navigation 1-2 times per full run (the 30s CDP navigation limit, or
+        // the 15s ready wait), against none in five runs with both. Measured
+        // 2026-09-19; why foreground creation slows loads is not known.
+        // Background alone passed too, but took 118s a run against 21s.
         let page = harness()
             .browser
-            .new_page("about:blank")
+            .new_page(
+                chromiumoxide::cdp::browser_protocol::target::CreateTargetParams::builder()
+                    .url("about:blank")
+                    .background(true)
+                    .build()
+                    .map_err(anyhow::Error::msg)?,
+            )
             .await
             .context("open a page")?;
 
@@ -160,6 +175,15 @@ impl Fixture {
         ))
         .await
         .context("set the viewport")?;
+
+        // Every page behaves as the focused one. The tests share one browser,
+        // and a page another test opens takes window focus: the first page
+        // gets `blur`, and an open combobox, menu or popover closes by itself
+        // mid-test. `isolation::a_page_keeps_focus_while_another_opens` pins
+        // it; without this it fails every time (todo 356).
+        page.execute(SetFocusEmulationEnabledParams::new(true))
+            .await
+            .context("emulate a focused page")?;
 
         // Before `goto`, deliberately. See the field's doc comment.
         let console = crate::passes::console::Recorder::attach(&page).await?;

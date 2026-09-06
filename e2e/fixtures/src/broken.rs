@@ -63,6 +63,41 @@ pub fn ConsoleError() -> Element {
     }
 }
 
+/// A field whose keyboard ring is too faint to see, while its frame's border
+/// changes strongly on `:focus-within`.
+///
+/// The shape of `use_field_frame`: focus lands on the input, and a
+/// `[data-ring]` sibling after it draws the ring. The focus-ring pass used to
+/// read only the input and its ancestors, found the frame's border, and passed
+/// (review 7, E4) - so a faint, or missing, keyboard ring on every field went
+/// unseen.
+#[component]
+pub fn FaintFieldRing() -> Element {
+    rsx! {
+        style { r#"
+            #faint-frame {{ position: relative; border: 1px solid #888; background: #fff; padding: 8px; max-width: 240px; }}
+            #faint-frame:focus-within {{ border-color: #1a1a8c; }}
+            #faint-frame input {{ border: none; outline: none; font: inherit; }}
+            #faint-frame [data-ring] {{ position: absolute; inset: -1px; pointer-events: none; }}
+            #faint-frame input:focus-visible ~ [data-ring] {{ outline: 2px solid #eeeeee; outline-offset: 2px; }}
+        "# }
+        div { id: "faint-frame",
+            input { id: "faint-input", "aria-label": "Faint ring" }
+            span { "data-ring": true, "aria-hidden": "true" }
+        }
+    }
+}
+
+/// A page that warns while mounting. The console pass used to drop every
+/// warning, so dioxus's scope warning (todo 283) could never fail a run.
+#[component]
+pub fn ConsoleWarning() -> Element {
+    rsx! {
+        document::Script { "console.warn('fixture: deliberate mount-time warning');" }
+        p { "This fixture warns while mounting." }
+    }
+}
+
 /// APG roving tabindex violated: every item is its own tab stop.
 ///
 /// The important part is that this **works**. Every tab is reachable and

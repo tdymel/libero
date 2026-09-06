@@ -96,6 +96,10 @@ enum Route {
     BrokenContrast {},
     #[route("/broken/console")]
     BrokenConsole {},
+    #[route("/broken/faint-field-ring")]
+    BrokenFaintFieldRing {},
+    #[route("/broken/console-warning")]
+    BrokenConsoleWarning {},
     #[route("/broken/roving")]
     BrokenRoving {},
     #[route("/broken/focus-return")]
@@ -173,6 +177,14 @@ fn BrokenContrast() -> Element {
 #[component]
 fn BrokenConsole() -> Element {
     rsx! { broken::ConsoleError {} }
+}
+#[component]
+fn BrokenFaintFieldRing() -> Element {
+    rsx! { broken::FaintFieldRing {} }
+}
+#[component]
+fn BrokenConsoleWarning() -> Element {
+    rsx! { broken::ConsoleWarning {} }
 }
 #[component]
 fn BrokenRoving() -> Element {

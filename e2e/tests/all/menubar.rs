@@ -7,8 +7,9 @@
 
 use e2e::archetypes::{Orientation, Overlay, RovingTabindex};
 use e2e::browser::block_on;
+use e2e::passes::{keyboard, pointer};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard};
+use e2e::{Fixture, Suite, Viewport, wait};
 
 pub const TRIGGERS: &str = "[role=menubar] [data-menubar-index]";
 const FIRST: &str = "[role=menubar] [data-menubar-index=\"0\"]";
@@ -76,5 +77,35 @@ fn its_menu_honours_the_overlay_contract() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// Todo 283: moving the pointer between triggers while a menu is open logged
+/// a dioxus scope warning, twice per switch, and nothing in the DOM showed
+/// it. Edit holds the submenu level that the warning came from.
+#[test]
+fn switching_menus_by_pointer_logs_nothing() {
+    block_on(async {
+        let fixture = Fixture::open("/menubar", Viewport::Desktop).await.unwrap();
+        let trigger = |index: usize| format!("[role=menubar] [data-menubar-index=\"{index}\"]");
+
+        pointer::click(&fixture.page, &trigger(0)).await.unwrap();
+        wait::for_visible(&fixture.page, MENU).await.unwrap();
+        for index in [1, 0, 1, 2, 1] {
+            pointer::hover(&fixture.page, &trigger(index))
+                .await
+                .unwrap();
+            let expanded = format!(
+                "document.querySelector({}).getAttribute('aria-expanded') === 'true'",
+                serde_json::to_string(&trigger(index)).unwrap()
+            );
+            wait::for_js_true(&fixture.page, &expanded, "the hovered menu to open")
+                .await
+                .unwrap();
+        }
+
+        let outcome = fixture.console.assert_clean("switching menus by pointer");
+        fixture.close().await.unwrap();
+        outcome.unwrap();
     });
 }

@@ -404,7 +404,7 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                 aria_label: aria_label.clone(),
                 close_button: false,
                 size: SPOTLIGHT_WIDTH.value(),
-                radius: SizeCss::RADIUS.value(theme.spotlight.radius),
+                radius: theme.spotlight.radius,
                 sx: sx()
                     .align_self("flex-start")
                     .margin_top(SPOTLIGHT_TOP_OFFSET.value())

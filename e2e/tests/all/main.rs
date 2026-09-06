@@ -7,6 +7,7 @@
 mod autocomplete;
 mod drawer;
 mod focus_contrast;
+mod isolation;
 mod menu;
 mod menubar;
 mod modal;
