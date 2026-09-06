@@ -325,9 +325,7 @@ fn snap_position(
 /// cannot be asked to stop propagating - and the library's own text inputs do
 /// not. Without this, a bubble-phase handler calling `prevent_default` would
 /// eat caret movement, Home/End and option selection from any focusable slide
-/// content *and* advance the carousel underneath it. That is a direct
-/// consequence of leaving offscreen slides reachable, so it is this
-/// component's problem rather than the caller's.
+/// content *and* advance the carousel underneath it.
 ///
 /// Only the keys this orientation's track acts on are stopped. The cross-axis
 /// arrows are not among them: the track lets those through untouched, so a
@@ -342,6 +340,29 @@ fn carousel_key(key: &Key, orientation: Orientation) -> bool {
             matches!(key, Key::ArrowUp | Key::ArrowDown | Key::Home | Key::End)
         }
     }
+}
+
+/// Whether strip position `position` lies wholly outside the viewport while the
+/// strip rests on `rest` - the slides that go `inert`.
+///
+/// In pitches (`u = slide + gap`) slide `k` covers `k..k + 1 - gap/u` and the
+/// viewport `p..p + per_view - gap/u`, where `p` is the aligned rest clamped to
+/// the scroll range. The gap is not measured, so it is taken as zero on both
+/// sides: that only ever keeps a slide live, never hides one that shows. A
+/// peeking slide therefore stays live.
+fn outside_viewport(
+    position: usize,
+    rest: usize,
+    strip: usize,
+    per_view: f64,
+    align: CarouselAlign,
+) -> bool {
+    const EPSILON: f64 = 1e-6;
+    let range = (strip as f64 - per_view).max(0.0);
+    let start = (rest as f64 - align_shift(per_view, align)).clamp(0.0, range);
+    let slide = position as f64;
+
+    slide + 1.0 <= start + EPSILON || slide >= start + per_view - EPSILON
 }
 
 /// A dot's own id, derived from the track's so two carousels on one page do
@@ -689,6 +710,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // from the root.
     let root_handle = use_element();
     let track_id = use_id();
+    // The status region describes the track, so the tab stop says where it is.
+    let status_id = use_id();
 
     let count = props.slides.len();
     let per_view = props.per_view.copied_or(theme.carousel.per_view).max(0.1);
@@ -787,10 +810,14 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // the first render's values.
     let controlled = props.index;
     let mut mounting = use_signal(|| true);
+    // The controlled index this effect last applied. Until it runs, a new one
+    // stands in for `settled` when the slides go `inert` - see `rest` below.
+    let mut applied = use_signal(|| None::<usize>);
     use_effect(use_reactive!(|controlled, nav| {
         let Some(index) = controlled else {
             return;
         };
+        applied.set(Some(index));
         // Through `nav`, like every other mover: a looping strip keeps the real
         // slide `clones` positions in, and the clamp has to be the same one
         // `go_to` uses or a controlled index is legal through one path and
@@ -1037,6 +1064,18 @@ pub fn Carousel(props: CarouselProps) -> Element {
         strip
     };
 
+    // Where the strip rests, for `inert`: `settled`, never `current`, or the
+    // slides would flip on every scroll frame. A controlled index the effect
+    // has not applied yet counts already, so the slide a caller moves to is
+    // live in the same render - `Lightbox` focuses its picture from an effect
+    // of its own, which may run before ours.
+    let rest = match controlled {
+        Some(index) if Some(index) != *applied.peek() => nav.clamp_index(index),
+        _ => settled(),
+    };
+    let rest = nav.raw_for(rest);
+    let strip_len = nav.strip_count();
+
     let track_body = strip
         .into_iter()
         .enumerate()
@@ -1044,6 +1083,9 @@ pub fn Carousel(props: CarouselProps) -> Element {
             // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one,
             // and `data-current` below is what a caller actually reads.
             let slide_states: Input<States> = states().with(align.state_name(), true).into();
+            // Wholly offscreen at rest: out of the Tab order and the reading
+            // order. A press on it still reaches the track (measured).
+            let hidden = outside_viewport(position, rest, strip_len, per_view, align);
             rsx! {
                 Box {
                     key: "{position}",
@@ -1055,9 +1097,20 @@ pub fn Carousel(props: CarouselProps) -> Element {
                     // A clone is the same content twice over, so it is hidden
                     // rather than announced a second time.
                     aria_hidden: is_clone.then(|| "true".to_string()),
+                    inert: hidden.then_some(true),
                     onkeydown: move |event: Event<KeyboardData>| {
                         if carousel_key(&event.key(), orientation) {
                             event.stop_propagation();
+                        }
+                    },
+                    // Focus inside a slide that has just gone `inert` - the
+                    // wheel, a drag, a native arrow on a button, a caller's
+                    // index - is blurred by the browser and lands on `<body>`.
+                    // The track takes it instead: it is what the keyboard
+                    // was on, one level up.
+                    onfocusout: move |_| {
+                        if hidden {
+                            let _ = track.element.focus();
                         }
                     },
                     "data-current": (!is_clone && index == current()).then_some("true"),
@@ -1081,6 +1134,11 @@ pub fn Carousel(props: CarouselProps) -> Element {
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
             id: track_id(),
+            // The tab stop names itself: landing on a descendant does not
+            // reliably re-announce the region, and the status says where.
+            role: (!empty).then_some("group"),
+            aria_label: (!empty).then(|| aria_label.clone()),
+            aria_describedby: (!empty).then_some(status_id()),
             onscroll: move |event: ScrollPositionEvent| match event {
                 ScrollPositionEvent::Start(x, y) | ScrollPositionEvent::Change(x, y) => {
                     onscroll(x, y)
@@ -1144,6 +1202,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     root.render(HtmlTag::Section, props.attributes, rsx! {
         if !empty {
             VisuallyHidden {
+                id: status_id(),
                 role: "status",
                 // Off while it rotates on its own: an unattended change is not
                 // worth interrupting a screen reader for, and it becomes
@@ -1618,6 +1677,36 @@ mod tests {
             "{}",
             css.as_str()
         );
+    }
+
+    /// Which positions go `inert`: those wholly outside the viewport at rest.
+    /// A peek stays live, and the clamp at either end counts.
+    #[test]
+    fn only_a_slide_wholly_outside_the_viewport_goes_inert() {
+        let outside = |rest, strip, per_view, align| -> Vec<usize> {
+            (0..strip)
+                .filter(|&k| outside_viewport(k, rest, strip, per_view, align))
+                .collect()
+        };
+        let (start, center, end) = (
+            CarouselAlign::Start,
+            CarouselAlign::Center,
+            CarouselAlign::End,
+        );
+
+        // One up: everything but the slide showing.
+        assert_eq!(outside(2, 5, 1.0, center), vec![0, 1, 3, 4]);
+        // Three up, centred on 2: 1 to 3 show.
+        assert_eq!(outside(2, 6, 3.0, center), vec![0, 4, 5]);
+        // Centred on 1, the strip is clamped at 0: 0 to 2 show.
+        assert_eq!(outside(1, 6, 3.0, center), vec![3, 4, 5]);
+        assert_eq!(outside(5, 6, 3.0, end), vec![0, 1, 2]);
+        // 1.5 up: the half slide peeking on the right stays live.
+        assert_eq!(outside(0, 5, 1.5, start), vec![2, 3, 4]);
+        // Centred on 2 it peeks a quarter each side.
+        assert_eq!(outside(2, 5, 1.5, center), vec![0, 4]);
+        // Everything fits: nothing to hide.
+        assert!(outside(0, 3, 3.0, start).is_empty());
     }
 
     /// Not looping is the same code with no clones, and has to stay a plain

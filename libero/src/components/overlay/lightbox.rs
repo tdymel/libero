@@ -442,19 +442,30 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let zoomable = options.zoom;
     let swipe = options.close_on_swipe_down;
 
+    // The element a move sends focus to. Focused from an effect, not from the
+    // handler: until the render that moves the carousels, the target's slide
+    // is still `inert`, and `focus()` on it does nothing.
+    let mut focus_next = use_signal(|| None::<String>);
+    use_effect(move || {
+        if let Some(id) = focus_next() {
+            focus_next.set(None);
+            if let Ok(element) = stage.query_selector(&id_selector(&id)) {
+                let _ = element.focus();
+            }
+        }
+    });
+
     // Moves to picture `target`, and focus with it when focus was on the
     // picture - otherwise the keyboard is stranded on a slide scrolled away.
     let go = move |target: usize, refocus: bool| {
         let target = target.min(last);
-        let mut index = index;
+        let (mut index, mut focus_next) = (index, focus_next);
         if target == *index.peek() {
             return;
         }
         index.set(target);
-        if refocus
-            && let Ok(image) = stage.query_selector(&id_selector(&image_id(&base_id(), target)))
-        {
-            let _ = image.focus();
+        if refocus {
+            focus_next.set(Some(image_id(&base_id(), target)));
         }
     };
 
@@ -733,11 +744,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
                         };
                         event.prevent_default();
                         go(target, false);
-                        if let Ok(thumbnail) =
-                            stage.query_selector(&id_selector(&thumbnail_id(&base_id(), target)))
-                        {
-                            let _ = thumbnail.focus();
-                        }
+                        focus_next.set(Some(thumbnail_id(&base_id(), target)));
                     },
                     Box {
                         component: "img",

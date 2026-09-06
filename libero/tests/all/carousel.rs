@@ -40,9 +40,11 @@ fn open_tag<'a>(html: &'a str, needle: &str) -> &'a str {
     &html[start..=end]
 }
 
-/// The track's id: the first id in a carousel's markup is the track's.
+/// The track's id. The track is the one element described by the status, so
+/// its tag is the one carrying `aria-describedby`.
 fn track_id_of(html: &str) -> String {
-    html.split_once(r#" id=""#)
+    open_tag(html, "aria-describedby")
+        .split_once(r#" id=""#)
         .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
         .expect("the track carries an id")
 }
@@ -119,12 +121,21 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     assert_eq!(root["aria-roledescription"], "carousel");
     assert_eq!(root["aria-label"], "Photos");
 
-    // Every slide is a named group, and none is hidden: in a real scroll
-    // container an offscreen slide is still reachable.
+    // Every slide is a named group, and none is `aria-hidden`. The three
+    // wholly offscreen at rest - centred three-up on slide 1 shows 0 to 2 -
+    // are `inert` instead, which takes them out of the Tab order too.
     assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 6);
     assert!(html.contains(r#"aria-label="1 of 6""#), "{html}");
     assert!(html.contains(r#"aria-label="6 of 6""#), "{html}");
     assert!(!html.contains("aria-hidden"), "{html}");
+    assert!(
+        !open_tag(&html, r#"aria-label="3 of 6""#).contains("inert"),
+        "{html}"
+    );
+    for n in 4..=6 {
+        let slide = open_tag(&html, &format!(r#"aria-label="{n} of 6""#));
+        assert!(slide.contains("inert"), "{slide}");
+    }
 
     // The controls name the element they scroll, and the track is the tab stop.
     // The track is the only element here that carries an id, and the controls
@@ -139,6 +150,15 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     // page-wide `tabindex="0"` stayed green with the track taken out.
     let track = open_tag(&html, &format!(r#"id="{track_id}""#));
     assert!(track.contains(r#"tabindex="0""#), "{track}");
+    // A tab stop with a role and a name, described by where it is.
+    let track = attributes_of(track, "div");
+    assert_eq!(track["role"], "group");
+    assert_eq!(track["aria-label"], "Photos");
+    let status = open_tag(&html, r#"role="status""#);
+    assert!(
+        status.contains(&format!(r#"id="{}""#, track["aria-describedby"])),
+        "{status}"
+    );
     // The track and the current dot, and nothing else.
     assert_eq!(html.matches(r#"tabindex="0""#).count(), 2, "{html}");
 
@@ -331,6 +351,13 @@ fn a_looping_carousel_clones_its_ends_and_hides_the_copies() {
     assert_eq!(html.matches(r#"aria-hidden="true""#).count(), 2);
     // Only the four real slides are named and grouped.
     assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 4);
+    // The clones follow the same rule as the slides: at rest on slide 0, one
+    // up, every position but that one is offscreen.
+    assert_eq!(html.matches("inert").count(), 5, "{html}");
+    assert!(
+        !open_tag(&html, r#"aria-label="1 of 4""#).contains("inert"),
+        "{html}"
+    );
     assert_eq!(html.matches(r#"aria-label="1 of 4""#).count(), 1);
 
     // The strip opens on the last slide (the leading clone) and the first
