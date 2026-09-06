@@ -58,6 +58,15 @@ field_props! {
     }
 }
 
+/// Whether two options post the same string. `onchange` finds the first,
+/// so the later one could never be picked.
+fn repeats(posted: &[String]) -> bool {
+    posted
+        .iter()
+        .enumerate()
+        .any(|(index, value)| posted[..index].contains(value))
+}
+
 /// A styled native `<select>` over an enum, with a label, a description,
 /// helper text and a validation message stacked around it. Controlled: it
 /// renders `value` and asks for a new one through `onchange`.
@@ -153,18 +162,35 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         .focus_ring(false)
         .prepare();
 
+    // What each `<option>` posts, and so what `onchange` reads back. Only a
+    // runtime set can repeat one - the derive posts variant names.
+    let posted: Vec<String> = values.iter().map(Options::value).collect();
+    if repeats(&posted) {
+        warn(
+            "NativeSelect: two options share one `Options::value`, so picking the later one \
+             selects the first.",
+        );
+    }
+
     let onchange = props.onchange;
     let setter = bound.setter();
-    let pick = use_callback(move |index: usize| {
-        let Some(value) = values.get(index) else {
-            return;
-        };
-        match (&onchange, &setter) {
-            (Some(onchange), _) => onchange.call(value.clone()),
-            (None, Some(setter)) => setter.set(Some(value.clone())),
-            (None, None) => {}
-        }
-    });
+    let pick = {
+        let posted = posted.clone();
+        use_callback(move |value: String| {
+            let Some(value) = posted
+                .iter()
+                .position(|option| *option == value)
+                .and_then(|index| values.get(index))
+            else {
+                return;
+            };
+            match (&onchange, &setter) {
+                (Some(onchange), _) => onchange.call(value.clone()),
+                (None, Some(setter)) => setter.set(Some(value.clone())),
+                (None, None) => {}
+            }
+        })
+    };
 
     let placeholder = props.placeholder.clone().unwrap_or_default();
 
@@ -179,11 +205,7 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         .attr("disabled", disabled)
         .attr("required", required)
         .attr("data-controlled", true)
-        .event("onchange", move |event: FormEvent| {
-            if let Ok(index) = event.value().parse::<usize>() {
-                pick.call(index);
-            }
-        })
+        .event("onchange", move |event: FormEvent| pick.call(event.value()))
         .render(
             HtmlTag::Select,
             props.attributes,
@@ -197,10 +219,10 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
                         "{placeholder}"
                     }
                 }
-                for (index, label) in labels.iter().enumerate() {
+                for (index, (label, value)) in labels.iter().zip(&posted).enumerate() {
                     option {
                         key: "{index}",
-                        value: "{index}",
+                        value: "{value}",
                         selected: selected == Some(index),
                         "{label}"
                     }
@@ -209,4 +231,18 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
         );
 
     field.render(frame.render(select))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::repeats;
+
+    /// Todo 20: a runtime set can post one value twice; the derive cannot.
+    #[test]
+    fn a_repeated_value_is_caught() {
+        let posted = |values: &[&str]| values.iter().map(|v| v.to_string()).collect::<Vec<_>>();
+        assert!(!repeats(&posted(&["Free", "Pro"])));
+        assert!(repeats(&posted(&["Free", "Pro", "Free"])));
+        assert!(!repeats(&[]));
+    }
 }

@@ -262,6 +262,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             GroupRadio {
                 key: "{index}",
                 index,
+                value: option.value(),
                 label,
                 description,
                 name: name.clone(),
@@ -296,6 +297,9 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
 #[derive(Props, Clone, PartialEq)]
 struct GroupRadioProps {
     index: usize,
+    /// What the radio posts when it is the checked one: `Options::value`,
+    /// never the index or the browser's default `on`.
+    value: String,
     label: String,
     description: Option<String>,
     name: String,
@@ -313,6 +317,7 @@ struct GroupRadioProps {
 fn GroupRadio(props: GroupRadioProps) -> Element {
     let GroupRadioProps {
         index,
+        value,
         label,
         description,
         name,
@@ -339,6 +344,7 @@ fn GroupRadio(props: GroupRadioProps) -> Element {
             tabindex: if tab_stop { "0" } else { "-1" },
             onselect: move |_| pick.call(index),
             "data-radio-index": "{index}",
+            value,
         }
     }
 }

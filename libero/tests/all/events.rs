@@ -11,9 +11,9 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Box, Button, Checkbox, Chip, Collapse, ColorCode, ColorField, Dialog,
-        FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NumberField, Options, PinField,
-        RadioGroup, RangeSlider, Rule, SegmentedControl, SelectionArgs, Slider, SliderChangeEvent,
-        Tabs, TagsField, TextField, not_empty, use_form, use_menu,
+        FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField, Options,
+        PinField, RadioGroup, RangeSlider, Rule, SegmentedControl, SelectionArgs, Slider,
+        SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -27,6 +27,7 @@ struct FindClickListener {
     click: Option<ElementId>,
     first_click: Option<ElementId>,
     input: Option<ElementId>,
+    change: Option<ElementId>,
     keydown: Vec<ElementId>,
     mousedown: Vec<ElementId>,
     transitionend: Vec<ElementId>,
@@ -46,6 +47,9 @@ impl WriteMutations for FindClickListener {
         }
         if name == "input" {
             self.input = self.last;
+        }
+        if name == "change" {
+            self.change = self.last;
         }
         if name == "keydown" {
             self.keydown.extend(self.last);
@@ -1968,4 +1972,78 @@ fn escape_in_a_submenu_closes_only_the_submenu() {
     let html = dioxus_ssr::render(&dom);
     assert_eq!(open_menus(&html), 1, "the root menu stays");
     assert!(html.contains("menus:true"));
+}
+
+/// A label that is not the variant's name, so a test can tell which of the
+/// two a control posted.
+#[derive(Clone, Copy, PartialEq, Debug, Options)]
+pub enum Plan {
+    #[option(label = "Free plan")]
+    Free,
+    #[option(label = "Pro plan")]
+    Pro,
+}
+
+#[derive(Clone, PartialEq, Default, libero::components::Fields)]
+pub struct Signup {
+    pub plan: Option<Plan>,
+}
+
+/// Mounts `app`, sends `change` carrying `posted` to the select, and returns
+/// what the handler heard and the markup afterwards.
+fn change_select(app: fn() -> Element, posted: &str) -> (Vec<String>, String) {
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    HEARD.with_borrow_mut(Vec::clear);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let select = find.change.expect("registered no change listener");
+    dom.runtime()
+        .handle_event("change", Event::new(input_event(posted), true), select);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    (HEARD.with_borrow(Clone::clone), dioxus_ssr::render(&dom))
+}
+
+/// Todo 20: the `<select>` reports the chosen option's `value`, which is
+/// `Options::value` now - so that is what `onchange` looks up. An index or
+/// the visible label is no option's value any more, and picks nothing.
+#[test]
+fn a_native_select_reads_the_option_value_back() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NativeSelect {
+                    value: Plan::Free,
+                    onchange: move |next: Plan| heard(next),
+                }
+            }
+        }
+    }
+
+    assert_eq!(change_select(app, "Pro").0, ["Pro"]);
+    assert_eq!(change_select(app, "1").0, Vec::<String>::new());
+    assert_eq!(change_select(app, "Pro plan").0, Vec::<String>::new());
+}
+
+/// The same round trip without `onchange`: the path `name` writes the
+/// `Form`'s value, and the select renders it back as selected.
+#[test]
+fn a_native_select_with_a_path_name_writes_its_forms_value() {
+    fn app() -> Element {
+        let signup = use_store(Signup::default);
+        rsx! {
+            LiberoProvider {
+                Form { value: signup,
+                    NativeSelect { name: Signup::FIELDS.plan(), placeholder: "Pick" }
+                }
+                "plan: {signup.read().plan:?}"
+            }
+        }
+    }
+
+    let (_, html) = change_select(app, "Pro");
+    assert!(html.contains("plan: Some(Pro)"), "{html}");
+    assert!(html.contains("<option value=\"Pro\" selected"), "{html}");
+    let select = attributes_of(&body(&html), "select");
+    assert_eq!(select.get("name").map(String::as_str), Some("plan"));
 }

@@ -162,6 +162,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
                 // text with an ellipsis - a bare text node cannot take one.
                 content: label.content.unwrap_or_else(|| rsx! { span { "{name}" } }),
                 name,
+                value: value.value(),
                 disabled: disabled || props.disabled_options.contains(value),
             }
         })

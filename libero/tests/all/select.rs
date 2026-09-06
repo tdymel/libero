@@ -29,7 +29,9 @@ fn select_renders_its_options_and_marks_the_current_one() {
     assert_eq!(body.matches("<option").count(), 2);
     // The selection is on the `<option>`, not a `value` on the `<select>`:
     // that is what SSR can express, and it needs no second render to appear.
-    assert!(body.contains("<option value=\"1\" selected"));
+    // Each option posts `Options::value` - the variant's name - not its index.
+    assert!(body.contains("<option value=\"First\">"));
+    assert!(body.contains("<option value=\"Second\" selected"));
     assert!(!body.contains("<select value="));
 }
 
@@ -57,7 +59,7 @@ fn a_select_without_a_value_shows_its_placeholder() {
     assert_eq!(body.matches("<option").count(), 3);
     // Disabled and hidden, so it cannot be picked back once a value is set.
     assert!(body.contains("hidden"));
-    assert!(!body.contains("<option value=\"0\" selected"));
+    assert!(!body.contains("<option value=\"First\" selected"));
 }
 
 #[test]

@@ -117,8 +117,9 @@ fn Demo() -> Element {
 set that is data - `String`s, or records fetched from a server - passes them
 here. Any type can be an option by implementing `Options`; `label` is the only
 required method. `value` is the second, and it defaults to `label` - it is what
-a `Select`'s hidden input posts in a native form, so override it when the label
-is text a backend should never receive. The derive overrides it already: for an
+each `<option>` posts in a native form, and what `onchange` looks the pick up
+by, so no two options may share one. Override it when the label is text a
+backend should never receive. The derive overrides it already: for an
 enum the wire value is the variant's name, never a customised label.
 
 ```rust

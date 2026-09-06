@@ -57,6 +57,12 @@ fn a_segmented_control_checks_only_the_selected_radio() {
     // a rich label's text is not it.
     assert!(body.contains("aria-label=\"Bold\""));
     assert!(body.contains("aria-label=\"Italic\""));
+    // Todo 20: each radio posts `Options::value`, not its position.
+    let values: Vec<String> = body
+        .match_indices("<input")
+        .map(|(at, _)| attributes_of(&body[at..], "input")["value"].clone())
+        .collect();
+    assert_eq!(values, ["Bold", "Italic"]);
 
     // The selected look is a `data-state`, so one class serves both segments -
     // `classes_of` only ever reads the first tag, hence the split.

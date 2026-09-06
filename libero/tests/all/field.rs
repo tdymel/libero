@@ -844,6 +844,13 @@ fn a_radio_group_shares_one_name_and_one_tab_stop() {
     assert_eq!(body.matches(r#"tabindex="0""#).count(), 1, "{body}");
     assert_eq!(body.matches(r#"tabindex="-1""#).count(), 2, "{body}");
     assert!(body.contains(r#"data-radio-index="1""#), "{body}");
+
+    // Todo 20: each radio posts `Options::value`, not the browser's `on`.
+    let values: Vec<String> = body
+        .match_indices("<input")
+        .map(|(at, _)| attributes_of(&body[at..], "input")["value"].clone())
+        .collect();
+    assert_eq!(values, ["Free", "Pro", "Team"]);
 }
 
 /// Nothing selected is what an unanswered question looks like - but the group

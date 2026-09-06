@@ -172,6 +172,8 @@ static SEGMENTED_CONTROL_SX: StaticSx = StaticSx::new(|| {
 /// `name` the accessible one.
 pub(crate) struct SegmentSpec {
     pub name: String,
+    /// What the segment's radio posts: `Options::value`.
+    pub value: String,
     pub content: Element,
     pub disabled: bool,
 }
@@ -357,7 +359,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
                 id: "{root}-segment-{index}",
                 r#type: "radio",
                 name: "{name}",
-                value: "{index}",
+                value: segment.value.clone(),
                 // The label's text is not the name when the label is an icon,
                 // so the radio carries it.
                 "aria-label": segment.name.clone(),
