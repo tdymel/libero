@@ -50,7 +50,16 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         .user_select("none")
         .white_space("nowrap")
         .overflow("hidden")
-        .text_overflow("ellipsis")
+        // The row is a flex root, where `text-overflow` never applies, so a
+        // bare-text row was cut mid-glyph (todo 94). A label in a span of its
+        // own is a flex item, and so a block container the ellipsis works in.
+        // Every default row wraps its text this way; a caller's row can too.
+        .selector(
+            "& > [data-slot='label']",
+            sx().min_width("0")
+                .overflow("hidden")
+                .text_overflow("ellipsis"),
+        )
         .hover(sx().background("grey.1"))
         .when("active", sx().background("grey.2"))
         // The shade's own contrast twin, not `primary.7`: blue text on a light
@@ -95,6 +104,9 @@ base_props! {
 /// A themed row for `Combobox`'s `option` callback. Registers itself as the
 /// Enter target while it is the active row, and takes its `id` from the
 /// `Combobox` so `aria-activedescendant` can point at it.
+///
+/// The row is a flex row, so bare text in it is cut at the edge. Put a long
+/// label in `span { "data-slot": "label" }` and it ends in an ellipsis instead.
 #[component]
 pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
     let theme = use_theme();
@@ -153,4 +165,41 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         })
         .event("onclick", move |_: MouseEvent| pick.call(()))
         .render(HtmlTag::Div, props.attributes, props.children)
+}
+
+/// A default row's text: the one element `COMBOBOX_ROW_SX` can ellipsise, since
+/// the row itself is a flex root. `Select`, `MultiSelect`, `Autocomplete` and
+/// `TagsField` draw their own rows through it.
+pub(crate) fn row_label(label: String) -> Element {
+    rsx! {
+        span { "data-slot": "label", "{label}" }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// The ellipsis lives on the label, not on the row: `text-overflow` on a
+    /// flex root never applies, and a bare-text row was cut mid-glyph.
+    #[test]
+    fn the_label_slot_carries_the_ellipsis_and_the_row_does_not() {
+        let css = Stylesheet::from(&COMBOBOX_ROW_SX);
+        let css = css.as_str();
+        let label = css.find("[data-slot='label']").expect("a label rule");
+        let rule = &css[label..][..css[label..].find('}').unwrap()];
+        for declaration in ["min-width:0", "overflow:hidden", "text-overflow:ellipsis"] {
+            assert!(rule.contains(declaration), "{declaration} missing: {rule}");
+        }
+        assert_eq!(css.matches("text-overflow").count(), 1, "{css}");
+    }
+
+    #[test]
+    fn a_row_label_is_a_label_slot_holding_the_text() {
+        assert_eq!(
+            dioxus_ssr::render_element(row_label("Apple".to_string())),
+            r#"<span data-slot="label">Apple</span>"#
+        );
+    }
 }

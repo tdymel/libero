@@ -4,7 +4,7 @@ use crate::{
     components::{
         ComboboxCore, ComboboxOption, HtmlTag, Input, Options,
         common::field_props,
-        form::{FIELD_CONTROL_SX, clear_button, use_bound, use_field, use_field_frame},
+        form::{FIELD_CONTROL_SX, clear_button, row_label, use_bound, use_field, use_field_frame},
         layout::use_box,
         use_combobox,
     },
@@ -51,7 +51,8 @@ field_props! {
         /// annotates one.
         #[props(default)]
         options: Vec<T>,
-        /// Draws one row's content. Defaults to `Options::label`.
+        /// Draws one row's content. Defaults to `Options::label`, in a
+        /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
         #[props(default)]
         option: Option<Callback<AutocompleteOptionArgs<T>, Element>>,
         /// A suggestion was accepted, with the whole `T` behind the text - the
@@ -176,7 +177,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
                     value: value.clone(),
                     index,
                 }),
-                None => rsx! { "{value.label()}" },
+                None => row_label(value.label()),
             };
             rsx! {
                 ComboboxOption {

@@ -119,6 +119,10 @@ under itself, and reads its own `id` and highlight from the `Combobox` around it
 - so a row needs no wiring props at all. `args.active` is there for a row drawn
 without `ComboboxOption`.
 
+The row is a flex row, so bare text that is too long is cut at its edge. Put the
+text in `span { "data-slot": "label", .. }` and it ends in an ellipsis instead,
+which is how `Select`'s and `Autocomplete`'s own rows draw it.
+
 `selected` is deliberately optional. It sets `aria-selected` and tints the row -
 which is select semantics. A suggestion list has no selection, so it just does
 not pass it.

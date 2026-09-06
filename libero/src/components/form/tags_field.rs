@@ -7,7 +7,8 @@ use crate::{
         ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
         common::{field_props, ring_overlay},
         form::{
-            clear_button, field_control_sx, removable_chip, use_bound, use_field, use_field_frame,
+            clear_button, field_control_sx, removable_chip, row_label, use_bound, use_field,
+            use_field_frame,
         },
         layout::use_box,
         use_combobox,
@@ -260,7 +261,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                         text.set(String::new());
                         state.set_active(None);
                     },
-                    "{label}"
+                    {row_label(label)}
                 }
             }
         })

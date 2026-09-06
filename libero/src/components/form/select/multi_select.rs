@@ -27,7 +27,8 @@ field_props! {
         /// here.
         #[props(default)]
         options: Option<Vec<T>>,
-        /// Draws one row's content. Defaults to `Options::label`.
+        /// Draws one row's content. Defaults to `Options::label`, in a
+        /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
         #[props(default)]
         option: Option<Callback<SelectOptionArgs<T>, Element>>,
         /// Draws one selected value inside the trigger. Defaults to the label

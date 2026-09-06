@@ -1,6 +1,6 @@
 use dioxus::prelude::*;
 
-use crate::components::form::use_bound;
+use crate::components::form::{row_label, use_bound};
 
 use crate::{
     components::{Input, Options, common::field_props},
@@ -63,7 +63,8 @@ field_props! {
         /// here.
         #[props(default)]
         options: Option<Vec<T>>,
-        /// Draws one row's content. Defaults to `Options::label`.
+        /// Draws one row's content. Defaults to `Options::label`, in a
+        /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
         #[props(default)]
         option: Option<Callback<SelectOptionArgs<T>, Element>>,
         /// Draws the selection inside the trigger. Defaults to the label as
@@ -236,7 +237,28 @@ pub(super) fn draw_rows<T: Options>(
                 index,
                 selected: *selected,
             }),
-            None => rsx! { "{value.label()}" },
+            None => row_label(value.label()),
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `Select` and `MultiSelect` draw their default rows here. The text goes
+    /// in the label slot, the only element a long label can ellipsise in.
+    #[test]
+    fn a_default_row_puts_its_text_in_the_label_slot() {
+        let values = vec!["Apple".to_string(), "Banana".to_string()];
+        let rows = draw_rows(&values, &[false, true], None);
+        let html: Vec<String> = rows.into_iter().map(dioxus_ssr::render_element).collect();
+        assert_eq!(
+            html,
+            [
+                r#"<span data-slot="label">Apple</span>"#,
+                r#"<span data-slot="label">Banana</span>"#
+            ]
+        );
+    }
 }
