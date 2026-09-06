@@ -1,10 +1,7 @@
 use crate::{
-    components::{ClassList, States, Variables},
-    sx::{StaticSx, Sx},
-    theme::{Size, SizeCss},
+    sx::{ClassList, States, StaticSx, Sx, ThemeAwareValue, Variables},
+    tokens::{Size, SizeCss},
 };
-
-use crate::sx::ThemeAwareValue;
 
 #[derive(Clone, Debug, Default)]
 pub enum Input<T: 'static> {
@@ -91,13 +88,13 @@ impl Input<ThemeAwareValue> {
 /// can't chain that on its own.
 macro_rules! input_from_str {
     ($ty:ty) => {
-        impl From<&str> for $crate::components::Input<$ty> {
+        impl From<&str> for $crate::sx::Input<$ty> {
             fn from(value: &str) -> Self {
                 Self::Value(<$ty>::from(value))
             }
         }
 
-        impl From<String> for $crate::components::Input<$ty> {
+        impl From<String> for $crate::sx::Input<$ty> {
             fn from(value: String) -> Self {
                 Self::Value(<$ty>::from(value.as_str()))
             }

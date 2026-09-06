@@ -1,5 +1,5 @@
-//! `theme` and `hooks` sit below `components` in the layer order, so neither
-//! may import from it (todo 178). A source scan, so a module no test compiles
+//! `hooks`, `theme`, `sx`, `tokens` and `css` sit below `components` in the
+//! layer order, so none may import from it (todos 178, 359). A source scan, so a module no test compiles
 //! into a render is covered too. Comments and the `#[cfg(test)]` module at a
 //! file's end are skipped: a test may render a component.
 
@@ -8,10 +8,6 @@ use std::{fs, path::Path};
 /// The one statement allowed to name `components`: the overlay hooks, which
 /// live beside their components, stay public under `hooks`.
 const REEXPORT: (&str, &str) = ("hooks/mod.rs", "pub use crate::components::overlay::");
-
-/// Known and filed: `use_box_css` takes an `Input<ClassList>`, and `Input`
-/// drags `ClassList`, `States` and `Variables` along with it.
-const KNOWN: &[&str] = &["hooks/stylesheet.rs"];
 
 /// The 1-based line of each `crate::components` path, or `use crate::{..}`
 /// naming `components`, in `source`.
@@ -70,9 +66,6 @@ fn scan(dir: &Path, root: &Path, hits: &mut Vec<String>) {
             .unwrap()
             .to_string_lossy()
             .replace('\\', "/");
-        if KNOWN.contains(&relative.as_str()) {
-            continue;
-        }
         let allowed = (relative == REEXPORT.0).then_some(REEXPORT.1);
         for line in upward_imports(&fs::read_to_string(&path).unwrap(), allowed) {
             hits.push(format!("{relative}:{line}"));
@@ -109,15 +102,15 @@ fn the_scan_finds_an_upward_import() {
 }
 
 #[test]
-fn theme_and_hooks_import_nothing_from_components() {
+fn the_layers_below_components_import_nothing_from_it() {
     let src = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
     let mut hits = Vec::new();
-    for layer in ["theme", "hooks"] {
+    for layer in ["hooks", "theme", "sx", "tokens", "css"] {
         scan(&src.join(layer), &src, &mut hits);
     }
     assert!(
         hits.is_empty(),
-        "`theme` and `hooks` sit below `components`; move the type down or the hook up:\n{}",
+        "these layers sit below `components`; move the type down or the hook up:\n{}",
         hits.join("\n")
     );
 }
