@@ -35954,7 +35954,7 @@ Carousel {
         })
         .collect(),
     per_view: 1.5,
-    align: "center",
+    align: "start",
     indicators: true,
 }
 }
