@@ -20,7 +20,7 @@ filled badge the way `Icon` does. That is how `Code`'s own copy button is built.
 `CheckmarkIcon` below stands for any component of your own that renders an
 `svg` - `ActionIcon` only sizes and colors what it wraps.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::ActionIcon;
 
@@ -32,11 +32,13 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
 With a variant and a color, it draws a badge of its own:
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::ActionIcon;
 
@@ -52,12 +54,14 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
 With `to` set it renders as a real anchor, or a router `Link` when `to`
 matches an internal route.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::ActionIcon;
 
@@ -74,6 +78,8 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[component] fn CheckmarkIcon() -> Element { rsx! {} }
 ```
 
 ## Accessibility

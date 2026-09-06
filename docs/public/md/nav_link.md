@@ -17,7 +17,7 @@ its own whether it is the page you are on.
 Two links, so `active`'s auto-detection can be seen deciding *between* them: the
 one whose `to` matches the current route gets the tint and `aria-current="page"`.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::{components::{Flex, NavLink}, sx::sx};
 
@@ -30,6 +30,16 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[derive(Clone, PartialEq, Routable)]
+# enum Route {
+#     #[route("/0")]
+#     GettingStarted {},
+#     #[route("/1")]
+#     NavLinkPage {},
+# }
+# #[component] fn GettingStarted() -> Element { rsx! {} }
+# #[component] fn NavLinkPage() -> Element { rsx! {} }
 ```
 
 `active` can also be forced, for a section-level parent item or anywhere

@@ -18,7 +18,7 @@ own `alt`; the bar is sibling content and never becomes one.
 
 ## Usage
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Box, Image, ImageBar, ImageItem, ImageList};
 use libero::sx::sx;
@@ -44,6 +44,9 @@ fn Demo(photos: Vec<Photo>) -> Element {
         }
     }
 }
+#
+# #[derive(Clone, PartialEq)]
+# struct Photo { url: String, alt: String, title: String, author: String }
 ```
 
 Every prop set:

@@ -63,7 +63,8 @@ page in order to show a gap.
 The arithmetic is public, so a caller drawing a custom strip can reuse it rather
 than re-deriving the edge cases:
 
-```rust,ignore
+```rust
+use dioxus::prelude::*;
 use libero::components::{pagination_range, PaginationItem};
 
 #[component]

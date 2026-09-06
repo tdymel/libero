@@ -30,7 +30,7 @@ fn Demo() -> Element {
 Severity is yours to state. The default color is `info`; pass `error`,
 `warning` or `success` when the message is one.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::Alert;
 
@@ -50,6 +50,8 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[component] fn WarningGlyph() -> Element { rsx! {} }
 ```
 
 `onclose` is what shows the close button. There is no separate

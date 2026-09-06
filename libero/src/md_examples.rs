@@ -2,9 +2,13 @@
 //! printed example that stops compiling fails `cargo test -p libero`. Only built
 //! under `cfg(doctest)`; run just these with `cargo test -p libero --doc md_examples`.
 //!
-//! A block that is a fragment on purpose (it continues an earlier block, or
-//! names a placeholder like `Route`) is fenced `rust,ignore`. A bare ` ``` `
-//! fence is Rust to rustdoc too, so plain text is fenced `text`.
+//! A complete example that names a placeholder - the reader's `Route`, a
+//! `Photo`, an icon, a `submit` function - still compiles: the stand-ins go
+//! at the end of the block as hidden `# ` lines, rustdoc's own convention,
+//! so a reader sees the example and the test sees a whole program. Only a
+//! fragment on purpose (a prop list, a block that continues an earlier one)
+//! is fenced `rust,ignore`. A bare ` ``` ` fence is Rust to rustdoc too, so
+//! plain text is fenced `text`.
 //! `tests/all/md_examples.rs` checks that every md file is listed here.
 //!
 //! `PageSnippets` does the same for the code the docs pages print, from

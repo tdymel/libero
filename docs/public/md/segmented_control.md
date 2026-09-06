@@ -85,7 +85,7 @@ segment is a `<label>`, so its content has to stay phrasing content: an
 [Icon](icon.md) is an inline-flex `span` (and it is what sizes the raw svg), a
 [Flex](flex.md) is a `div`.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Icon, OptionLabel, Options, SegmentedControl};
 
@@ -122,6 +122,10 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[component] fn AlignLeftIcon() -> Element { rsx! {} }
+# #[component] fn AlignCenterIcon() -> Element { rsx! {} }
+# #[component] fn AlignRightIcon() -> Element { rsx! {} }
 ```
 
 The `Align*Icon`s there are your own icon components - any `svg` will do; `Icon`

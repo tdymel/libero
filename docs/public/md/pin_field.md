@@ -13,7 +13,7 @@ has.
 
 ## Usage
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::PinField;
 
@@ -32,6 +32,8 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# fn submit(_code: String) {}
 ```
 
 `value` is the pin as one string, one character per filled cell. `None` leaves

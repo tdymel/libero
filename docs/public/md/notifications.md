@@ -13,11 +13,13 @@ at the app's root, so it outlives the component that raised it.
 
 ## Usage
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{NotificationData, NotificationOptions, Notifications, Placement, use_notifications},
+    components::{
+        Button, NotificationData, NotificationOptions, Notifications, Placement, use_notifications,
+    },
     theme::AutoClose,
 };
 
@@ -56,6 +58,13 @@ fn SaveButton() -> Element {
         }
     }
 }
+#
+# #[derive(Clone, PartialEq, Routable)]
+# enum Route {
+#     #[route("/0")]
+#     Home {},
+# }
+# #[component] fn Home() -> Element { rsx! {} }
 ```
 
 Render the host **once**. It is the one outlet for every handle, so a second

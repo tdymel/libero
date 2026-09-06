@@ -15,6 +15,9 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     /// Whether the list is open and which row the arrows are on, from
     /// [`use_combobox`](crate::hooks::use_combobox). It lives in the caller's
     /// scope, and `state.a11y_attributes()` is what wires the control up.
+    /// Close it on your trigger's blur (`state.close()`): on the web an open
+    /// list takes Escape first, so an enclosing `Modal` or `HoverCard` stops
+    /// hearing Escape while it stays open.
     state: ComboboxState,
     /// The options to list, already filtered. There is no query prop: a
     /// suggestion list narrows by handing a shorter `options` in.

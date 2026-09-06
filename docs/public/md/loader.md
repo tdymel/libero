@@ -56,7 +56,7 @@ When the loader is the only content of a region, mark the region busy and keep
 the loader silent. Say the wait in a `role="status"` region that is always
 mounted and sits outside the busy element, and fill it only while loading:
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Box, Loader, VisuallyHidden};
 
@@ -76,6 +76,9 @@ fn Results() -> Element {
         VisuallyHidden { role: "status", if loading { "Loading results" } }
     }
 }
+#
+# async fn search() -> Vec<String> { Vec::new() }
+# #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
 ```
 
 Both halves matter. Some screen readers skip a live region that mounts with its

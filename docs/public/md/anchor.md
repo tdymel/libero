@@ -35,7 +35,7 @@ Pass a typed route and the link navigates through the router instead of reloadin
 the page. With a router mounted and `target` unset or `"_blank"`, an internal
 target gets SPA navigation; otherwise it degrades to a plain `href`.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::Anchor;
 
@@ -45,6 +45,13 @@ fn Demo() -> Element {
         Anchor { to: Route::GettingStarted {}, "Back to Getting Started" }
     }
 }
+#
+# #[derive(Clone, PartialEq, Routable)]
+# enum Route {
+#     #[route("/0")]
+#     GettingStarted {},
+# }
+# #[component] fn GettingStarted() -> Element { rsx! {} }
 ```
 
 ## Underline

@@ -14,7 +14,7 @@ the caller's, usually from a button inside the step.
 
 ## Usage
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Button, Options, StepState, Stepper, Text};
 
@@ -50,6 +50,8 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# fn address_valid() -> bool { true }
 ```
 
 ## Where a step's state comes from

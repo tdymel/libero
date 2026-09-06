@@ -68,7 +68,7 @@ A skeleton says nothing to a screen reader, on purpose. While it covers, its
 content is hidden, and `aria-busy` on a hidden element reaches nobody. Mark the
 region you are filling `aria-busy` while it waits - the same rule as `Loader`.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Box, Skeleton};
 
@@ -85,6 +85,11 @@ fn Card() -> Element {
         }
     }
 }
+#
+# #[derive(Clone, PartialEq, Default)]
+# struct Profile;
+# async fn load_profile() -> Profile { Profile }
+# #[component] fn ProfileCard(profile: Profile) -> Element { rsx! {} }
 ```
 
 ## How it hides the content

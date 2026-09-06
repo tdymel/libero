@@ -121,7 +121,7 @@ a `Select`'s hidden input posts in a native form, so override it when the label
 is text a backend should never receive. The derive overrides it already: for an
 enum the wire value is the variant's name, never a customised label.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Options, NativeSelect};
 
@@ -151,6 +151,8 @@ fn Demo(orders: Vec<Order>) -> Element {
         }
     }
 }
+#
+# type OrderId = u32;
 ```
 
 `onchange` hands back the `Order`, not an id to look up again. Note that

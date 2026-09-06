@@ -117,7 +117,7 @@ of you would disagree forever, with your code pushing the same unreachable value
 back on every render and nothing ever converging. An uncontrolled carousel stays
 quiet, because there is no second party holding a wrong value.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Carousel, Image, Text};
 
@@ -137,6 +137,9 @@ fn Demo(photos: Vec<Photo>) -> Element {
         Text { "Showing {slide() + 1} of {photos.len()}" }
     }
 }
+#
+# #[derive(Clone, PartialEq)]
+# struct Photo { url: String, alt: String }
 ```
 
 ## Autoplay

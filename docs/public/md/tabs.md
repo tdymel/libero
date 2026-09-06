@@ -102,7 +102,7 @@ fn Demo() -> Element {
 inline-flex `<span>`, while a [Flex](flex.md) is a `<div>` and does not belong
 there.
 
-```rust,ignore
+```rust
 use dioxus::prelude::*;
 use libero::components::{Icon, OptionLabel, Options, Tabs};
 
@@ -132,6 +132,8 @@ fn Demo() -> Element {
         }
     }
 }
+#
+# #[component] fn FileIcon() -> Element { rsx! {} }
 ```
 
 `FileIcon` there is your own icon component - any `svg` will do; `Icon` is what

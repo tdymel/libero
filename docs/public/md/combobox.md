@@ -275,6 +275,10 @@ Keyboard, from anywhere inside the wrapper: ArrowDown opens and moves down,
 ArrowUp moves up, Home and End jump to the ends, Enter picks the active row and
 closes, Escape and Tab close.
 
+Close the list on your trigger's blur (`onblur: move |_| suggestions.close()`),
+or an enclosing `Modal` or `HoverCard` stops hearing Escape on the web while
+the list stays open.
+
 ## Props
 
 ### `Combobox`
