@@ -283,6 +283,31 @@ fn states(node: &AxNode) -> Vec<String> {
     out
 }
 
+/// The accessible description the browser computed for `selector` - what
+/// `aria-describedby` resolves to - or `""` when it has none. The snapshot
+/// leaves descriptions out, so a test that cares asks for one here.
+pub async fn description(page: &Page, selector: &str) -> Result<String> {
+    let backend_id = backend_node_id(page, selector).await?;
+    let nodes = page
+        .execute(GetFullAxTreeParams::default())
+        .await
+        .context("get the accessibility tree")?
+        .result
+        .nodes
+        .clone();
+    let node = nodes
+        .iter()
+        .find(|n| n.backend_dom_node_id == Some(backend_id))
+        .with_context(|| format!("no accessibility node for {selector}"))?;
+    Ok(node
+        .description
+        .as_ref()
+        .and_then(|v| v.value.as_ref())
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string())
+}
+
 async fn backend_node_id(page: &Page, selector: &str) -> Result<BackendNodeId> {
     let doc = page
         .execute(GetDocumentParams::default())

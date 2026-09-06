@@ -127,6 +127,72 @@ fn a_range_slider_renders_two_thumbs_and_posts_both_values() {
     assert!(first < second, "{html}");
 }
 
+/// The value bubble is a `role="tooltip"`, and a tooltip nothing points at
+/// has no owner in the accessibility tree: each thumb lists its own bubble,
+/// after the field's captions.
+#[test]
+fn each_thumb_is_described_by_its_own_value_bubble() {
+    fn single() -> Element {
+        rsx! {
+            LiberoProvider {
+                Slider {
+                    value: 40.0,
+                    label: "Volume",
+                    description: "Loud is 80.",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+    fn range() -> Element {
+        rsx! {
+            LiberoProvider {
+                RangeSlider {
+                    value: (20.0, 80.0),
+                    aria_label: "Price",
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    fn bubbles(html: &str) -> Vec<Vec<String>> {
+        html.match_indices(r#"role="slider""#)
+            .map(|(at, _)| {
+                let thumb = attributes_of(&html[html[..at].rfind('<').unwrap()..], "span");
+                thumb["aria-describedby"]
+                    .split(' ')
+                    .map(str::to_owned)
+                    .collect()
+            })
+            .collect()
+    }
+    fn text_of(html: &str, id: &str) -> String {
+        let at = html.find(&format!(r#"id="{id}""#)).expect(id);
+        let open = html[at..].find('>').unwrap() + at + 1;
+        let close = html[open..].find('<').unwrap() + open;
+        html[open..close].to_owned()
+    }
+
+    let html = render(single);
+    let described = bubbles(&html);
+    assert_eq!(described.len(), 1, "{html}");
+    assert_eq!(described[0].len(), 2, "{described:?}");
+    assert_eq!(text_of(&html, &described[0][0]), "Loud is 80.");
+    assert_eq!(text_of(&html, &described[0][1]), "40");
+    let at = html.find(&format!(r#"id="{}""#, described[0][1])).unwrap();
+    let bubble = attributes_of(&html[html[..at].rfind('<').unwrap()..], "span");
+    assert_eq!(bubble["role"], "tooltip", "{bubble:?}");
+
+    let html = render(range);
+    let described = bubbles(&html);
+    assert_eq!(described.len(), 2, "{html}");
+    assert_eq!(described[0].len(), 1, "{described:?}");
+    assert_ne!(described[0], described[1]);
+    assert_eq!(text_of(&html, &described[0][0]), "20");
+    assert_eq!(text_of(&html, &described[1][0]), "80");
+}
+
 /// A single thumb's `aria_label` stands in for a missing `label`, so with both
 /// the label names it alone - only a range appends each thumb's own name.
 #[test]

@@ -11,7 +11,7 @@ use crate::{
         overlay::Tooltip,
     },
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_element,
+        DragMove, DragOptions, DragStart, drag_handle_sx, use_css, use_drag, use_element, use_id,
         use_local_state, use_theme,
     },
     platform::ElementApi,
@@ -276,6 +276,8 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     // Two handles, always: a hook cannot be conditional, and a single-thumb
     // slider simply never mounts the second.
     let thumb_elements = [use_element(), use_element()];
+    // Names each thumb's value bubble, so the thumb can point at it.
+    let bubble_id = use_id();
 
     // `snap` clamps on every render, and `f64::clamp` panics on an inverted
     // or non-finite range - which `max: items.len() as f64 - 1.0` is for an
@@ -529,6 +531,15 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
             _ => (None, props.labelledby.clone()),
         };
 
+        // A `plain` slider has no bubble to point at. The bubble goes after
+        // the field's captions: a hint or an error is the news, the value is
+        // already in `aria-valuenow`.
+        let bubble_id = (!props.plain).then(|| format!("{}-value-{index}", bubble_id.read()));
+        let describedby = [props.describedby.clone(), bubble_id.clone()]
+            .into_iter()
+            .flatten()
+            .reduce(|captions, bubble| format!("{captions} {bubble}"));
+
         let thumb = thumb_style
             .clone()
             .attr("role", "slider")
@@ -544,7 +555,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
             .attr("id", own_id)
             .attr("aria-label", aria_label)
             .attr("aria-labelledby", labelledby)
-            .attr("aria-describedby", props.describedby.clone())
+            .attr("aria-describedby", describedby)
             .attr("aria-invalid", props.invalid.then_some("true"))
             .attr("aria-required", props.required.then_some("true"))
             .attr("aria-disabled", !interactive)
@@ -576,6 +587,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
                     label: rsx! { {bubble_text} },
                     size,
                     open: ((drag.dragging)() && active.get() == index).then_some(true),
+                    label_id: bubble_id,
                     {thumb}
                 }
             }

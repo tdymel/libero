@@ -6,7 +6,6 @@ use libero::components::{Chip, Code, Table, Text, column};
 struct Person {
     name: String,
     role: String,
-    age: u32,
     bonus: Option<f64>,
 }
 
@@ -15,33 +14,30 @@ fn people() -> Vec<Person> {
         Person {
             name: "Ada Lovelace".into(),
             role: "Owner".into(),
-            age: 36,
             bonus: Some(12.5),
         },
         Person {
             name: "Grace Hopper".into(),
             role: "Admin".into(),
-            age: 45,
             bonus: Some(8.0),
         },
         Person {
             name: "Alan Turing".into(),
             role: "Viewer".into(),
-            age: 9,
             bonus: None,
         },
     ]
 }
 
-// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, age: u32, bonus: f64 }
+// snippet: item #[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: f64 }
 // snippet: let people: Vec<Person> = Vec::new();
 // snippet: in Table { aria_label: "Team members", data: people, .. }
 const COLUMNS: &str = r#"columns: vec![
         column("Name").value(|p: &Person| p.name.clone()).sortable(),
         column("Role")
             .value(|p: &Person| p.role.clone())
+            .sortable()
             .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-        column("Age").value(|p: &Person| p.age).sortable(),
         column("Bonus").value(|p: &Person| p.bonus).sortable(),
     ]"#;
 
@@ -53,14 +49,13 @@ fn wrap_data(_: &DemoValues, code: &str) -> String {
 struct Person {{
     name: String,
     role: String,
-    age: u32,
     bonus: Option<f64>,
 }}
 
 let people = vec![
-    Person {{ name: "Ada Lovelace".into(), role: "Owner".into(), age: 36, bonus: Some(12.5) }},
-    Person {{ name: "Grace Hopper".into(), role: "Admin".into(), age: 45, bonus: Some(8.0) }},
-    Person {{ name: "Alan Turing".into(), role: "Viewer".into(), age: 9, bonus: None }},
+    Person {{ name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) }},
+    Person {{ name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) }},
+    Person {{ name: "Alan Turing".into(), role: "Viewer".into(), bonus: None }},
 ];
 
 {code}"#
@@ -135,8 +130,8 @@ pub fn TablePage() -> Element {
                             column("Name").value(|p: &Person| p.name.clone()).sortable(),
                             column("Role")
                                 .value(|p: &Person| p.role.clone())
+                                .sortable()
                                 .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-                            column("Age").value(|p: &Person| p.age).sortable(),
                             column("Bonus").value(|p: &Person| p.bonus).sortable(),
                         ],
                     }

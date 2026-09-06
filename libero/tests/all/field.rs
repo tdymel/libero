@@ -786,8 +786,9 @@ fn a_slider_is_named_by_labelledby_rather_than_for() {
         body.contains(&format!(r#"aria-labelledby="{id}-label""#)),
         "{body}"
     );
+    // The helper, then the thumb's own value bubble (todo 309).
     assert!(
-        body.contains(&format!(r#"aria-describedby="{id}-helper""#)),
+        body.contains(&format!(r#"aria-describedby="{id}-helper "#)),
         "{body}"
     );
 }

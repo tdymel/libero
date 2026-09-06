@@ -612,7 +612,7 @@ use libero::{LiberoProvider, use_theme};
 use libero::components::Title;
 use std::time::Duration;
 
-#[derive(Clone, PartialEq)] struct Person { name: String, role: String, age: u32, bonus: f64 }
+#[derive(Clone, PartialEq)] struct Person { name: String, role: String, bonus: f64 }
 
 #[component]
 fn Snippet() -> Element {
@@ -623,8 +623,8 @@ Table { aria_label: "Team members", data: people, columns: vec![
         column("Name").value(|p: &Person| p.name.clone()).sortable(),
         column("Role")
             .value(|p: &Person| p.role.clone())
+            .sortable()
             .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-        column("Age").value(|p: &Person| p.age).sortable(),
         column("Bonus").value(|p: &Person| p.bonus).sortable(),
     ] }
 }
@@ -8054,7 +8054,7 @@ Box {
 fn main() {}
 ```
 
-## data_display/table.rs `Demo` at line 120
+## data_display/table.rs `Demo` at line 115
 
 ```rust,no_run
 use dioxus::prelude::*;
@@ -8093,16 +8093,15 @@ use super::*;
 struct Person {
     name: String,
     role: String,
-    age: u32,
     bonus: Option<f64>,
 }
 
 #[component]
 fn Snippet() -> Element {
 let people = vec![
-    Person { name: "Ada Lovelace".into(), role: "Owner".into(), age: 36, bonus: Some(12.5) },
-    Person { name: "Grace Hopper".into(), role: "Admin".into(), age: 45, bonus: Some(8.0) },
-    Person { name: "Alan Turing".into(), role: "Viewer".into(), age: 9, bonus: None },
+    Person { name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) },
+    Person { name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) },
+    Person { name: "Alan Turing".into(), role: "Viewer".into(), bonus: None },
 ];
 
 rsx! {
@@ -8113,8 +8112,8 @@ Table {
             column("Name").value(|p: &Person| p.name.clone()).sortable(),
             column("Role")
                 .value(|p: &Person| p.role.clone())
+                .sortable()
                 .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-            column("Age").value(|p: &Person| p.age).sortable(),
             column("Bonus").value(|p: &Person| p.bonus).sortable(),
         ],
 }

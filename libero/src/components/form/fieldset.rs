@@ -16,6 +16,7 @@ use crate::{
     },
     sx::{StaticSx, sx},
     theme::{FIELD_CAPTION_FONT_SIZE, FIELD_LABEL_FONT_SIZE, FieldsetDefaults, Size},
+    utils::warn,
 };
 
 static FIELDSET_SX: StaticSx = StaticSx::new(|| {
@@ -57,6 +58,8 @@ base_props! {
         value: Option<Store<V>>,
         /// Composite rules over `value`. A rule naming fields with `.on(..)`
         /// shows on each of them; one naming none shows under the fields.
+        /// With no value - none of its own, and no bound `Form` above - the
+        /// rules do not run.
         #[props(default, into)]
         validate: Validators<V>,
         /// Where the group sits in the form's value - `Order::FIELDS.address()`.
@@ -115,12 +118,24 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         own_disabled.0.set(disabled);
     }
 
+    // With no value there is nothing to judge: a rule run over `V::default()`
+    // would report on a value nobody entered.
+    let inert = !props.validate.is_empty() && !binding.is_bound();
+    use_hook(|| {
+        if inert {
+            warn(
+                "Fieldset: `validate` without a `value` never runs. Give the fieldset a `value`, \
+                 or put it in a `Form` with one and name its `path` with `FIELDS`.",
+            );
+        }
+    });
+
     let prefix = binding.prefix();
     let issues = match props.validate.is_empty() {
         true => Vec::new(),
         false => binding
             .with::<V, _>(&[], |value| issues_of(&props.validate, value, prefix))
-            .unwrap_or_else(|| issues_of(&props.validate, &V::default(), prefix)),
+            .unwrap_or_default(),
     };
     scope.raise(key, issues);
 
@@ -169,4 +184,61 @@ pub fn Fieldset<V: FormValue>(props: FieldsetProps<V>) -> Element {
         .attr("disabled", disabled)
         .attr("aria-describedby", describedby)
         .render(HtmlTag::Fieldset, props.attributes, children)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::cell::Cell;
+
+    use dioxus::prelude::*;
+
+    use crate::{
+        LiberoProvider,
+        components::{Fieldset, Rule},
+        utils::take_warnings,
+    };
+
+    thread_local! {
+        /// What each rule run was handed.
+        static JUDGED: Cell<Option<u32>> = const { Cell::new(None) };
+    }
+
+    fn judged_and_warnings(app: fn() -> Element) -> (Option<u32>, Vec<String>) {
+        JUDGED.set(None);
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        let warnings = take_warnings()
+            .into_iter()
+            .filter(|warning| warning.starts_with("Fieldset:"))
+            .collect();
+        (JUDGED.take(), warnings)
+    }
+
+    fn rule(value: &u32) -> bool {
+        JUDGED.set(Some(*value));
+        false
+    }
+
+    /// Todo 303: with no value, the rules used to judge `V::default()` - a
+    /// value nobody entered.
+    #[test]
+    fn a_fieldset_without_a_value_runs_no_rule_and_says_so() {
+        let (judged, warnings) = judged_and_warnings(|| {
+            rsx! { LiberoProvider { Fieldset::<u32> { validate: rule.error("Never"), "" } } }
+        });
+        assert_eq!(judged, None);
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+    }
+
+    #[test]
+    fn a_fieldset_with_a_value_runs_its_rules_on_it() {
+        let (judged, warnings) = judged_and_warnings(|| {
+            let value = use_store(|| 7_u32);
+            rsx! { LiberoProvider { Fieldset { value, validate: rule.error("Never"), "" } } }
+        });
+        assert_eq!(judged, Some(7));
+        assert!(warnings.is_empty(), "{warnings:?}");
+    }
 }

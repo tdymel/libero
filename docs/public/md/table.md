@@ -30,16 +30,15 @@ use libero::components::{Chip, Table, column};
 struct Person {
     name: String,
     role: String,
-    age: u32,
     bonus: Option<f64>,
 }
 
 #[component]
 fn Demo() -> Element {
     let people = vec![
-        Person { name: "Ada Lovelace".into(), role: "Owner".into(), age: 36, bonus: Some(12.5) },
-        Person { name: "Grace Hopper".into(), role: "Admin".into(), age: 45, bonus: Some(8.0) },
-        Person { name: "Alan Turing".into(), role: "Viewer".into(), age: 9, bonus: None },
+        Person { name: "Ada Lovelace".into(), role: "Owner".into(), bonus: Some(12.5) },
+        Person { name: "Grace Hopper".into(), role: "Admin".into(), bonus: Some(8.0) },
+        Person { name: "Alan Turing".into(), role: "Viewer".into(), bonus: None },
     ];
 
     rsx! {
@@ -50,8 +49,8 @@ fn Demo() -> Element {
                 column("Name").value(|p: &Person| p.name.clone()).sortable(),
                 column("Role")
                     .value(|p: &Person| p.role.clone())
+                    .sortable()
                     .render(|p: &Person| rsx! { Chip { size: "xs", "{p.role}" } }),
-                column("Age").value(|p: &Person| p.age).sortable(),
                 column("Bonus").value(|p: &Person| p.bonus).sortable(),
             ],
         }
@@ -65,7 +64,7 @@ type's alignment, renders `None` as empty, and sorts it last in both directions.
 
 ```rust,ignore
 |p: &Person| p.name.clone()  // String      -> text sort, start-aligned
-|p: &Person| p.age          // u32         -> numeric sort, end-aligned
+|p: &Person| p.name.len()   // usize       -> numeric sort, end-aligned
 |p: &Person| p.bonus        // Option<f64> -> None renders empty, sorts last
 ```
 

@@ -13,23 +13,21 @@ const THUMB: &str = "[role=slider]";
 
 /// The generic battery.
 ///
-/// **Two known defects are visible here, and neither is desired output.**
+/// **A known defect is visible here, and it is not desired output.**
 ///
 /// * **No `targets()`.** The thumb measures 16x16 and WCAG 2.5.8 wants 24x24
 ///   (**todo 302**). Asserting it would go red every run for a decision nobody
 ///   has made, so it is omitted. Add `.targets(THUMB)` once 302 is settled and
 ///   this test starts guarding it.
-/// * **The accessibility baseline contains `tooltip "40"`** - the value bubble
-///   is a `role="tooltip"` that nothing references, so assistive technology
-///   sees an ownerless tooltip (**todo 309**). It is in the snapshot because a
-///   snapshot records what *is*, and a reviewer reading that line needs to know
-///   it is a recorded defect rather than the shape we want. When 309 is fixed
-///   the baseline changes and that is correct, not a regression.
 ///
 /// This is the cost of snapshots that the contrast pass covers and they do not:
 /// a snapshot detects *change*, so a defect present when the baseline was taken
 /// is accepted forever unless somebody writes down that it is one. This comment
 /// is that writing down.
+///
+/// The baseline's `tooltip "40"` is the value bubble, and it is not ownerless:
+/// the thumb names it in `aria-describedby` (todo 309). The snapshot prints no
+/// descriptions, so `the_thumb_is_described_by_its_value_bubble` checks that.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("slider", "/slider").focusable(THUMB).run();
@@ -120,6 +118,18 @@ fn the_thumb_moves_with_the_arrow_keys() {
         .await
         .unwrap_or_else(|e| panic!("End should jump to the maximum: {e}"));
 
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The bubble is a `role="tooltip"`, and a tooltip only means something to
+/// assistive technology through the element that points at it.
+#[test]
+fn the_thumb_is_described_by_its_value_bubble() {
+    block_on(async {
+        let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
+        let description = e2e::ax::description(&fixture.page, THUMB).await.unwrap();
+        assert_eq!(description, "40", "the thumb's computed description");
         fixture.close().await.unwrap();
     });
 }
