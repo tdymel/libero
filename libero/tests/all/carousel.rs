@@ -29,6 +29,24 @@ fn the_autoplay_toggle_has_a_fixed_name() {
     assert!(!html.contains("Play slideshow"), "{html}");
 }
 
+/// The opening tag of the element whose markup contains `needle`, so an
+/// attribute can be asserted on *that* element rather than anywhere in the page.
+fn open_tag<'a>(html: &'a str, needle: &str) -> &'a str {
+    let at = html
+        .find(needle)
+        .unwrap_or_else(|| panic!("no {needle} in {html}"));
+    let start = html[..at].rfind('<').expect("an opening tag");
+    let end = at + html[at..].find('>').expect("an unterminated tag");
+    &html[start..=end]
+}
+
+/// The track's id: the first id in a carousel's markup is the track's.
+fn track_id_of(html: &str) -> String {
+    html.split_once(r#" id=""#)
+        .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
+        .expect("the track carries an id")
+}
+
 fn six() -> Vec<Element> {
     (1..=6).map(|n| rsx! { "{n}" }).collect()
 }
@@ -111,16 +129,18 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     // The controls name the element they scroll, and the track is the tab stop.
     // The track is the only element here that carries an id, and the controls
     // have to name that one rather than whatever `attributes_of` finds first.
-    let track_id = html
-        .split_once(r#" id=""#)
-        .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
-        .expect("the track carries an id");
+    let track_id = track_id_of(&html);
     assert_eq!(
         html.matches(&format!(r#"aria-controls="{track_id}""#))
             .count(),
         2
     );
-    assert!(html.contains(r#"tabindex="0""#), "{html}");
+    // On the track's own tag: the current dot is a tab stop too, so a
+    // page-wide `tabindex="0"` stayed green with the track taken out.
+    let track = open_tag(&html, &format!(r#"id="{track_id}""#));
+    assert!(track.contains(r#"tabindex="0""#), "{track}");
+    // The track and the current dot, and nothing else.
+    assert_eq!(html.matches(r#"tabindex="0""#).count(), 2, "{html}");
 
     // Six slides three-up stop at index 3, so four dots, not six.
     assert_eq!(html.matches(r#"aria-label="Go to slide"#).count(), 4);
@@ -158,12 +178,16 @@ fn an_index_outside_the_reachable_window_is_pulled_into_it() {
 
     let html = body(&render(app));
 
-    // The indicator strip is reachable at all.
+    // The track is the tab stop, and so is the current dot - on each one's
+    // own tag. The track's alone kept a page-wide `tabindex="0"` green with
+    // no tab stop among the dots, the very defect this test is named for.
+    let track = open_tag(&html, &format!(r#"id="{}""#, track_id_of(&html)));
+    assert!(track.contains(r#"tabindex="0""#), "{track}");
+    let dot = open_tag(&html, r#"aria-current="true""#);
     assert!(
-        html.contains(r#"tabindex="0""#),
-        "no tab stop in the strip: {html}"
+        dot.contains(r#"tabindex="0""#),
+        "no tab stop in the strip: {dot}"
     );
-    assert!(html.contains(r#"aria-current="true""#), "{html}");
     // Slide 1 is the one actually centred at rest, so it is the current one.
     let slide_one = html.find("slide 1").expect("slide 1");
     let current = html
@@ -276,10 +300,7 @@ fn every_indicator_carries_the_id_its_focus_lookup_targets() {
     }
 
     let html = body(&render(app));
-    let track_id = html
-        .split_once(r#" id=""#)
-        .map(|(_, rest)| rest.split('"').next().unwrap_or_default().to_string())
-        .expect("the track carries an id");
+    let track_id = track_id_of(&html);
 
     for index in 0..3 {
         let id = format!("{track_id}-indicator-{index}");
@@ -339,4 +360,59 @@ fn an_unnamed_carousel_falls_back_to_the_theme_label() {
     let root = attributes_of(&body(&render(app)), "section");
 
     assert_eq!(root["aria-label"], "Carousel");
+}
+
+/// No slides is not one slide: there is no position to announce, nothing to go
+/// to and nothing to pause. The root stays so the caller's layout holds, but
+/// it is neither a landmark nor a tab stop.
+#[test]
+fn an_empty_carousel_renders_no_chrome() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    indicators: true,
+                    controls: true,
+                    autoplay: true,
+                    slides: vec![],
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    assert!(html.contains("<section"), "{html}");
+    assert!(!html.contains("Slide 1 of 1"), "{html}");
+    assert!(!html.contains(r#"role="status""#), "{html}");
+    assert!(!html.contains("Go to slide"), "{html}");
+    assert!(!html.contains("Pause slideshow"), "{html}");
+    assert!(!html.contains("Previous slide"), "{html}");
+    assert!(!html.contains(r#"role="region""#), "{html}");
+    assert!(!html.contains(r#"tabindex="0""#), "{html}");
+}
+
+/// `align` defaults to `Center` (Maintainer, 2026-09-19). Three-up over six
+/// slides, centred rests on slides 1-4, so the one current at rest is the
+/// second - start-aligned it would be the first.
+#[test]
+fn a_carousel_centres_its_slides_by_default() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Carousel {
+                    aria_label: "Photos",
+                    per_view: 3.0,
+                    slides: (0..6).map(|i| rsx! { div { "slide {i}" } }).collect(),
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+
+    let current = open_tag(&html, r#"data-current="true""#);
+    let after = &html[html.find(current).unwrap() + current.len()..];
+    assert!(after.starts_with("<div>slide 1</div>"), "{html}");
 }

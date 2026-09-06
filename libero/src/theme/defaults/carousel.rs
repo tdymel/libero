@@ -17,14 +17,18 @@ pub const CAROUSEL_INDICATORS_GAP: CssVar = CssVar::new("--lsx-carousel-indicato
 pub const CAROUSEL_INDICATOR_COLOR: CssVar = CssVar::new("--lsx-carousel-indicator-color");
 pub const CAROUSEL_INDICATOR_CURRENT_COLOR: CssVar =
     CssVar::new("--lsx-carousel-indicator-current-color");
+pub const CAROUSEL_CONTROL_BACKGROUND: CssVar = CssVar::new("--lsx-carousel-control-background");
+pub const CAROUSEL_CONTROL_HOVER_BACKGROUND: CssVar =
+    CssVar::new("--lsx-carousel-control-hover-background");
+pub const CAROUSEL_CONTROL_COLOR: CssVar = CssVar::new("--lsx-carousel-control-color");
 
 str_enum! {
     /// Where a snapped slide comes to rest inside the viewport - CSS
     /// `scroll-snap-align`.
     #[state_prefix = "align"]
     pub enum CarouselAlign {
-        #[default]
         Start = "start",
+        #[default]
         Center = "center",
         End = "end",
     }
@@ -55,6 +59,17 @@ pub struct CarouselDefaults {
     /// `grey.5` about 2.0:1 and `grey.4` 1.49:1. Retheme it with that in hand.
     pub indicator_color: ColorValue,
     pub indicator_current_color: ColorValue,
+    /// The previous/next and pause buttons' fill. They sit over the slides,
+    /// not on the page, so this is their own surface rather than the paper's.
+    pub control_background: ColorValue,
+    /// A previous/next button's fill under the pointer. The pause button has
+    /// no hover arm.
+    pub control_hover_background: ColorValue,
+    /// The glyph on every control. It is also the controls' focus-ring
+    /// colour: a var is opaque to `sx`, so `background()` no longer publishes
+    /// the ring's `--lsx-focus-contrast`, and this is what reads against
+    /// `control_background`. Change the two together.
+    pub control_color: ColorValue,
     /// Milliseconds between automatic advances, when `autoplay` is on.
     pub autoplay_delay: u32,
     /// English literals, the `DateDefaults` precedent. The library has no i18n
@@ -90,6 +105,9 @@ impl ToCssDeclarations for CarouselDefaults {
             CAROUSEL_INDICATORS_GAP.declare(self.indicators_gap),
             CAROUSEL_INDICATOR_COLOR.declare(self.indicator_color.value()),
             CAROUSEL_INDICATOR_CURRENT_COLOR.declare(self.indicator_current_color.value()),
+            CAROUSEL_CONTROL_BACKGROUND.declare(self.control_background.value()),
+            CAROUSEL_CONTROL_HOVER_BACKGROUND.declare(self.control_hover_background.value()),
+            CAROUSEL_CONTROL_COLOR.declare(self.control_color.value()),
         ]
     }
 }
@@ -98,7 +116,7 @@ impl CarouselDefaults {
     pub const DEFAULT: Self = Self {
         per_view: 1.0,
         gap: Size::Md,
-        align: CarouselAlign::Start,
+        align: CarouselAlign::Center,
         radius: Size::Sm,
         controls: true,
         indicators: false,
@@ -110,6 +128,9 @@ impl CarouselDefaults {
         indicators_gap: "8px",
         indicator_color: ColorValue::Shade(Color::Grey, ColorShade::S6),
         indicator_current_color: ColorValue::Shade(Color::Primary, ColorShade::S6),
+        control_background: ColorValue::Shade(Color::White, ColorShade::S1),
+        control_hover_background: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        control_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
         autoplay_delay: 4000,
         label: "Carousel",
         previous_label: "Previous slide",

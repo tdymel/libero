@@ -15,12 +15,13 @@ use crate::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id, use_theme,
     },
     platform::{ElementApi, TimerSubscription, timer},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
+        CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
         CAROUSEL_INDICATOR_CURRENT_COLOR, CAROUSEL_INDICATOR_CURRENT_LENGTH,
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
-        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, Size, SizeCss,
+        CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, NamedColorCss, Size, SizeCss,
     },
     utils::use_name_warning,
 };
@@ -138,6 +139,20 @@ static CAROUSEL_CONTROLS_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
+/// The fill and glyph every control shares, behind the theme's vars so a dark
+/// theme has one place to change them. A var is opaque to `background()`, so
+/// the `--lsx-focus-contrast` that `background("white")` used to publish is
+/// declared by hand - the glyph colour, which is what reads against the fill -
+/// or the ring would fall back to whatever the page around the carousel set.
+fn control_colors_sx() -> Sx {
+    sx().background(CAROUSEL_CONTROL_BACKGROUND.value())
+        .color(CAROUSEL_CONTROL_COLOR.value())
+        .var(
+            CssVar::Owned(NamedColorCss::FOCUS_CONTRAST.name().to_string()),
+            CAROUSEL_CONTROL_COLOR.value(),
+        )
+}
+
 static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
     sx().pointer_events("auto")
         .display("inline-flex")
@@ -148,16 +163,17 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .border_width("0")
         .border_radius("50%")
-        .background("white")
-        .color("grey.7")
+        .and(control_colors_sx())
         .box_shadow(SizeCss::SHADOW.value(Size::Sm))
         .cursor("pointer")
-        .hover(sx().background("grey.1"))
+        .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
         // Disabled by `aria-disabled`, not `disabled`: the button keeps its
         // tab stop so focus is never dropped at either end.
         .when(
             "disabled",
-            sx().opacity("0.4").cursor("default").background("white"),
+            sx().opacity("0.4")
+                .cursor("default")
+                .background(CAROUSEL_CONTROL_BACKGROUND.value()),
         )
         .focus_visible(focus_ring_sx())
 });
@@ -225,8 +241,7 @@ static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .border_width("0")
         .border_radius("50%")
-        .background("white")
-        .color("grey.7")
+        .and(control_colors_sx())
         .box_shadow(SizeCss::SHADOW.value(Size::Sm))
         .cursor("pointer")
         .focus_visible(focus_ring_sx())
@@ -673,8 +688,14 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // `Orientation` defaults to vertical; a carousel does not.
     let orientation = props.orientation.copied_or(Orientation::Horizontal);
     let align = props.align.copied_or(theme.carousel.align);
-    let controls = props.controls.unwrap_or(theme.carousel.controls);
-    let indicators = props.indicators.unwrap_or(theme.carousel.indicators);
+    // No slides is not "one slide": there is no position to announce, no dot
+    // to go to and nothing to rotate, so none of the chrome renders. The root
+    // stays, so a caller's size and placement hold while slides load, but it
+    // is no landmark and the empty track is no tab stop - a named region with
+    // nothing in it is noise in a screen reader's landmark list.
+    let empty = count == 0;
+    let controls = !empty && props.controls.unwrap_or(theme.carousel.controls);
+    let indicators = !empty && props.indicators.unwrap_or(theme.carousel.indicators);
     let (first, last) = index_range(count, per_view, align);
 
     // Two indices, deliberately: `current` follows the scroll frame by frame so
@@ -1047,8 +1068,9 @@ pub fn Carousel(props: CarouselProps) -> Element {
             },
             scrollbar_visibility: "hidden",
             // The track is the scrollable region, so it is the tab stop - the
-            // opposite of `ScrollArea`'s default, and on purpose.
-            focusable: true,
+            // opposite of `ScrollArea`'s default, and on purpose. Empty, there
+            // is nothing to scroll to.
+            focusable: !empty,
             framework_sx: ScrollAreaBase(&CAROUSEL_TRACK_SX),
             states: track_states,
             id: track_id(),
@@ -1081,9 +1103,9 @@ pub fn Carousel(props: CarouselProps) -> Element {
         .variables(&variables)
         .prepare()
         .element(&root_handle)
-        .attr("role", "region")
-        .attr("aria-roledescription", "carousel")
-        .attr("aria-label", aria_label)
+        .attr("role", (!empty).then_some("region"))
+        .attr("aria-roledescription", (!empty).then_some("carousel"))
+        .attr("aria-label", (!empty).then_some(aria_label))
         .event("onmouseenter", move |_: Event<MouseData>| hovered.set(true))
         .event("onmouseleave", move |_: Event<MouseData>| {
             hovered.set(false)
@@ -1114,14 +1136,16 @@ pub fn Carousel(props: CarouselProps) -> Element {
 
     rsx! {
         {root.render(HtmlTag::Section, props.attributes, rsx! {
-            VisuallyHidden {
-                role: "status",
-                // Off while it rotates on its own: an unattended change is not
-                // worth interrupting a screen reader for, and it becomes
-                // `polite` the moment the rotation stops. WCAG 2.2.2.
-                aria_live: if running { "off" } else { "polite" },
-                aria_atomic: "true",
-                "{status}"
+            if !empty {
+                VisuallyHidden {
+                    role: "status",
+                    // Off while it rotates on its own: an unattended change is not
+                    // worth interrupting a screen reader for, and it becomes
+                    // `polite` the moment the rotation stops. WCAG 2.2.2.
+                    aria_live: if running { "off" } else { "polite" },
+                    aria_atomic: "true",
+                    "{status}"
+                }
             }
             Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
                 {track_element}
@@ -1166,7 +1190,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
                     }
                 }
             }
-            if props.autoplay {
+            if props.autoplay && !empty {
                 Box {
                     component: "button",
                     r#type: "button",
@@ -1541,6 +1565,40 @@ mod tests {
             !css.as_str().contains("--lsx-focus-contrast:"),
             "{}",
             css.as_str()
+        );
+    }
+
+    /// The controls' colours come from the theme, and the ring colour the
+    /// literal `white` used to publish is still published, from the glyph.
+    #[test]
+    fn the_controls_read_their_colours_from_the_theme() {
+        for sheet in [
+            Stylesheet::from(&CAROUSEL_CONTROL_SX),
+            Stylesheet::from(&CAROUSEL_PAUSE_SX),
+        ] {
+            let css = sheet.as_str();
+            assert!(
+                css.contains("background:var(--lsx-carousel-control-background)"),
+                "{css}"
+            );
+            assert!(
+                css.contains("color:var(--lsx-carousel-control-color)"),
+                "{css}"
+            );
+            assert!(
+                css.contains("--lsx-focus-contrast:var(--lsx-carousel-control-color)"),
+                "{css}"
+            );
+            assert!(!css.contains("--lsx-white"), "{css}");
+            assert!(!css.contains("--lsx-grey"), "{css}");
+        }
+        let control = Stylesheet::from(&CAROUSEL_CONTROL_SX);
+        assert!(
+            control
+                .as_str()
+                .contains("background:var(--lsx-carousel-control-hover-background)"),
+            "{}",
+            control.as_str()
         );
     }
 

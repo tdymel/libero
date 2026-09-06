@@ -62,6 +62,11 @@ than six, and a status that runs "Slide 1 of 4" to "Slide 4 of 4". They count
 where the strip can rest, as Mantine does, so a strip whose slides all fit is
 one position - one dot, "Slide 1 of 1", and both controls inactive.
 
+With no slides at all there is no position, so nothing counts one: no status,
+no dots, no controls and no pause button. The root still renders, so the
+caller's size and placement hold while slides load, but it is not a named
+region and the empty track is not a tab stop.
+
 `align` moves that window rather than just the look. Six slides three-up reach
 indices 0-3 aligned to the start, 1-4 centred and 2-5 aligned to the end,
 because at either end the browser clamps the scroll and the slide sitting in the
@@ -172,7 +177,7 @@ unaffected.
 | `onindexchange` | `EventHandler<usize>` | - | Fired once a scroll settles, and on every control, key, indicator and autoplay tick. |
 | `per_view` | `f64` | `1` | Slides visible at once. Fractional peeks the next one. |
 | `gap` | `Size` | `md` | Between slides. |
-| `align` | `CarouselAlign` | `start` | Where a snapped slide comes to rest - `start`, `center` or `end`. Visible with a fractional `per_view`; at a whole one the alignments can share their resting offsets. Above `per_view: 1` it also moves which indices are reachable. |
+| `align` | `CarouselAlign` | `center` | Where a snapped slide comes to rest - `start`, `center` or `end`. Visible with a fractional `per_view`; at a whole one the alignments can share their resting offsets. Above `per_view: 1` it also moves which indices are reachable. |
 | `orientation` | `Orientation` | `horizontal` | Scroll axis. Note this differs from `Orientation`'s own default. |
 | `height` | `ThemeAwareValue` | `auto` | Required for a vertical carousel. |
 | `controls` | `bool` | `true` | Prev/next buttons. |
@@ -194,7 +199,7 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 |---|---|---|---|
 | `per_view` | `f64` | `1.0` | Slides visible at once. |
 | `gap` | `Size` | `Md` | Between slides. |
-| `align` | `CarouselAlign` | `Start` | Where a snapped slide rests. |
+| `align` | `CarouselAlign` | `Center` | Where a snapped slide rests. |
 | `radius` | `Size` | `Sm` | Corner radius of a slide. |
 | `controls` | `bool` | `true` | Prev/next buttons by default. |
 | `indicators` | `bool` | `false` | Dot strip by default. |
@@ -206,6 +211,9 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `indicators_gap` | `&'static str` | `8px` | Between dots. |
 | `indicator_color` | `ColorValue` | `grey.6` | An idle dot. It is a button carrying the only visible position affordance, so it owes 3:1 against the surface (SC 1.4.11): `grey.6` is 3.32:1 on white, `grey.4` is 1.49:1. |
 | `indicator_current_color` | `ColorValue` | `primary.6` | The current dot. |
+| `control_background` | `ColorValue` | `white` | The previous/next and pause buttons' fill. |
+| `control_hover_background` | `ColorValue` | `grey.1` | A previous/next button's fill under the pointer. |
+| `control_color` | `ColorValue` | `grey.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 | `label` | `&'static str` | `Carousel` | Stands in when a caller omits `aria_label` - which also warns. |
 | `previous_label` / `next_label` | `&'static str` | `Previous slide` / `Next slide` | The controls' names. |
@@ -232,6 +240,8 @@ another language today.
 | `--lsx-carousel-indicator-current-length` | The current dot's length. Position is not carried by colour alone, since the two dot colours are close in luminance. |
 | `--lsx-carousel-indicators-gap` | Between indicators. |
 | `--lsx-carousel-indicator-color` / `-current-color` | An idle dot and the current one. |
+| `--lsx-carousel-control-background` / `-hover-background` | A control's fill, and a previous/next control's under the pointer. |
+| `--lsx-carousel-control-color` | A control's glyph and focus ring. |
 | `--lsx-carousel-height` | Set from the `height` prop; the track is `auto` without it. |
 
 ## Data attributes
