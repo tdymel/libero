@@ -2,9 +2,11 @@
 //! whose track is a gradient as tall as its thumb.
 
 use crate::{
-    components::Input,
+    components::{Input, form::slider::SLIDER_HIT},
     sx::{StaticSx, Sx},
-    theme::{COLOR_PICKER_THUMB, ColorPickerDefaults, SLIDER_THUMB, SLIDER_TRACK},
+    theme::{
+        COLOR_PICKER_SPACING, COLOR_PICKER_THUMB, ColorPickerDefaults, SLIDER_THUMB, SLIDER_TRACK,
+    },
 };
 
 /// Red round the wheel and back to red, at even sixths.
@@ -33,4 +35,15 @@ static COLOR_SLIDER_SX: StaticSx = StaticSx::new(|| {
     ColorPickerDefaults::theme_vars()
         .var(SLIDER_TRACK, COLOR_PICKER_THUMB.value())
         .var(SLIDER_THUMB, COLOR_PICKER_THUMB.value())
+        // The picker stacks its sliders one `spacing` apart, and at `xs` and
+        // `sm` a 24px hit area would reach into the next slider and take its
+        // presses. Capped so it never passes the middle of the gap.
+        .var(
+            SLIDER_HIT,
+            format!(
+                "min(24px, {} + {})",
+                COLOR_PICKER_THUMB.value(),
+                COLOR_PICKER_SPACING.value()
+            ),
+        )
 });

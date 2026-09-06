@@ -67,10 +67,9 @@ fn it_honours_the_radio_group_contract() {
 /// clears its neighbours: the rows' centres must be at least 24px apart.
 ///
 /// Measured 2026-09-19 at 1280x800 and 390px wide, device scale 1: rows
-/// 19.5px tall, 23.5px apart. Half a pixel short - todo 325. Fixing it turns
-/// this green; drop the `ignore` then.
+/// 19.5px tall, 23.5px apart, half a pixel short. Since todo 302 each row is
+/// at least `24px - gap` tall, so the rows sit 24px apart.
 #[test]
-#[ignore = "todo 325: RadioGroup's md rows sit 23.5px apart, under 2.5.8's 24px"]
 fn its_rows_meet_the_target_spacing_exception() {
     block_on(async {
         for viewport in Viewport::ALL {

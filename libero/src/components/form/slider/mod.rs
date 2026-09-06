@@ -5,7 +5,7 @@ mod slider;
 mod slider_value;
 mod value;
 
-pub(in crate::components::form) use core::SliderCore;
+pub(in crate::components::form) use core::{SLIDER_HIT, SliderCore};
 pub use range_slider::{RangeSlider, RangeSliderProps};
 pub use slider::{Slider, SliderProps};
 pub use slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue};

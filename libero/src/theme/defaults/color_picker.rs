@@ -80,6 +80,11 @@ impl ColorPickerDefaults {
                 saturation_height: "100px",
                 thumb_size: "8px",
                 preview_size: "26px",
+                // An accessibility threshold, not only a layout knob: a
+                // swatch is a button, and at 20px it meets WCAG 2.5.8 only
+                // by its spacing exception - swatch plus spacing at least
+                // 24px, centre to centre. Exactly 24 here, so neither value
+                // can shrink. Pinned by a test below.
                 spacing: "4px",
                 swatch_size: "20px",
             },
@@ -157,5 +162,28 @@ impl ToCssDeclarations for ColorPickerDefaults {
             declarations.push(COLOR_PICKER_SWATCH_SIZE.declare(size, level.swatch_size));
         }
         declarations
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn px(value: &str) -> f64 {
+        value
+            .strip_suffix("px")
+            .and_then(|n| n.parse().ok())
+            .unwrap()
+    }
+
+    /// WCAG 2.5.8: a swatch under 24px passes only if its neighbours' centres
+    /// are 24px away. `xs` is the tightest step, and it sits exactly on it.
+    #[test]
+    fn the_swatches_sit_24px_apart_centre_to_centre_at_every_step() {
+        for size in Size::ALL {
+            let level = ColorPickerDefaults::DEFAULT.sizes.get(size);
+            let pitch = px(level.swatch_size) + px(level.spacing);
+            assert!(pitch >= 24.0, "{size:?}: swatches sit {pitch}px apart");
+        }
     }
 }

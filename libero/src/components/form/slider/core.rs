@@ -36,6 +36,9 @@ const SLIDER_COLOR: CssVar = CssVar::new("--lsx-slider-color");
 const SLIDER_MARK_AT: CssVar = CssVar::new("--lsx-slider-mark-at");
 /// A plain slider's thumb face - the color the track is pointing at.
 const SLIDER_THUMB_FILL: CssVar = CssVar::new("--lsx-slider-thumb-fill");
+/// The side of the thumb's invisible hit area. 24px unless a skin whose
+/// sliders sit closer than that sets it; see `SLIDER_THUMB_SX`.
+pub(in crate::components::form) const SLIDER_HIT: CssVar = CssVar::new("--lsx-slider-hit");
 
 /// Where a 0-1 `fraction` sits along the track. The track is the full width,
 /// so the thumb travels inset by half its own width and never overhangs -
@@ -145,6 +148,22 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         .border_width("2px")
         .border_color(SLIDER_COLOR.value())
         .cursor("grab")
+        // WCAG 2.5.8 wants a 24x24 target, and the default thumb is 16px. An
+        // invisible square centred on the thumb takes the pointer instead, so
+        // the thumb keeps its look. Which thumb a press grabs is picked by
+        // value, never by hit-test, so two overlapping squares cannot swap
+        // a range's thumbs.
+        .position("relative")
+        .selector(
+            "&::before",
+            sx().content("\"\"")
+                .position("absolute")
+                .top("50%")
+                .left("50%")
+                .width(SLIDER_HIT.value_or("24px"))
+                .height(SLIDER_HIT.value_or("24px"))
+                .transform("translate(-50%, -50%)"),
+        )
 });
 
 static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {

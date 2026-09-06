@@ -5,6 +5,7 @@
 
 use e2e::browser::block_on;
 use e2e::passes::pointer;
+use e2e::passes::target_size::MINIMUM;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const VALUE_NOW: &str = "document.querySelector('[role=slider]').getAttribute('aria-valuenow')";
@@ -13,17 +14,10 @@ const THUMB: &str = "[role=slider]";
 
 /// The generic battery.
 ///
-/// **A known defect is visible here, and it is not desired output.**
-///
-/// * **No `targets()`.** The thumb measures 16x16 and WCAG 2.5.8 wants 24x24
-///   (**todo 302**). Asserting it would go red every run for a decision nobody
-///   has made, so it is omitted. Add `.targets(THUMB)` once 302 is settled and
-///   this test starts guarding it.
-///
-/// This is the cost of snapshots that the contrast pass covers and they do not:
-/// a snapshot detects *change*, so a defect present when the baseline was taken
-/// is accepted forever unless somebody writes down that it is one. This comment
-/// is that writing down.
+/// * **No `targets()`.** The thumb is drawn 16x16, and its 24x24 hit area is a
+///   `::before` (todo 302), which a bounding box does not include. That
+///   check would report 16 for a thumb that meets 2.5.8, so
+///   `the_thumb_takes_the_pointer_over_24px` checks the hit area instead.
 ///
 /// The baseline's `tooltip "40"` is the value bubble, and it is not ownerless:
 /// the thumb names it in `aria-describedby` (todo 309). The snapshot prints no
@@ -120,6 +114,79 @@ fn the_thumb_moves_with_the_arrow_keys() {
 
         fixture.close().await.unwrap();
     });
+}
+
+/// WCAG 2.5.8 on the thumb's hit area, not its box: the thumb is drawn 16px
+/// and an invisible square 24px wide takes the pointer (todo 302).
+///
+/// Hit-tests the square's corners, 11.5px out from the thumb's centre on both
+/// axes, and 13px out as the control that the check can fail. Then drags from
+/// 11px above the centre, which is outside the thumb's drawn box and outside
+/// the slider's root, so only the hit area can start that drag.
+#[test]
+fn the_thumb_takes_the_pointer_over_24px() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/slider", viewport).await.unwrap();
+            let centre = pointer::centre_of(&fixture.page, THUMB).await.unwrap();
+
+            assert_eq!(
+                corners_on_thumb(&fixture, centre, MINIMUM / 2.0 - 0.5).await,
+                [true; 4],
+                "at {}: a corner of the 24px hit area missed the thumb",
+                viewport.name()
+            );
+            assert_eq!(
+                corners_on_thumb(&fixture, centre, MINIMUM / 2.0 + 1.0).await,
+                [false; 4],
+                "at {}: the thumb took the pointer outside its 24px hit area",
+                viewport.name()
+            );
+
+            let before = value_now(&fixture).await;
+            let from = pointer::Point {
+                x: centre.x,
+                y: centre.y - 11.0,
+            };
+            let to = pointer::Point {
+                x: from.x + 80.0,
+                y: from.y,
+            };
+            pointer::drag(&fixture.page, from, to, 10).await.unwrap();
+            wait::for_js_change(
+                &fixture.page,
+                VALUE_NOW,
+                &before,
+                "a drag from the hit area to move the thumb",
+            )
+            .await
+            .unwrap_or_else(|e| {
+                panic!(
+                    "at {}: a drag from 11px above the thumb's centre did not move it: {e}",
+                    viewport.name()
+                )
+            });
+            fixture.close().await.unwrap();
+        }
+    });
+}
+
+/// Whether each corner of a square `offset` out from `centre` hit-tests to
+/// the thumb.
+async fn corners_on_thumb(fixture: &Fixture, centre: pointer::Point, offset: f64) -> Vec<bool> {
+    fixture
+        .page
+        .evaluate(format!(
+            "[[-1,-1],[1,-1],[-1,1],[1,1]].map(([dx, dy]) => {{ \
+             const el = document.elementFromPoint({x} + dx * {offset}, {y} + dy * {offset}); \
+             return !!el && !!el.closest('[role=slider]'); }})",
+            x = centre.x,
+            y = centre.y,
+        ))
+        .await
+        .unwrap()
+        .into_value()
+        .unwrap()
 }
 
 /// The bubble is a `role="tooltip"`, and a tooltip only means something to

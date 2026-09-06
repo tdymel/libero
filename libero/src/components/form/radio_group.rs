@@ -18,6 +18,14 @@ static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .flex_direction("column")
         .gap(FIELD_GAP.value())
+        // A row is under 24px tall at every step below `xxl`, so WCAG 2.5.8
+        // holds only by its spacing exception: rows 24px apart, centre to
+        // centre. Topped up per row rather than by a bigger gap, so a row
+        // that a caption already makes taller keeps the theme's gap.
+        .selector(
+            "& > *",
+            sx().min_height(format!("calc(24px - {})", FIELD_GAP.value())),
+        )
         .when(
             "horizontal",
             sx().flex_direction("row")
