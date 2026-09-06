@@ -1,4 +1,5 @@
-//! The trigger's `aria-activedescendant` names only a row that is in the DOM:
+//! The trigger's `aria-controls` names the listbox only while it is mounted,
+//! and its `aria-activedescendant` names only a row that is in the DOM:
 //! never one while the list is loading or empty, and a highlight past the end
 //! names the last row, the one drawn as active. What the list says while it
 //! loads comes from the theme, and it is said by a status region that is always
@@ -101,6 +102,46 @@ fn an_empty_list_names_no_row() {
     let mut dom = mount();
     dom.in_runtime(|| get(&OPTIONS).set(Vec::new()));
     assert_eq!(descendant(&mut dom), None);
+}
+
+/// The trigger's `aria-controls`, if it has one. Two passes, as for
+/// [`descendant`].
+fn controls(dom: &mut VirtualDom) -> (Option<String>, String) {
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = body(&dioxus_ssr::render(dom));
+    let button = &html[html.find("<button").expect("the trigger")..];
+    let button = &button[..button.find('>').unwrap()];
+    let id = button.find(r#"aria-controls=""#).map(|at| {
+        let at = at + r#"aria-controls=""#.len();
+        button[at..at + button[at..].find('"').unwrap()].to_string()
+    });
+    (id, html)
+}
+
+/// A closed, empty or loading list draws no listbox, so there is nothing for
+/// `aria-controls` to name (todo 360).
+#[test]
+fn aria_controls_names_the_listbox_only_while_it_is_mounted() {
+    let mut dom = mount();
+    let (id, html) = controls(&mut dom);
+    let id = id.expect("an open list with rows is named");
+    assert!(html.contains(&format!(r#"id="{id}""#)), "{html}");
+
+    dom.in_runtime(|| get(&LOADING).set(true));
+    assert_eq!(controls(&mut dom).0, None, "while loading");
+    dom.in_runtime(|| get(&LOADING).set(false));
+    assert!(controls(&mut dom).0.is_some(), "once the results land");
+
+    dom.in_runtime(|| get(&OPTIONS).set(Vec::new()));
+    assert_eq!(controls(&mut dom).0, None, "while empty");
+    dom.in_runtime(|| get(&OPTIONS).set(vec!["apple"]));
+    assert!(controls(&mut dom).0.is_some(), "once rows are back");
+
+    dom.in_runtime(|| get(&STATE).close());
+    let (id, html) = controls(&mut dom);
+    assert_eq!(id, None, "while closed");
+    assert!(!html.contains("-listbox\""), "{html}");
 }
 
 /// The list reports its row count by writing the state during render, which

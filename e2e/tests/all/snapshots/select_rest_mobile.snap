@@ -9,4 +9,3 @@ generic
   combobox "Fruit" = Banana [expanded=false] [haspopup=listbox]
     StaticText "Banana"
 status [atomic] [live=polite]
---> aria-controls [id="lsx-N-listbox"] (missing)

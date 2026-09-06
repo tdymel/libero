@@ -209,13 +209,12 @@ fn the_trigger_is_a_named_focusable_combobox() {
     );
 }
 
-/// `aria-controls` names the list even while it is closed, which is what makes
-/// it one stable target for both layouts - the columns' wrapper in one and the
-/// single listbox in the other.
+/// A closed list is not in the DOM, so `aria-controls` has nothing to name
+/// until it opens (todo 360).
 #[test]
-fn the_trigger_points_at_one_list() {
+fn a_closed_trigger_points_at_no_list() {
     let trigger = trigger_of(&body(&render(chosen)));
-    assert!(trigger.contains("aria-controls=\""), "{trigger}");
+    assert!(!trigger.contains("aria-controls"), "{trigger}");
     // Nothing is highlighted while the list is closed, so there is no row for
     // `aria-activedescendant` to point at.
     assert!(!trigger.contains("aria-activedescendant"), "{trigger}");

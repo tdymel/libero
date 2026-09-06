@@ -228,15 +228,16 @@ impl Combobox<'_> {
 
     /// The listbox, found through `aria-controls` rather than the DOM tree: it
     /// is portaled to an outlet at the document root and is no descendant of
-    /// the trigger (`codebase/use-popover`).
+    /// the trigger (`codebase/use-popover`). Polled: the attribute is set only
+    /// while the listbox is mounted, by the re-render the opening key starts.
     async fn listbox_selector(&self, page: &Page) -> Result<String> {
-        let id: Option<String> = page
-            .evaluate(format!(
-                "(() => {{ const el = document.querySelector({}); return el ? el.getAttribute('aria-controls') : null; }})()",
-                serde_json::to_string(self.trigger)?
-            ))
-            .await?
-            .into_value()?;
+        let read = format!(
+            "(() => {{ const el = document.querySelector({}); return el ? el.getAttribute('aria-controls') : null; }})()",
+            serde_json::to_string(self.trigger)?
+        );
+        // A timeout falls through to the read, whose `None` is the bail below.
+        let _ = wait::for_js_true(page, &format!("!!{read}"), "aria-controls").await;
+        let id: Option<String> = page.evaluate(read).await?.into_value()?;
         match id {
             Some(id) if !id.is_empty() => Ok(format!("#{id}")),
             _ => bail!(

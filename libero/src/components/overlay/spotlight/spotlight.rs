@@ -434,7 +434,9 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
                             state.set_active(highlight_first.then_some(0));
                         },
                         onkeydown,
-                        ..state.a11y_attributes(),
+                        // Its listbox is drawn whenever it is open, rows
+                        // or none.
+                        ..state.aria(true),
                     }
                     ScrollArea {
                         id: "{listbox}",

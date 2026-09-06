@@ -599,8 +599,12 @@ fn trigger_aria(
         attr("role", "combobox"),
         attr("aria-haspopup", "listbox"),
         attr("aria-expanded", opened.to_string()),
-        attr("aria-controls", listbox_id.to_string()),
     ];
+    // The list is mounted only while open, and an id that names nothing is an
+    // invalid reference.
+    if opened {
+        trigger.push(attr("aria-controls", listbox_id.to_string()));
+    }
     if let Some(target) = descendant.filter(|_| opened) {
         trigger.push(attr("aria-activedescendant", target));
     }

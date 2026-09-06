@@ -81,9 +81,9 @@ impl ComboboxState {
         }
     }
 
-    /// `role`, `aria-haspopup`, `aria-expanded`, `aria-controls` and, while the
-    /// list is open and has a row to point at, `aria-activedescendant`. Spread it on whatever control
-    /// sits inside the `Combobox`:
+    /// `role`, `aria-haspopup`, `aria-expanded`, and, while the list is open
+    /// and has a row to point at, `aria-controls` and `aria-activedescendant`.
+    /// Spread it on whatever control sits inside the `Combobox`:
     ///
     /// ```no_run
     /// # use dioxus::prelude::*;
@@ -96,6 +96,13 @@ impl ComboboxState {
     /// # } }
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
+        // `ComboboxCore` mounts the listbox only while it has rows to draw.
+        self.aria(self.is_open() && (self.rows)() > 0)
+    }
+
+    /// [`a11y_attributes`](Self::a11y_attributes) for a list that is not a
+    /// `ComboboxCore`'s, whose drawer says whether its listbox is mounted.
+    pub(crate) fn aria(&self, listbox: bool) -> Vec<Attribute> {
         let opened = self.is_open();
         // Clamped the way the list clamps its highlight, so the id named here
         // is the row drawn as active.
@@ -104,6 +111,6 @@ impl ComboboxState {
             .active()
             .filter(|_| opened && rows > 0)
             .map(|row| row.min(rows - 1));
-        trigger_aria(&self.id(), opened, active)
+        trigger_aria(&self.id(), opened, listbox, active)
     }
 }

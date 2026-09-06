@@ -12,4 +12,3 @@ generic
     generic
 status [atomic] [live=polite]
 status [atomic] [live=polite]
---> aria-controls [id="lsx-N-listbox"] (missing)
