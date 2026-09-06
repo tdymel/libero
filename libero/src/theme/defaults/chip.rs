@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{Size, SizeCss, Sizes};
+use crate::theme::{Size, SizeCss, Sizes, Variant};
 
 pub const CHIP_FONT_SIZE: SizeCss = SizeCss::new("--lsx-chip-font-size-");
 pub const CHIP_HEIGHT: SizeCss = SizeCss::new("--lsx-chip-height-");
@@ -15,6 +15,8 @@ pub struct ChipSizeLevel {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ChipDefaults {
+    /// The chrome a chip takes when a call site names none.
+    pub variant: Variant,
     pub size: Size,
     pub radius: Size,
     pub sizes: Sizes<ChipSizeLevel>,
@@ -22,6 +24,7 @@ pub struct ChipDefaults {
 
 impl ChipDefaults {
     pub const DEFAULT: Self = Self {
+        variant: Variant::Filled,
         size: Size::Md,
         radius: Size::Xl,
         sizes: Sizes::new(

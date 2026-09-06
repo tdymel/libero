@@ -128,6 +128,7 @@ label and caption typography comes from `FieldDefaults`.
 
 | Field | Type | Description |
 |---|---|---|
+| `variant` | `ChoiceVariant` | Default `variant` when the prop is omitted (`plain`). |
 | `size` | `Size` | Default `size` when the prop is omitted (`md`). |
 | `radius` | `Size` | Default `radius` when the prop is omitted (`xl`). |
 | `sizes` | `Sizes<SwitchSizeLevel>` | `track_width`, `track_height` and `thumb_size` per size - `30x16` with a 12px thumb at `xs`, up the scale from there. |

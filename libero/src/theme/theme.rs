@@ -41,6 +41,7 @@ pub struct Theme {
     pub badge: BadgeDefaults,
     pub alert: AlertDefaults,
     pub switch: SwitchDefaults,
+    pub segmented_control: SegmentedControlDefaults,
     pub checkbox: CheckboxDefaults,
     pub radio: RadioDefaults,
     /// Shared by every field: the typography of the slots stacked around a
@@ -163,6 +164,7 @@ impl Theme {
         badge: BadgeDefaults::DEFAULT,
         progress_bar: ProgressBarDefaults::DEFAULT,
         switch: SwitchDefaults::DEFAULT,
+        segmented_control: SegmentedControlDefaults::DEFAULT,
         checkbox: CheckboxDefaults::DEFAULT,
         radio: RadioDefaults::DEFAULT,
         field: FieldDefaults::DEFAULT,

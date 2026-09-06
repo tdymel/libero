@@ -182,7 +182,7 @@ base_props! {
 #[component]
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.copied_or_default();
+    let variant = props.variant.copied_or(theme.chip.variant);
     let color = base_color(props.color.as_ref());
     let bound = use_bound(&props.name, props.onchange.is_some());
     let checked = bound

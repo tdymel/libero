@@ -135,7 +135,7 @@ the props extend `input`'s own.
 
 ## Theme defaults
 
-`CheckboxDefaults`: `size`, `radius`, and one square per size step (`14px` to
+`CheckboxDefaults`: `variant` (`plain`), `size`, `radius`, and one square per size step (`14px` to
 `24px`), published as `--lsx-checkbox-box-size-*`. A card's padding is
 `FieldDefaults::card_paddings`, `8px` to `18px`, published as
 `--lsx-field-card-padding-*`. The label and caption

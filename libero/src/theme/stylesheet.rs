@@ -189,6 +189,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         multi_select: _,
         cascader: _,
         autocomplete: _,
+        segmented_control: _,
         color_field: _,
         scroll_area: _,
         tree: _,

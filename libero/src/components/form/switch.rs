@@ -164,7 +164,7 @@ pub fn Switch(props: SwitchProps) -> Element {
     // ours anyway - so it is refused here and said with `aria-readonly`,
     // which the `switch` role inherits from `checkbox`.
     let readonly = props.readonly.unwrap_or(false);
-    let card = props.variant.copied_or_default() == ChoiceVariant::Card;
+    let card = props.variant.copied_or(theme.switch.variant) == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Switch: `checked` without `onchange` can never change.");

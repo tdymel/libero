@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
+use crate::theme::{ChoiceVariant, CssVar, Size, SizeCss, Sizes};
 
 pub const CHECKBOX_BOX_SIZE: SizeCss = SizeCss::new("--lsx-checkbox-box-size-");
 
@@ -17,6 +17,8 @@ pub const CHECKBOX_RADIUS: CssVar = CssVar::new("--lsx-checkbox-radius");
 /// not an affordance inside a frame, it *is* the control.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct CheckboxDefaults {
+    /// The wrapper a checkbox takes when a call site names none.
+    pub variant: ChoiceVariant,
     pub size: Size,
     pub radius: Size,
     pub sizes: Sizes<&'static str>,
@@ -24,6 +26,7 @@ pub struct CheckboxDefaults {
 
 impl CheckboxDefaults {
     pub const DEFAULT: Self = Self {
+        variant: ChoiceVariant::Plain,
         size: Size::Md,
         radius: Size::Sm,
         sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),

@@ -152,7 +152,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     // ours anyway - so it is refused here and said with `aria-readonly`,
     // which WAI-ARIA 1.2 supports on the `checkbox` role.
     let readonly = props.readonly.unwrap_or(false);
-    let card = props.variant.copied_or_default() == ChoiceVariant::Card;
+    let card = props.variant.copied_or(theme.checkbox.variant) == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onchange.is_none() && !bound.is_bound() {
         warn("Checkbox: `checked` without `onchange` can never change.");

@@ -257,3 +257,30 @@ fn a_group_radius_step_resolves_through_the_avatar_scale() {
         "{html}"
     );
 }
+
+static FILLED: libero::theme::Theme = libero::theme::Theme {
+    avatar: libero::theme::AvatarDefaults {
+        variant: libero::theme::Variant::Filled,
+        ..libero::theme::Theme::DEFAULT.avatar
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// An unset `variant` takes `theme.avatar.variant`, on an `Avatar` and on
+/// every member of an `AvatarGroup` and its chip.
+#[test]
+fn an_unset_variant_follows_the_theme() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { theme: &FILLED,
+                Avatar { name: "Ada Lovelace", initials: "AL" }
+                AvatarGroup { people: people(), max: 3 }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(!html.contains("tonal"), "{html}");
+    // The lone avatar, two members and the chip.
+    assert_eq!(html.matches("filled").count(), 4, "{html}");
+}

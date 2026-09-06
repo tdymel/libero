@@ -8,6 +8,7 @@ use crate::{
         layout::use_box,
         variables,
     },
+    hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, ICON_SIZE, Size, SizeCss},
 };
@@ -44,10 +45,10 @@ static ICON_BASE_SX: StaticSx = StaticSx::new(|| {
     })
 });
 
-fn icon_variables(props: &IconProps) -> Variables {
+fn icon_variables(props: &IconProps, variant: Variant) -> Variables {
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
-    let colors = variant_colors(props.variant.copied_or_default(), &base);
+    let colors = variant_colors(variant, &base);
 
     variables()
         .with(ICON_COLOR_VAR, text_color(&base))
@@ -84,8 +85,8 @@ base_props! {
 #[component]
 pub fn Icon(props: IconProps) -> Element {
     let component = props.component.copied_or(HtmlTag::Span);
-    let variant = props.variant.copied_or_default();
-    let variables: Input<Variables> = icon_variables(&props).into();
+    let variant = props.variant.copied_or(use_theme().icon.variant);
+    let variables: Input<Variables> = icon_variables(&props, variant).into();
 
     let states: Input<States> = props
         .states
@@ -126,7 +127,8 @@ mod tests {
 
     #[test]
     fn a_bare_theme_color_becomes_a_shade_plus_its_contrast() {
-        let variables = icon_variables(&icon_props(Color::Error.into())).to_string();
+        let variables =
+            icon_variables(&icon_props(Color::Error.into()), Variant::Filled).to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",
@@ -139,7 +141,7 @@ mod tests {
     /// A literal has no theme shade, so no contrast to pair with it.
     #[test]
     fn a_literal_color_emits_no_contrast() {
-        let variables = icon_variables(&icon_props("#123456".into())).to_string();
+        let variables = icon_variables(&icon_props("#123456".into()), Variant::Filled).to_string();
 
         assert!(variables.contains(&format!("{}:#123456;", ICON_COLOR_VAR.name())));
         assert!(!variables.contains(ICON_CONTRAST_VAR.name()));

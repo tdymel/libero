@@ -364,7 +364,7 @@ base_props! {
 #[component]
 pub fn Button(props: ButtonProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.copied_or_default();
+    let variant = props.variant.copied_or(theme.button.variant);
     let color = base_color(props.color.as_ref());
     let disabled = props.disabled.unwrap_or(false);
     let full_width = props.full_width.unwrap_or(false);

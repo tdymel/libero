@@ -242,7 +242,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
     let invalid = field.invalid();
     let option_label = props.option_label;
     let option_description = props.option_description;
-    let variant = props.variant.copied_or_default();
+    let variant = props.variant.copied_or(theme.radio.variant);
     let name = bound
         .name()
         .map(str::to_string)

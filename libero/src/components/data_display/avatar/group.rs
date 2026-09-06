@@ -76,7 +76,7 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     let theme = use_theme();
     let spacing = props.spacing.copied_or(theme.avatar_group.spacing);
     let size = props.size.copied_or(theme.avatar.size);
-    let variant = props.variant.copied_or(super::avatar::DEFAULT_VARIANT);
+    let variant = props.variant.copied_or(theme.avatar.variant);
 
     let total = props.people.len();
     // `max` is the number of *circles*, the chip included - so the chip always

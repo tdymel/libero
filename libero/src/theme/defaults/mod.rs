@@ -64,6 +64,7 @@ mod radio;
 mod ripple;
 mod scroll_area;
 mod scroller;
+mod segmented_control;
 mod select;
 mod sidebar;
 mod skeleton;
@@ -257,6 +258,7 @@ pub use scroller::{
     SCROLLER_CONTROL, SCROLLER_CONTROL_SIZE, SCROLLER_FADE, SCROLLER_FADE_DEFAULT,
     ScrollerControls, ScrollerDefaults,
 };
+pub use segmented_control::SegmentedControlDefaults;
 pub use select::SelectDefaults;
 pub use sidebar::{SIDEBAR_SIZE, SidebarDefaults, SidebarSide};
 pub use skeleton::{

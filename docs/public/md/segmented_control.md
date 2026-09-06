@@ -280,9 +280,14 @@ Like every component, `SegmentedControl` also takes the shared props `sx`,
 
 ## Theme defaults
 
-None of its own. Every visual prop is the segments', so the control reads
-[Button](button.md)'s `ButtonDefaults` for `size` and `radius`; `gap` resolves
-against the theme's spacing scale.
+`SegmentedControlDefaults` on the theme.
+
+| Field | Type | Description |
+|---|---|---|
+| `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). Its own field, so tonal buttons do not change a segmented control. |
+
+For `size` and `radius` the control reads [Button](button.md)'s
+`ButtonDefaults`. `gap` resolves against the theme's spacing scale.
 
 ## CSS variables
 

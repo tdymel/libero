@@ -152,3 +152,31 @@ fn a_full_width_segment_can_shrink_below_its_label() {
         "{row} > label > span{{min-width:0;overflow:hidden;text-overflow:ellipsis;}}"
     )));
 }
+
+static TONAL: libero::theme::Theme = libero::theme::Theme {
+    segmented_control: libero::theme::SegmentedControlDefaults {
+        variant: libero::theme::Variant::Tonal,
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// An unset `variant` takes `theme.segmented_control.variant`, its own field
+/// and not `Button`'s.
+#[test]
+fn an_unset_variant_follows_its_own_theme_field() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { theme: &TONAL,
+                SegmentedControl { value: Emphasis::Bold, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    // The first `div` is the field's wrapper; the group is the one inside it.
+    let group = &html[html[1..].find("<div").expect("the group") + 1..];
+    assert_eq!(
+        attributes_of(group, "div")["data-state"],
+        "horizontal tonal collapsed"
+    );
+}

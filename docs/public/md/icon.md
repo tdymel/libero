@@ -90,10 +90,11 @@ Like every component, `Icon` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
+| `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). |
 | `sizes` | `Sizes<u16>` | Badge width/height in px per size step - `16, 20, 24, 32, 40, 48` by default. |
 
-The `variant`, `color`, `size` and `radius` fallbacks are the component's own
-(`filled`, `primary`, `md`, `sm`), not theme fields.
+The `color`, `size` and `radius` fallbacks are the component's own
+(`primary`, `md`, `sm`), not theme fields.
 
 ## CSS variables
 

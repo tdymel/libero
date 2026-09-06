@@ -76,10 +76,10 @@ static BADGE_BASE_SX: StaticSx = StaticSx::new(|| {
     )
 });
 
-fn badge_variables(props: &BadgeProps) -> Variables {
+fn badge_variables(props: &BadgeProps, variant: Variant) -> Variables {
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
-    let colors = variant_colors(props.variant.copied_or_default(), &base);
+    let colors = variant_colors(variant, &base);
 
     variables()
         .with(BADGE_COLOR_VAR, text_color(&base))
@@ -128,9 +128,9 @@ base_props! {
 #[component]
 pub fn Badge(props: BadgeProps) -> Element {
     let theme = use_theme();
-    let variant = props.variant.copied_or_default();
+    let variant = props.variant.copied_or(theme.badge.variant);
     let size = props.size.copied_or(theme.badge.size);
-    let variables: Input<Variables> = badge_variables(&props).into();
+    let variables: Input<Variables> = badge_variables(&props, variant).into();
 
     let states: Input<States> = props
         .states

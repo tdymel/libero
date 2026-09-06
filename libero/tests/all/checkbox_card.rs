@@ -234,3 +234,49 @@ fn a_plain_switch_is_not_a_card() {
         "{wrapper:?}"
     );
 }
+
+static CARDS: libero::theme::Theme = libero::theme::Theme {
+    checkbox: libero::theme::CheckboxDefaults {
+        variant: libero::theme::ChoiceVariant::Card,
+        ..libero::theme::Theme::DEFAULT.checkbox
+    },
+    switch: libero::theme::SwitchDefaults {
+        variant: libero::theme::ChoiceVariant::Card,
+        ..libero::theme::Theme::DEFAULT.switch
+    },
+    radio: libero::theme::RadioDefaults {
+        variant: libero::theme::ChoiceVariant::Card,
+        ..libero::theme::Theme::DEFAULT.radio
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// With `variant` unset, each field takes the theme's. `RadioGroup` reads
+/// `theme.radio`, the same field its radios would.
+#[test]
+fn an_unset_variant_follows_the_theme() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { theme: &CARDS,
+                Checkbox { label: "Priority support", checked: true, onchange: move |_| {} }
+                Switch { label: "Alerts", checked: true, onchange: move |_| {} }
+                Radio { label: "Free", checked: false, onselect: move |_| {} }
+                RadioGroup { label: "Plan", value: Plan::Free, onchange: move |_| {} }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let cards = html
+        .split("data-state=\"")
+        .skip(1)
+        .filter(|rest| {
+            rest.split('"')
+                .next()
+                .is_some_and(|state| state.split(' ').any(|token| token == "card"))
+        })
+        .count();
+    // Three fields and the group's two options, each marking its wrapper and
+    // its control.
+    assert_eq!(cards, (3 + 2) * 2, "{html}");
+}

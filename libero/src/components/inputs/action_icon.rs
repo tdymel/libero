@@ -11,7 +11,7 @@ use crate::{
         navigation::InternalAnchor,
         variables,
     },
-    hooks::{ripple_sx, use_ripple},
+    hooks::{ripple_sx, use_ripple, use_theme},
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{ACTION_ICON_RADIUS, ACTION_ICON_SIZE, CssVar, ICON_SIZE, LOADER_SIZE, SizeCss},
     utils::warn,
@@ -107,7 +107,11 @@ fn loading_sx() -> Sx {
         )
 }
 
-fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> Variables {
+fn action_icon_variables(
+    props: &ActionIconProps,
+    variant: Variant,
+    has_variant_styling: bool,
+) -> Variables {
     // Only a toggle reads it, and every other icon would pay for the
     // declaration in its `style` attribute.
     let selectable = props.selected.is_some();
@@ -127,7 +131,7 @@ fn action_icon_variables(props: &ActionIconProps, has_variant_styling: bool) -> 
 
     let base = base_color(props.color.as_ref());
     let contrast = contrast_color(&base);
-    let colors = variant_colors(props.variant.copied_or_default(), &base);
+    let colors = variant_colors(variant, &base);
 
     result
         .with(ACTION_ICON_COLOR_VAR, text_color(&base))
@@ -204,8 +208,9 @@ pub fn ActionIcon(props: ActionIconProps) -> Element {
     }
 
     let has_variant_styling = props.variant.as_ref().is_some() || props.color.as_ref().is_some();
-    let variant = props.variant.copied_or_default();
-    let variables: Input<Variables> = action_icon_variables(&props, has_variant_styling).into();
+    let variant = props.variant.copied_or(use_theme().action_icon.variant);
+    let variables: Input<Variables> =
+        action_icon_variables(&props, variant, has_variant_styling).into();
 
     let ripple = use_ripple();
     let showing = ripple.showing();
@@ -331,7 +336,7 @@ mod tests {
     #[test]
     fn without_variant_styling_only_the_size_variables_are_set() {
         let props = action_icon_props(Color::Primary.into());
-        let variables = action_icon_variables(&props, false).to_string();
+        let variables = action_icon_variables(&props, Variant::Filled, false).to_string();
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(!variables.contains(ACTION_ICON_COLOR_VAR.name()));
@@ -340,7 +345,7 @@ mod tests {
     #[test]
     fn with_variant_styling_the_colour_variables_are_added() {
         let props = action_icon_props(Color::Primary.into());
-        let variables = action_icon_variables(&props, true).to_string();
+        let variables = action_icon_variables(&props, Variant::Filled, true).to_string();
 
         assert!(variables.contains(ACTION_ICON_SIZE.override_var().name()));
         assert!(variables.contains(ACTION_ICON_COLOR_VAR.name()));

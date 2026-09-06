@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
+use crate::theme::{ChoiceVariant, CssVar, Size, SizeCss, Sizes};
 
 pub const RADIO_CIRCLE_SIZE: SizeCss = SizeCss::new("--lsx-radio-circle-size-");
 
@@ -16,12 +16,16 @@ pub const RADIO_CIRCLE: CssVar = CssVar::new("--lsx-radio-circle");
 /// two lines up by construction.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct RadioDefaults {
+    /// The wrapper a radio, and every radio in a `RadioGroup`, takes when a
+    /// call site names none.
+    pub variant: ChoiceVariant,
     pub size: Size,
     pub sizes: Sizes<&'static str>,
 }
 
 impl RadioDefaults {
     pub const DEFAULT: Self = Self {
+        variant: ChoiceVariant::Plain,
         size: Size::Md,
         sizes: Sizes::new("14px", "16px", "18px", "20px", "22px", "24px"),
     };

@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
-use crate::theme::{CssVar, Size, SizeCss, Sizes};
+use crate::theme::{CssVar, Size, SizeCss, Sizes, Variant};
 
 pub const AVATAR_SIZE: SizeCss = SizeCss::new("--lsx-avatar-size-");
 pub const AVATAR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-avatar-font-size-");
@@ -15,6 +15,11 @@ pub const AVATAR_GROUP_INDEX: CssVar = CssVar::new("--lsx-avatar-group-index");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AvatarDefaults {
+    /// The placeholder chrome when a call site names none, for an `Avatar`
+    /// and for every member of an `AvatarGroup`. `Tonal` because
+    /// initials on a light tint read at any size - the filled arm puts them
+    /// on a mid shade, where the palette's own contrast twin is the weakest.
+    pub variant: Variant,
     pub size: Size,
     /// The step of [`Self::radii`] an avatar takes when a call site names
     /// none. Overridden per instance the way `ImageDefaults::radius` is,
@@ -33,6 +38,7 @@ pub struct AvatarDefaults {
 
 impl AvatarDefaults {
     pub const DEFAULT: Self = Self {
+        variant: Variant::Tonal,
         size: Size::Md,
         radius: Size::Xxl,
         // Mantine's scale, plus an `xxl` continuing its steps.

@@ -21,12 +21,6 @@ pub(super) const AVATAR_CONTRAST_VAR: CssVar = CssVar::new("--lsx-avatar-contras
 const AVATAR_CONTAINER_VAR: CssVar = CssVar::new("--lsx-avatar-container");
 const AVATAR_ON_CONTAINER_VAR: CssVar = CssVar::new("--lsx-avatar-on-container");
 
-/// Not a theme field: `Variant` is component-layer, and a theme naming
-/// one inverts the layer order (the `ChipDefaults` rule). `Tonal` because
-/// initials on a light tint read at any size - the filled arm puts them on a
-/// mid shade, where the palette's own contrast twin is the weakest.
-pub(super) const DEFAULT_VARIANT: Variant = Variant::Tonal;
-
 const AVATAR_VARS: VariantVars<'static> = VariantVars {
     color: &AVATAR_COLOR_VAR,
     fill: &AVATAR_FILL_VAR,
@@ -196,7 +190,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
 
     let size = props.size.copied_or(theme.avatar.size);
-    let variant = props.variant.copied_or(DEFAULT_VARIANT);
+    let variant = props.variant.copied_or(theme.avatar.variant);
 
     let src = props.src.clone().filter(|src| !src.is_empty());
     let failed = src.is_some() && errored_src.read().as_deref() == src.as_deref();

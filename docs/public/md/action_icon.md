@@ -91,7 +91,7 @@ fn Demo() -> Element {
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `variant` | `Variant` | - | Chrome, shared with `Button`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. Unset, with `color` also unset, the button contributes no background or color of its own and inherits the surrounding text color. |
-| `color` | `ThemeAwareValue` | - | Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `filled`). |
+| `color` | `ThemeAwareValue` | - | Accent color; a theme color name or a literal CSS color. Setting it turns on variant styling even if `variant` itself is unset (as `theme.action_icon.variant`, `filled`). |
 | `size` | `ThemeAwareValue` | `md` | Button size, independent of the wrapped icon's own size. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
 | `aria_label` | `String` | required | An icon-only button has no visible text for a screen reader to announce. |
@@ -113,6 +113,7 @@ size scale and the radius through the theme's radius scale.
 
 | Field | Type | Description |
 |---|---|---|
+| `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). |
 | `size` | `Size` | Default `size` when the prop is omitted. |
 | `radius` | `Size` | Default `radius` when the prop is omitted. |
 

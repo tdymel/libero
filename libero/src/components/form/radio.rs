@@ -130,7 +130,7 @@ pub fn Radio(props: RadioProps) -> Element {
     // As on `Checkbox`: HTML's `readonly` does not apply to a radio, so the
     // activation is refused here and said with `aria-readonly`.
     let readonly = props.readonly.unwrap_or(false);
-    let card = props.variant.copied_or_default() == ChoiceVariant::Card;
+    let card = props.variant.copied_or(theme.radio.variant) == ChoiceVariant::Card;
 
     if props.checked.is_some() && props.onselect.is_none() {
         warn("Radio: `checked` without `onselect` can never change.");

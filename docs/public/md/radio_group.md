@@ -158,7 +158,7 @@ Both also take the field props - `label`, `description`, `helper`, `status`,
 
 ## Theme defaults
 
-`RadioDefaults`: `size`, and one circle per size step (`14px` to `24px`),
+`RadioDefaults`: `variant` (`plain`, for a `Radio` and for a `RadioGroup`), `size`, and one circle per size step (`14px` to `24px`),
 published as `--lsx-radio-circle-size-*`. The same scale the checkbox box uses,
 so a form mixing the two lines up. There is no `radius`: a radio is a circle at
 every size, which is what tells it apart from a checkbox at a glance.

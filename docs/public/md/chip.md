@@ -122,6 +122,7 @@ Like every component, `Chip` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
+| `variant` | `Variant` | Default `variant` when the prop is omitted (`filled`). |
 | `size` | `Size` | Default `size` when the prop is omitted. |
 | `radius` | `Size` | Default `radius` when the prop is omitted. |
 | `sizes` | `Sizes<ChipSizeLevel>` | `font_size`, `height`, `padding_x` per size. |

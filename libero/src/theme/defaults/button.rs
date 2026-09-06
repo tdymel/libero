@@ -1,7 +1,7 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::sx::{Sx, sx};
 
-use crate::theme::{Size, SizeCss, Sizes};
+use crate::theme::{Size, SizeCss, Sizes, Variant};
 
 pub const BUTTON_FONT_SIZE: SizeCss = SizeCss::new("--lsx-button-font-size-");
 pub const BUTTON_HEIGHT: SizeCss = SizeCss::new("--lsx-button-height-");
@@ -16,6 +16,8 @@ pub struct ButtonSizeLevel {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ButtonDefaults {
+    /// The chrome a button takes when a call site names none.
+    pub variant: Variant,
     pub size: Size,
     pub radius: Size,
     pub sizes: Sizes<ButtonSizeLevel>,
@@ -23,6 +25,7 @@ pub struct ButtonDefaults {
 
 impl ButtonDefaults {
     pub const DEFAULT: Self = Self {
+        variant: Variant::Filled,
         size: Size::Md,
         radius: Size::Md,
         sizes: Sizes::new(

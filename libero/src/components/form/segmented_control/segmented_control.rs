@@ -180,7 +180,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         }
     });
 
-    let variant = props.variant.copied_or_default();
+    let variant = props.variant.copied_or(theme.segmented_control.variant);
     let color = base_color(props.color.as_ref());
     // Colour resolution plus rendering is ~790 ns, and `(variant, color)` is
     // the same on almost every render.
