@@ -205,9 +205,17 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
 /// Escape transport is an element handler, the field's runs first, and
 /// [`escape_closes`] reads the default it prevented.
 ///
-/// **The field has to close its list when focus leaves it**, and all four do,
-/// on blur or focusout. An open list with focus elsewhere hears nothing, yet
-/// sits on top, and would wedge Escape for every layer under it.
+/// **The field has to close its list when focus leaves it.** An open list
+/// with focus elsewhere hears no Escape, since its handlers are on the field
+/// and the dropdown, yet it sits on top: every layer under it declines as
+/// not-top, and Escape does nothing until the list closes. It cannot happen
+/// with today's fields, because each one closes on focus leaving: `Select`
+/// (its trigger, or its search box while searchable), `Autocomplete`,
+/// `TagsField` and `PhoneField` on blur, `Cascader` and `ColorField` on blur,
+/// the date pickers once focus is in neither the input nor the calendar.
+/// The one exception is the public `Combobox`: its caller owns the
+/// `use_combobox` state and wires the input, so closing on blur is the
+/// caller's job, as it already is for Tab and every other close.
 pub(crate) fn use_field_list_layer(open: bool) {
     let layer = use_dismiss_layer();
     // Decided once, as in `use_dismiss`: a property of the renderer.
@@ -837,6 +845,9 @@ mod tests {
         trigger: Option<ElementId>,
         /// The element carrying `id="dropdown"`, the field-dropdown stand-in.
         dropdown: Option<ElementId>,
+        /// The first element carrying `role="combobox"`: a real `Select`'s
+        /// trigger.
+        combobox: Option<ElementId>,
     }
 
     impl WriteMutations for FindKeydownListeners {
@@ -872,26 +883,41 @@ mod tests {
                     _ => {}
                 }
             }
+            if n == "role"
+                && self.combobox.is_none()
+                && let AttributeValue::Text(value) = v
+                && value == "combobox"
+            {
+                self.combobox = self.last;
+            }
         }
         fn set_text(&mut self, _value: &str) {}
         fn remove_event_listener(&mut self, _name: &str) {}
         fn remove(&mut self) {}
     }
 
-    /// A stand-in for the renderer's key event; only Escape is ever pressed,
-    /// plain unless a test asks for a held or a composing one.
+    /// A stand-in for the renderer's key event: Escape, plain unless a test
+    /// asks for a held or a composing one - or ArrowDown, which is how a test
+    /// opens a real `Select`'s list.
     #[derive(Clone, Copy, Default)]
     struct FakeEscape {
         repeat: bool,
         composing: bool,
+        arrow_down: bool,
     }
 
     impl HasKeyboardData for FakeEscape {
         fn key(&self) -> Key {
-            Key::Escape
+            match self.arrow_down {
+                true => Key::ArrowDown,
+                false => Key::Escape,
+            }
         }
         fn code(&self) -> Code {
-            Code::Escape
+            match self.arrow_down {
+                true => Code::ArrowDown,
+                false => Code::Escape,
+            }
         }
         fn location(&self) -> dioxus::html::input_data::keyboard_types::Location {
             dioxus::html::input_data::keyboard_types::Location::Standard
@@ -1040,10 +1066,17 @@ mod tests {
     const HELD: FakeEscape = FakeEscape {
         repeat: true,
         composing: false,
+        arrow_down: false,
     };
     const COMPOSING: FakeEscape = FakeEscape {
         repeat: false,
         composing: true,
+        arrow_down: false,
+    };
+    const ARROW_DOWN: FakeEscape = FakeEscape {
+        repeat: false,
+        composing: false,
+        arrow_down: true,
     };
 
     /// How many `<div>`s are open at `at`, so two elements can be shown to be
@@ -1459,6 +1492,110 @@ mod tests {
 
         press(&mut dom, dropdown);
         assert_eq!(state(&dom), "state: region=false list=false");
+    }
+
+    /// A real `Select`, for the regression tests below: the stand-in above
+    /// proves the rule, these prove the field that ships follows it.
+    #[component]
+    fn RealSelect() -> Element {
+        let mut value = use_signal(|| None::<String>);
+        rsx! {
+            crate::components::Select::<String> {
+                options: vec!["Apple".to_string(), "Banana".to_string()],
+                value: value(),
+                onchange: move |next| value.set(next),
+            }
+        }
+    }
+
+    /// Whether any combobox in the document says its list is open.
+    fn list_open(dom: &VirtualDom) -> bool {
+        dioxus_ssr::render(dom).contains(r#"aria-expanded="true""#)
+    }
+
+    /// Opens the list with ArrowDown, then Escape twice: the first closes
+    /// only the list, the second the overlay. `overlay` reads the overlay's
+    /// open state from the marker.
+    fn escape_through_a_real_select(
+        dom: &mut VirtualDom,
+        find: &FindKeydownListeners,
+        overlay: &str,
+    ) {
+        let combobox = find.combobox.expect("the Select's combobox");
+        assert!(state(dom).contains(&format!("{overlay}=true")));
+        assert!(!list_open(dom), "the list starts closed");
+
+        press_as(dom, combobox, ARROW_DOWN);
+        assert!(list_open(dom), "ArrowDown should open the list");
+
+        press(dom, combobox);
+        assert!(!list_open(dom), "the first Escape closes the list");
+        assert!(
+            state(dom).contains(&format!("{overlay}=true")),
+            "the first Escape must leave the {overlay} open: {}",
+            state(dom)
+        );
+
+        press(dom, combobox);
+        assert!(
+            state(dom).contains(&format!("{overlay}=false")),
+            "the second Escape closes the {overlay}: {}",
+            state(dom)
+        );
+    }
+
+    /// Todo 348's regression guard for `Modal`: an open list on the stack
+    /// must not change what one Escape does in a modal.
+    #[test]
+    fn a_real_select_in_a_modal_takes_the_first_escape() {
+        fn app() -> Element {
+            let mut modal = use_signal(|| true);
+            rsx! {
+                LiberoProvider {
+                    if modal() {
+                        Modal { onclose: move |_| modal.set(false), RealSelect {} }
+                    }
+                }
+                "state: modal={modal}"
+            }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        escape_through_a_real_select(&mut dom, &find, "modal");
+    }
+
+    /// The same for `FloatingWindow`.
+    #[test]
+    fn a_real_select_in_a_window_takes_the_first_escape() {
+        #[component]
+        fn SelectInWindow() -> Element {
+            let window = crate::hooks::use_floating_window(
+                crate::components::FloatingWindowOptions {
+                    title: Some("Inspector".into()),
+                    ..Default::default()
+                },
+                move |_| rsx! { RealSelect {} },
+            );
+            use_hook(|| window.open());
+            rsx! { "state: window={window.is_open()}" }
+        }
+        fn app() -> Element {
+            rsx! { LiberoProvider { SelectInWindow {} } }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        for _ in 0..4 {
+            dom.process_events();
+            dom.render_immediate(&mut find);
+        }
+        escape_through_a_real_select(&mut dom, &find, "window");
     }
 
     /// Todo 318. Escape held down over an open list: the first press closes
