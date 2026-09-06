@@ -42,25 +42,53 @@ pub fn body(html: &str) -> String {
 }
 
 /// Every attribute of the first `<tag>` in `html`.
+///
+/// SSR quotes a string value (`id="x"`) but writes a boolean bare
+/// (`disabled=true`), so both forms are read. A tokenizer that only knew the
+/// quoted form made every `!contains_key("disabled")` pass unconditionally
+/// (review 7, S1). A valueless attribute is recorded with an empty value.
 pub fn attributes_of(html: &str, tag: &str) -> BTreeMap<String, String> {
     let start = html
         .find(&format!("<{tag}"))
         .unwrap_or_else(|| panic!("no <{tag}> in the rendered output:\n{html}"));
-    let open_tag = &html[start..][..html[start..].find('>').expect("an unterminated tag")];
-
+    let mut rest = &html[start + format!("<{tag}").len()..];
     let mut attributes = BTreeMap::new();
-    let mut rest = &open_tag[format!("<{tag}").len()..];
 
-    while let Some(equals) = rest.find("=\"") {
-        // An unquoted value before it (`checked=true`) is not part of the name.
-        let name = rest[..equals].split_whitespace().last().unwrap_or_default();
-        let value_start = equals + 2;
-        let value_end = value_start
-            + rest[value_start..]
-                .find('"')
-                .expect("an unterminated attribute value");
-        attributes.insert(name.to_string(), rest[value_start..value_end].to_string());
-        rest = &rest[value_end + 1..];
+    loop {
+        rest = rest.trim_start();
+        if rest.is_empty() {
+            panic!("an unterminated <{tag}> tag");
+        }
+        if rest.starts_with('>') || rest.starts_with("/>") {
+            break;
+        }
+
+        let name_end = rest
+            .find(|c: char| c.is_whitespace() || matches!(c, '=' | '>' | '/'))
+            .unwrap_or(rest.len());
+        assert!(
+            name_end > 0,
+            "an attribute without a name in <{tag}>: {rest}"
+        );
+        let name = &rest[..name_end];
+        rest = &rest[name_end..];
+
+        let value = if let Some(after_equals) = rest.strip_prefix('=') {
+            if let Some(quoted) = after_equals.strip_prefix('"') {
+                let end = quoted.find('"').expect("an unterminated attribute value");
+                rest = &quoted[end + 1..];
+                &quoted[..end]
+            } else {
+                let end = after_equals
+                    .find(|c: char| c.is_whitespace() || c == '>')
+                    .unwrap_or(after_equals.len());
+                rest = &after_equals[end..];
+                &after_equals[..end]
+            }
+        } else {
+            ""
+        };
+        attributes.insert(name.to_string(), value.to_string());
     }
 
     attributes
@@ -140,4 +168,24 @@ pub fn fake_files(names: &[&'static str]) -> libero::components::Files {
         .iter()
         .map(|name| dioxus::html::FileData::new(FakeFile(name)))
         .collect()
+}
+
+/// The helper itself: SSR writes a boolean bare, and a `!contains_key` on it
+/// is only worth something if the key is seen when present.
+#[test]
+fn attributes_of_reads_a_bare_boolean() {
+    fn app() -> Element {
+        rsx! { button { disabled: true, "aria-disabled": "true", "x" } }
+    }
+
+    let html = render(app);
+    let attributes = attributes_of(&html, "button");
+
+    assert!(html.contains("disabled=true"), "{html}");
+    assert_eq!(
+        attributes.get("disabled").map(String::as_str),
+        Some("true"),
+        "{html}"
+    );
+    assert_eq!(attributes["aria-disabled"], "true", "{html}");
 }

@@ -104,6 +104,10 @@ enum Route {
     BrokenDismissal {},
     #[route("/broken/activedescendant")]
     BrokenActiveDescendant {},
+    #[route("/broken/activedescendant-missing")]
+    BrokenActiveDescendantMissing {},
+    #[route("/broken/static-highlight")]
+    BrokenStaticHighlight {},
     #[route("/notifications")]
     NotificationsPage {},
 }
@@ -185,6 +189,14 @@ fn BrokenDismissal() -> Element {
 #[component]
 fn BrokenActiveDescendant() -> Element {
     rsx! { broken::DanglingActiveDescendant {} }
+}
+#[component]
+fn BrokenActiveDescendantMissing() -> Element {
+    rsx! { broken::MissingActiveDescendant {} }
+}
+#[component]
+fn BrokenStaticHighlight() -> Element {
+    rsx! { broken::StaticHighlight {} }
 }
 
 /// Wraps every fixture in the provider and the ready marker, and nothing else.

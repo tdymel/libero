@@ -178,3 +178,57 @@ pub fn DanglingActiveDescendant() -> Element {
         }
     }
 }
+
+/// A combobox that opens but never sets `aria-activedescendant` at all.
+///
+/// The contract used to treat an absent attribute as valid, so this passed
+/// it (review 7, E2): a screen reader hears nothing while the arrows move.
+#[component]
+pub fn MissingActiveDescendant() -> Element {
+    rsx! { FakeCombobox { id: "missing", highlight: None } }
+}
+
+/// A combobox whose highlight names a real option and never moves.
+///
+/// Every reference resolves, so a check that only asks "does it exist" passes
+/// it. Only a check that the arrows move the highlight catches it.
+#[component]
+pub fn StaticHighlight() -> Element {
+    rsx! { FakeCombobox { id: "static", highlight: Some("static-option-0") } }
+}
+
+/// Starts closed, opens on ArrowDown, closes on Escape, and draws three
+/// options with ids - a real combobox in every respect but its highlight, so
+/// the contract reaches the highlight checks instead of failing earlier.
+#[component]
+fn FakeCombobox(id: &'static str, highlight: Option<&'static str>) -> Element {
+    let mut open = use_signal(|| false);
+    let listbox = format!("{id}-listbox");
+
+    rsx! {
+        input {
+            id,
+            role: "combobox",
+            "aria-label": "Fake combobox",
+            "aria-expanded": if open() { "true" } else { "false" },
+            "aria-controls": "{listbox}",
+            "aria-activedescendant": highlight.filter(|_| open()),
+            readonly: true,
+            onkeydown: move |event| match event.key() {
+                Key::ArrowDown => open.set(true),
+                Key::Escape => open.set(false),
+                _ => {}
+            },
+        }
+        if open() {
+            ul {
+                id: "{listbox}",
+                role: "listbox",
+                style: "border: 1px solid #888; margin: 0; padding: 4px;",
+                for row in 0..3 {
+                    li { role: "option", id: "{id}-option-{row}", "Option {row}" }
+                }
+            }
+        }
+    }
+}

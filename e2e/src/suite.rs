@@ -263,7 +263,50 @@ impl Suite {
         }
         crate::wait::for_visible(page, state.settled)
             .await
-            .map_err(|e| e.context(format!("reaching the {:?} state", state.name)))
+            .map_err(|e| e.context(format!("reaching the {:?} state", state.name)))?;
+        self.assert_settled_in_root(page, state).await
+    }
+
+    /// The state's `settled` element must lie inside the root, or axe and the
+    /// snapshot never see the thing the state was declared for.
+    ///
+    /// That was the case for every overlay until `dc3766db`: the root wrapped
+    /// only the fixture's outlet while the portal rendered beside it, and each
+    /// "open" state checked the trigger alone and reported clean (review 7,
+    /// E1). This makes the same hole fail loudly if a narrowed `root` or a
+    /// moved marker reopens it.
+    async fn assert_settled_in_root(
+        &self,
+        page: &chromiumoxide::Page,
+        state: &State,
+    ) -> anyhow::Result<()> {
+        let (has_root, outside): (bool, usize) = page
+            .evaluate(format!(
+                "(() => {{ const root = document.querySelector({}); \
+                 const hits = Array.from(document.querySelectorAll({})); \
+                 return [!!root, hits.filter(el => !root || !root.contains(el)).length]; }})()",
+                serde_json::to_string(self.root)?,
+                serde_json::to_string(state.settled)?
+            ))
+            .await?
+            .into_value()?;
+        if !has_root {
+            anyhow::bail!(
+                "the suite root {} matched nothing in the {:?} state",
+                self.root,
+                state.name
+            );
+        }
+        if outside > 0 {
+            anyhow::bail!(
+                "the {:?} state settled on {}, but {outside} match(es) lie outside the suite root {}, \
+                 so axe and the snapshot never see them",
+                state.name,
+                state.settled,
+                self.root
+            );
+        }
+        Ok(())
     }
 
     /// Snapshots live beside the tests, not beside this file.

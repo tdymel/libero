@@ -208,3 +208,68 @@ fn the_combobox_pass_catches_a_dangling_activedescendant() {
         .await;
     });
 }
+
+/// Review 7's hole: a combobox that never sets `aria-activedescendant` used to
+/// pass, because an absent attribute counted as valid.
+#[test]
+fn the_combobox_pass_catches_a_missing_activedescendant() {
+    block_on(combobox_must_fail(
+        "/broken/activedescendant-missing",
+        "#missing",
+        "aria-activedescendant is absent",
+    ));
+}
+
+/// A highlight that names a real option and never moves. Every reference
+/// resolves, so only the check that arrows move the highlight can catch it.
+#[test]
+fn the_combobox_pass_catches_a_static_highlight() {
+    block_on(combobox_must_fail(
+        "/broken/static-highlight",
+        "#static",
+        "stayed on \"static-option-0\"",
+    ));
+}
+
+/// `must_fail` for the combobox contract, also requiring the failure to be the
+/// one the fixture was built for - both fixtures here are sound up to their
+/// highlight, so failing anywhere else would mean an earlier step broke.
+async fn combobox_must_fail(route: &str, trigger: &'static str, expected: &'static str) {
+    must_fail(route, "Combobox", |fixture| async move {
+        let result = Combobox {
+            trigger,
+            option_count: 3,
+            tab_budget: 5,
+        }
+        .assert_contract(&fixture.page)
+        .await;
+        if let Err(error) = &result {
+            assert!(
+                format!("{error:#}").contains(expected),
+                "the combobox contract failed on {route}, but not with {expected:?}: {error:#}"
+            );
+        }
+        (fixture, result)
+    })
+    .await;
+}
+
+/// Review 7, E1: a root that does not contain the overlay a state opens.
+/// Narrowed to the trigger here, which is the shape the hole had: every
+/// "open" state axe-checked the trigger alone and reported clean.
+#[test]
+#[should_panic(expected = "lie outside the suite root")]
+fn the_suite_rejects_a_state_settling_outside_its_root() {
+    e2e::Suite::new("broken_root", "/modal")
+        .root("#open-modal")
+        .no_snapshot()
+        .state(
+            "open",
+            &[
+                e2e::suite::Step::TabTo("#open-modal"),
+                e2e::suite::Step::Press(keyboard::ENTER),
+            ],
+            "[role=dialog]",
+        )
+        .run();
+}

@@ -253,10 +253,7 @@ fn disabled_reaches_the_underlying_button() {
         rsx! { LiberoProvider { Burger { disabled: true } } }
     }
 
-    let attributes = attributes_of(&body(&render(app)), "button");
     let html = body(&render(app));
-    assert!(
-        attributes.contains_key("disabled") || html.contains("disabled"),
-        "{html}"
-    );
+    let attributes = attributes_of(&html, "button");
+    assert!(attributes.contains_key("disabled"), "{html}");
 }
