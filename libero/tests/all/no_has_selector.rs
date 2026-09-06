@@ -5,9 +5,9 @@
 
 use std::{fs, path::Path};
 
-/// Where `:has(` may be written: the public helper that exists for web-only
-/// callers, and the selector splitter's test of a nested comma.
-const ALLOWED: &[&str] = &["src/sx/sx.rs", "src/css/selector.rs"];
+/// Where `:has(` may be written: the selector splitter's test of a nested
+/// comma.
+const ALLOWED: &[&str] = &["src/css/selector.rs"];
 
 fn scan(dir: &Path, root: &Path, hits: &mut Vec<String>) {
     for entry in fs::read_dir(dir).unwrap() {

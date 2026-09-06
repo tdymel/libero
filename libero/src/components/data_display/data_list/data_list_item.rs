@@ -23,12 +23,16 @@ base_props! {
 
 /// A term and its descriptions, in a [`DataList`](super::DataList).
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{DataList, DataListItem};
+/// # fn app() -> Element { rsx! { DataList {
 /// DataListItem {
-///     label: "Phone",
+///     label: rsx! { "Phone" },
 ///     "555-1234"
 ///     "555-5678"
 /// }
+/// # } } }
 /// ```
 #[component]
 pub fn DataListItem(props: DataListItemProps) -> Element {

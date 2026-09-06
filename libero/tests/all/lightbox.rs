@@ -137,11 +137,10 @@ fn without_zoom_no_picture_is_focusable() {
         0,
     );
 
-    assert!(
-        stage_images(&html)
-            .iter()
-            .all(|img| !img.contains_key("tabindex"))
-    );
+    // `.all()` over nothing is true, so first prove the pictures are there.
+    let images = stage_images(&html);
+    assert_eq!(images.len(), 4, "{html}");
+    assert!(images.iter().all(|img| !img.contains_key("tabindex")));
 }
 
 /// `preload: 1` - the picture showing and one neighbour each side load at
@@ -182,8 +181,11 @@ fn a_picture_without_a_caption_is_described_by_nothing() {
     let html = open(LightboxOptions::default(), 2);
 
     assert!(!html.contains("<p "));
+    // `.all()` over nothing is true, so first prove the pictures are there.
+    let images = stage_images(&html);
+    assert_eq!(images.len(), 4, "{html}");
     assert!(
-        stage_images(&html)
+        images
             .iter()
             .all(|img| !img.contains_key("aria-describedby"))
     );
