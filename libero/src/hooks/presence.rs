@@ -89,22 +89,15 @@ impl Presence {
 /// the exit is expected to be switched off there and no `transitionend` would
 /// ever arrive. A consumer that still animates under reduced motion loses its
 /// exit.
-pub fn use_presence(open: bool, property: &'static str) -> Presence {
-    use_presence_timed(open, property, None)
-}
-
-/// [`use_presence`], plus a fallback for an exit that never reports its end.
 ///
-/// `transitionend` does not fire for a zero duration, for `transition: none`,
-/// or on a renderer that runs no transitions, and nothing else would ever
-/// latch `mounted` back to `false`. With `exit` known the hook unmounts at
-/// whichever comes first: the event, or `exit` plus [`EXIT_SLACK`]. A zero
-/// `exit` unmounts at once.
-pub(crate) fn use_presence_timed(
-    open: bool,
-    property: &'static str,
-    exit: Option<Duration>,
-) -> Presence {
+/// `exit` is the exit's duration, the fallback for an exit that never reports
+/// its end. `transitionend` does not fire for a zero duration, for
+/// `transition: none`, or on a renderer that runs no transitions, and nothing
+/// else would ever latch `mounted` back to `false`. With `exit` known the hook
+/// unmounts at whichever comes first: the event, or `exit` plus 150ms of
+/// slack. A zero `exit` unmounts at once. `None` waits for the event
+/// alone.
+pub fn use_presence(open: bool, property: &'static str, exit: Option<Duration>) -> Presence {
     let mut mounted = use_signal(|| open);
     // Not `false`: the first render is the one a server sends, and
     // mounted-without-visible is the closed markup.

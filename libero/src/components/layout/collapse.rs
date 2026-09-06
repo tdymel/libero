@@ -8,7 +8,7 @@ use crate::{
         common::{base_props, variables},
         layout::use_box,
     },
-    hooks::{use_presence_timed, use_theme},
+    hooks::{use_presence, use_theme},
     sx::{StaticSx, sx},
     theme::{COLLAPSE_DURATION, COLLAPSE_EASING, COLLAPSE_OPACITY_CLOSED},
 };
@@ -168,7 +168,7 @@ pub fn Collapse(props: CollapseProps) -> Element {
     // grid row animate from `0fr` instead of snapping. The duration is the
     // hook's fallback for an exit that never fires `transitionend` - a zero
     // duration, reduced motion, or a renderer that runs no transitions.
-    let presence = use_presence_timed(
+    let presence = use_presence(
         props.open,
         EXIT_PROPERTY,
         Some(Duration::from_millis(duration.into())),
