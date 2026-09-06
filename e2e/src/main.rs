@@ -16,12 +16,23 @@
 //!    a success status while the first build runs, so a reachable port proves
 //!    nothing.
 //! 4. Runs the tests with `E2E_BASE_URL` set.
-//! 5. Kills the server and exits with the tests' status.
+//! 5. Kills the server and exits with the tests' status, or with a failure
+//!    when the name filter matched no test.
+//!
+//! A guard process covers the runner's own death (todo 313). SIGKILL cannot
+//! be caught, so no signal handler in the runner can clean up after it. The
+//! runner starts a copy of itself instead, in its own process group, and tells
+//! it over a pipe what to stop. The kernel closes the pipe however the runner
+//! dies (SIGKILL, SIGTERM, Ctrl-C, a panic, the OOM killer). A guard that
+//! reads end-of-file without `done` stops the server, the tests and Chrome.
+//! The guard does not help when it is killed as well: a kill of every
+//! descendant, `kill -9 -1`, or a shutdown. Neither does a SIGKILL in the few
+//! microseconds between spawning a process and telling the guard about it.
 
-use std::io::{Read, Write};
+use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::os::unix::process::CommandExt;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, ChildStdin, Command, Stdio};
 use std::time::{Duration, Instant};
 
 use anyhow::{Context, Result, bail};
@@ -32,7 +43,13 @@ use anyhow::{Context, Result, bail};
 /// one.
 const BUILD_TIMEOUT: Duration = Duration::from_secs(45 * 60);
 
+/// Set on the guard process, which is this same binary.
+const GUARD_ENV: &str = "E2E_GUARD";
+
 fn main() -> Result<()> {
+    if std::env::var_os(GUARD_ENV).is_some() {
+        return guard();
+    }
     let root = workspace_root()?;
     let port = free_port()?;
     let base_url = format!("http://127.0.0.1:{port}");
@@ -78,6 +95,8 @@ fn main() -> Result<()> {
     let axe = e2e::vendor::ensure_axe().context("prepare the vendored axe archive")?;
     eprintln!("e2e: axe ready at {}", axe.display());
 
+    let mut guard = Guard::spawn()?;
+
     eprintln!("e2e: starting the fixture server on {base_url}");
     let mut server = Command::new(&dx)
         .current_dir(root.join("e2e/fixtures"))
@@ -107,10 +126,12 @@ fn main() -> Result<()> {
         .process_group(0)
         .spawn()
         .context("start dx run")?;
+    guard.tell(&format!("group {}", server.id()));
 
     let ready = wait_for_app(&base_url, &mut server, &dx_log);
     if let Err(error) = ready {
         stop(&mut server);
+        guard.done();
         return Err(error);
     }
 
@@ -118,6 +139,7 @@ fn main() -> Result<()> {
     // profile another process still holds, so sharing one means an interrupted
     // run poisons every run after it.
     let profile = std::env::temp_dir().join(format!("e2e-chrome-{}", std::process::id()));
+    guard.tell(&format!("profile {}", profile.display()));
 
     eprintln!("e2e: server is up, running the suite");
     // Everything after the runner's own name goes to the **test harness**, not
@@ -139,8 +161,24 @@ fn main() -> Result<()> {
         .env("E2E_CHROME_PROFILE", &profile)
         .env("E2E_ARTIFACTS", &artifacts)
         .env("CARGO_PROFILE_DEV_DEBUG", "line-tables-only")
-        .status()
-        .context("run the tests");
+        // Read here, to see whether anything ran. Echoed line by line.
+        .stdout(Stdio::piped())
+        // Its own group, so the guard can stop it and the Chrome it launched
+        // without signalling whatever group the runner was started in.
+        .process_group(0)
+        .spawn()
+        .context("run the tests")
+        .and_then(|mut tests| {
+            guard.tell(&format!("group {}", tests.id()));
+            let mut ran = 0;
+            let stdout = tests.stdout.take().context("the tests' stdout")?;
+            for line in BufReader::new(stdout).lines() {
+                let line = line.context("read the tests' output")?;
+                ran += tests_run(&line);
+                println!("{line}");
+            }
+            Ok((tests.wait().context("wait for the tests")?, ran))
+        });
 
     // The browser lives in a `static` inside the test binary, and a static is
     // never dropped - so nothing kills Chrome when the tests end. Reap it here,
@@ -175,10 +213,122 @@ fn main() -> Result<()> {
     // command itself.
     stop(&mut server);
     eprintln!("e2e: server stopped");
+    guard.done();
 
-    if !status?.success() {
+    let (status, ran) = status?;
+    if !status.success() {
         std::process::exit(1);
     }
+    // libtest exits 0 when its filter matched nothing, so a mistyped name reads
+    // as a green run. `--list` runs nothing on purpose.
+    if ran == 0 && !passthrough.iter().any(|arg| arg == "--list") {
+        bail!("no test ran: the name filter {passthrough:?} matched no test");
+    }
+    Ok(())
+}
+
+/// How many tests a libtest summary line says ran, passed or failed, and 0
+/// for any other line: `test result: ok. 3 passed; 1 failed; 0 ignored; ..`.
+fn tests_run(line: &str) -> u64 {
+    let Some((_, counts)) = line
+        .strip_prefix("test result: ")
+        .and_then(|rest| rest.split_once(". "))
+    else {
+        return 0;
+    };
+    counts
+        .split("; ")
+        .filter_map(|count| count.split_once(' '))
+        .filter(|(_, what)| matches!(*what, "passed" | "failed"))
+        .filter_map(|(n, _)| n.parse::<u64>().ok())
+        .sum()
+}
+
+/// The runner's side of the guard: the pipe it tells the guard things over.
+/// Dropped without `done`, as when the runner dies, it tells the guard to
+/// clean up.
+struct Guard {
+    child: Child,
+    pipe: Option<ChildStdin>,
+}
+
+impl Guard {
+    fn spawn() -> Result<Self> {
+        let mut child = Command::new(std::env::current_exe().context("locate the runner")?)
+            .env(GUARD_ENV, "1")
+            .stdin(Stdio::piped())
+            .stdout(Stdio::null())
+            // Out of the runner's group, so a Ctrl-C or a group kill that
+            // takes the runner leaves the guard to clean up after it.
+            .process_group(0)
+            .spawn()
+            .context("start the guard")?;
+        let pipe = child.stdin.take();
+        Ok(Self { child, pipe })
+    }
+
+    /// `group <pgid>` or `profile <path>`: one more thing to stop.
+    fn tell(&mut self, line: &str) {
+        if let Some(pipe) = &mut self.pipe {
+            let _ = writeln!(pipe, "{line}");
+        }
+    }
+
+    /// The runner cleaned up itself; the guard exits without doing anything.
+    fn done(&mut self) {
+        self.tell("done");
+        self.pipe = None;
+        let _ = self.child.wait();
+    }
+}
+
+/// The guard process. Reads what to stop until `done` or end-of-file, and on
+/// end-of-file stops it: the process groups first, then any Chrome left on
+/// the profile, then the profile itself.
+fn guard() -> Result<()> {
+    let (mut groups, mut profiles) = (Vec::new(), Vec::new());
+    for line in std::io::stdin().lock().lines() {
+        let Ok(line) = line else { break };
+        match line.split_once(' ') {
+            Some(("group", pgid)) => groups.extend(pgid.parse::<i32>().ok()),
+            Some(("profile", path)) => profiles.push(path.to_string()),
+            _ if line == "done" => return Ok(()),
+            _ => {}
+        }
+    }
+    // The runner failed before it started anything.
+    if groups.is_empty() && profiles.is_empty() {
+        return Ok(());
+    }
+    // The terminal may be gone with the runner, so nothing here may panic on a
+    // failed write, as `eprintln!` would.
+    let say = |message: &str| {
+        let _ = writeln!(std::io::stderr(), "e2e guard: {message}");
+    };
+    say("the runner died without cleaning up; stopping what it started");
+    for &group in &groups {
+        unsafe { libc_kill(-group, 15) };
+    }
+    let alive = |groups: &[i32]| groups.iter().any(|&g| unsafe { libc_kill(-g, 0) } == 0);
+    let deadline = Instant::now() + Duration::from_secs(5);
+    while Instant::now() < deadline && alive(&groups) {
+        std::thread::sleep(Duration::from_millis(100));
+    }
+    for &group in &groups {
+        unsafe { libc_kill(-group, 9) };
+    }
+    for profile in &profiles {
+        kill_by_cmdline(profile);
+        let deadline = Instant::now() + Duration::from_secs(10);
+        while Instant::now() < deadline && count_by_cmdline(profile) > 0 {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let _ = std::fs::remove_dir_all(profile);
+    }
+    say(&format!(
+        "stopped {} process group(s) and the browser",
+        groups.len()
+    ));
     Ok(())
 }
 
