@@ -102,11 +102,12 @@ Like every component, `Sidebar` also takes the shared props `sx`, `class`,
 
 ## Theme defaults
 
-`SidebarDefaults` on the theme. The default `side` (`left`) and `size` (`md`) are
-the enum's own default and a hardcoded value, not theme fields.
+`SidebarDefaults` on the theme. The default `side` (`left`) is the enum's own
+default, not a theme field.
 
 | Field | Type | Description |
 |---|---|---|
+| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
 | `sizes` | `Sizes<u16>` | Panel extent in px per size step - 200, 240, 280, 320, 400, 480. |
 
 ## CSS variables

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    hooks::use_theme,
     sx::StaticSx,
     theme::{Size, TitleDefaults},
 };
@@ -34,7 +35,8 @@ base_props! {
 
 #[component]
 pub fn Title(props: TitleProps) -> Element {
-    let chosen_size = props.size.copied_or(Size::Xxl);
+    let theme = use_theme();
+    let chosen_size = props.size.copied_or(theme.title.size);
 
     let states: Input<States> = props
         .states
@@ -46,7 +48,9 @@ pub fn Title(props: TitleProps) -> Element {
         .component
         .as_ref()
         .copied()
-        .unwrap_or_else(|| default_component(chosen_size));
+        // The caller's size, never the theme's: a theme is a look, and must
+        // not move a bare `Title` in the document outline.
+        .unwrap_or_else(|| default_component(props.size.copied_or(Size::Xxl)));
 
     use_box()
         .framework_sx(&TITLE_BASE_SX)

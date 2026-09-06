@@ -5,7 +5,7 @@ use crate::{
         Dialog, Float, Input, Placement,
         common::{base_props, input_from_str},
     },
-    hooks::use_css,
+    hooks::{use_css, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{DRAWER_SIZE, Size},
@@ -86,7 +86,8 @@ base_props! {
 #[component]
 pub(crate) fn Drawer(props: DrawerProps) -> Element {
     let anchor = props.anchor.copied_or_default();
-    let size = props.size.copied_or(Size::Md);
+    let theme = use_theme();
+    let size = props.size.copied_or(theme.drawer.size);
 
     let states = props
         .states

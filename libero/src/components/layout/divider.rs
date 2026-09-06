@@ -8,7 +8,7 @@ use crate::{
         layout::use_box,
         variables,
     },
-    hooks::use_css,
+    hooks::{use_css, use_theme},
     str_enum::str_enum,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -167,7 +167,8 @@ pub fn Divider(props: DividerProps) -> Element {
     let vertical = orientation == Orientation::Vertical;
     let has_label = props.children.is_some();
     let label_position = props.label_position.copied_or_default();
-    let size = props.size.copied_or(Size::Xs);
+    let theme = use_theme();
+    let size = props.size.copied_or(theme.divider.size);
 
     let divider_states = props
         .states

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    hooks::use_theme,
     sx::StaticSx,
     theme::{KbdDefaults, Size},
 };
@@ -26,8 +27,8 @@ base_props! {
 /// A single keyboard key, rendered as a real `<kbd>`.
 #[component]
 pub fn Kbd(props: KbdProps) -> Element {
-    // Matches Mantine's own default.
-    let size = props.size.copied_or(Size::Sm);
+    let theme = use_theme();
+    let size = props.size.copied_or(theme.kbd.size);
 
     let states: Input<States> = props
         .states

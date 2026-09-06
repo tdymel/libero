@@ -1,6 +1,6 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
 use crate::str_enum::str_enum;
-use crate::theme::{SizeCss, Sizes};
+use crate::theme::{Size, SizeCss, Sizes};
 
 pub const SIDEBAR_SIZE: SizeCss = SizeCss::new("--lsx-sidebar-size-");
 
@@ -20,11 +20,13 @@ str_enum! {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct SidebarDefaults {
+    pub size: Size,
     pub sizes: Sizes<u16>,
 }
 
 impl SidebarDefaults {
     pub const DEFAULT: Self = Self {
+        size: Size::Md,
         sizes: Sizes::new(200, 240, 280, 320, 400, 480),
     };
 }

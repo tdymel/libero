@@ -9,12 +9,15 @@ pub const DIVIDER_LINE: CssVar = CssVar::new("--lsx-divider-line");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DividerDefaults {
+    /// The line's thickness step when `size` is omitted.
+    pub size: Size,
     pub spacing: Option<Size>,
     pub thicknesses: Sizes<u16>,
 }
 
 impl DividerDefaults {
     pub const DEFAULT: Self = Self {
+        size: Size::Xs,
         spacing: None,
         thicknesses: Sizes::new(1, 2, 3, 4, 5, 6),
     };

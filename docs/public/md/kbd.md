@@ -65,11 +65,11 @@ Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-`KbdDefaults` on the theme. The default `size` is not a theme field - `Kbd`
-hardcodes `sm`, matching Mantine.
+`KbdDefaults` on the theme.
 
 | Field | Type | Description |
 |---|---|---|
+| `size` | `Size` | Default `size` when the prop is omitted; `sm`, matching Mantine. |
 | `font_sizes` | `Sizes<u16>` | Font size in px per size step - 10, 12, 14, 16, 20, 24. |
 | `font_family` | `&'static str` | The keycap's font; the theme's mono stack. |
 | `background` | `&'static str` | Keycap fill; `#f6f8fa`. |

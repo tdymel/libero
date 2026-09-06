@@ -1,15 +1,17 @@
 use crate::css::{CssDeclaration, ToCssDeclarations};
-use crate::theme::{SizeCss, Sizes};
+use crate::theme::{Size, SizeCss, Sizes};
 
 pub const DRAWER_SIZE: SizeCss = SizeCss::new("--lsx-drawer-size-");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DrawerDefaults {
+    pub size: Size,
     pub sizes: Sizes<u16>,
 }
 
 impl DrawerDefaults {
     pub const DEFAULT: Self = Self {
+        size: Size::Md,
         sizes: Sizes::new(200, 240, 280, 320, 400, 480),
     };
 }

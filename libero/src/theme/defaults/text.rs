@@ -21,12 +21,14 @@ pub struct TextSizeLevel {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TextDefaults {
+    pub size: Size,
     pub font_family: &'static str,
     pub sizes: Sizes<TextSizeLevel>,
 }
 
 impl TextDefaults {
     pub const DEFAULT: Self = Self {
+        size: Size::Md,
         font_family: SANS_FONT_FAMILY,
         sizes: Sizes::new(
             TextSizeLevel {

@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, States, common::base_props, layout::use_box},
+    hooks::use_theme,
     sx::StaticSx,
     theme::{Size, TextDefaults},
 };
@@ -26,7 +27,8 @@ base_props! {
 
 #[component]
 pub fn Text(props: TextProps) -> Element {
-    let chosen_size = props.size.copied_or(Size::Md);
+    let theme = use_theme();
+    let chosen_size = props.size.copied_or(theme.text.size);
 
     let states: Input<States> = props
         .states

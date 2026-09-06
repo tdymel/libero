@@ -71,6 +71,7 @@ Like every component, `Divider` also takes the shared props `sx`, `class`,
 
 | Field | Type | Description |
 |---|---|---|
+| `size` | `Size` | Default `size` when the prop is omitted; `xs`. |
 | `spacing` | `Option<Size>` | Default margin either side of the rule; `None` means `0`. |
 | `thicknesses` | `Sizes<u16>` | Line thickness in pixels per size step. |
 

@@ -6,6 +6,7 @@ use crate::{
         common::{base_props, input_from_str},
         layout::use_box,
     },
+    hooks::use_theme,
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, SIDEBAR_SIZE, Size},
 };
@@ -63,7 +64,8 @@ base_props! {
 #[component]
 pub fn Sidebar(props: SidebarProps) -> Element {
     let side = props.side.copied_or_default();
-    let size = props.size.copied_or(Size::Md);
+    let theme = use_theme();
+    let size = props.size.copied_or(theme.sidebar.size);
 
     let states: Input<States> = props
         .states

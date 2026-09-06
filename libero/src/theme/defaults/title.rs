@@ -21,12 +21,16 @@ pub struct TitleSizeLevel {
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct TitleDefaults {
+    /// The look only. A bare `Title` stays h1 whatever this says; the tag
+    /// follows `component`, or a `size` the caller passes.
+    pub size: Size,
     pub font_family: &'static str,
     pub sizes: Sizes<TitleSizeLevel>,
 }
 
 impl TitleDefaults {
     pub const DEFAULT: Self = Self {
+        size: Size::Xxl,
         font_family: SANS_FONT_FAMILY,
         sizes: Sizes::new(
             TitleSizeLevel {

@@ -128,6 +128,7 @@ Returns the same `ModalHandle` as `use_modal`; every method on it, on
 
 | Field | Type | Description |
 |---|---|---|
+| `size` | `Size` | Default `size` when the prop is omitted; `md`. |
 | `sizes` | `Sizes<u16>` | Panel extent per size step, in px. |
 
 The panel's surface - background, shadow, padding - comes from the theme's

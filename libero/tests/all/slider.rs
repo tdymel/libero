@@ -4,6 +4,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{RangeSlider, Slider, SliderMark, SliderValue},
+    theme::{Size, SliderDefaults, Theme},
 };
 
 #[test]
@@ -325,4 +326,41 @@ fn an_inverted_or_non_finite_range_renders_instead_of_panicking() {
     // A collapsed range has no position, and nothing writes `NaN`.
     assert!(!html.contains("NaN"));
     assert!(html.contains("--lsx-slider-filled:0;"));
+}
+
+/// A theme whose slider default is `sm`, to tell the theme's step from a
+/// hardcoded `md`.
+static SMALL_SLIDERS: Theme = Theme {
+    slider: SliderDefaults {
+        size: Size::Sm,
+        ..Theme::DEFAULT.slider
+    },
+    ..Theme::DEFAULT
+};
+
+/// The field wrapper sizes the label and captions, the core sizes the track.
+/// Both read the theme's step, so they never disagree.
+#[test]
+fn both_halves_of_a_slider_take_the_themes_default_size() {
+    fn single() -> Element {
+        rsx! {
+            LiberoProvider { theme: &SMALL_SLIDERS,
+                Slider { label: "Volume", value: 25.0, oninput: move |_| {} }
+            }
+        }
+    }
+    fn range() -> Element {
+        rsx! {
+            LiberoProvider { theme: &SMALL_SLIDERS,
+                RangeSlider { label: "Price", value: (20.0, 80.0), oninput: move |_| {} }
+            }
+        }
+    }
+
+    for html in [render(single), render(range)] {
+        let wrapper = attributes_of(&html, "div");
+        let root = attributes_of(&html[html.find("<div").unwrap() + 4..], "div");
+        assert!(wrapper["data-state"].contains("size-sm"), "{wrapper:?}");
+        assert!(root["data-state"].contains("size-sm"), "{root:?}");
+    }
 }

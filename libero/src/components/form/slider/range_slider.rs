@@ -6,8 +6,8 @@ use super::slider_value::{SliderChangeEvent, SliderMark, SliderStep, SliderValue
 use super::value::SliderCoreValue;
 use crate::{
     components::{FieldStatus, Input, common::field_props, form::use_bound, use_field},
+    hooks::use_theme,
     sx::ThemeAwareValue,
-    theme::Size,
 };
 
 field_props! {
@@ -77,6 +77,7 @@ field_props! {
 /// it.
 #[component]
 pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
+    let theme = use_theme();
     let scale = Scale::of::<V>(props.min.as_ref(), props.max.as_ref(), props.step);
     let (min, max, step) = scale.bounds();
     let bound = use_bound(&props.name, props.oninput.is_some());
@@ -142,7 +143,7 @@ pub fn RangeSlider<V: SliderValue>(props: RangeSliderProps<V>) -> Element {
         .bound(&bound)
         .required(required)
         .disabled(disabled)
-        .size(props.size.copied_or(Size::Md))
+        .size(props.size.copied_or(theme.slider.size))
         .class(&props.class)
         .sx(&props.sx)
         .states(&props.states)

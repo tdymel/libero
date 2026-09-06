@@ -80,11 +80,11 @@ Like every component, `Title` also takes the shared props `sx`, `class`, `style`
 
 ## Theme defaults
 
-`TitleDefaults` on the theme; the default `size` is hardcoded to `xxl` rather than
-being a theme field.
+`TitleDefaults` on the theme.
 
 | Field | Type | Description |
 |---|---|---|
+| `size` | `Size` | Default `size` when the prop is omitted; `xxl`. The look only: a bare `Title` stays `h1` whatever this says. |
 | `font_family` | `&'static str` | Heading font stack; the theme's sans stack. It does not vary by size. |
 | `sizes` | `Sizes<TitleSizeLevel>` | `font_weight`, `font_size` (rem), `letter_spacing`, `line_height` per size. |
 

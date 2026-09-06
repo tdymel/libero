@@ -12,6 +12,7 @@ pub const KBD_COLOR: CssVar = CssVar::new("--lsx-kbd-color");
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct KbdDefaults {
+    pub size: Size,
     pub font_sizes: Sizes<u16>,
     pub font_family: &'static str,
     pub background: &'static str,
@@ -21,6 +22,8 @@ pub struct KbdDefaults {
 
 impl KbdDefaults {
     pub const DEFAULT: Self = Self {
+        // Matches Mantine's own default.
+        size: Size::Sm,
         font_sizes: Sizes::new(10, 12, 14, 16, 20, 24),
         font_family: MONO_FONT_FAMILY,
         background: "#f6f8fa",
