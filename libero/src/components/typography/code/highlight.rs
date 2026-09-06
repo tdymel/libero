@@ -400,47 +400,112 @@ mod tests {
         Language::parse(name).unwrap_or_else(|| panic!("{name} should be in LANGUAGE_CATALOG"))
     }
 
-    /// Every grammar must tokenize arbitrary text without panicking or
-    /// hanging - `apply_pattern`'s "start >= end" guard is what stops a
-    /// pathological pattern looping forever.
-    #[test]
-    fn every_catalog_language_highlights_without_panicking() {
-        let sample = "hello_world(123) // a comment \"a string\" 4.5 { } [ ] < > = : ; \n";
-        for entry in LANGUAGE_CATALOG.iter() {
-            let language = Language(entry);
-            let lines = highlight(sample, language);
-            assert!(!lines.is_empty(), "{} produced no lines", entry.label);
-        }
-    }
+    /// The sweeps over every compiled-in grammar. Without a `code-lang-*`
+    /// feature the catalog is plain text alone and each of them would pass
+    /// having checked nothing, so they are compiled out instead (review 7
+    /// S2). The batch gate runs them with all 30 features on.
+    #[cfg(any(
+        feature = "code-lang-bash",
+        feature = "code-lang-c",
+        feature = "code-lang-cpp",
+        feature = "code-lang-csharp",
+        feature = "code-lang-css",
+        feature = "code-lang-dart",
+        feature = "code-lang-go",
+        feature = "code-lang-graphql",
+        feature = "code-lang-haskell",
+        feature = "code-lang-html",
+        feature = "code-lang-java",
+        feature = "code-lang-javascript",
+        feature = "code-lang-json",
+        feature = "code-lang-kotlin",
+        feature = "code-lang-lua",
+        feature = "code-lang-markdown",
+        feature = "code-lang-objective-c",
+        feature = "code-lang-perl",
+        feature = "code-lang-php",
+        feature = "code-lang-powershell",
+        feature = "code-lang-python",
+        feature = "code-lang-r",
+        feature = "code-lang-ruby",
+        feature = "code-lang-rust",
+        feature = "code-lang-scala",
+        feature = "code-lang-sql",
+        feature = "code-lang-swift",
+        feature = "code-lang-toml",
+        feature = "code-lang-typescript",
+        feature = "code-lang-yaml",
+    ))]
+    mod grammar_sweeps {
+        use super::*;
 
-    /// Todo 279: the non-web arm rewrites `\b`, `\w` and `\d` into their
-    /// ASCII sets so it agrees with the browser's `RegExp`
-    /// (`platform::regex::ascii_semantics`). A rewrite that produced invalid
-    /// syntax would panic in the compile cache, so every pattern of every
-    /// compiled-in grammar is built here - including the nested ones, which
-    /// a sample text may never reach.
-    #[test]
-    fn every_grammar_pattern_still_compiles_after_the_ascii_rewrite() {
-        fn compile(grammar: Grammar, label: &str, depth: usize) {
-            assert!(
-                depth < 8,
-                "{label}: `inside` grammars nest suspiciously deep"
-            );
-            let text = PreparedText::new("");
-            for rule in grammar {
-                for pattern in rule.patterns {
-                    // A compile failure panics inside the cache; a `None`
-                    // here just means the empty haystack did not match.
-                    regex_api().find(pattern.pattern, pattern.case_insensitive, &text, 0);
-                    if let Some(inside) = pattern.inside {
-                        compile(inside(), label, depth + 1);
-                    }
-                }
+        /// Every grammar must tokenize arbitrary text without panicking or
+        /// hanging - `apply_pattern`'s "start >= end" guard is what stops a
+        /// pathological pattern looping forever.
+        #[test]
+        fn every_catalog_language_highlights_without_panicking() {
+            let sample = "hello_world(123) // a comment \"a string\" 4.5 { } [ ] < > = : ; \n";
+            for entry in LANGUAGE_CATALOG.iter() {
+                let language = Language(entry);
+                let lines = highlight(sample, language);
+                assert!(!lines.is_empty(), "{} produced no lines", entry.label);
             }
         }
 
-        for entry in LANGUAGE_CATALOG.iter() {
-            compile((entry.grammar)(), entry.label, 0);
+        /// Todo 279: the non-web arm rewrites `\b`, `\w` and `\d` into their
+        /// ASCII sets so it agrees with the browser's `RegExp`
+        /// (`platform::regex::ascii_semantics`). A rewrite that produced invalid
+        /// syntax would panic in the compile cache, so every pattern of every
+        /// compiled-in grammar is built here - including the nested ones, which
+        /// a sample text may never reach.
+        #[test]
+        fn every_grammar_pattern_still_compiles_after_the_ascii_rewrite() {
+            fn compile(grammar: Grammar, label: &str, depth: usize) {
+                assert!(
+                    depth < 8,
+                    "{label}: `inside` grammars nest suspiciously deep"
+                );
+                let text = PreparedText::new("");
+                for rule in grammar {
+                    for pattern in rule.patterns {
+                        // A compile failure panics inside the cache; a `None`
+                        // here just means the empty haystack did not match.
+                        regex_api().find(pattern.pattern, pattern.case_insensitive, &text, 0);
+                        if let Some(inside) = pattern.inside {
+                            compile(inside(), label, depth + 1);
+                        }
+                    }
+                }
+            }
+
+            for entry in LANGUAGE_CATALOG.iter() {
+                compile((entry.grammar)(), entry.label, 0);
+            }
+        }
+
+        /// Adjacent greedy patterns compete by position, so a comment and a
+        /// string only keep out of each other when no non-greedy pattern sits
+        /// between their rules.
+        #[test]
+        fn every_grammars_comment_and_string_rules_compete() {
+            for entry in LANGUAGE_CATALOG.iter() {
+                let patterns: Vec<(&str, bool)> = (entry.grammar)()
+                    .iter()
+                    .flat_map(|rule| rule.patterns.iter().map(|p| (rule.name, p.greedy)))
+                    .collect();
+                let delimited = |(name, _): &(&str, bool)| *name == "comment" || *name == "string";
+                let (Some(first), Some(last)) = (
+                    patterns.iter().position(delimited),
+                    patterns.iter().rposition(delimited),
+                ) else {
+                    continue;
+                };
+                assert!(
+                    patterns[first..=last].iter().all(|(_, greedy)| *greedy),
+                    "{}: a non-greedy pattern splits its comment and string rules",
+                    entry.label
+                );
+            }
         }
     }
 
@@ -470,7 +535,14 @@ mod tests {
         highlight(source, language).into_iter().flatten().collect()
     }
 
+    /// With any of the three features off, `parse` returns `None` for both
+    /// sides and every equality holds trivially.
     #[test]
+    #[cfg(all(
+        feature = "code-lang-rust",
+        feature = "code-lang-bash",
+        feature = "code-lang-markdown"
+    ))]
     fn language_parse_accepts_known_aliases_and_rejects_unknown() {
         assert_eq!(Language::parse("rust"), Language::parse("rs"));
         assert_eq!(Language::parse("rust"), Language::parse("RS"));
@@ -490,31 +562,6 @@ mod tests {
             flat("let x = \"//\"; // hi\n", lang("text")),
             vec![("let x = \"//\"; // hi".to_string(), None)]
         );
-    }
-
-    /// Adjacent greedy patterns compete by position, so a comment and a
-    /// string only keep out of each other when no non-greedy pattern sits
-    /// between their rules.
-    #[test]
-    fn every_grammars_comment_and_string_rules_compete() {
-        for entry in LANGUAGE_CATALOG.iter() {
-            let patterns: Vec<(&str, bool)> = (entry.grammar)()
-                .iter()
-                .flat_map(|rule| rule.patterns.iter().map(|p| (rule.name, p.greedy)))
-                .collect();
-            let delimited = |(name, _): &(&str, bool)| *name == "comment" || *name == "string";
-            let (Some(first), Some(last)) = (
-                patterns.iter().position(delimited),
-                patterns.iter().rposition(delimited),
-            ) else {
-                continue;
-            };
-            assert!(
-                patterns[first..=last].iter().all(|(_, greedy)| *greedy),
-                "{}: a non-greedy pattern splits its comment and string rules",
-                entry.label
-            );
-        }
     }
 
     #[test]
