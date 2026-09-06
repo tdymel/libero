@@ -469,46 +469,44 @@ pub fn Demo(
                                     // order and the accessibility tree, which
                                     // is what a JS width check would cost us a
                                     // hook and a resize observer for.
-                                    ControlKind::Toggle if segments_need(control.options.len()).is_some() => rsx! {
-                                        {
-                                            let needed = format!(
-                                                "(min-width: {}px)",
-                                                segments_need(control.options.len()).unwrap_or_default(),
-                                            );
-                                            rsx! {
-                                                Box {
-                                                    sx: sx()
-                                                        .display("none")
-                                                        .container_query(DEMO_CARD, needed.clone(), sx().display("block")),
-                                                    ToggleSegments {
-                                                        control: control.clone(),
-                                                        value: values().str(control.name),
-                                                        onchange: move |next: String| {
-                                                            values.write().0[index].1 = next;
-                                                        },
-                                                    }
+                                    ControlKind::Toggle if segments_need(control.options.len()).is_some() => {
+                                        let needed = format!(
+                                            "(min-width: {}px)",
+                                            segments_need(control.options.len()).unwrap_or_default(),
+                                        );
+                                        rsx! {
+                                            Box {
+                                                sx: sx()
+                                                    .display("none")
+                                                    .container_query(DEMO_CARD, needed.clone(), sx().display("block")),
+                                                ToggleSegments {
+                                                    control: control.clone(),
+                                                    value: values().str(control.name),
+                                                    onchange: move |next: String| {
+                                                        values.write().0[index].1 = next;
+                                                    },
                                                 }
-                                                Box {
-                                                    sx: sx()
-                                                        .display("block")
-                                                        .container_query(DEMO_CARD, needed, sx().display("none")),
-                                                    NativeSelect {
-                                                        size: "sm",
-                                                        // The row's own `Text`
-                                                        // already names it, so
-                                                        // the field draws no
-                                                        // second label.
-                                                        "aria-label": control.name,
-                                                        value: Some(values().str(control.name)),
-                                                        options: control.options.clone(),
-                                                        option_label: {
-                                                            let control = control.clone();
-                                                            move |option: String| control.label_of(&option)
-                                                        },
-                                                        onchange: move |value: String| {
-                                                            values.write().0[index].1 = value;
-                                                        },
-                                                    }
+                                            }
+                                            Box {
+                                                sx: sx()
+                                                    .display("block")
+                                                    .container_query(DEMO_CARD, needed, sx().display("none")),
+                                                NativeSelect {
+                                                    size: "sm",
+                                                    // The row's own `Text`
+                                                    // already names it, so
+                                                    // the field draws no
+                                                    // second label.
+                                                    "aria-label": control.name,
+                                                    value: Some(values().str(control.name)),
+                                                    options: control.options.clone(),
+                                                    option_label: {
+                                                        let control = control.clone();
+                                                        move |option: String| control.label_of(&option)
+                                                    },
+                                                    onchange: move |value: String| {
+                                                        values.write().0[index].1 = value;
+                                                    },
                                                 }
                                             }
                                         }

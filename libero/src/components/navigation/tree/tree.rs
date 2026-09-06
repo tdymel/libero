@@ -12,13 +12,14 @@ use crate::{
     },
     platform::ElementApi,
     theme::Size,
+    utils::warn,
 };
 
 use super::{
     tree_node::{
         ErasedRenderNode, TreeNode, TreeNodeErased, TreeNodeRenderArgs, TreeValue, erase_nodes,
     },
-    tree_row::TreeRow,
+    tree_row::{TreeRow, child_active},
 };
 
 /// Borrows from the `data` it walks: it is rebuilt on every render and every
@@ -59,6 +60,40 @@ fn visible_order<'a>(
     let mut out = Vec::new();
     push_visible_nodes(nodes, expanded, None, &mut out);
     out
+}
+
+/// Where the first visible row with `id` sits, as child indices from the
+/// roots down. By position, not by id: a repeated id would otherwise make every
+/// row that carries it the tab stop.
+fn visible_path(
+    nodes: &[TreeNodeErased],
+    expanded: &HashSet<String>,
+    id: &str,
+) -> Option<Vec<usize>> {
+    nodes.iter().enumerate().find_map(|(index, node)| {
+        if node.id == id {
+            return Some(vec![index]);
+        }
+        if !(node.has_children() && expanded.contains(&node.id)) {
+            return None;
+        }
+        let mut path = visible_path(&node.children, expanded, id)?;
+        path.insert(0, index);
+        Some(path)
+    })
+}
+
+/// The first id that appears twice anywhere in the tree.
+fn repeated_id(nodes: &[TreeNodeErased]) -> Option<&str> {
+    fn walk<'a>(nodes: &'a [TreeNodeErased], seen: &mut HashSet<&'a str>) -> Option<&'a str> {
+        nodes
+            .iter()
+            .find_map(|node| match seen.insert(node.id.as_str()) {
+                true => walk(&node.children, seen),
+                false => Some(node.id.as_str()),
+            })
+    }
+    walk(nodes, &mut HashSet::new())
 }
 
 /// The ids from a root down to `id`, both ends included.
@@ -217,15 +252,16 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
     // pointer equality skip an untouched subtree. Not a signal: it derives
     // from `props.data`, and writing one here forces a second render pass.
     let cache = use_hook(|| {
-        Rc::new(RefCell::new((
-            props.data.clone(),
-            erase_nodes::<T>(&props.data),
-        )))
+        let erased = erase_nodes::<T>(&props.data);
+        warn_on_repeated_id(&erased);
+        Rc::new(RefCell::new((props.data.clone(), erased)))
     });
     let erased_data = {
         let mut cache = cache.borrow_mut();
         if cache.0 != props.data {
-            *cache = (props.data.clone(), erase_nodes::<T>(&props.data));
+            let erased = erase_nodes::<T>(&props.data);
+            warn_on_repeated_id(&erased);
+            *cache = (props.data.clone(), erased);
         }
         cache.1.clone()
     };
@@ -260,6 +296,19 @@ pub fn Tree<T: TreeValue>(props: TreeProps<T>) -> Element {
             current: props.current,
             onexpandedchange: props.onexpandedchange,
         }
+    }
+}
+
+/// Once per new `data`, not per render: the tree re-renders on every key.
+fn warn_on_repeated_id(nodes: &[TreeNodeErased]) {
+    if !cfg!(debug_assertions) {
+        return;
+    }
+    if let Some(id) = repeated_id(nodes) {
+        warn(&format!(
+            "Tree: the id \"{id}\" is used by more than one node. Ids must be unique; \
+             only the first of them can take the tab stop."
+        ));
     }
 }
 
@@ -305,6 +354,11 @@ fn TreeCore(props: TreeCoreProps) -> Element {
                 .find(|id| visible(id))
         })
         .or_else(|| order.first().map(|node| node.id.to_string()));
+    // The first row with that id, as `Tabs` resolves its value to the first
+    // tab that matches.
+    let active_path = resolved_active
+        .as_deref()
+        .and_then(|id| visible_path(&props.data, &expanded.read(), id));
 
     // A new `current` (the route changed) wins over wherever the arrow keys
     // left the tab stop. `peek`, so the mount run writes nothing.
@@ -428,14 +482,14 @@ fn TreeCore(props: TreeCoreProps) -> Element {
             "aria-label": props.aria_label,
             onkeydown,
             attributes: props.attributes,
-            for node in &props.data {
+            for (index , node) in props.data.iter().enumerate() {
                 TreeRow {
                     key: "{node.id}",
                     node: node.clone(),
                     size,
                     depth: 0,
                     expanded,
-                    resolved_active: resolved_active.clone(),
+                    active: child_active(active_path.as_deref(), index),
                     active_id,
                     render_node: props.render_node.clone(),
                     onexpandedchange: props.onexpandedchange,
@@ -448,6 +502,55 @@ fn TreeCore(props: TreeCoreProps) -> Element {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn tree(ids: &[(&'static str, &[&'static str])]) -> Vec<TreeNodeErased> {
+        let nodes = ids
+            .iter()
+            .map(|(id, children)| {
+                TreeNode::new(*id, id.to_string()).children(
+                    children
+                        .iter()
+                        .map(|child| TreeNode::new(*child, child.to_string()))
+                        .collect(),
+                )
+            })
+            .collect::<Vec<_>>();
+        erase_nodes::<String>(&nodes)
+    }
+
+    #[test]
+    fn a_repeated_id_is_found_across_branches() {
+        assert_eq!(repeated_id(&tree(&[("a", &["x"]), ("b", &["y"])])), None);
+        assert_eq!(
+            repeated_id(&tree(&[("a", &["x"]), ("b", &["x"])])),
+            Some("x")
+        );
+        assert_eq!(repeated_id(&tree(&[("a", &[]), ("a", &[])])), Some("a"));
+    }
+
+    #[test]
+    fn a_repeated_id_warns() {
+        crate::utils::take_warnings();
+        warn_on_repeated_id(&tree(&[("a", &["x"]), ("b", &["x"])]));
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 1, "{warnings:?}");
+        assert!(warnings[0].contains(r#""x""#), "{warnings:?}");
+        warn_on_repeated_id(&tree(&[("a", &["x"]), ("b", &["y"])]));
+        assert!(crate::utils::take_warnings().is_empty());
+    }
+
+    /// Only an open branch counts, and the first match in document order wins.
+    #[test]
+    fn the_visible_path_finds_the_first_open_match() {
+        let nodes = tree(&[("a", &["x"]), ("b", &["x"])]);
+        let open = |ids: &[&str]| ids.iter().map(|id| id.to_string()).collect::<HashSet<_>>();
+        assert_eq!(
+            visible_path(&nodes, &open(&["a", "b"]), "x"),
+            Some(vec![0, 0])
+        );
+        assert_eq!(visible_path(&nodes, &open(&["b"]), "x"), Some(vec![1, 0]));
+        assert_eq!(visible_path(&nodes, &open(&[]), "x"), None);
+    }
 
     fn node<'a>(id: &'a str, label: &'a str, disabled: bool) -> VisibleNode<'a> {
         VisibleNode {

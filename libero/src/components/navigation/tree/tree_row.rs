@@ -58,7 +58,12 @@ pub(super) struct TreeRowProps {
     pub size: Size,
     pub depth: usize,
     pub expanded: Signal<HashSet<String>>,
-    pub resolved_active: Option<String>,
+    /// Where the roving tab stop is, relative to this row: `Some(&[])` is this
+    /// row, `Some([i, ..])` is inside its child `i`. A path and not an id, so
+    /// that a repeated id still makes exactly one tab stop. It is `None` on
+    /// every row off that path, so moving the stop re-renders only the rows it
+    /// leaves and enters.
+    pub active: Option<Vec<usize>>,
     pub active_id: Signal<Option<String>>,
     pub render_node: ErasedRenderNode,
     pub onexpandedchange: Option<EventHandler<HashSet<String>>>,
@@ -70,7 +75,7 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
     let has_children = node.has_children();
     let is_expanded = has_children.then(|| props.expanded.read().contains(&node.id));
     let disabled = node.disabled;
-    let is_roving_active = props.resolved_active.as_deref() == Some(node.id.as_str());
+    let is_roving_active = props.active.as_deref().is_some_and(<[usize]>::is_empty);
     // The `<li>` carries the roving tabindex; `render_node`'s content is
     // always "-1", or the active row gets a second tab stop.
     let li_tabindex = if is_roving_active { "0" } else { "-1" };
@@ -136,14 +141,14 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
             List {
                 "role": "group",
                 size: props.size,
-                for child in &node.children {
+                for (index , child) in node.children.iter().enumerate() {
                     TreeRow {
                         key: "{child.id}",
                         node: child.clone(),
                         size: props.size,
                         depth: props.depth + 1,
                         expanded: props.expanded,
-                        resolved_active: props.resolved_active.clone(),
+                        active: child_active(props.active.as_deref(), index),
                         active_id: props.active_id,
                         render_node: props.render_node.clone(),
                         onexpandedchange: props.onexpandedchange,
@@ -160,4 +165,12 @@ pub(super) fn TreeRow(props: TreeRowProps) -> Element {
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("tabindex", li_tabindex)
         .render(HtmlTag::Li, Vec::new(), children)
+}
+
+/// The part of a row's `active` path that its child `index` sees.
+pub(super) fn child_active(active: Option<&[usize]>, index: usize) -> Option<Vec<usize>> {
+    match active? {
+        [head, rest @ ..] if *head == index => Some(rest.to_vec()),
+        _ => None,
+    }
 }

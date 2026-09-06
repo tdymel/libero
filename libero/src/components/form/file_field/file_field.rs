@@ -622,7 +622,7 @@ fn card_list(
         // Safari with VoiceOver drops list semantics from a `list-style: none`
         // list.
         .attr("role", "list")
-        .render(HtmlTag::Ul, Vec::new(), rsx! { {drawn.into_iter()} })
+        .render(HtmlTag::Ul, Vec::new(), drawn)
 }
 
 /// The real `input[type="file"]`: the picker, and what a form posts.
@@ -814,7 +814,7 @@ fn dropzone_prompt(props: &FileFieldProps, loader: Option<Size>) -> Element {
         .as_ref()
         .is_ok_and(|children| *children != VNode::default());
     let prompt = match (written, props.placeholder.clone()) {
-        (true, _) => rsx! { {props.children.clone()} },
+        (true, _) => props.children.clone(),
         (false, Some(placeholder)) => rsx! { span { "{placeholder}" } },
         (false, None) => {
             let text = match props.multiple {

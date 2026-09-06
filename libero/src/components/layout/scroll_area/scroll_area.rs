@@ -346,7 +346,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .variables(&content_variables)
         .prepare()
         .element(&content)
-        .render(HtmlTag::Div, Vec::new(), props.children)?;
+        .render(HtmlTag::Div, Vec::new(), props.children);
 
     use_box()
         .framework_sx(
@@ -368,7 +368,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .attr("tabindex", if props.focusable { "0" } else { "-1" })
         .event("onscroll", onscroll)
         .event("onscrollend", onscrollend)
-        .render(HtmlTag::Div, props.attributes, rsx! { {body} })
+        .render(HtmlTag::Div, props.attributes, body)
 }
 
 #[cfg(test)]

@@ -10,7 +10,7 @@ use libero::{
 
 /// The zone's children, printed verbatim - their point is that they are
 /// *different heights*, which is what `masonry` reacts to.
-// snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }
+// snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { children }
 // snippet: in GridZone { .. }
 const CARDS: &str = r#"GridItem { span: GridSpan::Third, Card { lines: 1, "A" } }
 GridItem { span: GridSpan::TwoThirds, Card { lines: 4, "B" } }

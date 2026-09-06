@@ -1262,3 +1262,34 @@ fn a_read_only_select_keeps_its_tab_stop() {
     assert!(body.contains(r#"name="size""#), "{body}");
     assert!(!body.contains("disabled"), "{body}");
 }
+
+/// Options come from data, and data repeats itself. Like `Tabs` with a repeated
+/// value, both radio groups check the first match only: two `checked` radios
+/// in one group leave the browser showing the last, while the component
+/// reasons about the first. Review 6 R7 reported both as checking two.
+#[test]
+fn a_repeated_option_is_checked_once_on_its_first_radio() {
+    fn app() -> Element {
+        let options = vec!["a".to_string(), "a".to_string(), "b".to_string()];
+        rsx! {
+            LiberoProvider {
+                RadioGroup { label: "Radio", options: options.clone(), value: "a".to_string(), onchange: move |_: String| {} }
+                SegmentedControl { options, value: "a".to_string(), onchange: move |_: String| {} }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+    // Open tags only, read raw: SSR writes a boolean as `checked=true`, unquoted.
+    let checked: Vec<&str> = body
+        .match_indices("<input")
+        .map(|(start, _)| &body[start..start + body[start..].find('>').unwrap()])
+        .filter(|input| input.contains("checked"))
+        .collect();
+    assert_eq!(checked.len(), 2, "one per group: {body}");
+    assert!(
+        checked[0].contains(r#"data-radio-index="0""#),
+        "{checked:?}"
+    );
+    assert!(checked[1].contains(r#"segment-0""#), "{checked:?}");
+}

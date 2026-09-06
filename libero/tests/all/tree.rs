@@ -109,3 +109,54 @@ fn a_collapsed_current_node_puts_the_tab_stop_on_its_branch() {
     assert_eq!(tab_stops.len(), 1);
     assert!(tab_stops[0].contains("Beta"));
 }
+
+/// Two nodes with one id used to make two tab stops in one composite. Like
+/// `Tabs` with a repeated value, the first match wins: the tab stop is placed
+/// by position, so exactly one row is `tabindex="0"`, and it is the first.
+#[test]
+fn a_repeated_id_still_makes_one_tab_stop_on_its_first_row() {
+    fn siblings() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data: vec![
+                        TreeNode::new("a", "First".to_string()),
+                        TreeNode::new("a", "Second".to_string()),
+                        TreeNode::new("b", "Third".to_string()),
+                    ],
+                }
+            }
+        }
+    }
+    // The same id in two open branches, and `current` naming it.
+    fn cousins() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tree {
+                    aria_label: "Files",
+                    data: vec![
+                        TreeNode::new("src", "src".to_string())
+                            .children(vec![TreeNode::new("mod", "First".to_string())]),
+                        TreeNode::new("lib", "lib".to_string())
+                            .children(vec![TreeNode::new("mod", "Second".to_string())]),
+                    ],
+                    default_expanded: ["src".to_string(), "lib".to_string()].into(),
+                    current: "mod".to_string(),
+                }
+            }
+        }
+    }
+
+    for (app, first) in [(siblings as fn() -> Element, "First"), (cousins, "First")] {
+        let body = body(&render(app));
+        assert_eq!(body.matches(r#"tabindex="0""#).count(), 1, "{body}");
+        let stop = body.find(r#"tabindex="0""#).unwrap();
+        let second = body.find("Second").unwrap();
+        assert!(
+            stop < second,
+            "the tab stop is not on the first row: {body}"
+        );
+        assert!(body[stop..second].contains(first), "{body}");
+    }
+}

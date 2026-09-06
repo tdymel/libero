@@ -78,6 +78,7 @@ mod portals;
 mod presence;
 mod progress_bar;
 mod qr_code;
+mod rsx_wrapping;
 mod scroll_area;
 mod scroller;
 mod segmented_control;

@@ -381,15 +381,11 @@ pub fn Menubar(props: MenubarProps) -> Element {
         .states(&states)
         .prepare();
 
-    rsx! {
-        {
-            root.element(&bar)
-                .attr("role", "menubar")
-                .attr("aria-orientation", "horizontal")
-                .attr("aria-label", props.aria_label.clone())
-                .render(HtmlTag::Div, props.attributes, rsx! { {columns.into_iter()} })
-        }
-    }
+    root.element(&bar)
+        .attr("role", "menubar")
+        .attr("aria-orientation", "horizontal")
+        .attr("aria-label", props.aria_label.clone())
+        .render(HtmlTag::Div, props.attributes, columns)
 }
 
 // Shift is part of ordinary typing; the rest mark a browser or OS shortcut.

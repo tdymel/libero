@@ -358,84 +358,72 @@ pub fn Pagination(props: PaginationProps) -> Element {
         })
         .collect();
 
-    rsx! {
-        {
-            nav.attr("aria-label", props.aria_label)
-                .render(
-                    HtmlTag::Nav,
-                    props.attributes,
-                    rsx! {
+    let list_element = list_box
+        .clone()
+        .element(&list)
+        // Safari with VoiceOver drops list semantics from a `list-style: none` list.
+        .attr("role", "list")
+        .render(
+            HtmlTag::Ul,
+            vec![],
+            rsx! {
+                if with_edges {
+                    {arrow(PaginationLabel::First, 1, page == 1, rsx! { FirstIcon {} })}
+                }
+                if with_controls {
+                    {arrow(PaginationLabel::Previous, page.saturating_sub(1).max(1), page == 1, rsx! { PreviousIcon {} })}
+                }
+                for (key , item) in items.iter() {
+                    li {
+                        key: "{key}",
+                        // The gap is hidden at the `<li>`, not just on
+                        // the text inside it. Hiding only the span
+                        // silences the `…` but leaves an empty list
+                        // item in the accessibility tree, so the list
+                        // announces more entries than it has.
+                        "aria-hidden": matches!(item, PaginationItem::Ellipsis)
+                            .then_some("true"),
                         {
-                            list_box
-                                .clone()
-                                .element(&list)
-                                // Safari with VoiceOver drops list semantics
-                                // from a `list-style: none` list.
-                                .attr("role", "list")
-                                .render(
-                                    HtmlTag::Ul,
-                                    vec![],
-                                    rsx! {
-                                        if with_edges {
-                                            {arrow(PaginationLabel::First, 1, page == 1, rsx! { FirstIcon {} })}
-                                        }
-                                        if with_controls {
-                                            {arrow(PaginationLabel::Previous, page.saturating_sub(1).max(1), page == 1, rsx! { PreviousIcon {} })}
-                                        }
-                                        for (key , item) in items.iter() {
-                                            li {
-                                                key: "{key}",
-                                                // The gap is hidden at the `<li>`, not just on
-                                                // the text inside it. Hiding only the span
-                                                // silences the `…` but leaves an empty list
-                                                // item in the accessibility tree, so the list
-                                                // announces more entries than it has.
-                                                "aria-hidden": matches!(item, PaginationItem::Ellipsis)
-                                                    .then_some("true"),
-                                                {
-                                                    match item {
-                                                        PaginationItem::Ellipsis => {
-                                                            ellipsis
-                                                                .clone()
-                                                                .render(HtmlTag::Span, vec![], rsx! { "…" })
-                                                        }
-                                                        PaginationItem::Page(number) => {
-                                                            let number = *number;
-                                                            let current = number == page;
-                                                            let frame = match current {
-                                                                true => control_current.clone(),
-                                                                false => control.clone(),
-                                                            };
-                                                            frame
-                                                                .attr("type", "button")
-                                                                .attr("aria-label", name(PaginationLabel::Page { number, current }))
-                                                                .attr("aria-current", current.then_some("page"))
-                                                                .attr("disabled", disabled)
-                                                                .event(
-                                                                    "onclick",
-                                                                    move |_: Event<MouseData>| {
-                                                                        if !disabled {
-                                                                            go(number, false)
-                                                                        }
-                                                                    },
-                                                                )
-                                                                .render(HtmlTag::Button, vec![], rsx! { "{number}" })
-                                                        }
-                                                    }
+                            match item {
+                                PaginationItem::Ellipsis => {
+                                    ellipsis
+                                        .clone()
+                                        .render(HtmlTag::Span, vec![], rsx! { "…" })
+                                }
+                                PaginationItem::Page(number) => {
+                                    let number = *number;
+                                    let current = number == page;
+                                    let frame = match current {
+                                        true => control_current.clone(),
+                                        false => control.clone(),
+                                    };
+                                    frame
+                                        .attr("type", "button")
+                                        .attr("aria-label", name(PaginationLabel::Page { number, current }))
+                                        .attr("aria-current", current.then_some("page"))
+                                        .attr("disabled", disabled)
+                                        .event(
+                                            "onclick",
+                                            move |_: Event<MouseData>| {
+                                                if !disabled {
+                                                    go(number, false)
                                                 }
-                                            }
-                                        }
-                                        if with_controls {
-                                            {arrow(PaginationLabel::Next, page.saturating_add(1).min(total), page == total, rsx! { NextIcon {} })}
-                                        }
-                                        if with_edges {
-                                            {arrow(PaginationLabel::Last, total, page == total, rsx! { LastIcon {} })}
-                                        }
-                                    },
-                                )
+                                            },
+                                        )
+                                        .render(HtmlTag::Button, vec![], rsx! { "{number}" })
+                                }
+                            }
                         }
-                    },
-                )
-        }
-    }
+                    }
+                }
+                if with_controls {
+                    {arrow(PaginationLabel::Next, page.saturating_add(1).min(total), page == total, rsx! { NextIcon {} })}
+                }
+                if with_edges {
+                    {arrow(PaginationLabel::Last, total, page == total, rsx! { LastIcon {} })}
+                }
+            },
+        );
+    nav.attr("aria-label", props.aria_label)
+        .render(HtmlTag::Nav, props.attributes, list_element)
 }

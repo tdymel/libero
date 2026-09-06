@@ -393,13 +393,7 @@ pub(crate) fn render_segmented_control(view: SegmentedControlView, root: String)
         .attr("aria-invalid", invalid.then_some("true"))
         .attr("aria-required", required.then_some("true"))
         .attr("aria-readonly", readonly.then_some("true"))
-        .render(
-            HtmlTag::Div,
-            attributes,
-            rsx! {
-                {items}
-            },
-        )
+        .render(HtmlTag::Div, attributes, items.collect::<Vec<_>>())
 }
 
 #[cfg(test)]

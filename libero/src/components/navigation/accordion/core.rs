@@ -274,7 +274,7 @@ pub(crate) fn render_accordion(view: AccordionView, root: String) -> Element {
         .states(&states)
         .prepare()
         .element(&root_element)
-        .render(HtmlTag::Div, attributes, rsx! { {items.into_iter()} })
+        .render(HtmlTag::Div, attributes, items)
 }
 
 #[cfg(test)]

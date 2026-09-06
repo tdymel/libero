@@ -278,13 +278,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         .attr("aria-required", required.then_some("true"))
         .element(&root)
         .event("onkeydown", arrows)
-        .render(
-            HtmlTag::Div,
-            props.attributes,
-            rsx! {
-                {options}
-            },
-        );
+        .render(HtmlTag::Div, props.attributes, options.collect::<Vec<_>>());
 
     field.render(group)
 }

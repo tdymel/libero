@@ -852,7 +852,7 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
             })
             // Leaving the box abandons whatever the pointer was waiting on.
             .event("onmouseleave", move |_: MouseEvent| hover.cancel())
-            .render(HtmlTag::Div, attributes, rsx! { {rows.into_iter()} })
+            .render(HtmlTag::Div, attributes, rows)
     }));
 
     let parents = {

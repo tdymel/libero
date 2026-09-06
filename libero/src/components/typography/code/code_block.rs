@@ -502,9 +502,12 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .attr("role", scrolls.then_some("region"))
         .attr("aria-label", scrolls.then_some(scroll_label));
     let code = match &lines {
-        Some(lines) => rsx! {
-            {code_lines(lines, props.line_numbers, &highlighted_lines, &diff_statuses)}
-        },
+        Some(lines) => code_lines(
+            lines,
+            props.line_numbers,
+            &highlighted_lines,
+            &diff_statuses,
+        ),
         None => rsx! {
             Box {
                 component: "pre",

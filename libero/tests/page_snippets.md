@@ -3174,7 +3174,7 @@ use libero::{LiberoProvider, use_theme};
 use libero::components::Title;
 use std::time::Duration;
 
-#[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }
+#[component] fn Card(lines: usize, children: Element) -> Element { children }
 
 #[component]
 fn Snippet() -> Element {
