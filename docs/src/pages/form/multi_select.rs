@@ -215,7 +215,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("Draws one row's content. `selected` on the args is there for a checkmark."),
                     prop("selection", "Callback<SelectionArgs<T>, Element>")
                         .default("Chip with an x")
-                        .doc("Draws one selected value inside the trigger, replacing the chip entirely - the remove control with it. `remove` on the args drops that value; the keyboard stays the control's."),
+                        .doc("Draws one selected value beside the trigger, replacing the chip entirely - the remove control with it. `remove` on the args drops that value; the keyboard stays the control's."),
                     prop("placeholder", "String").doc("Shown while `value` is empty."),
                     prop("name", "String")
                         .doc("Emits one hidden input of that name per selected option, carrying its `Options::value()`, so the selection posts with a native form."),

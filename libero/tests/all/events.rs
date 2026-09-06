@@ -12,8 +12,8 @@ use libero::{
     components::{
         ActionIcon, Box, Button, Checkbox, Chip, Collapse, ColorCode, ColorField, Dialog,
         FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NumberField, Options, PinField,
-        RadioGroup, RangeSlider, Rule, SegmentedControl, Slider, SliderChangeEvent, Tabs,
-        TagsField, TextField, not_empty, use_form, use_menu,
+        RadioGroup, RangeSlider, Rule, SegmentedControl, SelectionArgs, Slider, SliderChangeEvent,
+        Tabs, TagsField, TextField, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -678,14 +678,23 @@ fn an_uncontrolled_marquee_pauses_on_its_toggle() {
 /// that keeps its list open, and the x is about to be removed: focused, it
 /// would take the focus down with it, to the body. Nothing but this guard
 /// stops that, so nothing but this test notices it gone (todo 77).
-fn assert_every_press_keeps_the_focus(app: fn() -> Element, chips: usize) {
+///
+/// `guards` counts every `mousedown` listener the closed field registers,
+/// which since todo 70 is more than one per chip: `TagsField`'s tag wrapper
+/// and `FileField`'s chip wrapper guard a caller's own chip too, and `MultiSelect`'s value slot and chevron
+/// guard the trigger's focus.
+fn assert_every_press_keeps_the_focus(app: fn() -> Element, guards: usize) {
     dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindClickListener::default();
     dom.rebuild(&mut find);
     // Closed, the field has no other `mousedown` listener: the dropdown's own
     // guard only mounts with the dropdown.
-    assert_eq!(find.mousedown.len(), chips, "one guard per chip");
+    assert_eq!(
+        find.mousedown.len(),
+        guards,
+        "a guard went missing, or a listener joined"
+    );
 
     for chip in find.mousedown {
         let press = Event::new(click_event(), true);
@@ -703,6 +712,31 @@ fn pressing_a_tag_x_keeps_the_focus_on_the_input() {
                     label: "Topics",
                     value: vec!["rust".to_string(), "dioxus".to_string()],
                     onchange: move |_: Vec<String>| {},
+                }
+            }
+        }
+    }
+
+    // The default chip's guard, and its wrapper's.
+    assert_every_press_keeps_the_focus(app, 4);
+}
+
+/// Todo 70 (c): a caller's own `tag` draws its x without any guard, and the
+/// field's wrapper supplies it - two chips, two guards, both cancelling.
+#[test]
+fn a_custom_tag_gets_the_guard_it_did_not_draw() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    value: vec!["rust".to_string(), "dioxus".to_string()],
+                    onchange: move |_: Vec<String>| {},
+                    tag: move |args: SelectionArgs<String>| rsx! {
+                        span { "{args.value}"
+                            button { tabindex: "-1", onclick: move |_| args.remove.call(()), "x" }
+                        }
+                    },
                 }
             }
         }
@@ -729,6 +763,32 @@ fn pressing_a_file_chip_x_keeps_the_focus_on_the_control() {
         }
     }
 
+    // The default chip's guard, and its wrapper's.
+    assert_every_press_keeps_the_focus(app, 4);
+}
+
+/// A caller's own `selection` draws its x without any guard, and the chip's
+/// wrapper supplies it - two chips, two guards, both cancelling.
+#[test]
+fn a_custom_file_chip_gets_the_guard_it_did_not_draw() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    value: crate::common::fake_files(&["a.txt", "b.txt"]),
+                    onchange: move |_| {},
+                    selection: move |args: SelectionArgs<dioxus::html::FileData>| rsx! {
+                        span { "{args.value.name()}"
+                            button { tabindex: "-1", onclick: move |_| args.remove.call(()), "x" }
+                        }
+                    },
+                }
+            }
+        }
+    }
+
     assert_every_press_keeps_the_focus(app, 2);
 }
 
@@ -746,7 +806,8 @@ fn pressing_a_chip_x_keeps_the_focus_on_the_trigger() {
         }
     }
 
-    assert_every_press_keeps_the_focus(app, 2);
+    // One per chip, the value slot's and the chevron's.
+    assert_every_press_keeps_the_focus(app, 4);
 }
 
 /// Every element that registered a `click` listener, and the one named

@@ -11,6 +11,7 @@ generic
   combobox "Topics" [expanded] [haspopup=listbox]
     generic
 status [atomic] [live=polite]
+status [atomic] [live=polite]
 generic
   generic
     listbox

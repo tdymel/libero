@@ -11,4 +11,5 @@ generic
   combobox "Topics" [expanded=false] [haspopup=listbox]
     generic
 status [atomic] [live=polite]
+status [atomic] [live=polite]
 --> aria-controls [id="lsx-N-listbox"] (missing)

@@ -208,3 +208,28 @@ fn a_dropzones_card_list_keeps_its_list_semantics() {
     assert_eq!(attributes_of(&body, "ul")["role"], "list", "{body}");
     assert_eq!(body.matches("<li").count(), 2, "{body}");
 }
+
+/// The live region mounts empty: files already held when the field first
+/// renders are not news, so only a later change is announced (todo 70).
+#[test]
+fn the_files_held_at_mount_are_not_announced() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                FileField {
+                    label: "Attachments",
+                    multiple: true,
+                    value: fake_files(&["a.txt", "b.txt"]),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    assert!(html.contains("a.txt"), "the fixture holds no file:\n{html}");
+    assert!(
+        html.contains(r#"role="status"></span>"#) && !html.contains("Added"),
+        "the live region is missing, or spoke at mount:\n{html}"
+    );
+}

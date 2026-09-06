@@ -2,22 +2,24 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, HtmlTag, Input, States,
-        common::{attr, field_props, focus_ring_sx},
+        ComboboxCore, ComboboxOption, HtmlTag, Input, States, VisuallyHidden,
+        common::{attr, field_props, focus_ring_sx, ring_overlay},
         form::{
-            clear_button, field_control_sx, glyphs::ChevronIcon, use_field, use_field_frame,
-            use_refocus_on_close,
+            clear_button, field_control_sx, glyphs::ChevronIcon, use_chip_announcer, use_field,
+            use_field_frame, use_refocus_on_close,
         },
         layout::use_box,
         use_combobox,
     },
     hooks::{PopoverWidth, use_element, use_theme},
+    platform::ElementApi,
     sx::{StaticSx, sx},
 };
 
-/// The trigger is the frame's control: one line, the selection or the
-/// placeholder, and the chevron at its end - inside the control rather than
-/// in the frame's trailing slot, so a click on the chevron opens the list too.
+/// A single select's trigger is the frame's control: one line, the selection
+/// or the placeholder, and the chevron at its end - inside the control rather
+/// than in the frame's trailing slot, so a click on the chevron opens the list
+/// too. A multi-select's trigger sits in `MULTI_VALUE_SX`'s flow instead.
 static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
     field_control_sx()
         .display("flex")
@@ -41,25 +43,40 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
                 .height("1em")
                 .color("grey.6"),
         )
+        // In the chips' flow, after the last one. A zero basis keeps it on the
+        // last row whatever is left there, and the negative margin cancels
+        // the gap before it, so it never wraps onto a row of its own and the
+        // chips break exactly where they did inside the trigger.
         .when(
             "multiple",
-            sx().selector(
-                "& > [data-slot='value']",
-                sx().display("flex")
-                    .flex_wrap("wrap")
-                    .gap("4px")
-                    // The single-line slot clips its overflow for the
-                    // ellipsis. Chips wrap instead, and that clip cut the
-                    // bottom row and the cursor's ring off at the slot's edge.
-                    .overflow("visible"),
-            ),
+            sx().flex("1 1 0")
+                .selector("&:not(:first-child)", sx().margin_left("-4px")),
         )
+        .when("disabled", sx().cursor("not-allowed"))
+});
+
+/// `MultiSelect`'s control: the chips and the trigger on one wrapping flow.
+///
+/// The chips sit beside the `role="combobox"` element, not in it. Inside it,
+/// each chip's x was part of the combobox's value, which read "Cherry Remove
+/// Cherry". The trigger carries the selection as hidden text instead, and this
+/// slot takes the clicks the trigger used to own.
+static MULTI_VALUE_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .flex_wrap("wrap")
+        .align_items("center")
+        .gap("4px")
+        .flex("1 1 auto")
+        // Without it a long chip pushes the frame wider instead of wrapping.
+        .min_width("0")
+        .cursor("pointer")
+        .user_select("none")
         // One wrapper per selected item: it carries the id
         // `aria-activedescendant` points at, and nothing visual. `min-width: 0`,
         // or a long option's chip is floored at its whole label before the
         // chip's own ellipsis can apply.
         .selector(
-            "& [data-slot='chip']",
+            "& > [data-slot='chip']",
             sx().display("inline-flex").max_width("100%").min_width("0"),
         )
         // A flex line of its own, or the button hangs off the label's baseline.
@@ -71,9 +88,21 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
         // on the wrapper, so it follows that element's own radius. The trigger
         // keeps the DOM focus the whole time, so nothing else marks it.
         .selector(
-            "& [data-slot='chip'][data-cursor='true'] > *",
+            "& > [data-slot='chip'][data-cursor='true'] > *",
             focus_ring_sx(),
         )
+        .when("disabled", sx().cursor("not-allowed"))
+});
+
+/// `MultiSelect`'s chevron, in the frame's trailing slot rather than at the
+/// end of the trigger, where it would sit on the last chip row. The frame's
+/// gap is wider than the trigger's was, so the margin gives the difference
+/// back and the chevron stays where it was.
+static MULTI_CHEVRON_SX: StaticSx = StaticSx::new(|| {
+    sx().display("flex")
+        .margin_left("-4px")
+        .cursor("pointer")
+        .selector("& > svg", sx().width("1em").height("1em").color("grey.6"))
         .when("disabled", sx().cursor("not-allowed"))
 });
 
@@ -113,11 +142,17 @@ field_props! {
         /// Parallel to `rows`.
         selected: Vec<bool>,
         onpick: EventHandler<usize>,
-        /// Drawn inside the trigger, as a function of the chip cursor - the
+        /// Drawn inside the trigger - beside it when `multiple` - as a
+        /// function of the chip cursor - the
         /// skin owns no state, so the cursor lives here and the selection is
         /// redrawn from it. `None` shows `placeholder`.
         #[props(default)]
         selection: Option<Callback<SelectionRenderArgs, Element>>,
+        /// The selection's labels, in order. A `multiple` trigger carries them
+        /// as its hidden value text - the chips sit beside it - and its live
+        /// region announces what they gained or lost.
+        #[props(default)]
+        value_labels: Vec<String>,
         /// How many removable chips `selection` draws. The core moves a cursor
         /// over items it cannot see, so it has to be told how many there are.
         #[props(default)]
@@ -262,8 +297,49 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         move |_| onclear.call(()),
     );
 
+    let multiple = props.multiple;
+    // The trigger no longer spans the chips, so the slot around them and the
+    // chevron each open the list and hand the focus to the trigger. Read
+    // before the focus moves: a searchable list closes on its box's blur.
+    let toggle = move || {
+        if disabled {
+            return;
+        }
+        let next = !state.is_open();
+        let _ = trigger_element.focus();
+        if !readonly {
+            open(next);
+        }
+    };
+
+    // Hooks, so all three are prepared whether or not this is a multi-select.
+    let value_slot = use_box()
+        .framework_sx(&MULTI_VALUE_SX)
+        .focus_ring(false)
+        .states(field.states())
+        .prepare();
+    let chevron_box = use_box()
+        .framework_sx(&MULTI_CHEVRON_SX)
+        .states(field.states())
+        .prepare();
+    let announcer = use_chip_announcer(props.value_labels.clone());
+
+    // A multi-select's chevron is in the trailing slot, where the clear
+    // button replaces it just as it does inside a single select's trigger.
+    // Neither takes the focus: it stays on the trigger, whose blur closes the
+    // list.
+    let trailing = match (multiple, &clear) {
+        (true, None) => Some(
+            chevron_box
+                .event("onmousedown", |event: MouseEvent| event.prevent_default())
+                .event("onclick", move |_: MouseEvent| toggle())
+                .render(HtmlTag::Span, Vec::new(), rsx! { ChevronIcon {} }),
+        ),
+        _ => clear.clone(),
+    };
+
     let frame = use_field_frame()
-        .trailing(&clear)
+        .trailing(&trailing)
         .states(field.states())
         .prepare();
 
@@ -333,19 +409,26 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
 
     let placeholder = props.placeholder.clone().unwrap_or_default();
     let id_prefix = format!("{}-chip", state.id());
-    let content = match props.selection {
-        Some(selection) => {
-            let drawn = selection.call(SelectionRenderArgs {
-                cursor: chip_cursor,
-                id_prefix: id_prefix.clone(),
-            });
-            rsx! {
-                span { "data-slot": "value", {drawn} }
-            }
+    let drawn = props.selection.map(|selection| {
+        selection.call(SelectionRenderArgs {
+            cursor: chip_cursor,
+            id_prefix: id_prefix.clone(),
+        })
+    });
+    // A multi-select's chips go beside the trigger, so what it holds is said
+    // inside it as text - the combobox's value - and shown by the chips.
+    let (content, chips) = match (drawn, multiple) {
+        (Some(drawn), false) => (rsx! { span { "data-slot": "value", {drawn} } }, None),
+        (Some(drawn), true) => {
+            let spoken = props.value_labels.join(", ");
+            (rsx! { VisuallyHidden { "{spoken}" } }, Some(drawn))
         }
-        None => rsx! {
-            span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
-        },
+        (None, _) => (
+            rsx! {
+                span { "data-slot": "value", "data-placeholder": "true", "{placeholder}" }
+            },
+            None,
+        ),
     };
 
     // Two elements cannot both be the combobox. While the search box is open it
@@ -374,8 +457,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .attr("aria-disabled", disabled.then_some("true"))
         .attr("aria-readonly", readonly.then_some("true"))
         .attr("tabindex", (!disabled).then_some("0"))
+        // A multi-select's click bubbles to the slot around it, which owns it.
         .event("onclick", move |_: MouseEvent| {
-            if !disabled && !readonly {
+            if !multiple && !disabled && !readonly {
                 open(!state.is_open());
             }
         })
@@ -439,11 +523,32 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             attributes,
             rsx! {
                 {content}
-                if clear.is_none() {
+                if !multiple && clear.is_none() {
                     ChevronIcon {}
                 }
             },
         );
+
+    // The chips and the trigger share one wrapping flow, the shape `TagsField`
+    // has. The slot cancels `mousedown`, so a press anywhere in it - a chip, its
+    // x, the trigger itself - leaves the focus where it was, and a click
+    // focuses the trigger by hand. The trigger is not the frame's child any
+    // more, so it needs a ring overlay of its own as its sibling.
+    let control = match multiple {
+        true => value_slot
+            .event("onmousedown", |event: MouseEvent| event.prevent_default())
+            .event("onclick", move |_: MouseEvent| toggle())
+            .render(
+                HtmlTag::Div,
+                Vec::new(),
+                rsx! {
+                    {chips}
+                    {trigger}
+                    {ring_overlay()}
+                },
+            ),
+        false => trigger,
+    };
 
     let listbox = rsx! {
         ComboboxCore {
@@ -466,7 +571,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             // A pick on a multi-select adds or drops a chip, which resizes the
             // trigger under an open list.
             remeasure: props.selected.iter().filter(|selected| **selected).count() as u64,
-            {frame.render(trigger)}
+            {frame.render(control)}
         }
     };
 
@@ -489,5 +594,8 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     field.render(rsx! {
         {listbox}
         {hidden}
+        if multiple {
+            {announcer}
+        }
     })
 }

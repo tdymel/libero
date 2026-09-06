@@ -152,3 +152,16 @@ fn the_list_posts_through_one_hidden_input_per_tag() {
         "only the hidden inputs carry the name - the draft must not post:\n{html}"
     );
 }
+
+/// The live region mounts empty: tags already held when the field first
+/// renders are not news, so only a later change is announced (todo 70).
+#[test]
+fn the_tags_held_at_mount_are_not_announced() {
+    let html = body(&render(tagged));
+
+    assert!(html.contains("rust"), "the fixture holds no tag:\n{html}");
+    assert!(
+        html.contains(r#"role="status"></span>"#) && !html.contains("Added"),
+        "the live region is missing, or spoke at mount:\n{html}"
+    );
+}

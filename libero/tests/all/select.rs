@@ -241,6 +241,40 @@ mod select_listbox {
         );
     }
 
+    /// Todo 70 (b): inside the combobox, each chip's x was part of its value,
+    /// which read "Cherry Remove Cherry Apple Remove Apple". The chips now sit
+    /// before the trigger, and the trigger says the selection as text.
+    #[test]
+    fn the_chips_sit_beside_the_combobox_and_it_says_the_selection() {
+        fn app() -> Element {
+            rsx! {
+                LiberoProvider {
+                    MultiSelect { value: vec![Fruit::Cherry, Fruit::Apple], onchange: move |_| {} }
+                }
+            }
+        }
+        let html = body(&render(app));
+
+        let combobox = html.find(r#"role="combobox""#).expect("no combobox");
+        let inside = &html[combobox..];
+        assert!(
+            !inside.contains("Remove"),
+            "a remove button is inside or after the combobox:\n{html}"
+        );
+        assert!(
+            inside.contains("Cherry, Apple"),
+            "the combobox does not say the selection:\n{html}"
+        );
+        // Two regions, both empty: the list's loading status and the chips'
+        // own. Mounted empty, because a list that was already there is not
+        // news.
+        assert_eq!(
+            html.matches(r#"role="status"></span>"#).count(),
+            2,
+            "the chips' live region is missing, or spoke at mount:\n{html}"
+        );
+    }
+
     #[test]
     fn the_chips_follow_the_field_one_step_down_the_size_scale() {
         fn app() -> Element {

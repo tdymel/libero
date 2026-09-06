@@ -7,8 +7,8 @@ use crate::{
         ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
         common::{field_props, ring_overlay},
         form::{
-            clear_button, field_control_sx, removable_chip, row_label, use_bound, use_field,
-            use_field_frame,
+            clear_button, field_control_sx, removable_chip, row_label, use_bound,
+            use_chip_announcer, use_field, use_field_frame,
         },
         layout::use_box,
         use_combobox,
@@ -113,6 +113,12 @@ field_props! {
         /// Draws one tag. Defaults to the text in a `Chip` with an x. A caller
         /// who overrides it draws the whole chip, remove control included -
         /// `args.remove` is the wiring.
+        ///
+        /// Give that control `tabindex: "-1"`: the input is the field's one
+        /// tab stop, and Backspace is how a keyboard removes a tag. A button
+        /// that is a tab stop is destroyed under the focus when it removes its
+        /// own tag, and the focus falls to the page. The field already cancels
+        /// `mousedown` on each tag, so a click never moves the focus there.
         #[props(default)]
         tag: Option<Callback<SelectionArgs<String>, Element>>,
     }
@@ -143,6 +149,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     // chips' own remove buttons. The clear button stands down with them.
     let readonly = props.readonly.unwrap_or(false);
     let held = bound.value().unwrap_or_else(|| props.value.clone());
+    let announcer = use_chip_announcer(held.clone());
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("TagsField: without `onchange` the tags can never change.");
@@ -229,7 +236,15 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     });
     let tags = rsx! {
         for (index, chip) in chips.enumerate() {
-            span { key: "{index}", "data-slot": "tag", {chip} }
+            span {
+                key: "{index}",
+                "data-slot": "tag",
+                // The default chip's own guard, applied here so a caller's
+                // `tag` has it too: a press on its x must not take the focus
+                // off the input, or the removal strands it on the body.
+                onmousedown: move |event: MouseEvent| event.prevent_default(),
+                {chip}
+            }
         }
     };
 
@@ -456,6 +471,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
     field.render(rsx! {
         {body}
         {hidden}
+        {announcer}
     })
 }
 

@@ -10,7 +10,7 @@ use crate::{
         form::{
             SelectionArgs, clear_button, field_control_sx,
             glyphs::{CloseIcon, UploadIcon},
-            removable_chip, use_bound, use_field, use_field_frame,
+            removable_chip, use_bound, use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -307,6 +307,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
     }
 
     let value = bound.value().unwrap_or_else(|| props.value.clone());
+    let announcer = use_chip_announcer(value.iter().map(FileData::name).collect());
     let accept = props.accept.clone().unwrap_or_default();
     let dragging = use_local_state(|| false);
 
@@ -510,6 +511,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
                     {value_slot}
                     {input}
                 }
+                {announcer}
             })
         }
         FileFieldVariant::Dropzone => {
@@ -534,6 +536,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
                 {drop_target}
                 {card_list}
                 {input}
+                {announcer}
             })
         }
     }
@@ -781,6 +784,11 @@ impl FileRows {
                         "data-slot": "chip",
                         id: "{id_prefix}-{index}",
                         "data-cursor": (self.chip_cursor == Some(index)).then_some("true"),
+                        // The default chip's own guard, applied here so a
+                        // caller's `selection` has it too: a press on its x
+                        // must not take the focus off the control, or the
+                        // removal strands it on the body.
+                        onmousedown: move |event: MouseEvent| event.prevent_default(),
                         {content}
                     }
                 }

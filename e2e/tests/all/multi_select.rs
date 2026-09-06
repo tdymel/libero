@@ -1,9 +1,8 @@
 //! `MultiSelect`: the combobox archetype.
 //!
-//! **The baselines hold a known defect, todo 326.** The chip's remove button
-//! sits inside the `role="combobox"` element, so the combobox's value reads
-//! `Cherry Remove Cherry`. Fixing it changes every `multi_select_*.snap`, and
-//! that change is the fix showing up, not a regression.
+//! The chips sit beside the `role="combobox"` element, not in it, so its value
+//! reads `Cherry` and not `Cherry Remove Cherry` (todo 70 (b), which rebaselined
+//! every `multi_select_*.snap`).
 
 use e2e::archetypes::Combobox;
 use e2e::browser::block_on;

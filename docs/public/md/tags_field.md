@@ -97,7 +97,7 @@ adds those two rather than being rejected whole.
 | `name` | `FieldName<Vec<String>>` | - | One hidden input per tag; a path also binds |
 | `placeholder` | `String` | - | Shown while there are no tags |
 | `clearable` | `bool` | `false` | An x that empties the field |
-| `tag` | `Callback<SelectionArgs<String>, Element>` | a `Chip` | Draws one tag, remove control included |
+| `tag` | `Callback<SelectionArgs<String>, Element>` | a `Chip` | Draws one tag, remove control included. Give that control `tabindex: "-1"` |
 | `label` | `Caption` | - | The field's caption, above the control |
 | `description` | `Caption` | - | Between the label and the control |
 | `helper` | `Caption` | - | Under the control |
@@ -129,7 +129,10 @@ component's own arithmetic rather than a theme key.
 ## Accessibility
 
 The whole field is one tab stop. Backspace on an empty input removes the last
-tag; the arrows belong to the text, so there is no chip cursor.
+tag; the arrows belong to the text, so there is no chip cursor. A custom `tag`
+must give its remove control `tabindex: "-1"`, or each tag adds a tab stop, and
+removing a tag from the keyboard drops the focus to the page. The field cancels
+`mousedown` on every tag itself, so a click never moves the focus there.
 
 ## Data attributes
 

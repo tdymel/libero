@@ -1,7 +1,9 @@
+use std::{cell::RefCell, rc::Rc};
+
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ActionIcon, Chip, Input, form::glyphs::CloseIcon},
+    components::{ActionIcon, Chip, Input, VisuallyHidden, form::glyphs::CloseIcon},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHIP_HEIGHT, Size},
 };
@@ -97,5 +99,99 @@ pub(crate) fn removable_chip(
                 }
             }
         }
+    }
+}
+
+/// The last list a chip announcer saw, and what it last said.
+struct Announced {
+    labels: Vec<String>,
+    message: Option<String>,
+    /// Bumped per message, so a sentence equal to the last one still arrives
+    /// as a new node - a text node rewritten to the same text fires nothing.
+    count: u64,
+}
+
+/// A polite live region saying which chips a list just gained or lost.
+///
+/// It diffs the labels it is handed against the ones it saw last, so every
+/// path that edits the list - a pick, a typed tag, a paste, Backspace, an x,
+/// the clear button, the caller's own code - is announced by one mechanism,
+/// once per change. Always mounted: a region inserted together with its text
+/// is not announced. Call it unconditionally; it is a hook.
+pub(crate) fn use_chip_announcer(labels: Vec<String>) -> Element {
+    let announced = use_hook(|| {
+        Rc::new(RefCell::new(Announced {
+            labels: labels.clone(),
+            message: None,
+            count: 0,
+        }))
+    });
+    let mut announced = announced.borrow_mut();
+    if announced.labels != labels {
+        if let Some(message) = chip_change(&announced.labels, &labels) {
+            announced.message = Some(message);
+            announced.count += 1;
+        }
+        announced.labels = labels;
+    }
+    let spoken = announced
+        .message
+        .clone()
+        .map(|message| (announced.count, message));
+    rsx! {
+        VisuallyHidden { role: "status",
+            for (count, message) in spoken {
+                span { key: "{count}", "{message}" }
+            }
+        }
+    }
+}
+
+/// What a list gained and lost, as one sentence - `None` when it only moved.
+/// Counted, not compared as sets: a list allowed to hold "a" twice lost one
+/// when one of them goes.
+fn chip_change(before: &[String], after: &[String]) -> Option<String> {
+    let mut removed: Vec<String> = Vec::new();
+    let mut remaining = after.to_vec();
+    for label in before {
+        match remaining.iter().position(|held| held == label) {
+            Some(at) => {
+                remaining.remove(at);
+            }
+            None => removed.push(label.clone()),
+        }
+    }
+    let added = remaining;
+    match (added.is_empty(), removed.is_empty()) {
+        (true, true) => None,
+        (false, true) => Some(format!("Added {}", added.join(", "))),
+        (true, false) => Some(format!("Removed {}", removed.join(", "))),
+        (false, false) => Some(format!(
+            "Added {}. Removed {}",
+            added.join(", "),
+            removed.join(", ")
+        )),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::chip_change;
+
+    fn labels(values: &[&str]) -> Vec<String> {
+        values.iter().map(|value| value.to_string()).collect()
+    }
+
+    #[test]
+    fn a_change_names_what_came_and_what_went() {
+        let change = |before: &[&str], after: &[&str]| chip_change(&labels(before), &labels(after));
+        assert_eq!(change(&["a"], &["a", "b"]), Some("Added b".into()));
+        assert_eq!(change(&["a", "b"], &["b"]), Some("Removed a".into()));
+        assert_eq!(change(&["a", "b"], &[]), Some("Removed a, b".into()));
+        assert_eq!(change(&["a"], &["b"]), Some("Added b. Removed a".into()));
+        // A duplicate going is a removal, not "nothing changed".
+        assert_eq!(change(&["a", "a"], &["a"]), Some("Removed a".into()));
+        // Only the order moved: nothing to say.
+        assert_eq!(change(&["a", "b"], &["b", "a"]), None);
     }
 }

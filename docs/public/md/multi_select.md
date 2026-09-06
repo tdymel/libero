@@ -169,7 +169,7 @@ ticked without retyping it. It is cleared when the list closes.
 | `onchange` | `EventHandler<Vec<T>>` | - | The whole selection the caller should hold next. |
 | `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
-| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value inside the trigger, the remove control included. `remove` on the args drops that value. |
+| `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value beside the trigger, the remove control included. `remove` on the args drops that value. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |
 | `name` | `String` | - | Emits one hidden input of that name per selected option, carrying its `Options::value()`. |
 | `clearable` | `bool` | `false` | An x in place of the chevron that empties the selection. |

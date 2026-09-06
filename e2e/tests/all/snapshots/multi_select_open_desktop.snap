@@ -6,10 +6,12 @@ expression: tree
 LabelText
   StaticText "Fruit"
 generic
-  combobox "Fruit" = Cherry Remove Cherry [expanded] [haspopup=listbox]
-    generic
-      StaticText "Cherry"
-      button "Remove Cherry"
+  generic
+    StaticText "Cherry"
+    button "Remove Cherry"
+  combobox "Fruit" = Cherry [expanded] [haspopup=listbox]
+    StaticText "Cherry"
+status [atomic] [live=polite]
 status [atomic] [live=polite]
 generic
   generic

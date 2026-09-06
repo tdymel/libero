@@ -18,6 +18,8 @@ const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
                 size: "xs",
                 // A `<button>` inherits no colour of its own.
                 sx: sx().color("inherit"),
+                // The input is the field's one tab stop.
+                tabindex: "-1",
                 onclick: move |_| t.remove.call(()),
                 "x"
             }
@@ -45,11 +47,11 @@ fn topic_tag(t: SelectionArgs<String>) -> Element {
         Chip { size: "xs", variant: "outlined",
             "#{label}"
             span { "data-slot": "remove",
-                onmousedown: move |event: MouseEvent| event.prevent_default(),
                 ActionIcon {
                     aria_label: "Remove {label}",
                     size: "xs",
                     sx: sx().color("inherit"),
+                    tabindex: "-1",
                     onclick: move |_| t.remove.call(()),
                     "x"
                 }
@@ -107,7 +109,7 @@ pub fn TagsFieldPage() -> Element {
                         .doc("Shows an x that empties the field, at the end of the frame."),
                     prop("tag", "Callback<SelectionArgs<String>, Element>")
                         .default("Chip")
-                        .doc("Draws one tag. A caller who overrides it draws the whole chip, remove control included - `args.remove` is the wiring."),
+                        .doc("Draws one tag. A caller who overrides it draws the whole chip, remove control included - `args.remove` is the wiring. Give that control `tabindex: \"-1\"`; the field already keeps a click on it from taking the focus."),
                     prop("label", "Caption").doc("The field's caption, above the control."),
                     prop("description", "Caption").doc("Between the label and the control: what to enter."),
                     prop("helper", "Caption").doc("Under the control: formatting rules, or what the entry affects."),
@@ -252,7 +254,13 @@ pub fn TagsFieldPage() -> Element {
                 title: "Accessibility",
                 Text {
                     "The whole field is one tab stop. Backspace on an empty input removes the "
-                    "last tag; the arrows belong to the text, so there is no chip cursor."
+                    "last tag; the arrows belong to the text, so there is no chip cursor. "
+                    "A custom "
+                    Code { source: "tag" }
+                    " must give its remove control "
+                    Code { source: "tabindex: \"-1\"" }
+                    ", or each tag adds a tab stop, and removing a tag from the keyboard drops "
+                    "the focus to the page."
                 }
             }
         }

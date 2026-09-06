@@ -31,7 +31,7 @@ field_props! {
         /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
         #[props(default)]
         option: Option<Callback<SelectOptionArgs<T>, Element>>,
-        /// Draws one selected value inside the trigger. Defaults to the label
+        /// Draws one selected value beside the trigger. Defaults to the label
         /// in a `Chip` with an x. A caller who overrides it draws the whole
         /// chip, remove control included - `args.remove` is the wiring, and the
         /// keyboard stays the control's either way.
@@ -156,6 +156,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     let posted = current.iter().map(Options::value).collect::<Vec<_>>();
     let rules = props.validate.check(&current);
     let removable = held.clone();
+    let value_labels = held.iter().map(Options::label).collect::<Vec<_>>();
     let (pick_change, remove_change, clear_change) = (onchange.clone(), onchange.clone(), onchange);
     rsx! {
         SelectCore {
@@ -176,6 +177,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
                 onchange(next);
             },
             selection,
+            value_labels,
             chip_count: removable.len(),
             onremove: move |index: usize| drop_at(&removable, index, &remove_change),
             placeholder: props.placeholder,
