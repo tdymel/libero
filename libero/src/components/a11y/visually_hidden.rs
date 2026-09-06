@@ -49,6 +49,9 @@ base_props! {
 ///
 /// `fixed`, not the hosted inputs' `absolute`: it needs no positioned parent,
 /// so it never makes the page scrollable wherever it lands.
+///
+/// For a reveal-on-focus skip link, host it in a positioned parent and set
+/// `position: absolute` through `sx`, or Tab never scrolls it into view.
 #[component]
 pub fn VisuallyHidden(props: VisuallyHiddenProps) -> Element {
     use_box()

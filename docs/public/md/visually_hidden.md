@@ -48,6 +48,9 @@ extended.
 A focusable element inside a visually hidden span is a trap for a keyboard user:
 focus moves somewhere invisible. Keep the children to text.
 
+For a reveal-on-focus skip link, host it in a positioned parent and set
+`position: absolute` through `sx`. Otherwise Tab never scrolls it into view.
+
 ## Props
 
 | Prop | Type | Default | Description |
