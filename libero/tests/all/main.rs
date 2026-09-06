@@ -71,6 +71,7 @@ mod nav_link;
 mod no_has_selector;
 mod notifications;
 mod overlay;
+mod override_vars;
 mod pagination;
 mod paper;
 mod phone_field;
