@@ -20,11 +20,15 @@
 /// fields have none, and a prop that silently does nothing is worse than one
 /// repeated line.
 ///
+/// A leading `without(readonly);` leaves `readonly` out, for a field that has
+/// no way to honour it (`NativeSelect`: HTML has no read-only `<select>`). It
+/// cannot be combined with `extends(..)`; no such field exists yet.
+///
 /// Like [`base_props`], the leading `extends(..)` clause needs the internal
 /// `@build` arm plus two dispatch arms: `$(extends(..);)?` before the struct is
 /// a `local ambiguity when calling macro` error, since both can match empty.
 macro_rules! field_props {
-    (@build [$($extra_extends:tt)*]
+    (@build [$($extra_extends:tt)*] [$($readonly:ident)?]
         $(#[$struct_meta:meta])*
         $vis:vis struct $name:ident $(< $($generic:ident : $bound:path),+ $(,)? >)? {
             $($fields:tt)*
@@ -59,22 +63,28 @@ macro_rules! field_props {
                 disabled: Option<bool>,
                 #[props(default)]
                 required: Option<bool>,
-                /// Focusable and posted with the form, but not editable.
-                /// `disabled` instead drops the field from the tab order and
-                /// from the post, which is wrong for a review-your-answers
-                /// view. `None` is "not stated".
-                #[props(default)]
-                readonly: Option<bool>,
+                $(
+                    /// Focusable and posted with the form, but not editable.
+                    /// `disabled` instead drops the field from the tab order and
+                    /// from the post, which is wrong for a review-your-answers
+                    /// view. `None` is "not stated".
+                    #[props(default)]
+                    $readonly: Option<bool>,
+                )?
             }
         }
     };
 
     (extends($($extra_extends:ident),+ $(,)?); $($rest:tt)*) => {
-        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] $($rest)*);
+        crate::components::common::field_props!(@build [$(, extends = $extra_extends)+] [readonly] $($rest)*);
+    };
+
+    (without(readonly); $($rest:tt)*) => {
+        crate::components::common::field_props!(@build [] [] $($rest)*);
     };
 
     ($($rest:tt)*) => {
-        crate::components::common::field_props!(@build [] $($rest)*);
+        crate::components::common::field_props!(@build [] [readonly] $($rest)*);
     };
 }
 

@@ -68,7 +68,7 @@ pub fn NativeSelectPage() -> Element {
                         .doc("Marks the field required, adds `aria-required` and shows an asterisk in the label."),
                     prop("disabled", "bool")
                         .default("false")
-                        .doc("Disables interaction and dims the field."),
+                        .doc("Disables interaction and dims the field. There is no `readonly`: a native `<select>` has no read-only state. For a picker that stays focusable and posted but cannot change, use `Select`."),
                 ]),
             ],
             lead: rsx! {

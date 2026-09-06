@@ -202,7 +202,7 @@ ids first - so the validation message is never lost.
 | `helper` | `Caption` | - | Under the control: constraints, or what the choice affects. |
 | `status` | `FieldStatus` | `Valid` | Validation state, under the helper. A bare `&str` is an error. |
 | `required` | `bool` | `false` | Sets `required` and `aria-required`, and marks the label. |
-| `disabled` | `bool` | `false` | Disables interaction and dims the field. |
+| `disabled` | `bool` | `false` | Disables interaction and dims the field. There is no `readonly`: a native `<select>` has no read-only state. For a picker that stays focusable and posted but cannot change, use `Select`. |
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,
 `states`, and any extra HTML attributes.

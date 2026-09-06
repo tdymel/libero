@@ -17,7 +17,11 @@ use crate::{
 /// platform.
 static NATIVE_SELECT_CONTROL_SX: StaticSx = StaticSx::new(|| field_control_sx().cursor("pointer"));
 
+// No `readonly`: HTML has no read-only `<select>`, and every way to stop a
+// native picker takes it out of the tab order or out of the post. `Select` is
+// the read-only picker (todo 304).
 field_props! {
+    without(readonly);
     pub struct NativeSelectProps<T: Options> {
         /// Strictly controlled - pair it with `onchange`. `None` shows
         /// `placeholder` and selects nothing.
@@ -65,6 +69,27 @@ field_props! {
 /// The real `<select>`, not a listbox: it keeps the OS picker on phones, works
 /// without wasm, and renders its selection correctly under SSR. Reach for it
 /// when those matter; reach for `Select` when the rows have to be styled.
+///
+/// There is no `readonly`, unlike every other field: a native `<select>` has
+/// no read-only state. `Select` is the read-only picker.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{NativeSelect, Options};
+/// # fn app() -> Element {
+/// # #[derive(Clone, Copy, PartialEq, Options)] enum Plan { Free, Pro }
+/// rsx! { NativeSelect::<Plan> { value: Some(Plan::Free) } }
+/// # }
+/// ```
+///
+/// ```compile_fail,E0599
+/// # use dioxus::prelude::*;
+/// # use libero::components::{NativeSelect, Options};
+/// # fn app() -> Element {
+/// # #[derive(Clone, Copy, PartialEq, Options)] enum Plan { Free, Pro }
+/// rsx! { NativeSelect::<Plan> { value: Some(Plan::Free), readonly: true } }
+/// # }
+/// ```
 #[component]
 pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
     let theme = use_theme();
@@ -79,15 +104,6 @@ pub fn NativeSelect<T: Options>(props: NativeSelectProps<T>) -> Element {
 
     if props.onchange.is_none() && !bound.is_bound() {
         warn("NativeSelect: without `onchange` the selection can never change.");
-    }
-    // `field_props!` gives every field `readonly`, and this one cannot keep
-    // the promise yet: HTML has no `readonly` for a `<select>`, and the only
-    // ways to stop a native picker either take the field out of the tab order
-    // or out of the form post. Warned rather than ignored - todo pending.
-    if props.readonly.unwrap_or(false) {
-        warn(
-            "NativeSelect: `readonly` is not honoured yet - a native `<select>` has no read-only state.",
-        );
     }
 
     let values = props
