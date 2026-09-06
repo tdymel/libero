@@ -233,3 +233,27 @@ fn an_over_long_label_is_cut_at_the_end_rather_than_at_both_ends() {
     assert!(html.contains("justify-content:safe center"), "{html}");
     assert!(!html.contains("justify-content:center"), "{html}");
 }
+
+/// A group's `radius` reaches every member through `Avatar`'s own radius
+/// scale, whose `xxl` circle is the theme's default.
+#[test]
+fn a_group_radius_step_resolves_through_the_avatar_scale() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { AvatarGroup { people: people(), radius: "md" } }
+        }
+    }
+
+    let html = render(app);
+    assert!(html.contains("--lsx-avatar-radius-xxl:9999px;"), "{html}");
+    assert!(
+        html.contains("--lsx-avatar-radius:var(--lsx-avatar-radius-xxl);"),
+        "{html}"
+    );
+    assert_eq!(
+        html.matches("--lsx-avatar-radius-override:var(--lsx-avatar-radius-md);")
+            .count(),
+        people().len(),
+        "{html}"
+    );
+}

@@ -181,3 +181,29 @@ fn the_default_fill_is_the_theme_colour() {
         "{style}"
     );
 }
+
+/// The indicator has its own radius scale, whose `xxl` is the round dot the
+/// theme defaults to; a step resolves through it, not the global scale.
+#[test]
+fn a_radius_step_resolves_through_the_indicator_scale() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Indicator { radius: "sm" } }
+        }
+    }
+
+    let html = render(app);
+    assert!(
+        html.contains("--lsx-indicator-radius-xxl:9999px;"),
+        "{html}"
+    );
+    assert!(
+        html.contains("--lsx-indicator-radius:var(--lsx-indicator-radius-xxl);"),
+        "{html}"
+    );
+    let style = attributes_of(&body(&html), "span")["style"].clone();
+    assert!(
+        style.contains("--lsx-indicator-radius-override:var(--lsx-indicator-radius-sm);"),
+        "{style}"
+    );
+}

@@ -9,8 +9,8 @@ use crate::{
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_PROCESSING_DURATION, INDICATOR_RADIUS,
-        IndicatorDefaults, PAPER_BACKGROUND, Size, SizeCss,
+        CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_PROCESSING_DURATION, INDICATOR_RADII,
+        INDICATOR_RADIUS, IndicatorDefaults, PAPER_BACKGROUND, Size, SizeCss,
     },
 };
 
@@ -103,9 +103,10 @@ base_props! {
         /// The fill. The label takes its auto-contrast twin.
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
-        /// A size step or any CSS length. The theme's own default is round.
+        /// A step on the indicator's own radius scale. The theme's default,
+        /// `xxl`, is round.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         /// A ring in the surface colour, so the dot reads on top of a picture.
         #[props(default)]
         with_border: Option<bool>,
@@ -147,7 +148,10 @@ pub fn Indicator(props: IndicatorProps) -> Element {
         )
         .with(
             INDICATOR_RADIUS.override_var(),
-            props.radius.resolve(Some(SizeCss::RADIUS)),
+            props
+                .radius
+                .as_ref()
+                .map(|radius| INDICATOR_RADII.value(*radius)),
         )
         .into();
 

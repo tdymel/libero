@@ -58,9 +58,9 @@ pub fn IndicatorPage() -> Element {
                 prop("color", "ThemeAwareValue")
                     .default("error")
                     .doc("The fill; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with."),
-                prop("radius", "ThemeAwareValue")
-                    .default("9999px")
-                    .doc("A size step or any CSS length. The theme's own default is round."),
+                prop("radius", "Size")
+                    .default("xxl")
+                    .doc("A step on the indicator's own radius scale, `1px` to `6px`. The default, `xxl`, is `9999px`: round at every diameter."),
                 prop("with_border", "bool")
                     .default("false")
                     .doc("A ring in the surface color, `--lsx-paper-background`, so the dot reads on top of a picture."),

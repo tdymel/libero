@@ -25,9 +25,9 @@ pub fn BadgePage() -> Element {
                 prop("size", "Size")
                     .default("md")
                     .doc("Height, horizontal padding and font size, on the badge's own scale - smaller than a chip's."),
-                prop("radius", "ThemeAwareValue")
-                    .default("9999px")
-                    .doc("A size step or any CSS length. The theme's own default is off the scale, because a badge is a pill at every height."),
+                prop("radius", "Size")
+                    .default("xxl")
+                    .doc("A step on the badge's own radius scale, `2px` to `12px`. The default, `xxl`, is `9999px`: a pill at every height."),
                 prop("circle", "bool")
                     .default("false")
                     .doc("Drops the horizontal padding and floors the width at the height, for a one- or two-character count."),
@@ -58,13 +58,7 @@ pub fn BadgePage() -> Element {
                     // so that swatch prints nothing.
                     Control::color("color"),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    // "pill" is the theme's own off-scale default, so it is
-                    // "leave the prop unset", not a value to print.
-                    Control::slider("radius", ["pill", "xs", "sm", "md", "lg", "xl", "xxl"])
-                        .code(|_, values| match values.str("radius").as_str() {
-                            "pill" => vec![],
-                            radius => vec![format!("radius: {radius:?}")],
-                        }),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("xxl"),
                     Control::switch("circle"),
                     // The child, not a prop - `circle` only reads with a one-
                     // or two-character label, so the demo has to be able to
@@ -79,10 +73,7 @@ pub fn BadgePage() -> Element {
                             color => Input::from(color),
                         },
                         size: values.str("size"),
-                        radius: match values.str("radius").as_str() {
-                            "pill" => Input::None,
-                            radius => Input::from(radius),
-                        },
+                        radius: values.str("radius"),
                         circle: values.str("circle") == "true",
                         {values.str("label")}
                     }

@@ -76,7 +76,7 @@ fn Demo(unread: u32) -> Element {
 | `max` | `Option<u32>` | `99` | Above it, the label renders as `{max}+`. The theme's cap unless set. |
 | `size` | `Size` | `md` | The dot's diameter, and the height of a labelled one, on the indicator's own scale - 6px to 22px. |
 | `color` | `ThemeAwareValue` | `error` | The fill; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with. |
-| `radius` | `ThemeAwareValue` | `9999px` | A size step or any CSS length. The theme's own default is round. |
+| `radius` | `Size` | `xxl` | A step on the indicator's own radius scale, `1px` to `6px`. The default, `xxl`, is `9999px`: round at every diameter. |
 | `with_border` | `bool` | `false` | A ring in the surface color, `--lsx-paper-background`, so the dot reads on top of a picture. |
 | `processing` | `bool` | `false` | A ping growing and fading behind the dot. Stops under `prefers-reduced-motion`. |
 
@@ -91,11 +91,12 @@ Like every component, `Indicator` also takes the shared props `sx`, `class`,
 |---|---|---|
 | `size` | `Size` | Size step used when a call site names none - `md`. |
 | `color` | `Color` | The fill when a call site names none - `Error`. |
-| `radius` | `&'static str` | `9999px`, off the radius scale: a dot is round at every diameter. |
+| `radius` | `Size` | The step of `radii` used when a call site names none - `xxl`, round at every diameter. |
 | `max` | `u32` | The count cap - `99`. A house convention, set once. |
 | `border_width` | `&'static str` | The `with_border` ring - `2px`. |
 | `processing_duration` | `&'static str` | One ping cycle - `1000ms`. |
 | `sizes` | `Sizes<IndicatorSizeLevel>` | `size`/`font_size` per step: `6px/8px`, `8px/9px`, `10px/10px`, `14px/11px`, `18px/12px`, `22px/14px`. |
+| `radii` | `Sizes<&'static str>` | The indicator's own radius scale: `1px`, `2px`, `3px`, `4px`, `6px`, `9999px`. |
 
 ## CSS variables
 
@@ -105,8 +106,9 @@ Like every component, `Indicator` also takes the shared props `sx`, `class`,
 | `--lsx-indicator-font-size-<size>` | Label font size for that step. |
 | `--lsx-indicator-box` | The active step's diameter, republished unsuffixed. |
 | `--lsx-indicator-font` | The active step's font size. |
-| `--lsx-indicator-radius` | The theme's corner radius. |
-| `--lsx-indicator-radius-override` | Set by the `radius` prop; wins over the theme's. |
+| `--lsx-indicator-radius-<size>` | The radius for that step, from `IndicatorDefaults::radii`. |
+| `--lsx-indicator-radius` | The theme's default step, as `var(--lsx-indicator-radius-xxl)`. |
+| `--lsx-indicator-radius-override` | Set by the `radius` prop to that step's var; wins over the theme's. |
 | `--lsx-indicator-border-width` | The ring's width. Its color is `--lsx-paper-background`. |
 | `--lsx-indicator-processing-duration` | One ping cycle. |
 | `--lsx-indicator-color` | Resolved `color`. |

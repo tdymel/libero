@@ -4,6 +4,7 @@ use crate::theme::{CssVar, Size, SizeCss, Sizes};
 
 pub const AVATAR_SIZE: SizeCss = SizeCss::new("--lsx-avatar-size-");
 pub const AVATAR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-avatar-font-size-");
+pub const AVATAR_RADII: SizeCss = SizeCss::new("--lsx-avatar-radius-");
 pub const AVATAR_RADIUS: CssVar = CssVar::new("--lsx-avatar-radius");
 
 pub const AVATAR_GROUP_SPACING: CssVar = CssVar::new("--lsx-avatar-group-spacing");
@@ -15,26 +16,29 @@ pub const AVATAR_GROUP_INDEX: CssVar = CssVar::new("--lsx-avatar-group-index");
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct AvatarDefaults {
     pub size: Size,
-    /// A CSS length rather than a `Size`: the default is a circle, which is
-    /// off the radius scale entirely. Overridden per instance the way
-    /// `ImageDefaults::radius` is, through `AVATAR_RADIUS`'s override twin.
-    pub radius: &'static str,
+    /// The step of [`Self::radii`] an avatar takes when a call site names
+    /// none. Overridden per instance the way `ImageDefaults::radius` is,
+    /// through `AVATAR_RADIUS`'s override twin.
+    pub radius: Size,
     /// The square's side, in px.
     pub sizes: Sizes<u16>,
     /// Derived from the square (`side / 2.5`), not a second scale to keep in
     /// step with it.
     pub font_sizes: Sizes<u16>,
+    /// The avatar's own radius scale. `xxl` is a circle, which no fixed
+    /// length gives: the global `xl` (64px) is a rounded square on the two
+    /// largest avatars and a circle on the two smallest.
+    pub radii: Sizes<&'static str>,
 }
 
 impl AvatarDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
-        // A circle. Not `Size::Xl` (64px), which is a rounded square on
-        // the two largest avatars and a circle on the two smallest.
-        radius: "9999px",
+        radius: Size::Xxl,
         // Mantine's scale, plus an `xxl` continuing its steps.
         sizes: Sizes::new(20, 28, 38, 56, 84, 120),
         font_sizes: Sizes::new(8, 11, 15, 22, 34, 48),
+        radii: Sizes::new("2px", "4px", "8px", "16px", "32px", "9999px"),
     };
 
     fn size_sx(size: Size) -> Sx {
@@ -58,7 +62,10 @@ impl ToCssDeclarations for AvatarDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         let mut declarations = self.sizes.to_css_declarations(AVATAR_SIZE, "px");
         declarations.extend(self.font_sizes.to_css_declarations(AVATAR_FONT_SIZE, "px"));
-        declarations.push(AVATAR_RADIUS.declare(self.radius));
+        for size in Size::ALL {
+            declarations.push(AVATAR_RADII.declare(size, self.radii.get(size)));
+        }
+        declarations.push(AVATAR_RADIUS.declare(AVATAR_RADII.value(self.radius)));
         declarations
     }
 }

@@ -6140,7 +6140,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    radius: "0",
+    radius: "xs",
 }
 }
 }
@@ -6155,7 +6155,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    radius: "xs",
+    radius: "sm",
 }
 }
 }
@@ -6170,7 +6170,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    radius: "sm",
+    radius: "md",
 }
 }
 }
@@ -6185,7 +6185,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    radius: "md",
+    radius: "lg",
 }
 }
 }
@@ -6200,7 +6200,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    radius: "lg",
+    radius: "xl",
 }
 }
 }
@@ -6215,7 +6215,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    radius: "xl",
+    variant: "filled",
 }
 }
 }
@@ -6230,7 +6230,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    variant: "filled",
+    variant: "elevated",
 }
 }
 }
@@ -6245,7 +6245,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    variant: "elevated",
+    variant: "outlined",
 }
 }
 }
@@ -6260,7 +6260,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    variant: "outlined",
+    variant: "standard",
 }
 }
 }
@@ -6275,7 +6275,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    variant: "standard",
+    color: "secondary",
 }
 }
 }
@@ -6290,7 +6290,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    color: "secondary",
+    color: "success",
 }
 }
 }
@@ -6305,7 +6305,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    color: "success",
+    color: "error",
 }
 }
 }
@@ -6320,7 +6320,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    color: "error",
+    color: "warning",
 }
 }
 }
@@ -6335,7 +6335,7 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    color: "warning",
+    color: "info",
 }
 }
 }
@@ -6350,27 +6350,12 @@ rsx! {
 Avatar {
     name: "Ada Lovelace",
     src: AVATAR_IMAGE,
-    color: "info",
-}
-}
-}
-}
-mod state_35 {
-use super::*;
-
-#[component]
-fn Snippet() -> Element {
-
-rsx! {
-Avatar {
-    name: "Ada Lovelace",
-    src: AVATAR_IMAGE,
     color: "neutral",
 }
 }
 }
 }
-mod state_36 {
+mod state_35 {
 use super::*;
 
 #[component]
@@ -6735,7 +6720,7 @@ fn Snippet() -> Element {
 
 rsx! {
 Badge {
-    radius: "xxl",
+    circle: true,
     "New"
 }
 }
@@ -6748,25 +6733,11 @@ use super::*;
 fn Snippet() -> Element {
 
 rsx! {
-Badge {
-    circle: true,
-    "New"
-}
-}
-}
-}
-mod state_24 {
-use super::*;
-
-#[component]
-fn Snippet() -> Element {
-
-rsx! {
 Badge { "Beta" }
 }
 }
 }
-mod state_25 {
+mod state_24 {
 use super::*;
 
 #[component]

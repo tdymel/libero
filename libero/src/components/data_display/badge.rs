@@ -9,7 +9,7 @@ use crate::{
     },
     hooks::use_theme,
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::{BADGE_BOX, BADGE_RADIUS, BadgeDefaults, CssVar, Size, SizeCss},
+    theme::{BADGE_BOX, BADGE_RADII, BADGE_RADIUS, BadgeDefaults, CssVar, Size, SizeCss},
 };
 
 const BADGE_COLOR_VAR: CssVar = CssVar::new("--lsx-badge-color");
@@ -89,7 +89,10 @@ fn badge_variables(props: &BadgeProps) -> Variables {
         .with(BADGE_ON_CONTAINER_VAR, colors.on_container)
         .with(
             BADGE_RADIUS.override_var(),
-            props.radius.resolve(Some(SizeCss::RADIUS)),
+            props
+                .radius
+                .as_ref()
+                .map(|radius| BADGE_RADII.value(*radius)),
         )
 }
 
@@ -103,9 +106,10 @@ base_props! {
         color: Input<ThemeAwareValue>,
         #[props(default, into)]
         size: Input<Size>,
-        /// A size step or any CSS length. The theme's own default is a pill.
+        /// A step on the badge's own radius scale. The theme's default, `xxl`,
+        /// is a pill.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         /// Squares the padding away and floors the width at the height, for a
         /// one- or two-character count.
         #[props(default)]

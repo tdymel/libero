@@ -5,6 +5,7 @@ use crate::theme::{CssVar, Size, SizeCss, Sizes};
 pub const BADGE_FONT_SIZE: SizeCss = SizeCss::new("--lsx-badge-font-size-");
 pub const BADGE_HEIGHT: SizeCss = SizeCss::new("--lsx-badge-height-");
 pub const BADGE_PADDING_X: SizeCss = SizeCss::new("--lsx-badge-padding-x-");
+pub const BADGE_RADII: SizeCss = SizeCss::new("--lsx-badge-radius-");
 
 /// The active step's values, republished unsuffixed by
 /// [`BadgeDefaults::size_sx`] - the `ColorSwatch` pattern. `circle` needs the
@@ -29,10 +30,8 @@ pub struct BadgeSizeLevel {
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct BadgeDefaults {
     pub size: Size,
-    /// A CSS length, not a `Size`: the pill shape is off the 2..64px radius
-    /// scale entirely. A caller naming a scale step still resolves through
-    /// `SizeCss::RADIUS` into the override var - the `Image` pattern.
-    pub radius: &'static str,
+    /// The step of [`Self::radii`] a badge takes when a call site names none.
+    pub radius: Size,
     /// Uppercase is most of what separates a badge from a chip at a glance.
     /// Mantine hardcodes it with no prop at all; here a project flips it once.
     pub text_transform: &'static str,
@@ -40,14 +39,17 @@ pub struct BadgeDefaults {
     pub letter_spacing: &'static str,
     pub font_weight: &'static str,
     pub sizes: Sizes<BadgeSizeLevel>,
+    /// The badge's own radius scale, not the global one: a badge is at most
+    /// 38px tall, so every global step past `sm` is already a pill on most of
+    /// its sizes. `xxl` is the pill itself.
+    pub radii: Sizes<&'static str>,
 }
 
 impl BadgeDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
-        // Off the 2..64px radius scale on purpose: a badge is a pill at
-        // every height, which no fixed step gives.
-        radius: "9999px",
+        // A pill at every height, which no fixed length below it gives.
+        radius: Size::Xxl,
         text_transform: "uppercase",
         letter_spacing: "0.25px",
         font_weight: "700",
@@ -87,6 +89,7 @@ impl BadgeDefaults {
                 padding_x: "20px",
             },
         ),
+        radii: Sizes::new("2px", "4px", "6px", "8px", "12px", "9999px"),
     };
 
     pub fn size_sx(size: Size) -> Sx {
@@ -121,7 +124,10 @@ impl ToCssDeclarations for BadgeDefaults {
             declarations.push(BADGE_HEIGHT.declare(size, level.height));
             declarations.push(BADGE_PADDING_X.declare(size, level.padding_x));
         }
-        declarations.push(BADGE_RADIUS.declare(self.radius));
+        for size in Size::ALL {
+            declarations.push(BADGE_RADII.declare(size, self.radii.get(size)));
+        }
+        declarations.push(BADGE_RADIUS.declare(BADGE_RADII.value(self.radius)));
         declarations.push(BADGE_TEXT_TRANSFORM.declare(self.text_transform));
         declarations.push(BADGE_LETTER_SPACING.declare(self.letter_spacing));
         declarations.push(BADGE_FONT_WEIGHT.declare(self.font_weight));

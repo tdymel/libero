@@ -119,9 +119,9 @@ pub fn AvatarPage() -> Element {
                     prop("size", "Size")
                         .default("theme.avatar.size")
                         .doc("The square's side, which also sets the placeholder's font size."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Size")
                         .default("theme.avatar.radius")
-                        .doc("Corner radius - the radius scale, or any CSS length. The default is a circle."),
+                        .doc("A step on the avatar's own radius scale, `2px` to `32px`. The default, `xxl`, is `9999px`: a circle."),
                     prop("variant", "Variant")
                         .default("tonal")
                         .doc("Placeholder chrome; invisible once a picture loads."),
@@ -143,7 +143,7 @@ pub fn AvatarPage() -> Element {
                     prop("size", "Size")
                         .default("theme.avatar.size")
                         .doc("Applied to every member, the chip included."),
-                    prop("radius", "ThemeAwareValue")
+                    prop("radius", "Size")
                         .default("theme.avatar.radius")
                         .doc("Applied to every member, the chip included."),
                     prop("variant", "Variant")
@@ -216,8 +216,8 @@ pub fn AvatarPage() -> Element {
                         .default("sm")
                         .hidden_when(|values| !grouped(values)),
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"]).default("md"),
-                    Control::slider("radius", ["0", "xs", "sm", "md", "lg", "xl", "9999px"])
-                        .default("9999px"),
+                    Control::slider("radius", ["xs", "sm", "md", "lg", "xl", "xxl"])
+                        .default("xxl"),
                     Control::toggle(
                         "variant",
                         ["filled", "tonal", "elevated", "outlined", "standard"],

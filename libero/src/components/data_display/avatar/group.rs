@@ -53,8 +53,9 @@ base_props! {
         spacing: Input<Size>,
         #[props(default, into)]
         size: Input<Size>,
+        /// A step on `Avatar`'s radius scale, for every member and the chip.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         #[props(default, into)]
         variant: Input<Variant>,
         /// The tint every member without one of its own takes.
@@ -97,9 +98,13 @@ pub fn AvatarGroup(props: AvatarGroupProps) -> Element {
     // there is a chip, but the hook runs unconditionally.
     let chip_variables: Input<Variables> = match hidden > 0 {
         // The bottom of the stack, under every member.
-        true => avatar_variables(props.color.as_ref(), variant, &props.radius)
-            .with(AVATAR_GROUP_INDEX, "1".to_string())
-            .into(),
+        true => avatar_variables(
+            props.color.as_ref(),
+            variant,
+            props.radius.as_ref().copied(),
+        )
+        .with(AVATAR_GROUP_INDEX, "1".to_string())
+        .into(),
         false => Input::None,
     };
     let chip_style = use_box()

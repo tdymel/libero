@@ -4,6 +4,7 @@ use crate::theme::{Color, CssVar, Size, SizeCss, Sizes};
 
 pub const INDICATOR_SIZE: SizeCss = SizeCss::new("--lsx-indicator-size-");
 pub const INDICATOR_FONT_SIZE: SizeCss = SizeCss::new("--lsx-indicator-font-size-");
+pub const INDICATOR_RADII: SizeCss = SizeCss::new("--lsx-indicator-radius-");
 
 /// The active step's diameter and label size, republished unsuffixed by
 /// [`IndicatorDefaults::size_sx`] - the `Badge` pattern. The base rule reads
@@ -38,9 +39,8 @@ pub struct IndicatorDefaults {
     /// A dot that is not about something the reader should look at is not
     /// worth drawing, so the default is the error role - Mantine's too.
     pub color: Color,
-    /// A CSS length, off the radius scale on purpose: a dot is round at every
-    /// diameter, which no fixed step gives. `Badge`'s pill, same reason.
-    pub radius: &'static str,
+    /// The step of [`Self::radii`] a dot takes when a call site names none.
+    pub radius: Size,
     /// Above this a count renders as `{max}+`. A house convention, set once
     /// here rather than on every call site.
     pub max: u32,
@@ -50,13 +50,16 @@ pub struct IndicatorDefaults {
     /// px throughout, label included: the box is a fixed px height, and a
     /// label that followed the reader's text size would outgrow it.
     pub sizes: Sizes<IndicatorSizeLevel>,
+    /// The indicator's own radius scale, not the global one, which starts at
+    /// a third of the smallest dot. `xxl` is round at every diameter.
+    pub radii: Sizes<&'static str>,
 }
 
 impl IndicatorDefaults {
     pub const DEFAULT: Self = Self {
         size: Size::Md,
         color: Color::Error,
-        radius: "9999px",
+        radius: Size::Xxl,
         max: 99,
         border_width: "2px",
         processing_duration: "1000ms",
@@ -86,6 +89,7 @@ impl IndicatorDefaults {
                 font_size: "14px",
             },
         ),
+        radii: Sizes::new("1px", "2px", "3px", "4px", "6px", "9999px"),
     };
 
     pub fn size_sx(size: Size) -> Sx {
@@ -111,7 +115,10 @@ impl ToCssDeclarations for IndicatorDefaults {
             declarations.push(INDICATOR_SIZE.declare(size, level.size));
             declarations.push(INDICATOR_FONT_SIZE.declare(size, level.font_size));
         }
-        declarations.push(INDICATOR_RADIUS.declare(self.radius));
+        for size in Size::ALL {
+            declarations.push(INDICATOR_RADII.declare(size, self.radii.get(size)));
+        }
+        declarations.push(INDICATOR_RADIUS.declare(INDICATOR_RADII.value(self.radius)));
         declarations.push(INDICATOR_BORDER_WIDTH.declare(self.border_width));
         declarations.push(INDICATOR_PROCESSING_DURATION.declare(self.processing_duration));
         declarations

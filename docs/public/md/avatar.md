@@ -117,7 +117,7 @@ name is already visible beside the avatar, or it is announced twice.
 | `initials` | `String` | - | Drawn when there is no picture. Nothing is derived from `name`. |
 | `alt` | `String` | follows `name` | Overrides the announced name. `alt: ""` marks the avatar decorative. |
 | `size` | `Size` | `theme.avatar.size` | The square's side, which also sets the placeholder's font size. |
-| `radius` | `ThemeAwareValue` | `theme.avatar.radius` | Corner radius - the radius scale, or any CSS length. The default is a circle. |
+| `radius` | `Size` | `theme.avatar.radius` | A step on the avatar's own radius scale, `2px` to `32px`. The default, `xxl`, is `9999px`: a circle. |
 | `variant` | `Variant` | `tonal` | Placeholder chrome; invisible once a picture loads. |
 | `color` | `ThemeAwareValue` | `primary` | Placeholder tint. |
 | `children` | `Element` | - | Anything at all in place of the initials - an icon, a glyph. |
@@ -130,7 +130,7 @@ name is already visible beside the avatar, or it is announced twice.
 | `max` | `usize` | - | How many circles in total. Past that, the rest collapse into a `+N` chip. |
 | `spacing` | `Size` | `theme.avatar_group.spacing` | How far each circle is pulled over the one before it. |
 | `size` | `Size` | `theme.avatar.size` | Applied to every member, the chip included. |
-| `radius` | `ThemeAwareValue` | `theme.avatar.radius` | Applied to every member, the chip included. |
+| `radius` | `Size` | `theme.avatar.radius` | Applied to every member, the chip included. |
 | `variant` | `Variant` | `tonal` | Applied to every member, the chip included. |
 | `color` | `ThemeAwareValue` | `primary` | The tint a member without a `color` of its own takes. |
 
@@ -160,9 +160,10 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `avatar.size` | `Size` | `md` | Default `size` when the prop is omitted. |
-| `avatar.radius` | `&'static str` | `9999px` | CSS length, not a `Size`: the default is a circle, which is off the radius scale. |
+| `avatar.radius` | `Size` | `xxl` | The step of `avatar.radii` used when the prop is omitted - a circle. |
 | `avatar.sizes` | `Sizes<u16>` | `20, 28, 38, 56, 84, 120` | The square's side, in px, per size step. |
 | `avatar.font_sizes` | `Sizes<u16>` | `8, 11, 15, 22, 34, 48` | Placeholder font size, derived from the square at `side / 2.5`. |
+| `avatar.radii` | `Sizes<&'static str>` | `2px, 4px, 8px, 16px, 32px, 9999px` | The avatar's own radius scale. `xxl` is a circle at every size. |
 | `avatar_group.spacing` | `Size` | `sm` | How far each circle is pulled over the one before it. |
 | `avatar_group.ring` | `&'static str` | `2px` | Width of the ring in the page colour that separates two overlapping members. |
 
@@ -172,8 +173,9 @@ Like every component, both also take the shared props `sx`, `class`, `style`,
 |---|---|
 | `--lsx-avatar-size-{xs..xxl}` | The square's side per size step. |
 | `--lsx-avatar-font-size-{xs..xxl}` | Placeholder font size per size step. |
-| `--lsx-avatar-radius` | The theme's default corner radius. |
-| `--lsx-avatar-radius-override` | Set from the `radius` prop, resolved through the radius scale; wins over the theme value. |
+| `--lsx-avatar-radius-<size>` | The radius for that step, from `AvatarDefaults::radii`. |
+| `--lsx-avatar-radius` | The theme's default step, as `var(--lsx-avatar-radius-xxl)`. |
+| `--lsx-avatar-radius-override` | Set from the `radius` prop to that step's var; wins over the theme value. |
 | `--lsx-avatar-color` | The resolved `color`, which the variant chrome reads. |
 | `--lsx-avatar-contrast` | What reads on `--lsx-avatar-color`; unset for a literal colour, which has no shade ramp. |
 | `--lsx-avatar-container` / `--lsx-avatar-on-container` | The tonal variant's tint and its label colour. |

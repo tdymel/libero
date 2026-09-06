@@ -106,12 +106,18 @@ fn a_theme_colour_resolves_a_shade_and_its_contrast_twin() {
     );
 }
 
-/// The default is off the radius scale - a pill at every height - so it lives
-/// in the theme rather than as a `Size`, and an unset prop must leave the
-/// override var alone. A caller naming a scale step still resolves through it.
+/// The badge has its own radius scale, whose `xxl` is the pill the theme
+/// defaults to. An unset prop leaves the override var alone; a step resolves
+/// through the badge's scale, not the global one.
 #[test]
-fn radius_defaults_to_the_theme_pill_and_a_step_resolves_through_the_scale() {
-    let style = attributes_of(&body(&render(app)), "span")["style"].clone();
+fn radius_defaults_to_the_theme_pill_and_a_step_resolves_through_the_badge_scale() {
+    let html = render(app);
+    assert!(html.contains("--lsx-badge-radius-xxl:9999px;"), "{html}");
+    assert!(
+        html.contains("--lsx-badge-radius:var(--lsx-badge-radius-xxl);"),
+        "{html}"
+    );
+    let style = attributes_of(&body(&html), "span")["style"].clone();
     assert!(!style.contains("--lsx-badge-radius-override"), "{style}");
 
     fn square_app() -> Element {
@@ -121,7 +127,7 @@ fn radius_defaults_to_the_theme_pill_and_a_step_resolves_through_the_scale() {
     }
     let style = attributes_of(&body(&render(square_app)), "span")["style"].clone();
     assert!(
-        style.contains("--lsx-badge-radius-override:var(--lsx-radius-sm);"),
+        style.contains("--lsx-badge-radius-override:var(--lsx-badge-radius-sm);"),
         "{style}"
     );
 }

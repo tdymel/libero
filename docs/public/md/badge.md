@@ -89,7 +89,7 @@ fn Demo() -> Element {
 | `variant` | `Variant` | `filled` | Chrome, shared with `Button` and `Chip`: `filled`, `tonal`, `elevated`, `outlined`, `standard`. A badge is not interactive, so it takes no hover response. |
 | `color` | `ThemeAwareValue` | `primary` | The accent; a theme color name or a literal CSS color. A theme color also brings the `-contrast` twin the label reads with. |
 | `size` | `Size` | `md` | Height, horizontal padding and font size, on the badge's own scale - smaller than a chip's. |
-| `radius` | `ThemeAwareValue` | `9999px` | A size step or any CSS length. The theme's own default is off the scale, because a badge is a pill at every height. |
+| `radius` | `Size` | `xxl` | A step on the badge's own radius scale, `2px` to `12px`. The default, `xxl`, is `9999px`: a pill at every height. |
 | `circle` | `bool` | `false` | Drops the horizontal padding and floors the width at the height, for a one- or two-character count. |
 | `children` | `Element` | required | The label. |
 
@@ -103,11 +103,12 @@ Like every component, `Badge` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `size` | `Size` | Size step used when a call site names none - `md`. |
-| `radius` | `&'static str` | Corner radius as a CSS length - `9999px`, off the radius scale, because a badge is a pill at every height. |
+| `radius` | `Size` | The step of `radii` used when a call site names none - `xxl`, a pill at every height. |
 | `text_transform` | `&'static str` | `uppercase`. Most of what tells a badge from a chip at a glance; set it to `none` for a badge that carries a name. |
 | `letter_spacing` | `&'static str` | `0.25px`, which opens up the uppercase. |
 | `font_weight` | `&'static str` | `700`. |
 | `sizes` | `Sizes<BadgeSizeLevel>` | `font_size`/`height`/`padding_x` per step: `0.5625rem/16px/6px`, `0.625rem/18px/8px`, `0.6875rem/20px/10px`, `0.8125rem/26px/12px`, `1rem/32px/16px`, `1.125rem/38px/20px`. |
+| `radii` | `Sizes<&'static str>` | The badge's own radius scale: `2px`, `4px`, `6px`, `8px`, `12px`, `9999px`. |
 
 `variant` and `color` are not theme fields - `Variant` is component-layer,
 and `color` falls back to `primary` shade 6 in the component.
@@ -122,8 +123,9 @@ and `color` falls back to `primary` shade 6 in the component.
 | `--lsx-badge-font` | The active step's font size, republished unsuffixed. |
 | `--lsx-badge-box` | The active step's height. `circle` reads it for its `min-width`, and the line height is `calc()`ed from it. |
 | `--lsx-badge-pad-x` | The active step's horizontal padding. |
-| `--lsx-badge-radius` | The theme's corner radius. |
-| `--lsx-badge-radius-override` | Set by the `radius` prop; wins over the theme's. |
+| `--lsx-badge-radius-<size>` | The radius for that step, from `BadgeDefaults::radii`. |
+| `--lsx-badge-radius` | The theme's default step, as `var(--lsx-badge-radius-xxl)`. |
+| `--lsx-badge-radius-override` | Set by the `radius` prop to that step's var; wins over the theme's. |
 | `--lsx-badge-text-transform` | From `BadgeDefaults::text_transform`. |
 | `--lsx-badge-letter-spacing` | From `BadgeDefaults::letter_spacing`. |
 | `--lsx-badge-font-weight` | From `BadgeDefaults::font_weight`. |

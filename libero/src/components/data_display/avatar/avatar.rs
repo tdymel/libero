@@ -10,8 +10,8 @@ use crate::{
     hooks::use_theme,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
-        AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_RADIUS, AvatarDefaults, CssVar,
-        PAPER_BACKGROUND, Size, SizeCss,
+        AVATAR_GROUP_INDEX, AVATAR_GROUP_RING, AVATAR_RADII, AVATAR_RADIUS, AvatarDefaults, CssVar,
+        PAPER_BACKGROUND, Size,
     },
 };
 
@@ -111,7 +111,7 @@ static AVATAR_BASE_SX: StaticSx = StaticSx::new(avatar_sx);
 pub(super) fn avatar_variables(
     color: Option<&ThemeAwareValue>,
     variant: Variant,
-    radius: &Input<ThemeAwareValue>,
+    radius: Option<Size>,
 ) -> Variables {
     let base = base_color(color);
     let contrast = contrast_color(&base);
@@ -125,7 +125,7 @@ pub(super) fn avatar_variables(
         .with(AVATAR_ON_CONTAINER_VAR, colors.on_container)
         .with(
             AVATAR_RADIUS.override_var(),
-            radius.resolve(Some(SizeCss::RADIUS)),
+            radius.map(|radius| AVATAR_RADII.value(radius)),
         )
 }
 
@@ -170,10 +170,10 @@ base_props! {
         alt: Option<String>,
         #[props(default, into)]
         size: Input<Size>,
-        /// Corner radius - the radius scale, or any CSS length. The default is
-        /// a circle, which is off the scale.
+        /// A step on the avatar's own radius scale. The theme's default,
+        /// `xxl`, is a circle.
         #[props(default, into)]
-        radius: Input<ThemeAwareValue>,
+        radius: Input<Size>,
         #[props(default, into)]
         variant: Input<Variant>,
         #[props(default, into)]
@@ -201,8 +201,12 @@ pub fn Avatar(props: AvatarProps) -> Element {
     let src = props.src.clone().filter(|src| !src.is_empty());
     let failed = src.is_some() && errored_src.read().as_deref() == src.as_deref();
 
-    let variables: Input<Variables> =
-        avatar_variables(props.color.as_ref(), variant, &props.radius).into();
+    let variables: Input<Variables> = avatar_variables(
+        props.color.as_ref(),
+        variant,
+        props.radius.as_ref().copied(),
+    )
+    .into();
     let states: Input<States> = props
         .states
         .unwrap_or_default()
@@ -269,7 +273,7 @@ mod tests {
     #[test]
     fn a_bare_theme_color_becomes_a_shade_plus_its_contrast() {
         let variables =
-            avatar_variables(Some(&Color::Error.into()), Variant::Filled, &Input::None).to_string();
+            avatar_variables(Some(&Color::Error.into()), Variant::Filled, None).to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",
@@ -279,23 +283,22 @@ mod tests {
         assert!(variables.contains(AVATAR_CONTRAST_VAR.name()));
     }
 
-    /// The default radius is a circle, off the radius scale - so a caller
-    /// naming a scale step has to reach the same override var `Image` uses.
+    /// A step resolves through the avatar's own radius scale, not the
+    /// global one, into the same override var `Image` uses.
     #[test]
-    fn a_size_radius_resolves_through_the_radius_scale() {
-        let radius: Input<ThemeAwareValue> = ThemeAwareValue::Size(Size::Md).into();
-        let variables = avatar_variables(None, Variant::Tonal, &radius).to_string();
+    fn a_radius_step_resolves_through_the_avatar_scale() {
+        let variables = avatar_variables(None, Variant::Tonal, Some(Size::Md)).to_string();
 
         assert!(variables.contains(&format!(
             "{}:{};",
             AVATAR_RADIUS.override_var().name(),
-            SizeCss::RADIUS.value(Size::Md)
+            AVATAR_RADII.value(Size::Md)
         )));
     }
 
     #[test]
     fn no_radius_emits_no_override() {
-        let variables = avatar_variables(None, Variant::Tonal, &Input::None).to_string();
+        let variables = avatar_variables(None, Variant::Tonal, None).to_string();
 
         assert!(!variables.contains(AVATAR_RADIUS.override_var().name()));
     }
