@@ -154,12 +154,16 @@ impl Drop for LayerGuard {
     }
 }
 
-/// Whether an overlay that keeps its own Escape transport - `Modal`,
-/// `FloatingWindow` - should close on this press. The same filters the
-/// element listener in [`use_dismiss`] applies: a held Escape is one intent,
-/// so its auto-repeats do not walk on to the next layer out, and Escape
+/// Whether an overlay's element-level Escape transport should close it on
+/// this press: `Modal`, `FloatingWindow`, and the element listener in
+/// [`use_dismiss`] all ask it. A held Escape is one intent, so its
+/// auto-repeats do not walk on to the next layer out, and Escape
 /// mid-composition cancels the composition. And a press something inside
 /// already took ([`key_taken`]) is not this overlay's.
+///
+/// `use_dismiss`'s document transport cannot ask the last question: it hears
+/// the press in the capture phase, before any field has had it. There an open
+/// field list is a layer of its own instead ([`use_field_list_layer`]).
 pub(crate) fn escape_closes(event: &Event<KeyboardData>) -> bool {
     event.key() == Key::Escape
         && !event.is_auto_repeating()
@@ -182,6 +186,45 @@ pub(crate) fn use_dismiss_layer() -> DismissLayer {
     });
 
     DismissLayer { id, stack }
+}
+
+/// Puts a field's open list on the Escape stack, **on the web only**, for as
+/// long as `open` holds. `ComboboxCore`, `Cascader`, `ColorField` and the date
+/// picker fields call it; each keeps its own Escape handler.
+///
+/// On the web a `use_dismiss` box hears Escape in the capture phase at the
+/// document, before the field inside it has had the press, so it cannot see
+/// the field take it. Without this a `Select` open in a `HoverCard` closed
+/// its list and the card on one Escape (todo 348). With the list on top, the
+/// card declines as not-top and the field's own handler closes the list; the
+/// next Escape reaches the card. It also covers focus inside a portaled
+/// dropdown - a date picker's calendar - which no query of the card's own
+/// subtree could see.
+///
+/// Off the web it does not push, by the rule in [`DismissLayer`]: there every
+/// Escape transport is an element handler, the field's runs first, and
+/// [`escape_closes`] reads the default it prevented.
+///
+/// **The field has to close its list when focus leaves it**, and all four do,
+/// on blur or focusout. An open list with focus elsewhere hears nothing, yet
+/// sits on top, and would wedge Escape for every layer under it.
+pub(crate) fn use_field_list_layer(open: bool) {
+    let layer = use_dismiss_layer();
+    // Decided once, as in `use_dismiss`: a property of the renderer.
+    let global = use_hook(|| keyboard().is_some());
+    let guard: Rc<RefCell<Option<LayerGuard>>> = use_hook(|| Rc::new(RefCell::new(None)));
+
+    let slot = guard.clone();
+    use_effect(use_reactive!(|(open,)| {
+        if !open || !global {
+            slot.borrow_mut().take();
+        } else if slot.borrow().is_none() {
+            *slot.borrow_mut() = Some(layer.push());
+        }
+    }));
+    use_drop(move || {
+        guard.borrow_mut().take();
+    });
 }
 
 /// Why a box is closing, which is what decides whether focus goes back.
@@ -447,21 +490,27 @@ impl DismissHandle {
         {
             let handle = *self;
             listener("onkeydown", move |event: Event<KeyboardData>| {
+                // `escape_closes`, the one rule every overlay's own Escape
+                // transport shares. Three of its four filters matter here.
+                //
                 // A held Escape is one intent, not a stream of them. Without
-                // this it walks down the stack, closing the menu and then the
-                // modal behind it inside one press. A held ArrowDown scrolling
-                // a list still wants every repeat, so this is not a global
-                // filter.
-                if event.key() != Key::Escape || event.is_auto_repeating() {
-                    return;
-                }
+                // the repeat filter it walks down the stack, closing the menu
+                // and then the modal behind it inside one press. A held
+                // ArrowDown scrolling a list still wants every repeat, so this
+                // is not a global filter.
+                //
                 // Mid-composition, Escape means "cancel the composition", not
                 // "dismiss". `KeyboardApi` drops a composing press on both its
                 // paths ahead of the filter ([[codebase/platform-api]]); this
                 // is the same guard on the element path, so the contract does
                 // not change with the transport. Reasoned rather than measured
                 // there and here alike - headless Chromium has no IME.
-                if event.is_composing() {
+                //
+                // A press a field inside took is not this box's (todo 348). A
+                // `Select` in a `HoverCard` closes its list, prevents the
+                // default and lets the press bubble on, so without this one
+                // Escape closed the list and the card around it.
+                if !escape_closes(&event) {
                     return;
                 }
                 // No stack consultation here on purpose: a layer with only this
@@ -1344,6 +1393,74 @@ mod tests {
         assert_eq!(state(&dom), "state: window=false list=false");
     }
 
+    /// A `use_dismiss` box with a field dropdown in it: a `Select` in a
+    /// `HoverCard`'s content. Region's setup, with the stand-in as the box's
+    /// content.
+    #[component]
+    fn DropdownInRegion() -> Element {
+        let mut open = use_signal(|| true);
+        let list = use_signal(|| true);
+        let anchor = use_element();
+        let floating = use_element();
+        let close = use_callback(move |()| open.set(false));
+        let dismiss = use_dismiss(
+            anchor,
+            floating,
+            open(),
+            true,
+            Some(close),
+            DismissOptions {
+                outside: false,
+                return_focus: false,
+                ..Default::default()
+            },
+        );
+        let style = use_box().prepare();
+
+        rsx! {
+            if open() {
+                {
+                    style
+                        .element(&floating)
+                        .render(HtmlTag::Div, dismiss.floating_events(), rsx! { FieldDropdown { open: list } })
+                }
+            }
+            "state: region={open} list={list}"
+        }
+    }
+
+    /// Todo 348, off the web: the box's element listener did not ask
+    /// `key_taken`, so the press the list took bubbled on and closed the box
+    /// too. The second press is the control: with the list shut, Escape
+    /// reaches the box. The web half, where the box hears Escape before the
+    /// field does, is `use_field_list_layer`, and this harness has no
+    /// keyboard capability to run it.
+    #[test]
+    fn a_field_dropdown_taking_escape_leaves_the_dismiss_box_open() {
+        fn app() -> Element {
+            rsx! { LiberoProvider { DropdownInRegion {} } }
+        }
+
+        dioxus::html::set_event_converter(Box::new(EscapeConverter));
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindKeydownListeners::default();
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+
+        let dropdown = find.dropdown.expect("the dropdown stand-in");
+        assert_eq!(state(&dom), "state: region=true list=true");
+
+        press(&mut dom, dropdown);
+        assert_eq!(
+            state(&dom),
+            "state: region=true list=false",
+            "one Escape must close the list and not the box around it"
+        );
+
+        press(&mut dom, dropdown);
+        assert_eq!(state(&dom), "state: region=false list=false");
+    }
+
     /// Todo 318. Escape held down over an open list: the first press closes
     /// the list, and its auto-repeats must not go on to close the modal. A
     /// composing Escape cancels the composition and closes nothing. The last,
@@ -1809,7 +1926,7 @@ mod tests {
     /// of `onclose`. Off the web nothing counts as focused, so every focusout
     /// here is focus leaving.
     #[test]
-    fn focus_leaving_calls_focus_moved_instead_of_onclose() {
+    fn focus_leaving_calls_onfocusmoved_instead_of_onclose() {
         assert_eq!(
             close_watched(true, "focusout"),
             "state: open=false heard=focus_moved"
@@ -1817,7 +1934,7 @@ mod tests {
     }
 
     #[test]
-    fn without_focus_moved_focus_leaving_calls_onclose() {
+    fn without_onfocusmoved_focus_leaving_calls_onclose() {
         assert_eq!(
             close_watched(false, "focusout"),
             "state: open=false heard=onclose"
@@ -1825,7 +1942,7 @@ mod tests {
     }
 
     #[test]
-    fn escape_still_calls_onclose_when_focus_moved_is_set() {
+    fn escape_still_calls_onclose_when_onfocusmoved_is_set() {
         assert_eq!(
             close_watched(true, "keydown"),
             "state: open=false heard=onclose"

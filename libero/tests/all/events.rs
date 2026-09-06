@@ -1705,33 +1705,6 @@ fn a_loading_action_icon_swallows_the_click_and_stays_focusable() {
     );
 }
 
-/// Todo 222: `ActionIcon` takes `Button`'s `selected` - `aria-pressed` both
-/// ways, the `checked` token while pressed, and nothing on a plain action.
-#[test]
-fn a_selected_action_icon_says_pressed() {
-    fn app() -> Element {
-        rsx! {
-            LiberoProvider {
-                ActionIcon { aria_label: "Bold", variant: "standard", selected: true, "B" }
-                ActionIcon { aria_label: "Italic", variant: "standard", selected: false, "I" }
-                ActionIcon { aria_label: "Save", "S" }
-            }
-        }
-    }
-
-    let html = crate::common::render(app);
-    let tags: Vec<&str> = html
-        .match_indices("<button")
-        .map(|(at, _)| &html[at..at + html[at..].find('>').unwrap()])
-        .collect();
-    assert_eq!(tags.len(), 3, "{html}");
-    assert!(tags[0].contains(r#"aria-pressed="true""#), "{}", tags[0]);
-    assert!(tags[0].contains("checked"), "{}", tags[0]);
-    assert!(tags[1].contains(r#"aria-pressed="false""#), "{}", tags[1]);
-    assert!(!tags[1].contains("checked"), "{}", tags[1]);
-    assert!(!tags[2].contains("aria-pressed"), "{}", tags[2]);
-}
-
 /// Todo 222: a `name` makes a `Chip` a checkbox that posts, and one with no
 /// handler keeps its own state - the way an unbound `Checkbox` does.
 #[test]

@@ -12,7 +12,7 @@ use crate::{
         layout::use_box,
         surface::paper_sx,
     },
-    hooks::{PopoverOptions, use_element, use_popover, use_theme},
+    hooks::{PopoverOptions, use_element, use_field_list_layer, use_popover, use_theme},
     platform::eye_dropper,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
@@ -230,6 +230,9 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // branches on `opened`.
     let anchor = use_element();
     let showing = opened() && has_dropdown && !readonly;
+    // On the Escape stack exactly while the key handler below would take
+    // Escape, so a `HoverCard` around this field leaves the press to it.
+    use_field_list_layer(opened());
     let popover = use_popover(
         anchor,
         showing,

@@ -5,7 +5,10 @@ use crate::{
         HtmlTag, Input, States, VisuallyHidden, common::base_props, layout::use_box,
         surface::paper_sx,
     },
-    hooks::{ElementHandle, PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
+    hooks::{
+        ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,
+        use_popover, use_theme,
+    },
     platform::ElementApi,
     sx::StaticSx,
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
@@ -221,6 +224,10 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
 
     // Every one of these is a hook, so all of them run before anything branches
     // on `opened`.
+    //
+    // On the Escape stack exactly while the key handler above would take
+    // Escape, so a `HoverCard` around this field leaves the press to it.
+    use_field_list_layer(opened && !disabled);
     let anchor = use_element();
     let popover = use_popover(
         anchor,

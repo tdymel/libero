@@ -21,7 +21,7 @@ use crate::{
         layout::use_box,
         surface::paper_sx,
     },
-    hooks::{PopoverOptions, use_element, use_popover, use_theme},
+    hooks::{PopoverOptions, use_element, use_field_list_layer, use_popover, use_theme},
     platform::{ElementApi, next_task},
     sx::{StaticSx, Sx},
     theme::{DateDefaults, Size, SizeCss, Z_INDEX_POPOVER},
@@ -340,6 +340,9 @@ pub(super) fn use_picker_field<V: FieldValue>(
     // branches on `opened`.
     let anchor = use_element();
     let showing = opened() && !disabled && !readonly;
+    // On the Escape stack exactly while the key handler below would take
+    // Escape, so a `HoverCard` around this field leaves the press to it.
+    use_field_list_layer(opened() && !readonly);
     let popover = use_popover(
         anchor,
         showing,

@@ -12,7 +12,10 @@ use crate::{
         },
         layout::{BoxStyle, ScrollArea, use_box},
     },
-    hooks::{ElementHandle, PopoverOptions, PopoverWidth, use_element, use_popover, use_theme},
+    hooks::{
+        ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,
+        use_popover, use_theme,
+    },
     platform::ElementApi,
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
@@ -437,6 +440,9 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     };
 
     // ---- the dropdown -------------------------------------------------
+    // On the Escape stack exactly while the key handler would take
+    // Escape, so a `HoverCard` around this field leaves the press to it.
+    use_field_list_layer(opened);
     let anchor = use_element();
     // The box changes shape while it is open: a column appears, and a query
     // shortens the list.
