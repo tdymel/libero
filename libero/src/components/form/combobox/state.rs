@@ -83,6 +83,12 @@ impl ComboboxState {
 
     /// `role`, `aria-haspopup`, `aria-expanded`, and, while the list is open
     /// and has a row to point at, `aria-controls` and `aria-activedescendant`.
+    ///
+    /// `aria-controls` is left out while the list is closed, loading or empty,
+    /// because the listbox it names is then not in the DOM. Before todo 360 it
+    /// was always set, so a caller that reads it must not expect it on a closed
+    /// combobox.
+    ///
     /// Spread it on whatever control sits inside the `Combobox`:
     ///
     /// ```no_run
