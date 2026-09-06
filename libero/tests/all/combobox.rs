@@ -489,10 +489,26 @@ mod combobox_highlight {
 
         assert!(
             html.contains(
-                r#"style="position:fixed;left:0px;top:0px;width:auto;min-width:auto;visibility:hidden;""#
+                r#"style="position:fixed;left:0px;top:0px;width:auto;min-width:auto;max-width:calc(100vw - 16px);visibility:hidden;""#
             ),
             "the dropdown is not laid out fixed and hidden before its first \
              measurement, which under SSR never lands:\n{html}"
+        );
+    }
+
+    /// A long row must not push the dropdown off a phone's screen: the box is
+    /// capped at the viewport less the collision padding (8px, the theme's) at
+    /// both edges, so the row's ellipsis takes over (todo 357). In CSS, so it
+    /// already holds on the pass that is measured.
+    #[test]
+    fn the_dropdown_is_capped_at_the_viewport_less_its_padding() {
+        let mut dom = VirtualDom::new(App);
+        dom.rebuild_in_place();
+        let html = render_pass(&mut dom);
+
+        assert!(
+            html.contains("max-width:calc(100vw - 16px);"),
+            "the dropdown can grow past the viewport:\n{html}"
         );
     }
 

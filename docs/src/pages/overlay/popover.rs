@@ -234,7 +234,7 @@ pub fn PopoverPage() -> Element {
                         .doc("Pixels between the anchor's edge and the box."),
                     prop("padding", "f64")
                         .default("theme.popover.padding")
-                        .doc("How close to a viewport edge the box may come before it flips or shifts."),
+                        .doc("How close to a viewport edge the box may come before it flips or shifts. The box is also never wider than the viewport less this at both edges."),
                     prop("flip", "bool")
                         .default("true")
                         .doc("Move to the opposite side when the preferred one has no room."),

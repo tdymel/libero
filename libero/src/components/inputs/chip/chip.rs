@@ -49,6 +49,10 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
         .white_space("nowrap")
         .user_select("none")
         .max_width("100%")
+        // A long label is cut at the pill's edge instead of running past it
+        // (todo 358). Not on a selectable chip: its label clips itself, and the
+        // ring overlay drawn out by the border would be clipped with it.
+        .overflow("hidden")
         // A `<button>` root inherits neither, and a chip has to look the same
         // whichever tag it lands on.
         .font_family("inherit")
@@ -71,6 +75,7 @@ static CHIP_BASE_SX: StaticSx = StaticSx::new(|| {
             "checked",
             interactive_variant_sx(Variant::Tonal, &CHIP_VARS, &CHIP_HOVER_VAR),
         )
+        .when("selectable", sx().overflow("visible"))
         .when("clickable", sx().cursor("pointer"))
         .when(
             "disabled",
@@ -221,6 +226,7 @@ pub fn Chip(props: ChipProps) -> Element {
         .with(size.state_name(), true)
         .with(radius.radius_state_name(), true)
         .with("checked", checked)
+        .with("selectable", selectable)
         .with("disabled", disabled)
         .with("clickable", clickable && !selectable)
         .into();
@@ -330,5 +336,19 @@ mod tests {
         let css = Stylesheet::from(&CHIP_LABEL_SX);
         assert!(!css.as_str().contains("text-overflow"), "{}", css.as_str());
         assert!(css.as_str().contains("overflow:hidden"), "{}", css.as_str());
+    }
+
+    /// A plain chip's root clips, or a long label runs past the pill (todo
+    /// 358). A selectable one does not: its label clips, and the root has to
+    /// let the ring overlay out by the border.
+    #[test]
+    fn a_plain_chip_clips_and_a_selectable_one_lets_its_ring_out() {
+        let css = Stylesheet::from(&CHIP_BASE_SX);
+        let css = css.as_str();
+        let selectable = css
+            .find("[data-state~=\"selectable\"]")
+            .unwrap_or_else(|| panic!("no selectable arm: {css}"));
+        assert!(css[..selectable].contains("overflow:hidden"), "{css}");
+        assert!(css[selectable..].contains("overflow:visible"), "{css}");
     }
 }

@@ -34,7 +34,8 @@ pub struct PopoverOptions {
     /// Pixels between the anchor's edge and the box.
     pub gap: f64,
     /// How close to a viewport edge the box may come before flipping or
-    /// shifting.
+    /// shifting. The box's width is capped at the viewport less this at both
+    /// edges.
     pub padding: f64,
     pub flip: bool,
     pub shift: bool,

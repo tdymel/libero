@@ -33,6 +33,8 @@ pub struct PopoverHandle {
     /// The anchor's measured width, which is what `PopoverWidth` follows.
     anchor_width: Signal<Option<f64>>,
     width: PopoverWidth,
+    /// The collision padding, which the width cap leaves at both edges.
+    padding: f64,
     slot: PortalSlot,
 }
 
@@ -74,6 +76,12 @@ impl PopoverHandle {
     /// simply stops being printed is never taken off the element: dropping
     /// `visibility` once the box was placed left it hidden at the right
     /// coordinates.
+    ///
+    /// The width is capped at the viewport less the collision padding at both
+    /// edges, so a long row ellipsises instead of pushing the box off a phone's
+    /// screen (todo 357). In CSS rather than from the measurement: the cap then
+    /// holds on the pass that is measured, and for content that changes while
+    /// the box is open.
     pub fn style(&self) -> Option<String> {
         let (x, y, visibility) = match *self.placed.read() {
             Some(placed) => (placed.x, placed.y, "visible"),
@@ -88,8 +96,10 @@ impl PopoverHandle {
             _ => (String::from("auto"), String::from("auto")),
         };
 
+        let edges = 2.0 * self.padding;
+
         Some(format!(
-            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};visibility:{visibility};"
+            "position:fixed;left:{x}px;top:{y}px;width:{width};min-width:{min_width};max-width:calc(100vw - {edges}px);visibility:{visibility};"
         ))
     }
 
@@ -221,6 +231,7 @@ pub(crate) fn use_popover_on(
         placed,
         anchor_width,
         width: options.width,
+        padding: options.padding,
         slot,
     }
 }

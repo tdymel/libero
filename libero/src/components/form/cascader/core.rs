@@ -19,7 +19,7 @@ use crate::{
     platform::ElementApi,
     str_enum::str_enum,
     sx::{StaticSx, Sx, sx},
-    theme::{POPOVER_PADDING, Size},
+    theme::Size,
 };
 
 use super::{
@@ -158,15 +158,6 @@ fn cascader_rows_sx() -> Sx {
     // invisible the moment the arrows wander off it.
     .selector("& [data-state~='committed']", sx().font_weight("700"))
 }
-
-/// The shared dropdown, held inside the viewport. Three columns side by side
-/// are wider than a phone, and a fixed box that runs off the right edge
-/// cannot be scrolled to - the columns scroll inside it instead.
-static CASCADER_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
-    COMBOBOX_DROPDOWN_SX
-        .clone()
-        .max_width(format!("calc(100vw - 2 * {})", POPOVER_PADDING.value()))
-});
 
 /// One listbox per level, side by side, each scrolling on its own.
 static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
@@ -467,7 +458,11 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         .with(layout.state_name(), true)
         .into();
     let dropdown = use_box()
-        .framework_sx(&CASCADER_DROPDOWN_SX)
+        // Held inside the viewport by `use_popover`'s own cap: three columns
+        // side by side are wider than a phone, and a fixed box that runs off
+        // the right edge cannot be scrolled to - the columns scroll inside it
+        // instead.
+        .framework_sx(&COMBOBOX_DROPDOWN_SX)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
@@ -1221,17 +1216,11 @@ mod tests {
     }
 
     /// Three columns are wider than a phone. The dropdown is held inside the
-    /// viewport and the columns scroll sideways within it, rather than
-    /// opening off the right edge where nothing can reach them.
+    /// viewport (by `use_popover`, see `tests/all/combobox.rs`) and the columns
+    /// scroll sideways within it, rather than opening off the right edge where
+    /// nothing can reach them.
     #[test]
     fn the_columns_stay_inside_the_viewport() {
-        let dropdown = Stylesheet::from(&*CASCADER_DROPDOWN_SX);
-        let dropdown = dropdown.as_str();
-        assert!(
-            dropdown.contains("max-width:calc(100vw - 2 * var(--lsx-popover-padding));"),
-            "{dropdown}"
-        );
-
         let columns = Stylesheet::from(&*CASCADER_COLUMNS_SX);
         assert!(
             columns.as_str().contains("overflow-x:auto;"),

@@ -151,3 +151,4 @@ State tokens on the root's `data-state`, space separated.
 | `checked` | `checked` is set. |
 | `disabled` | `disabled` is set. |
 | `clickable` | The chip is a button or link, not a checkbox. |
+| `selectable` | The chip is a checkbox (`onchange` or `name`). Its root does not clip, so the focus ring drawn out by its border shows; its label clips instead. Every other chip clips at its root. |

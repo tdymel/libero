@@ -54,7 +54,10 @@ fn a_selectable_chip_renders_a_checkbox_its_label_points_at() {
     assert_eq!(attributes_of(&html, "label")["for"], input["id"]);
 
     let span = attributes_of(&html, "span");
-    assert_eq!(span["data-state"], "filled size-md radius-xl checked");
+    assert_eq!(
+        span["data-state"],
+        "filled size-md radius-xl checked selectable"
+    );
     // M3's selected filter chip is a tonal container, and one step past
     // `Tonal`'s own resting tint - so selecting an already-tonal chip still
     // reads as a change.

@@ -181,7 +181,7 @@ your own there.
 | `PopoverHandle::floating` | `fn(&self) -> &ElementHandle` | The handle to put on the box, so it can be measured. Nothing is placed until it is attached. |
 | `PopoverHandle::placed` | `fn(&self) -> bool` | Whether the box has been measured. `false` on the render that opens it. |
 | `PopoverHandle::placement` | `fn(&self) -> Placement` | The side and align it actually landed on, after flipping. |
-| `PopoverHandle::style` | `fn(&self) -> Option<String>` | The box's `style`: `position: fixed`, its coordinates, its width, and `visibility` until it is measured. |
+| `PopoverHandle::style` | `fn(&self) -> Option<String>` | The box's `style`: `position: fixed`, its coordinates, its width, a `max-width` of the viewport less `padding` at both edges, and `visibility` until it is measured. |
 | `PopoverHandle::show` | `fn(&self, content: Option<Element>)` | Portals the box. `None` takes it away, which is how a closed popover stops rendering. |
 
 ## Options
@@ -195,7 +195,7 @@ other field has a builder method of the same name.
 | `side` | `Side` | `Bottom` | The preferred side of the anchor. Flipping may override it. |
 | `align` | `Align` | `Start` | Where the box lines up along that side's cross axis. |
 | `gap` | `f64` | `theme.popover.gap` | Pixels between the anchor's edge and the box. |
-| `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. |
+| `padding` | `f64` | `theme.popover.padding` | How close to a viewport edge the box may come before it flips or shifts. The box is also never wider than the viewport less this at both edges. |
 | `flip` | `bool` | `true` | Move to the opposite side when the preferred one has no room. |
 | `shift` | `bool` | `true` | Slide along the side to stay on screen, once flipping cannot help. |
 | `width` | `PopoverWidth` | `Auto` | Whether the box follows its own content (`Auto`), the anchor's width exactly (`Match`), or at least the anchor's width (`Min`). |
