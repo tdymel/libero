@@ -3,9 +3,10 @@
 //! a dynamic node every render (`IntoChildren`, todo 42). A source scan rather
 //! than a render, so a component no test renders is covered too.
 //!
-//! Only the last-argument position is checked. An `rsx!` that turns an iterator or a
-//! `String` into an `Element` - a `match` arm, a return value, a prop - is the
-//! conversion doing real work.
+//! Two shapes are checked: the wrapper as a call's last argument, and a wrapper
+//! around a `.render(..)` call, which is an `Element` wherever it stands. Any
+//! other `rsx!` that turns an iterator or a `String` into an `Element` - a
+//! `match` arm, a return value, a prop - is the conversion doing real work.
 
 use std::{fs, path::Path};
 
@@ -27,7 +28,7 @@ fn close(text: &[u8], open: usize) -> Option<usize> {
     None
 }
 
-/// Each `rsx! { {..} }` whose next character is a call's closing `)`.
+/// Each `rsx! { {..} }` that is a call's last argument or holds a `.render(..)`.
 fn wrapped_arguments(source: &str) -> Vec<usize> {
     let text = source.as_bytes();
     let mut hits = Vec::new();
@@ -47,7 +48,13 @@ fn wrapped_arguments(source: &str) -> Vec<usize> {
             .unwrap_or(rest)
             .trim_start()
             .starts_with(')');
-        if single && argument {
+        // Read up to the first brace, so a `render` inside a nested `rsx!`
+        // does not count.
+        let rendered = single && {
+            let head = &inner[1..];
+            head[..head.find('{').unwrap_or(head.len())].contains(".render(")
+        };
+        if single && (argument || rendered) {
             hits.push(source[..start].lines().count());
         }
     }
@@ -87,6 +94,11 @@ fn the_scan_finds_the_shape_and_leaves_conversions_alone() {
     );
     assert!(wrapped_arguments("None => rsx! { {items.into_iter()} },").is_empty());
     assert!(wrapped_arguments("x.render(Div, v, rsx! { {a} {b} })").is_empty());
+    assert_eq!(
+        wrapped_arguments("rsx! {\n {root.render(Section, a, rsx! { b {} })?}\n}\n}").len(),
+        1
+    );
+    assert!(wrapped_arguments("rsx! { {marks} }\n}").is_empty());
 }
 
 #[test]
