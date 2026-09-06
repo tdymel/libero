@@ -128,20 +128,31 @@ pub fn DateFieldPage() -> Element {
                     ": only the props that type uses, no turbofish, and a value of the wrong type is a plain type mismatch."
                 }
             },
+            // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+            // snippet: let mut date = use_signal(|| None::<NaiveDate>);
+            // snippet: let mut time = use_signal(|| None::<NaiveTime>);
+            // snippet: let mut date_time = use_signal(|| None::<NaiveDateTime>);
+            // snippet: let mut date_range = use_signal(|| None::<DateRange<NaiveDate>>);
+            // snippet: let mut date_time_range = use_signal(|| None::<DateRange<NaiveDateTime>>);
             Demo {
                 component: "DateField",
                 children_text: "",
                 controls: {
                     let controls = vec![
                         Control::select("value", KINDS).default("date").code(|_, values| {
-                            let value = match values.str("value").as_str() {
-                                "time" => "time() /* Option<NaiveTime> */",
-                                "date-time" => "moment() /* Option<NaiveDateTime> */",
-                                "date-range" => "range() /* Option<DateRange<NaiveDate>> */",
-                                "date-time-range" => "range() /* Option<DateRange<NaiveDateTime>> */",
-                                _ => "day() /* Option<NaiveDate> */",
+                            // A typed `value` alone does not name `V`: the
+                            // `onchange` is what makes the snippet compile.
+                            let (name, kind) = match values.str("value").as_str() {
+                                "time" => ("time", "Option<NaiveTime>"),
+                                "date-time" => ("date_time", "Option<NaiveDateTime>"),
+                                "date-range" => ("date_range", "Option<DateRange<NaiveDate>>"),
+                                "date-time-range" => ("date_time_range", "Option<DateRange<NaiveDateTime>>"),
+                                _ => ("date", "Option<NaiveDate>"),
                             };
-                            vec![format!("value: {value}")]
+                            vec![
+                                format!("value: {name}() /* {kind} */"),
+                                format!("onchange: move |next| {name}.set(next)"),
+                            ]
                         }),
                         Control::slider("size", SIZES).default("md"),
                         Control::slider("radius", SIZES).default("sm"),

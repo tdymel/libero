@@ -491,6 +491,9 @@ pub fn NotificationsPage() -> Element {
                     "each starts over from its full time when you leave."
                 }
             },
+            // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] Home {} }
+            // snippet: item #[component] fn Home() -> Element { rsx! {} }
+            // snippet: item #[component] fn Examples() -> Element { rsx! {} }
             Demo {
                 component: "Notifications",
                 children_text: "",

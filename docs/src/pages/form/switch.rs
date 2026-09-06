@@ -64,6 +64,7 @@ pub fn SwitchPage() -> Element {
                     "; with neither, and outside a form binding, the switch keeps its own state."
                 }
             },
+            // snippet: let mut enabled = use_signal(|| false);
             Demo {
                 component: "Switch",
                 children_text: "",

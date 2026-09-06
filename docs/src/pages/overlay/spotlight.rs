@@ -393,6 +393,7 @@ pub fn SpotlightPage() -> Element {
                     "."
                 }
             },
+            // snippet: item async fn search_on_server(_: &str, _: &[SpotlightAction]) -> Vec<SpotlightAction> { Vec::new() }
             Demo {
                 component: "SpotlightOptions",
                 children_text: "",

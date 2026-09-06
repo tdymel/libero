@@ -198,6 +198,7 @@ pub fn SegmentedControlPage() -> Element {
                     "."
                 }
             },
+            // snippet: let mut alignment = use_signal(|| Alignment::Left);
             Demo {
                 component: "SegmentedControl",
                 children_text: "",

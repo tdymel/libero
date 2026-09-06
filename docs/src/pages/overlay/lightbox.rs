@@ -167,6 +167,8 @@ pub fn LightboxPage() -> Element {
                     "picture never traps the keyboard."
                 }
             },
+            // snippet: item struct Photo { src: String, alt: String, title: String }
+            // snippet: let photos: Vec<Photo> = Vec::new();
             Demo {
                 component: "LightboxOptions",
                 children_text: "",

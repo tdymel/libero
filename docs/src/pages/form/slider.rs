@@ -293,6 +293,10 @@ pub fn SliderPage() -> Element {
                     "the range, step grid, marks and captions all come from that list."
                 }
             },
+            // snippet: let mut volume = use_signal(|| 40.0);
+            // snippet: let mut quality = use_signal(|| Quality::Medium);
+            // snippet: let mut last = use_signal(|| SliderChangeEvent::Change(40.0));
+            // snippet: let mut last_quality = use_signal(|| SliderChangeEvent::Change(Quality::Medium));
             Demo {
                 component: "Slider",
                 children_text: "",

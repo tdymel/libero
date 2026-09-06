@@ -17,12 +17,23 @@ const CITIES_CONST: &str = r#"const CITIES: [(&str, &str); 6] = [
     ("Cologne", "Germany"),
 ];
 
+fn cities() -> Vec<String> {
+    CITIES.iter().map(|(city, _)| city.to_string()).collect()
+}
+
+fn country(city: &str) -> &'static str {
+    CITIES
+        .iter()
+        .find(|(name, _)| *name == city)
+        .map(|(_, country)| *country)
+        .unwrap_or("")
+}
+
 "#;
 
 // snippet: after CITIES_CONST
-// snippet: item fn country(city: &str) -> String { city.to_string() }
 // snippet: let mut value = use_signal(String::new);
-// snippet: in Autocomplete { options: CITIES.iter().map(|(city, _)| city.to_string()).collect(), value: value(), oninput: move |next| value.set(next), .. }
+// snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
 const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| rsx! {
     Flex {
         direction: "column",
@@ -36,18 +47,16 @@ const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| 
 /// Prefix rather than the default `contains` - the same list, narrowed by a
 /// different rule.
 // snippet: after CITIES_CONST
-// snippet: item fn country(city: &str) -> String { city.to_string() }
 // snippet: let mut value = use_signal(String::new);
-// snippet: in Autocomplete { options: CITIES.iter().map(|(city, _)| city.to_string()).collect(), value: value(), oninput: move |next| value.set(next), .. }
+// snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
 const CUSTOM_FILTER: &str = r#"filter: move |f: AutocompleteFilterArgs<String>| {
     f.value.to_lowercase().starts_with(&f.query.to_lowercase())
 }"#;
 
 // snippet: after CITIES_CONST
-// snippet: item fn country(city: &str) -> String { city.to_string() }
 // snippet: let mut value = use_signal(String::new);
-// snippet: let mut picked = use_signal(|| None::<String>);
-// snippet: in Autocomplete { options: CITIES.iter().map(|(city, _)| city.to_string()).collect(), value: value(), oninput: move |next| value.set(next), .. }
+// snippet: let mut picked = use_signal(|| None::<&'static str>);
+// snippet: in Autocomplete { options: cities(), value: value(), oninput: move |next| value.set(next), .. }
 const ONPICK: &str = r#"onpick: move |city: String| picked.set(Some(country(&city)))"#;
 
 const CITIES: [(&str, &str); 6] = [
@@ -163,6 +172,8 @@ pub fn AutocompletePage() -> Element {
                     ". Nothing is highlighted until you press ArrowDown, so Enter on text that matches nothing still submits a form."
                 }
             },
+            // snippet: let mut value = use_signal(String::new);
+            // snippet: let mut picked = use_signal(|| None::<&'static str>);
             Demo {
                 component: "Autocomplete",
                 children_text: "",

@@ -39,6 +39,8 @@ pub fn AnchorPage() -> Element {
                     "navigation, not a full page reload."
                 }
             },
+            // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] GettingStarted {} }
+            // snippet: item #[component] fn GettingStarted() -> Element { rsx! {} }
             Demo {
                 component: "Anchor",
                 children_text: "",

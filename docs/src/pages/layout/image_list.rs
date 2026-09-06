@@ -269,6 +269,11 @@ pub fn ImageListPage() -> Element {
                     "picture is the case to check."
                 }
             },
+            // snippet: item struct Picture { id: u32, url: String, alt: String }
+            // snippet: let photos: Vec<Picture> = Vec::new();
+            // snippet: item fn caption(_: &Picture) -> Element { rsx! {} }
+            // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/photo/:id")] Photo { id: u32 } }
+            // snippet: item #[component] fn Photo(id: u32) -> Element { rsx! {} }
             Demo {
                 component: "ImageList",
                 children_text: "",

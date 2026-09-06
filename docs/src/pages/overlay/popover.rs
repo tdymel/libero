@@ -262,6 +262,8 @@ pub fn PopoverPage() -> Element {
                     " is how a closed popover stops rendering."
                 }
             },
+            // snippet: let opened = use_signal(|| false);
+            // snippet: let theme = use_theme();
             Demo {
                 component: "PopoverDemo",
                 children_text: "",

@@ -62,6 +62,9 @@ pub fn NavLinkPage() -> Element {
                     ") by default, and only show once a link is active."
                 }
             },
+            // snippet: item #[derive(Clone, PartialEq, Routable)] enum Route { #[route("/")] GettingStarted {}, #[route("/nav-link")] NavLinkPage {} }
+            // snippet: item #[component] fn GettingStarted() -> Element { rsx! {} }
+            // snippet: item #[component] fn NavLinkPage() -> Element { rsx! {} }
             Demo {
                 component: "NavLink",
                 children_text: "",

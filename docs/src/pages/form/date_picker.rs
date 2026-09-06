@@ -98,20 +98,36 @@ pub fn DatePickerPage() -> Element {
                     ", with only the props that type uses and no turbofish."
                 }
             },
+            // snippet: item use chrono::{Datelike, NaiveDate, NaiveDateTime, NaiveTime};
+            // snippet: let mut date = use_signal(|| None::<NaiveDate>);
+            // snippet: let mut month = use_signal(|| None::<NaiveDate>);
+            // snippet: let mut year = use_signal(|| None::<NaiveDate>);
+            // snippet: let mut time = use_signal(|| None::<NaiveTime>);
+            // snippet: let mut date_time = use_signal(|| None::<NaiveDateTime>);
+            // snippet: let mut date_range = use_signal(|| None::<DateRange<NaiveDate>>);
+            // snippet: let mut date_time_range = use_signal(|| None::<DateRange<NaiveDateTime>>);
             Demo {
                 component: "DatePicker",
                 children_text: "",
                 controls: [vec![
                     Control::select("value", KINDS).default("date").code(|_, values| {
-                        match values.str("value").as_str() {
-                            "month" => vec!["value: month() /* Option<NaiveDate> */".to_string(), "level: DateLevel::Month".to_string()],
-                            "year" => vec!["value: year() /* Option<NaiveDate> */".to_string(), "level: DateLevel::Year".to_string()],
-                            "time" => vec!["value: time() /* Option<NaiveTime> */".to_string()],
-                            "date-time" => vec!["value: moment() /* Option<NaiveDateTime> */".to_string()],
-                            "date-range" => vec!["value: range() /* Option<DateRange<NaiveDate>> */".to_string()],
-                            "date-time-range" => vec!["value: range() /* Option<DateRange<NaiveDateTime>> */".to_string()],
-                            _ => vec!["value: day() /* Option<NaiveDate> */".to_string()],
-                        }
+                        // A typed `value` alone does not name `V`: the
+                        // `onchange` is what makes the snippet compile.
+                        let (name, kind, level) = match values.str("value").as_str() {
+                            "month" => ("month", "Option<NaiveDate>", Some("Month")),
+                            "year" => ("year", "Option<NaiveDate>", Some("Year")),
+                            "time" => ("time", "Option<NaiveTime>", None),
+                            "date-time" => ("date_time", "Option<NaiveDateTime>", None),
+                            "date-range" => ("date_range", "Option<DateRange<NaiveDate>>", None),
+                            "date-time-range" => ("date_time_range", "Option<DateRange<NaiveDateTime>>", None),
+                            _ => ("date", "Option<NaiveDate>", None),
+                        };
+                        let mut code = vec![
+                            format!("value: {name}() /* {kind} */"),
+                            format!("onchange: move |next| {name}.set(next)"),
+                        ];
+                        code.extend(level.map(|level| format!("level: DateLevel::{level}")));
+                        code
                     }),
                     Control::slider("size", SIZES).default("md"),
                     Control::toggle("variant", ["analog", "digital"]).default("analog").hidden_when(|values| !has_time(values)).code(|_, values| {

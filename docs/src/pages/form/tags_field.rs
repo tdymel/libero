@@ -132,6 +132,8 @@ pub fn TagsFieldPage() -> Element {
                     " over a real domain type, and it cannot be typed into."
                 }
             },
+            // snippet: let mut topics = use_signal(Vec::<String>::new);
+            // snippet: let mut refused = use_signal(|| None::<String>);
             Demo {
                 component: "TagsField",
                 children_text: "",

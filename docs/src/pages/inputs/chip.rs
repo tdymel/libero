@@ -49,6 +49,7 @@ pub fn ChipPage() -> Element {
                     ", so selection is announced and Space toggles it. Without it, a plain tag."
                 }
             },
+            // snippet: let mut selected = use_signal(|| false);
             Demo {
                 component: "Chip",
                 children_text: "rust",

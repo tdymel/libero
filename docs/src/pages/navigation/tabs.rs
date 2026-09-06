@@ -117,6 +117,7 @@ pub fn TabsPage() -> Element {
                     "since the rsx is what a screen reader cannot use."
                 }
             },
+            // snippet: let mut section = use_signal(|| Section::Account);
             Demo {
                 component: "Tabs",
                 children_text: "",

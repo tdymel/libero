@@ -7,8 +7,9 @@
 //! fence is Rust to rustdoc too, so plain text is fenced `text`.
 //! `tests/all/md_examples.rs` checks that every md file is listed here.
 //!
-//! `PageSnippets` does the same for the snippets the docs pages print from
-//! `const`s, which `tests/all/page_snippets.rs` writes into one md file.
+//! `PageSnippets` does the same for the code the docs pages print, from
+//! `const`s and from each `Demo`'s generated code block, which the docs
+//! crate's `snippets.rs` test writes into one md file.
 
 macro_rules! md_pages {
     ($($page:ident => $file:literal,)*) => {
@@ -19,8 +20,7 @@ macro_rules! md_pages {
     };
 }
 
-/// The `const` snippets the docs pages print, as `tests/all/page_snippets.rs`
-/// writes them out.
+/// The code the docs pages print, as `docs/src/snippets.rs` writes it out.
 #[doc = include_str!("../tests/page_snippets.md")]
 pub struct PageSnippets;
 

@@ -3,6 +3,8 @@ mod doc_page;
 mod doc_section;
 mod prop_doc;
 
+#[cfg(test)]
+pub use demo::DemoCode;
 pub use demo::{Child, Control, Demo, DemoValues, UNSET, Wrap, indent, or_unset};
 pub use doc_page::DocPage;
 pub use doc_section::DocSection;

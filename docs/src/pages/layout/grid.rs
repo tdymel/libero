@@ -206,6 +206,7 @@ pub fn GridPage() -> Element {
                     "carries meaning."
                 }
             },
+            // snippet: item #[component] fn Card(lines: usize, children: Element) -> Element { rsx! { {children} } }
             Demo {
                 component: "GridZone",
                 children_text: "",

@@ -89,6 +89,9 @@ pub fn CodeBlockPage() -> Element {
                     "primary colors."
                 }
             },
+            // snippet: item const RUST_EXAMPLE: &str = "";
+            // snippet: item const PYTHON_EXAMPLE: &str = "";
+            // snippet: item const RUST_DIFF: &str = "";
             Demo {
                     component: "CodeBlock",
                     children_text: "",

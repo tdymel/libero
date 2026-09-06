@@ -110,6 +110,8 @@ pub fn PhoneFieldPage() -> Element {
                     " line."
                 }
             },
+            // snippet: let mut phone = use_signal(String::new);
+            // snippet: item #[component] fn Tricolour(iso: String) -> Element { rsx! {} }
             Demo {
                 component: "PhoneField",
                 children_text: "",

@@ -168,6 +168,7 @@ pub fn FormPage() -> Element {
                     "and none is added until the next submit."
                 }
             },
+            // snippet: ignore - builds on Getting Started's `EmailField` and `NewPasswordFieldset`
             Demo {
                 component: "Form",
                 children_text: "",

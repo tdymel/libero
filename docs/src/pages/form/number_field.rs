@@ -143,6 +143,8 @@ pub fn NumberFieldPage() -> Element {
                     " adds the buttons."
                 }
             },
+            // snippet: let mut quantity = use_signal(|| Some(4i32));
+            // snippet: let mut weight = use_signal(|| Some(1.5f64));
             Demo {
                 component: "NumberField",
                 children_text: "",

@@ -535,6 +535,7 @@ pub fn ComboboxPage() -> Element {
                     ". All it adds is the placement, the arrow keys, and the row theming."
                 }
             },
+            // snippet: item impl Fruit { fn emoji(self) -> &'static str { "" } fn note(self) -> &'static str { "" } }
             Demo {
                 component: "Combobox",
                 children_text: "",

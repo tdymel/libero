@@ -252,6 +252,11 @@ pub fn TreePage() -> Element {
                     " - rows are yours, so their type scale is too."
                 }
             },
+            // snippet: item #[derive(Clone, PartialEq)] struct FileEntry { name: &'static str }
+            // snippet: item impl TreeLabel for FileEntry { fn tree_label(&self) -> String { self.name.to_string() } }
+            // snippet: item fn file_tree() -> Vec<TreeNode<FileEntry>> { Vec::new() }
+            // snippet: item fn file_icon(_: &FileEntry) -> Element { rsx! {} }
+            // snippet: let mut selected = use_signal(|| None::<String>);
             Demo {
                 component: "Tree",
                 children_text: "",

@@ -24,6 +24,8 @@ mod components;
 mod icons;
 mod nav;
 mod pages;
+#[cfg(test)]
+mod snippets;
 
 use icons::SearchIcon;
 use nav::DocsNav;

@@ -68,6 +68,7 @@ pub fn PaginationPage() -> Element {
                     "shareable URLs wires its own links around this component."
                 }
             },
+            // snippet: let mut page = use_signal(|| 1u32);
             Demo {
                 component: "Pagination",
                 children_text: "",

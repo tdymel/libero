@@ -41,6 +41,27 @@ fn label(name: &str) -> String {
 pub struct DemoValues(Vec<(&'static str, String)>, Option<Signal<DemoValues>>);
 
 impl DemoValues {
+    /// Every control at its default.
+    pub fn defaults(controls: &[Control]) -> Self {
+        Self(
+            controls
+                .iter()
+                .map(|control| (control.name, control.default.clone()))
+                .collect(),
+            None,
+        )
+    }
+
+    /// The same values with one control moved, for the snippet test.
+    #[cfg(test)]
+    pub fn with(&self, name: &str, value: &str) -> Self {
+        let mut next = self.clone();
+        if let Some(entry) = next.0.iter_mut().find(|(key, _)| *key == name) {
+            entry.1 = value.to_string();
+        }
+        next
+    }
+
     /// Writes a control's value from the preview, for a component whose own
     /// `onchange` should move the control that drives it.
     pub fn set(&self, name: &str, value: impl Into<String>) {
@@ -172,6 +193,45 @@ fn shown_controls<'a>(controls: &'a [Control], values: &DemoValues) -> Vec<(usiz
     shown
 }
 
+/// Everything the code block is generated from, apart from the values.
+#[derive(Clone)]
+pub struct DemoCode {
+    pub component: String,
+    pub children_text: String,
+    pub children_code: Option<String>,
+    pub code_child: Option<Child>,
+    pub fixed: Vec<String>,
+    pub controls: Vec<Control>,
+    pub wrap: Option<Wrap>,
+    pub child: Option<Child>,
+}
+
+impl DemoCode {
+    /// What the code block prints for these values.
+    pub fn source(&self, values: &DemoValues) -> String {
+        let children_text = match self.child {
+            Some(Child(child)) => child(values),
+            None => self.children_text.clone(),
+        };
+        let children_code = match self.code_child {
+            Some(Child(child)) => Some(child(values)),
+            None => self.children_code.clone(),
+        };
+        let source = super::generate_code(
+            &self.component,
+            &children_text,
+            children_code.as_deref(),
+            &self.fixed,
+            &self.controls,
+            values,
+        );
+        match self.wrap {
+            Some(Wrap(wrap)) => wrap(values, &source),
+            None => source,
+        }
+    }
+}
+
 /// A live example: `render` on the left, a control per prop on the right,
 /// and the rsx those values add up to below.
 #[component]
@@ -201,36 +261,21 @@ pub fn Demo(
     #[props(default)]
     wide_preview: bool,
 ) -> Element {
-    let mut values = use_signal(|| {
-        DemoValues(
-            controls
-                .iter()
-                .map(|control| (control.name, control.default.clone()))
-                .collect(),
-            None,
-        )
-    });
+    let mut values = use_signal(|| DemoValues::defaults(&controls));
 
-    let children_text = match child {
-        Some(Child(child)) => child(&values()),
-        None => children_text.clone(),
+    let code = DemoCode {
+        component,
+        children_text,
+        children_code,
+        code_child,
+        fixed,
+        controls: controls.clone(),
+        wrap,
+        child,
     };
-    let children_code = match code_child {
-        Some(Child(child)) => Some(child(&values())),
-        None => children_code.clone(),
-    };
-    let source = super::generate_code(
-        &component,
-        &children_text,
-        children_code.as_deref(),
-        &fixed,
-        &controls,
-        &values(),
-    );
-    let source = match wrap {
-        Some(Wrap(wrap)) => wrap(&values(), &source),
-        None => source,
-    };
+    #[cfg(test)]
+    use_hook(|| crate::snippets::record(&code));
+    let source = code.source(&values());
     rsx! {
         Box {
             sx: sx()

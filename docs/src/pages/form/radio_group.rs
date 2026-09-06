@@ -133,6 +133,7 @@ pub fn RadioGroupPage() -> Element {
                     "three things."
                 }
             },
+            // snippet: let mut plan = use_signal(|| Some(Plan::Pro));
             Demo {
                 component: "RadioGroup",
                 children_text: "",

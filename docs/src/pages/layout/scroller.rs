@@ -206,6 +206,7 @@ pub fn ScrollerPage() -> Element {
                     "; pick never in the preview to see it."
                 }
             },
+            // snippet: item const TAGS: [&str; 2] = ["rust", "dioxus"];
             Demo {
                 component: "Scroller",
                 children_text: "",

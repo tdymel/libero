@@ -80,6 +80,7 @@ pub fn ColorFieldPage() -> Element {
                     "emitted. The input keeps focus while the dropdown is used, so its blur is what closes it."
                 }
             },
+            // snippet: item const SWATCHES: [&str; 7] = [""; 7];
             Demo {
                 component: "ColorField",
                 children_text: "",

@@ -67,6 +67,7 @@ pub fn PasswordFieldPage() -> Element {
                     "visible is not a state a caller should be able to ask for."
                 }
             },
+            // snippet: let mut value = use_signal(String::new);
             Demo {
                 component: "PasswordField",
                 children_text: "",

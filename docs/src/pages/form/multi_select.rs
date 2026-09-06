@@ -22,10 +22,29 @@ enum Topping {
 "#;
 
 /// Only printed while the custom rows are on - the plain snippet never calls it.
-// snippet: ignore
+// snippet: after TOPPING_ENUM
 const TOPPING_IMPL: &str = r#"impl Topping {
-    fn emoji(self) -> &'static str { /* "🧀", "🍄", ... */ }
-    fn note(self) -> &'static str { /* "Earthy, browns well", ... */ }
+    fn emoji(self) -> &'static str {
+        match self {
+            Self::Cheese => "🧀",
+            Self::Mushrooms => "🍄",
+            Self::Olives => "🫒",
+            Self::Onions => "🧅",
+            Self::Peppers => "🫑",
+            Self::Pineapple => "🍍",
+        }
+    }
+
+    fn note(self) -> &'static str {
+        match self {
+            Self::Cheese => "Melts over everything",
+            Self::Mushrooms => "Earthy, browns well",
+            Self::Olives => "Salty, cures the dough",
+            Self::Onions => "Sharp raw, sweet cooked",
+            Self::Peppers => "Crisp, mild heat",
+            Self::Pineapple => "Divides the table",
+        }
+    }
 }
 
 "#;
@@ -238,6 +257,7 @@ pub fn MultiSelectPage() -> Element {
                     " to remove one - the last, with no chip picked out."
                 }
             },
+            // snippet: let mut value = use_signal(Vec::<Topping>::new);
             Demo {
                 component: "MultiSelect",
                 children_text: "",

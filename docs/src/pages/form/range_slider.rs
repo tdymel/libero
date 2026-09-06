@@ -299,6 +299,10 @@ pub fn RangeSliderPage() -> Element {
                     " short of it."
                 }
             },
+            // snippet: let mut price = use_signal(|| (20.0, 80.0));
+            // snippet: let mut quality = use_signal(|| (Quality::Low, Quality::High));
+            // snippet: let mut last = use_signal(|| SliderChangeEvent::Change((20.0, 80.0)));
+            // snippet: let mut last_quality = use_signal(|| SliderChangeEvent::Change((Quality::Low, Quality::High)));
             Demo {
                 component: "RangeSlider",
                 children_text: "",

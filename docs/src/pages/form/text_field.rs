@@ -66,6 +66,7 @@ pub fn TextFieldPage() -> Element {
                     " put content inside the border, beside the control."
                 }
             },
+            // snippet: let mut value = use_signal(String::new);
             Demo {
                 component: "TextField",
                 children_text: "",

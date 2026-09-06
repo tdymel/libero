@@ -73,6 +73,7 @@ pub fn DataListPage() -> Element {
                     }
                 }
             },
+            // snippet: let phones = ["+49 30 1234567"];
             Demo {
                 component: "DataList",
                 children_text: "",

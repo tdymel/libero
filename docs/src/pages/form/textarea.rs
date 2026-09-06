@@ -55,6 +55,7 @@ pub fn TextareaPage() -> Element {
                     "is its padding plus whatever the control needs."
                 }
             },
+            // snippet: let mut value = use_signal(String::new);
             Demo {
                 component: "Textarea",
                 children_text: "",

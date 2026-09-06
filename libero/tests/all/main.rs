@@ -70,7 +70,6 @@ mod nav_link;
 mod no_has_selector;
 mod notifications;
 mod overlay;
-mod page_snippets;
 mod pagination;
 mod paper;
 mod phone_field;

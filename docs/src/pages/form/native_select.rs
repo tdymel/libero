@@ -87,6 +87,7 @@ pub fn NativeSelectPage() -> Element {
                     " is a real state - the field nobody has filled in yet."
                 }
             },
+            // snippet: let mut value = use_signal(|| Some(FontSize::Small));
             Demo {
                 component: "NativeSelect",
                 children_text: "",

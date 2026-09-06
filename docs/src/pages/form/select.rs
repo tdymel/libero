@@ -21,10 +21,27 @@ enum Fruit {
 "#;
 
 /// Only printed while the custom rows are on - the plain snippet never calls it.
-// snippet: ignore
+// snippet: after FRUIT_ENUM
 const FRUIT_IMPL: &str = r#"impl Fruit {
-    fn emoji(self) -> &'static str { /* "🍎", "🍌", ... */ }
-    fn note(self) -> &'static str { /* "Crisp, keeps for weeks", ... */ }
+    fn emoji(self) -> &'static str {
+        match self {
+            Self::Apple => "🍎",
+            Self::Banana => "🍌",
+            Self::Cherry => "🍒",
+            Self::Mango => "🥭",
+            Self::Passion => "🟣",
+        }
+    }
+
+    fn note(self) -> &'static str {
+        match self {
+            Self::Apple => "Crisp, keeps for weeks",
+            Self::Banana => "Ripens on the counter",
+            Self::Cherry => "In season for a fortnight",
+            Self::Mango => "Ripe when it gives to a thumb",
+            Self::Passion => "Wrinkled is ready",
+        }
+    }
 }
 
 "#;
@@ -207,6 +224,7 @@ pub fn SelectPage() -> Element {
                     "."
                 }
             },
+            // snippet: let mut value = use_signal(|| None::<Fruit>);
             Demo {
                 component: "Select",
                 children_text: "",
