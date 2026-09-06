@@ -8,6 +8,8 @@ memory
 .dioxus-active
 .cargo
 .blitz-fork
+# Written by `cargo test -p docs page_snippets`, compiled by libero's doc-tests
+libero/tests/page_snippets.md
 
 # added by gcma: paths removed from history
 .agents/*

@@ -5,15 +5,15 @@
 //! `fixed:` props, each control's `code` fn and `format!`. This test collects
 //! both and writes them into `libero/tests/page_snippets.md`, wrapped into a
 //! component so each compiles on its own, and `libero/src/md_examples.rs`
-//! compiles that file as doc-tests. When a page changes what it prints, the
-//! file changes with it and this test fails once, so the new file gets
-//! committed.
+//! compiles that file as doc-tests. The file is gitignored: run this test
+//! before libero's doc-tests, or they compile what the pages printed last
+//! time, and in a fresh clone they fail on the missing file.
 //!
 //! The `Demo` code is not read from the source: the test renders every route,
 //! each `Demo` hands `record` what it generates its code from, and the test
-//! calls the same generator the page does. It does so for the defaults, for
-//! every option of every control, and for every option of a control that one
-//! of those states reveals. So what is compiled is what a reader can see.
+//! calls the same generator the page does. It does so for the defaults and
+//! for every option of every control once, a control the defaults hide
+//! included. So what is compiled is what a reader can see.
 //!
 //! Blocks are compiled, not run (`no_run`). A snippet is split at its blank
 //! lines, and each piece is placed by its first line of code: items (`fn`, `enum`,
@@ -385,30 +385,61 @@ fn demos_of(route: Route) -> Vec<DemoCode> {
     DEMOS.with(|demos| std::mem::take(&mut *demos.borrow_mut()))
 }
 
-/// What the code block prints in every state the test visits, each once.
+/// What the code block prints in the states the test visits, each once: the
+/// defaults, then as few states as it takes to show every option of every
+/// control once. Each state moves as many controls as it can at the same time,
+/// so a `Demo` costs about as many states as its longest control has options,
+/// not their sum. A control that the defaults hide is shown by also moving one
+/// other control that reveals it (a mode and its own props).
 fn demo_sources(code: &DemoCode) -> Vec<String> {
     let base = DemoValues::defaults(&code.controls);
-    let moved = |from: &DemoValues, only: &dyn Fn(&str) -> bool| {
-        let mut states = Vec::new();
-        for control in code.controls.iter().filter(|c| only(c.name)) {
-            for option in &control.options {
-                if *option != from.str(control.name) {
-                    states.push(from.with(control.name, option));
-                }
-            }
-        }
-        states
+    let hidden = |state: &DemoValues, name: &str| {
+        code.controls
+            .iter()
+            .find(|c| c.name == name)
+            .is_some_and(|c| c.is_hidden(state))
     };
-    let first = moved(&base, &|_| true);
+    let mut todo: Vec<(&str, &str)> = code
+        .controls
+        .iter()
+        .flat_map(|c| c.options.iter().map(|o| (c.name, o.as_str())))
+        .collect();
     let mut states = vec![base.clone()];
-    for state in &first {
-        // The controls this state reveals, tried in it: a mode's own props.
-        let revealed = |name: &str| {
-            let control = code.controls.iter().find(|c| c.name == name).unwrap();
-            control.is_hidden(&base) && !control.is_hidden(state)
-        };
-        states.push(state.clone());
-        states.extend(moved(state, &revealed));
+    loop {
+        let shown = states.last().unwrap();
+        todo.retain(|(name, option)| hidden(shown, name) || shown.str(name) != *option);
+        let mut state = base.clone();
+        let mut moved: Vec<&str> = Vec::new();
+        for &(name, option) in &todo {
+            if moved.contains(&name) {
+                continue;
+            }
+            let mut next = state.with(name, option);
+            let mut also = None;
+            if hidden(&next, name) {
+                also = code
+                    .controls
+                    .iter()
+                    .filter(|c| c.name != name && !moved.contains(&c.name))
+                    .flat_map(|c| c.options.iter().map(|o| (c.name, o.as_str())))
+                    .find(|(by, to)| !hidden(&next.with(by, to), name));
+                let Some((by, to)) = also else { continue };
+                next = next.with(by, to);
+            }
+            // Only if nothing moved before goes out of sight.
+            if moved.iter().any(|m| hidden(&next, m)) {
+                continue;
+            }
+            state = next;
+            moved.push(name);
+            moved.extend(also.map(|(by, _)| by));
+        }
+        if moved.is_empty() {
+            // What is left no single move reveals; a reader cannot see it
+            // without two, and the test does not look for those.
+            break;
+        }
+        states.push(state);
     }
     let mut sources: Vec<String> = Vec::new();
     for state in &states {
@@ -510,7 +541,7 @@ fn page_snippets_are_current() {
     let mut out = String::from(
         "# Page snippets\n\nGenerated by `docs/src/snippets.rs` from the `const` snippets and \
          the `Demo` code blocks in `docs/src/pages`, and compiled as doc-tests by \
-         `libero/src/md_examples.rs`. Do not edit: change the page, then run \
+         `libero/src/md_examples.rs`. Gitignored; do not edit: change the page, then run \
          `cargo test -p docs page_snippets`.\n",
     );
     let mut problems = Vec::new();
@@ -654,10 +685,9 @@ fn page_snippets_are_current() {
     }
 
     assert!(problems.is_empty(), "{}", problems.join("\n"));
+    // Gitignored, so nothing to commit. Rewritten only when it changed.
     let generated = root.join("../libero/tests/page_snippets.md");
-    let current = std::fs::read_to_string(&generated).unwrap_or_default();
-    if current != out {
+    if std::fs::read_to_string(&generated).ok().as_deref() != Some(&out) {
         std::fs::write(&generated, &out).unwrap();
-        panic!("libero/tests/page_snippets.md was out of date and is now rewritten: commit it");
     }
 }
