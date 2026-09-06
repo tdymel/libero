@@ -40,6 +40,10 @@ pub struct MenuDefaults {
     /// opens, or before a sibling takes over from an open submenu. Long enough
     /// to cross a sibling on the way into a submenu without closing it.
     pub submenu_delay: u32,
+    /// Whether choosing an item closes the menu.
+    pub close_on_select: bool,
+    /// Whether the arrow keys wrap from the last item to the first.
+    pub loop_focus: bool,
 }
 
 impl MenuDefaults {
@@ -86,6 +90,8 @@ impl MenuDefaults {
             },
         ),
         submenu_delay: 150,
+        close_on_select: true,
+        loop_focus: true,
     };
 
     pub fn size_sx(size: Size) -> Sx {

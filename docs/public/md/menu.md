@@ -89,8 +89,8 @@ item stays in the arrow order but cannot be chosen.
 | `children` | `Element` | required | The trigger, carrying `menu.a11y_attributes()`. |
 | `side` | `Side` | `Bottom` | Opening side; flips when it has no room. |
 | `align` | `Align` | `Start` | Alignment along that side. |
-| `close_on_select` | `bool` | `true` | Choosing an item closes the menu. |
-| `loop_focus` | `bool` | `true` | Arrows wrap. |
+| `close_on_select` | `bool` | `theme.menu.close_on_select` (`true`) | Choosing an item closes the menu. |
+| `loop_focus` | `bool` | `theme.menu.loop_focus` (`true`) | Arrows wrap. |
 | `size` | `Size` | `md` | Item height and font size. |
 | `radius` | `Size` | `sm` | Menu corner radius; items nest with it minus the padding. |
 | `disabled` | `bool` | `false` | The trigger opens nothing. |
@@ -106,7 +106,8 @@ item stays in the arrow order but cannot be chosen.
 
 `theme.menu: MenuDefaults` - `size` (`Md`), `radius` (`Sm`), `max_height`
 (`"340px"`), `sizes: Sizes<MenuSizeLevel { font_size, item_height, padding_x,
-label_font_size }>`, `submenu_delay` (`150` ms).
+label_font_size }>`, `submenu_delay` (`150` ms), and the defaults of the
+`close_on_select` and `loop_focus` props (both `true`).
 
 ## CSS variables
 

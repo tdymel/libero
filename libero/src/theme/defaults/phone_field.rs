@@ -17,6 +17,9 @@ pub struct PhoneFieldDefaults {
     /// ISO 3166-1 alpha-2. An unknown code falls back to the first country in
     /// the table rather than panicking.
     pub country: &'static str,
+    /// Offers the country picker. Off pins `country` and draws a static
+    /// prefix in its place.
+    pub country_select: bool,
 }
 
 impl PhoneFieldDefaults {
@@ -24,5 +27,6 @@ impl PhoneFieldDefaults {
         size: Size::Md,
         radius: Size::Sm,
         country: "US",
+        country_select: true,
     };
 }

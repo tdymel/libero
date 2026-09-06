@@ -109,8 +109,8 @@ base_props! {
         #[props(default, into)]
         radius: Input<Size>,
         /// Run the pulse.
-        #[props(default = true)]
-        animate: bool,
+        #[props(default)]
+        animate: Option<bool>,
         /// The real content, when the skeleton wraps it.
         children: Element,
     }
@@ -141,7 +141,10 @@ pub fn Skeleton(props: SkeletonProps) -> Element {
         .states
         .unwrap_or_default()
         .with(VISIBLE_STATE, props.visible)
-        .with(ANIMATE_STATE, props.animate)
+        .with(
+            ANIMATE_STATE,
+            props.animate.unwrap_or(theme.skeleton.animate),
+        )
         .with(CIRCLE_STATE, props.circle)
         .with(radius.radius_state_name(), !props.circle)
         .into();

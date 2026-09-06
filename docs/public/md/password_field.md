@@ -87,7 +87,7 @@ Leave `label` unset only when something else already names the field.
 | `value` | `Option<String>` | - | The secret. `None` leaves the `<input>` uncontrolled. |
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke with the text the field should hold next. |
 | `placeholder` | `String` | - | Shown while the field is empty. |
-| `reveal_button` | `bool` | `true` | Offers the reveal button at all. |
+| `reveal_button` | `bool` | `theme.password_field.reveal_button` (`true`) | Offers the reveal button at all. |
 | `reveal_label` | `String` | `Show password` | Announced on the reveal button while the secret is hidden. |
 | `hide_label` | `String` | `Hide password` | Announced on the reveal button while the secret is shown. |
 | `label` | `Caption` | - | The field's caption, above the control. Names the field through a `for`/`id` pair. |
@@ -105,8 +105,10 @@ sign-up form and `"current-password"` on a sign-in form is worth setting.
 
 ## Theme defaults
 
-None of its own. It renders a `TextField`, so it reads `FieldDefaults` and
-`TextFieldDefaults` - see [TextField](text_field.md).
+`PasswordFieldDefaults { reveal_button }`: `reveal_button` (`true`) is the
+default of the prop. Everything else comes from the `TextField` it renders, so
+it reads `FieldDefaults` and `TextFieldDefaults` - see
+[TextField](text_field.md).
 
 ## Data attributes
 

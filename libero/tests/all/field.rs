@@ -1294,3 +1294,31 @@ fn a_repeated_option_is_checked_once_on_its_first_radio() {
     );
     assert!(checked[1].contains(r#"segment-0""#), "{checked:?}");
 }
+
+static NO_REVEAL: libero::theme::Theme = libero::theme::Theme {
+    password_field: libero::theme::PasswordFieldDefaults {
+        reveal_button: false,
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// An unset `reveal_button` takes the theme's, and a call site still wins.
+#[test]
+fn an_unset_reveal_button_follows_the_theme() {
+    fn themed() -> Element {
+        rsx! {
+            LiberoProvider { theme: &NO_REVEAL, PasswordField { label: "Password" } }
+        }
+    }
+    fn overridden() -> Element {
+        rsx! {
+            LiberoProvider { theme: &NO_REVEAL,
+                PasswordField { label: "Password", reveal_button: true }
+            }
+        }
+    }
+
+    let html = body(&render(themed));
+    assert!(!html.contains("<button"), "{html}");
+    assert!(body(&render(overridden)).contains("<button"));
+}

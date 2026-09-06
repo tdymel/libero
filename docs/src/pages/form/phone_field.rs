@@ -62,7 +62,7 @@ pub fn PhoneFieldPage() -> Element {
                     prop("oncountrychange", "EventHandler<String>")
                         .doc("The user picked another country. `oninput` fires at the same time, with the value under the new dial code."),
                     prop("country_select", "bool")
-                        .default("true")
+                        .default("theme.phone_field.country_select")
                         .doc("Offers the picker at all. Off pins the country, draws a static `+49` in its place, and is one tab stop fewer."),
                     prop("country_label", "Callback<String, String>")
                         .doc("Overrides the English name a country is offered under, during render - so it can read a locale out of context."),

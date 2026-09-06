@@ -161,3 +161,27 @@ fn a_pinned_country_renders_no_picker_at_all() {
     );
     assert!(html.contains("+49"), "the dial code is not drawn:\n{html}");
 }
+
+static PINNED: libero::theme::Theme = libero::theme::Theme {
+    phone_field: libero::theme::PhoneFieldDefaults {
+        country_select: false,
+        ..libero::theme::Theme::DEFAULT.phone_field
+    },
+    ..libero::theme::Theme::DEFAULT
+};
+
+/// An unset `country_select` takes the theme's.
+#[test]
+fn an_unset_country_select_follows_the_theme() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { theme: &PINNED,
+                PhoneField { label: "Mobile", country: "DE", oninput: move |_: String| {} }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    assert!(!html.contains("<button"), "{html}");
+    assert!(html.contains("+49"), "{html}");
+}

@@ -20,6 +20,12 @@ pub struct CodeBlockDefaults {
     pub line_number: &'static str,
     pub copy_hover_background: &'static str,
     pub copy_hover_text: &'static str,
+    /// Draws the bar naming the language above the code.
+    pub header: bool,
+    /// Offers the copy button.
+    pub copyable: bool,
+    /// Draws the line-number gutter.
+    pub line_numbers: bool,
 }
 
 impl CodeBlockDefaults {
@@ -32,6 +38,9 @@ impl CodeBlockDefaults {
         line_number: "#6e7781",
         copy_hover_background: "rgba(31, 35, 40, 0.08)",
         copy_hover_text: "#1f2328",
+        header: true,
+        copyable: true,
+        line_numbers: true,
     };
 }
 

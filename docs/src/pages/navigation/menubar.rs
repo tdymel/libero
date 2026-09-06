@@ -157,7 +157,7 @@ pub fn MenubarPage() -> Element {
                     prop("aria_label", "String")
                         .doc("The bar's accessible name - `role=\"menubar\"` needs one. Required."),
                     prop("loop_focus", "bool")
-                        .default("true")
+                        .default("theme.menubar.loop_focus")
                         .doc("Whether the arrow keys wrap at the ends - along the bar, and down each menu."),
                     prop("side", "Side")
                         .default("Bottom")

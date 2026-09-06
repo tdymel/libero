@@ -137,7 +137,7 @@ native.
 | `oninput` | `EventHandler<String>` | - | Fires per keystroke with the E.164 the field should hold next. |
 | `country` | `String` | `US` | The country the field starts on, ISO 3166-1 alpha-2. Themed. |
 | `oncountrychange` | `EventHandler<String>` | - | The user picked another country. |
-| `country_select` | `bool` | `true` | Offers the picker at all. Off pins the country and draws a static dial code. |
+| `country_select` | `bool` | `theme.phone_field.country_select` (`true`) | Offers the picker at all. Off pins the country and draws a static dial code. |
 | `country_label` | `Callback<String, String>` | - | Overrides a country's English name, during render. |
 | `countries` | `Vec<String>` | - | Narrows the list to these ISO codes, in the order given. |
 | `flag` | `Callback<String, Element>` | - | Draws a flag beside a country. The library ships none. |
@@ -157,7 +157,8 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-`PhoneFieldDefaults { size, radius, country }`. The frame's numbers live on
+`PhoneFieldDefaults { size, radius, country, country_select }`;
+`country_select` (`true`) is the default of the prop. The frame's numbers live on
 `FieldDefaults` and the picker's list on `ComboboxDefaults`, so a phone field
 lines up with a [TextField](text_field.md) above it and with a
 [Select](select.md)'s list below it by construction.

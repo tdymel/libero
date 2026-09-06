@@ -110,8 +110,8 @@ base_props! {
         aria_label: String,
         /// Whether the arrow keys wrap at the ends - along the bar, and down
         /// each menu.
-        #[props(default = true)]
-        loop_focus: bool,
+        #[props(default)]
+        loop_focus: Option<bool>,
         /// Which side of its trigger every menu opens on.
         #[props(default)]
         side: Side,
@@ -228,11 +228,12 @@ pub fn Menubar(props: MenubarProps) -> Element {
         pool.iter().copied().collect()
     };
 
+    let loop_focus = props.loop_focus.unwrap_or(theme.menubar.loop_focus);
     let row = Row {
         bar,
         states,
         disabled: props.menus.iter().map(|menu| menu.disabled).collect(),
-        loop_focus: props.loop_focus,
+        loop_focus,
         current,
     };
 
@@ -346,7 +347,7 @@ pub fn Menubar(props: MenubarProps) -> Element {
                 align: props.align,
                 size,
                 radius,
-                loop_focus: props.loop_focus,
+                loop_focus,
                 disabled,
                 onedge,
                 button {

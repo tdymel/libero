@@ -24,7 +24,7 @@ pub fn PasswordFieldPage() -> Element {
                     prop("placeholder", "String")
                         .doc("Shown while the field is empty."),
                     prop("reveal_button", "bool")
-                        .default("true")
+                        .default("theme.password_field.reveal_button")
                         .doc("Offers the reveal button at all. A confirmation field, or one beside a revealed twin, has nothing to add."),
                     prop("reveal_label", "String")
                         .default("Show password")

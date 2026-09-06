@@ -230,3 +230,27 @@ fn a_visible_skeleton_hides_its_children_and_shows_only_the_grey() {
         "no cover layer: {html}"
     );
 }
+
+static STILL: Theme = Theme {
+    skeleton: SkeletonDefaults {
+        animate: false,
+        ..Theme::DEFAULT.skeleton
+    },
+    ..Theme::DEFAULT
+};
+
+/// An unset `animate` takes the theme's.
+#[test]
+fn an_unset_animate_follows_the_theme() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { theme: &STILL, Skeleton { Button { "Save" } } }
+        }
+    }
+
+    let attributes = attributes_of(&body(&render(app)), "div");
+    assert_eq!(
+        attributes["data-state"], "visible radius-sm",
+        "{attributes:?}"
+    );
+}

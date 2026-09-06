@@ -112,10 +112,10 @@ color.
 |---|---|---|---|
 | `source` | `String` | required | The text to render, highlighted when `language` names a grammar this build compiles in. Line numbers and the copy button need a real string, so this is the only way to pass content. |
 | `language` | `Language` | - | Unrecognized values fall back to no highlighting rather than a guess. |
-| `header` | `bool` | `true` | A bar above the code naming the language, or "Unrecognized language" if it isn't in the catalog or its `code-lang-*` feature is off. |
-| `copyable` | `bool` | `true` | Without `header`, floats in the top-right corner. |
+| `header` | `bool` | `theme.code_block.header` (`true`) | A bar above the code naming the language, or "Unrecognized language" if it isn't in the catalog or its `code-lang-*` feature is off. |
+| `copyable` | `bool` | `theme.code_block.copyable` (`true`) | Without `header`, floats in the top-right corner. |
 | `max_lines` | `Option<u32>` | - | Caps the visible height to roughly this many lines and scrolls past it; unset grows to fit. Long lines always scroll horizontally regardless. |
-| `line_numbers` | `bool` | `true` | Toggles the line-number gutter. |
+| `line_numbers` | `bool` | `theme.code_block.line_numbers` (`true`) | Toggles the line-number gutter. |
 | `highlight_lines` | `Option<String>` | - | 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed segments are skipped, not rejected. A range past the last line stops at it. |
 | `diff` | `bool` | `false` | Reads `source` as a unified diff: a leading `+`/`-` colors the row and is stripped from what's shown, highlighted and copied. Wins over `highlight_lines`. |
 
@@ -136,6 +136,9 @@ derive from the theme's primary, success and error.
 | `line_number` | `&'static str` | Gutter digits (`#8c959f`). |
 | `copy_hover_background` | `&'static str` | Copy button background on hover. |
 | `copy_hover_text` | `&'static str` | Copy button text on hover. |
+| `header` | `bool` | Default `header` when the prop is omitted (`true`). |
+| `copyable` | `bool` | Default `copyable` when the prop is omitted (`true`). |
+| `line_numbers` | `bool` | Default `line_numbers` when the prop is omitted (`true`). |
 
 ## CSS variables
 

@@ -30,6 +30,8 @@ pub struct SkeletonDefaults {
     pub color: ColorValue,
     /// One full pulse, any CSS `<time>`.
     pub duration: &'static str,
+    /// Runs the pulse.
+    pub animate: bool,
 }
 
 impl SkeletonDefaults {
@@ -37,6 +39,7 @@ impl SkeletonDefaults {
         radius: Size::Sm,
         color: ColorValue::Shade(Color::Grey, ColorShade::S3),
         duration: "1500ms",
+        animate: true,
     };
 
     pub fn radius_sx(radius: Size) -> Sx {

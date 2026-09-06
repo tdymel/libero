@@ -116,8 +116,8 @@ field_props! {
         oncountrychange: Option<EventHandler<String>>,
         /// Offers the picker at all. Off pins the country and draws a static
         /// `+49` in its place, which is also one tab stop fewer.
-        #[props(default = true)]
-        country_select: bool,
+        #[props(default)]
+        country_select: Option<bool>,
         /// Overrides the English name a country is offered under, during
         /// render - so it can read a locale out of context. The library ships
         /// no translations.
@@ -387,7 +387,10 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             },
         );
 
-    let leading = match props.country_select {
+    let leading = match props
+        .country_select
+        .unwrap_or(theme.phone_field.country_select)
+    {
         true => Some(rsx! {
             ComboboxCore {
                 rows,

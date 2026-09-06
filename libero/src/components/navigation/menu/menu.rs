@@ -133,11 +133,11 @@ base_props! {
         #[props(default)]
         align: Align,
         /// Whether choosing an item closes the menu.
-        #[props(default = true)]
-        close_on_select: bool,
+        #[props(default)]
+        close_on_select: Option<bool>,
         /// Whether the arrow keys wrap from the last item to the first.
-        #[props(default = true)]
-        loop_focus: bool,
+        #[props(default)]
+        loop_focus: Option<bool>,
         /// Item height and font size.
         #[props(default, into)]
         size: Input<Size>,
@@ -255,8 +255,10 @@ pub fn Menu(props: MenuProps) -> Element {
             align: props.align,
             size: props.size.copied_or(theme.menu.size),
             radius: props.radius.copied_or(theme.menu.radius),
-            loop_focus: props.loop_focus,
-            close_on_select: props.close_on_select,
+            loop_focus: props.loop_focus.unwrap_or(theme.menu.loop_focus),
+            close_on_select: props
+                .close_on_select
+                .unwrap_or(theme.menu.close_on_select),
             depth: 0,
             attributes: props.attributes,
             class: props.class,

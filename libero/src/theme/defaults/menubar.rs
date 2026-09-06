@@ -30,6 +30,9 @@ pub struct MenubarDefaults {
     /// Between two triggers.
     pub gap: &'static str,
     pub sizes: Sizes<MenubarSizeLevel>,
+    /// Whether the arrow keys wrap at the ends - along the bar, and down
+    /// each menu.
+    pub loop_focus: bool,
 }
 
 impl MenubarDefaults {
@@ -69,6 +72,7 @@ impl MenubarDefaults {
                 padding_y: "7px",
             },
         ),
+        loop_focus: true,
     };
 
     pub fn size_sx(size: Size) -> Sx {

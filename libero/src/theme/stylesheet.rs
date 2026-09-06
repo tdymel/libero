@@ -190,6 +190,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         cascader: _,
         autocomplete: _,
         segmented_control: _,
+        password_field: _,
         color_field: _,
         scroll_area: _,
         tree: _,

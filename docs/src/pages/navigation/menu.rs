@@ -191,10 +191,10 @@ pub fn MenuPage() -> Element {
                         .default("Start")
                         .doc("Where the menu lines up along that side."),
                     prop("close_on_select", "bool")
-                        .default("true")
+                        .default("theme.menu.close_on_select")
                         .doc("Whether choosing an item closes the menu."),
                     prop("loop_focus", "bool")
-                        .default("true")
+                        .default("theme.menu.loop_focus")
                         .doc("Whether the arrow keys wrap from the last item to the first."),
                     prop("size", "Size")
                         .default("md")

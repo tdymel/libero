@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{ActionIcon, Input, common::field_props, form::TextField},
+    hooks::use_theme,
     sx::ThemeAwareValue,
 };
 
@@ -29,8 +30,8 @@ field_props! {
         /// Offers the reveal button at all. On by default - a password nobody
         /// can read back is the field's worst papercut - but a confirmation
         /// field, or one next to a revealed twin, has nothing to add.
-        #[props(default = true)]
-        reveal_button: bool,
+        #[props(default)]
+        reveal_button: Option<bool>,
         /// Announced on the reveal button while the secret is hidden.
         #[props(default, into)]
         reveal_label: Option<String>,
@@ -52,6 +53,9 @@ field_props! {
 #[component]
 pub fn PasswordField(props: PasswordFieldProps) -> Element {
     let mut revealed = use_signal(|| false);
+    let reveal_button = props
+        .reveal_button
+        .unwrap_or(use_theme().password_field.reveal_button);
 
     let disabled = props.disabled.unwrap_or(false);
     let hidden_label = props
@@ -96,7 +100,7 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
             sx: props.sx,
             states: props.states,
             attributes: props.attributes,
-            trailing: props.reveal_button.then(|| rsx! {
+            trailing: reveal_button.then(|| rsx! {
                 ActionIcon {
                     aria_label,
                     size,

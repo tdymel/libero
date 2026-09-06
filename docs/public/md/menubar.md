@@ -62,7 +62,7 @@ leaves the bar. Everything else is `Menu`'s.
 |---|---|---|---|
 | `menus` | `Vec<MenubarMenu>` | required | The top-level menus, in order. |
 | `aria_label` | `String` | required | The bar's accessible name. |
-| `loop_focus` | `bool` | `true` | Arrows wrap - along the bar and down each menu. |
+| `loop_focus` | `bool` | `theme.menubar.loop_focus` (`true`) | Arrows wrap - along the bar and down each menu. |
 | `side` | `Side` | `Bottom` | Opening side of every menu; flips when it has no room. |
 | `align` | `Align` | `Start` | Alignment along that side. |
 | `size` | `Size` | `md` | Trigger font and padding, and each menu's item size. |
@@ -76,8 +76,9 @@ and `.disabled(bool)`. `items` is `Menu`'s `Vec<MenuEntry>`.
 ## Theme defaults
 
 `theme.menubar: MenubarDefaults` - `size` (`Md`), `radius` (`Sm`), `gap`
-(`"2px"`), `sizes: Sizes<MenubarSizeLevel { font_size, padding_x, padding_y }>`.
-The menus read `theme.menu`.
+(`"2px"`), `sizes: Sizes<MenubarSizeLevel { font_size, padding_x, padding_y }>`,
+`loop_focus` (`true`), the default of the prop. The menus read `theme.menu`,
+but take the bar's resolved `loop_focus`.
 
 ## CSS variables
 

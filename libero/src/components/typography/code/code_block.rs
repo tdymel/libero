@@ -11,7 +11,7 @@ use crate::{
         common::{base_props, focus_ring_sx, variables},
         layout::use_box,
     },
-    hooks::{Clipboard, use_clipboard, use_css, use_element},
+    hooks::{Clipboard, use_clipboard, use_css, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, Sx, sx},
     theme::{
@@ -213,19 +213,19 @@ base_props! {
         /// A bar above the code naming the language, or "Unrecognized
         /// language" if it isn't in the catalog or its `code-lang-*` feature
         /// is off.
-        #[props(default = true)]
-        header: bool,
+        #[props(default)]
+        header: Option<bool>,
         /// Without `header`, floats in the top-right corner.
-        #[props(default = true)]
-        copyable: bool,
+        #[props(default)]
+        copyable: Option<bool>,
         /// Caps the visible height to roughly this many lines and scrolls
         /// past it; unset grows to fit. Long lines always scroll horizontally
         /// regardless.
         #[props(default)]
         max_lines: Option<u32>,
         /// Toggles the line-number gutter.
-        #[props(default = true)]
-        line_numbers: bool,
+        #[props(default)]
+        line_numbers: Option<bool>,
         /// 1-indexed lines to emphasize, e.g. `"1,5-7,10"`. Malformed
         /// segments are skipped, not rejected. A range past the last line
         /// stops at it.
@@ -407,6 +407,10 @@ fn CopyButton(source: String, floating: bool) -> Element {
 #[component]
 pub fn CodeBlock(props: CodeBlockProps) -> Element {
     use_token_theme();
+    let theme = use_theme();
+    let header = props.header.unwrap_or(theme.code_block.header);
+    let copyable = props.copyable.unwrap_or(theme.code_block.copyable);
+    let line_numbers = props.line_numbers.unwrap_or(theme.code_block.line_numbers);
 
     let language = props.language.as_ref().copied();
     // Everything shown or copied uses the stripped version, so the two match.
@@ -427,10 +431,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .states(&props.states)
         .prepare();
     // `None` registers nothing, so a headerless block pays only the hook slot.
-    let header_class = use_css(
-        props.header.then_some(&CODE_BLOCK_HEADER_SX),
-        CssLayer::Framework,
-    );
+    let header_class = use_css(header.then_some(&CODE_BLOCK_HEADER_SX), CssLayer::Framework);
 
     // Diff statuses need the markers still present.
     let diff_statuses: Vec<Option<DiffStatus>> = if props.diff {
@@ -446,7 +447,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
     let label = language
         .map(Language::label)
         .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
-    let copy_source = props.copyable.then(|| display_source.clone());
+    let copy_source = copyable.then(|| display_source.clone());
     let highlighted_lines = props
         .highlight_lines
         .as_deref()
@@ -502,12 +503,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .attr("role", scrolls.then_some("region"))
         .attr("aria-label", scrolls.then_some(scroll_label));
     let code = match &lines {
-        Some(lines) => code_lines(
-            lines,
-            props.line_numbers,
-            &highlighted_lines,
-            &diff_statuses,
-        ),
+        Some(lines) => code_lines(lines, line_numbers, &highlighted_lines, &diff_statuses),
         None => rsx! {
             Box {
                 component: "pre",
@@ -524,7 +520,7 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         HtmlTag::Div,
         props.attributes,
         rsx! {
-            if props.header {
+            if header {
                 div { class: header_class,
                     span { {label} }
                     if let Some(copy_source) = copy_source.clone() {

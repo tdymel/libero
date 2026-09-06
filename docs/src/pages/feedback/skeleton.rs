@@ -83,7 +83,7 @@ pub fn SkeletonPage() -> Element {
                     .default("sm")
                     .doc("Corner. Ignored when `circle`."),
                 prop("animate", "bool")
-                    .default("true")
+                    .default("theme.skeleton.animate")
                     .doc("Run the pulse. Under `prefers-reduced-motion: reduce` it stops half-way."),
                 prop("children", "Element")
                     .doc("The real content, when the skeleton wraps it."),

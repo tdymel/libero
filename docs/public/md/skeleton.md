@@ -112,7 +112,7 @@ in and shows through the skeleton. Do not put one under a visible skeleton.
 | `width` | `ThemeAwareValue` | `100%` | A CSS length. Ignored when `circle`. |
 | `circle` | `bool` | `false` | Width equals `height`, corners fully round. Without `height`, as wide as the children. |
 | `radius` | `Size` | `sm` | Corner. Ignored when `circle`. |
-| `animate` | `bool` | `true` | Run the pulse. |
+| `animate` | `bool` | `theme.skeleton.animate` (`true`) | Run the pulse. |
 | `children` | `Element` | - | The real content, when the skeleton wraps it. |
 
 Like every component, `Skeleton` also takes the shared props `sx`, `class`,
@@ -127,6 +127,7 @@ Like every component, `Skeleton` also takes the shared props `sx`, `class`,
 | `radius` | `Size` | `Sm`. |
 | `color` | `ColorValue` | The grey: `grey.3`. |
 | `duration` | `&'static str` | One full pulse: `1500ms`. |
+| `animate` | `bool` | Default `animate` when the prop is omitted (`true`). |
 
 ## CSS variables
 
