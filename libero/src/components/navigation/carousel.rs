@@ -1134,128 +1134,126 @@ pub fn Carousel(props: CarouselProps) -> Element {
     };
     let strip_states: Input<States> = states().with(orientation.state_name(), true).into();
 
-    rsx! {
-        {root.render(HtmlTag::Section, props.attributes, rsx! {
-            if !empty {
-                VisuallyHidden {
-                    role: "status",
-                    // Off while it rotates on its own: an unattended change is not
-                    // worth interrupting a screen reader for, and it becomes
-                    // `polite` the moment the rotation stops. WCAG 2.2.2.
-                    aria_live: if running { "off" } else { "polite" },
-                    aria_atomic: "true",
-                    "{status}"
-                }
+    root.render(HtmlTag::Section, props.attributes, rsx! {
+        if !empty {
+            VisuallyHidden {
+                role: "status",
+                // Off while it rotates on its own: an unattended change is not
+                // worth interrupting a screen reader for, and it becomes
+                // `polite` the moment the rotation stops. WCAG 2.2.2.
+                aria_live: if running { "off" } else { "polite" },
+                aria_atomic: "true",
+                "{status}"
             }
-            Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
-                {track_element}
-                if controls {
-                    Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states.clone(),
-                        Box {
-                            component: "button",
-                            r#type: "button",
-                            framework_sx: &CAROUSEL_CONTROL_SX,
-                            states: control_states(at_start),
-                            aria_controls: track_id_value.clone(),
-                            aria_disabled: at_start.to_string(),
-                            aria_label: theme.carousel.previous_label,
-                            onclick: move |_| match (looping, current()) {
-                                (true, 0) => nav.go_to(count.saturating_sub(1)),
-                                (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
-                                _ => {}
-                            },
-                            {chevron(match orientation {
-                                Orientation::Horizontal => "m15 18-6-6 6-6",
-                                Orientation::Vertical => "m18 15-6-6-6 6",
-                            })}
-                        }
-                        Box {
-                            component: "button",
-                            r#type: "button",
-                            framework_sx: &CAROUSEL_CONTROL_SX,
-                            states: control_states(at_end),
-                            aria_controls: track_id_value.clone(),
-                            aria_disabled: at_end.to_string(),
-                            aria_label: theme.carousel.next_label,
-                            onclick: move |_| match looping && current() >= count.saturating_sub(1) {
-                                true => nav.go_to(0),
-                                false if !at_end => nav.go_to(current() + 1),
-                                false => {}
-                            },
-                            {chevron(match orientation {
-                                Orientation::Horizontal => "m9 18 6-6-6-6",
-                                Orientation::Vertical => "m6 9 6 6 6-6",
-                            })}
-                        }
+        }
+        Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
+            {track_element}
+            if controls {
+                Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states.clone(),
+                    Box {
+                        component: "button",
+                        r#type: "button",
+                        framework_sx: &CAROUSEL_CONTROL_SX,
+                        states: control_states(at_start),
+                        aria_controls: track_id_value.clone(),
+                        aria_disabled: at_start.to_string(),
+                        aria_label: theme.carousel.previous_label,
+                        onclick: move |_| match (looping, current()) {
+                            (true, 0) => nav.go_to(count.saturating_sub(1)),
+                            (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
+                            _ => {}
+                        },
+                        {chevron(match orientation {
+                            Orientation::Horizontal => "m15 18-6-6 6-6",
+                            Orientation::Vertical => "m18 15-6-6-6 6",
+                        })}
+                    }
+                    Box {
+                        component: "button",
+                        r#type: "button",
+                        framework_sx: &CAROUSEL_CONTROL_SX,
+                        states: control_states(at_end),
+                        aria_controls: track_id_value.clone(),
+                        aria_disabled: at_end.to_string(),
+                        aria_label: theme.carousel.next_label,
+                        onclick: move |_| match looping && current() >= count.saturating_sub(1) {
+                            true => nav.go_to(0),
+                            false if !at_end => nav.go_to(current() + 1),
+                            false => {}
+                        },
+                        {chevron(match orientation {
+                            Orientation::Horizontal => "m9 18 6-6-6-6",
+                            Orientation::Vertical => "m6 9 6 6 6-6",
+                        })}
                     }
                 }
             }
-            if props.autoplay && !empty {
-                Box {
-                    component: "button",
-                    r#type: "button",
-                    framework_sx: &CAROUSEL_PAUSE_SX,
-                    aria_label: theme.carousel.pause_label,
-                    aria_pressed: paused().to_string(),
-                    onclick: move |_| paused.toggle(),
-                    {pause_icon(paused())}
-                }
+        }
+        if props.autoplay && !empty {
+            Box {
+                component: "button",
+                r#type: "button",
+                framework_sx: &CAROUSEL_PAUSE_SX,
+                aria_label: theme.carousel.pause_label,
+                aria_pressed: paused().to_string(),
+                onclick: move |_| paused.toggle(),
+                {pause_icon(paused())}
             }
-            if indicators {
-                Box { framework_sx: &CAROUSEL_INDICATORS_SX, states: strip_states,
-                    for index in low..=high {
-                        Box {
-                            key: "{index}",
-                            component: "button",
-                            r#type: "button",
-                            framework_sx: &CAROUSEL_INDICATOR_SX,
-                            states: states()
-                                .with(orientation.state_name(), true)
-                                .with("current", index == current()),
-                            aria_label: CarouselDefaults::format_label(
-                                theme.carousel.indicator_label,
-                                index - low,
-                                high - low + 1,
-                            ),
-                            aria_current: (index == current()).then(|| "true".to_string()),
-                            // Roving: one tab stop for the whole strip. The
-                            // arrows move the slide and the focus with it -
-                            // leaving focus on a `tabindex="-1"` dot would
-                            // strand the keyboard there.
-                            id: indicator_id(&track_id(), index),
-                            tabindex: if index == current() { "0" } else { "-1" },
-                            onclick: move |_| nav.go_to(index),
-                            onkeydown: move |event: Event<KeyboardData>| {
-                                // Wraps only when the carousel does. Wrapping
-                                // here unconditionally made the same key wrap
-                                // through the dots and clamp through the
-                                // track, so the two disagreed about whether
-                                // this carousel loops.
-                                let target = match event.key() {
-                                    Key::ArrowRight | Key::ArrowDown => match index >= high {
-                                        true if looping => low,
-                                        true => high,
-                                        false => index + 1,
-                                    },
-                                    Key::ArrowLeft | Key::ArrowUp => match index <= low {
-                                        true if looping => high,
-                                        true => low,
-                                        false => index - 1,
-                                    },
-                                    Key::Home => low,
-                                    Key::End => high,
-                                    _ => return,
-                                };
-                                event.prevent_default();
-                                nav.go_to(target);
-                                focus_indicator(root_handle, &track_id(), target);
-                            },
-                        }
+        }
+        if indicators {
+            Box { framework_sx: &CAROUSEL_INDICATORS_SX, states: strip_states,
+                for index in low..=high {
+                    Box {
+                        key: "{index}",
+                        component: "button",
+                        r#type: "button",
+                        framework_sx: &CAROUSEL_INDICATOR_SX,
+                        states: states()
+                            .with(orientation.state_name(), true)
+                            .with("current", index == current()),
+                        aria_label: CarouselDefaults::format_label(
+                            theme.carousel.indicator_label,
+                            index - low,
+                            high - low + 1,
+                        ),
+                        aria_current: (index == current()).then(|| "true".to_string()),
+                        // Roving: one tab stop for the whole strip. The
+                        // arrows move the slide and the focus with it -
+                        // leaving focus on a `tabindex="-1"` dot would
+                        // strand the keyboard there.
+                        id: indicator_id(&track_id(), index),
+                        tabindex: if index == current() { "0" } else { "-1" },
+                        onclick: move |_| nav.go_to(index),
+                        onkeydown: move |event: Event<KeyboardData>| {
+                            // Wraps only when the carousel does. Wrapping
+                            // here unconditionally made the same key wrap
+                            // through the dots and clamp through the
+                            // track, so the two disagreed about whether
+                            // this carousel loops.
+                            let target = match event.key() {
+                                Key::ArrowRight | Key::ArrowDown => match index >= high {
+                                    true if looping => low,
+                                    true => high,
+                                    false => index + 1,
+                                },
+                                Key::ArrowLeft | Key::ArrowUp => match index <= low {
+                                    true if looping => high,
+                                    true => low,
+                                    false => index - 1,
+                                },
+                                Key::Home => low,
+                                Key::End => high,
+                                _ => return,
+                            };
+                            event.prevent_default();
+                            nav.go_to(target);
+                            focus_indicator(root_handle, &track_id(), target);
+                        },
                     }
                 }
             }
-        })?}
-    }
+        }
+    })
 }
 
 #[cfg(test)]
