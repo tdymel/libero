@@ -270,8 +270,8 @@ out, both measured in Chromium:
 
 - Leave the rule unlayered. Unlayered beats every layer, including `lsx-base` -
   which is what moving the reset into a layer bought you.
-- Declare the whole order yourself, in a stylesheet the browser sees first.
-  Then you decide where your layers sit:
+- Declare the whole order yourself, first in a stylesheet the browser sees
+  before Libero's statement. Then you decide where your layers sit:
 
 ```css
 @layer lsx-base, app-base, lsx-framework, lsx-user-static, lsx-user-custom, app-overrides;
@@ -280,14 +280,21 @@ out, both measured in Chromium:
 That is what `lsx-base` is for: a rank you can sit above without having to
 outrank a component's own styling.
 
-A utility framework like Tailwind composes with Libero, but which one wins
-depends on its version. Tailwind v3's utilities are unlayered, so a
-`class: "mt-4"` outranks every Libero layer. Tailwind v4 puts them in
-`@layer utilities`, and layers rank by first mention: a stylesheet the browser
-sees before Libero's statement has its layers sorted first, so there Libero's
-own layers win and an unlayered rule or `!important` is the way out. That works
-in theory and we do not test it - using Tailwind alongside Libero is
-unsupported, not forbidden.
+A utility framework like Tailwind composes with Libero once you declare the
+order. Tailwind v3's utilities are unlayered, so a `class: "mt-4"` outranks
+every Libero layer. Tailwind v4 layers everything - `theme`, `base` (its
+reset), `components`, `utilities` - and left alone those rank below Libero's:
+its reset leaves Libero's components alone, but a utility class on one loses.
+Put this first in your CSS, before `@import "tailwindcss"`, so the reset stays
+under Libero's components and the utilities win over them:
+
+```css
+@layer theme, base, lsx-base, lsx-framework, lsx-user-static, lsx-user-custom, components, utilities;
+```
+
+Measured in Chromium on the Button page: with that line every Button kept its
+fill and `bg-red-500` won on all 15; without it, `bg-red-500` won on none.
+Using Tailwind alongside Libero is unsupported, not forbidden.
 
 ## Static sx
 

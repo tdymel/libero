@@ -116,6 +116,10 @@ const LAYER_ORDER: &str = "@layer lsx-base, lsx-framework, lsx-user-static, lsx-
 const APP_LAYER_ORDER: &str =
     "@layer lsx-base, app-base, lsx-framework, lsx-user-static, lsx-user-custom, app-overrides;";
 
+/// The order a Tailwind v4 app declares: its reset under Libero's components,
+/// its utilities over them.
+const TAILWIND_LAYER_ORDER: &str = "@layer theme, base, lsx-base, lsx-framework, lsx-user-static, lsx-user-custom, components, utilities;";
+
 const STATIC_SX: &str = r#"static CARD_SX: StaticSx = StaticSx::new(|| {
     sx().padding("md")
         .border_radius("md")
@@ -537,24 +541,30 @@ pub fn StylingPage() -> Element {
                     Code { source: "lsx-base" }
                     ". Leave the rule unlayered and it wins - that is what moving the "
                     "reset into a layer bought you - or declare the whole order yourself, "
-                    "in a stylesheet the browser sees first, and put your own layers "
+                    "first in a stylesheet the browser sees before Libero's, and put your own layers "
                     "wherever you want them. Both measured in Chromium."
                 }
                 CodeBlock { source: APP_LAYER_ORDER, language: "css" }
                 Text {
-                    "A utility framework like Tailwind composes with Libero, but which one "
-                    "wins depends on its version. Tailwind v3's utilities are unlayered, so "
-                    "a "
+                    "A utility framework like Tailwind composes with Libero once you declare "
+                    "the order. Tailwind v3's utilities are unlayered, so a "
                     Code { source: "class: \"mt-4\"" }
-                    " outranks every Libero layer. Tailwind v4 puts them in "
-                    Code { source: "@layer utilities" }
-                    ", and layers rank by first mention: a stylesheet the browser sees "
-                    "before Libero's statement has its layers sorted first, so there "
-                    "Libero's own layers win and an unlayered rule or "
-                    Code { source: "!important" }
-                    " is the way out. That works in theory and we do not test it - using "
-                    "Tailwind alongside Libero is unsupported, not forbidden."
+                    " outranks every Libero layer. Tailwind v4 layers everything - its reset "
+                    "in "
+                    Code { source: "base" }
+                    ", its utilities in "
+                    Code { source: "utilities" }
+                    " - and left alone those rank below Libero's: the reset leaves Libero's "
+                    "components alone, but a utility class on one loses. Put this first in "
+                    "your CSS, before "
+                    Code { source: "@import \"tailwindcss\"" }
+                    ", so the reset stays under Libero's components and the utilities win "
+                    "over them. Measured in Chromium: every Button kept its fill and "
+                    Code { source: "bg-red-500" }
+                    " won on all of them. Using Tailwind alongside Libero is unsupported, "
+                    "not forbidden."
                 }
+                CodeBlock { source: TAILWIND_LAYER_ORDER, language: "css" }
             }
 
             DocSection {
