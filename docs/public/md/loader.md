@@ -83,7 +83,7 @@ fn Results() -> Element {
 
 Both halves matter. Some screen readers skip a live region that mounts with its
 text already in it, and some hold back changes inside an `aria-busy` subtree
-until it is no longer busy - by then the loader is gone. `ComboboxCore` renders
+until it is no longer busy - by then the loader is gone. `Combobox` renders
 its loading status this way.
 
 ## Accessibility

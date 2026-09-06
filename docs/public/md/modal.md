@@ -153,6 +153,26 @@ fn CancelButton() -> Element {
 }
 ```
 
+`use_modal_close()` is a shorthand for the context every modal provides to its
+content, `ModalContext`, whose `close()` does the same. Reach for the context
+when a component has to ask whether it is inside a modal at all:
+
+```rust
+use dioxus::prelude::*;
+use libero::{components::Button, context::ModalContext};
+
+#[component]
+fn CloseIfModal() -> Element {
+    let Some(modal) = try_use_context::<ModalContext>() else {
+        return rsx! {};
+    };
+
+    rsx! {
+        Button { variant: "text", onclick: move |_| modal.close(), "Close" }
+    }
+}
+```
+
 ## Accessibility
 
 Escape or a backdrop click dismisses the modal, settling the `Opening` with
@@ -210,6 +230,16 @@ pub fn use_modal_close() -> Callback<()>
 
 Closes the modal the calling component is rendered in. For a component factored
 out of the render closure, which cannot capture the `ModalScope`.
+
+### `ModalContext`
+
+Provided by every `use_modal` to what it renders; `use_context::<ModalContext>()`
+inside, `try_use_context` where a component may or may not be in a modal.
+`Copy`.
+
+| Method | Returns | Description |
+|---|---|---|
+| `close()` | `()` | Dismisses the modal - the same outcome as `ModalScope::close`. Deferred a microtask, so it is safe from a click inside the modal. |
 
 ## Theme defaults
 

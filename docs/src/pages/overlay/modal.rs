@@ -222,7 +222,13 @@ pub fn ModalPage() -> Element {
                     " also closes itself from its own header button. Only a component factored "
                     "out of the closure needs "
                     Code { source: "use_modal_close()" }
-                    "."
+                    ". It is a shorthand for the context every modal provides to its content, "
+                    Code { source: "ModalContext" }
+                    ", whose "
+                    Code { source: "close()" }
+                    " does the same; reach for the context when a component has to ask "
+                    Code { source: "try_use_context::<ModalContext>()" }
+                    " whether it is inside a modal at all."
                 }
                 Text {
                     "Escape and a backdrop click dismiss it, settling the "

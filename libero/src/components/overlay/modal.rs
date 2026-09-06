@@ -50,7 +50,7 @@ base_props! {
 /// A focus-trapped, dimmed layer that locks scroll and stacks above earlier
 /// modals. Render it conditionally - Escape/backdrop only *request* a close
 /// via `onclose`. Descendants close it via
-/// [`crate::hooks::use_modal_context`].
+/// [`crate::hooks::use_modal_close`] or [`ModalContext`].
 ///
 /// No opinion on content - pass `role`/`aria-modal`/`aria-label` yourself.
 #[component]

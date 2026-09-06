@@ -15,6 +15,8 @@ fetch only the file you need.
 - [Styling](styling.md): The `sx` styling builder every component takes - theme values, states, selectors, responsive, media and container queries, cascade layers and `StaticSx`.
 - [Theming](theming.md): How a Libero theme is defined - one plain struct of colors, scales and per-component defaults, emitted once as CSS custom properties.
 - [Performance](performance.md): What a libero component actually costs per render, measured by ablation - scope and dynamic-node counts, memoization boundaries, and how to measure it yourself.
+- [Hooks](hooks.md): The public hooks libero's components are built from - `use_drag` for pointer drags, `use_clipboard` for copying, and `use_root_id` for ids that respect a caller's own.
+- [Platform](platform.md): The platform traits and their accessors - timers, document-level keys, scroll, focus and viewport, the clock - each an `Option` that is `None` where the renderer cannot do it.
 
 ## A11y
 

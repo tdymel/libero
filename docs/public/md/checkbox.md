@@ -78,7 +78,7 @@ prevent. The state is ours; ARIA carries it to assistive tech.
 
 The control sits in column one, the label in column two, and the description,
 helper and status stack under the label rather than under the box. That is
-`use_field`'s inline layout, shared by every field with no frame.
+the inline layout every field with no frame shares.
 
 ## Card
 

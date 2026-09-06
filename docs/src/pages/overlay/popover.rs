@@ -12,22 +12,6 @@ use libero::{
 const GAPS: [&str; 4] = ["0", "4", "8", "16"];
 
 // snippet: ignore - pieces of a component built on `use_popover`
-const CALL_ORDER: &str = r#"// use_popover first: the style it returns is what the box renders with.
-let anchor = use_element();
-let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
-
-// Then the box. The other way round it styles itself with last
-// render's placement.
-let dropdown = use_box()
-    .framework_sx(&DROPDOWN_SX)
-    .style(popover.style())
-    .prepare();
-
-popover.show(opened().then(|| dropdown
-    .element(popover.floating())
-    .render(HtmlTag::Div, vec![], rsx! { .. })));"#;
-
-// snippet: ignore - pieces of a component built on `use_popover`
 const FOCUS_AFTER_PLACED: &str = r#"// Wrong: the box is mounted but not measured, so it is still
 // `visibility: hidden`. `focus()` answers Ok(()) and nothing moves.
 use_effect(move || {
@@ -56,14 +40,6 @@ popover.show(opened().then(|| rsx! {
 // scope that made it, and be dropped by hand.
 let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
 use_drop(move || tick.manually_drop());"#;
-
-// snippet: ignore - pieces of a component built on `use_popover`
-const NESTED: &str = r#"// A submenu is its own popover, anchored to the row that opened it.
-// Geometry needs nothing: both boxes are `position: fixed`, and the one
-// portaled later paints over the earlier one. Containment does - the
-// submenu is no descendant of the menu, so focus moving into it reads as
-// focus leaving. Register it, and hold the guard while it is open.
-let _inside = use_hook(move || parent.register_inside(submenu_box));"#;
 
 fn side_of(value: &str) -> Side {
     match value {
@@ -259,7 +235,9 @@ pub fn PopoverPage() -> Element {
                     " ancestor, and places it in viewport coordinates, flipping and shifting "
                     "to stay on screen. It owns no open state - "
                     Code { source: "show(None)" }
-                    " is how a closed popover stops rendering."
+                    " is how a closed popover stops rendering. Popovers nest with nothing "
+                    "extra: anchor the inner one to a row inside the outer box, and the one "
+                    "shown later paints over the earlier."
                 }
             },
             // snippet: let opened = use_signal(|| false);
@@ -288,8 +266,6 @@ pub fn PopoverPage() -> Element {
                 wrap: Wrap(wrap_hook_call),
             }
 
-            DocSection { title: "Call order", CodeBlock { source: CALL_ORDER, language: "rust" } }
-
             DocSection {
                 title: "Focus after placed, never after mount",
                 CodeBlock { source: FOCUS_AFTER_PLACED, language: "rust" }
@@ -298,11 +274,6 @@ pub fn PopoverPage() -> Element {
             DocSection {
                 title: "Context across the portal",
                 CodeBlock { source: CONTEXT_ACROSS_THE_PORTAL, language: "rust" }
-            }
-
-            DocSection {
-                title: "Nested popovers",
-                CodeBlock { source: NESTED, language: "rust" }
             }
 
             DocSection {

@@ -10,7 +10,9 @@ A popover is a hook, not a component: a dropdown, a menu and a hover card share
 when and where, never what the box looks like. `use_popover` portals the box to
 the document root, so it escapes an `overflow: hidden` ancestor, and places it in
 viewport coordinates, flipping and shifting to stay on screen. It owns no open
-state - `show(None)` is how a closed popover stops rendering.
+state - `show(None)` is how a closed popover stops rendering. Popovers nest with
+nothing extra: anchor the inner one to a row inside the outer box, and the one
+shown later paints over the earlier.
 
 ## Usage
 
@@ -80,25 +82,6 @@ fn Demo() -> Element {
 }
 ```
 
-## Call order
-
-```rust,ignore
-// use_popover first: the style it returns is what the box renders with.
-let anchor = use_element();
-let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
-
-// Then the box. The other way round it styles itself with last
-// render's placement.
-let dropdown = use_box()
-    .framework_sx(&DROPDOWN_SX)
-    .style(popover.style())
-    .prepare();
-
-popover.show(opened().then(|| dropdown
-    .element(popover.floating())
-    .render(HtmlTag::Div, vec![], rsx! { .. })));
-```
-
 ## Focus after placed, never after mount
 
 ```rust,ignore
@@ -133,17 +116,6 @@ popover.show(opened().then(|| rsx! {
 // scope that made it, and be dropped by hand.
 let tick = use_hook(|| Signal::new_in_scope(0u64, ScopeId::ROOT));
 use_drop(move || tick.manually_drop());
-```
-
-## Nested popovers
-
-```rust,ignore
-// A submenu is its own popover, anchored to the row that opened it.
-// Geometry needs nothing: both boxes are `position: fixed`, and the one
-// portaled later paints over the earlier one. Containment does - the
-// submenu is no descendant of the menu, so focus moving into it reads as
-// focus leaving. Register it, and hold the guard while it is open.
-let _inside = use_hook(move || parent.register_inside(submenu_box));
 ```
 
 ## Accessibility

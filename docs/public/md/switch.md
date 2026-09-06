@@ -9,7 +9,7 @@ Description: An on/off toggle - a visually hidden checkbox with `role="switch"`,
 A checkbox styled as a track and thumb. A visually hidden `<input>` does the
 real work, so it is announced as a switch, and Space and Enter both toggle it.
 
-Since the port onto `use_field` it is a field: the track sits where a
+It is a field like the others: the track sits where a
 [Checkbox](checkbox.md) puts its box, the label beside it, and the description,
 helper text and validation message under both.
 

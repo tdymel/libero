@@ -114,7 +114,7 @@ alone, so they move the search box's caret.
 
 ## Props
 
-Everything `field_props!` gives every field - `label`, `description`, `helper`,
+Every field's shared props - `label`, `description`, `helper`,
 `status`, `size`, `radius`, `required`, `disabled`, `readonly`, `class`, `sx`, `states`,
 `attributes` - plus:
 

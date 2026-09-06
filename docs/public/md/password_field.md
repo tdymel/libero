@@ -37,8 +37,8 @@ leaves the `<input>` uncontrolled, and `oninput` fires per keystroke.
 ## Why it is a `TextField`, not its own field
 
 A domain field is normally a text field with a narrower contract, so
-`PasswordField` renders a `TextField` rather than rebuilding the chrome on
-`use_field`. It costs one component scope and pays for it by inheriting
+`PasswordField` renders a `TextField` rather than rebuilding the field
+chrome. It costs one component scope and pays for it by inheriting
 everything the text field grows.
 
 That is the composition path to copy for an `EmailField`, a `SearchField` or any

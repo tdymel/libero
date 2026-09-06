@@ -129,6 +129,8 @@ fn nav_tree() -> Vec<TreeNode<NavEntry>> {
                 page(Route::StylingPage {}, "Styling"),
                 page(Route::ThemingPage {}, "Theming"),
                 page(Route::PerformancePage {}, "Performance"),
+                page(Route::HooksPage {}, "Hooks"),
+                page(Route::PlatformPage {}, "Platform"),
             ],
         ),
         group(

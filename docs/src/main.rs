@@ -58,6 +58,10 @@ pub(crate) enum Route {
     ThemingPage {},
     #[route("/about/performance")]
     PerformancePage {},
+    #[route("/about/hooks")]
+    HooksPage {},
+    #[route("/about/platform")]
+    PlatformPage {},
 
     #[route("/a11y/focus-trap")]
     FocusTrapPage {},
