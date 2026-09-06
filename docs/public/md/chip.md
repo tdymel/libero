@@ -83,6 +83,14 @@ fn Demo() -> Element {
 }
 ```
 
+A long label is cut at the chip's edge, with no ellipsis: the chip lays its
+children out in a row, and it cannot put them in a box of their own without
+breaking an icon's spacing. If you want an ellipsis, wrap the text yourself:
+
+```rust,ignore
+Chip { span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "{label}" } }
+```
+
 ## Accessibility
 
 Space toggles a selectable chip. Keep `children` to text and `Icon` - a

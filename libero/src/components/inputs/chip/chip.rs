@@ -94,8 +94,11 @@ static CHIP_LABEL_SX: StaticSx = StaticSx::new(|| {
         .align_items("center")
         .gap(SizeCss::SPACING.value(Size::Xs))
         .cursor("pointer")
+        // No `text-overflow`: on a flex root it never applies (todo 94). The
+        // chip cannot wrap its children in a block of its own either, since an
+        // icon among them would lose the `gap` - so the ellipsis is the
+        // caller's span, as the rustdoc below says.
         .overflow("hidden")
-        .text_overflow("ellipsis")
 });
 
 /// Depends on `(variant, checked, color)` alone - see the `use_cache` below.
@@ -168,6 +171,9 @@ base_props! {
 }
 
 /// A compact token; `onchange` makes it a real checkbox.
+///
+/// A long label is cut at the chip's edge. For an ellipsis, put the text in a
+/// span of its own: `span { style: "min-width: 0; overflow: hidden; text-overflow: ellipsis", "{label}" }`.
 #[component]
 pub fn Chip(props: ChipProps) -> Element {
     let theme = use_theme();
@@ -310,4 +316,19 @@ pub fn Chip(props: ChipProps) -> Element {
         props.attributes,
         vec![input, label, ring_overlay()],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::css::Stylesheet;
+
+    /// The label is a flex root, where `text-overflow` never applies. The
+    /// declaration promised an ellipsis the chip never drew (todo 94).
+    #[test]
+    fn the_label_promises_no_ellipsis_it_cannot_draw() {
+        let css = Stylesheet::from(&CHIP_LABEL_SX);
+        assert!(!css.as_str().contains("text-overflow"), "{}", css.as_str());
+        assert!(css.as_str().contains("overflow:hidden"), "{}", css.as_str());
+    }
 }
