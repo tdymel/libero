@@ -253,7 +253,9 @@ pub fn TagsFieldPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "The whole field is one tab stop. Backspace on an empty input removes the "
+                    "The whole field is one tab stop, plus the Clear button when "
+                    Code { source: "clearable" }
+                    " shows it. Backspace on an empty input removes the "
                     "last tag; the arrows belong to the text, so there is no chip cursor. "
                     "A custom "
                     Code { source: "tag" }

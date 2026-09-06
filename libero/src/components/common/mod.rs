@@ -10,6 +10,7 @@ mod rail;
 mod style_attributes;
 mod util;
 mod variant;
+mod warnings;
 
 pub use crate::sx::class_list::{ClassList, class_list};
 pub use crate::sx::input::Input;
@@ -36,3 +37,4 @@ pub(crate) use rail::{Rail, RailInset};
 pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
 pub(crate) use util::{attr, css_string, focus_ring_sx, ring_overlay, ring_overlay_sx};
 pub use variant::Variant;
+pub(crate) use warnings::{is_javascript_url, names_itself, use_name_warning};

@@ -191,7 +191,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
     let onclose = props.onclose;
     let title_id = use_id();
     let root = use_element();
-    crate::utils::use_name_warning(
+    crate::components::common::use_name_warning(
         title.is_some() || aria_label.is_some(),
         "FloatingWindow: no `title` or `aria_label` in its options, so it is announced as \
          just \"dialog\".",

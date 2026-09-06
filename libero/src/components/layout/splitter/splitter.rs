@@ -5,14 +5,14 @@ use crate::{
     CssLayer,
     components::{
         HtmlTag, Input, Orientation, States, Variables,
-        common::{base_props, variables},
+        common::{base_props, use_name_warning, variables},
         layout::use_box,
     },
     hooks::{DragMove, DragOptions, DragStart, use_css, use_drag, use_element, use_id, use_theme},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, Size},
-    utils::{use_name_warning, warn},
+    utils::warn,
 };
 
 /// Both panes' resulting sizes as percentages, `A` (left/top) first.

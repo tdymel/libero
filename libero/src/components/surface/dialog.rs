@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, Box, Input, Paper, Title, Variables,
-        common::{CloseIcon, attr, base_props},
+        common::{CloseIcon, attr, base_props, names_itself, use_name_warning},
         surface::paper_sx,
         variables,
     },
@@ -11,7 +11,6 @@ use crate::{
     hooks::use_id,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CssVar, DIALOG_SIZE, PAPER_RADIUS, Size, SizeCss},
-    utils::{names_itself, use_name_warning},
 };
 
 const DIALOG_RADIUS_VAR: CssVar = CssVar::new("--lsx-dialog-radius");

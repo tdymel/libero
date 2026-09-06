@@ -91,7 +91,7 @@ its mirror. Left/Right act on a vertical divider, Up/Down on a horizontal one.
 | `divider_size` | `Size` | `sm` | Which size level the divider uses. |
 | `divider_color` | `ThemeAwareValue` | - | The divider's color. Unset it is grey. |
 | `onresize` | `EventHandler<SplitterResizeEvent>` | - | Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`. |
-| `aria_label` | `String` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
+| `aria_label` | `Option<String>` | - | Names the divider, after the pane it resizes. Unset warns in a debug build. |
 | `panel_a` | `Element` | required | Pane A (left/top). |
 | `panel_b` | `Element` | required | Pane B (right/bottom). Nest another `Splitter` in a pane for more than two. |
 

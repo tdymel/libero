@@ -11,7 +11,7 @@ use crate::{
     },
     hooks::{DragMove, DragOptions, DragStart, use_drag, use_id, use_theme},
     platform::ElementApi,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{SCROLLER_CONTROL, SCROLLER_FADE, ScrollerDefaults, Size},
 };
 
@@ -26,9 +26,6 @@ const EDGE_TOLERANCE: f64 = 1.0;
 /// How far a mouse has to travel before a press becomes a drag. Below it the
 /// press stays a click on whatever is under it.
 const DRAG_THRESHOLD: f64 = 5.0;
-
-/// `Burger`'s and `Loader`'s spelling, deliberately identical.
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 /// Whether the strip rests against either end. Both `true` means nothing
 /// overflows.

@@ -9,7 +9,7 @@ use crate::{
         layout::use_box,
     },
     hooks::{use_presence, use_theme},
-    sx::{StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{COLLAPSE_DURATION, COLLAPSE_EASING, COLLAPSE_OPACITY_CLOSED},
 };
 
@@ -24,8 +24,6 @@ use crate::{
 /// this root, and the hook stops it at the inner root, so an inner exit never
 /// ends this one's (todo 36d).
 const EXIT_PROPERTY: &str = "grid-template-rows";
-
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 /// `0fr` -> `1fr` rather than a measured pixel height: it needs no platform
 /// capability, so web, Blitz, the WebView floor and SSR all behave alike, and

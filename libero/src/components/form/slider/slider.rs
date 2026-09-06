@@ -141,7 +141,7 @@ pub fn Slider<V: SliderValue>(props: SliderProps<V>) -> Element {
         .states(&props.states)
         .attributes(&props.attributes)
         .prepare();
-    crate::utils::use_name_warning(
+    crate::components::common::use_name_warning(
         field.label_id().is_some() || props.aria_label.is_some(),
         "Slider: no `label` or `aria_label`, so the thumb is announced as just \"slider\".",
     );

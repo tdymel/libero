@@ -269,19 +269,21 @@ fn strip_diff_markers(source: &str) -> String {
         .join("\n")
 }
 
-/// `"3,5-7,10"` into the 1-indexed lines it names. Malformed segments are
-/// skipped, not rejected. A range stops at `line_count`, so a typo like
-/// `"1-1000000000"` cannot fill the set with a billion entries.
-fn parse_highlighted_lines(spec: &str, line_count: usize) -> HashSet<usize> {
+/// `"3,5-7,10"` into the 1-indexed lines it names, plus the first range that
+/// ran past the last line. Malformed segments are skipped, not rejected. A
+/// range stops at `line_count`, so a typo like `"1-1000000000"` cannot fill
+/// the set with a billion entries.
+fn parse_highlighted_lines(spec: &str, line_count: usize) -> (HashSet<usize>, Option<String>) {
     let mut lines = HashSet::new();
+    let mut overrun = None;
     for segment in spec.split(',').map(str::trim).filter(|s| !s.is_empty()) {
         match segment.split_once('-') {
             Some((start, end)) => {
                 if let (Ok(start), Ok(end)) =
                     (start.trim().parse::<usize>(), end.trim().parse::<usize>())
                 {
-                    if end > line_count {
-                        warn(&format!(
+                    if end > line_count && overrun.is_none() {
+                        overrun = Some(format!(
                             "CodeBlock: highlight_lines range `{segment}` runs past the last line ({line_count})"
                         ));
                     }
@@ -295,7 +297,7 @@ fn parse_highlighted_lines(spec: &str, line_count: usize) -> HashSet<usize> {
             }
         }
     }
-    lines
+    (lines, overrun)
 }
 
 fn code_line_row(
@@ -448,11 +450,17 @@ pub fn CodeBlock(props: CodeBlockProps) -> Element {
         .map(Language::label)
         .unwrap_or(UNRECOGNIZED_LANGUAGE_LABEL);
     let copy_source = copyable.then(|| display_source.clone());
-    let highlighted_lines = props
+    let (highlighted_lines, overrun) = props
         .highlight_lines
         .as_deref()
         .map(|spec| parse_highlighted_lines(spec, display_source.lines().count()))
         .unwrap_or_default();
+    // Once per mount: the highlight resource resolving is already a second render.
+    use_hook(move || {
+        if let Some(message) = overrun {
+            warn(&message);
+        }
+    });
     let scroll_sx: Input<Sx> = match props.max_lines {
         Some(max_lines) => sx().max_height(format!(
             "{}px",
@@ -542,7 +550,7 @@ mod tests {
     #[test]
     fn parse_highlighted_lines_accepts_singles_and_ranges() {
         assert_eq!(
-            parse_highlighted_lines("1,5-7,10", 10),
+            parse_highlighted_lines("1,5-7,10", 10).0,
             HashSet::from([1, 5, 6, 7, 10])
         );
     }
@@ -550,7 +558,7 @@ mod tests {
     #[test]
     fn parse_highlighted_lines_skips_malformed_segments() {
         assert_eq!(
-            parse_highlighted_lines("1,,abc,5-,3", 10),
+            parse_highlighted_lines("1,,abc,5-,3", 10).0,
             HashSet::from([1, 3])
         );
     }
@@ -558,26 +566,44 @@ mod tests {
     #[test]
     fn parse_highlighted_lines_trims_whitespace() {
         assert_eq!(
-            parse_highlighted_lines(" 1 , 3 - 4 ", 10),
+            parse_highlighted_lines(" 1 , 3 - 4 ", 10).0,
             HashSet::from([1, 3, 4])
         );
     }
 
     #[test]
     fn parse_highlighted_lines_empty_spec_is_empty() {
-        assert_eq!(parse_highlighted_lines("", 10), HashSet::new());
+        assert_eq!(parse_highlighted_lines("", 10).0, HashSet::new());
     }
 
     #[test]
     fn parse_highlighted_lines_clamps_a_range_to_the_line_count() {
+        let (lines, overrun) = parse_highlighted_lines("2-1000000000", 4);
+        assert_eq!(lines, HashSet::from([2, 3, 4]));
+        assert!(overrun.is_some_and(|message| message.contains("2-1000000000")));
+    }
+
+    #[test]
+    fn a_range_past_the_last_line_warns_once_per_mount() {
         crate::utils::take_warnings();
-        assert_eq!(
-            parse_highlighted_lines("2-1000000000", 4),
-            HashSet::from([2, 3, 4])
-        );
-        let warnings = crate::utils::take_warnings();
-        assert_eq!(warnings.len(), 1);
-        assert!(warnings[0].contains("2-1000000000"));
+        let mut dom = VirtualDom::new(|| {
+            let mut copyable = use_signal(|| true);
+            use_hook(move || copyable.set(false));
+            rsx! {
+                crate::LiberoProvider {
+                    CodeBlock { source: "a\nb", highlight_lines: "1-9", copyable: copyable() }
+                }
+            }
+        });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+        let count = crate::utils::take_warnings()
+            .iter()
+            .filter(|warning| warning.contains("`1-9`"))
+            .count();
+        assert_eq!(count, 1);
     }
 
     #[test]

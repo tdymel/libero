@@ -210,8 +210,8 @@ pub fn HoverCard(props: HoverCardProps) -> Element {
     };
 
     // A dialog with no name is announced as "dialog" and nothing else.
-    crate::utils::use_name_warning(
-        crate::utils::names_itself(&props.attributes),
+    crate::components::common::use_name_warning(
+        crate::components::common::names_itself(&props.attributes),
         "HoverCard: the card is a dialog and needs a name - pass `aria_label`, or \
          `aria-labelledby` pointing into `content`.",
     );

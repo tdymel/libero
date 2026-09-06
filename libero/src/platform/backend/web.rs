@@ -74,11 +74,7 @@ pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
 
 pub(super) fn prefers_reduced_motion() -> bool {
     web_sys::window()
-        .and_then(|window| {
-            window
-                .match_media("(prefers-reduced-motion: reduce)")
-                .ok()?
-        })
+        .and_then(|window| window.match_media(crate::sx::REDUCED_MOTION).ok()?)
         .is_some_and(|query| query.matches())
 }
 

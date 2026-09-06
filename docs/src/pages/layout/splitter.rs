@@ -101,7 +101,7 @@ pub fn SplitterPage() -> Element {
                 prop("divider_color", "ThemeAwareValue").doc("The divider's color."),
                 prop("onresize", "EventHandler<SplitterResizeEvent>")
                     .doc("Fires as the divider moves, with both panes' resulting sizes as percentages. A key press emits `Change` then `End`."),
-                prop("aria_label", "String")
+                prop("aria_label", "Option<String>")
                     .doc("Names the divider, after the pane it resizes. Unset warns in a debug build."),
                 prop("panel_a", "Element").doc("Pane A (left/top)."),
                 prop("panel_b", "Element").doc("Pane B (right/bottom). Nest another `Splitter` in a pane for more than two."),

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, Options, States,
-        common::{Orientation, field_props},
+        common::{Orientation, field_props, names_itself, use_name_warning},
         form::{Radio, use_bound, use_field},
         layout::use_box,
     },
@@ -11,7 +11,7 @@ use crate::{
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{ChoiceVariant, FIELD_GAP, Size},
-    utils::{names_itself, use_name_warning, warn},
+    utils::warn,
 };
 
 static RADIO_GROUP_SX: StaticSx = StaticSx::new(|| {

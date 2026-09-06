@@ -3,25 +3,23 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables,
-        common::{base_color, base_props},
+        common::{base_color, base_props, names_itself, use_name_warning},
         layout::use_box,
         variables,
     },
     hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         ColorCss, ColorShade, INDETERMINATE_WIDTH, PROGRESS_BAR_ANIMATION, PROGRESS_BAR_COLOR,
         PROGRESS_BAR_FILL, PROGRESS_BAR_INDETERMINATE_STATE, PROGRESS_BAR_RADIUS,
         PROGRESS_BAR_SIZE, PROGRESS_BAR_TRACK, PROGRESS_BAR_TRANSITION, ProgressBarDefaults, Size,
     },
-    utils::{names_itself, use_name_warning, warn},
+    utils::warn,
 };
 
 /// The `data-state` the determinate arm keys on. Named rather than left as the
 /// absence of `indeterminate`, because an `Sx` condition cannot say "not".
 const DETERMINATE_STATE: &str = "determinate";
-
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 /// How long one indeterminate sweep takes.
 const SWEEP_DURATION: &str = "1.4s";

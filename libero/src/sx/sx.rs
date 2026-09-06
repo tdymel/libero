@@ -4,6 +4,10 @@ use crate::tokens::{CssVar, Size};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
+/// The one reduced-motion query for [`Sx::media`], so a project grepping for
+/// the guard finds every component that has one.
+pub(crate) const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
+
 #[derive(Debug, Clone, PartialEq, Default, Hash)]
 pub struct Sx {
     entries: Vec<SxEntry>,

@@ -7,14 +7,12 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         SKELETON_ANIMATION, SKELETON_COLOR, SKELETON_DURATION, SKELETON_HEIGHT, SKELETON_RADIUS,
         SKELETON_WIDTH, Size, SkeletonDefaults,
     },
 };
-
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 const VISIBLE_STATE: &str = "visible";
 const ANIMATE_STATE: &str = "animate";

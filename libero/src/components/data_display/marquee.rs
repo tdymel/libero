@@ -7,15 +7,12 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         MARQUEE_ANIMATION, MARQUEE_DURATION, MARQUEE_FADE_SIZE, MARQUEE_GAP, MARQUEE_MIN_REPEAT,
         MARQUEE_REPEAT, MARQUEE_SHIFT, PAPER_BACKGROUND, Size, SizeCss,
     },
 };
-
-/// `Indicator`'s, `Skeleton`'s and `Loader`'s spelling, deliberately identical.
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 const TRACK: &str = "& > [data-slot='track']";
 const COPIES: &str = "& > [data-slot='track'] > [data-slot='group']";

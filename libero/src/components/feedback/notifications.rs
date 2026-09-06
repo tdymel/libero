@@ -20,7 +20,7 @@ use crate::{
     },
     hooks::{use_portal, use_theme},
     platform::{TimerSubscription, timer},
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_OFFSET, NOTIFICATION_OUT,
         NOTIFICATION_TRANSITION, NOTIFICATION_WIDTH, Placement, Size, SizeCss,
@@ -28,8 +28,6 @@ use crate::{
     },
     utils::warn,
 };
-
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 static NEXT_ID: AtomicU64 = AtomicU64::new(0);
 

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{LocalState, use_local_state},
-    sx::{Sx, sx},
+    sx::{REDUCED_MOTION, Sx, sx},
     theme::{CssVar, RIPPLE_ANIMATION, RIPPLE_STATE},
 };
 
@@ -102,7 +102,7 @@ fn ripple_animation_sx(which: usize) -> Sx {
         "{} 550ms ease-out forwards",
         RIPPLE_ANIMATION[which]
     ))
-    .media("(prefers-reduced-motion: reduce)", sx().animation("none"))
+    .media(REDUCED_MOTION, sx().animation("none"))
 }
 
 #[cfg(test)]
@@ -115,9 +115,7 @@ mod tests {
     fn reduced_motion_switches_both_ripples_off() {
         let css = Stylesheet::from(&ripple_sx(sx()));
         let css = css.as_str();
-        let reduced = css
-            .find("(prefers-reduced-motion: reduce)")
-            .expect("a reduced-motion block");
+        let reduced = css.find(REDUCED_MOTION).expect("a reduced-motion block");
 
         for (state, name) in RIPPLE_STATE.iter().zip(RIPPLE_ANIMATION) {
             let running = css.find(name).expect("the ripple animation");

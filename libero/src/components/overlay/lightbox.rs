@@ -5,7 +5,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Carousel, Dialog, Input, States, Variables,
-        common::{focus_ring_sx, ring_overlay, ring_overlay_sx, states, variables},
+        common::{
+            focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
+        },
     },
     hooks::{
         DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxOpening,
@@ -13,7 +15,7 @@ use crate::{
         use_modal_close, use_theme,
     },
     platform::{Dimensions, ElementApi},
-    sx::{StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         CarouselDefaults, CssVar, LIGHTBOX_STAGE_HEIGHT, LIGHTBOX_THUMBNAIL_SIZE,
         LIGHTBOX_THUMBNAILS_GAP, LIGHTBOX_WIDTH, Size, SizeCss,
@@ -133,7 +135,7 @@ static LIGHTBOX_IMAGE_SX: StaticSx = StaticSx::new(|| {
         .focus_visible(sx().outline("none"))
         .transform(LIGHTBOX_TRANSFORM.value_or("none"))
         .transition("transform 150ms ease")
-        .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
+        .media(REDUCED_MOTION, sx().transition("none"))
         .when("zoomable", sx().cursor("zoom-in"))
         // The carousel still scrolls sideways natively; a vertical move is
         // left to the swipe-down.
@@ -688,6 +690,10 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     };
 
     let slides: Vec<Element> = (0..count).map(slide).collect();
+    use_name_warning(
+        options.aria_label.is_some(),
+        "Lightbox: no `aria_label`, falling back to the theme's. A dialog needs a name of its own to be told apart.",
+    );
     let label = options
         .aria_label
         .clone()

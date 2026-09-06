@@ -8,15 +8,13 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         BURGER_COLOR, BURGER_LINE_SIZE, BURGER_SIZE, BURGER_SIZES, BURGER_TRANSITION_DURATION,
         BURGER_TRANSITION_TIMING, Size, SizeCss,
     },
     utils::warn,
 };
-
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 /// One bar. The middle one *is* the glyph element; the outer two are its
 /// `::before`/`::after`, so the whole thing is a single `<span>`.

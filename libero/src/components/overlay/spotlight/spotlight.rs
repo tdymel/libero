@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Dialog, Kbd, Loader, ScrollArea, VisuallyHidden,
-        common::focus_ring_sx,
+        common::{focus_ring_sx, use_name_warning},
         form::{ComboboxState, use_combobox},
     },
     hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_modal, use_theme},
@@ -235,6 +235,10 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             warn("use_spotlight: no `actions` - the palette will always be empty");
         }
     });
+    use_name_warning(
+        options.aria_label.is_some(),
+        "use_spotlight: no `aria_label`, falling back to the theme's. A dialog needs a name of its own to be told apart.",
+    );
 
     let labels = theme.spotlight.labels;
     let close_on_action = options.close_on_action;

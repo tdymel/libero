@@ -7,7 +7,7 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         CssVar, INDICATOR_BORDER_WIDTH, INDICATOR_PROCESSING_DURATION, INDICATOR_RADII,
         INDICATOR_RADIUS, IndicatorDefaults, PAPER_BACKGROUND, Size, SizeCss,
@@ -16,9 +16,6 @@ use crate::{
 
 const INDICATOR_COLOR_VAR: CssVar = CssVar::new("--lsx-indicator-color");
 const INDICATOR_CONTRAST_VAR: CssVar = CssVar::new("--lsx-indicator-contrast");
-
-/// `Burger`'s and `Loader`'s spelling, deliberately identical.
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 static INDICATOR_BASE_SX: StaticSx = StaticSx::new(|| {
     let fill = INDICATOR_COLOR_VAR.value();

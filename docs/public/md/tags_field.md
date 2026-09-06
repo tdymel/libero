@@ -128,8 +128,8 @@ component's own arithmetic rather than a theme key.
 
 ## Accessibility
 
-The whole field is one tab stop. Backspace on an empty input removes the last
-tag; the arrows belong to the text, so there is no chip cursor. A custom `tag`
+The whole field is one tab stop, plus the Clear button when `clearable` shows
+it. Backspace on an empty input removes the last tag; the arrows belong to the text, so there is no chip cursor. A custom `tag`
 must give its remove control `tabindex: "-1"`, or each tag adds a tab stop, and
 removing a tag from the keyboard drops the focus to the page. The field cancels
 `mousedown` on every tag itself, so a click never moves the focus there.

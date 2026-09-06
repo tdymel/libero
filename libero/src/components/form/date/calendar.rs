@@ -344,7 +344,7 @@ pub(super) struct CalendarProps {
 #[derive(Clone, Copy)]
 struct FocusRequest {
     root: ElementHandle,
-    request: Signal<Option<Focus>>,
+    request: Signal<Option<String>>,
     focusable: bool,
 }
 
@@ -352,35 +352,30 @@ impl FocusRequest {
     fn to(self, target: Focus) {
         if self.focusable && self.root.query_selector(":focus").is_ok() {
             let mut request = self.request;
-            request.set(Some(target));
+            request.set(Some(match target {
+                Focus::Title => "[data-slot='title']".to_string(),
+                Focus::Stop => ":is([role='grid'], [data-slot='cells']) [tabindex='0']".to_string(),
+                Focus::Date(day) => format!("[data-date='{day}']:not([data-outside])"),
+            }));
         }
     }
 }
 
-fn use_focus_request(root: ElementHandle, focusable: bool) -> FocusRequest {
-    let focus_request = use_signal(|| None::<Focus>);
-    // Runs after the render that drew the target, so it exists. A level change
-    // replaces the heading and the cells, which would leave focus on `body`.
+/// A selector to focus inside `root` after the next render, which drew the
+/// target. A level change replaces the heading and the cells, which would
+/// leave focus on `body`.
+pub(super) fn use_focus_after_render(root: ElementHandle) -> Signal<Option<String>> {
+    let mut focus_request = use_signal(|| None::<String>);
     use_effect(move || {
-        let Some(target) = focus_request() else {
+        let Some(selector) = focus_request() else {
             return;
         };
-        let mut request = focus_request;
-        request.set(None);
-        let selector = match target {
-            Focus::Title => "[data-slot='title']".to_string(),
-            Focus::Stop => ":is([role='grid'], [data-slot='cells']) [tabindex='0']".to_string(),
-            Focus::Date(day) => format!("[data-date='{day}']:not([data-outside])"),
-        };
+        focus_request.set(None);
         let _ = root
             .query_selector(&selector)
             .and_then(|element| element.focus());
     });
-    FocusRequest {
-        root,
-        request: focus_request,
-        focusable,
-    }
+    focus_request
 }
 
 /// What the keys and the views of every level read, for one render.
@@ -900,7 +895,11 @@ pub(super) fn Calendar(props: CalendarProps) -> Element {
     let mut paged = use_signal(|| None::<NaiveDate>);
     let active = use_signal(|| None::<NaiveDate>);
     let root = use_element();
-    let focus = use_focus_request(root, focusable);
+    let focus = FocusRequest {
+        root,
+        request: use_focus_after_render(root),
+        focusable,
+    };
     // The day under the mouse while a range waits for its end.
     let mut hover = use_signal(|| None::<NaiveDate>);
 

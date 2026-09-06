@@ -10,14 +10,12 @@ use crate::{
     },
     hooks::{id_selector, use_element},
     platform::ElementApi,
-    sx::{StaticSx, sx},
+    sx::{REDUCED_MOTION, StaticSx, sx},
     theme::{
         ACCORDION_BORDER_COLOR, ACCORDION_CHEVRON_DURATION, ACCORDION_CHEVRON_SIZE,
         ACCORDION_HOVER, ACCORDION_PAD_X, ACCORDION_PAD_Y, AccordionDefaults, Size,
     },
 };
-
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 static ACCORDION_SX: StaticSx = StaticSx::new(|| {
     AccordionDefaults::theme_vars()

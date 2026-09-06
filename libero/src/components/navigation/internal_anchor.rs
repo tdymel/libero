@@ -3,11 +3,11 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, Variables,
-        common::{base_props, styling_attributes, use_style_attributes},
+        common::{base_props, is_javascript_url, styling_attributes, use_style_attributes},
         layout::box_style,
     },
     sx::StaticSx,
-    utils::{is_javascript_url, warn},
+    utils::warn,
 };
 
 fn navigation_target_href(to: NavigationTarget) -> String {

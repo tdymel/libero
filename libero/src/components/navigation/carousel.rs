@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
-        common::{base_props, focus_ring_sx, input_from_str, states, variables},
+        common::{base_props, focus_ring_sx, input_from_str, states, use_name_warning, variables},
         layout::{
             ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
             use_box, use_scroll_area,
@@ -15,7 +15,7 @@ use crate::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id, use_theme,
     },
     platform::{ElementApi, TimerSubscription, timer},
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,
         CAROUSEL_CONTROL_SIZE, CAROUSEL_CONTROLS_OFFSET, CAROUSEL_GAP, CAROUSEL_INDICATOR_COLOR,
@@ -23,7 +23,6 @@ use crate::{
         CAROUSEL_INDICATOR_LENGTH, CAROUSEL_INDICATOR_THICKNESS, CAROUSEL_INDICATORS_GAP,
         CAROUSEL_PER_VIEW, CAROUSEL_RADIUS, CarouselDefaults, CssVar, NamedColorCss, Size, SizeCss,
     },
-    utils::use_name_warning,
 };
 
 pub use crate::theme::CarouselAlign;
@@ -78,10 +77,7 @@ static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
             // reduced motion - only Firefox does - so the guard is explicit. It
             // sits at the same specificity as the declaration it overrides and
             // after it, which is what settles the two.
-            .media(
-                "(prefers-reduced-motion: reduce)",
-                sx().scroll_behavior("auto"),
-            )
+            .media(REDUCED_MOTION, sx().scroll_behavior("auto"))
             // A drag is the pointer's own position: animating towards it lags,
             // and a mandatory snap pulls every write back to the slide it left, so
             // the strip sat still and then jumped a whole slide. After the
@@ -225,7 +221,7 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
                     sx().height(CAROUSEL_INDICATOR_CURRENT_LENGTH.value()),
                 ),
         )
-        .media("(prefers-reduced-motion: reduce)", sx().transition("none"))
+        .media(REDUCED_MOTION, sx().transition("none"))
         .focus_visible(focus_ring_sx())
 });
 
@@ -1522,9 +1518,7 @@ mod tests {
     fn smooth_scrolling_is_switched_off_under_reduced_motion() {
         let css = Stylesheet::from(&CAROUSEL_TRACK_SX);
         let css = css.as_str();
-        let guard = css
-            .find("(prefers-reduced-motion: reduce)")
-            .expect("a reduced-motion block");
+        let guard = css.find(REDUCED_MOTION).expect("a reduced-motion block");
 
         assert!(css[guard..].contains("scroll-behavior:auto"), "{css}");
         assert!(

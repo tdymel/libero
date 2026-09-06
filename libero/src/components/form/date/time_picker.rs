@@ -3,6 +3,7 @@ use dioxus::prelude::*;
 use chrono::{NaiveTime, Timelike};
 
 use super::{
+    calendar::use_focus_after_render,
     date_value::{DateValue, PickerArgs, PickerOptions},
     format::uses_twelve_hours,
     parse_time::MIDNIGHT,
@@ -203,21 +204,6 @@ struct Choice {
 
 fn at(hour: u32, minute: u32, second: u32) -> NaiveTime {
     NaiveTime::from_hms_opt(hour, minute, second).expect("in range")
-}
-
-/// A selector to focus after the next render, inside `root`.
-fn use_focus_request(root: ElementHandle) -> Signal<Option<String>> {
-    let mut focus_request = use_signal(|| None::<String>);
-    use_effect(move || {
-        let Some(selector) = focus_request() else {
-            return;
-        };
-        focus_request.set(None);
-        let _ = root
-            .query_selector(&selector)
-            .and_then(|element| element.focus());
-    });
-    focus_request
 }
 
 /// What both variants read, for one render.
@@ -663,7 +649,7 @@ pub(super) fn Clock(props: ClockProps) -> Element {
     });
     // The digital option the keyboard is on.
     let active = use_signal(|| None::<(Column, usize)>);
-    let focus_request = use_focus_request(root);
+    let focus_request = use_focus_after_render(root);
 
     // One identity across renders, so the columns' props compare equal and a
     // pick in one column skips the others.

@@ -4,14 +4,14 @@ use super::core::{SegmentSpec, SegmentedControlView, render_segmented_control};
 use crate::{
     components::{
         Input, OptionLabel, Options, Variant,
-        common::{Orientation, base_color, field_props},
+        common::{Orientation, base_color, field_props, names_itself, use_name_warning},
         form::{use_bound, use_field},
         inputs::button_variables,
     },
     hooks::{use_cache, use_element, use_theme},
     sx::ThemeAwareValue,
     theme::Size,
-    utils::{names_itself, use_name_warning, warn},
+    utils::warn,
 };
 
 field_props! {

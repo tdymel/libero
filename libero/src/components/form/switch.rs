@@ -6,8 +6,8 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, contrast_color, field_props, fill_color, focus_ring_sx, ring_overlay,
-            ring_overlay_sx, variables,
+            base_color, contrast_color, field_props, fill_color, focus_ring_sx, names_itself,
+            ring_overlay, ring_overlay_sx, use_name_warning, variables,
         },
         form::{use_bound, use_field},
         layout::use_box,
@@ -18,7 +18,7 @@ use crate::{
         ChoiceVariant, CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W,
         SwitchDefaults,
     },
-    utils::{names_itself, use_name_warning, warn},
+    utils::warn,
 };
 
 const SWITCH_COLOR_VAR: CssVar = CssVar::new("--lsx-switch-color");

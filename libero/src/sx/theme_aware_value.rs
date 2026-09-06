@@ -116,9 +116,21 @@ impl ThemeAwareValue {
 }
 
 /// `gray` is a CSS keyword, and the palette name is `grey`: the one spelling
-/// that falls through to an off-theme colour without a sound.
+/// that falls through to an off-theme colour without a sound. Once per
+/// spelling, since this runs on every render of every `color: "gray"`.
 fn warn_misspelled_palette(value: &str) {
-    if value.eq_ignore_ascii_case("gray") {
+    thread_local! {
+        static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+    if value.eq_ignore_ascii_case("gray")
+        && WARNED.with_borrow_mut(|warned| {
+            let first = !warned.iter().any(|spelling| spelling == value);
+            if first {
+                warned.push(value.to_string());
+            }
+            first
+        })
+    {
         warn(&format!(
             "`{value}` is the CSS keyword, not a palette colour; the palette name is `grey`."
         ));
@@ -230,10 +242,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn gray_stays_the_css_keyword_but_warns() {
+    fn gray_stays_the_css_keyword_but_warns_once() {
         crate::utils::take_warnings();
         assert_eq!(
             ThemeAwareValue::from("gray"),
+            ThemeAwareValue::String("gray".to_string())
+        );
+        assert_eq!(
+            ThemeAwareValue::from("gray".to_string()),
             ThemeAwareValue::String("gray".to_string())
         );
         assert_eq!(

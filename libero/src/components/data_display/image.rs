@@ -43,7 +43,6 @@ static ZOOM_BUTTON_SX: StaticSx = StaticSx::new(|| {
         .background("transparent")
         .outline("none")
         .cursor("zoom-in")
-        .when("zoomed", sx().cursor("zoom-out"))
         .focus_visible(focus_ring_sx())
 });
 
@@ -66,12 +65,10 @@ base_props! {
     }
 }
 
-fn zoom_label(alt: &str, zoomed: bool) -> String {
-    match (alt.is_empty(), zoomed) {
-        (true, false) => "Zoom in".to_string(),
-        (true, true) => "Zoom out".to_string(),
-        (false, false) => format!("Zoom in: {alt}"),
-        (false, true) => format!("Zoom out: {alt}"),
+fn zoom_label(alt: &str) -> String {
+    match alt.is_empty() {
+        true => "Zoom in".to_string(),
+        false => format!("Zoom in: {alt}"),
     }
 }
 
@@ -181,20 +178,14 @@ fn ZoomButton(props: ZoomButtonProps) -> Element {
         aria_label: (!props.alt.is_empty()).then(|| props.alt.clone()),
         ..LightboxOptions::default()
     });
-    let states: Input<States> = props
-        .states
-        .clone()
-        .unwrap_or_default()
-        .with("zoomed", zoom.is_open())
-        .into();
     let root = use_box()
         .framework_sx(&ZOOM_BUTTON_SX)
         .class(&props.class)
         .sx(&props.sx)
-        .states(&states)
+        .states(&props.states)
         .prepare();
 
-    let label = zoom_label(&props.alt, zoom.is_open());
+    let label = zoom_label(&props.alt);
     let item = props.item.clone();
     // A dialog opener, not a toggle: the open state lives in the modal
     // `Lightbox`, never on this button.

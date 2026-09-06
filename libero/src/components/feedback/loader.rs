@@ -7,18 +7,13 @@ use crate::{
         layout::use_box,
     },
     hooks::use_theme,
-    sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{LOADER_COLOR, LOADER_SIZE, LoaderDefaults, Size},
 };
 
 pub use crate::theme::LoaderVariant;
 
 input_from_str!(LoaderVariant);
-
-/// `Burger`'s spelling, deliberately identical - one query string in the
-/// library, so a project grepping for the guard finds every component that has
-/// one.
-const REDUCED_MOTION: &str = "(prefers-reduced-motion: reduce)";
 
 /// The ink, with a fallback so a `Loader` still draws if a caller ever renders
 /// one outside the theme's `variables()` path.

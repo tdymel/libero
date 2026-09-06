@@ -1,5 +1,5 @@
 //! A role that needs an accessible name warns once when it renders without one
-//! (`utils::use_name_warning`), and a `javascript:` link warns in the shared
+//! (`common::use_name_warning`), and a `javascript:` link warns in the shared
 //! anchor path. Each case renders the component and reads what `warn()` saw.
 
 use dioxus::prelude::*;
@@ -7,8 +7,10 @@ use dioxus::prelude::*;
 use crate::{
     LiberoProvider,
     components::{
-        Anchor, Dialog, Drawer, ProgressBar, RadioGroup, SegmentedControl, Slider, Splitter, Switch,
+        Anchor, Dialog, Drawer, ProgressBar, RadioGroup, SegmentedControl, Slider, Splitter,
+        SpotlightOptions, Switch, use_spotlight,
     },
+    hooks::{LightboxItem, LightboxOptions, use_lightbox},
     utils::take_warnings,
 };
 
@@ -125,6 +127,50 @@ fn an_unnamed_slider_warns() {
     assert!(!warns(
         || rsx! { LiberoProvider { Slider::<f64> { value: 5.0, aria_label: "Volume" } } },
         "Slider: no `"
+    ));
+}
+
+/// The theme's label stands in, but the warning still asks for a real name,
+/// like `Carousel`'s.
+#[test]
+fn an_unnamed_lightbox_warns() {
+    #[component]
+    fn Gallery(named: bool) -> Element {
+        let lightbox = use_lightbox(LightboxOptions {
+            aria_label: named.then(|| "Holiday photos".to_string()),
+            ..LightboxOptions::default()
+        });
+        use_hook(move || lightbox.open_with(LightboxItem::new("a.png", "A beach")));
+        rsx! {}
+    }
+    assert!(warns(
+        || rsx! { LiberoProvider { Gallery { named: false } } },
+        "Lightbox:"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Gallery { named: true } } },
+        "Lightbox:"
+    ));
+}
+
+#[test]
+fn an_unnamed_spotlight_warns() {
+    #[component]
+    fn Palette(named: bool) -> Element {
+        use_spotlight(SpotlightOptions {
+            actions: Some(Callback::new(|_: String| Vec::new())),
+            aria_label: named.then(|| "Commands".to_string()),
+            ..SpotlightOptions::default()
+        });
+        rsx! {}
+    }
+    assert!(warns(
+        || rsx! { LiberoProvider { Palette { named: false } } },
+        "use_spotlight: no `aria_label`"
+    ));
+    assert!(!warns(
+        || rsx! { LiberoProvider { Palette { named: true } } },
+        "use_spotlight: no `aria_label`"
     ));
 }
 
