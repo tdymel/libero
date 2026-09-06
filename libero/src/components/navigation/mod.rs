@@ -14,6 +14,7 @@ mod tree;
 pub use accordion::{Accordion, AccordionOpen, AccordionProps};
 pub use anchor::{Anchor, AnchorUnderline};
 pub use burger::{Burger, BurgerProps};
+pub(crate) use carousel::CarouselJump;
 pub use carousel::{Carousel, CarouselAlign, CarouselProps};
 pub(crate) use internal_anchor::InternalAnchor;
 pub use menu::{Menu, MenuEdge, MenuEntry, MenuItem, MenuProps, MenuState, use_menu};

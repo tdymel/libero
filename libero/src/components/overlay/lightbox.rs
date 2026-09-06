@@ -4,7 +4,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        Box, Carousel, Dialog, Input, States, Variables,
+        Box, Carousel, CarouselJump, Dialog, Input, States, Variables,
         common::{
             focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
         },
@@ -391,6 +391,12 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // `<img>`s, and one created `eager` around the old index fetches at once
     // and cannot be taken back (todo 227).
     let pending = settled.borrow().0 != opening;
+    // The swap's own move is instant: a smooth scroll back from the old index
+    // would pass over new pictures that are not shown, and fetch them.
+    let jump = use_context_provider(CarouselJump::default);
+    if pending {
+        jump.swapped();
+    }
     if pending {
         // The last render in which the old pictures are still in the document.
         // Their `<img>`s are about to be replaced, so focus on one would drop

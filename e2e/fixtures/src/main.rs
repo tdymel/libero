@@ -81,6 +81,8 @@ enum Route {
     SpotlightPage {},
     #[route("/collapse")]
     CollapsePage {},
+    #[route("/lightbox")]
+    LightboxPage {},
 
     // A real component with one defect planted through a prop. Most plants
     // are injected by the test instead (`tests/all/planted.rs`); these are
@@ -156,7 +158,7 @@ fn NotificationsPage() -> Element {
 }
 
 use combobox::{MultiSelectPage, SelectPage, TagsFieldPage};
-use overlay::{DrawerPage, MenuPage, SpotlightPage};
+use overlay::{DrawerPage, LightboxPage, MenuPage, SpotlightPage};
 use roving::{MenubarPage, RadioGroupPage, SegmentedControlPage};
 
 #[component]

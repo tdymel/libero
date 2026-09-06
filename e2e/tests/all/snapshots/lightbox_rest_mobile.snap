@@ -1,0 +1,11 @@
+---
+source: e2e/src/suite.rs
+description: lightbox at mobile (rest)
+expression: tree
+---
+button "Open the gallery"
+  StaticText "Open the gallery"
+button "Open the last picture"
+  StaticText "Open the last picture"
+button "Swap the gallery"
+  StaticText "Swap the gallery"

@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{cell::Cell, rc::Rc, time::Duration};
 
 use dioxus::prelude::*;
 
@@ -445,12 +445,46 @@ fn is_clone(raw: usize, count: usize, clones: usize) -> bool {
     clones > 0 && (raw < clones || raw >= clones + count)
 }
 
-/// Whether a controlled index's scroll is the instant one after mount. Only
-/// when it moves at all: at `first` the strip is already there, no scroll
-/// settles, and a raised `seam` would never come down. A looping strip is
-/// placed by its own mount effect.
-fn instant_first_scroll(first_scroll: bool, clones: usize, index: usize, first: usize) -> bool {
-    first_scroll && clones == 0 && index != first
+/// Whether a controlled index's scroll is instant: the first one after mount,
+/// or one that arrives with a swap of the slides ([`CarouselJump`]). Only when
+/// it moves at all: where the strip already is, no scroll settles, and a
+/// raised `seam` would never come down. A looping strip is placed by its own
+/// mount effect.
+fn instant_scroll(
+    first_scroll: bool,
+    swapped: bool,
+    clones: usize,
+    index: usize,
+    from: usize,
+    first: usize,
+) -> bool {
+    (first_scroll && clones == 0 && index != first) || (swapped && index != from)
+}
+
+/// Provided by a caller that replaces a controlled carousel's slides and its
+/// `index` in the same render: `Lightbox`, on a second `open_with` while it
+/// is open. A controlled move that arrives with a swap is instant. A smooth
+/// scroll from the old index would pass over slides of the new set that are
+/// not being shown, and a lazy picture on one of them is fetched as it goes
+/// by (todo 323). A context rather than a prop: no caller outside the crate
+/// swaps slides this way, and a remount instead would drop focus off the
+/// controls.
+///
+/// A count of swaps, not a flag for the swapping render: the carousel's
+/// effect compares it with the last count it saw, so the swap is not lost
+/// when the provider renders again before that effect runs.
+#[derive(Clone, Default)]
+pub(crate) struct CarouselJump(Rc<Cell<u64>>);
+
+impl CarouselJump {
+    /// Marks a swap, from the render that draws it.
+    pub(crate) fn swapped(&self) {
+        self.0.set(self.0.get() + 1);
+    }
+
+    fn count(&self) -> u64 {
+        self.0.get()
+    }
 }
 
 /// Scrolls the track so `index` is the snapped slide. The offset is a share of
@@ -709,6 +743,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // The status region describes the track, so the tab stop says where it is.
     let status_id = use_id();
 
+    let jump = try_use_context::<CarouselJump>();
+
     let count = props.slides.len();
     let per_view = props.per_view.copied_or(theme.carousel.per_view).max(0.1);
     // `Orientation` defaults to vertical; a carousel does not.
@@ -809,7 +845,11 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // The controlled index this effect last applied. Until it runs, a new one
     // stands in for `settled` when the slides go `inert` - see `rest` below.
     let mut applied = use_signal(|| None::<usize>);
-    use_effect(use_reactive!(|controlled, nav| {
+    // Read in render, so a swap is a dependency of the effect below, which
+    // runs even when the swap leaves the index where it was.
+    let swaps = jump.as_ref().map(CarouselJump::count);
+    let mut swaps_seen = use_signal(|| swaps);
+    use_effect(use_reactive!(|controlled, nav, swaps| {
         let Some(index) = controlled else {
             return;
         };
@@ -820,7 +860,9 @@ pub fn Carousel(props: CarouselProps) -> Element {
         // silently trimmed through the other.
         let asked = index;
         let index = nav.clamp_index(asked);
-        if index != *current.peek() {
+        // Where the strip is before this move: `current` follows the scroll.
+        let from = *current.peek();
+        if index != from {
             current.set(index);
             settled.set(index);
         }
@@ -831,7 +873,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
         // that puts it in the DOM - the effect that reads it - and the settle
         // on a real slide lowers it again.
         let first_scroll = std::mem::replace(&mut *mounting.write(), false);
-        match instant_first_scroll(first_scroll, nav.clones, index, nav.first) {
+        let swapped = swaps != std::mem::replace(&mut *swaps_seen.write(), swaps);
+        match instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first) {
             true => seam.set(true),
             false => nav.scroll_to_raw(nav.raw_for(index)),
         }
@@ -1718,10 +1761,19 @@ mod tests {
     /// strip already is.
     #[test]
     fn only_a_first_scroll_that_moves_is_instant() {
-        assert!(instant_first_scroll(true, 0, 5, 0));
-        assert!(!instant_first_scroll(false, 0, 5, 0));
-        assert!(!instant_first_scroll(true, 0, 0, 0));
-        assert!(!instant_first_scroll(true, 0, 2, 2));
-        assert!(!instant_first_scroll(true, 2, 5, 0));
+        assert!(instant_scroll(true, false, 0, 5, 0, 0));
+        assert!(!instant_scroll(false, false, 0, 5, 0, 0));
+        assert!(!instant_scroll(true, false, 0, 0, 0, 0));
+        assert!(!instant_scroll(true, false, 0, 2, 2, 2));
+        assert!(!instant_scroll(true, false, 2, 5, 0, 0));
+    }
+
+    /// Todo 323: a move that arrives with a swap of the slides is instant
+    /// too, whenever it leaves the slide the strip is on.
+    #[test]
+    fn a_move_with_a_slide_swap_is_instant() {
+        assert!(instant_scroll(false, true, 0, 2, 5, 0));
+        assert!(instant_scroll(false, true, 2, 2, 5, 0));
+        assert!(!instant_scroll(false, true, 0, 5, 5, 0));
     }
 }

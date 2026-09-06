@@ -1,0 +1,50 @@
+---
+source: e2e/src/suite.rs
+description: lightbox at desktop (open)
+expression: tree
+---
+button "Open the gallery"
+  StaticText "Open the gallery"
+button "Open the last picture"
+  StaticText "Open the last picture"
+button "Swap the gallery"
+  StaticText "Swap the gallery"
+generic
+  generic
+    generic
+    generic
+      dialog "Gallery" [modal]
+        button "Close"
+        region "Gallery"
+          status [atomic] [live=polite]
+            StaticText "Slide 1 of 6"
+          generic
+            group "Gallery"
+              group "1 of 6"
+                generic
+                  image "Picture 1"
+            generic
+              button "Previous slide" [disabled]
+                image
+              button "Next slide"
+                image
+        paragraph
+          StaticText "Picture 1 of the first gallery"
+        region "Thumbnails"
+          status [atomic] [live=polite]
+            StaticText "Slide 1 of 1"
+          generic
+            group "Thumbnails"
+              group "1 of 6"
+                button "Go to slide 1"
+              group "2 of 6"
+                button "Go to slide 2"
+              group "3 of 6"
+                button "Go to slide 3"
+              group "4 of 6"
+                button "Go to slide 4"
+              group "5 of 6"
+                button "Go to slide 5"
+              group "6 of 6"
+                button "Go to slide 6"
+--> aria-controls [id="lsx-N"] (rendered above)

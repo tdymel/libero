@@ -9,6 +9,7 @@ mod collapse;
 mod drawer;
 mod focus_contrast;
 mod isolation;
+mod lightbox;
 mod menu;
 mod menubar;
 mod modal;
