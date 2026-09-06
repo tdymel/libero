@@ -97,8 +97,14 @@ impl MenuState {
     /// `aria-controls` while the menu is open. Spread it on the control inside
     /// the `Menu`:
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// # use libero::components::{Button, Menu, use_menu};
+    /// # fn app() -> Element {
+    /// # let menu = use_menu();
+    /// # rsx! {
     /// Button { attributes: menu.a11y_attributes(), "Actions" }
+    /// # } }
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
         let id = self.id();

@@ -211,13 +211,18 @@ impl SpotlightHandle {
 /// A hook, like [`use_modal`](crate::hooks::use_modal): the palette is
 /// portaled from here, so call it in a component that outlives every trigger.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, SpotlightAction, SpotlightOptions, spotlight_filter, use_spotlight};
+/// # fn app() -> Element {
+/// # fn build_actions() -> Vec<SpotlightAction> { Vec::new() }
 /// let pages = use_signal(build_actions);
 /// let spotlight = use_spotlight(SpotlightOptions {
 ///     actions: Some(Callback::new(move |query: String| spotlight_filter(&query, &pages()))),
 ///     ..Default::default()
 /// });
 /// rsx! { Button { onclick: move |_| spotlight.open(), "Search" } }
+/// # }
 /// ```
 pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
     let theme = use_theme();

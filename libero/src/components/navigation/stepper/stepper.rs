@@ -82,7 +82,11 @@ pub struct StepperProps<T: Options> {
 /// is a match over `T` - so a step without a body is a compile error.
 /// Completed, current and pending come from the order; `state` adds errors.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Options, Stepper};
+/// # fn app() -> Element {
+/// # #[derive(Clone, Copy, PartialEq, Options)] enum Stage { Account, Shipping, Review }
 /// let mut stage = use_signal(|| Some(Stage::Account));
 /// rsx! {
 ///     Stepper {
@@ -95,6 +99,10 @@ pub struct StepperProps<T: Options> {
 ///         },
 ///     }
 /// }
+/// # }
+/// # #[component] fn AccountForm() -> Element { rsx! {} }
+/// # #[component] fn AddressForm() -> Element { rsx! {} }
+/// # #[component] fn OrderSummary() -> Element { rsx! {} }
 /// ```
 #[component]
 pub fn Stepper<T: Options>(props: StepperProps<T>) -> Element {

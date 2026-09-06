@@ -72,13 +72,17 @@ fn step_target(offset: f64, amount: f64, forward: bool, max: f64) -> f64 {
 /// For a strip whose buttons are the caller's own: `controls: "never"`,
 /// `onedgechange` for their state, and a handle to move it.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Scroller, use_scroller};
+/// # fn app() -> Element {
 /// let strip = use_scroller();
 /// rsx! {
-///     Scroller { handle: strip, controls: "never", aria_label: "Tags", .. }
+///     Scroller { handle: strip, controls: "never", aria_label: "Tags", "…" }
 ///     Button { onclick: move |_| strip.step_back(), "Back" }
 ///     Button { onclick: move |_| strip.step_forward(), "Forward" }
 /// }
+/// # }
 /// ```
 ///
 /// `Copy`, so any number of handlers can hold it. A call before the bound
@@ -294,12 +298,18 @@ base_props! {
 /// The scrolling is the browser's own, so touch, trackpad and the arrow keys
 /// on the focused strip work untouched; the controls step by `scroll_amount`.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Chip, Flex, Scroller};
+/// # fn app() -> Element {
+/// # const TAGS: [&str; 2] = ["rust", "ui"];
+/// # rsx! {
 /// Scroller { aria_label: "Tags",
 ///     Flex { direction: "row", gap: "sm",
 ///         for tag in TAGS { Chip { "{tag}" } }
 ///     }
 /// }
+/// # } }
 /// ```
 #[component]
 pub fn Scroller(props: ScrollerProps) -> Element {

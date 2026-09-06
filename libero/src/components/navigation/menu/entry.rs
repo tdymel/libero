@@ -34,10 +34,18 @@ enum Action {
 
 /// One command in a [`Menu`](super::Menu).
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Kbd, MenuItem};
+/// # fn app() -> Element {
+/// # fn copy() {}
+/// # let _ =
 /// MenuItem::new("Copy")
 ///     .trailing(rsx! { Kbd { "Ctrl C" } })
 ///     .onselect(move |_| copy())
+/// # ;
+/// # rsx! {}
+/// # }
 /// ```
 ///
 /// `leading` and `trailing` land inside the item's `<button>`, so they must not

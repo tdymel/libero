@@ -7,11 +7,18 @@ use crate::components::Options;
 /// across the whole tree, not just among siblings: the cascader finds the path
 /// to its value by searching for it.
 ///
-/// ```rust,ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{CascaderOption};
+/// # fn app() -> Element {
+/// # let _: CascaderOption<&str> =
 /// CascaderOption::new("fruit", "Fruit").children(vec![
 ///     CascaderOption::new("apple", "Apple"),
 ///     CascaderOption::new("quince", "Quince").disabled(true),
 /// ])
+/// # ;
+/// # rsx! {}
+/// # }
 /// ```
 #[derive(Clone, Debug, PartialEq)]
 pub struct CascaderOption<T> {

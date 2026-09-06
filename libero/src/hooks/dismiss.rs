@@ -653,6 +653,7 @@ impl DismissHandle {
 /// trigger as well as [`DismissHandle::floating_events`] on the box.
 ///
 /// ```ignore
+/// # // Not compiled: `use_dismiss` is crate-internal, so a doc-test cannot name it.
 /// let anchor = use_element();
 /// let popover = use_popover(anchor, opened(), PopoverOptions::new(gap, padding));
 /// let dismiss = use_dismiss(anchor, *popover.floating(), opened(), popover.placed(),

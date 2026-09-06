@@ -85,8 +85,15 @@ impl ComboboxState {
     /// list is open and has a row to point at, `aria-activedescendant`. Spread it on whatever control
     /// sits inside the `Combobox`:
     ///
-    /// ```ignore
+    /// ```no_run
+    /// # use dioxus::prelude::*;
+    /// # use libero::components::{TextField, use_combobox};
+    /// # fn app() -> Element {
+    /// # let fruit = use_combobox();
+    /// # let text = use_signal(String::new);
+    /// # rsx! {
     /// TextField { attributes: fruit.a11y_attributes(), value: text() }
+    /// # } }
     /// ```
     pub fn a11y_attributes(&self) -> Vec<Attribute> {
         let opened = self.is_open();

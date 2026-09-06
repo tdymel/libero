@@ -115,7 +115,11 @@ base_props! {
 /// The sections are `T::options()` unless `sections` narrows them, and `panel`
 /// is a match over `T` - so a forgotten section is a compile error.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Accordion, AccordionOpen, Options};
+/// # fn app() -> Element {
+/// # #[derive(Clone, Copy, PartialEq, Options)] enum Step { Shipping, Payment }
 /// let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
 /// rsx! {
 ///     Accordion {
@@ -127,6 +131,9 @@ base_props! {
 ///         },
 ///     }
 /// }
+/// # }
+/// # #[component] fn AddressForm() -> Element { rsx! {} }
+/// # #[component] fn CardForm() -> Element { rsx! {} }
 /// ```
 #[component]
 pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {

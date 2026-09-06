@@ -8,6 +8,7 @@
 /// `Sx` or `States` need not import them.
 ///
 /// ```ignore
+/// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
 /// base_props! {
 ///     pub struct ContainerProps {
 ///         #[props(default, into)]
@@ -24,6 +25,7 @@
 /// be followed by `>`.
 ///
 /// ```ignore
+/// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
 /// base_props! {
 ///     pub struct SliderProps<V: SliderValue> {
 ///         value: V,
@@ -36,6 +38,7 @@
 /// share is ambiguous at the call site - declare it as a field instead.
 ///
 /// ```ignore
+/// # // Not compiled: `base_props!` is crate-internal, so a doc-test cannot name it.
 /// base_props! {
 ///     extends(option);
 ///     pub struct OptionProps {

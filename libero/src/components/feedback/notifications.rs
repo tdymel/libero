@@ -432,7 +432,10 @@ impl<T: 'static> NotificationHandle<T> {
 
 /// Notifications drawn as an [`Alert`], over [`NotificationData`].
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{NotificationData, use_notifications};
+/// # fn app() -> Element {
 /// let notify = use_notifications();
 /// notify.show("Saved.");
 /// notify.show(NotificationData {
@@ -440,6 +443,8 @@ impl<T: 'static> NotificationHandle<T> {
 ///     color: "error".into(),
 ///     ..Default::default()
 /// });
+/// # rsx! {}
+/// # }
 /// ```
 ///
 /// Nothing appears unless the app renders a [`Notifications`] host, once.
@@ -455,12 +460,18 @@ pub fn use_notifications() -> NotificationHandle<NotificationData> {
 /// Everything a template needs travels in `T`, and a non-capturing closure
 /// coerces to the `fn`.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{NotificationScope, Paper, ProgressBar, Text, use_notifications_with};
+/// # fn app() -> Element {
+/// # #[derive(Clone, PartialEq)] struct Upload { file: String, percent: f64 }
 /// let uploads = use_notifications_with(|s: NotificationScope<Upload>| rsx! {
 ///     Paper { Text { "{s.args().file}" } ProgressBar { value: s.args().percent } }
 /// });
 /// let id = uploads.show(Upload { file: "archive.zip".into(), percent: 0.0 });
 /// uploads.update(id, Upload { file: "archive.zip".into(), percent: 40.0 });
+/// # rsx! {}
+/// # }
 /// ```
 ///
 /// The template is called in its notification's own scope, on every render,
@@ -516,10 +527,16 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 /// inside its own box, around `children`, and every handle created below it
 /// shows notifications here rather than in the app's host.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Notifications, use_notifications};
+/// # fn app() -> Element {
+/// # rsx! {
 /// Notifications { contained: true,
 ///     SaveButton {} // its `use_notifications()` shows them in this box
 /// }
+/// # } }
+/// # #[component] fn SaveButton() -> Element { rsx! {} }
 /// ```
 ///
 /// No keyboard behaviour of its own and no `Escape`: nothing here ever takes

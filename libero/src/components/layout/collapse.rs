@@ -146,12 +146,16 @@ base_props! {
 /// whatever owns the trigger, and `Collapse` never sees it. It handles no keys
 /// either, because it focuses nothing.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Collapse, Text};
+/// # fn app() -> Element {
 /// let mut open = use_signal(|| false);
 /// rsx! {
 ///     Button { onclick: move |_| open.toggle(), "Details" }
 ///     Collapse { open: open(), Text { "Shipping is calculated at checkout." } }
 /// }
+/// # }
 /// ```
 #[component]
 pub fn Collapse(props: CollapseProps) -> Element {

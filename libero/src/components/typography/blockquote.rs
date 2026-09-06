@@ -171,7 +171,11 @@ base_props! {
 /// Not interactive: no role, no `tabindex`, no ARIA. `<blockquote>` and
 /// `<cite>` mean what they mean.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::Blockquote;
+/// # fn app() -> Element {
+/// # rsx! {
 /// Blockquote {
 ///     color: "info",
 ///     attribution: rsx! { "Albert Einstein" },
@@ -179,6 +183,7 @@ base_props! {
 ///     cite_url: "https://example.org/quotes/42",
 ///     "Life is like riding a bicycle. To keep your balance, you must keep moving."
 /// }
+/// # } }
 /// ```
 #[component]
 pub fn Blockquote(props: BlockquoteProps) -> Element {

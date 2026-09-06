@@ -4,7 +4,10 @@ use std::sync::Arc;
 
 /// A user-defined enum naming the zones of a [`GridTemplate`].
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::GridArea;
+/// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Content }
 /// impl GridArea for PageArea {
 ///     fn name(&self) -> &'static str {
 ///         match self { Self::Header => "header", Self::Content => "content" }
@@ -113,7 +116,11 @@ pub(crate) struct TemplateInner {
 /// `?` cannot carry through `fn() -> Element`, and a template is a constant of
 /// the layout.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{GridArea, StaticGridTemplate};
+/// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Sidebar, Content }
+/// # impl GridArea for PageArea { fn name(&self) -> &'static str { "a" } }
 /// static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
 ///     template
 ///         .row(|row| row.cell(PageArea::Header))

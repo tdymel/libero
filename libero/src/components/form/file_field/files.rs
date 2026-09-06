@@ -9,9 +9,16 @@ use dioxus::html::FileData;
 /// `From` impls are what let a call site write whichever it has -
 /// `From<Option<FileData>> for Vec<FileData>` cannot exist, both being foreign.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{FileField, Files};
+/// # fn app() -> Element {
+/// # let mut avatar = use_signal(|| None::<dioxus::html::FileData>);
+/// # let mut attachments = use_signal(Vec::<dioxus::html::FileData>::new);
+/// # rsx! {
 /// FileField { value: avatar(), onchange: move |files: Files| avatar.set(files.one()) }
-/// FileField { value: attachments(), multiple: true, onchange: .. }
+/// FileField { value: attachments(), multiple: true, onchange: move |files: Files| attachments.set(files.into_vec()) }
+/// # } }
 /// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Files(Vec<FileData>);

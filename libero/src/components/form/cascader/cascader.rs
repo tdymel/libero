@@ -128,7 +128,14 @@ field_props! {
 /// never leaves its trigger - the columns are listboxes the trigger points at
 /// with `aria-activedescendant`.
 ///
-/// ```rust,ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Cascader, CascaderOption};
+/// # fn app() -> Element {
+/// # type Category = String;
+/// # let categories = use_signal(Vec::<CascaderOption<Category>>::new);
+/// # let mut chosen = use_signal(|| None::<Category>);
+/// # rsx! {
 /// Cascader {
 ///     label: "Category",
 ///     data: categories(),
@@ -136,6 +143,7 @@ field_props! {
 ///     onchange: move |next: Option<Category>| chosen.set(next),
 ///     searchable: true,
 /// }
+/// # } }
 /// ```
 #[component]
 pub fn Cascader<T: Options>(props: CascaderProps<T>) -> Element {

@@ -189,11 +189,19 @@ base_props! {
 /// is no longer busy - by which time the loader is gone. `ComboboxCore` does
 /// it this way:
 ///
-/// ```rust,ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Box, Loader, VisuallyHidden};
+/// # fn app() -> Element {
+/// # let loading = true;
+/// # let rows: Vec<String> = Vec::new();
+/// # rsx! {
 /// Box { "aria-busy": loading,
 ///     if loading { Loader {} } else { ResultList { rows } }
 /// }
 /// VisuallyHidden { role: "status", if loading { "Loading results" } }
+/// # } }
+/// # #[component] fn ResultList(rows: Vec<String>) -> Element { rsx! {} }
 /// ```
 ///
 /// There is no `label` prop that would make the loader its own status region:

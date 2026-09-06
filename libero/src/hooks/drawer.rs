@@ -22,7 +22,11 @@ pub struct DrawerOptions {
 /// A drawer is [`use_modal`] with a docked panel around the content: same
 /// handle, same openings, same results.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::Anchor;
+/// # use libero::hooks::{DrawerOptions, ModalScope, use_drawer};
+/// # fn app() -> Element {
 /// let options = DrawerOptions {
 ///     anchor: "right".into(),
 ///     aria_label: Some("Navigation".into()),
@@ -32,6 +36,8 @@ pub struct DrawerOptions {
 ///     Anchor { to: "/", "Home" }
 /// });
 /// nav.open();
+/// # rsx! {}
+/// # }
 /// ```
 pub fn use_drawer<S, R>(
     options: DrawerOptions,

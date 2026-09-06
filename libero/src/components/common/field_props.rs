@@ -4,6 +4,7 @@
 /// specific to the field.
 ///
 /// ```ignore
+/// # // Not compiled: `field_props!` is crate-internal, so a doc-test cannot name it.
 /// field_props! {
 ///     extends(input);
 ///     pub struct TextFieldProps {

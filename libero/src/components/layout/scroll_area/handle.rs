@@ -12,12 +12,16 @@ use crate::{
 /// scrolled away in between - does nothing. A handle is a command, and every
 /// call scrolls.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, ScrollArea, use_scroll_area};
+/// # fn app() -> Element {
 /// let area = use_scroll_area();
 /// rsx! {
-///     ScrollArea { handle: area, .. }
+///     ScrollArea { handle: area, "…" }
 ///     Button { onclick: move |_| area.scroll_to_percent(None, Some(0.0)), "Top" }
 /// }
+/// # }
 /// ```
 ///
 /// `Copy`, so any number of handlers can hold it. A call before the bound

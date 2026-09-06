@@ -9,8 +9,14 @@ use crate::utils::warn;
 /// design token file. One that parses as no color is skipped with a dev
 /// warning, never a panic.
 ///
-/// ```ignore
-/// ColorPicker { swatches: ["#2e2e2e", "#868e96", "rgba(250, 82, 82, 0.5)"], .. }
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{ColorCode, ColorPicker};
+/// # fn app() -> Element {
+/// # let color = use_signal(ColorCode::default);
+/// # rsx! {
+/// ColorPicker { value: color(), swatches: ["#2e2e2e", "#868e96", "rgba(250, 82, 82, 0.5)"] }
+/// # } }
 /// ```
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Swatches(Vec<ColorCode>);

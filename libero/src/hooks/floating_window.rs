@@ -55,12 +55,18 @@ impl FloatingWindowHandle {
 /// It is not a modal: no focus trap, no overlay, and the page stays usable.
 /// Focus moves into the window on open and back to the trigger on close.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, FloatingWindowOptions};
+/// # use libero::hooks::use_floating_window;
+/// # fn app() -> Element {
 /// let inspector = use_floating_window(
 ///     FloatingWindowOptions { title: Some("Inspector".into()), resizable: true, ..Default::default() },
 ///     |window| rsx! { InspectorBody {} },
 /// );
 /// rsx! { Button { onclick: move |_| inspector.toggle(), "Inspector" } }
+/// # }
+/// # #[component] fn InspectorBody() -> Element { rsx! {} }
 /// ```
 ///
 /// Call it under `LiberoProvider`, in a component that outlives every

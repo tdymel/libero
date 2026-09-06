@@ -185,7 +185,12 @@ base_props! {
 /// button is a real `<button>` inside an `ActionIcon`, so `Tab` reaches it and
 /// `Enter`/`Space` activate it.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::Alert;
+/// # fn app() -> Element {
+/// # let mut dismissed = use_signal(|| false);
+/// # rsx! {
 /// Alert {
 ///     color: "warning",
 ///     title: "Card expiring",
@@ -193,6 +198,8 @@ base_props! {
 ///     onclose: move |_| dismissed.set(true),
 ///     "Your card ends 09/26. Update it before the next invoice."
 /// }
+/// # } }
+/// # #[component] fn WarningGlyph() -> Element { rsx! {} }
 /// ```
 #[component]
 pub fn Alert(props: AlertProps) -> Element {

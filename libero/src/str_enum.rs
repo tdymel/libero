@@ -6,6 +6,7 @@
 /// first of which is its canonical one (what `as_str` returns).
 ///
 /// ```ignore
+/// # // Not compiled: `str_enum!` is crate-internal, so a doc-test cannot name it.
 /// str_enum! {
 ///     /// How a control paints itself.
 ///     pub enum Variant {
@@ -23,6 +24,7 @@
 /// names would collide with another enum's on the same element:
 ///
 /// ```ignore
+/// # // Not compiled: `str_enum!` is crate-internal, so a doc-test cannot name it.
 /// str_enum! {
 ///     #[state_prefix = "fit"]
 ///     pub enum ImageFit {

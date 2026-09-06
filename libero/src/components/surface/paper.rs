@@ -74,11 +74,17 @@ base_props! {
 /// border. No role, no ARIA and nothing focusable - a surface is
 /// presentational, and the contents are what a reader interacts with.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Paper, Text, Title};
+/// # use libero::sx::sx;
+/// # fn app() -> Element {
+/// # rsx! {
 /// Paper { shadow: "sm", radius: "md", sx: sx().padding("lg"),
 ///     Title { size: "md", "Invoice #4021" }
 ///     Text { "Due 30 September." }
 /// }
+/// # } }
 /// ```
 #[component]
 pub fn Paper(props: PaperProps) -> Element {

@@ -49,6 +49,7 @@ base_props! {
 /// extra.
 ///
 /// ```ignore
+/// # // Not compiled: `use_box` is crate-internal, so a doc-test cannot name it.
 /// use_box()
 ///     .framework_sx(&TEXT_BASE_SX)
 ///     .class(&props.class)

@@ -6,14 +6,20 @@ use super::{GridArea, GridTemplate, GridTemplateBuilder};
 /// A [`GridTemplate`] built once, at a `static` - the shape of a layout is a
 /// constant, and `build`'s `Result` cannot travel through `fn() -> Element`.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Grid, GridArea, StaticGridTemplate};
+/// # fn app() -> Element {
+/// # #[derive(Clone, Copy, PartialEq)] enum PageArea { Header, Sidebar, Content }
+/// # impl GridArea for PageArea { fn name(&self) -> &'static str { "a" } }
 /// static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
 ///     template
 ///         .row(|row| row.cell(PageArea::Header))
 ///         .row(|row| row.cell(PageArea::Sidebar).cells(PageArea::Content, 3))
 /// });
 ///
-/// rsx! { Grid { template: PAGE.clone(), .. } }
+/// rsx! { Grid { template: PAGE.clone() } }
+/// # }
 /// ```
 ///
 /// The type parameter stays here, on the caller's own `static`; `Grid` still

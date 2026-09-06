@@ -254,8 +254,17 @@ pub trait Fields: Sized {
 /// A typed path for a type that cannot `#[derive(Fields)]`. The field access
 /// is compiled, so a typo is an error, and the path binds like a derived one:
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Fields, FieldPath};
+/// # fn app() -> Element {
+/// # #[derive(Clone, PartialEq, Default, Fields)] struct Address { zip: String }
+/// # #[derive(Clone, PartialEq, Default, Fields)] struct Signup { #[fields(nested)] address: Address }
+/// # use libero::path;
 /// let zip = path!(Signup => address.zip); // FieldPath<Signup, String>
+/// # let _: FieldPath<Signup, String> = zip;
+/// # rsx! {}
+/// # }
 /// ```
 #[macro_export]
 macro_rules! path {

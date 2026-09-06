@@ -182,7 +182,13 @@ base_props! {
 /// It needs an accessible name, and `role` sits on the root, so a plain
 /// `aria_label` reaches exactly the right element:
 ///
-/// ```rust,ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::ProgressBar;
+/// # fn app() -> Element {
+/// # let downloaded = use_signal(|| 0u64);
+/// # let total = use_signal(|| 100u64);
+/// # rsx! {
 /// ProgressBar {
 ///     aria_label: "Downloading update",
 ///     value: downloaded() as f64,
@@ -190,6 +196,7 @@ base_props! {
 ///     size: "lg",
 ///     color: "success",
 /// }
+/// # } }
 /// ```
 #[component]
 pub fn ProgressBar(props: ProgressBarProps) -> Element {

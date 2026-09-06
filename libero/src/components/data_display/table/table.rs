@@ -99,7 +99,13 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 
 /// A sortable data table.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Table, column};
+/// # fn app() -> Element {
+/// # #[derive(Clone, PartialEq)] struct User { name: String, age: u32 }
+/// # let users = use_signal(Vec::<User>::new);
+/// # rsx! {
 /// Table {
 ///     data: users(),
 ///     columns: vec![
@@ -107,6 +113,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 ///         column("Age").value(|u: &User| u.age).sortable(),
 ///     ],
 /// }
+/// # } }
 /// ```
 ///
 /// Give it an accessible name with `aria_label` when the surrounding text

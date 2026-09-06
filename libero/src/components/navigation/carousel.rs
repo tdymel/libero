@@ -666,13 +666,20 @@ base_props! {
 /// which is what makes a native touch swipe, a keyboard arrow and a control
 /// click all end up in the same place.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Carousel, Image};
+/// # fn app() -> Element {
+/// # struct Photo { url: String, alt: String }
+/// # let photos: Vec<Photo> = Vec::new();
+/// # rsx! {
 /// Carousel {
 ///     aria_label: "Product photos",
 ///     per_view: 3.0,
 ///     indicators: true,
 ///     slides: photos.iter().map(|p| rsx! { Image { src: "{p.url}", alt: "{p.alt}" } }).collect(),
 /// }
+/// # } }
 /// ```
 #[component]
 pub fn Carousel(props: CarouselProps) -> Element {

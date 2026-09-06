@@ -110,13 +110,21 @@ impl Default for LightboxOptions {
 /// Open it from the thumbnail's own click handler, and focus goes back to that
 /// thumbnail when it closes.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::hooks::{LightboxItem, LightboxOptions, use_lightbox};
+/// # fn app() -> Element {
+/// # struct Photo { url: String, alt: String, title: String }
+/// # let photos: Vec<Photo> = Vec::new();
+/// # let index = 0;
 /// let lightbox = use_lightbox(LightboxOptions::default());
 /// let items: Vec<LightboxItem> = photos.iter()
 ///     .map(|p| LightboxItem::new(&p.url, &p.alt).caption(&p.title))
 ///     .collect();
 /// // in a thumbnail's `onclick`:
 /// lightbox.open_with((items.clone(), index));
+/// # rsx! {}
+/// # }
 /// ```
 pub fn use_lightbox(options: LightboxOptions) -> ModalHandle<LightboxOpening> {
     use_modal(move |s: ModalScope<LightboxOpening>| {

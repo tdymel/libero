@@ -273,12 +273,20 @@ impl<S: Default + 'static, R: Clone + 'static> ModalHandle<S, R> {
 /// captured by `render`. The handle is `Copy`; a dialog wanting one shared
 /// instance can `use_context_provider` it in its own hook.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{Button, Dialog};
+/// # use libero::hooks::{ModalScope, use_modal};
+/// # fn app() -> Element {
+/// # #[derive(Clone, PartialEq)] struct Confirm { message: String }
+/// # impl From<&str> for Confirm { fn from(m: &str) -> Self { Confirm { message: m.into() } } }
 /// let confirm = use_modal(|s: ModalScope<Confirm, bool>| rsx! {
 ///     Dialog { title: "{s.args().message}",
 ///         Button { onclick: move |_| s.resolve(true), "Delete" } }
 /// });
-/// confirm.open_with("Delete this file?").onresult(move |r| { .. });
+/// confirm.open_with("Delete this file?").onresult(move |deleted| { let _ = deleted; });
+/// # rsx! {}
+/// # }
 /// ```
 pub fn use_modal<S, R>(
     render: impl FnMut(ModalScope<S, R>) -> Element + 'static,

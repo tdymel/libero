@@ -132,12 +132,18 @@ base_props! {
 /// that signal to drive the panel itself. `aria-controls` rides
 /// `GlobalAttributes`, so spread it:
 ///
-/// ```rust,ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::Burger;
+/// # fn app() -> Element {
+/// # let mut open = use_signal(|| false);
+/// # rsx! {
 /// Burger {
 ///     open: open(),
 ///     "aria-controls": "site-nav",
 ///     onclick: move |_| open.toggle(),
 /// }
+/// # } }
 /// ```
 ///
 /// Focus stays on the burger when the panel opens. Moving it into the panel

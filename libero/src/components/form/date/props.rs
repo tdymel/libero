@@ -5,6 +5,7 @@
 /// Declares a date or time component's props.
 ///
 /// ```ignore
+/// # // Not compiled: `date_props!` is crate-internal, so a doc-test cannot name it.
 /// date_props! {
 ///     field DayFieldProps(NaiveDate, NaiveDate): format, limits, exclude_date, today, close_on_change
 /// }

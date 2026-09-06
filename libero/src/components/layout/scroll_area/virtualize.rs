@@ -77,7 +77,12 @@ impl Probe {
 /// body, or a plain stack - as long as a `ScrollArea` is somewhere above it.
 /// Without one it warns and renders every row.
 ///
-/// ```ignore
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::components::{List, ListItem, ScrollArea, Virtualize};
+/// # fn app() -> Element {
+/// # let items = use_signal(Vec::<String>::new);
+/// # rsx! {
 /// ScrollArea {
 ///     List {
 ///         Virtualize {
@@ -86,6 +91,7 @@ impl Probe {
 ///         }
 ///     }
 /// }
+/// # } }
 /// ```
 ///
 /// Rows must be uniform height - it measures one and assumes the rest match.
