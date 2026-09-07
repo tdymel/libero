@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::components::form::{row_label, use_bound};
 
 use crate::{
-    components::{Input, OptionList, OptionSource, Options, common::field_props},
+    components::{Input, OptionSource, Options, common::field_props},
     hooks::use_theme,
     utils::warn,
 };
@@ -130,7 +130,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         warn("Select: without `onchange` the selection can never change.");
     }
 
-    let list = option_list(&props.options);
+    let list = props.options.or_static();
     let values = list.values();
     // A list that has been asked for and has not answered yet lists nothing,
     // and says nothing about being empty: the rows belong to the request still
@@ -235,20 +235,6 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             states: props.states,
             attributes: props.attributes,
         }
-    }
-}
-
-/// What the skin lists: the caller's options, or every `Options::options()`
-/// when the prop was left unset - which is the fallback a runtime type like
-/// `String` leaves empty, so those pass their own.
-///
-/// Unset is not the same as an empty list, which is why the prop is an
-/// `OptionSource` rather than an `Option<Vec<T>>`: a caller who passes nothing
-/// wants the enum's own options, and one who passes an empty list means it.
-pub(super) fn option_list<T: Options>(source: &OptionSource<T>) -> OptionList<T> {
-    match source.is_unset() {
-        true => OptionList::from(T::options().to_vec()),
-        false => source.list().clone(),
     }
 }
 

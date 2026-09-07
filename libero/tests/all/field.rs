@@ -9,8 +9,8 @@ use libero::{
     LiberoProvider,
     components::{
         Checkbox, Fields, Fieldset, Form, MultiSelect, NativeSelect, NumberField, NumberValue,
-        Options, PasswordField, PinField, Radio, RadioGroup, SegmentedControl, Select, Slider,
-        Switch, TextField, Textarea,
+        OptionItem, OptionList, Options, PasswordField, PinField, Radio, RadioGroup,
+        SegmentedControl, Select, Slider, Switch, TextField, Textarea,
     },
 };
 
@@ -853,6 +853,51 @@ fn a_radio_group_shares_one_name_and_one_tab_stop() {
     assert_eq!(values, ["Free", "Pro", "Team"]);
 }
 
+/// Todo 371: the per-option flag rides on the option, and `options` left
+/// unset is not an empty list - it still means every `Options::options()`.
+#[test]
+fn a_radio_group_disables_the_option_its_item_flagged() {
+    fn unset() -> Element {
+        rsx! {
+            LiberoProvider {
+                RadioGroup { label: "Plan", value: Some(Plan::Free), onchange: move |_: Plan| {} }
+            }
+        }
+    }
+
+    fn flagged() -> Element {
+        rsx! {
+            LiberoProvider {
+                RadioGroup {
+                    label: "Plan",
+                    value: Some(Plan::Free),
+                    onchange: move |_: Plan| {},
+                    options: OptionList::new([
+                        Plan::Free.into(),
+                        Plan::Pro.into(),
+                        OptionItem::new(Plan::Team).disabled(true),
+                    ]),
+                }
+            }
+        }
+    }
+
+    // Unset lists the enum's own three options, none of them off.
+    let unset = body(&render(unset));
+    assert_eq!(unset.matches("<input").count(), 3);
+    assert_eq!(unset.matches("disabled").count(), 0, "{unset}");
+
+    // Only the flagged option is refused, and the selected one keeps the one
+    // tab stop the group has.
+    let flagged = body(&render(flagged));
+    assert_eq!(flagged.matches("<input").count(), 3);
+    let team = &flagged[flagged
+        .find(r#"data-radio-index="2""#)
+        .expect("the third radio")..];
+    assert!(team[..team.find('>').expect("an unterminated tag")].contains("disabled"));
+    assert_eq!(flagged.matches(r#"tabindex="0""#).count(), 1, "{flagged}");
+}
+
 /// Nothing selected is what an unanswered question looks like - but the group
 /// still needs a way in, so the first option holds the tab stop.
 #[test]
@@ -877,7 +922,7 @@ fn an_unanswered_radio_group_still_has_a_way_in() {
 
 /// A segmented control is a radio group with the field around it: the label
 /// names the group, the captions describe it, and `disabled` reaches every
-/// segment rather than only the ones in `disabled_options`.
+/// segment rather than only the ones its `options` flag.
 #[test]
 fn a_segmented_control_wears_the_field_around_its_radiogroup() {
     fn app() -> Element {

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, Options, States,
+        HtmlTag, Input, OptionSource, Options, States,
         common::{Orientation, field_props, names_itself, use_name_warning},
         form::{Radio, use_bound, use_field},
         layout::use_box,
@@ -79,8 +79,20 @@ field_props! {
         /// The options to show. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
         /// here.
-        #[props(default)]
-        options: Option<Vec<T>>,
+        ///
+        /// `OptionItem::new(value).disabled(true)` renders an option that
+        /// cannot be picked and that the arrow keys step over; `disabled`
+        /// disables all of them. A grouped
+        /// [`OptionList`](crate::components::OptionList) is accepted and its
+        /// options are drawn flattened, in the order given: the group is the
+        /// field, so it draws no group headings inside itself.
+        ///
+        /// A group has no dropdown to put a loader in, so a **pending**
+        /// [`OptionSource`](crate::components::OptionSource) - one built from
+        /// a [`Resource`] that has not answered yet - simply draws no
+        /// options. Await the fetch above the field if that matters.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Overrides `Options::label`. Runs during render, so it can read a
         /// locale from context.
         #[props(default)]
@@ -89,10 +101,6 @@ field_props! {
         /// makes a `Card` option worth its surface.
         #[props(default)]
         option_description: Option<Callback<T, String>>,
-        /// Options that render but cannot be picked. `disabled` disables all
-        /// of them.
-        #[props(default)]
-        disabled_options: Vec<T>,
         /// `Card` draws every option as a bordered surface that is its own
         /// hit area. A row of cards stretches them to one height.
         #[props(default, into)]
@@ -135,10 +143,8 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         warn("RadioGroup: without `onchange` the selection can never change.");
     }
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
+    let list = props.options.or_static();
+    let values = list.values();
     let selected = current
         .as_ref()
         .and_then(|value| values.iter().position(|option| option == value));
@@ -196,21 +202,18 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
         })
     };
 
-    let disabled_options: Vec<bool> = values
-        .iter()
-        .map(|value| props.disabled_options.contains(value))
-        .collect();
+    let option_disabled = list.disabled();
     // One tab stop for the whole group: the selected option, or the first one
     // that can be picked. A disabled input takes no focus, so a selected
     // option the caller has disabled cannot hold the stop - the group would
     // drop out of the Tab order. Arrow keys move between them from there.
     let tab_stop = selected
-        .filter(|&index| !disabled_options[index])
-        .or_else(|| disabled_options.iter().position(|off| !off))
+        .filter(|&index| !option_disabled[index])
+        .or_else(|| option_disabled.iter().position(|off| !off))
         .unwrap_or(0);
 
     let arrows = {
-        let disabled_options = disabled_options.clone();
+        let option_disabled = option_disabled.clone();
         move |event: Event<KeyboardData>| {
             if disabled {
                 return;
@@ -229,7 +232,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
             if readonly {
                 return;
             }
-            let Some(next) = neighbour(&disabled_options, tab_stop, step) else {
+            let Some(next) = neighbour(&option_disabled, tab_stop, step) else {
                 return;
             };
             pick.call(next);
@@ -270,7 +273,7 @@ pub fn RadioGroup<T: Options>(props: RadioGroupProps<T>) -> Element {
                 variant,
                 color: color.clone(),
                 checked: selected == Some(index),
-                disabled: disabled || disabled_options[index],
+                disabled: disabled || option_disabled[index],
                 readonly,
                 tab_stop: index == tab_stop,
                 pick,

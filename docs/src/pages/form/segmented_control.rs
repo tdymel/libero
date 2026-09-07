@@ -4,7 +4,7 @@ use crate::components::{
 use crate::icons::{AlignCenterIcon, AlignLeftIcon, AlignRightIcon};
 use dioxus::prelude::*;
 use libero::components::{
-    Code, FieldStatus, Icon, Input, OptionLabel, Options, SegmentedControl, Text,
+    Code, FieldStatus, Icon, Input, OptionLabel, OptionList, Options, SegmentedControl, Text,
 };
 
 /// The enum is the strip, so the snippet has to show it.
@@ -56,7 +56,13 @@ const RICH: &str = r#"option_label: |alignment: Alignment| OptionLabel::rich(
     },
 )"#;
 
-const DISABLED_OPTIONS: &str = "disabled_options: vec![Alignment::Center]";
+/// The flag sits on the option, inside the one `options` prop - a segment
+/// this control refuses, rather than an alignment the type refuses everywhere.
+// snippet: after ALIGNMENT_ENUM
+// snippet: let mut alignment = use_signal(|| Alignment::Left);
+// snippet: in SegmentedControl { value: alignment(), onchange: move |next| alignment.set(next), .. }
+const DISABLED_OPTION: &str =
+    r#"options: OptionList::from_options().disabling(|align| *align == Alignment::Center)"#;
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
@@ -115,14 +121,12 @@ pub fn SegmentedControlPage() -> Element {
                         .doc("What the control posts as. A path - `Settings::FIELDS.align()` - also binds it to the surrounding `Form`'s value when it has no `onchange`."),
                     prop("validate", "Validators<T>")
                         .doc("Rules over the selection, shown once the control loses focus or its form is submitted."),
-                    prop("options", "Vec<T>")
+                    prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own."),
+                        .doc("Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a single row of segments has nowhere to put headings."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a segment. Runs during render, so it can read a locale from context."),
-                    prop("disabled_options", "Vec<T>")
-                        .doc("Segments that render but cannot be picked."),
                     prop("orientation", "Orientation")
                         .default("horizontal")
                         .doc("Row or column layout."),
@@ -267,11 +271,11 @@ pub fn SegmentedControlPage() -> Element {
                     Control::switch("full_width"),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                    // `disabled_options` is a `Vec<T>`, not a bool, so the
-                    // switch stands for one named segment rather than the prop.
-                    Control::switch("disabled_options").code(|_, values| {
-                        match values.str("disabled_options") == "true" {
-                            true => vec![DISABLED_OPTIONS.to_string()],
+                    // The flag lives inside `options`, so the switch stands
+                    // for one named segment rather than for a prop of its own.
+                    Control::switch("disabled_option").code(|_, values| {
+                        match values.str("disabled_option") == "true" {
+                            true => vec![DISABLED_OPTION.to_string()],
                             false => vec![],
                         }
                     }),
@@ -306,9 +310,10 @@ pub fn SegmentedControlPage() -> Element {
                             "rich" => Some(Callback::new(rich)),
                             _ => None,
                         },
-                        disabled_options: match is_on(&values, "disabled_options") {
-                            true => vec![Alignment::Center],
-                            false => Vec::new(),
+                        options: {
+                            let off = is_on(&values, "disabled_option");
+                            OptionList::from_options()
+                                .disabling(move |align| off && *align == Alignment::Center)
                         },
                         value: alignment(),
                         onchange: move |next| alignment.set(next),

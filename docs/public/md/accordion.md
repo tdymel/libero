@@ -63,9 +63,8 @@ them back.
 | `open` | `AccordionOpen<T>` | `One(None)` | Which sections are expanded; the variant is the mode |
 | `onchange` | `EventHandler<AccordionOpen<T>>` | - | The new open set |
 | `panel` | `Callback<T, Element>` | - | A section's body. Closed content is never mounted |
-| `options` | `Vec<T>` | `T::options()` | The sections to show |
+| `options` | `OptionSource<T>` | `T::options()` | The sections to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled` - a section that renders, cannot toggle, and stays a tab stop. Named groups are drawn flattened |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Rename a section, or `OptionLabel::rich` to draw it as rsx |
-| `disabled_options` | `Vec<T>` | `[]` | Render, cannot toggle; still tab stops |
 | `heading` | `HtmlTag` | `h3` | The heading around each trigger, `h1`..`h6` |
 | `size` | `Size` | `theme.accordion.size` (`md`) | Type and padding |
 

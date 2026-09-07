@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use super::core::{SegmentSpec, SegmentedControlView, render_segmented_control};
 use crate::{
     components::{
-        Input, OptionLabel, Options, Variant,
+        Input, OptionLabel, OptionSource, Options, Variant,
         common::{Orientation, base_color, field_props, names_itself, use_name_warning},
         form::{use_bound, use_field},
         inputs::button_variables,
@@ -36,8 +36,19 @@ field_props! {
         validate: crate::components::Validators<T>,
         /// The segments to show. Defaults to every `Options::options()` - which
         /// `String` leaves empty, so a runtime set passes them here.
-        #[props(default)]
-        options: Option<Vec<T>>,
+        ///
+        /// `OptionItem::new(value).disabled(true)` renders a segment that
+        /// cannot be picked; `disabled` disables all of them. A grouped
+        /// [`OptionList`](crate::components::OptionList) is accepted and its
+        /// segments are drawn flattened, in the order given: a single row of
+        /// segments has nowhere to put group headings and does not draw them.
+        ///
+        /// A control has no dropdown to put a loader in, so a **pending**
+        /// [`OptionSource`](crate::components::OptionSource) - one built from
+        /// a [`Resource`] that has not answered yet - simply draws no
+        /// segments. Await the fetch above the field if that matters.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Overrides `Options::label`. Runs during render, so it can read a
         /// locale from context - which is how a renamed control stays renamed.
         ///
@@ -46,10 +57,6 @@ field_props! {
         /// use.
         #[props(default)]
         option_label: Option<Callback<T, OptionLabel>>,
-        /// Segments that render but cannot be picked. `disabled` disables all
-        /// of them.
-        #[props(default)]
-        disabled_options: Vec<T>,
         #[props(default, into)]
         orientation: Input<Orientation>,
         /// The *unselected* look, shared by every segment.
@@ -99,10 +106,9 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
         warn("SegmentedControl: without `onchange` the selection can never change.");
     }
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
+    let list = props.options.or_static();
+    let values = list.values();
+    let option_disabled = list.disabled();
     if values.is_empty() {
         warn("SegmentedControl: no segments - a `T` without static `options()` needs `options`.");
     }
@@ -151,7 +157,8 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
 
     let segments: Vec<SegmentSpec> = values
         .iter()
-        .map(|value| {
+        .zip(&option_disabled)
+        .map(|(value, &option_disabled)| {
             let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
@@ -163,7 +170,7 @@ pub fn SegmentedControl<T: Options>(props: SegmentedControlProps<T>) -> Element 
                 content: label.content.unwrap_or_else(|| rsx! { span { "{name}" } }),
                 name,
                 value: value.value(),
-                disabled: disabled || props.disabled_options.contains(value),
+                disabled: disabled || option_disabled,
             }
         })
         .collect();

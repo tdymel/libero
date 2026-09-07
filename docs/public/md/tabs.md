@@ -139,8 +139,9 @@ fn Demo() -> Element {
 `FileIcon` there is your own icon component - any `svg` will do; `Icon` is what
 sizes it.
 
-`options` narrows the strip to a subset of the enum's variants, and `disabled_options` lists
-tabs that render but cannot be picked.
+`options` narrows the strip to a subset of the enum's variants, and an
+`OptionItem::new(tab).disabled(true)` inside it renders a tab that cannot be
+picked.
 
 ## Accessibility
 
@@ -160,9 +161,8 @@ draws is what a screen reader cannot use, and that name becomes the tab's
 | `value` | `T` | required | The selected tab. Strictly controlled - pair it with `onchange`. |
 | `onchange` | `EventHandler<T>` | - | Called with the tab that should become selected. |
 | `panel` | `Callback<T, Element>` | - | The body of the selected tab. Called for `value` only, so the other panels cost nothing. |
-| `options` | `Vec<T>` | `T::options()` | The tabs to show. |
+| `options` | `OptionSource<T>` | `T::options()` | The tabs to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a strip has no room for headings. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed. |
-| `disabled_options` | `Vec<T>` | - | Tabs that render but cannot be picked. |
 | `size` | `Size` | `md` | Tab strip size. |
 | `color` | `ThemeAwareValue` | `primary` | Indicator and selected-label color. |
 | `full_width` | `bool` | `false` | Tabs share the row evenly instead of sizing to their label. |

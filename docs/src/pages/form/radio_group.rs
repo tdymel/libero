@@ -1,6 +1,6 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use dioxus::prelude::*;
-use libero::components::{Code, FieldStatus, Options, RadioGroup, Text};
+use libero::components::{Code, FieldStatus, OptionList, Options, RadioGroup, Text};
 
 /// The enum is the option list, so the snippet has to show it.
 const PLAN_ENUM: &str = r#"#[derive(Clone, Copy, PartialEq, Options)]
@@ -41,7 +41,19 @@ const PLAN_DESCRIPTION: &str = r#"option_description: move |plan: Plan| match pl
 }
 .to_string()"#;
 
-const DISABLED_OPTIONS: &str = "disabled_options: vec![Plan::Team]";
+/// The flag sits on the option, inside the one `options` prop - a row this
+/// group refuses, rather than a plan the type refuses everywhere.
+// snippet: after PLAN_ENUM
+// snippet: let mut plan = use_signal(|| None::<Plan>);
+// snippet: in RadioGroup { value: plan(), onchange: move |next| plan.set(Some(next)), .. }
+const DISABLED_OPTION: &str =
+    r#"options: OptionList::from_options().disabling(|plan| *plan == Plan::Team)"#;
+
+/// Every plan, with `Team` flagged when the switch is on.
+fn plan_options(values: &DemoValues) -> OptionList<Plan> {
+    let off = is_on(values, "disabled_option");
+    OptionList::from_options().disabling(move |plan| off && *plan == Plan::Team)
+}
 
 fn is_on(values: &DemoValues, name: &str) -> bool {
     values.str(name) == "true"
@@ -62,16 +74,14 @@ pub fn RadioGroupPage() -> Element {
                         .doc("The selected option; strictly controlled. `None` selects nothing, which is what an unanswered question looks like."),
                     prop("onchange", "EventHandler<T>")
                         .doc("Called with the option the caller should select next."),
-                    prop("options", "Vec<T>")
+                    prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own."),
+                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here, since only an enum lists its own. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - the group is the field, so it draws no headings inside itself."),
                     prop("option_label", "Callback<T, String>")
                         .default("T::label()")
                         .doc("Overrides what the derive named an option. Runs during render, so it can read a locale from context."),
                     prop("option_description", "Callback<T, String>")
                         .doc("A line under each option's label; an empty string renders none. What makes a card option worth its surface."),
-                    prop("disabled_options", "Vec<T>")
-                        .doc("Options that render but cannot be picked. The arrow keys step over them."),
                     prop("variant", "ChoiceVariant")
                         .default("plain")
                         .doc("`card` draws every option as a bordered surface that is its own hit area. A row of cards stretches them to one height."),
@@ -193,11 +203,11 @@ pub fn RadioGroupPage() -> Element {
                     }),
                     Control::switch("required"),
                     Control::switch("disabled"),
-                    // `disabled_options` is a `Vec<T>`, not a bool, so the
-                    // switch stands for one named option rather than the prop.
-                    Control::switch("disabled_options").code(|_, values| {
-                        match is_on(values, "disabled_options") {
-                            true => vec![DISABLED_OPTIONS.to_string()],
+                    // The flag lives inside `options`, so the switch stands
+                    // for one named option rather than for a prop of its own.
+                    Control::switch("disabled_option").code(|_, values| {
+                        match is_on(values, "disabled_option") {
+                            true => vec![DISABLED_OPTION.to_string()],
                             false => vec![],
                         }
                     }),
@@ -223,10 +233,7 @@ pub fn RadioGroupPage() -> Element {
                         },
                         required: is_on(&values, "required").then_some(true),
                         disabled: is_on(&values, "disabled").then_some(true),
-                        disabled_options: match is_on(&values, "disabled_options") {
-                            true => vec![Plan::Team],
-                            false => Vec::new(),
-                        },
+                        options: plan_options(&values),
                         value: plan(),
                         onchange: move |next| plan.set(Some(next)),
                     }

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use super::core::{AccordionView, SectionSpec, render_accordion};
 use crate::{
-    components::{HtmlTag, Input, OptionLabel, Options, common::base_props},
+    components::{HtmlTag, Input, OptionLabel, OptionSource, Options, common::base_props},
     hooks::{use_root_id, use_theme},
     theme::Size,
     utils::warn,
@@ -90,15 +90,25 @@ base_props! {
         #[props(default)]
         panel: Option<Callback<T, Element>>,
         /// The sections to show. Defaults to every `Options::options()`.
-        #[props(default)]
-        options: Option<Vec<T>>,
+        ///
+        /// `OptionItem::new(step).disabled(true)` renders a section that
+        /// cannot be toggled; it stays a tab stop. A grouped
+        /// [`OptionList`](crate::components::OptionList) is accepted and its
+        /// sections are drawn flattened, in the order given - the list draws
+        /// no group headings, because a section's own heading is already the
+        /// outline.
+        ///
+        /// A section list has no dropdown to put a loader in, so a
+        /// **pending** [`OptionSource`](crate::components::OptionSource) -
+        /// one built from a [`Resource`] that has not answered yet - simply
+        /// draws no sections. Await the fetch above the list if that
+        /// matters.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Overrides `Options::label`, like `Tabs::option_label`. `OptionLabel::rich`
         /// draws a trigger as rsx and still names it.
         #[props(default)]
         option_label: Option<Callback<T, OptionLabel>>,
-        /// Sections that render but cannot be toggled.
-        #[props(default)]
-        disabled_options: Vec<T>,
         /// The heading element around each trigger, `h1`..`h6`. Pick the level
         /// the page outline needs; `h3` is a default, not an answer.
         #[props(default, into)]
@@ -162,14 +172,14 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
         }
     };
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
+    let list = props.options.or_static();
+    let values = list.values();
+    let option_disabled = list.disabled();
 
     let sections: Vec<SectionSpec> = values
         .iter()
-        .map(|value| {
+        .zip(&option_disabled)
+        .map(|(value, &option_disabled)| {
             let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
@@ -178,7 +188,7 @@ pub fn Accordion<T: Options>(props: AccordionProps<T>) -> Element {
             SectionSpec {
                 content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
                 name,
-                disabled: props.disabled_options.contains(value),
+                disabled: option_disabled,
                 open: props.open.is_open(value),
                 // Not only while open: a closing panel animates out around its
                 // content, and only `Collapse` knows when that ends. It mounts

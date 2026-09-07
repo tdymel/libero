@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, classes_of, has_rule_for, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Options, SegmentedControl},
+    components::{OptionItem, OptionList, Options, SegmentedControl},
 };
 
 #[derive(Clone, PartialEq, Options)]
@@ -185,4 +185,50 @@ fn an_unset_variant_follows_its_own_theme_field() {
         attributes_of(group, "div")["data-state"],
         "horizontal tonal collapsed"
     );
+}
+
+/// Todo 371: the per-segment flag rides on the option, and `options` left
+/// unset is not an empty list - it still means every `Options::options()`.
+#[test]
+fn a_segmented_control_disables_the_segment_its_option_flagged() {
+    fn unset() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl {
+                    "aria-label": "Emphasis",
+                    value: Emphasis::Bold,
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    fn flagged() -> Element {
+        rsx! {
+            LiberoProvider {
+                SegmentedControl {
+                    "aria-label": "Emphasis",
+                    value: Emphasis::Bold,
+                    onchange: move |_| {},
+                    options: OptionList::new([
+                        Emphasis::Bold.into(),
+                        OptionItem::new(Emphasis::Italic).disabled(true),
+                    ]),
+                }
+            }
+        }
+    }
+
+    // Unset falls back to the enum's own options, and none of them is off.
+    let unset = body(&render(unset));
+    assert_eq!(unset.matches("<input").count(), 2);
+    assert_eq!(unset.matches("disabled").count(), 0);
+
+    // The flagged segment is the only one the control refuses, and the flag
+    // is matched by position in the list rather than by value.
+    let flagged = body(&render(flagged));
+    assert_eq!(flagged.matches("<input").count(), 2);
+    assert_eq!(flagged.matches("disabled").count(), 2); // the input, and `data-state`
+    let italic = &flagged[flagged.find("Italic").expect("the second segment")..];
+    assert!(italic.contains("disabled"));
 }

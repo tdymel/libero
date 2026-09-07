@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     core::{SelectCore, SelectionRenderArgs},
-    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows, option_list},
+    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows},
 };
 
 field_props! {
@@ -90,7 +90,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         warn("MultiSelect: without `onchange` the selection can never change.");
     }
 
-    let list = option_list(&props.options);
+    let list = props.options.or_static();
     let values = list.values();
     // The same rule as `Select`: a request still in flight lists nothing, and
     // says nothing about being empty.

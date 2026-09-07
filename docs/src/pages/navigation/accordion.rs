@@ -3,10 +3,19 @@ use crate::icons::{ClipboardCheckIcon, CreditCardIcon, TruckIcon};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, OptionLabel, Options, Text,
+        Accordion, AccordionOpen, Box, Button, Code, Flex, Icon, OptionLabel, OptionList, Options,
+        Text,
     },
     sx::sx,
 };
+
+/// The flag sits on the option, inside the one `options` prop - a section
+/// this list refuses, rather than a step the type refuses everywhere.
+// snippet: after STEP_ENUM
+// snippet: let mut open = use_signal(|| AccordionOpen::One(Some(Step::Shipping)));
+// snippet: in Accordion { open: open(), onchange: move |next| open.set(next), panel: |_: Step| rsx! {}, .. }
+const DISABLED_OPTION: &str =
+    r#"options: OptionList::from_options().disabling(|step| *step == Step::Review)"#;
 
 /// The sections are the enum, so the snippet is a lie without it.
 const STEP_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
@@ -141,11 +150,10 @@ pub fn AccordionPage() -> Element {
                         .doc("Which sections are expanded. The variant is the mode: `One(Option<T>)` holds at most one, `Many(Vec<T>)` any number. Strictly controlled - pair it with `onchange`."),
                     prop("onchange", "EventHandler<AccordionOpen<T>>").doc("Called with the whole new open set, in the same mode, ready to store."),
                     prop("panel", "Callback<T, Element>").doc("A section's body. A closed panel's content is never mounted, so it keeps no state."),
-                    prop("options", "Vec<T>").default("T::options()").doc("The sections to show."),
+                    prop("options", "OptionSource<T>").default("T::options()").doc("The sections to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`, for a section that renders but cannot be toggled and stays a tab stop. Named groups are accepted and drawn flattened - a section's own heading is already the outline."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a section. `OptionLabel::rich` draws the trigger as rsx and still names it."),
-                    prop("disabled_options", "Vec<T>").doc("Sections that render but cannot be toggled. They stay tab stops."),
                     prop("heading", "HtmlTag").default("h3").doc("The heading around each trigger, `h1`..`h6`."),
                     prop("size", "Size").default("md").doc("Type and padding of the triggers and panels."),
                 ]),
@@ -214,9 +222,11 @@ pub fn AccordionPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::toggle("heading", ["h2", "h3", "h4"]).default("h3"),
-                    Control::switch("disabled_options").code(|_, values| {
-                        if values.str("disabled_options") == "true" {
-                            vec!["disabled_options: vec![Step::Review]".to_string()]
+                    // The flag lives inside `options`, so the switch stands
+                    // for one named section rather than for a prop of its own.
+                    Control::switch("disabled_option").code(|_, values| {
+                        if values.str("disabled_option") == "true" {
+                            vec![DISABLED_OPTION.to_string()]
                         } else {
                             vec![]
                         }
@@ -259,10 +269,10 @@ pub fn AccordionPage() -> Element {
                         Accordion {
                             size: values.str("size"),
                             heading: values.str("heading"),
-                            disabled_options: if values.str("disabled_options") == "true" {
-                                vec![Step::Review]
-                            } else {
-                                vec![]
+                            options: {
+                                let off = values.str("disabled_option") == "true";
+                                OptionList::from_options()
+                                    .disabling(move |step| off && *step == Step::Review)
                             },
                             option_label: (values.str("rich_label") == "true").then(|| Callback::new(rich)),
                             open: open(),

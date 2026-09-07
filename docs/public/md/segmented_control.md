@@ -159,13 +159,15 @@ fn Demo(options: Vec<String>) -> Element {
 
 ## Disabling a segment
 
-`disabled_options` takes the segments that render but cannot be picked. It is a
-`Vec<T>`, not a flag per segment, because the control owns the whole strip.
-`disabled` disables every segment, like on any other field.
+The flag rides on the option, inside the one `options` prop: an `OptionItem`
+the control refuses, rather than an alignment the type refuses everywhere.
+`OptionList::from_options()` is the enum's own list, and `disabling` says which
+of it this field says no to. `disabled` disables every segment, like on any
+other field.
 
 ```rust
 use dioxus::prelude::*;
-use libero::components::{Options, SegmentedControl};
+use libero::components::{OptionList, Options, SegmentedControl};
 
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Alignment {
@@ -182,7 +184,8 @@ fn Demo() -> Element {
         SegmentedControl {
             value: alignment(),
             onchange: move |next| alignment.set(next),
-            disabled_options: vec![Alignment::Center],
+            options: OptionList::from_options()
+                .disabling(|align| *align == Alignment::Center),
         }
     }
 }
@@ -244,9 +247,8 @@ name the options, not the question. With neither, it warns in a debug build.
 | `onchange` | `EventHandler<T>` | - | Called with the segment that should become selected. |
 | `name` | `FieldName<T>` | - | What the control posts as. A path - `Settings::FIELDS.align()` - also binds it to the surrounding `Form`'s value when it has no `onchange`. |
 | `validate` | `Validators<T>` | - | Rules over the selection, shown once the control loses focus or its form is submitted. |
-| `options` | `Vec<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the strip. A runtime set of `String`s passes them here, since `String` lists no options of its own. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a single row of segments has nowhere to put headings. |
 | `option_label` | `Callback<T, OptionLabel>` | `T::label()` | Overrides what the derive named a segment. Runs during render, so it can read a locale from context. |
-| `disabled_options` | `Vec<T>` | - | Segments that render but cannot be picked. |
 | `orientation` | `Orientation` | `horizontal` | Row or column layout. |
 | `variant` | `Variant` | `filled` | The unselected look, shared by every segment. |
 | `color` | `ThemeAwareValue` | `primary` | Accent color; a theme color name or a literal CSS color. |
@@ -320,4 +322,4 @@ Each segment `<label>` carries its own `data-state`.
 |---|---|
 | `size-<size>` / `radius-<size>` | The control's `size` and `radius`. |
 | `checked` | The segment is the selected one. |
-| `disabled` | The segment is in `disabled_options`, or the whole control is `disabled`. |
+| `disabled` | The segment's `OptionItem` is `disabled`, or the whole control is. |

@@ -133,6 +133,30 @@ impl<T> OptionList<T> {
         self.items().map(|item| item.disabled).collect()
     }
 
+    /// Flags every choice the predicate names, wherever it sits.
+    ///
+    /// The other half of [`from_options`](Self::from_options): the whole list
+    /// is the type's, and this says which of it this particular field refuses.
+    ///
+    /// ```
+    /// # use libero::components::{OptionList, Options};
+    /// # #[derive(Clone, Copy, PartialEq, Options)] enum Plan { Free, Pro, Team }
+    /// let plans: OptionList<Plan> =
+    ///     OptionList::from_options().disabling(|plan| *plan == Plan::Team);
+    /// ```
+    ///
+    /// It only ever *adds* a flag: a choice an [`OptionItem`] already disabled
+    /// stays disabled whatever the predicate says, so the two ways of writing
+    /// the same list cannot fight.
+    pub fn disabling(mut self, disabled: impl Fn(&T) -> bool) -> Self {
+        for (_, members) in &mut self.groups {
+            for item in members {
+                item.disabled = item.disabled || disabled(&item.value);
+            }
+        }
+        self
+    }
+
     /// One group label per choice, parallel to [`values`](Self::values),
     /// `None` for a choice in an unnamed run.
     ///
@@ -145,6 +169,29 @@ impl<T> OptionList<T> {
             .iter()
             .flat_map(|(label, members)| members.iter().map(move |_| label.clone()))
             .collect()
+    }
+}
+
+impl<T: super::Options> OptionList<T> {
+    /// Every [`Options::options()`](super::Options::options), flat and in
+    /// declaration order - the list a component builds for itself when its
+    /// `options` prop is left unset.
+    ///
+    /// Left unset is still the way to say "all of them", and this exists for
+    /// the case just past it: the type's own list with a choice or two
+    /// refused, which otherwise means writing every variant out by hand.
+    ///
+    /// ```
+    /// # use libero::components::{OptionList, Options};
+    /// # #[derive(Clone, Copy, PartialEq, Options)] enum Plan { Free, Pro, Team }
+    /// let plans: OptionList<Plan> =
+    ///     OptionList::from_options().disabling(|plan| *plan == Plan::Team);
+    /// ```
+    ///
+    /// A runtime type like `String` lists nothing, so this is empty for it -
+    /// those callers build the list they fetched.
+    pub fn from_options() -> Self {
+        Self::new(T::options().to_vec())
     }
 }
 
@@ -210,6 +257,24 @@ impl<T> OptionSource<T> {
 
     pub(crate) fn list(&self) -> &OptionList<T> {
         &self.list
+    }
+}
+
+impl<T: super::Options> OptionSource<T> {
+    /// What a component lists: the caller's choices, or every
+    /// [`Options::options()`](super::Options::options) when the prop was left
+    /// unset - the fallback a runtime type like `String` leaves empty, so
+    /// those pass their own.
+    ///
+    /// Unset is not the same as an empty list, which is why the prop is an
+    /// `OptionSource` rather than an `Option<Vec<T>>`: a caller who passes
+    /// nothing wants the type's own options, and one who passes an empty list
+    /// means it.
+    pub(crate) fn or_static(&self) -> OptionList<T> {
+        match self.is_unset() {
+            true => OptionList::from_options(),
+            false => self.list.clone(),
+        }
     }
 }
 
@@ -343,6 +408,25 @@ mod tests {
         let pending = OptionSource::<&str>::from(None::<OptionList<&str>>);
         assert!(!pending.is_unset() && pending.is_pending());
         assert!(pending.list().values().is_empty());
+    }
+
+    /// `from_options` plus `disabling` is the short form of the dominant call
+    /// shape: the type's own list, with the choices this one field refuses.
+    /// It only adds flags, so it cannot undo an `OptionItem` that is already
+    /// disabled - the two spellings of one list never fight.
+    #[test]
+    fn disabling_flags_the_named_choices_and_never_clears_one() {
+        let list = cities().disabling(|city| *city == "Paris");
+        assert_eq!(list.values(), ["Berlin", "Bonn", "Paris"]);
+        // Bonn was flagged by its `OptionItem` and the predicate misses it;
+        // Paris is flagged by the predicate alone.
+        assert_eq!(list.disabled(), [false, true, true]);
+
+        // A predicate that names nothing leaves the list exactly as it was.
+        assert_eq!(
+            cities().disabling(|_| false).disabled(),
+            [false, true, false]
+        );
     }
 
     /// A failed fetch is a ready, empty list - the caller returns an empty

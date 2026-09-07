@@ -2,7 +2,9 @@ use dioxus::prelude::*;
 
 use super::core::{TabSpec, TabsView, render_tabs};
 use crate::{
-    components::{ClassList, Input, OptionLabel, Options, States, common::base_color},
+    components::{
+        ClassList, Input, OptionLabel, OptionSource, Options, States, common::base_color,
+    },
     hooks::{use_root_id, use_theme},
     sx::{Sx, ThemeAwareValue},
     theme::Size,
@@ -23,8 +25,18 @@ pub struct TabsProps<T: Options> {
     #[props(default)]
     panel: Option<Callback<T, Element>>,
     /// The tabs to show. Defaults to every `Options::options()`.
-    #[props(default)]
-    options: Option<Vec<T>>,
+    ///
+    /// `OptionItem::new(tab).disabled(true)` renders a tab that cannot be
+    /// picked. A grouped [`OptionList`](crate::components::OptionList) is
+    /// accepted and its tabs are drawn flattened, in the order given: a strip
+    /// has no room for group headings and does not draw them.
+    ///
+    /// A strip has no dropdown to put a loader in, so a **pending**
+    /// [`OptionSource`](crate::components::OptionSource) - one built from a
+    /// [`Resource`] that has not answered yet - simply draws no tabs. Await
+    /// the fetch above the strip if that matters.
+    #[props(default, into)]
+    options: OptionSource<T>,
     /// Overrides `Options::label`. Runs during render, so it can read a
     /// locale from context - which is how a renamed strip stays renamed.
     ///
@@ -33,9 +45,6 @@ pub struct TabsProps<T: Options> {
     /// use.
     #[props(default)]
     option_label: Option<Callback<T, OptionLabel>>,
-    /// Tabs that render but cannot be picked.
-    #[props(default)]
-    disabled_options: Vec<T>,
     #[props(default, into)]
     size: Input<Size>,
     /// Indicator and selected-label colour.
@@ -71,10 +80,9 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
         warn("Tabs: without `panel` there is nothing below the tabs to show.");
     }
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
+    let list = props.options.or_static();
+    let values = list.values();
+    let option_disabled = list.disabled();
     let selected = values.iter().position(|value| *value == props.value);
     if selected.is_none() {
         warn("Tabs: `value` is not one of the tabs, so none is selected.");
@@ -82,7 +90,8 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
 
     let tabs: Vec<TabSpec> = values
         .iter()
-        .map(|value| {
+        .zip(&option_disabled)
+        .map(|(value, &disabled)| {
             let label = match &props.option_label {
                 Some(label) => label.call(value.clone()),
                 None => OptionLabel::from(value.label()),
@@ -91,7 +100,7 @@ pub fn Tabs<T: Options>(props: TabsProps<T>) -> Element {
             TabSpec {
                 content: label.content.unwrap_or_else(|| rsx! { "{name}" }),
                 name,
-                disabled: props.disabled_options.contains(value),
+                disabled,
             }
         })
         .collect();

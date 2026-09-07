@@ -3,7 +3,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{OptionLabel, Options, Tabs},
+    components::{OptionItem, OptionLabel, OptionList, Options, Tabs},
 };
 
 #[derive(Clone, PartialEq, Options)]
@@ -14,6 +14,11 @@ enum Section {
     Billing,
 }
 
+/// Every section, with the named ones flagged.
+fn sections_with_disabled(off: &[Section]) -> OptionList<Section> {
+    OptionList::from_options().disabling(|section| off.contains(section))
+}
+
 #[test]
 fn tabs_wire_the_selected_tab_to_its_panel_and_render_only_that_one() {
     fn app() -> Element {
@@ -22,7 +27,7 @@ fn tabs_wire_the_selected_tab_to_its_panel_and_render_only_that_one() {
                 Tabs {
                     value: Section::Admin,
                     onchange: move |_| {},
-                    disabled_options: vec![Section::Billing],
+                    options: sections_with_disabled(&[Section::Billing]),
                     panel: |section: Section| match section {
                         Section::Account => rsx! { "account body" },
                         Section::Admin => rsx! { "admin body" },
@@ -103,8 +108,10 @@ fn a_value_outside_the_tabs_leaves_the_first_enabled_tab_as_the_tab_stop() {
                 Tabs {
                     value: Section::Admin,
                     onchange: move |_| {},
-                    options: vec![Section::Account, Section::Billing],
-                    disabled_options: vec![Section::Account],
+                    options: OptionList::new([
+                        OptionItem::new(Section::Account).disabled(true),
+                        Section::Billing.into(),
+                    ]),
                     panel: |_: Section| rsx! {},
                 }
             }
@@ -148,4 +155,26 @@ fn a_caller_id_that_is_no_css_identifier_still_names_the_tabs() {
     for n in 0..3 {
         assert!(body.contains(&format!("id=\"1-faq-tab-{n}\"")), "{body}");
     }
+}
+
+/// Todo 371: an `options` prop that was never set is not an empty list - it
+/// still means every `Options::options()`, with nothing disabled.
+#[test]
+fn tabs_left_without_options_still_list_the_enums_own() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Tabs {
+                    value: Section::Account,
+                    onchange: move |_| {},
+                    panel: |_: Section| rsx! { "body" },
+                }
+            }
+        }
+    }
+
+    let body = body(&render(app));
+
+    assert_eq!(body.matches("role=\"tab\"").count(), 3);
+    assert_eq!(body.matches("aria-disabled=\"true\"").count(), 0);
 }

@@ -125,10 +125,9 @@ card is still one click target, so a link inside it picks the option.
 |---|---|---|---|
 | `value` | `Option<T>` | - | The selected option; strictly controlled. |
 | `onchange` | `EventHandler<T>` | - | Called with the option the caller should select next. |
-| `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes them here. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes them here. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`, which the arrow keys step over. Named groups are drawn flattened - the group is the field. |
 | `option_label` | `Callback<T, String>` | `T::label()` | Overrides what the derive named an option. |
 | `option_description` | `Callback<T, String>` | - | A line under each option's label; an empty string renders none. |
-| `disabled_options` | `Vec<T>` | - | Options that render but cannot be picked. The arrow keys step over them. |
 | `variant` | `ChoiceVariant` | `plain` | `card` draws every option as a bordered surface that is its own hit area. |
 | `orientation` | `Orientation` | `vertical` | A row instead of a column. |
 | `color` | `ThemeAwareValue` | `primary` | The ring and dot color of the selected option. |

@@ -7,7 +7,7 @@ use crate::common::{attributes_of, body, render};
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
-    components::{Accordion, AccordionOpen, OptionLabel, Options},
+    components::{Accordion, AccordionOpen, OptionLabel, OptionList, Options},
 };
 
 #[derive(Clone, Debug, PartialEq, Options)]
@@ -148,7 +148,7 @@ fn disabled_app() -> Element {
             Accordion::<Step> {
                 onchange: |_| {},
                 panel: panel,
-                disabled_options: vec![Step::Payment],
+                options: OptionList::from_options().disabling(|step| *step == Step::Payment),
             }
         }
     }
@@ -281,4 +281,22 @@ fn a_caller_id_that_is_no_css_identifier_still_names_the_triggers() {
         );
     }
     assert!(body.contains("id=\"1-faq-region-0\""), "{body}");
+}
+
+/// Todo 371: an `options` prop that was never set is not an empty list - it
+/// still means every `Options::options()`, with nothing disabled.
+#[test]
+fn an_accordion_left_without_options_still_lists_the_enums_own_sections() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Accordion::<Step> { onchange: |_| {}, panel: panel }
+            }
+        }
+    }
+
+    let triggers = buttons(&render(app));
+
+    assert_eq!(triggers.len(), 3);
+    assert!(triggers.iter().all(|t| t["aria-disabled"] == "false"));
 }

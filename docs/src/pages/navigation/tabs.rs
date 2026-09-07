@@ -1,7 +1,7 @@
 use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use crate::icons::FileIcon;
 use dioxus::prelude::*;
-use libero::components::{Code, Icon, Input, OptionLabel, Options, Tabs, Text};
+use libero::components::{Code, Icon, Input, OptionLabel, OptionList, Options, Tabs, Text};
 
 /// The enum is the tab strip, so the snippet has to show it.
 const SECTION_ENUM: &str = r#"#[derive(Clone, PartialEq, Options)]
@@ -40,6 +40,14 @@ const RICH: &str = r#"option_label: |section: Section| OptionLabel::rich(
         "{section.label()}"
     },
 )"#;
+
+/// The flag sits on the option, inside the one `options` prop - a tab this
+/// strip refuses, rather than a section the type refuses everywhere.
+// snippet: after SECTION_ENUM
+// snippet: let mut section = use_signal(|| Section::Account);
+// snippet: in Tabs { value: section(), onchange: move |next| section.set(next), panel: |_: Section| rsx! {}, .. }
+const DISABLED_OPTION: &str =
+    r#"options: OptionList::from_options().disabling(|section| *section == Section::Billing)"#;
 
 #[derive(Clone, PartialEq, Options)]
 enum Section {
@@ -81,11 +89,10 @@ pub fn TabsPage() -> Element {
                     prop("value", "T").doc("The selected tab. Strictly controlled - pair it with `onchange`."),
                     prop("onchange", "EventHandler<T>").doc("Called with the tab that should become selected."),
                     prop("panel", "Callback<T, Element>").doc("The body of the selected tab. Called for `value` only, so the other panels cost nothing."),
-                    prop("options", "Vec<T>").default("T::options()").doc("The tabs to show."),
+                    prop("options", "OptionSource<T>").default("T::options()").doc("The tabs to show. A `Vec<T>` converts; an `OptionList<T>` adds per-option `disabled`. Named groups are accepted and drawn flattened - a strip has no room for headings."),
                     prop("option_label", "Callback<T, OptionLabel>")
                         .default("T::label()")
                         .doc("Overrides what the derive named a tab. Runs during render, so it can read a locale from context - which is how a renamed strip stays renamed."),
-                    prop("disabled_options", "Vec<T>").doc("Tabs that render but cannot be picked."),
                     prop("size", "Size").default("md").doc("Tab strip size."),
                     prop("color", "ThemeAwareValue").default("primary").doc("Indicator and selected-label color."),
                     prop("full_width", "bool").default("false").doc("Tabs share the row evenly instead of sizing to their label."),
@@ -141,9 +148,22 @@ pub fn TabsPage() -> Element {
                     Control::slider("size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default("md"),
                     Control::switch("full_width"),
+                    // The flag lives inside `options`, so the switch stands
+                    // for one named tab rather than for a prop of its own.
+                    Control::switch("disabled_option").code(|_, values| {
+                        match values.str("disabled_option") == "true" {
+                            true => vec![DISABLED_OPTION.to_string()],
+                            false => vec![],
+                        }
+                    }),
                 ],
                 render: move |values: DemoValues| rsx! {
                     Tabs {
+                        options: {
+                            let off = values.str("disabled_option") == "true";
+                            OptionList::from_options()
+                                .disabling(move |section| off && *section == Section::Billing)
+                        },
                         color: match values.str("color").as_str() {
                             "primary" => Input::None,
                             color => Input::from(color),

@@ -11,9 +11,10 @@ use libero::{
     LiberoProvider,
     components::{
         ActionIcon, Box, Button, Checkbox, Chip, Collapse, ColorCode, ColorField, Dialog,
-        FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField, Options,
-        PhoneField, PinField, RadioGroup, RangeSlider, Rule, SegmentedControl, SelectionArgs,
-        Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form, use_menu,
+        FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
+        OptionList, Options, PhoneField, PinField, RadioGroup, RangeSlider, Rule, SegmentedControl,
+        SelectionArgs, Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form,
+        use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -1589,7 +1590,8 @@ fn tier_group() -> Element {
             RadioGroup {
                 label: "Tier",
                 value: TIER.get(),
-                disabled_options: TIERS_OFF.with_borrow(Clone::clone),
+                options: OptionList::from_options()
+                    .disabling(|tier| TIERS_OFF.with_borrow(|off| off.contains(tier))),
                 onchange: move |next: Tier| heard(next),
             }
         }
@@ -1631,10 +1633,10 @@ fn tier_press(value: Option<Tier>, off: &[Tier], key: Key) -> (Vec<(bool, String
     (inputs, HEARD.with_borrow(Clone::clone))
 }
 
-/// Todo 221: `disabled_options` greys out single options, and the arrows
+/// Todo 221: a disabled `OptionItem` greys out a single option, and the arrows
 /// step over them, wrapping.
 #[test]
-fn a_radio_group_steps_over_its_disabled_options() {
+fn a_radio_group_steps_over_the_options_its_list_disabled() {
     let (inputs, picked) = tier_press(Some(Tier::Free), &[Tier::Pro], Key::ArrowDown);
     let off: Vec<bool> = inputs.iter().map(|(off, _)| *off).collect();
     assert_eq!(off, [false, true, false], "{inputs:?}");
