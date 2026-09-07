@@ -33,7 +33,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 use std::net::{TcpListener, TcpStream};
 use std::os::unix::process::CommandExt;
 use std::process::{Child, ChildStdin, Command, Stdio};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use anyhow::{Context, Result, bail};
 
@@ -45,6 +45,11 @@ const BUILD_TIMEOUT: Duration = Duration::from_secs(45 * 60);
 
 /// Set on the guard process, which is this same binary.
 const GUARD_ENV: &str = "E2E_GUARD";
+
+/// The fixture app's `<title>`, from `e2e/fixtures/Dioxus.toml`. It is the one
+/// string in the served body that neither dx's build splash nor somebody
+/// else's app can produce, which is why `wait_for_app` waits for it.
+const FIXTURE_TITLE: &str = "libero e2e fixtures";
 
 fn main() -> Result<()> {
     if std::env::var_os(GUARD_ENV).is_some() {
@@ -69,21 +74,45 @@ fn main() -> Result<()> {
     let target_dir = own_target_dir()?;
     eprintln!("e2e: building into {}", target_dir.display());
 
-    // Artifacts (failure screenshots, dx.log) go in a directory of this run's
-    // own, named by its port. One shared directory, emptied at start, let a
-    // second agent's run delete the first one's evidence, and a `dx.log` read
-    // afterwards could belong to the other worktree (todo 329).
-    let artifacts = std::env::temp_dir()
-        .join("e2e-artifacts")
-        .join(format!("port-{port}"));
+    // Artifacts (failure screenshots, dx.log, the wait journal, the tests'
+    // own output) go in a directory of this run's own. One shared directory,
+    // emptied at start, let a second agent's run delete the first one's
+    // evidence, and a `dx.log` read afterwards could belong to the other
+    // worktree (todo 329).
+    //
+    // Keyed by **run**, not by port, since todo 364: a port comes round again
+    // and the next run deleted the evidence of the red one before anybody had
+    // read it. Both all-fail events lost their artifacts exactly this way.
+    // Nothing is deleted at start any more - the name is new every time - and
+    // `prune_old_runs` keeps a red run a week instead of a day.
+    let started = SystemTime::now();
+    let artifacts = std::env::temp_dir().join("e2e-artifacts").join(format!(
+        "run-{}-pid{}-port{port}",
+        e2e::journal::utc_now().replace([':', '.'], "-"),
+        std::process::id(),
+    ));
     prune_old_runs(
         artifacts
             .parent()
             .context("the artifacts directory has a parent")?,
     );
-    let _ = std::fs::remove_dir_all(&artifacts);
     std::fs::create_dir_all(&artifacts).context("create the artifacts directory")?;
     eprintln!("e2e: artifacts go to {}", artifacts.display());
+
+    // The journal and the offsets in it need to be readable from the test
+    // process too, which is a child of this one.
+    // SAFETY: single-threaded, before anything is spawned.
+    unsafe {
+        std::env::set_var("E2E_ARTIFACTS", &artifacts);
+        std::env::set_var(
+            e2e::journal::RUN_STARTED,
+            started
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis()
+                .to_string(),
+        );
+    }
 
     // dx's own output, kept rather than discarded: when the fixture crate fails
     // to compile, this file is the only place that says why.
@@ -132,6 +161,9 @@ fn main() -> Result<()> {
     if let Err(error) = ready {
         stop(&mut server);
         guard.done();
+        // Red before a single test ran. Marked all the same, so the directory
+        // survives the prune and so the next reader sees which wait it was.
+        mark_red(&artifacts, &format!("served-body: {error}"));
         return Err(error);
     }
 
@@ -170,24 +202,78 @@ fn main() -> Result<()> {
         .context("run the tests")
         .and_then(|mut tests| {
             guard.tell(&format!("group {}", tests.id()));
-            let mut ran = 0;
+            let mut tally = e2e::journal::Tally::default();
+            // Counted separately from the summary line, because the verdict's
+            // question is about **pages**: a unit that drives no browser
+            // cannot be a sibling that stayed up (todo 364, `NON_BROWSER`).
+            let mut browser = e2e::journal::Tally::default();
+            let mut set_aside = 0u64;
             let stdout = tests.stdout.take().context("the tests' stdout")?;
+            // Teed to a file as well as echoed. Both all-fail events were run
+            // under a pipe through `tail`, so the per-test detail - which is
+            // the only thing that says *how* they failed - was cut before
+            // anybody read it, and the todo has said "no per-test output
+            // survived" twice (todo 364).
+            let mut log = std::fs::File::create(artifacts.join("test-output.log")).ok();
             for line in BufReader::new(stdout).lines() {
                 let line = line.context("read the tests' output")?;
-                ran += tests_run(&line);
+                tally += e2e::journal::Tally::from_summary(&line);
+                if let Some((test, passed)) = e2e::journal::test_outcome(&line) {
+                    match (e2e::journal::drives_a_browser(test), passed) {
+                        (true, true) => browser.passed += 1,
+                        (true, false) => browser.failed += 1,
+                        (false, true) => set_aside += 1,
+                        // A non-browser unit that failed is an ordinary
+                        // failure and says nothing about the pages either,
+                        // so it is neither counted nor set aside.
+                        (false, false) => {}
+                    }
+                }
+                if let Some(log) = log.as_mut() {
+                    let _ = writeln!(log, "{line}");
+                }
                 println!("{line}");
             }
-            Ok((tests.wait().context("wait for the tests")?, ran))
+            Ok((
+                tests.wait().context("wait for the tests")?,
+                tally,
+                browser,
+                set_aside,
+            ))
         });
+
+    let red = !matches!(&status, Ok((status, ..)) if status.success());
+    let (browser, set_aside) = status
+        .as_ref()
+        .map(|(_, _, browser, set_aside)| (*browser, *set_aside))
+        .unwrap_or_default();
 
     // The browser lives in a `static` inside the test binary, and a static is
     // never dropped - so nothing kills Chrome when the tests end. Reap it here,
     // matched on this run's own profile path, which no other process can carry.
+    //
+    // On a red run, what is alive at this moment is evidence: the second
+    // all-fail left eleven Chromiums with a dead parent and the runner still
+    // printed `reaped 88` and exited 0 (todo 364). So the list is written down
+    // before anything is signalled.
     let needle = profile.to_string_lossy().into_owned();
-    let reaped = kill_by_cmdline(&needle);
-    if reaped > 0 {
-        eprintln!("e2e: reaped {reaped} browser process(es)");
+    if red {
+        let before = pids_by_cmdline(&needle);
+        let census = before
+            .iter()
+            .map(|&pid| describe_pid(pid))
+            .collect::<Vec<_>>()
+            .join("\n");
+        let _ = std::fs::write(
+            artifacts.join("browser-processes.txt"),
+            format!(
+                "{} browser process(es) alive on {needle} when the tests ended\n\
+                 pid ppid state cmdline\n{census}\n",
+                before.len()
+            ),
+        );
     }
+    let signalled = kill_by_cmdline(&needle);
 
     // Wait for them to actually go before deleting the directory.
     //
@@ -201,7 +287,47 @@ fn main() -> Result<()> {
         std::thread::sleep(Duration::from_millis(100));
     }
 
-    if let Err(error) = std::fs::remove_dir_all(&profile)
+    // `reaped N` used to be printed straight after the SIGTERM, so it said how
+    // many processes were *asked* to go, not how many went - and it was being
+    // read as proof the run tidied up. Verify, escalate, and if anything is
+    // still there say which pids rather than claiming a number (todo 364).
+    let mut survivors = pids_by_cmdline(&needle);
+    if !survivors.is_empty() {
+        for &pid in &survivors {
+            unsafe { libc_kill(pid as i32, 9) };
+        }
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline && count_by_cmdline(&needle) > 0 {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        survivors = pids_by_cmdline(&needle);
+    }
+    if survivors.is_empty() {
+        if signalled > 0 {
+            eprintln!("e2e: reaped {signalled} browser process(es), none left");
+        }
+    } else {
+        let message = format!(
+            "signalled {signalled} browser process(es) and {} survived SIGTERM then SIGKILL: {}. \
+             The profile {} is left in place; kill them by pid and remove it.",
+            survivors.len(),
+            survivors
+                .iter()
+                .map(u32::to_string)
+                .collect::<Vec<_>>()
+                .join(", "),
+            profile.display(),
+        );
+        eprintln!("e2e: {message}");
+        e2e::journal::note(&message);
+    }
+
+    // A red run's Chrome profile is part of its evidence, so it stays
+    // (todo 364). A green one is removed as before; leaving every run's
+    // profile behind is how /tmp filled up in the first place.
+    if red || !survivors.is_empty() {
+        eprintln!("e2e: keeping the Chrome profile {}", profile.display());
+    } else if let Err(error) = std::fs::remove_dir_all(&profile)
         && profile.exists()
     {
         // Said out loud rather than swallowed: a cleanup that silently fails
@@ -215,33 +341,61 @@ fn main() -> Result<()> {
     eprintln!("e2e: server stopped");
     guard.done();
 
-    let (status, ran) = status?;
+    if red {
+        // A name filter makes "everything failed" mean something much
+        // smaller, so the verdict is told about it. Flags are not a filter.
+        let filter = passthrough
+            .iter()
+            .find(|arg| !arg.starts_with('-'))
+            .map(String::as_str);
+        let verdict = e2e::journal::verdict(
+            browser,
+            set_aside,
+            &artifacts,
+            &profile,
+            survivors.len(),
+            filter,
+        );
+        eprintln!("{verdict}");
+        mark_red(&artifacts, &verdict);
+    }
+
+    let (status, tally, ..) = status?;
     if !status.success() {
         std::process::exit(1);
     }
     // libtest exits 0 when its filter matched nothing, so a mistyped name reads
     // as a green run. `--list` runs nothing on purpose.
-    if ran == 0 && !passthrough.iter().any(|arg| arg == "--list") {
+    if tally.ran() == 0 && !passthrough.iter().any(|arg| arg == "--list") {
         bail!("no test ran: the name filter {passthrough:?} matched no test");
     }
     Ok(())
 }
 
-/// How many tests a libtest summary line says ran, passed or failed, and 0
-/// for any other line: `test result: ok. 3 passed; 1 failed; 0 ignored; ..`.
-fn tests_run(line: &str) -> u64 {
-    let Some((_, counts)) = line
-        .strip_prefix("test result: ")
-        .and_then(|rest| rest.split_once(". "))
-    else {
-        return 0;
-    };
-    counts
-        .split("; ")
-        .filter_map(|count| count.split_once(' '))
-        .filter(|(_, what)| matches!(*what, "passed" | "failed"))
-        .filter_map(|(n, _)| n.parse::<u64>().ok())
-        .sum()
+/// Mark the artifacts directory so `prune_old_runs` keeps it a week, and so
+/// the next reader finds the verdict without rebuilding it from the log.
+fn mark_red(artifacts: &Path, verdict: &str) {
+    let _ = std::fs::write(
+        artifacts.join("RED"),
+        format!("{}\n{verdict}\n", e2e::journal::utc_now()),
+    );
+}
+
+/// `pid ppid state cmdline` for one process, or a note that it is already
+/// gone. The parent is the interesting column: a Chromium whose parent is 1
+/// outlived the run that started it.
+fn describe_pid(pid: u32) -> String {
+    let stat = std::fs::read_to_string(format!("/proc/{pid}/stat")).unwrap_or_default();
+    // `comm` can contain spaces and brackets, so the fields after it are found
+    // from the last `)`, not by splitting the whole line.
+    let after = stat.rsplit_once(')').map(|(_, rest)| rest).unwrap_or("");
+    let mut fields = after.split_whitespace();
+    let state = fields.next().unwrap_or("?");
+    let ppid = fields.next().unwrap_or("?");
+    let cmdline = std::fs::read(format!("/proc/{pid}/cmdline"))
+        .map(|raw| String::from_utf8_lossy(&raw).replace('\0', " "))
+        .unwrap_or_else(|_| "(gone)".into());
+    format!("{pid} {ppid} {state} {}", cmdline.trim())
 }
 
 /// The runner's side of the guard: the pipe it tells the guard things over.
@@ -323,7 +477,24 @@ fn guard() -> Result<()> {
         while Instant::now() < deadline && count_by_cmdline(profile) > 0 {
             std::thread::sleep(Duration::from_millis(100));
         }
-        let _ = std::fs::remove_dir_all(profile);
+        // SIGTERM only asks, and a Chromium whose main thread is frozen never
+        // gets round to answering. The runner's own reap escalates for the
+        // same reason (todo 364).
+        for pid in pids_by_cmdline(profile) {
+            unsafe { libc_kill(pid as i32, 9) };
+        }
+        let deadline = Instant::now() + Duration::from_secs(5);
+        while Instant::now() < deadline && count_by_cmdline(profile) > 0 {
+            std::thread::sleep(Duration::from_millis(100));
+        }
+        let left = count_by_cmdline(profile);
+        if left > 0 {
+            say(&format!(
+                "{left} browser process(es) on {profile} survived SIGKILL; leaving the profile"
+            ));
+        } else {
+            let _ = std::fs::remove_dir_all(profile);
+        }
     }
     say(&format!(
         "stopped {} process group(s) and the browser",
@@ -339,8 +510,18 @@ fn guard() -> Result<()> {
 fn free_port() -> Result<u16> {
     // `E2E_PORT` pins it, which is what a shared checkout wants when several
     // agents each own a port and have to prove theirs is free afterwards.
+    //
+    // Bound here rather than taken on trust (todo 364, 2026-09-20). A pinned
+    // port that somebody else already held was accepted, `dx run` could not
+    // have it, and the suite ran its whole filter against **that** server -
+    // another agent's docs site - failing every test with nothing anywhere
+    // saying the port was not ours.
     if let Ok(port) = std::env::var("E2E_PORT") {
-        return port.parse().context("E2E_PORT is not a port number");
+        let port: u16 = port.parse().context("E2E_PORT is not a port number")?;
+        TcpListener::bind(("127.0.0.1", port)).with_context(|| {
+            format!("E2E_PORT={port} is already in use; that port belongs to something else")
+        })?;
+        return Ok(port);
     }
     let listener = TcpListener::bind("127.0.0.1:0").context("bind a free port")?;
     Ok(listener.local_addr()?.port())
@@ -382,7 +563,9 @@ fn stop(server: &mut Child) {
 ///   then reported a timeout, hiding a compile error behind a 45-minute wait;
 /// * the deadline passes.
 fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) -> Result<()> {
-    let deadline = Instant::now() + BUILD_TIMEOUT;
+    let started = Instant::now();
+    let deadline = started + BUILD_TIMEOUT;
+    let (mut polls, mut slowest) = (0u32, Duration::ZERO);
     loop {
         if let Ok(Some(status)) = server.try_wait() {
             let tail = std::fs::read_to_string(dx_log)
@@ -394,18 +577,44 @@ fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) ->
             );
         }
 
-        if let Some(body) = http_get(base_url) {
+        let at = Instant::now();
+        let body = http_get(base_url);
+        polls += 1;
+        slowest = slowest.max(at.elapsed());
+        if let Some(body) = body {
             // The placeholder is served with a success status, so the check is
             // on what came back, not on whether anything came back.
-            let placeholder = body.contains("dx is not serving a web app");
-            if !placeholder && body.contains("wasm") {
+            //
+            // And it is on something **only this app** can say (todo 364,
+            // 2026-09-20). "Not the placeholder string, and mentions wasm" was
+            // satisfied twice in one afternoon by something that was not the
+            // fixture app: by dx's *build splash*, which is served from the
+            // moment the port binds and for the whole compile - a red run's
+            // browser still held six pages titled "Dioxus Build" - and by
+            // another agent's **docs site**, when `E2E_PORT` named a port this
+            // run did not own. Both times the suite ran to completion against
+            // the wrong page and failed every test, which is exactly the shape
+            // this todo is about.
+            if body.contains(FIXTURE_TITLE) {
                 return Ok(());
             }
         }
 
         if Instant::now() >= deadline {
+            // The first of the three waits todo 364 could not tell apart.
+            e2e::journal::gave_up(&e2e::journal::GaveUp {
+                kind: "served-body",
+                how: "expired",
+                what: "the fixture app's body at / (not dx's placeholder)",
+                budget: BUILD_TIMEOUT,
+                elapsed: started.elapsed(),
+                slowest_poll: slowest,
+                polls,
+            });
             bail!(
-                "the fixture server never finished building (waited {BUILD_TIMEOUT:?}); see {}",
+                "timed out after {:.1?} (budget {BUILD_TIMEOUT:?}) waiting for the fixture \
+                 server's body [wait=served-body, {polls} poll(s), slowest {slowest:.2?}]; see {}",
+                started.elapsed(),
                 dx_log.display()
             );
         }
@@ -455,6 +664,14 @@ fn count_by_cmdline(needle: &str) -> usize {
     each_matching_pid(needle, |_| {})
 }
 
+/// Which processes still match. A count says a leak happened; the pids say
+/// what leaked, which is what the second all-fail needed and did not have.
+fn pids_by_cmdline(needle: &str) -> Vec<u32> {
+    let mut pids = Vec::new();
+    each_matching_pid(needle, |pid| pids.push(pid));
+    pids
+}
+
 fn each_matching_pid(needle: &str, mut act: impl FnMut(u32)) -> usize {
     let mut matched = 0;
     let me = std::process::id();
@@ -500,24 +717,38 @@ fn own_target_dir() -> Result<std::path::PathBuf> {
         .with_context(|| format!("no cargo target directory above {}", exe.display()))
 }
 
-/// Delete other runs' artifact directories once they are a day old.
+/// Delete other runs' artifact directories once they are old enough.
 ///
 /// Never a younger one: a parallel run may still be writing to it, or its owner
 /// may not have read it yet. A day keeps /tmp from growing without bound.
+///
+/// A run that ended red carries a `RED` marker and is kept a week instead
+/// (todo 364). The evidence from a red run is the scarce thing here; a green
+/// run's artifacts have never been worth reading.
 fn prune_old_runs(parent: &Path) {
     const MAX_AGE: Duration = Duration::from_secs(24 * 60 * 60);
+    const MAX_AGE_RED: Duration = Duration::from_secs(7 * 24 * 60 * 60);
     let Ok(entries) = std::fs::read_dir(parent) else {
         return;
     };
     for entry in entries.flatten() {
+        let path = entry.path();
+        if !path.is_dir() {
+            continue;
+        }
+        let limit = if path.join("RED").exists() {
+            MAX_AGE_RED
+        } else {
+            MAX_AGE
+        };
         let old = entry
             .metadata()
             .and_then(|m| m.modified())
             .ok()
             .and_then(|at| at.elapsed().ok())
-            .is_some_and(|age| age > MAX_AGE);
-        if old && entry.path().is_dir() {
-            let _ = std::fs::remove_dir_all(entry.path());
+            .is_some_and(|age| age > limit);
+        if old {
+            let _ = std::fs::remove_dir_all(path);
         }
     }
 }

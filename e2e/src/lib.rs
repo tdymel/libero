@@ -13,6 +13,7 @@
 pub mod archetypes;
 pub mod ax;
 pub mod browser;
+pub mod journal;
 pub mod passes;
 pub mod suite;
 pub mod vendor;

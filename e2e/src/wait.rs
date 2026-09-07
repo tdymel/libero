@@ -24,20 +24,79 @@ fn timeout() -> Duration {
 
 const POLL: Duration = Duration::from_millis(25);
 
+/// The journal's name for an ordinary per-assertion poll, the one
+/// `E2E_TIMEOUT_MS` bounds. `Fixture::open` passes its own names, because a
+/// red run has to say which of the three waits gave up (todo 364).
+pub const READ: &str = "read";
+
 /// Poll `check` until it returns true, or fail naming what was waited for.
-pub async fn until<F, Fut>(what: &str, mut check: F) -> Result<()>
+pub async fn until<F, Fut>(what: &str, check: F) -> Result<()>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = Result<bool>>,
+{
+    until_kind(READ, what, check).await
+}
+
+/// `until`, with the journal's name for this kind of wait.
+///
+/// Besides polling it measures, because "it took 15 s" and "one call took
+/// 120 s" are the two mechanisms behind todo 364 and the wall-clock number
+/// alone cannot tell them apart. The failure message and the journal line
+/// both carry the poll count and the slowest single poll: hundreds of quick
+/// polls mean the condition never came true, one long poll means the page or
+/// the CDP connection stopped answering.
+pub async fn until_kind<F, Fut>(kind: &'static str, what: &str, mut check: F) -> Result<()>
 where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = Result<bool>>,
 {
     let budget = timeout();
-    let deadline = Instant::now() + budget;
+    let started = Instant::now();
+    let deadline = started + budget;
+    let (mut polls, mut slowest) = (0u32, Duration::ZERO);
     loop {
-        if check().await? {
-            return Ok(());
+        let poll_started = Instant::now();
+        let outcome = check().await;
+        polls += 1;
+        slowest = slowest.max(poll_started.elapsed());
+
+        match outcome {
+            Ok(true) => return Ok(()),
+            Ok(false) => {}
+            Err(error) => {
+                // The poll itself failed - a CDP call that errored or timed
+                // out. Worth a journal line of its own: it is the shape a
+                // dead browser connection takes, and it never reaches the
+                // `expired` branch below.
+                crate::journal::gave_up(&crate::journal::GaveUp {
+                    kind,
+                    how: "failed",
+                    what: &format!("{what} ({error})"),
+                    budget,
+                    elapsed: started.elapsed(),
+                    slowest_poll: slowest,
+                    polls,
+                });
+                return Err(error);
+            }
         }
+
         if Instant::now() >= deadline {
-            bail!("timed out after {budget:?} waiting for {what}");
+            let elapsed = started.elapsed();
+            crate::journal::gave_up(&crate::journal::GaveUp {
+                kind,
+                how: "expired",
+                what,
+                budget,
+                elapsed,
+                slowest_poll: slowest,
+                polls,
+            });
+            bail!(
+                "timed out after {elapsed:.1?} (budget {budget:.1?}) waiting for {what} \
+                 [wait={kind}, {polls} poll(s), slowest {slowest:.2?}]"
+            );
         }
         tokio::time::sleep(POLL).await;
     }
@@ -82,7 +141,14 @@ pub async fn for_js_change(
 
 /// Wait for an element to exist in the DOM.
 pub async fn for_selector(page: &Page, selector: &str) -> Result<()> {
-    until(&format!("selector {selector}"), || async {
+    for_selector_kind(READ, page, selector).await
+}
+
+/// `for_selector`, under a journal name of the caller's choosing.
+/// `Fixture::open` uses it so the `[data-fixture-ready]` wait is not filed as
+/// an ordinary read (todo 364).
+pub async fn for_selector_kind(kind: &'static str, page: &Page, selector: &str) -> Result<()> {
+    until_kind(kind, &format!("selector {selector}"), || async {
         let found: bool = page
             .evaluate(format!(
                 "!!document.querySelector({})",

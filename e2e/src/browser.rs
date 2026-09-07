@@ -147,6 +147,27 @@ impl Fixture {
             .await
             .expect("navigation semaphore");
 
+        // Everything from here to the ready marker is journalled as
+        // `navigation` (todo 364). It is the half of the run that shares the
+        // browser connection with every other test, so it is where a red run
+        // that failed *everything* has to be distinguished from one page's own
+        // trouble. `navigated` measures it; nothing is written on success.
+        let navigation_started = std::time::Instant::now();
+        let stage = |stage: &'static str, started: std::time::Instant, error: &anyhow::Error| {
+            crate::journal::gave_up(&crate::journal::GaveUp {
+                kind: "navigation",
+                how: "failed",
+                what: &format!("{stage} for {url} ({error})"),
+                // chromiumoxide's own request timeout bounds these, not
+                // `E2E_TIMEOUT_MS`; recorded so the line is readable without
+                // knowing that.
+                budget: Duration::from_secs(120),
+                elapsed: started.elapsed(),
+                slowest_poll: started.elapsed(),
+                polls: 1,
+            });
+        };
+
         // In the background, so a new page never takes activation from the
         // pages other tests are driving. Focus emulation alone (below) stopped
         // the blur, but runs with it and foreground pages timed out on
@@ -164,9 +185,11 @@ impl Fixture {
                     .map_err(anyhow::Error::msg)?,
             )
             .await
-            .context("open a page")?;
+            .context("open a page")
+            .inspect_err(|error| stage("creating the page", navigation_started, error))?;
 
         let (width, height) = viewport.size();
+        let at = std::time::Instant::now();
         page.execute(SetDeviceMetricsOverrideParams::new(
             width,
             height,
@@ -174,7 +197,8 @@ impl Fixture {
             viewport == Viewport::Mobile,
         ))
         .await
-        .context("set the viewport")?;
+        .context("set the viewport")
+        .inspect_err(|error| stage("setting the viewport", at, error))?;
 
         // Every page behaves as the focused one. The tests share one browser,
         // and a page another test opens takes window focus: the first page
@@ -188,16 +212,18 @@ impl Fixture {
         // Before `goto`, deliberately. See the field's doc comment.
         let console = crate::passes::console::Recorder::attach(&page).await?;
 
+        let at = std::time::Instant::now();
         page.goto(&url)
             .await
-            .with_context(|| format!("go to {url}"))?;
+            .with_context(|| format!("go to {url}"))
+            .inspect_err(|error| stage("navigating", at, error))?;
 
         let fixture = Fixture {
             page,
             viewport,
             console,
         };
-        crate::wait::for_selector(&fixture.page, "[data-fixture-ready]")
+        crate::wait::for_selector_kind("fixture-ready", &fixture.page, "[data-fixture-ready]")
             .await
             .with_context(|| {
                 format!(

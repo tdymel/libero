@@ -11,6 +11,7 @@ mod collapse;
 mod drawer;
 mod focus_contrast;
 mod isolation;
+mod journal;
 mod lightbox;
 mod mark;
 mod menu;
