@@ -41,12 +41,8 @@ pub struct FocusRingDefaults {
     /// The stripe. Dark on purpose: the halo only rescues a *dark* surround,
     /// so the stripe is what has to read against a light one.
     pub color: ColorValue,
-    /// What the stripe reads against. A CSS colour rather than a palette
-    /// token, for the same reason [`PaperDefaults::background`] is one: the
-    /// palette has no shade that means "the page itself".
-    ///
-    /// [`PaperDefaults::background`]: crate::theme::PaperDefaults::background
-    pub halo: &'static str,
+    /// What the stripe reads against.
+    pub halo: ColorValue,
     /// The stripe's thickness, in px.
     pub width: u8,
     /// The gap between the element and the stripe, in px. The halo fills it.
@@ -56,9 +52,18 @@ pub struct FocusRingDefaults {
 }
 
 impl FocusRingDefaults {
+    /// The two tones are the theme's own black and white rather than
+    /// literals, and rather than a palette shade.
+    ///
+    /// `Color::Black`/`Color::White` have no ramp, so both resolve to the one
+    /// var each - `--lsx-black` and `--lsx-white`, which *are* `theme.black`
+    /// and `theme.white` - and the shade below is ignored. That is what makes
+    /// the pair follow the theme: a scheme that redefines the two ends of the
+    /// page redefines the ring with them, and the tones stay adjacent because
+    /// they invert together.
     pub const DEFAULT: Self = Self {
-        color: ColorValue::Shade(Color::Black, ColorShade::S1),
-        halo: "#fff",
+        color: ColorValue::Shade(Color::Black, ColorShade::DEFAULT),
+        halo: ColorValue::Shade(Color::White, ColorShade::DEFAULT),
         width: 2,
         offset: 2,
         halo_width: 2,
@@ -69,7 +74,7 @@ impl ToCssDeclarations for FocusRingDefaults {
     fn to_css_declarations(&self) -> Vec<CssDeclaration> {
         vec![
             FOCUS_RING_COLOR.declare(self.color.value()),
-            FOCUS_RING_HALO.declare(self.halo),
+            FOCUS_RING_HALO.declare(self.halo.value()),
             FOCUS_RING_WIDTH.declare(format!("{}px", self.width)),
             FOCUS_RING_OFFSET.declare(format!("{}px", self.offset)),
             FOCUS_RING_HALO_WIDTH.declare(format!("{}px", self.halo_width)),

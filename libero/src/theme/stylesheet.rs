@@ -639,7 +639,10 @@ mod tests {
     #[test]
     fn the_focus_ring_carries_its_own_contrast() {
         assert_declares(&[
-            ("--lsx-focus-ring-halo", "#fff"),
+            // Both tones are the theme's own two ends of the page, so a
+            // scheme that redefines those redefines the ring with them.
+            ("--lsx-focus-ring-color", "var(--lsx-black)"),
+            ("--lsx-focus-ring-halo", "var(--lsx-white)"),
             ("--lsx-focus-ring-width", "2px"),
             ("--lsx-focus-ring-offset", "2px"),
             ("--lsx-focus-ring-halo-width", "2px"),
@@ -651,14 +654,19 @@ mod tests {
         ]);
 
         let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
-        // The stripe is a var pointing at a palette shade; follow the one hop.
-        let stripe = root_var(&css, "--lsx-focus-ring-color");
-        let stripe = stripe
-            .strip_prefix("var(")
-            .and_then(|rest| rest.strip_suffix(')'))
-            .expect("the stripe names a palette var");
-        let stripe = HexColor::parse(&root_var(&css, stripe)).expect("a hex");
-        let halo = HexColor::parse("#fff").expect("a hex");
+        // Each tone is a var naming another var; follow the one hop.
+        let tone = |name| {
+            let named = root_var(&css, name);
+            let named = named
+                .strip_prefix("var(")
+                .and_then(|rest| rest.strip_suffix(')'))
+                .expect("a tone names a theme var");
+            HexColor::parse(&root_var(&css, named)).expect("a hex")
+        };
+        let (stripe, halo) = (
+            tone("--lsx-focus-ring-color"),
+            tone("--lsx-focus-ring-halo"),
+        );
 
         assert!(
             stripe.contrast_ratio(halo) >= 3.0,
