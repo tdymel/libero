@@ -22,7 +22,10 @@ pub(crate) use color_variant::{
 };
 pub(crate) use field_props::field_props;
 pub(crate) use icons::{
-    CheckIcon, ChevronDownIcon, ChevronRightIcon, CloseIcon, PauseIcon, PlayIcon,
+    ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,
+    ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyIcon,
+    EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, PauseIcon, PersonIcon, PlayIcon, PlusIcon,
+    UploadIcon,
 };
 pub use number_value::NumberValue;
 pub use options::{OptionLabel, Options};

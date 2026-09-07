@@ -1,7 +1,11 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ActionIcon, Input, common::field_props, form::TextField},
+    components::{
+        ActionIcon, Input,
+        common::{EyeIcon, EyeOffIcon, field_props},
+        form::TextField,
+    },
     hooks::use_theme,
     sx::ThemeAwareValue,
 };
@@ -113,45 +117,6 @@ pub fn PasswordField(props: PasswordFieldProps) -> Element {
                     }
                 }
             }),
-        }
-    }
-}
-
-/// libero ships no icon set, so the two icons this component cannot do without
-/// live here rather than in a caller's hands - a reveal button with no default
-/// glyph is a blank button.
-#[component]
-fn EyeIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" }
-            circle { cx: "12", cy: "12", r: "3" }
-        }
-    }
-}
-
-#[component]
-fn EyeOffIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M2 12s3.5-7 10-7c2 0 3.8.7 5.2 1.6" }
-            path { d: "M21.5 10.4c.3.6.5 1.1.5 1.6 0 0-3.5 7-10 7-1.3 0-2.5-.3-3.5-.7" }
-            path { d: "M9.9 9.9a3 3 0 0 0 4.2 4.2" }
-            path { d: "M3 3l18 18" }
         }
     }
 }

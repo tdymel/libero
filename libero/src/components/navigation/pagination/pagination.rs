@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, States, Variables,
-        common::{base_color, base_props, contrast_color, fill_color},
+        common::{
+            ChevronFirstIcon, ChevronLastIcon, ChevronLeftIcon, ChevronRightIcon, base_color,
+            base_props, contrast_color, fill_color,
+        },
         layout::use_box,
         variables,
     },
@@ -18,7 +21,6 @@ use crate::{
     utils::warn,
 };
 
-use super::glyphs::{FirstIcon, LastIcon, NextIcon, PreviousIcon};
 use super::range::{PaginationItem, pagination_range};
 
 /// Which control a caller's `label` closure is naming.
@@ -368,10 +370,10 @@ pub fn Pagination(props: PaginationProps) -> Element {
             vec![],
             rsx! {
                 if with_edges {
-                    {arrow(PaginationLabel::First, 1, page == 1, rsx! { FirstIcon {} })}
+                    {arrow(PaginationLabel::First, 1, page == 1, rsx! { ChevronFirstIcon {} })}
                 }
                 if with_controls {
-                    {arrow(PaginationLabel::Previous, page.saturating_sub(1).max(1), page == 1, rsx! { PreviousIcon {} })}
+                    {arrow(PaginationLabel::Previous, page.saturating_sub(1).max(1), page == 1, rsx! { ChevronLeftIcon {} })}
                 }
                 for (key , item) in items.iter() {
                     li {
@@ -417,10 +419,10 @@ pub fn Pagination(props: PaginationProps) -> Element {
                     }
                 }
                 if with_controls {
-                    {arrow(PaginationLabel::Next, page.saturating_add(1).min(total), page == total, rsx! { NextIcon {} })}
+                    {arrow(PaginationLabel::Next, page.saturating_add(1).min(total), page == total, rsx! { ChevronRightIcon {} })}
                 }
                 if with_edges {
-                    {arrow(PaginationLabel::Last, total, page == total, rsx! { LastIcon {} })}
+                    {arrow(PaginationLabel::Last, total, page == total, rsx! { ChevronLastIcon {} })}
                 }
             },
         );

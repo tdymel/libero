@@ -5,7 +5,8 @@ use chrono::{Datelike, Days, Months, NaiveDate};
 use super::{DateRange, fields::day_allowed, format::format_date, today::use_today};
 use crate::{
     components::{
-        ActionIcon, ClassList, HtmlTag, Input, States, Variant, common::focus_ring_sx,
+        ActionIcon, ClassList, HtmlTag, Input, States, Variant,
+        common::{ChevronLeftIcon, ChevronRightIcon, focus_ring_sx},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -1223,38 +1224,6 @@ const fn nav_size(size: Size) -> Size {
         Size::Xs | Size::Sm => Size::Xs,
         Size::Md | Size::Lg => Size::Sm,
         Size::Xl | Size::Xxl => Size::Md,
-    }
-}
-
-#[component]
-fn ChevronLeftIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M15 6l-6 6 6 6" }
-        }
-    }
-}
-
-#[component]
-fn ChevronRightIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M9 6l6 6-6 6" }
-        }
     }
 }
 

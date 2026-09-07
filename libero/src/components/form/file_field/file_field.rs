@@ -5,12 +5,11 @@ use crate::{
     CssLayer,
     components::{
         ActionIcon, HtmlTag, Input, States,
-        common::{field_props, focus_ring_sx, input_from_str},
+        common::{CloseIcon, UploadIcon, field_props, focus_ring_sx, input_from_str},
         feedback::Loader,
         form::{
-            SelectionArgs, clear_button, field_control_sx,
-            glyphs::{CloseIcon, UploadIcon},
-            removable_chip, use_bound, use_chip_announcer, use_field, use_field_frame,
+            SelectionArgs, clear_button, field_control_sx, removable_chip, use_bound,
+            use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },

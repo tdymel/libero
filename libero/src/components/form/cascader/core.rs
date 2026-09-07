@@ -5,10 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, ComboboxOption, HtmlTag, Input, States,
-        common::{attr, field_props, input_from_str},
+        common::{ChevronDownIcon, attr, field_props, input_from_str},
         form::{
             ComboboxState, clear_button, combobox::COMBOBOX_DROPDOWN_SX, field_control_sx,
-            glyphs::ChevronIcon, use_combobox, use_field, use_field_frame, use_refocus_on_close,
+            use_combobox, use_field, use_field_frame, use_refocus_on_close,
         },
         layout::{BoxStyle, ScrollArea, use_box},
     },
@@ -534,7 +534,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
             rsx! {
                 {value_slot}
                 if clear.is_none() {
-                    ChevronIcon {}
+                    ChevronDownIcon {}
                 }
             },
         );
@@ -901,7 +901,7 @@ impl CascaderRows {
                 },
                 span { "data-slot": "label", {content} }
                 if has_children && !whole_path {
-                    span { "data-slot": "branch", ChevronIcon {} }
+                    span { "data-slot": "branch", ChevronDownIcon {} }
                 }
             }
         }

@@ -8,7 +8,7 @@ use crate::{
     CssLayer,
     components::{
         ActionIcon, Box, HtmlTag, Input, States, Variables, VisuallyHidden,
-        common::{base_props, focus_ring_sx, variables},
+        common::{CopiedIcon, CopyIcon, base_props, focus_ring_sx, variables},
         layout::use_box,
     },
     hooks::{Clipboard, use_clipboard, use_css, use_element, use_theme},
@@ -166,39 +166,6 @@ static CODE_PLAIN_PRE_SX: StaticSx = StaticSx::new(|| {
         // is still in flight.
         .line_height(format!("{CODE_LINE_HEIGHT_PX}px"))
 });
-
-fn copy_icon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            width: "14px",
-            height: "14px",
-            rect { x: "9", y: "9", width: "13", height: "13", rx: "2" }
-            path { d: "M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" }
-        }
-    }
-}
-
-fn check_icon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            width: "14px",
-            height: "14px",
-            polyline { points: "20 6 9 17 4 12" }
-        }
-    }
-}
 
 base_props! {
     pub struct CodeBlockProps {
@@ -391,9 +358,9 @@ fn CopyButton(source: String, floating: bool) -> Element {
             // A keyboard or touch user never leaves with a mouse.
             onblur: move |_| clipboard.reset(),
             if clipboard.copied() {
-                {check_icon()}
+                CopiedIcon {}
             } else {
-                {copy_icon()}
+                CopyIcon {}
             }
         }
         // Always mounted, so a reader is already watching it when the text

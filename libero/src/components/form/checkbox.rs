@@ -6,8 +6,8 @@ use crate::{
         HtmlTag, Input, States,
         a11y::VISUALLY_HIDDEN_SX,
         common::{
-            base_color, contrast_color, field_props, fill_color, focus_ring_sx, ring_overlay,
-            ring_overlay_sx, variables,
+            CheckboxMarkIcon, base_color, contrast_color, field_props, fill_color, focus_ring_sx,
+            ring_overlay, ring_overlay_sx, variables,
         },
         form::{use_bound, use_field},
         layout::use_box,
@@ -56,6 +56,7 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
         .color(CHECKBOX_MARK.value())
         .cursor("pointer")
         .transition("background 150ms ease, border-color 150ms ease")
+        .selector("& > svg", sx().width("65%").height("65%"))
 });
 
 /// Depends on `(on, color)` alone - see the `use_cache` below.
@@ -237,23 +238,6 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     // hit area, and a second `<label for>` around it would compete with the
     // field's own label for the accessible name. A card takes the click
     // itself, so the box leaves it to the card rather than toggling twice.
-    let mark = rsx! {
-        svg {
-            width: "65%",
-            height: "65%",
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentcolor",
-            stroke_width: "3",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            if indeterminate {
-                path { d: "M6 12h12" }
-            } else {
-                path { d: "M5 13l4 4L19 7" }
-            }
-        }
-    };
     let box_node = rsx! {
         span {
             class: box_class,
@@ -263,7 +247,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
                     toggle();
                 }
             },
-            {mark}
+            CheckboxMarkIcon { indeterminate }
         }
     };
 

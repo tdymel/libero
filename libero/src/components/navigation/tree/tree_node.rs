@@ -3,7 +3,7 @@ use std::{any::Any, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::{
-    components::{Box, Icon, States},
+    components::{Box, Icon, States, common::ChevronRightIcon},
     sx::{StaticSx, sx},
     theme::{ICON_SIZE, Size},
 };
@@ -187,20 +187,6 @@ static DEFAULT_RENDER_ROW_SX: StaticSx = StaticSx::new(|| {
         )
 });
 
-fn chevron_svg() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M9 18l6-6-6-6" }
-        }
-    }
-}
-
 /// `render_node`'s default: a chevron for a branch, a matching spacer for a
 /// leaf, then `tree_label()`. `pub` so a custom `render_node` can fall back to
 /// it for some rows rather than reimplementing it.
@@ -216,7 +202,7 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
                 color: "grey.6",
                 "data-tree-chevron": true,
                 states: States::new().with("expanded", expanded),
-                {chevron_svg()}
+                ChevronRightIcon {}
             }
         },
         None => rsx! {

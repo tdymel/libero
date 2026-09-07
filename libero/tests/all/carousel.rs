@@ -127,7 +127,12 @@ fn a_carousel_names_its_slides_and_points_its_controls_at_the_track() {
     assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 6);
     assert!(html.contains(r#"aria-label="1 of 6""#), "{html}");
     assert!(html.contains(r#"aria-label="6 of 6""#), "{html}");
-    assert!(!html.contains("aria-hidden"), "{html}");
+    // The control glyphs are `aria-hidden` themselves; nothing else is.
+    assert_eq!(
+        html.matches("aria-hidden").count(),
+        html.matches("<svg").count(),
+        "{html}"
+    );
     assert!(
         !open_tag(&html, r#"aria-label="3 of 6""#).contains("inert"),
         "{html}"
@@ -348,7 +353,11 @@ fn a_looping_carousel_clones_its_ends_and_hides_the_copies() {
 
     // One clone at each end at one-up: six positions for four slides.
     assert_eq!(html.matches("<div>slide").count(), 6);
-    assert_eq!(html.matches(r#"aria-hidden="true""#).count(), 2);
+    // The two clones, plus the control glyphs, which hide themselves.
+    assert_eq!(
+        html.matches(r#"aria-hidden="true""#).count(),
+        2 + html.matches("<svg").count()
+    );
     // Only the four real slides are named and grouped.
     assert_eq!(html.matches(r#"aria-roledescription="slide""#).count(), 4);
     // The clones follow the same rule as the slides: at rest on slide 0, one

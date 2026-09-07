@@ -4,11 +4,8 @@ use super::{ColorCode, ColorFormat, ColorPicker, ColorSwatch, Swatches};
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, States,
-        common::field_props,
-        form::{
-            FIELD_CONTROL_SX, SliderChangeEvent, glyphs::EyeDropperIcon, use_bound, use_field,
-            use_field_frame,
-        },
+        common::{EyeDropperIcon, field_props},
+        form::{FIELD_CONTROL_SX, SliderChangeEvent, use_bound, use_field, use_field_frame},
         layout::use_box,
         surface::paper_sx,
     },

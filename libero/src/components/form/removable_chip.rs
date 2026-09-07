@@ -3,7 +3,7 @@ use std::{cell::RefCell, rc::Rc};
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ActionIcon, Chip, Input, VisuallyHidden, form::glyphs::CloseIcon},
+    components::{ActionIcon, Chip, Input, VisuallyHidden, common::CloseIcon},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{CHIP_HEIGHT, Size},
 };

@@ -5,7 +5,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
-        common::{base_props, focus_ring_sx, input_from_str, states, use_name_warning, variables},
+        common::{
+            ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, PauseIcon, PlayIcon,
+            base_props, focus_ring_sx, input_from_str, states, use_name_warning, variables,
+        },
         layout::{
             ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
             use_box, use_scroll_area,
@@ -162,6 +165,7 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .and(control_colors_sx())
         .box_shadow(SizeCss::SHADOW.value(Size::Sm))
         .cursor("pointer")
+        .selector("& > svg", sx().width("60%").height("60%"))
         .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
         // Disabled by `aria-disabled`, not `disabled`: the button keeps its
         // tab stop so focus is never dropped at either end.
@@ -240,39 +244,9 @@ static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .and(control_colors_sx())
         .box_shadow(SizeCss::SHADOW.value(Size::Sm))
         .cursor("pointer")
+        .selector("& > svg", sx().width("55%").height("55%"))
         .focus_visible(focus_ring_sx())
 });
-
-fn chevron(points: &'static str) -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            width: "60%",
-            height: "60%",
-            path { d: points }
-        }
-    }
-}
-
-fn pause_icon(paused: bool) -> Element {
-    match paused {
-        true => rsx! {
-            svg { view_box: "0 0 24 24", fill: "currentColor", width: "55%", height: "55%",
-                path { d: "M8 5v14l11-7z" }
-            }
-        },
-        false => rsx! {
-            svg { view_box: "0 0 24 24", fill: "currentColor", width: "55%", height: "55%",
-                path { d: "M6 5h4v14H6zM14 5h4v14h-4z" }
-            }
-        },
-    }
-}
 
 /// The indices that can actually be snapped to, inclusive.
 ///
@@ -1268,10 +1242,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
                             (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
                             _ => {}
                         },
-                        {chevron(match orientation {
-                            Orientation::Horizontal => "m15 18-6-6 6-6",
-                            Orientation::Vertical => "m18 15-6-6-6 6",
-                        })}
+                        {match orientation {
+                            Orientation::Horizontal => rsx! { ChevronLeftIcon {} },
+                            Orientation::Vertical => rsx! { ChevronUpIcon {} },
+                        }}
                     }
                     Box {
                         component: "button",
@@ -1286,10 +1260,10 @@ pub fn Carousel(props: CarouselProps) -> Element {
                             false if !at_end => nav.go_to(current() + 1),
                             false => {}
                         },
-                        {chevron(match orientation {
-                            Orientation::Horizontal => "m9 18 6-6-6-6",
-                            Orientation::Vertical => "m6 9 6 6 6-6",
-                        })}
+                        {match orientation {
+                            Orientation::Horizontal => rsx! { ChevronRightIcon {} },
+                            Orientation::Vertical => rsx! { ChevronDownIcon {} },
+                        }}
                     }
                 }
             }
@@ -1302,7 +1276,11 @@ pub fn Carousel(props: CarouselProps) -> Element {
                 aria_label: theme.carousel.pause_label,
                 aria_pressed: paused().to_string(),
                 onclick: move |_| paused.toggle(),
-                {pause_icon(paused())}
+                if paused() {
+                    PlayIcon {}
+                } else {
+                    PauseIcon {}
+                }
             }
         }
         if indicators {

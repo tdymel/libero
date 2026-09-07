@@ -10,7 +10,6 @@ mod field_status;
 mod fieldset;
 mod file_field;
 mod form;
-mod glyphs;
 mod handle;
 mod native_select;
 mod number_field;

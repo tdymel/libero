@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use super::cell_value::{CellAlign, SortDirection, SortKey};
+use crate::components::common::ArrowDownIcon;
 
 /// What the non-generic body needs from a `Column<T>`, once `T` is gone.
 pub(super) struct HeaderSpec {
@@ -72,7 +73,10 @@ pub(super) fn render_body(
                                     sort.set(Some(next));
                                 },
                                 "{spec.header}"
-                                {sort_arrow()}
+                                // Always rendered, so sorting a column can't
+                                // change its header's width. The `aria-sort`
+                                // on the `th` is what fades and flips it.
+                                ArrowDownIcon {}
                             }
                         } else {
                             "{spec.header}"
@@ -94,24 +98,6 @@ pub(super) fn render_body(
                     }
                 }
             }
-        }
-    }
-}
-
-/// Always rendered, so sorting a column can't change its header's width. The
-/// `aria-sort` on the `th` is what fades and flips it.
-fn sort_arrow() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            "aria-hidden": "true",
-            path { d: "M12 5v14" }
-            path { d: "M6 13l6 6 6-6" }
         }
     }
 }

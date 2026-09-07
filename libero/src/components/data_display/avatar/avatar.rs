@@ -3,7 +3,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States, Variables, Variant,
-        common::{base_color, base_props, contrast_color, fill_color, text_color, variables},
+        common::{
+            PersonIcon, base_color, base_props, contrast_color, fill_color, text_color, variables,
+        },
         inputs::{VariantVars, variant_chrome_sx, variant_colors},
         layout::use_box,
     },
@@ -123,22 +125,6 @@ pub(super) fn avatar_variables(
         )
 }
 
-/// The last link in the fallback chain. Presentational - the root carries the
-/// name.
-#[component]
-fn PersonGlyph() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "currentColor",
-            "aria-hidden": "true",
-            path {
-                d: "M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 1.8c-4.1 0-7.4 2.1-7.4 4.7V21h14.8v-2.5c0-2.6-3.3-4.7-7.4-4.7Z",
-            }
-        }
-    }
-}
-
 base_props! {
     pub struct AvatarProps {
         /// The person this avatar stands for. Announced as the accessible
@@ -224,7 +210,7 @@ pub fn Avatar(props: AvatarProps) -> Element {
         _ => match (props.children, props.initials) {
             (Some(children), _) => children,
             (None, Some(initials)) => rsx! { "{initials}" },
-            (None, None) => rsx! { PersonGlyph {} },
+            (None, None) => rsx! { PersonIcon {} },
         },
     };
 

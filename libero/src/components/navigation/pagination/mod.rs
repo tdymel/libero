@@ -1,4 +1,3 @@
-mod glyphs;
 mod pagination;
 mod range;
 

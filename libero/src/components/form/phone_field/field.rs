@@ -5,8 +5,8 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ComboboxCore, ComboboxOption, HtmlTag, Input,
-        common::{field_props, ring_overlay},
-        form::{FIELD_CONTROL_SX, glyphs::ChevronIcon, use_bound, use_field, use_field_frame},
+        common::{ChevronDownIcon, field_props, ring_overlay},
+        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::use_box,
         use_combobox,
     },
@@ -383,7 +383,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
                 {picker_flag}
                 span { "data-slot": "iso", "{country.iso}" }
                 span { "data-slot": "dial", "+{country.dial}" }
-                ChevronIcon {}
+                ChevronDownIcon {}
             },
         );
 

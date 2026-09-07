@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ActionIcon, Input, form::glyphs::CloseIcon},
+    components::{ActionIcon, Input, common::CloseIcon},
     hooks::ElementHandle,
     platform::ElementApi,
     sx::ThemeAwareValue,

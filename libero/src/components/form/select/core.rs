@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ComboboxCore, ComboboxOption, HtmlTag, Input, States, VisuallyHidden,
-        common::{attr, field_props, focus_ring_sx, ring_overlay},
+        common::{ChevronDownIcon, attr, field_props, focus_ring_sx, ring_overlay},
         form::{
-            clear_button, field_control_sx, glyphs::ChevronIcon, use_chip_announcer, use_field,
-            use_field_frame, use_refocus_on_close,
+            clear_button, field_control_sx, use_chip_announcer, use_field, use_field_frame,
+            use_refocus_on_close,
         },
         layout::use_box,
         use_combobox,
@@ -333,7 +333,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             chevron_box
                 .event("onmousedown", |event: MouseEvent| event.prevent_default())
                 .event("onclick", move |_: MouseEvent| toggle())
-                .render(HtmlTag::Span, Vec::new(), rsx! { ChevronIcon {} }),
+                .render(HtmlTag::Span, Vec::new(), rsx! { ChevronDownIcon {} }),
         ),
         _ => clear.clone(),
     };
@@ -524,7 +524,7 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             rsx! {
                 {content}
                 if !multiple && clear.is_none() {
-                    ChevronIcon {}
+                    ChevronDownIcon {}
                 }
             },
         );

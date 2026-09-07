@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, NumberValue,
-        common::field_props,
+        common::{MinusIcon, PlusIcon, field_props},
         form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::use_box,
     },
@@ -262,37 +262,4 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
         .render(HtmlTag::Input, props.attributes, ());
 
     field.render(frame.render(input))
-}
-
-/// libero ships no icon set; a stepper with no glyph is a blank button. Kept
-/// private, the same call the reveal toggle's eye makes.
-#[component]
-fn MinusIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            "aria-hidden": "true",
-            path { d: "M6 12h12" }
-        }
-    }
-}
-
-#[component]
-fn PlusIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            "aria-hidden": "true",
-            path { d: "M12 6v12" }
-            path { d: "M6 12h12" }
-        }
-    }
 }
