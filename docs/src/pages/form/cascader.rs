@@ -250,6 +250,13 @@ pub fn CascaderPage() -> Element {
                     ", and so while searching, ArrowLeft and ArrowRight belong to the search "
                     "box's caret instead."
                 }
+                Text {
+                    "Without a "
+                    Code { source: "label" }
+                    ", the trigger has no name of its own - set "
+                    Code { source: "aria_label" }
+                    ", or a screen reader announces an unnamed combobox."
+                }
             }
         }
     }

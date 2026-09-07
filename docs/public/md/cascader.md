@@ -112,6 +112,9 @@ cannot be picked.
 In `"paths"` - and so while searching - `ArrowLeft` and `ArrowRight` are left
 alone, so they move the search box's caret.
 
+Without a `label` the trigger has no name of its own: set `aria_label`, or a
+screen reader announces an unnamed combobox.
+
 ## Props
 
 Every field's shared props - `label`, `description`, `helper`,

@@ -317,6 +317,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
 
     let id = state.id();
     let listbox_id = format!("{id}-listbox");
+    let controlled_id = controlled_id(&listbox_id, layout, &cursor_now);
 
     // `Rc` rather than a bare closure: each is needed in two or more handlers,
     // and what they capture - a path - is not `Copy`.
@@ -479,9 +480,10 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
                 cursor,
                 state,
             },
-            listbox_id.clone(),
+            controlled_id.clone(),
             descendant.clone(),
             props.search_placeholder.clone().unwrap_or_default(),
+            field.label_id(),
         )
     });
 
@@ -499,7 +501,7 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     }));
 
     // ---- the trigger --------------------------------------------------
-    let mut attributes = trigger_aria(searchable, opened, &listbox_id, descendant);
+    let mut attributes = trigger_aria(searchable, opened, &controlled_id, descendant);
     attributes.extend(props.attributes);
 
     let value_slot = value_slot(&props.display, props.placeholder.as_deref());
@@ -586,7 +588,7 @@ fn option_id(id: &str, level: usize, index: usize) -> String {
 fn trigger_aria(
     searchable: bool,
     opened: bool,
-    listbox_id: &str,
+    controlled_id: &str,
     descendant: Option<String>,
 ) -> Vec<Attribute> {
     if searchable && opened {
@@ -603,7 +605,7 @@ fn trigger_aria(
     // The list is mounted only while open, and an id that names nothing is an
     // invalid reference.
     if opened {
-        trigger.push(attr("aria-controls", listbox_id.to_string()));
+        trigger.push(attr("aria-controls", controlled_id.to_string()));
     }
     if let Some(target) = descendant.filter(|_| opened) {
         trigger.push(attr("aria-activedescendant", target));
@@ -845,6 +847,14 @@ impl CascaderRows {
         // the moment two columns are open.
         let on_cursor = self.cursor_now.starts_with(&indices);
         let is_cursor = self.cursor_now == indices;
+        // One listbox, so exactly one row may be selected. `Paths` draws every
+        // ancestor of the cursor as a row of its own, and "on the cursor's
+        // chain" marked all of them - three `aria-selected` rows in one
+        // single-select listbox, measured with `any_level` on.
+        let marked = match whole_path {
+            true => is_cursor,
+            false => on_cursor,
+        };
         let is_committed = self.committed == indices;
         let content = match whole_path {
             false => self.node(&indices),
@@ -884,7 +894,7 @@ impl CascaderRows {
                 id: option_id(&self.id, level, index),
                 size: self.size,
                 radius: self.radius,
-                selected: on_cursor,
+                selected: marked,
                 active: is_cursor,
                 states: States::new().with("committed", is_committed),
                 "aria-disabled": row_disabled.then_some("true"),
@@ -1066,9 +1076,13 @@ struct CascaderSearch {
 fn search_header(
     style: BoxStyle,
     search: CascaderSearch,
-    listbox_id: String,
+    controlled_id: String,
     descendant: Option<String>,
     placeholder: String,
+    // The field's label. While the box is open it is the combobox, so it is
+    // what a screen reader announces the field by - without this it was an
+    // unnamed combobox, measured in Chromium.
+    label_id: Option<String>,
 ) -> Element {
     let CascaderSearch {
         element,
@@ -1088,7 +1102,8 @@ fn search_header(
         .attr("role", "combobox")
         .attr("aria-haspopup", "listbox")
         .attr("aria-expanded", "true")
-        .attr("aria-controls", listbox_id)
+        .attr("aria-controls", controlled_id)
+        .attr("aria-labelledby", label_id)
         .attr("aria-activedescendant", descendant)
         .event("oninput", move |event: FormEvent| {
             query.set(event.value());
@@ -1184,6 +1199,18 @@ fn dropdown_box(
         .render(HtmlTag::Div, Vec::new(), content)
 }
 
+/// The listbox `aria-controls` names. `Columns` puts `role="listbox"` on each
+/// column and only `role="presentation"` on the strip holding them, so naming
+/// the strip pointed the combobox at an element with no popup role at all -
+/// measured in Chromium. It names the cursor's own column instead, which is
+/// the one [`active_descendant`] points into.
+fn controlled_id(listbox_id: &str, layout: CascaderLayout, cursor: &[usize]) -> String {
+    match layout {
+        CascaderLayout::Paths => listbox_id.to_string(),
+        CascaderLayout::Columns => format!("{listbox_id}-{}", cursor.len().saturating_sub(1)),
+    }
+}
+
 /// Which row `aria-activedescendant` points at - the cursor's deepest node in
 /// `Columns`, and its row in the flat list in `Paths`.
 fn active_descendant(
@@ -1217,6 +1244,32 @@ mod tests {
         let css = css.as_str();
 
         assert!(css.contains("flex:1 0 auto;"), "{css}");
+    }
+
+    /// A combobox's `aria-controls` must name its popup, and the row
+    /// `aria-activedescendant` names has to be inside it. In `Columns` that is
+    /// one column per level, so the two have to agree on which.
+    #[test]
+    fn aria_controls_names_the_column_the_active_row_is_in() {
+        let cursor = vec![1, 0];
+        let controls = controlled_id("x-listbox", CascaderLayout::Columns, &cursor);
+        let active = active_descendant("x", CascaderLayout::Columns, &cursor, None).unwrap();
+        assert_eq!(controls, "x-listbox-1");
+        // `columns()` builds a column's id as `{listbox_id}-{level}` and a
+        // row's as `{id}-option-{level}-{index}`, so the level must match.
+        assert_eq!(active, "x-option-1-0");
+
+        // The list opens with nothing highlighted: there is still exactly one
+        // column, and it is the one named.
+        assert_eq!(
+            controlled_id("x-listbox", CascaderLayout::Columns, &[]),
+            "x-listbox-0"
+        );
+        // `Paths` is one listbox, and it carries `listbox_id` itself.
+        assert_eq!(
+            controlled_id("x-listbox", CascaderLayout::Paths, &cursor),
+            "x-listbox"
+        );
     }
 
     /// Three columns are wider than a phone. The dropdown is held inside the
