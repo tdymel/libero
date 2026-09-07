@@ -7,7 +7,7 @@ pub fn ChipPage() -> Element {
     rsx! {
         DocPage {
             title: "Chip",
-            source: "libero/src/components/inputs/chip",
+            source: "libero/src/components/form/chip.rs",
             markdown: "/md/chip.md",
             properties: vec![props("Chip", vec![
                 prop("color", "ThemeAwareValue")
@@ -29,6 +29,9 @@ pub fn ChipPage() -> Element {
                     .doc("Called with the value `checked` should take next. Its presence makes the chip a real checkbox."),
                 prop("name", "FieldName<bool>")
                     .doc("Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`."),
+                prop("value", "String")
+                    .default("on")
+                    .doc("What the chip posts under its `name` when it is checked, so a row of filter chips can share one name. Left out, it posts the browser's `on`, as `Checkbox` does."),
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("A plain action; its presence makes the chip a `button`."),
                 prop("to", "NavigationTarget")

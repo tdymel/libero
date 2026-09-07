@@ -108,6 +108,8 @@ pub(crate) enum Route {
     AutocompletePage {},
     #[route("/form/checkbox")]
     CheckboxPage {},
+    #[route("/form/chip")]
+    ChipPage {},
     #[route("/form/color-field")]
     ColorFieldPage {},
     #[route("/form/color-picker")]
@@ -161,8 +163,6 @@ pub(crate) enum Route {
     ActionIconPage {},
     #[route("/inputs/button")]
     ButtonPage {},
-    #[route("/inputs/chip")]
-    ChipPage {},
     #[route("/layout/aspect-ratio")]
     AspectRatioPage {},
     #[route("/layout/box")]

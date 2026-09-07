@@ -161,6 +161,12 @@ base_props! {
         /// `Form`'s value when the chip has no `onchange`, as on `Checkbox`.
         #[props(default, into)]
         name: crate::components::FieldName<bool>,
+        /// What the chip posts under its `name` when it is checked, so a row
+        /// of filter chips can share one name: `Chip { name: "tags", value:
+        /// "rust" }` posts `tags=rust`. Left out, it posts the browser's
+        /// `name=on`, as `Checkbox` does.
+        #[props(default, into)]
+        value: Option<String>,
         /// A plain action: renders a `<button>` root.
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
@@ -212,6 +218,9 @@ pub fn Chip(props: ChipProps) -> Element {
     }
     if props.onchange.is_some() && props.checked.is_none() {
         warn("Chip: `onchange` without `checked` can never appear selected.");
+    }
+    if props.value.is_some() && props.name.is_empty() {
+        warn("Chip: `value` without `name` is posted by nothing.");
     }
 
     let style = use_cache((variant, checked, color), |(variant, checked, color)| {
@@ -307,6 +316,9 @@ pub fn Chip(props: ChipProps) -> Element {
         .attr("type", "checkbox")
         .attr("id", id())
         .attr("name", bound.name().map(str::to_string))
+        // No attribute is how the `on` fallback is kept: the browser's own
+        // default for a valueless checkbox, exactly as `Checkbox` posts.
+        .attr("value", props.value)
         .attr("checked", checked)
         .attr("disabled", disabled)
         // Void element - `()` costs no dynamic node.

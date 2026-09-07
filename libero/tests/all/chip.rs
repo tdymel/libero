@@ -85,3 +85,35 @@ fn a_clickable_chip_is_a_button_and_a_linked_one_an_anchor() {
     // The pointer state both roots need, and no `<span>` root gets.
     assert!(attributes_of(&html, "button")["data-state"].contains("clickable"));
 }
+
+/// A row of filter chips shares one `name`, so each has to post its own
+/// `value` (todo 20). Without one the attribute is absent and the browser
+/// posts its default `on`, exactly as `Checkbox` does.
+#[test]
+fn a_chip_posts_its_value_under_the_shared_name_or_falls_back_to_on() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { name: "tags", value: "rust", "Rust" }
+            }
+        }
+    }
+
+    let html = render(app);
+    let input = attributes_of(&html, "input");
+    assert_eq!(input["name"], "tags");
+    assert_eq!(input["value"], "rust");
+
+    fn valueless() -> Element {
+        rsx! {
+            LiberoProvider {
+                Chip { name: "agreed", "Agreed" }
+            }
+        }
+    }
+
+    let html = render(valueless);
+    let input = attributes_of(&html, "input");
+    assert_eq!(input["name"], "agreed");
+    assert!(!input.contains_key("value"), "{input:?}");
+}

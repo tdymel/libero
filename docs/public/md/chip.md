@@ -2,7 +2,7 @@
 
 Crate: `libero`
 Import: `use libero::components::Chip;`
-Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/chip>
+Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/form/chip.rs>
 Index: [index.md](index.md) - every other component's markdown page
 Description: A compact token - a tag, a filter, or a small inline action.
 
@@ -63,6 +63,27 @@ fn Demo() -> Element {
 }
 ```
 
+A `name` alone also makes the chip a checkbox: it now has something to post.
+Give each chip of a filter row the same `name` and its own `value`, and the row
+posts one entry per selected chip - `tags=rust&tags=css`. A chip with no
+`value` posts `name=on`, as `Checkbox` does.
+
+```rust
+use dioxus::prelude::*;
+use libero::components::{Chip, Flex};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        Flex { direction: "row", gap: "md",
+            for language in ["rust", "css", "html"] {
+                Chip { key: "{language}", name: "tags", value: "{language}", "{language}" }
+            }
+        }
+    }
+}
+```
+
 `onclick` makes the chip a `<button>`, `to` a router-aware link that takes
 precedence over `onclick`. Neither combines with `onchange`.
 
@@ -108,6 +129,7 @@ Space toggles a selectable chip. Keep `children` to text and `Icon` - a
 | `disabled` | `bool` | `false` | Disables interaction and dims the chip. |
 | `onchange` | `EventHandler<bool>` | - | Called with the value `checked` should take next. Its presence makes the chip a real checkbox. |
 | `name` | `FieldName<bool>` | - | Makes the chip a checkbox that posts under this name. A path - `Filters::FIELDS.open()` - also binds it to the surrounding `Form`'s value when the chip has no `onchange`, as on `Checkbox`. |
+| `value` | `String` | `on` | What the chip posts under its `name` when it is checked, so a row of filter chips can share one name. Left out, it posts the browser's `on`, as `Checkbox` does. |
 | `onclick` | `EventHandler<MouseEvent>` | - | A plain action; its presence makes the chip a `<button>`. |
 | `to` | `NavigationTarget` | - | Renders a router-aware link instead. Takes precedence over `onclick`. |
 | `target` | `String` | - | Link target, e.g. `_blank`. Only with `to`. |

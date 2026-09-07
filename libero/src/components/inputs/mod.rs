@@ -1,6 +1,5 @@
 mod action_icon;
 mod button;
-mod chip;
 
 pub use action_icon::ActionIcon;
 pub(crate) use button::{
@@ -9,4 +8,3 @@ pub(crate) use button::{
     variant_selected_sx,
 };
 pub use button::{Button, ButtonProps};
-pub use chip::{Chip, ChipProps};

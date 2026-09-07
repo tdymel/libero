@@ -2,6 +2,7 @@ mod autocomplete;
 mod caption;
 mod cascader;
 mod checkbox;
+mod chip;
 mod clear;
 mod color;
 mod combobox;
@@ -38,6 +39,7 @@ pub use cascader::{
     Cascader, CascaderFilterArgs, CascaderLayout, CascaderNodeArgs, CascaderOption, CascaderProps,
 };
 pub use checkbox::{Checkbox, CheckboxProps};
+pub use chip::{Chip, ChipProps};
 pub(crate) use clear::{clear_button, use_refocus_on_close};
 pub use color::{
     AlphaSlider, AlphaSliderProps, ColorCode, ColorField, ColorFieldProps, ColorFormat,

@@ -1,6 +1,7 @@
 mod autocomplete;
 mod cascader;
 mod checkbox;
+mod chip;
 mod color_field;
 mod color_picker;
 mod combobox;
@@ -30,6 +31,7 @@ mod textarea;
 pub use autocomplete::AutocompletePage;
 pub use cascader::CascaderPage;
 pub use checkbox::CheckboxPage;
+pub use chip::ChipPage;
 pub use color_field::ColorFieldPage;
 pub use color_picker::ColorPickerPage;
 pub use combobox::ComboboxPage;
