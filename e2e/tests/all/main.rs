@@ -5,6 +5,7 @@
 //! A new component is `tests/all/<unit>.rs` plus its `mod` line here.
 
 mod autocomplete;
+mod code;
 mod collapse;
 mod drawer;
 mod focus_contrast;
