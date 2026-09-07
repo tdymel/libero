@@ -28,12 +28,15 @@
 //!    [`HELD_CLOCK`] for how, and why CDP's virtual time was not used.
 
 use e2e::browser::block_on;
-use e2e::passes::keyboard;
+use e2e::passes::{keyboard, pointer, target_size};
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
 const TRIGGER: &str = "#notify";
 const MESSAGE: &str = "Saved to your library";
+
+/// A shown notification's close button, the one undersized control here.
+const CLOSE: &str = "[aria-live] li [data-slot=close]";
 
 const ASSERTIVE_TRIGGER: &str = "#notify-assertive";
 const TIMED_TRIGGER: &str = "#notify-timed";
@@ -51,12 +54,16 @@ const EXIT_MS: u32 = 200;
 /// polite one in its list and the assertive one in the other. The resting tree
 /// is the empty case, the 18 silent lists, and pins that they are mounted.
 ///
-/// No `targets`: the close button is 20x20 and meets WCAG 2.5.8 only through
-/// the spacing exception, which the size pass does not measure.
+/// `targets_spaced`, not `targets`: the close button is 20x20 and meets WCAG
+/// 2.5.8 only through the spacing exception, so what it has to prove is
+/// clearance rather than size (todo 366). It is the press target itself - the
+/// click handler is on that button, and the card around it dismisses nothing -
+/// so its own box is the region a press acts on.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("notifications", "/notifications")
         .focusable(TRIGGER)
+        .targets_spaced(CLOSE)
         .state("polite", &[Step::Click(TRIGGER)], "[aria-live=polite] li")
         .state(
             "assertive",
@@ -406,5 +413,53 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
         );
 
         fixture.close().await.unwrap();
+    });
+}
+
+/// WCAG 2.5.8 for the close button, with the numbers written down (todo 366).
+///
+/// The baseline above declares it with `targets_spaced`, which passes it
+/// silently. This is what a reviewer reads instead: the button is under 24px
+/// and conforms only because nothing else comes within reach of the 24px
+/// circle on it. If it ever grows to 24x24 the exception stops mattering and
+/// the declaration should become a plain `targets`.
+///
+/// Measured 2026-09-20, device scale 1: 20x20 at both viewports, with **no**
+/// other target inside the circle's reach - a stacked notification's own close
+/// button is a card's height away. So the clearance here is unforced, and what
+/// the declaration guards is a future layout that crowds it. That the
+/// computation can refuse a real case is proved separately, on two 20x20
+/// buttons edge to edge (`negative.rs`).
+#[test]
+fn its_close_button_is_undersized_and_clears_its_neighbours() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let fixture = Fixture::open("/notifications", viewport).await.unwrap();
+            let page = &fixture.page;
+
+            pointer::click(page, TRIGGER).await.unwrap();
+            wait::for_visible(page, CLOSE).await.unwrap();
+
+            let measured = target_size::measure_spacing(page, CLOSE).await.unwrap();
+            assert_eq!(
+                measured.len(),
+                1,
+                "expected one close button at {}, found {measured:?}",
+                viewport.name()
+            );
+            println!("{}: {measured:?}", viewport.name());
+            assert!(
+                measured[0].target.width < target_size::MINIMUM
+                    || measured[0].target.height < target_size::MINIMUM,
+                "at {}: the close button now measures {}x{}, so it meets 2.5.8 outright and \
+                 the baseline should declare it with `targets` rather than `targets_spaced`",
+                viewport.name(),
+                measured[0].target.width,
+                measured[0].target.height
+            );
+            target_size::assert_sizes_spaced(CLOSE, &measured).unwrap();
+
+            fixture.close().await.unwrap();
+        }
     });
 }

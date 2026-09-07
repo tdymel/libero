@@ -6,7 +6,7 @@
 //! and rows that appear and disappear. Whether the flat archetype survives that
 //! is the question this unit answers.
 
-use e2e::archetypes::{Orientation, RovingTabindex};
+use e2e::archetypes::{Orientation, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
@@ -31,16 +31,9 @@ fn it_is_a_single_tab_stop() {
     block_on(async {
         let fixture = Fixture::open("/tree", Viewport::Desktop).await.unwrap();
 
-        let tabbable: usize = fixture
-            .page
-            .evaluate(
-                "[...document.querySelectorAll('[role=treeitem]')]\
-                 .filter(el => el.getAttribute('tabindex') !== '-1').length",
-            )
-            .await
-            .unwrap()
-            .into_value()
-            .unwrap();
+        // By tabbing, not off `tabindex`: a row's own expander or action is a
+        // tab stop the attribute count cannot see, and a tree grows those.
+        let tabbable = count_tab_stops(&fixture.page, ROW).await.unwrap();
 
         assert_eq!(
             tabbable, 1,

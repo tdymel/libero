@@ -98,18 +98,80 @@ pub fn ConsoleWarning() -> Element {
     }
 }
 
+/// WCAG 2.5.8's spacing exception violated: two 20x20 targets edge to edge.
+///
+/// The counterpart to [`TinyTarget`], and the case that one cannot make. An
+/// undersized target is not automatically a failure - a `RadioGroup` row and a
+/// `Notifications` close button are both under 24px and both conform, because
+/// a 24px circle on each clears its neighbours. Here the circles overlap: the
+/// buttons are 20px wide with nothing between them, so their centres are 20px
+/// apart where the exception wants 24.
+///
+/// Each button is a real press target with nothing else inside it, so what is
+/// measured is what a finger has to hit.
+#[component]
+pub fn CrampedTargets() -> Element {
+    rsx! {
+        div { style: "display: flex; gap: 0;",
+            button {
+                id: "cramped-a",
+                "aria-label": "Cramped A",
+                style: "box-sizing: border-box; width: 20px; height: 20px; padding: 0; margin: 0; border: 1px solid #555;",
+            }
+            button {
+                id: "cramped-b",
+                "aria-label": "Cramped B",
+                style: "box-sizing: border-box; width: 20px; height: 20px; padding: 0; margin: 0; border: 1px solid #555;",
+            }
+        }
+    }
+}
+
 /// APG roving tabindex violated: every item is its own tab stop.
 ///
 /// The important part is that this **works**. Every tab is reachable and
 /// nothing throws; it is simply three tab stops where the pattern allows one.
 /// A naive "can a keyboard reach it" check passes here.
+///
+/// The arrows, Home and End all work, wrapping at both ends, so the tab-stop
+/// count is the **only** thing `RovingTabindex` can object to. Without them the
+/// contract would fail whatever the count check did, and `negative.rs` would be
+/// asserting that some part of the archetype works rather than that part.
 #[component]
 pub fn ManyTabStops() -> Element {
+    const TABS: [&str; 3] = ["One", "Two", "Three"];
+    let mut nodes: Signal<Vec<Option<std::rc::Rc<MountedData>>>> =
+        use_signal(|| vec![None; TABS.len()]);
+
     rsx! {
         div { role: "tablist", "aria-label": "Broken strip",
-            button { role: "tab", tabindex: "0", "One" }
-            button { role: "tab", tabindex: "0", "Two" }
-            button { role: "tab", tabindex: "0", "Three" }
+            for (index , label) in TABS.iter().enumerate() {
+                button {
+                    key: "{index}",
+                    role: "tab",
+                    tabindex: "0",
+                    onmounted: move |event: Event<MountedData>| {
+                        nodes.write()[index] = Some(event.data());
+                    },
+                    onkeydown: move |event: Event<KeyboardData>| {
+                        let target = match event.key() {
+                            Key::ArrowRight => (index + 1) % TABS.len(),
+                            Key::ArrowLeft => (index + TABS.len() - 1) % TABS.len(),
+                            Key::Home => 0,
+                            Key::End => TABS.len() - 1,
+                            _ => return,
+                        };
+                        event.prevent_default();
+                        let node = nodes.read().get(target).cloned().flatten();
+                        if let Some(node) = node {
+                            spawn(async move {
+                                let _ = node.set_focus(true).await;
+                            });
+                        }
+                    },
+                    "{label}"
+                }
+            }
         }
     }
 }

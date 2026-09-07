@@ -100,6 +100,8 @@ enum Route {
     BrokenFocusRing {},
     #[route("/broken/target-size")]
     BrokenTargetSize {},
+    #[route("/broken/target-spacing")]
+    BrokenTargetSpacing {},
     #[route("/broken/contrast")]
     BrokenContrast {},
     #[route("/broken/console")]
@@ -214,6 +216,10 @@ fn BrokenFocusRing() -> Element {
 #[component]
 fn BrokenTargetSize() -> Element {
     rsx! { broken::TinyTarget {} }
+}
+#[component]
+fn BrokenTargetSpacing() -> Element {
+    rsx! { broken::CrampedTargets {} }
 }
 #[component]
 fn BrokenContrast() -> Element {

@@ -30,6 +30,98 @@ use chromiumoxide::Page;
 use crate::passes::keyboard::{self, Key};
 use crate::wait;
 
+/// How many distinct tab stops lie inside the widget holding `items`.
+///
+/// **Counted by tabbing, not read off `tabindex`.** An attribute count over the
+/// item selector answers a narrower question than the one the pattern asks: it
+/// sees a tab stop that *is* an item and is blind to a tab stop *inside* one.
+/// A tab strip whose tabs each carry a close button, a toolbar row with a
+/// nested link, a tree row with an action - every one of those is several stops
+/// where the pattern allows one, and every one of them counted as a single stop
+/// (review 7, E3). The same blindness runs the other way: `RadioSet` measured
+/// three stops on `SegmentedControl`'s native radios, which the browser groups
+/// into one, and that false red is why it already counts this way.
+///
+/// The widget is the closest ancestor holding every item, so "inside" covers
+/// the items, anything nested in them, and any chrome the widget draws between
+/// them. Tab walks forward from a blurred document until focus has entered the
+/// widget and left it again, and each distinct element focused inside counts
+/// once.
+pub async fn count_tab_stops(page: &Page, items: &str) -> Result<usize> {
+    let sel = serde_json::to_string(items)?;
+    // The widget, kept on `window` so the per-press read below is one cheap
+    // expression rather than a repeated ancestor walk.
+    let count: i64 = page
+        .evaluate(format!(
+            "(() => {{ const items = [...document.querySelectorAll({sel})]; \
+             if (!items.length) return -1; \
+             let root = items[0]; \
+             for (const item of items) {{ while (root && !root.contains(item)) root = root.parentElement; }} \
+             if (!root) return -1; \
+             window.__e2eTabStops = {{ root, stops: [] }}; \
+             return items.length; }})()"
+        ))
+        .await?
+        .into_value()?;
+    let Ok(count) = usize::try_from(count) else {
+        bail!("counting tab stops: nothing matched {items}");
+    };
+
+    // From the top of the document, so what is counted is the walk a keyboard
+    // user makes rather than whatever the last test step left focused.
+    reset_tab_position(page).await?;
+
+    // Enough presses to walk in from the top of the document, cross a stop per
+    // item and any nested ones, and come back out.
+    let budget = count * 3 + 8;
+    let mut entered = false;
+    for _ in 0..budget {
+        keyboard::press(page, keyboard::TAB).await?;
+        let inside: bool = page
+            .evaluate(
+                "(() => { const state = window.__e2eTabStops, el = document.activeElement; \
+                 const inside = !!(el && state.root.contains(el)); \
+                 if (inside && !state.stops.includes(el)) state.stops.push(el); \
+                 return inside; })()",
+            )
+            .await?
+            .into_value()?;
+        if inside {
+            entered = true;
+        } else if entered {
+            break;
+        }
+    }
+
+    let stops: usize = page
+        .evaluate("window.__e2eTabStops.stops.length")
+        .await?
+        .into_value()?;
+    reset_tab_position(page).await?;
+    Ok(stops)
+}
+
+/// Put the next Tab back at the top of the document.
+///
+/// `blur()` alone does not: it clears the focus and leaves the **sequential
+/// focus navigation starting point** where the element was, so the next Tab
+/// continues from there. Counting stops walks past the widget, so without this
+/// the walk that follows tabbed into whatever comes after it and reported the
+/// widget unreachable. Focusing `<body>` moves the starting point to the start
+/// of the document, and the temporary `tabindex` is what makes `<body>`
+/// focusable at all; it is removed again so nothing else - the AX snapshot
+/// especially - sees it.
+pub async fn reset_tab_position(page: &Page) -> Result<()> {
+    page.evaluate(
+        "(() => { if (document.activeElement) document.activeElement.blur(); \
+         document.body.setAttribute('tabindex', '-1'); \
+         document.body.focus(); \
+         document.body.removeAttribute('tabindex'); })()",
+    )
+    .await?;
+    Ok(())
+}
+
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum Orientation {
     Horizontal,
@@ -75,8 +167,7 @@ impl RovingTabindex<'_> {
         self.assert_single_tab_stop(page, count).await?;
 
         // Focus the group, then walk it.
-        page.evaluate("document.activeElement && document.activeElement.blur()")
-            .await?;
+        reset_tab_position(page).await?;
         keyboard::press(page, keyboard::TAB).await?;
         let first = self.settle_on(page, 0).await?;
         if first.is_none() {
@@ -126,17 +217,9 @@ impl RovingTabindex<'_> {
         Ok(())
     }
 
-    /// Exactly one item may be in the tab order.
+    /// Exactly one tab stop inside the widget.
     async fn assert_single_tab_stop(&self, page: &Page, count: usize) -> Result<()> {
-        let tabbable: usize = page
-            .evaluate(format!(
-                r#"[...document.querySelectorAll({})]
-                    .filter(el => el.getAttribute('tabindex') !== '-1' && !el.hasAttribute('disabled'))
-                    .length"#,
-                serde_json::to_string(self.items)?
-            ))
-            .await?
-            .into_value()?;
+        let tabbable = count_tab_stops(page, self.items).await?;
         if tabbable != 1 {
             bail!(
                 "{} has {tabbable} tab stops across {count} items; a roving-tabindex widget is \

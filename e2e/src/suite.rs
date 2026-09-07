@@ -48,6 +48,15 @@ pub enum Step {
     Click(&'static str),
 }
 
+/// A control the target-size pass must measure, and which of WCAG 2.5.8's two
+/// ways of passing it may use.
+struct Target {
+    selector: &'static str,
+    /// Whether an undersized target may conform through the spacing exception.
+    /// Opt-in per control, so a page that leans on the exception says so.
+    spacing_exception: bool,
+}
+
 struct State {
     name: &'static str,
     steps: &'static [Step],
@@ -63,7 +72,7 @@ pub struct Suite {
     route: &'static str,
     root: &'static str,
     focusable: Vec<&'static str>,
-    targets: Vec<&'static str>,
+    targets: Vec<Target>,
     waivers: &'static [contrast::Waiver],
     snapshot: bool,
     states: Vec<State>,
@@ -105,7 +114,29 @@ impl Suite {
 
     /// A control that must meet WCAG 2.5.8's 24x24. Repeatable.
     pub fn targets(mut self, selector: &'static str) -> Self {
-        self.targets.push(selector);
+        self.targets.push(Target {
+            selector,
+            spacing_exception: false,
+        });
+        self
+    }
+
+    /// A control that may be under 24x24 and conform through WCAG 2.5.8's
+    /// **spacing exception** instead: a 24px circle on its centre reaching no
+    /// other target. Repeatable.
+    ///
+    /// The exception is a real part of the criterion, and several units need
+    /// it: a `RadioGroup` row, a `Notifications` close button. It is still
+    /// opt-in rather than automatic, for two reasons. It is a weaker claim, and a unit
+    /// that makes it should say so where a reviewer reads it. And it is only
+    /// sound when the selector names the **press target** rather than what is
+    /// drawn: the exception measures clearance around a region, so pointing it
+    /// at a 20px glyph inside a 44px button computes clearance nobody needs.
+    pub fn targets_spaced(mut self, selector: &'static str) -> Self {
+        self.targets.push(Target {
+            selector,
+            spacing_exception: true,
+        });
         self
     }
 
@@ -223,10 +254,11 @@ impl Suite {
         // A selector that matched in no state at all is a stale test, not a
         // pass. Saying so is what stops a renamed role silently disabling the
         // check.
-        for (selector, matched) in self.targets.iter().zip(&seen) {
+        for (target, matched) in self.targets.iter().zip(&seen) {
             if !matched {
                 anyhow::bail!(
-                    "target size: {selector} matched nothing at rest or in any declared state"
+                    "target size: {} matched nothing at rest or in any declared state",
+                    target.selector
                 );
             }
         }
@@ -244,13 +276,23 @@ impl Suite {
         page: &chromiumoxide::Page,
         seen: &mut [bool],
     ) -> anyhow::Result<()> {
-        for (index, selector) in self.targets.iter().enumerate() {
-            let sizes = target_size::measure_all(page, selector).await?;
-            if sizes.is_empty() {
-                continue;
+        for (index, target) in self.targets.iter().enumerate() {
+            let selector = target.selector;
+            if target.spacing_exception {
+                let measured = target_size::measure_spacing(page, selector).await?;
+                if measured.is_empty() {
+                    continue;
+                }
+                seen[index] = true;
+                target_size::assert_sizes_spaced(selector, &measured)?;
+            } else {
+                let sizes = target_size::measure_all(page, selector).await?;
+                if sizes.is_empty() {
+                    continue;
+                }
+                seen[index] = true;
+                target_size::assert_sizes(selector, &sizes)?;
             }
-            seen[index] = true;
-            target_size::assert_sizes(selector, &sizes)?;
         }
         Ok(())
     }

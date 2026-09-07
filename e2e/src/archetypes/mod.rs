@@ -34,4 +34,4 @@ mod roving;
 pub use combobox::Combobox;
 pub use overlay::Overlay;
 pub use radio_set::RadioSet;
-pub use roving::{Orientation, RovingTabindex};
+pub use roving::{Orientation, RovingTabindex, count_tab_stops};

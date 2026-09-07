@@ -149,6 +149,49 @@ fn menubar_with_a_tab_stop_per_trigger_fails_the_roving_contract() {
     });
 }
 
+/// `Tabs` with a close button inside a tab: the defect the old count could
+/// not see (review 7, E3).
+///
+/// Every `[role=tab]` still carries the right `tabindex`, so an attribute
+/// count over the item selector reports one stop and the strip reports clean.
+/// A keyboard user meets two - the tab, then its close button - and a strip of
+/// twelve would be thirteen stops before the next control. The count has to be
+/// taken by tabbing for this to be visible at all, which is why a plant on the
+/// real component is the proof and not a fixture written to fail.
+#[test]
+fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
+    block_on(async {
+        must_fail(
+            "/tabs",
+            Some(
+                "(() => { const plant = () => { \
+                 const tab = document.querySelector('[role=tab]'); \
+                 if (!tab || tab.querySelector('[data-planted-close]')) return; \
+                 const close = document.createElement('button'); \
+                 close.type = 'button'; close.textContent = 'x'; \
+                 close.setAttribute('aria-label', 'Close tab'); \
+                 close.setAttribute('data-planted-close', ''); \
+                 tab.append(close); }; \
+                 new MutationObserver(plant).observe(document.body, \
+                 { subtree: true, childList: true }); \
+                 plant(); })()",
+            ),
+            "has 2 tab stops across 3 items",
+            |fixture| async move {
+                let result = RovingTabindex {
+                    items: crate::tabs::TAB,
+                    orientation: Orientation::Horizontal,
+                    wraps: true,
+                }
+                .assert_contract(&fixture.page)
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
 /// `Select` whose rows lose their ids: todo 101's bug on the real component.
 /// `aria-activedescendant` is present and well-formed and names nothing. An
 /// observer strips every option's id as soon as the list renders it.
