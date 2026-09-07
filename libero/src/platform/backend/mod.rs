@@ -121,6 +121,28 @@ pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
     return false;
 }
 
+/// Only the web can see a key press's target today - see
+/// [`typing_target`](crate::platform::typing_target).
+pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::typing_target(event);
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
+}
+
+/// Only the web can see a key press's target today - see
+/// [`arrow_target`](crate::platform::arrow_target).
+pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = event;
+    #[cfg(target_arch = "wasm32")]
+    return web::arrow_target(event);
+    #[cfg(not(target_arch = "wasm32"))]
+    return false;
+}
+
 /// Only the web can see a click's target today - see
 /// [`nested_interactive`](crate::platform::nested_interactive).
 pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bool {

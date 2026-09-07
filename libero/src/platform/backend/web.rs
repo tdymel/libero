@@ -12,7 +12,7 @@ use wasm_bindgen::prelude::Closure;
 use crate::platform::{
     Dimensions, DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError,
     Read, ScrollApi, ScrollSubscription, TimerApi, TimerSubscription,
-    keyboard::{takes_typing, warn_reserved_chord},
+    keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
 };
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
@@ -47,6 +47,18 @@ pub(super) fn key_taken(event: &Event<KeyboardData>) -> bool {
     event
         .downcast::<web_sys::KeyboardEvent>()
         .is_some_and(|event| event.default_prevented())
+}
+
+pub(super) fn typing_target(event: &Event<KeyboardData>) -> bool {
+    event
+        .downcast::<web_sys::KeyboardEvent>()
+        .is_some_and(editable_target)
+}
+
+pub(super) fn arrow_target(event: &Event<KeyboardData>) -> bool {
+    event
+        .downcast::<web_sys::KeyboardEvent>()
+        .is_some_and(stepping_target)
 }
 
 /// What HTML counts as interactive content, plus anything a caller made
@@ -541,13 +553,17 @@ struct WebKeyboard;
 
 static KEYBOARD: WebKeyboard = WebKeyboard;
 
+/// The element a key press landed on, or `None` where the target is not one.
+fn key_target(event: &web_sys::KeyboardEvent) -> Option<web_sys::Element> {
+    event
+        .target()
+        .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
+}
+
 /// Whether this event landed in something the user types into - the rule
 /// itself is [`takes_typing`], plus `contenteditable`.
 fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
-    let Some(target) = event
-        .target()
-        .and_then(|target| target.dyn_into::<web_sys::Element>().ok())
-    else {
+    let Some(target) = key_target(event) else {
         return false;
     };
 
@@ -561,6 +577,18 @@ fn editable_target(event: &web_sys::KeyboardEvent) -> bool {
     target
         .dyn_ref::<web_sys::HtmlElement>()
         .is_some_and(|html| html.is_content_editable())
+}
+
+/// Whether this event landed on a control the browser steps with the arrows -
+/// the rule itself is [`takes_arrows`]. No `contenteditable` arm: that is text
+/// entry, and [`editable_target`] has it.
+fn stepping_target(event: &web_sys::KeyboardEvent) -> bool {
+    key_target(event).is_some_and(|target| {
+        takes_arrows(
+            target.tag_name().as_str(),
+            target.get_attribute("type").as_deref(),
+        )
+    })
 }
 
 impl WebKeyboard {

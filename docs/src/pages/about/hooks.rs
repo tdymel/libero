@@ -129,7 +129,7 @@ const OTHERS: [(&str, &str, Route, &str); 5] = [
     ),
     (
         "use_focus_return() -> FocusReturn",
-        "Remembers where focus came from, with remember(event) on a trigger's onmounted or remember_active() as it opens, and restore() puts it back - onto fallback(handle) if the trigger is gone.",
+        "Remembers where focus came from, with remember(event) on a trigger's onmounted or remember_active() as it opens, and restore() puts it back - onto fallback(handle) if the trigger is gone. restore() keeps a remember(event) element and consumes a remember_active() snapshot, so arm that one on every open.",
         Route::CollapsePage {},
         "Collapse",
     ),

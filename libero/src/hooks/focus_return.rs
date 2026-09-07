@@ -10,6 +10,7 @@ use crate::{
 /// Two ways of naming the same element. An overlay that renders its own
 /// trigger has that trigger's `onmounted`; one opened from the caller's markup
 /// has only whatever held focus at the moment it opened.
+#[derive(Clone)]
 enum Trigger {
     Mounted(Rc<MountedData>),
     Active(Rc<dyn ElementApi>),
@@ -40,8 +41,19 @@ pub struct FocusReturn {
 impl FocusReturn {
     /// Attach to the trigger's `onmounted`. Kept for the overlay whose trigger
     /// belongs to the caller and is never handed to the component -
-    /// `FloatingWindow` has no opening handler of its own to call
-    /// `remember_active()` from, so the caller names the trigger instead.
+    /// an overlay rendered conditionally by its caller has no opening handler
+    /// of its own to call `remember_active()` from, so the caller names the
+    /// trigger instead.
+    ///
+    /// **Arm it once.** The element named here is an element, not a snapshot:
+    /// it outlives any number of open/close cycles, and
+    /// [`restore`](Self::restore) keeps it rather than clearing it.
+    ///
+    /// **This arm has no caller in the library and no test**, which is a known
+    /// cost rather than an oversight: every component here arms per open with
+    /// [`remember_active`](Self::remember_active), and exercising this one off
+    /// the web would mean fabricating a `MountedData`. The first consumer
+    /// should bring a browser test with it.
     pub fn remember(&self, event: Event<MountedData>) {
         let mut trigger = self.trigger;
         trigger.set(Some(Trigger::Mounted(event.data.clone())));
@@ -52,7 +64,8 @@ impl FocusReturn {
     ///
     /// Call it **synchronously inside the handler that opens the overlay**:
     /// there the active element still is the element the user acted on. A
-    /// frame later it is not.
+    /// frame later it is not. And call it **on every open**: a snapshot is a
+    /// fact about one moment, so [`restore`](Self::restore) consumes it.
     pub fn remember_active(&self) {
         let active = document()
             .and_then(|document| document.active_element())
@@ -78,8 +91,16 @@ impl FocusReturn {
         fallbacks.write().push(element);
     }
 
-    /// Hands focus back, and forgets the trigger - a second close cannot then
-    /// take focus off whatever holds it by then.
+    /// Hands focus back.
+    ///
+    /// **A snapshot is consumed, an element is kept.** A
+    /// [`remember_active`](Self::remember_active) trigger is a fact about the
+    /// moment the overlay opened, so it is forgotten here and a second close
+    /// cannot take focus off whatever holds it by then - which is safe only
+    /// because every such consumer arms again on each open. A
+    /// [`remember`](Self::remember) trigger is the element itself and stays:
+    /// clearing it would make a caller who armed once from `onmounted` drop
+    /// focus to `<body>` on the second close ([[todos]] item 44).
     ///
     /// Focus goes to the remembered trigger if it is still in the document,
     /// otherwise to the first [`fallback`](Self::fallback) that is. **The
@@ -99,9 +120,12 @@ impl FocusReturn {
     /// lands the focus after the overlay is gone rather than beside it.
     pub fn restore(&self) {
         let mut signal = self.trigger;
-        let Some(trigger) = signal.write().take() else {
+        let Some(trigger) = (*signal.peek()).clone() else {
             return;
         };
+        if matches!(trigger, Trigger::Active(_)) {
+            signal.write().take();
+        }
 
         let target = match trigger.is_connected() {
             true => Some(trigger),

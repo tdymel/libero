@@ -109,6 +109,41 @@ pub(crate) fn key_taken(event: &Event<KeyboardData>) -> bool {
     !event.default_action_enabled() || backend::key_taken(event)
 }
 
+/// Whether this press landed in something the user types into - a text-like
+/// `input`, a `textarea`, a `select` or a `contenteditable`.
+///
+/// **The component-facing half of the filter [`KeyboardApi::on_key`] applies
+/// to a document listener.** A root key handler that acts on the arrows,
+/// Home or End has the same obligation and no way to meet it: the press it
+/// receives has bubbled out of whatever is focused, so acting on it - and
+/// worse, `prevent_default()`ing it - takes the caret out of a text field a
+/// caller put inside the component. Ask this first and return.
+///
+/// Only the web can see an event's target, so every other renderer answers
+/// `false` - the same floor as [`key_taken`] and
+/// [`nested_interactive`](super::nested_interactive), and for the same reason.
+pub(crate) fn typing_target(event: &Event<KeyboardData>) -> bool {
+    backend::typing_target(event)
+}
+
+/// Whether this press landed on a control the browser steps with the arrow
+/// keys although it is not text entry - the rule is [`takes_arrows`].
+///
+/// **Ask it beside [`typing_target`], never instead of it.** The two are
+/// complements, so a component filtering the arrows asks both and a component
+/// filtering typing asks only the first. Neither name covers the other's
+/// elements.
+///
+/// Like [`typing_target`] it answers about the **element**, not about the key
+/// in hand: a `range` inside the component is left alone for Home and End too,
+/// which is right, since Home steps a range to its minimum.
+///
+/// Only the web can see an event's target, so every other renderer answers
+/// `false`.
+pub(crate) fn arrow_target(event: &Event<KeyboardData>) -> bool {
+    backend::arrow_target(event)
+}
+
 /// Whether an element takes typing, so a hotkey must not fire from it - the
 /// text-entry filter behind [`KeyboardApi::on_key`], kept apart from any one
 /// renderer so the next backend applies the same list. `tag` is upper case,
@@ -142,6 +177,32 @@ pub(crate) fn takes_typing(tag: &str, input_type: Option<&str>) -> bool {
         }),
         _ => false,
     }
+}
+
+/// Whether an element steps on an arrow key although the user types nothing
+/// into it - **the complement of [`takes_typing`], not a superset of it**.
+/// `tag` and `input_type` are read the same way.
+///
+/// A `range` and a `radio` are the whole list: the browser moves a range's
+/// value and a radio group's selection on an arrow, and nothing prevents that
+/// default, so a component acting on the arrows has no other way to know the
+/// press was spoken for. A `textarea`, a `select` and a text `input` also take
+/// the arrows, and they are [`takes_typing`]'s, which is why a component
+/// filtering the arrows asks both and neither name lies about its own list.
+///
+/// A checkbox, a button and a file input are on neither list: the arrows do
+/// nothing there, so a component may act on them.
+///
+/// **Our own controls do not need this.** `Slider`, `RadioGroup` and
+/// `SegmentedControl` each `prevent_default()` on the arrows, which
+/// [`key_taken`] already reports. This is the backstop for raw HTML a caller
+/// wrote.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(crate) fn takes_arrows(tag: &str, input_type: Option<&str>) -> bool {
+    tag == "INPUT"
+        && input_type.is_some_and(|kind| {
+            matches!(kind.trim().to_ascii_lowercase().as_str(), "range" | "radio")
+        })
 }
 
 /// What a global hotkey on this chord would take away from the user, or `None`
@@ -260,6 +321,28 @@ mod tests {
         assert!(takes_typing("SELECT", None));
         assert!(!takes_typing("BUTTON", None));
         assert!(!takes_typing("DIV", None));
+    }
+
+    /// The two predicates are complements: a component filtering the arrows
+    /// asks both, so an element on both lists would be asked about twice and
+    /// one on neither is a press the component may act on.
+    #[test]
+    fn stepping_controls_take_the_arrows_without_taking_typing() {
+        for kind in ["range", "radio", "RANGE"] {
+            assert!(takes_arrows("INPUT", Some(kind)), "{kind}");
+            assert!(!takes_typing("INPUT", Some(kind)), "{kind}");
+        }
+        // The arrows do nothing here, so a component may act on them.
+        for kind in ["checkbox", "button", "file", "color"] {
+            assert!(!takes_arrows("INPUT", Some(kind)), "{kind}");
+            assert!(!takes_typing("INPUT", Some(kind)), "{kind}");
+        }
+        // Text entry takes the arrows too, and it is `takes_typing`'s.
+        for (tag, kind) in [("INPUT", None), ("TEXTAREA", None), ("SELECT", None)] {
+            assert!(!takes_arrows(tag, kind), "{tag}");
+            assert!(takes_typing(tag, kind), "{tag}");
+        }
+        assert!(!takes_arrows("DIV", None));
     }
 
     #[test]

@@ -18,7 +18,7 @@ use crate::{
     hooks::{
         DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id, use_theme,
     },
-    platform::{ElementApi, TimerSubscription, timer},
+    platform::{ElementApi, TimerSubscription, arrow_target, key_taken, timer, typing_target},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
     theme::{
         CAROUSEL_CONTROL_BACKGROUND, CAROUSEL_CONTROL_COLOR, CAROUSEL_CONTROL_HOVER_BACKGROUND,
@@ -287,29 +287,6 @@ fn snap_position(
     match looping {
         true => (index.min(count.saturating_sub(1)), count),
         false => (index.clamp(first, last) - first, last - first + 1),
-    }
-}
-
-/// The keys the track acts on, so a slide can keep them.
-///
-/// A caller's `TextField` inside a slide is not code this component owns and
-/// cannot be asked to stop propagating - and the library's own text inputs do
-/// not. Without this, a bubble-phase handler calling `prevent_default` would
-/// eat caret movement, Home/End and option selection from any focusable slide
-/// content *and* advance the carousel underneath it.
-///
-/// Only the keys this orientation's track acts on are stopped. The cross-axis
-/// arrows are not among them: the track lets those through untouched, so a
-/// slide has to as well, or an ancestor would hear them from the track and not
-/// from a button inside a slide.
-fn carousel_key(key: &Key, orientation: Orientation) -> bool {
-    match orientation {
-        Orientation::Horizontal => {
-            matches!(key, Key::ArrowLeft | Key::ArrowRight | Key::Home | Key::End)
-        }
-        Orientation::Vertical => {
-            matches!(key, Key::ArrowUp | Key::ArrowDown | Key::Home | Key::End)
-        }
     }
 }
 
@@ -969,8 +946,25 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // of preventing a bubble by structure instead of stopping it.
     //
     // A slide's own focusable content is the case structure cannot separate,
-    // and `carousel_key` below is why it does not have to.
+    // and the two guards below are how it is separated instead. A caller's
+    // `TextField` inside a slide is not code this component owns and cannot be
+    // asked to stop propagating - without them, `prevent_default` here eats
+    // caret movement, Home/End and option selection from slide content *and*
+    // advances the carousel underneath it.
+    //
+    // `key_taken` is the press something nearer already acted on, marked the
+    // one way it is marked everywhere - `Slider`, `RadioGroup` and
+    // `SegmentedControl` each prevent the default on the arrows, so every one
+    // of our own controls is covered by it. The other two are the cases that
+    // cannot mark themselves, because the browser's own default action is the
+    // wanted behaviour and nothing prevents it: `typing_target` for a caret
+    // move in a text entry, a `select` or a `contenteditable`, and
+    // `arrow_target` for raw HTML a caller wrote - an `<input type="range">`
+    // or an `<input type="radio">`, which step on an arrow without typing.
     let onkeydown = move |event: Event<KeyboardData>| {
+        if key_taken(&event) || typing_target(&event) || arrow_target(&event) {
+            return;
+        }
         let key = event.key();
         let (previous, next) = match orientation {
             Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
@@ -1120,11 +1114,6 @@ pub fn Carousel(props: CarouselProps) -> Element {
                     // rather than announced a second time.
                     aria_hidden: is_clone.then(|| "true".to_string()),
                     inert: hidden.then_some(true),
-                    onkeydown: move |event: Event<KeyboardData>| {
-                        if carousel_key(&event.key(), orientation) {
-                            event.stop_propagation();
-                        }
-                    },
                     // Focus inside a slide that has just gone `inert` - the
                     // wheel, a drag, a native arrow on a button, a caller's
                     // index - is blurred by the browser and lands on `<body>`.
@@ -1611,21 +1600,6 @@ mod tests {
         assert_eq!(real_for(2, 6, 3), 5);
         assert_eq!(real_for(3, 6, 3), 0);
         assert_eq!(real_for(9, 6, 3), 0);
-    }
-
-    /// A horizontal track ignores the vertical arrows, so a slide must not
-    /// swallow them either - and the other way round.
-    #[test]
-    fn a_slide_keeps_only_the_keys_its_track_acts_on() {
-        let (h, v) = (Orientation::Horizontal, Orientation::Vertical);
-
-        assert!(carousel_key(&Key::ArrowRight, h));
-        assert!(carousel_key(&Key::Home, h));
-        assert!(!carousel_key(&Key::ArrowDown, h));
-        assert!(carousel_key(&Key::ArrowDown, v));
-        assert!(carousel_key(&Key::End, v));
-        assert!(!carousel_key(&Key::ArrowRight, v));
-        assert!(!carousel_key(&Key::Enter, h));
     }
 
     /// The two dot colours are about 1.07:1 apart, so the current dot's own
