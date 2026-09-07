@@ -73,9 +73,10 @@ fn Knob() -> Element {
                 },
                 sx: drag_handle_sx().position("absolute").width("32px").height("32px")
                     .border_radius("16px").background("primary.6").cursor("grab")
-                    // The fill makes the default ring its contrast colour, white,
-                    // which vanishes on the page. Draw it in the fill's colour.
-                    .focus_visible(sx().outline("2px solid var(--lsx-primary-6)").outline_offset("2px")),
+                    // The fill publishes its contrast colour, white, for what is
+                    // drawn *on* it - and the ring is drawn outside, where it
+                    // vanishes. Inset it into the fill: 4.86:1 rather than 1.11:1.
+                    .focus_visible(sx().outline_offset("-4px")),
                 style: "left: {x}px",
             }
         }

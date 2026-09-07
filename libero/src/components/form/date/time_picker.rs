@@ -115,6 +115,13 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         )
         .selector("& button:focus-visible", focus_ring_sx())
         .selector("& [data-slot='face']:focus-visible", focus_ring_sx())
+        // As in `Calendar`: a picked option's fill sets the ring's contrast
+        // colour for its inside, so the ring is drawn there. After the ring
+        // above, and more specific, so it wins.
+        .selector(
+            "& [data-selected]:focus-visible",
+            sx().outline_offset("-4px"),
+        )
 });
 
 date_props! {
