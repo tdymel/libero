@@ -25,6 +25,14 @@ const fn row(iso: &'static str, name: &'static str, dial: &'static str) -> Count
 }
 
 /// Sorted by name, which is also the order the picker offers them in.
+///
+/// Checked on 2026-09-20 against libphonenumber's `PhoneNumberMetadata.xml`
+/// (commit `806ee32e`), each row's `countryCode` plus its `leadingDigits` where
+/// that is one fixed area code. A NANP member with one area code carries it in
+/// its dial code (`1684`), because the picker then fills it in; one with several
+/// (`DO`, `JM`, `PR`) carries a bare `1` and the area code is typed. `AQ`
+/// (`672`) and `PN` (`64`) are not in libphonenumber and follow the ITU-T
+/// E.164 assignment list.
 pub(crate) static COUNTRIES: &[Country] = &[
     row("AF", "Afghanistan", "93"),
     row("AX", "Åland Islands", "358"),
@@ -89,7 +97,7 @@ pub(crate) static COUNTRIES: &[Country] = &[
     row("DK", "Denmark", "45"),
     row("DJ", "Djibouti", "253"),
     row("DM", "Dominica", "1767"),
-    row("DO", "Dominican Republic", "1809"),
+    row("DO", "Dominican Republic", "1"),
     row("EC", "Ecuador", "593"),
     row("EG", "Egypt", "20"),
     row("SV", "El Salvador", "503"),
@@ -134,7 +142,7 @@ pub(crate) static COUNTRIES: &[Country] = &[
     row("IM", "Isle of Man", "44"),
     row("IL", "Israel", "972"),
     row("IT", "Italy", "39"),
-    row("JM", "Jamaica", "1876"),
+    row("JM", "Jamaica", "1"),
     row("JP", "Japan", "81"),
     row("JE", "Jersey", "44"),
     row("JO", "Jordan", "962"),
@@ -202,7 +210,7 @@ pub(crate) static COUNTRIES: &[Country] = &[
     row("PN", "Pitcairn Islands", "64"),
     row("PL", "Poland", "48"),
     row("PT", "Portugal", "351"),
-    row("PR", "Puerto Rico", "1787"),
+    row("PR", "Puerto Rico", "1"),
     row("QA", "Qatar", "974"),
     row("RE", "Réunion", "262"),
     row("RO", "Romania", "40"),
@@ -254,6 +262,7 @@ pub(crate) static COUNTRIES: &[Country] = &[
     row("TM", "Turkmenistan", "993"),
     row("TC", "Turks and Caicos Islands", "1649"),
     row("TV", "Tuvalu", "688"),
+    row("VI", "U.S. Virgin Islands", "1340"),
     row("UG", "Uganda", "256"),
     row("UA", "Ukraine", "380"),
     row("AE", "United Arab Emirates", "971"),
@@ -291,8 +300,18 @@ pub(crate) fn by_dial(digits: &str) -> Option<&'static Country> {
     COUNTRIES
         .iter()
         .filter(|country| digits.starts_with(country.dial))
-        .max_by_key(|country| country.dial.len())
+        .max_by_key(|country| (country.dial.len(), !SHARING.contains(&country.iso)))
 }
+
+/// The rows that share their dial code with a larger country, which is the one
+/// a bare `+61` or `+39` belongs to - libphonenumber's main country for the
+/// code. Without it the tie went to whichever row sorted last by name, so an
+/// Australian number arrived as the Cocos Islands and an Italian one as the
+/// Vatican.
+pub(crate) const SHARING: &[&str] = &[
+    "AQ", "AX", "BL", "BQ", "CA", "CC", "CX", "DO", "EH", "GG", "IM", "JE", "JM", "KZ", "MF", "PN",
+    "PR", "SJ", "VA", "YT",
+];
 
 /// Only the ASCII digits, which is every path's first step: a pasted
 /// `+1 (213) 373-4253` and a typed `2133734253` have to reach the same value.
@@ -319,14 +338,18 @@ pub(crate) fn national_of(e164: &str, country: &Country) -> Option<String> {
         .map(|national| national.to_string())
 }
 
-/// The national number, grouped for reading.
+/// The national number grouped for reading, or `None` where this numbering
+/// plan has no one fixed shape.
 ///
 /// Deliberately sparse. A grouping is only applied where the national number
-/// has one fixed, well-known shape; everywhere else the digits are returned
-/// untouched, because inventing a grouping for 240 numbering plans is exactly
-/// the data we decided not to ship. Nothing here is validation: a number of the
-/// wrong length is simply left ungrouped.
-pub(crate) fn group(country: &Country, national: &str) -> String {
+/// has one fixed, well-known shape, because inventing a grouping for 240
+/// numbering plans is exactly the data we decided not to ship. Nothing here is
+/// validation: a number of the wrong length is simply not grouped.
+///
+/// `None` rather than the bare digits, because a caller that has the user's own
+/// text must keep it: returning the digits made a blur on a German number strip
+/// the spaces the user had typed (todo 87b).
+pub(crate) fn group(country: &Country, national: &str) -> Option<String> {
     let digits = digits_of(national);
     let groups: &[usize] = match (country.dial, digits.len()) {
         // The NANP, whose subscriber number is 3-3-4 in every member country.
@@ -336,7 +359,7 @@ pub(crate) fn group(country: &Country, national: &str) -> String {
         // France, whose national significant number is nine digits read in
         // pairs after the leading one.
         ("33", 9) => &[1, 2, 2, 2, 2],
-        _ => return digits,
+        _ => return None,
     };
 
     let mut rest = digits.as_str();
@@ -349,5 +372,5 @@ pub(crate) fn group(country: &Country, national: &str) -> String {
         out.push_str(head);
         rest = tail;
     }
-    out
+    Some(out)
 }

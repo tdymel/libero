@@ -194,12 +194,14 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         None => text(),
         Some(value) if countries::to_e164(country, &text()) == *value => text(),
         Some(value) => countries::national_of(value, country)
-            .map(|national| countries::group(country, &national))
+            .map(|national| countries::group(country, &national).unwrap_or(national))
             .unwrap_or_default(),
     };
     // What a pick or a blur re-assembles from - the digits on screen, which is
     // not the same as the buffer when the caller's value is what won above.
     let typed = countries::digits_of(&display);
+    // The pick closure below outlives `display`, which the input takes.
+    let shown = display.clone();
     let e164 = countries::to_e164(country, &typed);
 
     let state = use_combobox();
@@ -246,8 +248,10 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             let mut text = text;
             picked.set(next);
             // The typed digits keep their meaning - only the dial code in front of
-            // them changed.
-            text.set(countries::group(next, &typed));
+            // them changed. Where the new plan has no fixed shape there is
+            // nothing to regroup into, so the text the user typed stays as it
+            // is rather than losing its spacing (todo 87b).
+            text.set(countries::group(next, &typed).unwrap_or_else(|| shown.clone()));
             if let Some(emit) = &pick_emit {
                 emit(countries::to_e164(next, &typed));
             }
@@ -460,8 +464,13 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         // the text is typed moves the caret, and `ElementApi` has no
         // `selection_start` to put it back.
         .event("onblur", move |_: FocusEvent| {
-            let grouped = countries::group(blur_country, &text());
-            if grouped != text() {
+            // Only where the plan has a fixed shape. A plan without one has no
+            // grouping to apply, and the bare digits are not an improvement on
+            // what the user typed - blurring a German number used to strip its
+            // spaces, and so did every re-render after it (todo 87b).
+            if let Some(grouped) = countries::group(blur_country, &text())
+                && grouped != text()
+            {
                 text.set(grouped);
             }
         })
@@ -556,6 +565,48 @@ mod tests {
         assert_eq!(country_for(Some("+12425550123"), country("DE")).iso, "BS");
     }
 
+    /// A shared dial code belongs to the main country, not to whichever row
+    /// sorts last by name.
+    #[test]
+    fn a_shared_dial_code_falls_to_its_main_country() {
+        for (value, iso) in [
+            ("+61212345678", "AU"),
+            ("+390612345678", "IT"),
+            ("+6491234567", "NZ"),
+            ("+4712345678", "NO"),
+            ("+590590123456", "GP"),
+            ("+12135550123", "US"),
+            ("+18095550123", "US"),
+            ("+13405550123", "VI"),
+        ] {
+            assert_eq!(country_for(Some(value), country("DE")).iso, iso, "{value}");
+        }
+        // A pick that shares the code keeps the number, area code and all.
+        assert_eq!(country_for(Some("+18295550123"), country("DO")).iso, "DO");
+        assert_eq!(
+            countries::to_e164(country("DO"), "829 555 0123"),
+            "+18295550123"
+        );
+    }
+
+    /// Every dial code two rows share has exactly one main country, so the
+    /// tie-break never falls back to the table's order - and every row marked
+    /// as sharing really does share.
+    #[test]
+    fn every_shared_dial_code_has_one_main_country() {
+        for entry in COUNTRIES {
+            let sharers: Vec<&Country> = COUNTRIES
+                .iter()
+                .filter(|other| other.dial == entry.dial)
+                .collect();
+            let main = sharers
+                .iter()
+                .filter(|other| !countries::SHARING.contains(&other.iso))
+                .count();
+            assert_eq!(main, 1, "+{} has {main} main countries", entry.dial);
+        }
+    }
+
     /// An empty value never drags the field off the country it is on.
     #[test]
     fn an_empty_value_leaves_the_country_alone() {
@@ -564,21 +615,21 @@ mod tests {
     }
 
     /// Grouping is deliberately sparse: where a numbering plan has one fixed
-    /// shape it is used, and everywhere else the digits are left alone rather
-    /// than invented.
+    /// shape it is used, and everywhere else there is no grouping at all -
+    /// which leaves the text the user typed alone (todo 87b).
     #[test]
     fn blur_groups_only_where_the_plan_is_fixed() {
         assert_eq!(
-            countries::group(country("US"), "2133734253"),
-            "213 373 4253"
+            countries::group(country("US"), "2133734253").as_deref(),
+            Some("213 373 4253")
         );
         assert_eq!(
-            countries::group(country("FR"), "612345678"),
-            "6 12 34 56 78"
+            countries::group(country("FR"), "612345678").as_deref(),
+            Some("6 12 34 56 78")
         );
-        assert_eq!(countries::group(country("DE"), "30 123456"), "30123456");
+        assert_eq!(countries::group(country("DE"), "30 123456"), None);
         // A number of another length is not a number we know how to group.
-        assert_eq!(countries::group(country("US"), "213373"), "213373");
+        assert_eq!(countries::group(country("US"), "213373"), None);
     }
 
     /// Every dial code is digits, every ISO code is two upper-case letters, and

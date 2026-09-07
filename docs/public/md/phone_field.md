@@ -71,8 +71,9 @@ Formatting is the one thing the field does with the digits, and it happens on
 blur rather than as the number is typed: regrouping on every keystroke moves the
 caret, and the platform layer has no way to put it back. The grouping itself is
 deliberately sparse - it applies where a numbering plan has one fixed shape
-(the NANP, Russia and Kazakhstan, France) and leaves the digits alone
-everywhere else.
+(the NANP, Russia and Kazakhstan, France) and leaves the text alone everywhere
+else, spacing included: a plan with no fixed shape has nothing to regroup the
+number into, so what was typed is what stays.
 
 ## The country
 
