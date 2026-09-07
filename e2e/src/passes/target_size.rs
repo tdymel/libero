@@ -125,7 +125,13 @@ pub async fn measure_spacing(page: &Page, selector: &str) -> Result<Vec<Spaced>>
                     const style = getComputedStyle(el);
                     return style.visibility !== 'hidden' && style.pointerEvents !== 'none';
                 }};
-                const all = [...document.querySelectorAll({targets})].filter(shown);
+                // The declared targets belong in the neighbour set too. They
+                // are what the unit calls a press target, and a selector of
+                // roles and focusables cannot always see one.
+                const all = [...new Set([
+                    ...document.querySelectorAll({targets}),
+                    ...document.querySelectorAll({selector}),
+                ])].filter(shown);
                 return [...document.querySelectorAll({selector})].map(el => {{
                     const target = box(el);
                     // Only what a {minimum}px circle on the target could touch.

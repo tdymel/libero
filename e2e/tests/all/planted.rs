@@ -22,6 +22,8 @@ use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
 use e2e::{Fixture, Viewport, wait};
 
+use crate::carousel;
+
 /// Open `route`, plant `defect` (JavaScript, run once the app has mounted),
 /// run `check`, and require it to fail with an error containing `because`.
 async fn must_fail<F, Fut>(route: &str, defect: Option<&str>, because: &str, check: F)
@@ -544,6 +546,98 @@ fn collapse_animating_under_reduced_motion_fails_the_motion_check() {
                     motion::assert_still(page, crate::collapse::ROOT).await
                 }
                 .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `Carousel`'s track guard with one arm taken out, three times over.
+///
+/// The arms are `key_taken || typing_target || arrow_target` in
+/// `carousel.rs`, and each covers a different kind of control in a slide, so
+/// removing all three at once would prove only that the checks see *a*
+/// broken carousel. One plant per arm, each aimed at the control only that arm
+/// can save, is what says the three checks are three checks.
+/// `crate::carousel::plant_arm_out` is how an arm is taken out of a running
+/// page.
+#[test]
+fn a_carousel_that_ignores_key_taken_advances_under_its_own_slider() {
+    block_on(async {
+        must_fail(
+            "/carousel",
+            Some(&carousel::plant_arm_out(carousel::KEY_TAKEN)),
+            "the carousel advanced on an arrow on a slider in a slide",
+            |fixture| async move {
+                let result = carousel::the_slider_in_a_slide_takes_the_arrows(&fixture).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// Without `typing_target` the track's `prevent_default()` eats the caret
+/// move, so the check fails on the caret before it reaches the strip - which
+/// is the symptom a user meets first.
+#[test]
+fn a_carousel_that_ignores_typing_target_eats_a_caret_move() {
+    block_on(async {
+        must_fail(
+            "/carousel",
+            Some(&carousel::plant_arm_out(carousel::TYPING_TARGET)),
+            "the caret in the slide's text field did not move",
+            |fixture| async move {
+                let result = carousel::the_caret_moves_in_a_slides_text_field(&fixture).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// Without `arrow_target` a caller's own `<input type="range">` stops
+/// stepping: nothing in the library marks that press, and it is not typing, so
+/// no other arm covers it.
+#[test]
+fn a_carousel_that_ignores_arrow_target_stops_a_raw_range() {
+    block_on(async {
+        must_fail(
+            "/carousel",
+            Some(&carousel::plant_arm_out(carousel::ARROW_TARGET)),
+            "the raw range in the slide did not step",
+            |fixture| async move {
+                let result = carousel::a_raw_range_in_a_slide_steps(&fixture).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `RadioGroup`'s rows crammed back under the 24px pitch todo 302 fixed.
+///
+/// This is the proof for todo 377, and the reason
+/// `radio_group::it_meets_the_baseline` may declare its rows with
+/// `targets_spaced` at all. Before the neighbour set included the unit's own
+/// declared selector, the pass was **green on this page**: a row's only
+/// neighbours were the `1x1` hidden inputs, and the adjacent rows - bare
+/// `div`s - were in no selector the pass looked at.
+#[test]
+fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
+    block_on(async {
+        must_fail(
+            "/radio-group",
+            Some(&stylesheet(
+                "[role=radiogroup] { gap: 0 !important; row-gap: 0 !important; } \
+                 [role=radiogroup] > div { height: 10px !important; min-height: 0 !important; }",
+            )),
+            "spacing exception fails",
+            |fixture| async move {
+                let result =
+                    target_size::assert_minimum_or_spacing(&fixture.page, crate::radio_group::ROWS)
+                        .await;
                 (fixture, result)
             },
         )

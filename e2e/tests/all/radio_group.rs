@@ -12,6 +12,11 @@ use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, passes::keyboard};
 
 pub const RADIOS: &str = "[role=radiogroup] input[type=radio]";
+/// The press target, and what WCAG 2.5.8 measures here: a click anywhere on
+/// the row - circle or label - picks the option. Structural, because a row has
+/// no role and no attribute of its own; if a measurement over it ever
+/// disagrees with one over the inputs, suspect this first.
+pub const ROWS: &str = "[role=radiogroup] > div";
 /// The tab stop. Not `RADIOS`: `querySelector` would name the first radio,
 /// which is not where Tab enters a group whose second option is checked.
 const CHECKED: &str = "[role=radiogroup] input[type=radio]:checked";
@@ -23,9 +28,13 @@ const THIRD_CHECKED: &str = "[role=radiogroup] input[type=radio][data-radio-inde
 fn it_meets_the_baseline() {
     Suite::new("radio_group", "/radio-group")
         .focusable(CHECKED)
-        // No `.targets`: a row is under 24px tall, so 2.5.8 turns on its
-        // spacing exception, which a plain size check cannot express. See
-        // `its_rows_meet_the_target_spacing_exception`.
+        // Not `.targets`: a row is under 24px tall, so 2.5.8 is met through
+        // its spacing exception. `planted.rs`'s
+        // `radio_group_rows_crammed_together_fail_the_spacing_exception` is
+        // the proof this can refuse - before todo 377 the pass could not see
+        // one row from another here, and this line would have been a check
+        // that cannot fail.
+        .targets_spaced(ROWS)
         // The third option checked, so a snapshot that still says the second
         // is checked after an arrow press is caught.
         .state(
@@ -60,39 +69,52 @@ fn it_honours_the_radio_group_contract() {
     });
 }
 
-/// WCAG 2.5.8 for a column of radios, spacing exception included.
+/// The rows really are undersized, so the spacing exception is load-bearing.
 ///
-/// A row - circle and label, both of which pick the option - is under 24px
-/// tall at `md`, so it passes 2.5.8 only if a 24px circle centred on each row
-/// clears its neighbours: the rows' centres must be at least 24px apart.
+/// **Not a second implementation of WCAG 2.5.8.** Since todo 377
+/// `it_meets_the_baseline` declares these rows with `targets_spaced` and the
+/// pass computes the criterion over them, with
+/// `planted::radio_group_rows_crammed_together_fail_the_spacing_exception` as
+/// the proof it can refuse. Todo 376 converged the two, and the hand-written
+/// arithmetic went with it.
+///
+/// What is left is the claim the pass cannot make. `targets_spaced` is the
+/// weaker of 2.5.8's two ways of passing, and it is silently green on a target
+/// that meets 24x24 outright - so if a theme change ever made these rows full
+/// size, the weaker declaration would stay green and nothing would say the
+/// unit had stopped needing it. This fails there, and the next reader gets
+/// told to write `targets` instead.
 ///
 /// Measured 2026-09-19 at 1280x800 and 390px wide, device scale 1: rows
-/// 19.5px tall, 23.5px apart, half a pixel short. Since todo 302 each row is
-/// at least `24px - gap` tall, so the rows sit 24px apart.
+/// 19.5px tall, 23.5px apart - half a pixel short, which was todo 302. Since
+/// 302 each row is at least `24px - gap` tall, so the rows sit 24px apart.
 #[test]
-fn its_rows_meet_the_target_spacing_exception() {
+fn its_rows_are_undersized_so_the_spacing_exception_is_load_bearing() {
     block_on(async {
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/radio-group", viewport).await.unwrap();
-            let rows: Vec<(f64, f64)> = fixture
+            let heights: Vec<f64> = fixture
                 .page
-                .evaluate(
-                    "[...document.querySelectorAll('[role=radiogroup] > div')].map(el => { \
-                     const r = el.getBoundingClientRect(); return [r.top + r.height / 2, r.height]; })",
-                )
+                .evaluate(format!(
+                    "[...document.querySelectorAll({ROWS:?})]\
+                     .map(el => el.getBoundingClientRect().height)"
+                ))
                 .await
                 .unwrap()
                 .into_value()
                 .unwrap();
-            assert_eq!(rows.len(), 3, "expected a row per option, found {rows:?}");
-            for pair in rows.windows(2) {
-                let ((a, height_a), (b, height_b)) = (pair[0], pair[1]);
-                let pitch = b - a;
-                let undersized = height_a < MINIMUM || height_b < MINIMUM;
+            assert_eq!(
+                heights.len(),
+                3,
+                "expected a row per option, found {heights:?}"
+            );
+            for height in &heights {
                 assert!(
-                    !undersized || pitch >= MINIMUM,
-                    "at {}: rows {height_a}px and {height_b}px tall sit {pitch}px apart, centre \
-                     to centre; an undersized target needs {MINIMUM}px of clearance",
+                    *height < MINIMUM,
+                    "at {}: a row is {height}px tall, which meets WCAG 2.5.8's {MINIMUM}px \
+                     outright. The unit no longer needs the spacing exception, so \
+                     `it_meets_the_baseline` should declare `targets(ROWS)` rather than \
+                     `targets_spaced(ROWS)`",
                     viewport.name()
                 );
             }
