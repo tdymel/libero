@@ -27,9 +27,9 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Autocomplete, Button, Collapse, Dialog, Flex, NotificationOptions, Notifications, Options,
-        Slider, SliderChangeEvent, Tabs, Text, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
-        use_notifications,
+        Autocomplete, Button, Collapse, Dialog, Flex, NotificationData, NotificationLive,
+        NotificationOptions, Notifications, Options, Slider, SliderChangeEvent, Tabs, Text, Tree,
+        TreeItem, TreeNode, TreeNodeRenderArgs, use_notifications,
     },
     hooks::{ModalScope, use_modal},
     theme::AutoClose,
@@ -127,11 +127,11 @@ enum Route {
 /// removes itself on a timer - so its accessibility tree is a function of time,
 /// and its live regions say different things at different moments.
 ///
-/// `auto_close` is pinned off. A fixture that disappears while being measured
-/// is not a test of the component, it is a race, and a suite whose whole point
-/// is the absence of flakiness should not contain one. Auto-close behaviour is
-/// worth testing and needs a different shape: drive the clock, do not wait on
-/// it.
+/// `#notify` and `#notify-assertive` pin `auto_close` off. A fixture that
+/// disappears while being measured is not a test of the component, it is a
+/// race. `#notify-timed` does close itself, after [`TIMED_AUTO_CLOSE_MS`], and
+/// the test holds that timer on the page's clock and fires it by hand
+/// (`tests/all/notifications.rs`), so nothing waits on real time.
 #[component]
 fn NotificationsPage() -> Element {
     let notify = use_notifications();
@@ -153,9 +153,46 @@ fn NotificationsPage() -> Element {
                 },
                 "Notify"
             }
+            Button {
+                id: "notify-assertive",
+                onclick: move |_| {
+                    notify
+                        .show_with(
+                            NotificationData {
+                                title: Some("Upload failed".into()),
+                                message: "The file is larger than 10 MB".into(),
+                                ..Default::default()
+                            },
+                            NotificationOptions {
+                                auto_close: Some(AutoClose::Never),
+                                live: NotificationLive::Assertive,
+                                ..Default::default()
+                            },
+                        );
+                },
+                "Notify assertively"
+            }
+            Button {
+                id: "notify-timed",
+                onclick: move |_| {
+                    notify
+                        .show_with(
+                            "Draft saved",
+                            NotificationOptions {
+                                auto_close: Some(AutoClose::After(TIMED_AUTO_CLOSE_MS)),
+                                ..Default::default()
+                            },
+                        );
+                },
+                "Notify for a while"
+            }
         }
     }
 }
+
+/// A delay nothing else on the page schedules, so the test's clock can hold
+/// exactly this timer and pass every other one through.
+const TIMED_AUTO_CLOSE_MS: u32 = 4321;
 
 use combobox::{MultiSelectPage, SelectPage, TagsFieldPage};
 use overlay::{DrawerPage, LightboxPage, MenuPage, SpotlightPage};

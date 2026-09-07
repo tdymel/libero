@@ -16,27 +16,291 @@
 //!
 //! ## Where the framework did not reach, and what was done about it
 //!
-//! 1. **`Suite` cannot express "do this, then measure".** Its `state` steps run
-//!    before a snapshot, so a notification *can* be reached that way - but the
-//!    interesting assertions here are about what happens over time, not about a
-//!    state. The unit is hand-written instead, and that is the right answer
-//!    rather than a gap to close: bending `Suite` into a timeline runner would
-//!    make it worse at the twenty static components it serves well.
-//! 2. **Auto-close is pinned off in the fixture.** A fixture that removes
-//!    itself while being measured is a race, not a test. Auto-close is worth
-//!    testing and needs the clock driven rather than waited on - filed, not
-//!    built.
-//! 3. **No AX snapshot.** The tree differs by whether a notification is
-//!    present, so a resting baseline would pin the empty case and prove very
-//!    little. Snapshotting the *shown* state would work and is left for
-//!    whoever grows this unit.
+//! 1. **`Suite` cannot express "do this, then measure over time".** Its `state`
+//!    steps reach a state and measure it, which is enough for the two AX
+//!    baselines below, so those go through `Suite`. The timeline (appears, is
+//!    announced once, disappears on auto-close) is hand-written in
+//!    [`a_timed_notification_appears_is_announced_once_and_closes_itself`].
+//!    That is the right answer rather than a gap to close: bending `Suite` into
+//!    a timeline runner would make it worse at the twenty static components it
+//!    serves well (todo 315 (c)).
+//! 2. **Auto-close is tested by holding the clock, not by sleeping.** See
+//!    [`HELD_CLOCK`] for how, and why CDP's virtual time was not used.
 
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 const TRIGGER: &str = "#notify";
 const MESSAGE: &str = "Saved to your library";
+
+const ASSERTIVE_TRIGGER: &str = "#notify-assertive";
+const TIMED_TRIGGER: &str = "#notify-timed";
+const TIMED_MESSAGE: &str = "Draft saved";
+/// The fixture's `TIMED_AUTO_CLOSE_MS`. A delay nothing else schedules, so the
+/// held clock can take this one timer and no other.
+const AUTO_CLOSE_MS: u32 = 4321;
+/// `theme.notifications.transition_duration`: the exit, after which the item
+/// is removed.
+const EXIT_MS: u32 = 200;
+
+/// The shown state's baseline, polite and then assertive (todo 315 (b)).
+///
+/// The states accumulate on one page, so the "assertive" tree holds both: the
+/// polite one in its list and the assertive one in the other. The resting tree
+/// is the empty case, the 18 silent lists, and pins that they are mounted.
+///
+/// No `targets`: the close button is 20x20 and meets WCAG 2.5.8 only through
+/// the spacing exception, which the size pass does not measure.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("notifications", "/notifications")
+        .focusable(TRIGGER)
+        .state("polite", &[Step::Click(TRIGGER)], "[aria-live=polite] li")
+        .state(
+            "assertive",
+            &[Step::Click(ASSERTIVE_TRIGGER)],
+            "[aria-live=assertive] li",
+        )
+        .run();
+}
+
+/// A clock the test holds, for the timers it names and no others.
+///
+/// It replaces `window.setTimeout` and `window.clearTimeout` on the page.
+/// A call whose delay is in `delays` is kept in `held` under a negative id,
+/// which a real timer id never is. Every other call goes to the real clock,
+/// so dioxus, the fade and anything else on the page run as they would.
+/// A held timer runs when the test calls `fire(ms)`, and at no other time.
+/// libero's web timer is `window.setTimeout` through web-sys, whose glue looks
+/// the method up on the window at call time. So installing this after load
+/// is enough.
+///
+/// **Why not `Emulation.setVirtualTimePolicy`.** Virtual time does not pick out
+/// one timer. It stops the page's whole clock: `requestAnimationFrame`, the CSS
+/// entry and exit animations, and the tasks dioxus uses to run its effects.
+/// The notification arms its timer inside one of those effects. So "advance
+/// 4.4 s" does not state an order between "the effect armed the timer" and
+/// "the timer fired". The policy is also experimental, and headless Chromium
+/// supports it unevenly. A held timer has no such question. The test first
+/// sees that it was armed (`armed`), then fires it, and each step is a
+/// state it can wait on, not a length of time.
+///
+/// **Why not a fixture that exposes its timer.** libero's `timer()` is a static
+/// with no seam a fixture could reach. Adding one is a public API change, for a
+/// test.
+const HELD_CLOCK: &str = r#"(delays) => {
+    if (window.__heldClock) return;
+    const realSet = window.setTimeout.bind(window);
+    const realClear = window.clearTimeout.bind(window);
+    const held = new Map();
+    let next = -1;
+    window.__heldClock = {
+        armed: (ms) => [...held.values()].filter((t) => t.ms === ms).length,
+        fire: (ms) => {
+            const hits = [...held].filter(([, t]) => t.ms === ms);
+            if (hits.length !== 1) return hits.length;
+            const [id, t] = hits[0];
+            held.delete(id);
+            t.run();
+            return 1;
+        },
+    };
+    window.setTimeout = function (fn, ms, ...args) {
+        if (delays.includes(ms) && typeof fn === 'function') {
+            const id = next--;
+            held.set(id, { ms, run: () => fn(...args) });
+            return id;
+        }
+        return realSet(fn, ms, ...args);
+    };
+    window.clearTimeout = function (id) {
+        if (!held.delete(id)) realClear(id);
+    };
+}"#;
+
+/// Counts what the live regions say, from before anything is shown.
+///
+/// A screen reader announces an insertion into a live region, so an insertion
+/// that carries `text` is one announcement. A re-render that put the item
+/// back, or re-set its text, would count again.
+const ANNOUNCEMENTS: &str = r#"(text) => {
+    window.__announced = 0;
+    const count = (node) => (node.textContent || '').includes(text);
+    const observer = new MutationObserver((records) => {
+        for (const r of records) {
+            if (r.type === 'characterData' && count(r.target)) window.__announced++;
+            for (const node of r.addedNodes) if (count(node)) window.__announced++;
+        }
+    });
+    for (const region of document.querySelectorAll('[aria-live]')) {
+        observer.observe(region, { childList: true, subtree: true, characterData: true });
+    }
+    return document.querySelectorAll('[aria-live]').length;
+}"#;
+
+async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: String) -> T {
+    page.evaluate(expression.as_str())
+        .await
+        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
+        .into_value()
+        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
+}
+
+/// The timeline `Suite` cannot express (todo 315 (a) and (c)): the notification
+/// appears, is announced once and without taking focus, and closes itself when
+/// its auto-close timer fires. Every step waits on a state and none on a
+/// duration. The clock moves only when the test fires it.
+#[test]
+fn a_timed_notification_appears_is_announced_once_and_closes_itself() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications", viewport).await.unwrap();
+            let page = &fixture.page;
+            let item = format!(
+                "[...document.querySelectorAll('[aria-live] li')]\
+                 .filter(li => li.textContent.includes({}))",
+                serde_json::to_string(TIMED_MESSAGE).unwrap()
+            );
+
+            let _: bool = js(
+                page,
+                format!("(({HELD_CLOCK})([{AUTO_CLOSE_MS}, {EXIT_MS}]), true)"),
+            )
+            .await;
+            let regions: usize = js(
+                page,
+                format!(
+                    "({ANNOUNCEMENTS})({})",
+                    serde_json::to_string(TIMED_MESSAGE).unwrap()
+                ),
+            )
+            .await;
+            assert!(regions > 0, "at {at}: no live region to observe");
+
+            // Appears.
+            keyboard::tab_to(page, TIMED_TRIGGER, 10).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("{item}.length === 1"),
+                "the timed notification",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            let politeness: String = js(
+                page,
+                format!("{item}[0].closest('[aria-live]').getAttribute('aria-live')"),
+            )
+            .await;
+            assert_eq!(
+                politeness, "polite",
+                "at {at}: the notification is in the wrong region"
+            );
+
+            // Armed. If this times out while the item is shown, either the
+            // library no longer arms a timer or its timer no longer goes
+            // through `window.setTimeout`. Either way the clock holds nothing,
+            // and the fire below would prove nothing.
+            wait::for_js_true(
+                page,
+                &format!("window.__heldClock.armed({AUTO_CLOSE_MS}) === 1"),
+                "the held clock to hold the notification's auto-close timer",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            let exit_armed: usize = js(page, format!("window.__heldClock.armed({EXIT_MS})")).await;
+            assert_eq!(
+                exit_armed, 0,
+                "at {at}: the exit is armed before the auto-close fired"
+            );
+
+            // The control on the clock itself (Ted, 2026-09-20). If libero's
+            // timer went round the wrapper - a bound `setTimeout`, a worker, a
+            // future `TimerApi` arm - the real delay would still be running
+            // underneath, and every assertion after the fire would be about a
+            // notification that was closing on its own. So once, at the first
+            // viewport, the test spends the real delay and requires the
+            // notification to be untouched by it. This costs the suite ~4.5 s;
+            // the property is about the timer path, not about the viewport.
+            if viewport == Viewport::ALL[0] {
+                tokio::time::sleep(std::time::Duration::from_millis(
+                    u64::from(AUTO_CLOSE_MS) + 500,
+                ))
+                .await;
+                let shown: usize = js(page, format!("{item}.length")).await;
+                assert_eq!(
+                    shown, 1,
+                    "the notification closed after its real {AUTO_CLOSE_MS}ms, so its timer \
+                     did not go through the held clock and nothing here is being driven"
+                );
+                let still_armed: usize =
+                    js(page, format!("window.__heldClock.armed({AUTO_CLOSE_MS})")).await;
+                assert_eq!(
+                    still_armed, 1,
+                    "at {at}: the held auto-close timer vanished"
+                );
+            }
+
+            // Announced once, without taking focus (WCAG 4.1.3).
+            e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "showing a notification")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            let announced: usize = js(page, "window.__announced".into()).await;
+            assert_eq!(
+                announced, 1,
+                "at {at}: the live regions said the text {announced} times"
+            );
+
+            // Auto-close fires: the item starts leaving and arms its exit.
+            let fired: usize = js(page, format!("window.__heldClock.fire({AUTO_CLOSE_MS})")).await;
+            assert_eq!(fired, 1, "at {at}: fired {fired} auto-close timers");
+            wait::for_js_true(
+                page,
+                &format!("{item}.length === 1 && window.__heldClock.armed({EXIT_MS}) === 1"),
+                "the notification to start leaving and arm its exit",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            // The exit fires: it is gone from the DOM, so from the AX tree too.
+            let fired: usize = js(page, format!("window.__heldClock.fire({EXIT_MS})")).await;
+            assert_eq!(fired, 1, "at {at}: fired {fired} exit timers");
+            wait::for_js_true(
+                page,
+                &format!("{item}.length === 0"),
+                "the notification to be removed",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            let spoken: bool = js(
+                page,
+                "[...document.querySelectorAll('[aria-live]')]\
+                 .some(el => el.textContent.trim().length > 0)"
+                    .into(),
+            )
+            .await;
+            assert!(
+                !spoken,
+                "at {at}: a live region still speaks after the removal"
+            );
+            let announced: usize = js(page, "window.__announced".into()).await;
+            assert_eq!(announced, 1, "at {at}: closing announced the text again");
+            e2e::passes::focus::assert_focused(page, TIMED_TRIGGER, "a notification closing")
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            fixture
+                .console
+                .assert_clean(&format!("the notification timeline at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}
 
 /// The assertion that only a browser can make: the status is announced **and
 /// focus does not move**.

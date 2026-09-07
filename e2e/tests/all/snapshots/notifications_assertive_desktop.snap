@@ -1,0 +1,51 @@
+---
+source: e2e/src/suite.rs
+description: notifications at desktop (assertive)
+expression: tree
+---
+button "Notify"
+  StaticText "Notify"
+button "Notify assertively"
+  StaticText "Notify assertively"
+button "Notify for a while"
+  StaticText "Notify for a while"
+generic
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+      listitem [level=1]
+        group "Upload failed"
+          generic
+            StaticText "Upload failed"
+          generic
+            StaticText "The file is larger than 10 MB"
+          button "Close"
+    list [live=polite]
+      listitem [level=1]
+        group
+          generic
+            StaticText "Saved to your library"
+          button "Close"

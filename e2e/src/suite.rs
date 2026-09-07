@@ -26,6 +26,11 @@ use crate::passes::keyboard::{self, Key};
 use crate::passes::{contrast, focus, pointer, target_size};
 use crate::{Fixture, Viewport, ax, browser};
 
+/// How long a state's entry animation may take before the wait fails. Well
+/// past anything the theme animates (a notification's entry is 200 ms), and
+/// short enough that a stuck animation is a failure within a test's patience.
+const ANIMATION_BUDGET: std::time::Duration = std::time::Duration::from_secs(5);
+
 /// One move towards a state worth snapshotting.
 ///
 /// Deliberately an enum and not a closure. An async closure in a builder means
@@ -276,7 +281,47 @@ impl Suite {
         crate::wait::for_visible(page, state.settled)
             .await
             .map_err(|e| e.context(format!("reaching the {:?} state", state.name)))?;
+        self.wait_for_animations(page, state).await?;
         self.assert_settled_in_root(page, state).await
+    }
+
+    /// Visible is not finished.
+    ///
+    /// A notification is visible from the first frame of its fade-in, and axe
+    /// measured its text blended into the background there: 3.72:1, against
+    /// black on the settled card (todo 315). Every animated popup after it
+    /// inherits that, so the wait is here and not in one unit.
+    ///
+    /// Infinite animations never finish, so a spinner, a marquee or a skeleton
+    /// does not hold a state up. A finite one that never ends is a failure
+    /// naming it, never a silent pass: a state measured mid-animation is
+    /// measured against a colour, a position and a size that nobody ever sees.
+    async fn wait_for_animations(
+        &self,
+        page: &chromiumoxide::Page,
+        state: &State,
+    ) -> anyhow::Result<()> {
+        const RUNNING: &str = "[...document.getAnimations()] \
+             .filter(a => a.playState === 'running' && a.effect \
+               && a.effect.getComputedTiming().iterations !== Infinity) \
+             .map(a => a.animationName || (a.effect.target && a.effect.target.tagName) || 'animation')";
+        let deadline = std::time::Instant::now() + ANIMATION_BUDGET;
+        loop {
+            let running: Vec<String> = page.evaluate(RUNNING).await?.into_value()?;
+            if running.is_empty() {
+                return Ok(());
+            }
+            if std::time::Instant::now() >= deadline {
+                anyhow::bail!(
+                    "reaching the {:?} state: {:?} still running after {ANIMATION_BUDGET:?}. \
+                     A state measured mid-animation is measured against a colour and a \
+                     geometry nobody sees, so this is a failure rather than a measurement",
+                    state.name,
+                    running
+                );
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+        }
     }
 
     /// The state's `settled` element must lie inside the root, or axe and the

@@ -1,0 +1,39 @@
+---
+source: e2e/src/suite.rs
+description: notifications at desktop (rest)
+expression: tree
+---
+button "Notify"
+  StaticText "Notify"
+button "Notify assertively"
+  StaticText "Notify assertively"
+button "Notify for a while"
+  StaticText "Notify for a while"
+generic
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
+  generic
+    list [live=assertive]
+    list [live=polite]
