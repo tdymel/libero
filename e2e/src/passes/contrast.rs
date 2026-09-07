@@ -132,10 +132,20 @@ const UNLOCK: &str = r#"
             ? 'the number of elements changed from ' + before.length + ' to ' + after.length
             : (at >= 0 ? 'element ' + at + ' moved from ' + before[at] + ' to ' + after[at] : null);
     }
+    try {
 "#;
 
-/// Puts the scroll lock back. Always paired with [`UNLOCK`].
-const RELOCK: &str = "if (__style) { __style.remove(); }";
+/// Puts the scroll lock back. Always paired with [`UNLOCK`], which opens the
+/// `try` this closes, so everything between the two runs with the lock lifted
+/// and the lock comes back however that block leaves.
+///
+/// The `finally` is the whole point. axe rejects rather than returns on a rule
+/// that throws or a detached root, and a `return` in the middle of the block is
+/// normal. With a plain statement here, any of those would leave `__style` in
+/// the document and the scroll lock lifted **for the rest of the page's life** -
+/// so the next assertion on that page would measure a document we quietly
+/// altered, which is precisely what the rect check exists to prevent.
+const RELOCK: &str = "} finally { if (__style) { __style.remove(); } }";
 
 async fn inject(page: &Page) -> Result<()> {
     let injected: bool = page
@@ -166,7 +176,6 @@ pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
             const result = await window.axe.run(document.querySelector({}), {{
                 runOnly: {{ type: 'rule', values: {} }},
             }});
-            {RELOCK}
             return {{
                 moved: __moved,
                 violations: result.violations.map(v => ({{
@@ -178,6 +187,7 @@ pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
                     }})),
                 }})),
             }};
+            {RELOCK}
         }})()"#,
         serde_json::to_string(selector)?,
         serde_json::to_string(RULES)?,
@@ -220,8 +230,11 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
             const result = await window.axe.run(document.querySelector({root}), {{
                 runOnly: {{ type: 'rule', values: ['color-contrast'] }},
             }});
-            {RELOCK}
 
+            // Still inside the lift, deliberately: `wanted` below decides what
+            // is on screen from `getBoundingClientRect`, and it has to judge
+            // that against the same layout axe just judged. The rects are
+            // asserted identical across the lift either way.
             const seen = new Set();
             for (const bucket of ['passes', 'violations', 'incomplete']) {{
                 for (const rule of result[bucket]) {{
@@ -262,6 +275,7 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                 missing: wanted.filter(el => !seen.has(el))
                     .map(el => el.outerHTML.slice(0, 200)),
             }};
+            {RELOCK}
         }})()"#,
         root = serde_json::to_string(root)?,
         selector = serde_json::to_string(selector)?,

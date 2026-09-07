@@ -408,14 +408,22 @@ fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
 /// An **inline** `!important` is the plant, not a stylesheet: the harness lifts
 /// the lock with a stylesheet of its own appended at run time, which would win
 /// the cascade against any rule planted earlier. A style attribute outranks
-/// both.
+/// both. The general rule is in `principles/browser-harness-traps`: if the
+/// harness injects style at run time, a plant must outrank it inline or it is
+/// not a plant at all - it is a test of the harness's own stylesheet.
+///
+/// The expected message pins the **count**, `7 of 7`, not just the wording. A
+/// plant that only asserts "something was missed" would still pass if the lift
+/// half-worked and one row slipped through, which is the shape of failure this
+/// whole todo was.
 #[test]
 fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
     block_on(async {
         must_fail(
             "/spotlight",
             Some("document.body.style.setProperty('overflow', 'hidden', 'important')"),
-            "never evaluated by axe's `color-contrast` rule",
+            "7 of 7 on-screen text element(s) under [role=dialog] were never evaluated by \
+             axe's `color-contrast` rule",
             |fixture| async move {
                 let page = &fixture.page;
                 let result = async {
