@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{ChevronDownIcon, focus_ring_sx},
+        common::{ChevronDownIcon, inset_focus_ring_sx},
         layout::{Collapse, use_box},
     },
     hooks::{id_selector, use_element},
@@ -56,7 +56,7 @@ static ACCORDION_SX: StaticSx = StaticSx::new(|| {
         // clipped by whatever holds the accordion.
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] > button:focus-visible",
-            focus_ring_sx().outline_offset("-2px"),
+            inset_focus_ring_sx("-2px"),
         )
         .selector(
             "& > [data-accordion-item] > [data-accordion-heading] > button:hover:not([aria-disabled=\"true\"])",

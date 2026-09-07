@@ -26,6 +26,8 @@ pub struct Theme {
     pub z_index: ZIndexDefaults,
     pub popover: PopoverDefaults,
     pub progress_bar: ProgressBarDefaults,
+    /// The library's one focus indicator, shared by every focusable.
+    pub focus_ring: FocusRingDefaults,
     pub paper: PaperDefaults,
     pub dialog: DialogDefaults,
     pub drawer: DrawerDefaults,
@@ -149,6 +151,7 @@ impl Theme {
         overlay: OverlayDefaults::DEFAULT,
         z_index: ZIndexDefaults::DEFAULT,
         popover: PopoverDefaults::DEFAULT,
+        focus_ring: FocusRingDefaults::DEFAULT,
         paper: PaperDefaults::DEFAULT,
         dialog: DialogDefaults::DEFAULT,
         drawer: DrawerDefaults::DEFAULT,

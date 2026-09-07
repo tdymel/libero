@@ -5,7 +5,10 @@ use dioxus::prelude::*;
 
 use super::ColorCode;
 use crate::{
-    components::{HtmlTag, Input, Variables, form::SliderChangeEvent, layout::use_box, variables},
+    components::{
+        HtmlTag, Input, Variables, common::shadow_sx, form::SliderChangeEvent, layout::use_box,
+        variables,
+    },
     hooks::{
         DragMove, DragOptions, DragStart, drag_handle_sx, use_drag, use_element, use_local_state,
     },
@@ -50,7 +53,9 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .border_style("solid")
         .border_width("2px")
         .border_color("white")
-        .box_shadow("0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(0, 0, 0, 0.3)")
+        .and(shadow_sx(
+            "0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(0, 0, 0, 0.3)".to_string(),
+        ))
         .background(SATURATION_COLOR.value())
         .cursor("grab")
 });

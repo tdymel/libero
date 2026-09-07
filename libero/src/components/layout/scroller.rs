@@ -3,7 +3,10 @@ use dioxus::{html::input_data::MouseButton, prelude::*};
 use crate::{
     components::{
         Box, HtmlTag, Input, States, Variables,
-        common::{ChevronDownIcon, base_props, focus_ring_sx, input_from_str, states, variables},
+        common::{
+            ChevronDownIcon, base_props, focus_ring_sx, input_from_str, inset_focus_ring_sx,
+            states, variables,
+        },
         layout::{
             ScrollArea, ScrollAreaBase, ScrollAreaHandle, scroll_area_base, use_box,
             use_scroll_area,
@@ -245,7 +248,7 @@ static SCROLLER_CONTROL_SX: StaticSx = StaticSx::new(|| {
                 sx().opacity("0").pointer_events("none"),
             ),
         )
-        .focus_visible(focus_ring_sx().outline_offset("-2px"))
+        .focus_visible(inset_focus_ring_sx("-2px"))
 });
 
 fn scroller_variables(fade: Option<&ThemeAwareValue>) -> Variables {

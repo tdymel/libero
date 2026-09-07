@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{base_props, focus_ring_sx},
+        common::{base_props, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::{
@@ -67,7 +67,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         // `appearance: none` and `border: 0` take the UA's ring with them.
         .selector(
             "& [data-menubar-index]:focus-visible",
-            focus_ring_sx().outline_offset("-2px"),
+            inset_focus_ring_sx("-2px"),
         )
         .selector(
             "& [data-menubar-index][aria-disabled=\"true\"]",

@@ -6,7 +6,7 @@ use crate::{
     components::{
         Box, Carousel, CarouselJump, Dialog, Input, States, Variables,
         common::{
-            focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
+            inset_focus_ring_sx, ring_overlay, ring_overlay_sx, states, use_name_warning, variables,
         },
     },
     hooks::{
@@ -120,7 +120,7 @@ static LIGHTBOX_FRAME_SX: StaticSx = StaticSx::new(|| {
         .selector("& > [data-ring]", ring_overlay_sx())
         .selector(
             "& > :focus-visible ~ [data-ring]",
-            focus_ring_sx().outline_offset("-2px"),
+            inset_focus_ring_sx("-2px"),
         )
 });
 
@@ -173,7 +173,7 @@ static LIGHTBOX_THUMBNAIL_SX: StaticSx = StaticSx::new(|| {
         .cursor("pointer")
         .when("current", sx().background("primary.6"))
         // Inset: the carousel slide around it clips.
-        .focus_visible(focus_ring_sx().outline_offset("-2px"))
+        .focus_visible(inset_focus_ring_sx("-2px"))
 });
 
 static LIGHTBOX_THUMBNAIL_IMAGE_SX: StaticSx = StaticSx::new(|| {

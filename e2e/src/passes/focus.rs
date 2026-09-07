@@ -181,6 +181,38 @@ pub async fn assert_focus_ring(page: &Page, selector: &str, tab_budget: usize) -
 /// (`principles/use-crates-for-solved-domains`). For a ring on a flat surface
 /// it is right, and it catches the case that matters: a ring too faint to see.
 pub fn assert_ring_contrast(ring: &Ring) -> Result<()> {
+    // A two-tone ring brings its own surround.
+    //
+    // `focus_ring_sx` paints a light halo on both sides of a dark stripe, so
+    // whatever the caller's surface turns out to be, the stripe has the halo
+    // next to it. WCAG's adjacent-colour rule is then discharged by the two
+    // tones against each other, and measuring the stripe against the page
+    // behind it asks a question the pattern deliberately does not answer -
+    // `Splitter`'s divider draws its ring entirely over the caller's panes.
+    if has_visible_outline(&ring.outline)
+        && let Some(halo) = halo_color(&ring.box_shadow)
+    {
+        let (Some(stripe), Some(halo_rgb)) = (parse_rgb(&ring.outline_color), parse_rgb(halo))
+        else {
+            bail!(
+                "the two-tone focus ring on {} has a tone this pass cannot read \
+                 (stripe {:?}, halo {halo:?}), so its contrast is unmeasured",
+                ring.selector,
+                ring.outline_color
+            );
+        };
+        let ratio = contrast(stripe, halo_rgb);
+        if ratio < 3.0 {
+            bail!(
+                "the two-tone focus ring on {} is {ratio:.2}:1 between its stripe ({}) and its \
+                 halo ({halo}) - the pair is what carries the indicator, so it wants 3:1",
+                ring.selector,
+                ring.outline_color
+            );
+        }
+        return Ok(());
+    }
+
     // Whichever property actually carries the indicator.
     let indicator = if has_visible_outline(&ring.outline) {
         ring.outline_color.as_str()
@@ -287,6 +319,40 @@ fn has_visible_outline(outline: &str) -> bool {
     !outline.is_empty() && !outline.contains("none") && !outline.starts_with("0px")
 }
 
+/// The first shadow in the list, split into its colour and its lengths.
+/// Chromium computes one as `rgb(34, 139, 230) 0px 0px 0px 2px`, and a colour
+/// carries commas of its own, so the list cannot be split on `,` alone.
+fn first_shadow(shadow: &str) -> Option<(&str, &str)> {
+    let start = shadow.find("rgb")?;
+    let close = start + shadow[start..].find(')')?;
+    let rest = &shadow[close + 1..];
+    let end = rest.find(',').unwrap_or(rest.len());
+    Some((&shadow[start..=close], rest[..end].trim()))
+}
+
+/// The colour of a two-tone ring's halo, if the first shadow is one.
+///
+/// The halo is spread-only and outset - no offset, no blur - which is the
+/// shape [`focus_ring_sx`](../../../libero/src/components/common/util.rs)
+/// emits and which a resting elevation shadow never has. An inset shadow or
+/// one with an offset is the component's own chrome, not a ring.
+fn halo_color(shadow: &str) -> Option<&str> {
+    let (color, lengths) = first_shadow(shadow)?;
+    // Chromium puts the keyword after the lengths: `rgb(0, 0, 0) 0px 0px 0px
+    // 1px inset`.
+    if lengths.contains("inset") {
+        return None;
+    }
+    let px: Vec<f64> = lengths
+        .split_whitespace()
+        .filter_map(|p| p.trim_end_matches("px").parse::<f64>().ok())
+        .collect();
+    match px[..] {
+        [x, y, blur, spread] if x == 0.0 && y == 0.0 && blur == 0.0 && spread > 0.0 => Some(color),
+        _ => None,
+    }
+}
+
 /// The colour of the first shadow, as Chromium computes it:
 /// `rgb(34, 139, 230) 0px 0px 0px 2px`.
 fn shadow_color(shadow: &str) -> &str {
@@ -375,6 +441,34 @@ mod tests {
             "rgb(34, 139, 230) 0px 0px 0px 2px",
         );
         assert!(assert_ring_contrast(&strong).is_ok());
+    }
+
+    #[test]
+    fn a_two_tone_ring_is_measured_between_its_own_tones() {
+        // A black stripe with a white halo passes wherever it lands, even
+        // though the pass is told the surround is the same white.
+        let mut two_tone = ring(
+            "rgb(0, 0, 0) solid 2px",
+            "rgb(0, 0, 0)",
+            "rgb(255, 255, 255) 0px 0px 0px 6px, rgba(0, 0, 0, 0) 0px 0px 0px 0px",
+        );
+        assert!(assert_ring_contrast(&two_tone).is_ok());
+
+        // Two tones too close together is the failure this rule can still see.
+        two_tone.box_shadow = "rgb(60, 60, 60) 0px 0px 0px 6px".into();
+        assert!(assert_ring_contrast(&two_tone).is_err());
+    }
+
+    #[test]
+    fn a_resting_elevation_shadow_is_not_a_halo() {
+        // Offset, blurred or inset: the component's own chrome. The ring is
+        // then measured against the surround as before.
+        assert_eq!(halo_color("rgb(0, 0, 0) 0px 2px 4px 0px"), None);
+        assert_eq!(halo_color("rgb(0, 0, 0) 0px 0px 0px 1px inset"), None);
+        assert_eq!(
+            halo_color("rgb(255, 255, 255) 0px 0px 0px 6px"),
+            Some("rgb(255, 255, 255)")
+        );
     }
 
     #[test]

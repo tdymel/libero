@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{base_props, focus_ring_sx},
+        common::{base_props, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::use_theme,
@@ -75,7 +75,7 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         // The keyboard's own mark, on top of any background - a tint alone
         // cannot say "highlighted" on a row that is already tinted. Inset, so
         // it neither overlaps the row above nor is clipped by the dropdown.
-        .when("active", focus_ring_sx().outline_offset("-2px"))
+        .when("active", inset_focus_ring_sx("-2px"))
 });
 
 base_props! {

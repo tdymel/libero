@@ -6,7 +6,7 @@ use super::{DateRange, fields::day_allowed, format::format_date, today::use_toda
 use crate::{
     components::{
         ActionIcon, ClassList, HtmlTag, Input, States, Variant,
-        common::{ChevronLeftIcon, ChevronRightIcon, focus_ring_sx},
+        common::{ChevronLeftIcon, ChevronRightIcon, focus_ring_sx, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -180,7 +180,7 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         // page. After the ring above, and more specific, so it wins.
         .selector(
             "& [data-selected]:focus-visible",
-            sx().outline_offset("-4px"),
+            inset_focus_ring_sx("-4px"),
         )
 });
 

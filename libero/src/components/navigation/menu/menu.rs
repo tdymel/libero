@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Divider, HtmlTag, Input, States,
-        common::{ChevronRightIcon, base_props, focus_ring_sx},
+        common::{ChevronRightIcon, base_props, inset_focus_ring_sx},
         layout::use_box,
         surface::paper_sx,
     },
@@ -92,7 +92,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
         // Inset, because the box clips at its padding edge while it scrolls.
         .selector(
             "& [role=\"menuitem\"]:focus-visible",
-            focus_ring_sx().outline_offset("-2px"),
+            inset_focus_ring_sx("-2px"),
         )
         .selector(
             "& [role=\"menuitem\"][aria-disabled=\"true\"]",

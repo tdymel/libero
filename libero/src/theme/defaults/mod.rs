@@ -32,6 +32,7 @@ mod file_field;
 mod flex;
 mod float;
 mod floating_window;
+mod focus_ring;
 mod form;
 mod grid;
 mod header;
@@ -186,6 +187,10 @@ pub use flex::{
 };
 pub use float::{FLOAT_OFFSET_X, FLOAT_OFFSET_Y, FloatDefaults, Placement};
 pub use floating_window::FloatingWindowDefaults;
+pub use focus_ring::{
+    FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_HALO_SPREAD, FOCUS_RING_HALO_WIDTH,
+    FOCUS_RING_OFFSET, FOCUS_RING_WIDTH, FocusRingDefaults, OWN_SHADOW,
+};
 pub use form::{FIELDSET_GAP, FORM_GAP, FieldsetDefaults, FormDefaults};
 pub use grid::{
     GRID_AREAS_VAR, GRID_COLUMNS_VAR, GRID_GAP, GRID_ITEM_ROW_SPAN_VAR, GRID_ITEM_ROWS_VAR,

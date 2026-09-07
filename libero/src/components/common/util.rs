@@ -6,18 +6,71 @@ pub(crate) fn attr<T>(
     dioxus::prelude::Attribute::new(name, value, None, false)
 }
 
-/// Standard `:focus-visible` ring, contrasting against the nearest ancestor
-/// background via `--lsx-focus-contrast` (published by `background()`).
-/// Falls back to primary when no ancestor published one.
+/// A `box-shadow` that draws nothing, as the tail of a shadow list. An
+/// element with no resting shadow still needs the list to parse.
+const NO_SHADOW: &str = "0 0 #0000";
+
+/// The library's `:focus-visible` ring: a dark stripe with a light halo on
+/// both sides of it.
+///
+/// The halo is a `box-shadow` spreading past the stripe, and painting order
+/// does the rest - a `box-shadow` is painted *under* the element's `outline`.
+/// With the default numbers a 6px halo, a 2px stripe and a 2px offset land as
+/// light 0-2px, dark 2-4px, light 4-6px. So the stripe always has the halo
+/// next to it, and the indicator reads at the ratio between its own two tones
+/// rather than against a surface the caller owns - which is the only surface
+/// there is, for a ring drawn outside the element.
+///
+/// The stripe still yields to `--lsx-focus-contrast` where a surface
+/// publishes one: a component that knows what reads against itself keeps
+/// winning. Every number and both colours come from `theme.focus_ring`.
 pub(crate) fn focus_ring_sx() -> crate::sx::Sx {
-    use crate::tokens::{ColorCss, ColorShade, NamedColorCss};
+    use crate::theme::{
+        FOCUS_RING_COLOR, FOCUS_RING_HALO, FOCUS_RING_HALO_SPREAD, FOCUS_RING_OFFSET,
+        FOCUS_RING_WIDTH, OWN_SHADOW,
+    };
+    use crate::tokens::NamedColorCss;
 
     crate::sx::sx()
         .outline(format!(
-            "2px solid {}",
-            NamedColorCss::FOCUS_CONTRAST.value_or(ColorCss::PRIMARY.value(ColorShade::S6))
+            "{} solid {}",
+            FOCUS_RING_WIDTH.value(),
+            NamedColorCss::FOCUS_CONTRAST.value_or(FOCUS_RING_COLOR.value())
         ))
-        .outline_offset("2px")
+        .outline_offset(FOCUS_RING_OFFSET.value())
+        .box_shadow(format!(
+            "0 0 0 {} {},{}",
+            FOCUS_RING_HALO_SPREAD.value(),
+            FOCUS_RING_HALO.value(),
+            OWN_SHADOW.value_or(NO_SHADOW)
+        ))
+}
+
+/// The same ring, inset into the element's own fill - a picked day, a
+/// highlighted option, the current thumbnail.
+///
+/// No halo, on purpose. An inset ring's surround is the element's own fill,
+/// which the component chose and can be sure of; a halo would only paint a
+/// light band *outside* an indicator that is drawn inside. `offset` is
+/// negative, and `-width` or beyond puts the whole stripe on the fill.
+pub(crate) fn inset_focus_ring_sx(offset: &str) -> crate::sx::Sx {
+    focus_ring_sx()
+        .outline_offset(offset)
+        .box_shadow(crate::theme::OWN_SHADOW.value_or(NO_SHADOW))
+}
+
+/// A resting `box-shadow` on a focusable, written so the focus ring can
+/// compose it back in.
+///
+/// The ring's halo is itself a `box-shadow`, and a `:focus-visible` arm that
+/// sets the property drops whatever the resting rule put there - an
+/// `Elevated` button would lose its elevation for as long as it held focus.
+/// Declaring the value twice, once as the property and once as
+/// `--lsx-own-shadow`, is what lets the ring put it back.
+pub(crate) fn shadow_sx(shadow: String) -> crate::sx::Sx {
+    crate::sx::sx()
+        .box_shadow(shadow.clone())
+        .var(crate::theme::OWN_SHADOW, shadow)
 }
 
 /// The stand-in that draws a focus ring for an element the focus lands
@@ -73,7 +126,57 @@ pub(crate) fn css_string(value: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::css_string;
+    use super::{css_string, focus_ring_sx, inset_focus_ring_sx, shadow_sx};
+    use crate::css::Stylesheet;
+
+    #[test]
+    fn the_ring_draws_both_tones_and_takes_every_number_from_the_theme() {
+        let css = Stylesheet::from(&focus_ring_sx());
+        let css = css.as_str();
+
+        assert!(
+            css.contains(
+                "outline:var(--lsx-focus-ring-width) solid \
+                 var(--lsx-focus-contrast, var(--lsx-focus-ring-color));"
+            ),
+            "{css}"
+        );
+        assert!(
+            css.contains("outline-offset:var(--lsx-focus-ring-offset);"),
+            "{css}"
+        );
+        // The halo first, so the resting shadow it composes back in is
+        // painted under it rather than over it.
+        assert!(
+            css.contains(
+                "box-shadow:0 0 0 var(--lsx-focus-ring-halo-spread) \
+                 var(--lsx-focus-ring-halo),var(--lsx-own-shadow, 0 0 #0000);"
+            ),
+            "{css}"
+        );
+    }
+
+    #[test]
+    fn an_inset_ring_drops_the_halo_but_keeps_a_resting_shadow() {
+        let css = Stylesheet::from(&inset_focus_ring_sx("-4px"));
+        let css = css.as_str();
+
+        assert!(css.contains("outline-offset:-4px;"), "{css}");
+        assert!(!css.contains("--lsx-focus-ring-halo-spread"), "{css}");
+        assert!(
+            css.contains("box-shadow:var(--lsx-own-shadow, 0 0 #0000);"),
+            "{css}"
+        );
+    }
+
+    #[test]
+    fn a_resting_shadow_is_published_as_well_as_drawn() {
+        let css = Stylesheet::from(&shadow_sx("0 1px 2px #0003".to_string()));
+        let css = css.as_str();
+
+        assert!(css.contains("box-shadow:0 1px 2px #0003;"), "{css}");
+        assert!(css.contains("--lsx-own-shadow:0 1px 2px #0003;"), "{css}");
+    }
 
     #[test]
     fn quotes_and_escapes_only_what_css_requires() {

@@ -6,7 +6,7 @@ use crate::{
     CssLayer,
     components::{
         ClassList, HtmlTag, Input, States, Variables,
-        common::{base_color, variables},
+        common::{base_color, shadow_sx, variables},
         layout::use_box,
         overlay::Tooltip,
     },
@@ -81,8 +81,9 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
             "plain",
             sx().selector(
                 "& [role='slider']",
-                sx().border_color("white")
-                    .box_shadow("0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)"),
+                sx().border_color("white").and(shadow_sx(
+                    "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)".to_string(),
+                )),
             ),
         )
 });

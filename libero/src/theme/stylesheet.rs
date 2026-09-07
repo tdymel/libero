@@ -116,6 +116,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         z_index,
         popover,
         progress_bar,
+        focus_ring,
         paper,
         divider,
         splitter,
@@ -229,6 +230,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(z_index.to_css_declarations());
     declarations.extend(popover.to_css_declarations());
     declarations.extend(progress_bar.to_css_declarations());
+    declarations.extend(focus_ring.to_css_declarations());
     declarations.extend(paper.to_css_declarations());
     declarations.extend(divider.to_css_declarations());
     declarations.extend(splitter.to_css_declarations());
@@ -629,6 +631,40 @@ mod tests {
             ("--lsx-flex-row-spacing", "var(--lsx-spacing-md)"),
             ("--lsx-flex-row-wrap", "nowrap"),
         ]);
+    }
+
+    /// The two-tone ring's whole premise: the pair reads against itself, so
+    /// it owes 3:1 between its own tones rather than against a surface the
+    /// caller owns (todo 368).
+    #[test]
+    fn the_focus_ring_carries_its_own_contrast() {
+        assert_declares(&[
+            ("--lsx-focus-ring-halo", "#fff"),
+            ("--lsx-focus-ring-width", "2px"),
+            ("--lsx-focus-ring-offset", "2px"),
+            ("--lsx-focus-ring-halo-width", "2px"),
+            (
+                "--lsx-focus-ring-halo-spread",
+                "calc(var(--lsx-focus-ring-offset) + var(--lsx-focus-ring-width) + \
+                 var(--lsx-focus-ring-halo-width))",
+            ),
+        ]);
+
+        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+        // The stripe is a var pointing at a palette shade; follow the one hop.
+        let stripe = root_var(&css, "--lsx-focus-ring-color");
+        let stripe = stripe
+            .strip_prefix("var(")
+            .and_then(|rest| rest.strip_suffix(')'))
+            .expect("the stripe names a palette var");
+        let stripe = HexColor::parse(&root_var(&css, stripe)).expect("a hex");
+        let halo = HexColor::parse("#fff").expect("a hex");
+
+        assert!(
+            stripe.contrast_ratio(halo) >= 3.0,
+            "the ring's two tones measure {:.2}:1 against each other",
+            stripe.contrast_ratio(halo)
+        );
     }
 
     #[test]

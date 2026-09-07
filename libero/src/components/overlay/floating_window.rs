@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ActionIcon, HtmlTag, Input, Placement, Title, Variables,
-        common::{CloseIcon, focus_ring_sx},
+        common::{CloseIcon, focus_ring_sx, inset_focus_ring_sx},
         layout::{Float, use_box},
         surface::paper_sx,
         variables,
@@ -95,7 +95,7 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
                 .min_width("0")
                 .min_height("1.5em")
                 .selector("& h2", sx().margin("0"))
-                .selector("&:focus-visible", focus_ring_sx().outline_offset("-2px")),
+                .selector("&:focus-visible", inset_focus_ring_sx("-2px")),
         )
         .selector(
             "& > [data-window-title-bar] > [data-window-handle][tabindex]",
@@ -123,7 +123,7 @@ static WINDOW_SX: StaticSx = StaticSx::new(|| {
                      transparent 62%, transparent 75%, currentColor 75%, currentColor 82%, transparent 82%)",
                 )
                 .opacity("0.6")
-                .selector("&:focus-visible", focus_ring_sx().outline_offset("-2px")),
+                .selector("&:focus-visible", inset_focus_ring_sx("-2px")),
         )
 });
 

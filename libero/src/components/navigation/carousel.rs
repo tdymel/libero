@@ -7,7 +7,8 @@ use crate::{
         Box, HtmlTag, Input, Orientation, States, Variables, VisuallyHidden,
         common::{
             ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, PauseIcon, PlayIcon,
-            base_props, focus_ring_sx, input_from_str, states, use_name_warning, variables,
+            base_props, focus_ring_sx, input_from_str, inset_focus_ring_sx, shadow_sx, states,
+            use_name_warning, variables,
         },
         layout::{
             ScrollArea, ScrollAreaBase, ScrollAreaHandle, ScrollPositionEvent, scroll_area_base,
@@ -92,7 +93,7 @@ static CAROUSEL_TRACK_SX: StaticSx = StaticSx::new(|| {
             .when("seam", sx().scroll_behavior("auto"))
             // Inset: the viewport is `overflow: hidden` and exactly this size, so
             // an outset ring is clipped away entirely.
-            .focus_visible(focus_ring_sx().outline_offset("-2px")),
+            .focus_visible(inset_focus_ring_sx("-2px")),
     )
 });
 
@@ -163,7 +164,7 @@ static CAROUSEL_CONTROL_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .border_radius("50%")
         .and(control_colors_sx())
-        .box_shadow(SizeCss::SHADOW.value(Size::Sm))
+        .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("60%").height("60%"))
         .hover(sx().background(CAROUSEL_CONTROL_HOVER_BACKGROUND.value()))
@@ -242,7 +243,7 @@ static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
         .border_width("0")
         .border_radius("50%")
         .and(control_colors_sx())
-        .box_shadow(SizeCss::SHADOW.value(Size::Sm))
+        .and(shadow_sx(SizeCss::SHADOW.value(Size::Sm)))
         .cursor("pointer")
         .selector("& > svg", sx().width("55%").height("55%"))
         .focus_visible(focus_ring_sx())

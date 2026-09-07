@@ -12,7 +12,7 @@ use super::{
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{focus_ring_sx, input_from_str},
+        common::{focus_ring_sx, input_from_str, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::{ElementHandle, use_element, use_theme},
@@ -120,7 +120,7 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         // above, and more specific, so it wins.
         .selector(
             "& [data-selected]:focus-visible",
-            sx().outline_offset("-4px"),
+            inset_focus_ring_sx("-4px"),
         )
 });
 

@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ClassList, HtmlTag, Input, States,
-        common::{Variables, focus_ring_sx, text_color, variables},
+        common::{Variables, focus_ring_sx, inset_focus_ring_sx, text_color, variables},
         layout::use_box,
     },
     hooks::{id_selector, use_element},
@@ -55,7 +55,7 @@ static TABS_SX: StaticSx = StaticSx::new(|| {
         // against the tab's bottom edge and an outset ring would be clipped.
         .selector(
             "& [role=\"tab\"]:focus-visible",
-            focus_ring_sx().outline_offset("-2px"),
+            inset_focus_ring_sx("-2px"),
         )
         .selector(
             "& [role=\"tab\"]:hover:not([aria-selected=\"true\"]):not([aria-disabled=\"true\"])",

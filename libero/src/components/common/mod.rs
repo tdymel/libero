@@ -38,6 +38,8 @@ pub use polymorphic::HtmlTag;
 pub(crate) use polymorphic::{IntoChildren, render_polymorphic, styling_attributes};
 pub(crate) use rail::{Rail, RailInset};
 pub(crate) use style_attributes::{ABSENT, StyleAttributes, use_style_attributes};
-pub(crate) use util::{attr, css_string, focus_ring_sx, ring_overlay, ring_overlay_sx};
+pub(crate) use util::{
+    attr, css_string, focus_ring_sx, inset_focus_ring_sx, ring_overlay, ring_overlay_sx, shadow_sx,
+};
 pub use variant::Variant;
 pub(crate) use warnings::{is_javascript_url, names_itself, use_name_warning};

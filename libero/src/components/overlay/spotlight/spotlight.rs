@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Box, Dialog, Kbd, Loader, ScrollArea, VisuallyHidden,
-        common::{focus_ring_sx, use_name_warning},
+        common::{inset_focus_ring_sx, use_name_warning},
         form::{ComboboxState, use_combobox},
     },
     hooks::{ModalHandle, ModalScope, use_dismiss_layer, use_modal, use_theme},
@@ -75,7 +75,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [role=\"option\"][data-active]",
-            focus_ring_sx().outline_offset("-2px"),
+            inset_focus_ring_sx("-2px"),
         )
         .selector(
             "& [data-spotlight-icon]",

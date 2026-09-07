@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use super::{ColorCode, color_slider::CHECKERBOARD};
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables, common::base_props, layout::use_box, variables,
+        HtmlTag, Input, States, Variables,
+        common::{base_props, shadow_sx},
+        layout::use_box,
+        variables,
     },
     hooks::use_theme,
     sx::{StaticSx, sx},
@@ -31,7 +34,9 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
         .padding("0")
         .when(
             "shadow",
-            sx().box_shadow("inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 0 4px rgba(0, 0, 0, 0.1)"),
+            shadow_sx(
+                "inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 0 4px rgba(0, 0, 0, 0.1)".to_string(),
+            ),
         )
         .color("white")
         .when("on-light", sx().color("black"))

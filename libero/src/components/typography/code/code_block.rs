@@ -8,7 +8,7 @@ use crate::{
     CssLayer,
     components::{
         ActionIcon, Box, HtmlTag, Input, States, Variables, VisuallyHidden,
-        common::{CopiedIcon, CopyIcon, base_props, focus_ring_sx, variables},
+        common::{CopiedIcon, CopyIcon, base_props, inset_focus_ring_sx, variables},
         layout::use_box,
     },
     hooks::{Clipboard, use_clipboard, use_css, use_element, use_theme},
@@ -88,7 +88,7 @@ static CODE_COPY_BUTTON_FLOATING_SX: StaticSx = StaticSx::new(|| {
 // Inset: the container clips, so an outset ring would be cut away.
 static CODE_BLOCK_SCROLL_SX: StaticSx = StaticSx::new(|| {
     sx().overflow("auto")
-        .focus_visible(focus_ring_sx().outline_offset("-2px"))
+        .focus_visible(inset_focus_ring_sx("-2px"))
 });
 
 static CODE_LINES_SX: StaticSx = StaticSx::new(|| {

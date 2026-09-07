@@ -5,8 +5,8 @@ use crate::{
         HtmlTag, Input, States, Variant,
         common::{
             base_color, base_props, contrast_color, contrast_shade_color, fill_color,
-            focus_ring_sx, hover_color, input_from_str, selected_color, shade_color, text_color,
-            variables,
+            focus_ring_sx, hover_color, input_from_str, selected_color, shade_color, shadow_sx,
+            text_color, variables,
         },
         feedback::Loader,
         layout::use_box,
@@ -113,7 +113,7 @@ pub(crate) fn variant_chrome_sx(variant: Variant, vars: &VariantVars) -> Sx {
             .and(PaperDefaults::background_sx())
             .border_color("transparent")
             .color(color.value())
-            .box_shadow(SizeCss::SHADOW.value(ELEVATED_REST)),
+            .and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_REST))),
         Variant::Outlined => sx()
             .background("transparent")
             .border_color(color.value())
@@ -139,7 +139,7 @@ pub(crate) fn interactive_variant_sx(variant: Variant, vars: &VariantVars, hover
 
     let mut hovered = sx().background(hover.value_or(fallback));
     if variant == Variant::Elevated {
-        hovered = hovered.box_shadow(SizeCss::SHADOW.value(ELEVATED_HOVER));
+        hovered = hovered.and(shadow_sx(SizeCss::SHADOW.value(ELEVATED_HOVER)));
     }
 
     variant_chrome_sx(variant, vars).hover(hovered)
