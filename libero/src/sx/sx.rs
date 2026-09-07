@@ -115,8 +115,23 @@ impl Sx {
     /// `container-type: inline-size` is `contain: layout style inline-size` -
     /// the element stops being sized by its own contents in the inline axis,
     /// becomes a stacking context, and becomes the containing block for
-    /// absolutely and fixed positioned descendants. Never put it on a
-    /// shrink-to-fit box.
+    /// absolutely and fixed positioned descendants.
+    ///
+    /// **So give it a width from somewhere else.** A query container cannot
+    /// derive its inline size from its contents, so it needs one from its
+    /// parent - a block-level box filling a block formatting context, or a
+    /// flex item with a definite basis - or from its own `width`. In a
+    /// shrink-to-fit context there is no such width and the element resolves
+    /// to **zero**, not to its content width: the query then never matches and
+    /// every rule under it silently takes the fallback.
+    ///
+    /// Shrink-to-fit is the box's *context*, not a property you can read off
+    /// this `Sx`. A flex or grid item sized from its content, a float, an
+    /// inline-block, an absolutely positioned box, and a `width: max-content`
+    /// wrapper are all it. `Timeline`'s `Alternate` arm shipped this way: the
+    /// `<ol>` was a flex item, measured 0px, and rendered byte-identical HTML
+    /// to a working one, so no SSR test could see it. If you cannot name where
+    /// the width comes from, declare one here.
     pub fn container(self, name: impl Into<String>) -> Self {
         self.container_type("inline-size")
             .container_name(name.into())

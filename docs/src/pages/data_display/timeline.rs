@@ -156,6 +156,11 @@ pub fn TimelinePage() -> Element {
             Demo {
                 component: "Timeline",
                 children_text: "",
+                // `Alternate` centres a rail in the `<ol>`'s whole width, and
+                // the side-by-side preview never exceeds 498px at any viewport
+                // - which is how the mode shipped undemonstrable. Wide, the
+                // list has room for the alternation to read.
+                wide_preview: true,
                 controls: vec![
                     Control::slider("active", ["none", "0", "1", "2", "3"])
                         .default("2")
