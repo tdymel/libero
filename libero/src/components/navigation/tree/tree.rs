@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Input, List,
-        common::{base_props, css_string},
+        common::{base_props, css_string, has_shortcut_modifier},
     },
     hooks::{
         ElementHandle, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
@@ -184,13 +184,6 @@ fn click_tree_item(root: &ElementHandle, target_id: &str) {
     let id = css_string(target_id);
     let selector = format!("[data-tree-id={id}] a, [data-tree-id={id}] button");
     let _ = root.query_selector(&selector).and_then(|el| el.click());
-}
-
-// Shift is part of ordinary typing; the rest mark a browser or OS shortcut
-// that must not be mistaken for typeahead.
-fn has_shortcut_modifier(event: &Event<KeyboardData>) -> bool {
-    let modifiers = event.modifiers();
-    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
 }
 
 // Keyboard nav only applies while the active row itself holds focus. Anything

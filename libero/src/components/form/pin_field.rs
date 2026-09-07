@@ -1,11 +1,13 @@
+use std::rc::Rc;
+
 use dioxus::prelude::*;
 
 use crate::{
     components::{
         HtmlTag, Input, States,
         common::{field_props, input_from_str},
-        form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
-        layout::use_box,
+        form::{FIELD_CONTROL_SX, PreparedFrame, use_bound, use_field, use_field_frame},
+        layout::{BoxStyle, use_box},
     },
     hooks::{ElementHandle, use_element, use_theme},
     platform::ElementApi,
@@ -102,8 +104,8 @@ field_props! {
 pub fn PinField(props: PinFieldProps) -> Element {
     let theme = use_theme();
     let root = use_element();
-    let mut buffer = use_signal(String::new);
-    let mut completed = use_signal(|| false);
+    let buffer = use_signal(String::new);
+    let completed = use_signal(|| false);
 
     let size = props.size.copied_or(theme.pin_field.size);
     let radius = props.radius.copied_or(theme.pin_field.radius);
@@ -169,7 +171,11 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let oninput = bound.emit(props.oninput);
     let oncomplete = props.oncomplete;
     let controlled = props.value.is_some() || bound.is_bound();
-    let report = move |cells: Vec<Option<char>>| {
+    // An `Rc` rather than a `use_callback`: every cell holds one, and it writes
+    // signals this component reads from inside an input event
+    // ([[codebase/reentrant-handlers]]).
+    let report: Rc<dyn Fn(Vec<Option<char>>)> = Rc::new(move |cells: Vec<Option<char>>| {
+        let (mut buffer, mut completed) = (buffer, completed);
         let next: String = cells.iter().flatten().collect();
         let full = next.chars().count() == length;
         if !controlled {
@@ -190,137 +196,15 @@ pub fn PinField(props: PinFieldProps) -> Element {
             false => completed.set(false),
             true => {}
         }
-    };
+    });
 
-    let edit = {
-        let cells = cells.clone();
-        let mut report = report.clone();
-        move |index: usize, character: Option<char>| {
-            let mut next = cells.clone();
-            next[index] = character;
-            report(next);
-        }
-    };
-
-    let spread = {
-        let cells = cells.clone();
-        let mut report = report.clone();
-        move |index: usize, characters: Vec<char>| {
-            let mut next = cells.clone();
-            let mut cursor = index;
-            for character in characters {
-                if cursor >= next.len() {
-                    break;
-                }
-                next[cursor] = Some(character);
-                cursor += 1;
-            }
-            report(next);
-            cursor.min(next_len_floor(length))
-        }
-    };
-
-    let typed = {
-        let cells = cells.clone();
-        let mut edit = edit.clone();
-        let mut spread = spread.clone();
-        move |index: usize, raw: String| {
-            let accepted: Vec<char> = raw.chars().filter(|c| kind.accepts(*c)).collect();
-            match accepted.len() {
-                // The cell was emptied - Backspace handles its own focus.
-                0 if raw.is_empty() => edit(index, None),
-                // Every character was rejected. The key handler drops those
-                // before they land, so this is a paste of junk.
-                0 => {}
-                1 => {
-                    edit(index, Some(accepted[0]));
-                    focus_cell(&root, index + 1, length);
-                }
-                // Two characters in a cell that already held one is a
-                // replacement, not a paste: the caret sat beside the old
-                // character and the new one joined it.
-                2 if cells[index].is_some() => {
-                    edit(index, Some(accepted[1]));
-                    focus_cell(&root, index + 1, length);
-                }
-                _ => {
-                    let cursor = spread(index, accepted);
-                    focus_cell(&root, cursor, length);
-                }
-            }
-        }
-    };
-
-    let keys = {
-        let cells = cells.clone();
-        let mut edit = edit.clone();
-        move |index: usize, event: Event<KeyboardData>| {
-            let modified = event.modifiers().ctrl() || event.modifiers().meta();
-            match event.key() {
-                Key::ArrowLeft => {
-                    event.prevent_default();
-                    focus_cell(&root, index.wrapping_sub(1), length);
-                }
-                Key::ArrowRight => {
-                    event.prevent_default();
-                    focus_cell(&root, index + 1, length);
-                }
-                Key::Home => {
-                    event.prevent_default();
-                    focus_cell(&root, 0, length);
-                }
-                Key::End => {
-                    event.prevent_default();
-                    focus_cell(&root, length - 1, length);
-                }
-                // Read-only cells still take every key that only moves:
-                // the native `readonly` stops typing, but a handler that
-                // clears a cell itself is not typing and it does not stop.
-                Key::Delete => {
-                    event.prevent_default();
-                    if !readonly {
-                        edit(index, None);
-                    }
-                }
-                Key::Backspace => {
-                    event.prevent_default();
-                    match cells[index].is_some() && !readonly {
-                        true => {
-                            edit(index, None);
-                            // The last cell keeps focus: it is where the next
-                            // character goes, and the pin is one short.
-                            if index + 1 < length {
-                                focus_cell(&root, index.wrapping_sub(1), length);
-                            }
-                        }
-                        false => focus_cell(&root, index.wrapping_sub(1), length),
-                    }
-                }
-                Key::Character(character) if !modified => {
-                    let character = character.chars().next();
-                    match character {
-                        // Space moves on rather than typing a character no
-                        // pin accepts.
-                        Some(' ') => {
-                            event.prevent_default();
-                            focus_cell(&root, index + 1, length);
-                        }
-                        // Retyping what the cell already holds reads as
-                        // confirming it, so move on instead of rewriting it.
-                        Some(character) if cells[index] == Some(character) => {
-                            event.prevent_default();
-                            focus_cell(&root, index + 1, length);
-                        }
-                        // Dropped at the key, so a rejected character never
-                        // reaches the DOM - there is nothing to take back out
-                        // of an input the value prop did not change.
-                        Some(character) if !kind.accepts(character) => event.prevent_default(),
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-        }
+    let editor = PinEdit {
+        cells: cells.clone(),
+        length,
+        kind,
+        root,
+        readonly,
+        report,
     };
 
     let one_time_code = props.one_time_code.unwrap_or(true);
@@ -332,45 +216,23 @@ pub fn PinField(props: PinFieldProps) -> Element {
         (false, PinKind::Alphanumeric) => "text",
     };
 
-    let id = field.id().to_string();
-    let mut children: Vec<Element> = Vec::with_capacity(length * 2);
-    for (index, cell) in cells.iter().enumerate() {
-        if index > 0
-            && let Some(separator) = &props.separator
-        {
-            children.push(separator.clone());
-        }
-
-        let mut typed = typed.clone();
-        let mut keys = keys.clone();
-        let input = control
-            .clone()
-            .attr("id", format!("{id}-{}", index + 1))
-            .attr("type", input_type)
-            .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))
-            .attr(
-                "autocomplete",
-                match one_time_code && index == 0 {
-                    true => "one-time-code",
-                    false => "off",
-                },
-            )
-            .attr("value", cell.map(String::from).unwrap_or_default())
-            .attr("data-controlled", true)
-            .attr("data-pin-index", index.to_string())
-            .attr("disabled", disabled)
-            .attr("readonly", readonly)
-            .attr("autofocus", autofocus && index == 0)
-            .event("oninput", move |event: FormEvent| {
-                typed(index, event.value())
-            })
-            .event("onkeydown", move |event: Event<KeyboardData>| {
-                keys(index, event)
-            })
-            .render(HtmlTag::Input, Vec::new(), ());
-
-        children.push(frame.clone().render(input));
-    }
+    let mut children = pin_cells(
+        Cells {
+            cells,
+            editor,
+            control,
+            frame,
+            id: field.id().to_string(),
+            length,
+            kind,
+            input_type,
+            disabled,
+            readonly,
+            one_time_code,
+            autofocus,
+        },
+        props.separator.as_ref(),
+    );
 
     if let Some(name) = bound.name().map(str::to_string) {
         // `Some(true)` or nothing - a `false` bool reaches a native renderer
@@ -428,4 +290,217 @@ fn focus_cell(root: &ElementHandle, index: usize, length: usize) {
     }
     let selector = format!("input[data-pin-index=\"{index}\"]");
     let _ = root.query_selector(&selector).and_then(|el| el.focus());
+}
+
+/// The pin's editing engine. Every path that can change a cell - a keystroke,
+/// a paste, Backspace, Delete - goes through `report`, so the completion latch
+/// cannot disagree between them.
+#[derive(Clone)]
+struct PinEdit {
+    cells: Vec<Option<char>>,
+    length: usize,
+    kind: PinKind,
+    root: ElementHandle,
+    readonly: bool,
+    report: Rc<dyn Fn(Vec<Option<char>>)>,
+}
+
+impl PinEdit {
+    /// One cell set or cleared.
+    fn edit(&self, index: usize, character: Option<char>) {
+        let mut next = self.cells.clone();
+        next[index] = character;
+        (self.report)(next);
+    }
+
+    /// A paste, from `index` onwards. Returns the cell the caret lands on.
+    fn spread(&self, index: usize, characters: Vec<char>) -> usize {
+        let mut next = self.cells.clone();
+        let mut cursor = index;
+        for character in characters {
+            if cursor >= next.len() {
+                break;
+            }
+            next[cursor] = Some(character);
+            cursor += 1;
+        }
+        (self.report)(next);
+        cursor.min(next_len_floor(self.length))
+    }
+
+    /// What arrived in one cell's `oninput`: a character, a replacement or a
+    /// paste.
+    fn typed(&self, index: usize, raw: String) {
+        let (root, length) = (&self.root, self.length);
+        let accepted: Vec<char> = raw.chars().filter(|c| self.kind.accepts(*c)).collect();
+        match accepted.len() {
+            // The cell was emptied - Backspace handles its own focus.
+            0 if raw.is_empty() => self.edit(index, None),
+            // Every character was rejected. The key handler drops those
+            // before they land, so this is a paste of junk.
+            0 => {}
+            1 => {
+                self.edit(index, Some(accepted[0]));
+                focus_cell(root, index + 1, length);
+            }
+            // Two characters in a cell that already held one is a
+            // replacement, not a paste: the caret sat beside the old
+            // character and the new one joined it.
+            2 if self.cells[index].is_some() => {
+                self.edit(index, Some(accepted[1]));
+                focus_cell(root, index + 1, length);
+            }
+            _ => {
+                let cursor = self.spread(index, accepted);
+                focus_cell(root, cursor, length);
+            }
+        }
+    }
+
+    /// One cell's keyboard: the moves, the two deletions, and the characters
+    /// that are dropped before they reach the DOM.
+    fn keys(&self, index: usize, event: Event<KeyboardData>) {
+        let (root, length, readonly) = (&self.root, self.length, self.readonly);
+        let modified = event.modifiers().ctrl() || event.modifiers().meta();
+        match event.key() {
+            Key::ArrowLeft => {
+                event.prevent_default();
+                focus_cell(root, index.wrapping_sub(1), length);
+            }
+            Key::ArrowRight => {
+                event.prevent_default();
+                focus_cell(root, index + 1, length);
+            }
+            Key::Home => {
+                event.prevent_default();
+                focus_cell(root, 0, length);
+            }
+            Key::End => {
+                event.prevent_default();
+                focus_cell(root, length - 1, length);
+            }
+            // Read-only cells still take every key that only moves:
+            // the native `readonly` stops typing, but a handler that
+            // clears a cell itself is not typing and it does not stop.
+            Key::Delete => {
+                event.prevent_default();
+                if !readonly {
+                    self.edit(index, None);
+                }
+            }
+            Key::Backspace => {
+                event.prevent_default();
+                match self.cells[index].is_some() && !readonly {
+                    true => {
+                        self.edit(index, None);
+                        // The last cell keeps focus: it is where the next
+                        // character goes, and the pin is one short.
+                        if index + 1 < length {
+                            focus_cell(root, index.wrapping_sub(1), length);
+                        }
+                    }
+                    false => focus_cell(root, index.wrapping_sub(1), length),
+                }
+            }
+            Key::Character(character) if !modified => {
+                let character = character.chars().next();
+                match character {
+                    // Space moves on rather than typing a character no
+                    // pin accepts.
+                    Some(' ') => {
+                        event.prevent_default();
+                        focus_cell(root, index + 1, length);
+                    }
+                    // Retyping what the cell already holds reads as
+                    // confirming it, so move on instead of rewriting it.
+                    Some(character) if self.cells[index] == Some(character) => {
+                        event.prevent_default();
+                        focus_cell(root, index + 1, length);
+                    }
+                    // Dropped at the key, so a rejected character never
+                    // reaches the DOM - there is nothing to take back out
+                    // of an input the value prop did not change.
+                    Some(character) if !self.kind.accepts(character) => event.prevent_default(),
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+    }
+}
+
+/// What one cell is drawn from. `control` and `frame` are prepared once and
+/// cloned per cell: neither carries an id or an event, so a clone is a class,
+/// a `data-state` and the attribute list - no hook runs again.
+struct Cells {
+    cells: Vec<Option<char>>,
+    editor: PinEdit,
+    control: BoxStyle,
+    frame: PreparedFrame,
+    id: String,
+    length: usize,
+    kind: PinKind,
+    input_type: &'static str,
+    disabled: bool,
+    readonly: bool,
+    one_time_code: bool,
+    autofocus: bool,
+}
+
+/// The cells, with the caller's separator between them.
+fn pin_cells(parts: Cells, separator: Option<&Element>) -> Vec<Element> {
+    let Cells {
+        cells,
+        editor,
+        control,
+        frame,
+        id,
+        length,
+        kind,
+        input_type,
+        disabled,
+        readonly,
+        one_time_code,
+        autofocus,
+    } = parts;
+
+    let mut children: Vec<Element> = Vec::with_capacity(length * 2);
+    for (index, cell) in cells.iter().enumerate() {
+        if index > 0
+            && let Some(separator) = separator
+        {
+            children.push(separator.clone());
+        }
+
+        let typed = editor.clone();
+        let keys = editor.clone();
+        let input = control
+            .clone()
+            .attr("id", format!("{id}-{}", index + 1))
+            .attr("type", input_type)
+            .attr("inputmode", (kind == PinKind::Numeric).then_some("numeric"))
+            .attr(
+                "autocomplete",
+                match one_time_code && index == 0 {
+                    true => "one-time-code",
+                    false => "off",
+                },
+            )
+            .attr("value", cell.map(String::from).unwrap_or_default())
+            .attr("data-controlled", true)
+            .attr("data-pin-index", index.to_string())
+            .attr("disabled", disabled)
+            .attr("readonly", readonly)
+            .attr("autofocus", autofocus && index == 0)
+            .event("oninput", move |event: FormEvent| {
+                typed.typed(index, event.value())
+            })
+            .event("onkeydown", move |event: Event<KeyboardData>| {
+                keys.keys(index, event)
+            })
+            .render(HtmlTag::Input, Vec::new(), ());
+
+        children.push(frame.clone().render(input));
+    }
+    children
 }

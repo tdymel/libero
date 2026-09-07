@@ -8,8 +8,8 @@ use crate::{
         common::{CloseIcon, UploadIcon, field_props, focus_ring_sx, input_from_str},
         feedback::Loader,
         form::{
-            SelectionArgs, clear_button, field_control_sx, removable_chip, use_bound,
-            use_chip_announcer, use_field, use_field_frame,
+            PreparedField, SelectionArgs, Setter, clear_button, field_control_sx, removable_chip,
+            use_bound, use_chip_announcer, use_field, use_field_frame,
         },
         layout::{BoxStyle, use_box},
     },
@@ -307,16 +307,7 @@ pub fn FileField(props: FileFieldProps) -> Element {
 
     let value = bound.value().unwrap_or_else(|| props.value.clone());
     let announcer = use_chip_announcer(value.iter().map(FileData::name).collect());
-    let accept = props.accept.clone().unwrap_or_default();
     let dragging = use_local_state(|| false);
-
-    let onchange = props.onchange;
-    let setter = bound.setter();
-    let emit = use_callback(move |files: Files| match (&onchange, &setter) {
-        (Some(onchange), _) => onchange.call(files),
-        (None, Some(setter)) => setter.set(files),
-        (None, None) => {}
-    });
 
     // A drop bypasses the picker, which is the only place `accept` applies by
     // itself - so the component applies it, and says so rather than dropping
@@ -327,20 +318,16 @@ pub fn FileField(props: FileFieldProps) -> Element {
     // back. A `multiple` one keeps taking files, so it keeps its surface.
     let surface = !cards || multiple || value.is_empty();
 
-    // What the next render owes the keyboard. A removal destroys the button
-    // focus was on; a pick that stands the surface down destroys the
-    // *surface* focus was on. Either way focus would fall to the body.
-    let mut owed = use_signal(|| None::<FocusDebt>);
-
-    let take = use_callback(move |files: Vec<FileData>| {
-        if !editable {
-            return;
-        }
-        let kept = keep_accepted(files, &accept, multiple);
-        if !kept.is_empty() {
-            owed.set(Some(FocusDebt::Took));
-            emit.call(kept);
-        }
+    let Intake {
+        emit,
+        mut owed,
+        take,
+    } = use_file_intake(Taking {
+        onchange: props.onchange,
+        setter: bound.setter(),
+        accept: props.accept.clone().unwrap_or_default(),
+        multiple,
+        editable,
     });
 
     use_input_mirror(input_element, mirrored, value.clone());
@@ -379,21 +366,8 @@ pub fn FileField(props: FileFieldProps) -> Element {
     let chip_class = use_css(Some(&FILE_CHIP_SX), CssLayer::Framework);
     let card_class = use_css(Some(&FILE_CARD_SX), CssLayer::Framework);
 
-    // Which chip the keyboard is on. Only the `Input` variant has one: the
-    // dropzone's cards sit outside the control, so their remove buttons are
-    // ordinary tab stops and need no cursor at all.
-    let mut cursor = use_signal(|| None::<usize>);
     let count = value.len();
-    let chip_cursor = chip_cursor(cursor(), count, cards);
-    // A cursor set in the `Input` variant means nothing to the dropzone, and
-    // coming back must not show a chip the keyboard never picked there. The
-    // dropzone ignores it above, so clearing it one render late is unseen.
-    use_effect(use_reactive!(|(variant,)| {
-        let _ = variant;
-        if cursor.peek().is_some() {
-            cursor.set(None);
-        }
-    }));
+    let (cursor, chip_cursor) = use_chip_cursor(variant, count, cards);
     let id_prefix = format!("{}-file", field.id());
 
     // Prepared unconditionally, the way every `use_box` must be, and used
@@ -496,48 +470,35 @@ pub fn FileField(props: FileFieldProps) -> Element {
         // Each variant draws its control in a scope of its own: the two
         // prepare different boxes, and hooks in one scope are positional, so
         // a `variant` switch must remount rather than reuse the other's slots.
-        FileFieldVariant::Input => {
-            // The input's files are the control's own contents.
-            let placeholder = props.placeholder.clone().unwrap_or_default();
-            let value_slot = chip_slot(drawn, &placeholder);
-            let frame_states = field.states().clone();
-            field.render(rsx! {
-                FileInputControl {
-                    control,
-                    trailing,
-                    frame_states,
-                    states,
-                    {value_slot}
-                    {input}
-                }
-                {announcer}
-            })
-        }
-        FileFieldVariant::Dropzone => {
-            let prompt = dropzone_prompt(&props, loading.then_some(size));
-            // The cards sit under the surface, not in it: a dropzone that
-            // grows with its own contents stops being a target to aim at.
-            // The input stays mounted either way - it is what posts.
-            let drop_target = rsx! {
-                FileDropzoneControl { control, states, shown: surface, {prompt} }
-            };
-            let card_list = has_files.then(|| {
-                card_list(
-                    card_list_style,
-                    list_element,
-                    labelledby,
-                    surface,
-                    loading,
-                    drawn,
-                )
-            });
-            field.render(rsx! {
-                {drop_target}
-                {card_list}
-                {input}
-                {announcer}
-            })
-        }
+        FileFieldVariant::Input => file_input_variant(
+            field,
+            control,
+            states,
+            Chips {
+                trailing,
+                drawn,
+                placeholder: props.placeholder.clone().unwrap_or_default(),
+            },
+            input,
+            announcer,
+        ),
+        FileFieldVariant::Dropzone => file_dropzone_variant(
+            field,
+            control,
+            states,
+            Cards {
+                prompt: dropzone_prompt(&props, loading.then_some(size)),
+                drawn,
+                style: card_list_style,
+                list_element,
+                labelledby,
+                surface,
+                loading,
+                has_files,
+            },
+            input,
+            announcer,
+        ),
     }
 }
 
@@ -1110,6 +1071,166 @@ fn default_card(
             }
         }
     }
+}
+
+/// What the `Input` variant draws inside its control.
+struct Chips {
+    trailing: Option<Element>,
+    drawn: Vec<Element>,
+    placeholder: String,
+}
+
+/// The `Input` variant: the files are chips inside the field's own control,
+/// and the native input is the control's own contents.
+fn file_input_variant(
+    field: PreparedField,
+    control: Surface,
+    states: Input<States>,
+    chips: Chips,
+    input: Element,
+    announcer: Element,
+) -> Element {
+    let Chips {
+        trailing,
+        drawn,
+        placeholder,
+    } = chips;
+    let value_slot = chip_slot(drawn, &placeholder);
+    let frame_states = field.states().clone();
+
+    field.render(rsx! {
+        FileInputControl {
+            control,
+            trailing,
+            frame_states,
+            states,
+            {value_slot}
+            {input}
+        }
+        {announcer}
+    })
+}
+
+/// What the dropzone draws under its surface.
+struct Cards {
+    prompt: Element,
+    drawn: Vec<Element>,
+    style: BoxStyle,
+    list_element: ElementHandle,
+    labelledby: Option<String>,
+    surface: bool,
+    loading: bool,
+    has_files: bool,
+}
+
+/// The `Dropzone` variant. The cards sit under the surface, not in it: a
+/// dropzone that grows with its own contents stops being a target to aim at.
+/// The input stays mounted either way - it is what posts.
+fn file_dropzone_variant(
+    field: PreparedField,
+    control: Surface,
+    states: Input<States>,
+    cards: Cards,
+    input: Element,
+    announcer: Element,
+) -> Element {
+    let Cards {
+        prompt,
+        drawn,
+        style,
+        list_element,
+        labelledby,
+        surface,
+        loading,
+        has_files,
+    } = cards;
+
+    let drop_target = rsx! {
+        FileDropzoneControl { control, states, shown: surface, {prompt} }
+    };
+    let card_list =
+        has_files.then(|| card_list(style, list_element, labelledby, surface, loading, drawn));
+
+    field.render(rsx! {
+        {drop_target}
+        {card_list}
+        {input}
+        {announcer}
+    })
+}
+
+/// What the two paths that add files need. `accept` applies to a drop as well
+/// as to the picker, which is the only place the browser applies it itself.
+struct Taking {
+    onchange: Option<EventHandler<Files>>,
+    setter: Option<Setter<Files>>,
+    accept: String,
+    multiple: bool,
+    editable: bool,
+}
+
+/// The one writer, and the focus debt every edit through it leaves.
+#[derive(Clone, Copy)]
+struct Intake {
+    emit: Callback<Files>,
+    /// What the next render owes the keyboard. A removal destroys the button
+    /// focus was on; a pick that stands the surface down destroys the
+    /// *surface* focus was on. Either way focus would fall to the body.
+    owed: Signal<Option<FocusDebt>>,
+    take: Callback<Vec<FileData>>,
+}
+
+fn use_file_intake(taking: Taking) -> Intake {
+    let Taking {
+        onchange,
+        setter,
+        accept,
+        multiple,
+        editable,
+    } = taking;
+
+    let emit = use_callback(move |files: Files| match (&onchange, &setter) {
+        (Some(onchange), _) => onchange.call(files),
+        (None, Some(setter)) => setter.set(files),
+        (None, None) => {}
+    });
+
+    let mut owed = use_signal(|| None::<FocusDebt>);
+
+    let take = use_callback(move |files: Vec<FileData>| {
+        if !editable {
+            return;
+        }
+        let kept = keep_accepted(files, &accept, multiple);
+        if !kept.is_empty() {
+            owed.set(Some(FocusDebt::Took));
+            emit.call(kept);
+        }
+    });
+
+    Intake { emit, owed, take }
+}
+
+/// Which chip the keyboard is on. Only the `Input` variant has one: the
+/// dropzone's cards sit outside the control, so their remove buttons are
+/// ordinary tab stops and need no cursor at all.
+fn use_chip_cursor(
+    variant: FileFieldVariant,
+    count: usize,
+    cards: bool,
+) -> (Signal<Option<usize>>, Option<usize>) {
+    let mut cursor = use_signal(|| None::<usize>);
+    // A cursor set in the `Input` variant means nothing to the dropzone, and
+    // coming back must not show a chip the keyboard never picked there. The
+    // dropzone ignores it above, so clearing it one render late is unseen.
+    use_effect(use_reactive!(|(variant,)| {
+        let _ = variant;
+        if cursor.peek().is_some() {
+            cursor.set(None);
+        }
+    }));
+
+    (cursor, chip_cursor(cursor(), count, cards))
 }
 
 #[cfg(test)]

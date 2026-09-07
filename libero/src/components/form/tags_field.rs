@@ -4,17 +4,18 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, HtmlTag, Input, SelectionArgs,
+        ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input, SelectionArgs,
         common::{field_props, ring_overlay},
         form::{
             clear_button, field_control_sx, removable_chip, row_label, use_bound,
             use_chip_announcer, use_field, use_field_frame,
         },
-        layout::use_box,
+        layout::{BoxStyle, use_box},
         use_combobox,
     },
-    hooks::{PopoverWidth, use_element, use_theme},
+    hooks::{ElementHandle, PopoverWidth, use_element, use_theme},
     sx::{StaticSx, sx},
+    theme::Size,
     utils::warn,
 };
 
@@ -212,75 +213,10 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         }
     });
 
-    // The chips. The input is the one tab stop, so removing one never destroys
-    // the control the keyboard was on and there is no focus debt to repay
-    // ([[principles/focus-after-removal]] - "where this does not apply").
-    let removing = held.clone();
-    let remove_change = onchange.clone();
-    let draw_tag = props.tag;
-    let chips = held.iter().cloned().enumerate().map(|(index, value)| {
-        let list = removing.clone();
-        let onchange = remove_change.clone();
-        let remove = Callback::new(move |_: ()| {
-            let Some(onchange) = &onchange else {
-                return;
-            };
-            let mut next = list.clone();
-            next.remove(index);
-            onchange(next);
-        });
-        match &draw_tag {
-            Some(tag) => tag.call(SelectionArgs { value, remove }),
-            None => removable_chip(value, remove, size, disabled || readonly),
-        }
-    });
-    let tags = rsx! {
-        for (index, chip) in chips.enumerate() {
-            span {
-                key: "{index}",
-                "data-slot": "tag",
-                // The default chip's own guard, applied here so a caller's
-                // `tag` has it too: a press on its x must not take the focus
-                // off the input, or the removal strands it on the body.
-                onmousedown: move |event: MouseEvent| event.prevent_default(),
-                {chip}
-            }
-        }
-    };
+    let tags = tags_field_chips(&held, &onchange, props.tag, size, disabled || readonly);
 
-    // The rows: what is already held is never offered again, and the draft
-    // narrows what is left.
-    let query = text().trim().to_lowercase();
-    let picked: Vec<String> = held.iter().map(|tag| tag.trim().to_lowercase()).collect();
-    let matches: Vec<String> = suggestions
-        .unwrap_or_default()
-        .into_iter()
-        .filter(|suggestion| {
-            let folded = suggestion.trim().to_lowercase();
-            !picked.contains(&folded) && folded.contains(&query)
-        })
-        .collect();
-    let row_count = matches.len();
-
-    // Drawn eagerly and handed down as values: a `Callback` would let the rows
-    // memoize and a narrowed list would leave stale ones on screen.
-    let rows: Vec<Element> = matches
-        .into_iter()
-        .map(|suggestion| {
-            let label = suggestion.clone();
-            let pick = add.clone();
-            rsx! {
-                ComboboxOption {
-                    onpick: move |_| {
-                        pick(vec![suggestion.clone()]);
-                        text.set(String::new());
-                        state.set_active(None);
-                    },
-                    {row_label(label)}
-                }
-            }
-        })
-        .collect();
+    let rows = tags_field_rows(suggestions, &held, &text(), &add, text, state);
+    let row_count = rows.len();
 
     let clear_change = onchange.clone();
     let clearable = props.clearable.unwrap_or(false);
@@ -313,103 +249,25 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    let splitting = split_chars.clone();
-    let typing = add.clone();
-    let entering = add.clone();
-    let blurring = add;
-    let backspacing = held.clone();
-    let backspace_change = onchange.clone();
-
-    let mut attributes = match has_suggestions {
-        true => state.a11y_attributes(),
-        // Without a dropdown there is no listbox for `aria-controls` to name
-        // and nothing for the arrows to move, so the input is what it looks
-        // like: a text input.
-        false => Vec::new(),
-    };
-    attributes.extend(props.attributes);
-    let input = field
-        .aria(control)
-        .attr_default("type", "text")
-        .attr("aria-autocomplete", has_suggestions.then_some("list"))
-        .attr("value", text())
-        .attr("data-controlled", true)
-        .attr(
-            "placeholder",
-            (held.is_empty()).then_some(props.placeholder).flatten(),
-        )
-        .attr("disabled", disabled)
-        .attr("readonly", readonly)
-        .attr("required", (required && held.is_empty()).then_some(true))
-        .attr("autocomplete", "off")
-        .event("oninput", move |event: FormEvent| {
-            let raw = event.value();
-            let pieces: Vec<String> = split(&raw, &splitting);
-            match pieces.is_empty() {
-                // Nothing to commit - the text is only separators. Keeping what
-                // arrived is what keeps the signal and the DOM agreeing: a
-                // value the vdom already rendered is not written back, so
-                // normalising `","` to `""` would leave the comma on screen.
-                true if raw != text() => text.set(raw),
-                true => {}
-                false => {
-                    typing(pieces);
-                    text.set(String::new());
-                }
-            }
-            // The list changes under the highlight, so typing disarms it: the
-            // next Enter belongs to what was typed, not to a row that happens
-            // to sit where the old one did.
-            state.set_active(None);
-            if has_suggestions {
-                state.open();
-            }
-        })
-        .event("onkeydown", move |event: KeyboardEvent| {
-            if disabled || readonly {
-                return;
-            }
-            match event.key() {
-                // A highlighted row is the core's Enter, and it must never mean
-                // two things. Nothing highlighted and nothing typed is nobody's,
-                // so it bubbles and a form still submits.
-                Key::Enter
-                    if !(state.is_open() && state.active().is_some() && row_count > 0)
-                        && !text().trim().is_empty() =>
-                {
-                    event.prevent_default();
-                    entering(vec![text()]);
-                    text.set(String::new());
-                    state.set_active(None);
-                }
-                // The input is the value's own editor here, not a filter over a
-                // list - which is why this reverses the call `MultiSelect`'s
-                // search box made. With text in it, Backspace only ever edits.
-                Key::Backspace if text().is_empty() && !backspacing.is_empty() => {
-                    let Some(onchange) = &backspace_change else {
-                        return;
-                    };
-                    event.prevent_default();
-                    let mut next = backspacing.clone();
-                    next.pop();
-                    onchange(next);
-                }
-                _ => {}
-            }
-        })
-        // What was typed and not committed is still what the user meant, so it
-        // becomes a tag rather than being thrown away. Not a prop: nobody turns
-        // it off, and one for "discard my typing" is not worth the line.
-        .event("onblur", move |_: FocusEvent| {
-            let draft = text();
-            if !readonly && !draft.trim().is_empty() {
-                blurring(vec![draft]);
-                text.set(String::new());
-            }
-            state.close();
-        })
-        .element(&input_element)
-        .render(HtmlTag::Input, attributes, ());
+    let input = tags_field_input(
+        field.aria(control),
+        Draft {
+            text,
+            state,
+            held: held.clone(),
+            add,
+            split_chars,
+            has_suggestions,
+            disabled,
+            readonly,
+            required,
+            row_count,
+            placeholder: props.placeholder,
+            element: input_element,
+        },
+        onchange.clone(),
+        props.attributes,
+    );
 
     let control = slot.render(
         HtmlTag::Div,
@@ -423,22 +281,7 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
         },
     );
 
-    // A hidden input per tag is how the list posts: the visible one holds the
-    // draft, so it carries no `name` at all. The same shape `MultiSelect` uses,
-    // and the same one a native `<select multiple>` sends.
-    let hidden = bound.name().map(str::to_string).map(|name| {
-        rsx! {
-            for (index, tag) in held.iter().cloned().enumerate() {
-                input {
-                    key: "{index}",
-                    r#type: "hidden",
-                    name: name.clone(),
-                    value: tag,
-                    disabled: disabled.then_some(true),
-                }
-            }
-        }
-    });
+    let hidden = tags_field_hidden(bound.name().map(str::to_string), &held, disabled);
 
     let framed = frame.render(control);
     let body = match has_suggestions {
@@ -538,6 +381,243 @@ fn split(text: &str, split_chars: &[String]) -> Vec<String> {
     }
     pieces.retain(|piece| !piece.trim().is_empty());
     pieces
+}
+
+/// The chips, one per held tag. The input is the one tab stop, so removing one
+/// never destroys the control the keyboard was on and there is no focus debt
+/// to repay ([[principles/focus-after-removal]] - "where this does not
+/// apply").
+fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
+    held: &[String],
+    onchange: &Option<F>,
+    draw_tag: Option<Callback<SelectionArgs<String>, Element>>,
+    size: Size,
+    locked: bool,
+) -> Element {
+    let chips = held.iter().cloned().enumerate().map(|(index, value)| {
+        let list = held.to_vec();
+        let onchange = onchange.clone();
+        let remove = Callback::new(move |_: ()| {
+            let Some(onchange) = &onchange else {
+                return;
+            };
+            let mut next = list.clone();
+            next.remove(index);
+            onchange(next);
+        });
+        match &draw_tag {
+            Some(tag) => tag.call(SelectionArgs { value, remove }),
+            None => removable_chip(value, remove, size, locked),
+        }
+    });
+
+    rsx! {
+        for (index , chip) in chips.enumerate() {
+            span {
+                key: "{index}",
+                "data-slot": "tag",
+                // The default chip's own guard, applied here so a caller's
+                // `tag` has it too: a press on its x must not take the focus
+                // off the input, or the removal strands it on the body.
+                onmousedown: move |event: MouseEvent| event.prevent_default(),
+                {chip}
+            }
+        }
+    }
+}
+
+/// The suggestion rows: what is already held is never offered again, and the
+/// draft narrows what is left.
+///
+/// Drawn eagerly and handed down as values: a `Callback` would let the rows
+/// memoize and a narrowed list would leave stale ones on screen.
+fn tags_field_rows(
+    suggestions: Option<Vec<String>>,
+    held: &[String],
+    draft: &str,
+    add: &Rc<dyn Fn(Vec<String>)>,
+    mut text: Signal<String>,
+    state: ComboboxState,
+) -> Vec<Element> {
+    let query = draft.trim().to_lowercase();
+    let picked: Vec<String> = held.iter().map(|tag| tag.trim().to_lowercase()).collect();
+
+    suggestions
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|suggestion| {
+            let folded = suggestion.trim().to_lowercase();
+            !picked.contains(&folded) && folded.contains(&query)
+        })
+        .map(|suggestion| {
+            let label = suggestion.clone();
+            let pick = add.clone();
+            rsx! {
+                ComboboxOption {
+                    onpick: move |_| {
+                        pick(vec![suggestion.clone()]);
+                        text.set(String::new());
+                        state.set_active(None);
+                    },
+                    {row_label(label)}
+                }
+            }
+        })
+        .collect()
+}
+
+/// A hidden input per tag is how the list posts: the visible one holds the
+/// draft, so it carries no `name` at all. The same shape `MultiSelect` uses,
+/// and the same one a native `<select multiple>` sends.
+fn tags_field_hidden(name: Option<String>, held: &[String], disabled: bool) -> Option<Element> {
+    let held = held.to_vec();
+    name.map(|name| {
+        rsx! {
+            for (index , tag) in held.iter().cloned().enumerate() {
+                input {
+                    key: "{index}",
+                    r#type: "hidden",
+                    name: name.clone(),
+                    value: tag,
+                    disabled: disabled.then_some(true),
+                }
+            }
+        }
+    })
+}
+
+/// What the draft input reads and writes. `add` is the one path that can make
+/// a tag; `onchange` is what Backspace uses to take one back.
+struct Draft {
+    text: Signal<String>,
+    state: ComboboxState,
+    held: Vec<String>,
+    add: Rc<dyn Fn(Vec<String>)>,
+    split_chars: Vec<String>,
+    has_suggestions: bool,
+    disabled: bool,
+    readonly: bool,
+    required: bool,
+    row_count: usize,
+    placeholder: Option<String>,
+    element: ElementHandle,
+}
+
+/// The draft input: the field's id, label and `aria-describedby` land here,
+/// because this is what the caller types into and what `<label for>` may name.
+fn tags_field_input<F: Fn(Vec<String>) + Clone + 'static>(
+    control: BoxStyle,
+    draft: Draft,
+    onchange: Option<F>,
+    extra: Vec<Attribute>,
+) -> Element {
+    let Draft {
+        mut text,
+        state,
+        held,
+        add,
+        split_chars,
+        has_suggestions,
+        disabled,
+        readonly,
+        required,
+        row_count,
+        placeholder,
+        element,
+    } = draft;
+    // One `Rc` per path that can add a tag: typing a splitter, Enter and blur
+    // all merge through the same closure.
+    let (typing, entering, blurring) = (add.clone(), add.clone(), add);
+
+    let mut attributes = match has_suggestions {
+        true => state.a11y_attributes(),
+        // Without a dropdown there is no listbox for `aria-controls` to name
+        // and nothing for the arrows to move, so the input is what it looks
+        // like: a text input.
+        false => Vec::new(),
+    };
+    attributes.extend(extra);
+    control
+        .attr_default("type", "text")
+        .attr("aria-autocomplete", has_suggestions.then_some("list"))
+        .attr("value", text())
+        .attr("data-controlled", true)
+        .attr(
+            "placeholder",
+            held.is_empty().then_some(placeholder).flatten(),
+        )
+        .attr("disabled", disabled)
+        .attr("readonly", readonly)
+        .attr("required", (required && held.is_empty()).then_some(true))
+        .attr("autocomplete", "off")
+        .event("oninput", move |event: FormEvent| {
+            let raw = event.value();
+            let pieces: Vec<String> = split(&raw, &split_chars);
+            match pieces.is_empty() {
+                // Nothing to commit - the text is only separators. Keeping what
+                // arrived is what keeps the signal and the DOM agreeing: a
+                // value the vdom already rendered is not written back, so
+                // normalising `","` to `""` would leave the comma on screen.
+                true if raw != text() => text.set(raw),
+                true => {}
+                false => {
+                    typing(pieces);
+                    text.set(String::new());
+                }
+            }
+            // The list changes under the highlight, so typing disarms it: the
+            // next Enter belongs to what was typed, not to a row that happens
+            // to sit where the old one did.
+            state.set_active(None);
+            if has_suggestions {
+                state.open();
+            }
+        })
+        .event("onkeydown", move |event: KeyboardEvent| {
+            if disabled || readonly {
+                return;
+            }
+            match event.key() {
+                // A highlighted row is the core's Enter, and it must never mean
+                // two things. Nothing highlighted and nothing typed is nobody's,
+                // so it bubbles and a form still submits.
+                Key::Enter
+                    if !(state.is_open() && state.active().is_some() && row_count > 0)
+                        && !text().trim().is_empty() =>
+                {
+                    event.prevent_default();
+                    entering(vec![text()]);
+                    text.set(String::new());
+                    state.set_active(None);
+                }
+                // The input is the value's own editor here, not a filter over a
+                // list - which is why this reverses the call `MultiSelect`'s
+                // search box made. With text in it, Backspace only ever edits.
+                Key::Backspace if text().is_empty() && !held.is_empty() => {
+                    let Some(onchange) = &onchange else {
+                        return;
+                    };
+                    event.prevent_default();
+                    let mut next = held.clone();
+                    next.pop();
+                    onchange(next);
+                }
+                _ => {}
+            }
+        })
+        // What was typed and not committed is still what the user meant, so it
+        // becomes a tag rather than being thrown away. Not a prop: nobody turns
+        // it off, and one for "discard my typing" is not worth the line.
+        .event("onblur", move |_: FocusEvent| {
+            let draft = text();
+            if !readonly && !draft.trim().is_empty() {
+                blurring(vec![draft]);
+                text.set(String::new());
+            }
+            state.close();
+        })
+        .element(&element)
+        .render(HtmlTag::Input, attributes, ())
 }
 
 #[cfg(test)]

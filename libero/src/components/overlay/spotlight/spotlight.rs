@@ -292,95 +292,12 @@ pub fn use_spotlight(options: SpotlightOptions) -> SpotlightHandle {
             }
         };
 
-        let onkeydown = {
+        let onkeydown = move |event: KeyboardEvent| {
             let callbacks = callbacks.clone();
-            move |event: KeyboardEvent| {
-                if count == 0 {
-                    return;
-                }
-                match event.key() {
-                    Key::ArrowDown => {
-                        event.prevent_default();
-                        state.set_active(Some(active.map_or(0, |row| (row + 1) % count)));
-                    }
-                    Key::ArrowUp => {
-                        event.prevent_default();
-                        state.set_active(Some(match active {
-                            None | Some(0) => count - 1,
-                            Some(row) => row - 1,
-                        }));
-                    }
-                    // Nothing highlighted, nothing runs. With
-                    // `highlight_first_on_query` (the default) a query always
-                    // leaves the first row highlighted, so Enter runs it.
-                    Key::Enter => {
-                        if let Some(row) = active {
-                            event.prevent_default();
-                            run(callbacks[row]);
-                        }
-                    }
-                    _ => {}
-                }
-            }
+            spotlight_key(event, state, active, count, move |row| run(callbacks[row]));
         };
 
-        let mut index = 0usize;
-        let mut rows = Vec::with_capacity(groups.len());
-        for (group_index, (group, members)) in groups.into_iter().enumerate() {
-            let options_rows: Vec<Element> = members
-                .into_iter()
-                .map(|action| {
-                    let row = index;
-                    index += 1;
-                    let onclick = action.onclick;
-                    rsx! {
-                        div {
-                            key: "{row}",
-                            id: "{id}-option-{row}",
-                            "role": "option",
-                            "data-active": (active == Some(row)).then_some("true"),
-                            // Or the click takes focus out of the search box.
-                            onmousedown: move |event: MouseEvent| event.prevent_default(),
-                            onclick: move |_| run(onclick),
-                            if let Some(icon) = action.icon {
-                                span { "data-spotlight-icon": "", {icon} }
-                            }
-                            span { "data-spotlight-text": "",
-                                span { "{action.label}" }
-                                if let Some(description) = action.description {
-                                    span { "data-spotlight-description": "", "{description}" }
-                                }
-                            }
-                            if let Some(shortcut) = action.shortcut {
-                                Kbd { "{shortcut}" }
-                            }
-                        }
-                    }
-                })
-                .collect();
-            rows.push(match group {
-                Some(group) => {
-                    let label_id = format!("{id}-group-{group_index}");
-                    rsx! {
-                        div {
-                            key: "group-{group_index}",
-                            "role": "group",
-                            "aria-labelledby": "{label_id}",
-                            div {
-                                id: "{label_id}",
-                                "role": "presentation",
-                                "data-spotlight-group-label": "",
-                                "{group}"
-                            }
-                            {options_rows.into_iter()}
-                        }
-                    }
-                }
-                None => rsx! {
-                    div { key: "group-{group_index}", "role": "group", {options_rows.into_iter()} }
-                },
-            });
-        }
+        let rows = spotlight_rows(groups, &id, active, run);
 
         let empty = !loading && count == 0 && !query().trim().is_empty();
         let nothing_found = empty.then(|| {
@@ -555,4 +472,109 @@ fn use_hotkey(handle: SpotlightHandle, shortcut: Option<char>) {
         seen.set(pressed);
         handle.toggle();
     });
+}
+
+/// The action rows, grouped. A `listbox` may hold only options and groups, so
+/// a group's own label is a presentational div named by `aria-labelledby`.
+fn spotlight_rows(
+    groups: Vec<(Option<String>, Vec<SpotlightAction>)>,
+    id: &str,
+    active: Option<usize>,
+    run: impl Fn(Option<Callback<()>>) + Copy + 'static,
+) -> Vec<Element> {
+    let mut index = 0usize;
+    let mut rows = Vec::with_capacity(groups.len());
+    for (group_index, (group, members)) in groups.into_iter().enumerate() {
+        let options_rows: Vec<Element> = members
+            .into_iter()
+            .map(|action| {
+                let row = index;
+                index += 1;
+                let onclick = action.onclick;
+                rsx! {
+                    div {
+                        key: "{row}",
+                        id: "{id}-option-{row}",
+                        "role": "option",
+                        "data-active": (active == Some(row)).then_some("true"),
+                        // Or the click takes focus out of the search box.
+                        onmousedown: move |event: MouseEvent| event.prevent_default(),
+                        onclick: move |_| run(onclick),
+                        if let Some(icon) = action.icon {
+                            span { "data-spotlight-icon": "", {icon} }
+                        }
+                        span { "data-spotlight-text": "",
+                            span { "{action.label}" }
+                            if let Some(description) = action.description {
+                                span { "data-spotlight-description": "", "{description}" }
+                            }
+                        }
+                        if let Some(shortcut) = action.shortcut {
+                            Kbd { "{shortcut}" }
+                        }
+                    }
+                }
+            })
+            .collect();
+        rows.push(match group {
+            Some(group) => {
+                let label_id = format!("{id}-group-{group_index}");
+                rsx! {
+                    div {
+                        key: "group-{group_index}",
+                        "role": "group",
+                        "aria-labelledby": "{label_id}",
+                        div {
+                            id: "{label_id}",
+                            "role": "presentation",
+                            "data-spotlight-group-label": "",
+                            "{group}"
+                        }
+                        {options_rows.into_iter()}
+                    }
+                }
+            }
+            None => rsx! {
+                div { key: "group-{group_index}", "role": "group", {options_rows.into_iter()} }
+            },
+        });
+    }
+    rows
+}
+
+/// The search box's keyboard: the two arrows wrap through the flat row list,
+/// and Enter runs whatever is highlighted.
+///
+/// Nothing highlighted, nothing runs. With `highlight_first_on_query` (the
+/// default) a query always leaves the first row highlighted, so Enter runs it.
+fn spotlight_key(
+    event: KeyboardEvent,
+    state: ComboboxState,
+    active: Option<usize>,
+    count: usize,
+    run_row: impl Fn(usize),
+) {
+    if count == 0 {
+        return;
+    }
+    match event.key() {
+        Key::ArrowDown => {
+            event.prevent_default();
+            state.set_active(Some(active.map_or(0, |row| (row + 1) % count)));
+        }
+        Key::ArrowUp => {
+            event.prevent_default();
+            state.set_active(Some(match active {
+                None | Some(0) => count - 1,
+                Some(row) => row - 1,
+            }));
+        }
+        Key::Enter => {
+            if let Some(row) = active {
+                event.prevent_default();
+                run_row(row);
+            }
+        }
+        _ => {}
+    }
 }

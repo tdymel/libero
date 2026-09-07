@@ -1,3 +1,17 @@
+/// Whether a key press carries a modifier that marks it a browser or OS
+/// shortcut rather than ordinary typing.
+///
+/// Shift is deliberately not one of them: it is how a capital letter is typed,
+/// so a typeahead that ignored `Shift+A` would refuse half the alphabet. Every
+/// list that types to search - `Menu`, `Menubar`, `Tree` and `Select` - asks
+/// this one question.
+pub(crate) fn has_shortcut_modifier(event: &dioxus::prelude::KeyboardEvent) -> bool {
+    use dioxus::prelude::ModifiersInteraction;
+
+    let modifiers = event.data().modifiers();
+    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
+}
+
 /// A non-global attribute to push into a `Vec<Attribute>` by hand.
 pub(crate) fn attr<T>(
     name: &'static str,

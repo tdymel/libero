@@ -12,8 +12,8 @@ use crate::{
     },
     context::WindowHost,
     hooks::{
-        DragMove, DragOptions, DragStart, drag_handle_sx, escape_closes, use_drag, use_element,
-        use_id,
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, drag_handle_sx, escape_closes,
+        use_drag, use_element, use_id,
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
@@ -207,165 +207,21 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         caller => caller,
     };
 
-    // Top-left in viewport pixels once moved; `None` while `placement` decides.
-    let mut position = use_signal(|| None::<(f64, f64)>);
-    // What the resize handle asked for; `None` is the content's own size.
-    let mut size = use_signal(|| None::<(f64, f64)>);
-    // The rendered border box, for the clamp. Kept current by `onresize`.
-    let mut measured = use_signal(|| None::<(f64, f64)>);
-    // Where a pointer drag started, read once at pointerdown.
-    let mut move_origin = use_signal(|| None::<(f64, f64)>);
-    let mut size_origin = use_signal(|| None::<(f64, f64)>);
-
-    // Focus the window itself on open, which is what APG asks of a non-modal
-    // dialog. Once: a later re-render must not pull focus back from the page.
-    // A keyboard move or resize reports once the new geometry has rendered:
-    // reading the rect in the same task as the write would report the old one.
-    // An effect runs after the render commits, and the read forces layout.
-    let mut owed = use_signal(|| None::<Option<Callback<WindowRect>>>);
-    use_effect(move || {
-        if let Some(callback) = owed() {
-            owed.set(None);
-            report(root, callback);
-        }
-    });
-
-    let mut focused = use_signal(|| false);
-    use_effect(move || {
-        if root.is_mounted() && !*focused.peek() {
-            focused.set(true);
-            let _ = root.focus();
-        }
-    });
-
-    let move_drag = use_drag(DragOptions {
-        capture: root,
-        onstart: Callback::new(move |_: DragStart| {
-            move_origin.set(None);
-            let offset = root.client_offset();
-            spawn(async move {
-                if let Ok(offset) = offset.await {
-                    move_origin.set(Some(offset));
-                }
-            });
-        }),
-        onmove: Callback::new(move |event: DragMove| {
-            if let Some((x, y)) = move_origin() {
-                let delta = event.delta();
-                position.set(Some((x + delta.x, y + delta.y)));
-            }
-        }),
-        onend: Callback::new(move |()| report(root, onmove)),
-    });
-
-    let resize_drag = use_drag(DragOptions {
-        capture: root,
-        onstart: Callback::new(move |_: DragStart| {
-            size_origin.set(None);
-            let dimensions = root.dimensions();
-            spawn(async move {
-                if let Ok(dimensions) = dimensions.await {
-                    size_origin.set(Some((dimensions.width, dimensions.height)));
-                }
-            });
-        }),
-        onmove: Callback::new(move |event: DragMove| {
-            if let Some((width, height)) = size_origin() {
-                let delta = event.delta();
-                size.set(Some((
-                    (width + delta.x).max(0.0),
-                    (height + delta.y).max(0.0),
-                )));
-            }
-        }),
-        onend: Callback::new(move |()| report(root, onresize)),
-    });
-
-    // Both drags capture on the root, so it receives every move; only the one
-    // that started reacts, because `use_drag` filters on its own pointer id.
-    let onpointermove = move |event: Event<PointerData>| {
-        if (move_drag.dragging)() {
-            move_drag.onpointermove.call(event);
-        } else if (resize_drag.dragging)() {
-            resize_drag.onpointermove.call(event);
-        }
-    };
-    let onpointerup = move |event: Event<PointerData>| {
-        if (move_drag.dragging)() {
-            move_drag.onpointerup.call(event);
-        } else if (resize_drag.dragging)() {
-            resize_drag.onpointerup.call(event);
-        }
-    };
-    let onpointercancel = move |event: Event<PointerData>| {
-        if (move_drag.dragging)() {
-            move_drag.onpointercancel.call(event);
-        } else if (resize_drag.dragging)() {
-            resize_drag.onpointercancel.call(event);
-        }
-    };
-
-    let move_step = f64::from(defaults.move_step);
-    let resize_step = f64::from(defaults.resize_step);
-
-    // The title bar is the keyboard move handle: Arrow moves by a step,
-    // Shift+Arrow by a pixel.
-    let onhandlekey = move |event: Event<KeyboardData>| {
-        let step = if event.modifiers().shift() {
-            1.0
-        } else {
-            move_step
-        };
-        let Some((dx, dy)) = arrow_delta(&event.key(), step) else {
-            return;
-        };
-        event.prevent_default();
-        event.stop_propagation();
-        let offset = root.client_offset();
-        spawn(async move {
-            if let Ok((x, y)) = offset.await {
-                position.set(Some((x + dx, y + dy)));
-                owed.set(Some(onmove));
-            }
-        });
-    };
-
-    // The corner handle: Arrow resizes by a step, Shift+Arrow by a pixel, and
-    // Home/End ask for nothing and for everything, which the window's
-    // min/max constraints then clamp.
-    let onresizekey = move |event: Event<KeyboardData>| {
-        let key = event.key();
-        let request = match key {
-            Key::Home => Some(Err((0.0, 0.0))),
-            Key::End => Some(Err((f64::from(u16::MAX), f64::from(u16::MAX)))),
-            _ => {
-                let step = if event.modifiers().shift() {
-                    1.0
-                } else {
-                    resize_step
-                };
-                arrow_delta(&key, step).map(Ok)
-            }
-        };
-        let Some(request) = request else { return };
-        event.prevent_default();
-        event.stop_propagation();
-        let dimensions = root.dimensions();
-        spawn(async move {
-            let next = match request {
-                Err(absolute) => absolute,
-                Ok((dx, dy)) => match dimensions.await {
-                    Ok(dimensions) => (
-                        (dimensions.width + dx).max(0.0),
-                        (dimensions.height + dy).max(0.0),
-                    ),
-                    Err(_) => return,
-                },
-            };
-            size.set(Some(next));
-            owed.set(Some(onresize));
-        });
-    };
+    let geometry = use_window_geometry(
+        root,
+        f64::from(defaults.move_step),
+        f64::from(defaults.resize_step),
+        onmove,
+        onresize,
+    );
+    let WindowGeometry {
+        position,
+        size,
+        mut measured,
+        move_drag,
+        resize_drag,
+        ..
+    } = geometry;
 
     // Not a dismiss layer: a window is non-modal and hears only presses from
     // inside it. It still skips one that something inside already took - an
@@ -437,9 +293,15 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
         // Pointer too: a drag's pointerdown prevents the focus a click
         // would otherwise bring.
         .event("onpointerdown", move |_: Event<PointerData>| host.raise(id))
-        .event("onpointermove", onpointermove)
-        .event("onpointerup", onpointerup)
-        .event("onpointercancel", onpointercancel)
+        .event("onpointermove", move |event: Event<PointerData>| {
+            geometry.onpointermove(event)
+        })
+        .event("onpointerup", move |event: Event<PointerData>| {
+            geometry.onpointerup(event)
+        })
+        .event("onpointercancel", move |event: Event<PointerData>| {
+            geometry.onpointercancel(event)
+        })
         .event("onresize", move |event: Event<ResizeData>| {
             if let Ok(size) = event.get_border_box_size() {
                 measured.set(Some((size.width, size.height)));
@@ -465,7 +327,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                         },
                         onkeydown: move |event| {
                             if !pinned {
-                                onhandlekey(event);
+                                geometry.handle_key(event);
                             }
                         },
                         if let Some(title) = title.clone() {
@@ -492,7 +354,7 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                         "aria-valuenow": "{width.round()}",
                         "aria-valuetext": "{width.round()} by {height.round()} pixels",
                         onpointerdown: move |event| resize_drag.onpointerdown.call(event),
-                        onkeydown: onresizekey,
+                        onkeydown: move |event| geometry.resize_key(event),
                     }
                 }
             },
@@ -519,5 +381,212 @@ pub(crate) fn FloatingWindow(props: FloatingWindowProps) -> Element {
                 .flex_direction("column"),
             {window}
         }
+    }
+}
+/// A floating window's geometry: where it is, how big it is, and the two
+/// drags that move and resize it. One `Copy` argument, so the title bar, the
+/// corner handle and the window itself all read the same state.
+#[derive(Clone, Copy)]
+struct WindowGeometry {
+    root: ElementHandle,
+    /// Top-left in viewport pixels once moved; `None` while `placement`
+    /// decides.
+    position: Signal<Option<(f64, f64)>>,
+    /// What the resize handle asked for; `None` is the content's own size.
+    size: Signal<Option<(f64, f64)>>,
+    /// The rendered border box, for the clamp. Kept current by `onresize`.
+    measured: Signal<Option<(f64, f64)>>,
+    /// A keyboard move or resize reports once the new geometry has rendered.
+    owed: Signal<Option<Option<Callback<WindowRect>>>>,
+    move_drag: Drag,
+    resize_drag: Drag,
+    onmove: Option<Callback<WindowRect>>,
+    onresize: Option<Callback<WindowRect>>,
+    move_step: f64,
+    resize_step: f64,
+}
+
+/// The window's own geometry state, the two drags over it, and the effect that
+/// pays back a report owed to a keyboard move.
+fn use_window_geometry(
+    root: ElementHandle,
+    move_step: f64,
+    resize_step: f64,
+    onmove: Option<Callback<WindowRect>>,
+    onresize: Option<Callback<WindowRect>>,
+) -> WindowGeometry {
+    let mut position = use_signal(|| None::<(f64, f64)>);
+    let mut size = use_signal(|| None::<(f64, f64)>);
+    let measured = use_signal(|| None::<(f64, f64)>);
+    // Where a pointer drag started, read once at pointerdown.
+    let mut move_origin = use_signal(|| None::<(f64, f64)>);
+    let mut size_origin = use_signal(|| None::<(f64, f64)>);
+
+    // A keyboard move or resize reports once the new geometry has rendered:
+    // reading the rect in the same task as the write would report the old one.
+    // An effect runs after the render commits, and the read forces layout.
+    let mut owed = use_signal(|| None::<Option<Callback<WindowRect>>>);
+    use_effect(move || {
+        if let Some(callback) = owed() {
+            owed.set(None);
+            report(root, callback);
+        }
+    });
+
+    // Focus the window itself on open, which is what APG asks of a non-modal
+    // dialog. Once: a later re-render must not pull focus back from the page.
+    let mut focused = use_signal(|| false);
+    use_effect(move || {
+        if root.is_mounted() && !*focused.peek() {
+            focused.set(true);
+            let _ = root.focus();
+        }
+    });
+
+    let move_drag = use_drag(DragOptions {
+        capture: root,
+        onstart: Callback::new(move |_: DragStart| {
+            move_origin.set(None);
+            let offset = root.client_offset();
+            spawn(async move {
+                if let Ok(offset) = offset.await {
+                    move_origin.set(Some(offset));
+                }
+            });
+        }),
+        onmove: Callback::new(move |event: DragMove| {
+            if let Some((x, y)) = move_origin() {
+                let delta = event.delta();
+                position.set(Some((x + delta.x, y + delta.y)));
+            }
+        }),
+        onend: Callback::new(move |()| report(root, onmove)),
+    });
+
+    let resize_drag = use_drag(DragOptions {
+        capture: root,
+        onstart: Callback::new(move |_: DragStart| {
+            size_origin.set(None);
+            let dimensions = root.dimensions();
+            spawn(async move {
+                if let Ok(dimensions) = dimensions.await {
+                    size_origin.set(Some((dimensions.width, dimensions.height)));
+                }
+            });
+        }),
+        onmove: Callback::new(move |event: DragMove| {
+            if let Some((width, height)) = size_origin() {
+                let delta = event.delta();
+                size.set(Some((
+                    (width + delta.x).max(0.0),
+                    (height + delta.y).max(0.0),
+                )));
+            }
+        }),
+        onend: Callback::new(move |()| report(root, onresize)),
+    });
+
+    WindowGeometry {
+        root,
+        position,
+        size,
+        measured,
+        owed,
+        move_drag,
+        resize_drag,
+        onmove,
+        onresize,
+        move_step,
+        resize_step,
+    }
+}
+
+impl WindowGeometry {
+    /// Both drags capture on the root, so it receives every move; only the one
+    /// that started reacts, because `use_drag` filters on its own pointer id.
+    fn onpointermove(self, event: Event<PointerData>) {
+        match (self.move_drag.dragging)() {
+            true => self.move_drag.onpointermove.call(event),
+            false if (self.resize_drag.dragging)() => self.resize_drag.onpointermove.call(event),
+            false => {}
+        }
+    }
+
+    fn onpointerup(self, event: Event<PointerData>) {
+        match (self.move_drag.dragging)() {
+            true => self.move_drag.onpointerup.call(event),
+            false if (self.resize_drag.dragging)() => self.resize_drag.onpointerup.call(event),
+            false => {}
+        }
+    }
+
+    fn onpointercancel(self, event: Event<PointerData>) {
+        match (self.move_drag.dragging)() {
+            true => self.move_drag.onpointercancel.call(event),
+            false if (self.resize_drag.dragging)() => self.resize_drag.onpointercancel.call(event),
+            false => {}
+        }
+    }
+
+    /// The title bar is the keyboard move handle: Arrow moves by a step,
+    /// Shift+Arrow by a pixel.
+    fn handle_key(self, event: Event<KeyboardData>) {
+        let step = if event.modifiers().shift() {
+            1.0
+        } else {
+            self.move_step
+        };
+        let Some((dx, dy)) = arrow_delta(&event.key(), step) else {
+            return;
+        };
+        event.prevent_default();
+        event.stop_propagation();
+        let (root, mut position, mut owed, onmove) =
+            (self.root, self.position, self.owed, self.onmove);
+        let offset = root.client_offset();
+        spawn(async move {
+            if let Ok((x, y)) = offset.await {
+                position.set(Some((x + dx, y + dy)));
+                owed.set(Some(onmove));
+            }
+        });
+    }
+
+    /// The corner handle: Arrow resizes by a step, Shift+Arrow by a pixel, and
+    /// Home/End ask for nothing and for everything, which the window's
+    /// min/max constraints then clamp.
+    fn resize_key(self, event: Event<KeyboardData>) {
+        let key = event.key();
+        let request = match key {
+            Key::Home => Some(Err((0.0, 0.0))),
+            Key::End => Some(Err((f64::from(u16::MAX), f64::from(u16::MAX)))),
+            _ => {
+                let step = if event.modifiers().shift() {
+                    1.0
+                } else {
+                    self.resize_step
+                };
+                arrow_delta(&key, step).map(Ok)
+            }
+        };
+        let Some(request) = request else { return };
+        event.prevent_default();
+        event.stop_propagation();
+        let (mut size, mut owed, onresize) = (self.size, self.owed, self.onresize);
+        let dimensions = self.root.dimensions();
+        spawn(async move {
+            let next = match request {
+                Err(absolute) => absolute,
+                Ok((dx, dy)) => match dimensions.await {
+                    Ok(dimensions) => (
+                        (dimensions.width + dx).max(0.0),
+                        (dimensions.height + dy).max(0.0),
+                    ),
+                    Err(_) => return,
+                },
+            };
+            size.set(Some(next));
+            owed.set(Some(onresize));
+        });
     }
 }

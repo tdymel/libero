@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Divider, HtmlTag, Input, States,
-        common::{ChevronRightIcon, base_props, inset_focus_ring_sx},
+        common::{ChevronRightIcon, base_props, has_shortcut_modifier, inset_focus_ring_sx},
         layout::use_box,
         surface::paper_sx,
     },
@@ -734,9 +734,6 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         anchors[index]
     };
 
-    // The roving `tabindex`: exactly one item is tabbable, the focused one, or
-    // the first before anything has been focused.
-    let tabbable = active().unwrap_or(0);
     let expanded = open_child();
     let level_id = props.id.clone();
 
@@ -744,74 +741,24 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
     let mut group = 0usize;
     let mut submenus: Vec<(usize, Vec<MenuEntry>, (ElementHandle, ElementHandle))> = Vec::new();
 
+    let draw = ItemDraw {
+        level,
+        typeahead,
+        labels,
+        hover: hover.clone(),
+        // The roving `tabindex`: exactly one item is tabbable, the focused
+        // one, or the first before anything has been focused.
+        tabbable: active().unwrap_or(0),
+        expanded,
+        level_id: level_id.clone(),
+    };
     let mut draw_item = |item: &MenuItem, index: usize| -> Element {
         let submenu = item.submenu_items().cloned();
-        let has_submenu = submenu.is_some();
-        let disabled = item.disabled;
-        let onselect = item.onselect_callback();
-        let item_id = format!("{level_id}-item-{index}");
-        let child_id = format!("{level_id}-{index}");
-        let handles = has_submenu.then(|| anchor_of(index));
-        let anchor = handles.map(|(anchor, _)| anchor);
+        let handles = submenu.is_some().then(|| anchor_of(index));
         if let (Some(items), Some(handles)) = (submenu, handles) {
             submenus.push((index, items, handles));
         }
-        let is_expanded = has_submenu && expanded == Some(index);
-        let opens = (has_submenu && !disabled).then_some(index);
-
-        let onkeydown = {
-            let (typeahead, labels, hover) = (typeahead.clone(), labels.clone(), hover.clone());
-            move |event: KeyboardEvent| {
-                level.item_keydown(event, index, opens.is_some(), &typeahead, &labels, &hover)
-            }
-        };
-        let onmouseenter = {
-            let hover = hover.clone();
-            move |_: MouseEvent| hover.enter(level, index, opens)
-        };
-        let onclick = {
-            let hover = hover.clone();
-            move |_: MouseEvent| {
-                if disabled {
-                    return;
-                }
-                hover.cancel();
-                level.choose(index, onselect, has_submenu);
-            }
-        };
-
-        rsx! {
-            button {
-                key: "{index}",
-                r#type: "button",
-                "role": "menuitem",
-                id: "{item_id}",
-                tabindex: if index == tabbable { "0" } else { "-1" },
-                "data-menu-index": "{index}",
-                "aria-disabled": disabled.then_some("true"),
-                "aria-haspopup": has_submenu.then_some("menu"),
-                "aria-expanded": has_submenu.then(|| is_expanded.to_string()),
-                "aria-controls": is_expanded.then_some(child_id),
-                onmounted: move |event| {
-                    if let Some(anchor) = anchor {
-                        anchor.mount()(event);
-                    }
-                },
-                onclick,
-                onkeydown,
-                onmouseenter,
-                if let Some(leading) = item.leading.clone() {
-                    span { "data-menu-section": "leading", {leading} }
-                }
-                span { "data-menu-label": "", "{item.label}" }
-                if let Some(trailing) = item.trailing.clone() {
-                    span { "data-menu-section": "trailing", {trailing} }
-                }
-                if has_submenu {
-                    span { "data-menu-chevron": "", ChevronRightIcon {} }
-                }
-            }
-        }
+        menu_item(&draw, item, index, handles.map(|(anchor, _)| anchor))
     };
 
     let rows = draw_rows(
@@ -940,9 +887,98 @@ fn draw_rows(
     rows
 }
 
-// Shift is part of ordinary typing; the rest mark a browser or OS shortcut
-// that must not be mistaken for typeahead. `Tree`'s rule.
-fn has_shortcut_modifier(event: &KeyboardEvent) -> bool {
-    let modifiers = event.modifiers();
-    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
+/// What every item on one level is drawn from. The three handlers each need
+/// the typeahead buffer, the labels and the hover timer, so they travel
+/// together.
+struct ItemDraw {
+    level: Level,
+    typeahead: Typeahead,
+    labels: Rc<Vec<Option<String>>>,
+    hover: HoverDelay,
+    /// The roving `tabindex`: exactly one item is tabbable, the focused one,
+    /// or the first before anything has been focused.
+    tabbable: usize,
+    expanded: Option<usize>,
+    level_id: String,
+}
+
+/// One `menuitem` row: its three handlers, its aria, and the leading,
+/// trailing and chevron slots.
+fn menu_item(
+    draw: &ItemDraw,
+    item: &MenuItem,
+    index: usize,
+    anchor: Option<ElementHandle>,
+) -> Element {
+    let ItemDraw {
+        level,
+        typeahead,
+        labels,
+        hover,
+        tabbable,
+        expanded,
+        level_id,
+    } = draw;
+    let (level, tabbable) = (*level, *tabbable);
+    let has_submenu = item.submenu_items().is_some();
+    let disabled = item.disabled;
+    let onselect = item.onselect_callback();
+    let item_id = format!("{level_id}-item-{index}");
+    let child_id = format!("{level_id}-{index}");
+    let is_expanded = has_submenu && *expanded == Some(index);
+    let opens = (has_submenu && !disabled).then_some(index);
+
+    let onkeydown = {
+        let (typeahead, labels, hover) = (typeahead.clone(), labels.clone(), hover.clone());
+        move |event: KeyboardEvent| {
+            level.item_keydown(event, index, opens.is_some(), &typeahead, &labels, &hover)
+        }
+    };
+    let onmouseenter = {
+        let hover = hover.clone();
+        move |_: MouseEvent| hover.enter(level, index, opens)
+    };
+    let onclick = {
+        let hover = hover.clone();
+        move |_: MouseEvent| {
+            if disabled {
+                return;
+            }
+            hover.cancel();
+            level.choose(index, onselect, has_submenu);
+        }
+    };
+
+    rsx! {
+        button {
+            key: "{index}",
+            r#type: "button",
+            "role": "menuitem",
+            id: "{item_id}",
+            tabindex: if index == tabbable { "0" } else { "-1" },
+            "data-menu-index": "{index}",
+            "aria-disabled": disabled.then_some("true"),
+            "aria-haspopup": has_submenu.then_some("menu"),
+            "aria-expanded": has_submenu.then(|| is_expanded.to_string()),
+            "aria-controls": is_expanded.then_some(child_id),
+            onmounted: move |event| {
+                if let Some(anchor) = anchor {
+                    anchor.mount()(event);
+                }
+            },
+            onclick,
+            onkeydown,
+            onmouseenter,
+            if let Some(leading) = item.leading.clone() {
+                span { "data-menu-section": "leading", {leading} }
+            }
+            span { "data-menu-label": "", "{item.label}" }
+            if let Some(trailing) = item.trailing.clone() {
+                span { "data-menu-section": "trailing", {trailing} }
+            }
+            if has_submenu {
+                span { "data-menu-chevron": "", ChevronRightIcon {} }
+            }
+        }
+    }
 }

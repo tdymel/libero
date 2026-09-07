@@ -131,33 +131,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     let size = props.size.copied_or(theme.combobox.size);
     let radius = props.radius.copied_or(theme.combobox.radius);
 
-    // Owned by the root scope, not by this one, and dropped by hand on unmount.
-    // The rows that read them are portaled, so they mount under `PortalOutlet`
-    // and are *not* descendants of this component - a signal created here would
-    // be read from outside the scope that owns it, which dioxus warns about and
-    // which really can drop the value while a row still holds it.
-    let id = use_hook(|| Signal::new_in_scope(props.state.id(), ScopeId::ROOT));
-    let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
-    if *shared_size.peek() != size {
-        shared_size.set(size);
-    }
-    let mut shared_radius = use_hook(|| Signal::new_in_scope(radius, ScopeId::ROOT));
-    if *shared_radius.peek() != radius {
-        shared_radius.set(radius);
-    }
-    let active_pick = use_hook(|| Signal::new_in_scope(None, ScopeId::ROOT));
-    use_drop(move || {
-        id.manually_drop();
-        shared_size.manually_drop();
-        shared_radius.manually_drop();
-        active_pick.manually_drop();
-    });
-    let context = ComboboxContext {
-        id,
-        size: shared_size,
-        radius: shared_radius,
-        active_pick,
-    };
+    let context = use_combobox_context(props.state.id(), size, radius);
     // Provided here for a row drawn inside the trigger, and handed to the
     // portaled dropdown as a prop, which mounts outside this scope entirely.
     use_context_provider(|| context);
@@ -198,83 +172,18 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         });
     let set_active = props.onactive;
 
-    // Every arrow's destination, worked out here rather than inside the
-    // handler. They depend only on what this render already knows, and four
-    // `Option<usize>` keep the handler `Copy` - which is what lets the wrapper
-    // and the portaled dropdown share one closure.
-    let at = active_row.and_then(|row| enabled.iter().position(|row_at| *row_at == row));
-    let step = |delta: isize| {
-        let at = at?.saturating_add_signed(delta);
-        enabled
-            .get(at.min(enabled.len().saturating_sub(1)))
-            .copied()
+    let keys = ComboboxKeys {
+        active_row,
+        arrows: arrow_targets(&enabled, active_row, opened),
+        set_active,
+        onopened: props.onopened,
+        active_pick: context.active_pick,
+        opened,
+        disabled: props.disabled,
+        close_on_pick: props.close_on_pick,
     };
-    let first_enabled = enabled.first().copied();
-    let last_enabled = enabled.last().copied();
-    // From no highlight, both arrows land on the first row the keyboard may
-    // have - the first press arms the list rather than moving inside it.
-    let arrow_down = match (opened, active_row) {
-        (true, Some(_)) => step(1),
-        _ => active_row.or(first_enabled),
-    };
-    let arrow_up = step(-1);
-
+    let onkeydown = move |event: KeyboardEvent| keys.handle(event);
     let disabled = props.disabled;
-    let close_on_pick = props.close_on_pick;
-    let onopened = props.onopened;
-    let request = move |next: bool| onopened.call(next);
-
-    let onkeydown = move |event: KeyboardEvent| {
-        if disabled {
-            return;
-        }
-        // A list of nothing but disabled rows has nowhere to go, and the arrows
-        // then only open it.
-        let go_to = |row: Option<usize>| {
-            if let Some(row) = row {
-                set_active.call(row);
-            }
-            if !opened {
-                request(true);
-            }
-        };
-
-        match event.key() {
-            Key::ArrowDown => {
-                event.prevent_default();
-                go_to(arrow_down);
-            }
-            Key::ArrowUp if opened => {
-                event.prevent_default();
-                go_to(arrow_up);
-            }
-            Key::Home if opened => {
-                event.prevent_default();
-                go_to(first_enabled);
-            }
-            Key::End if opened => {
-                event.prevent_default();
-                go_to(last_enabled);
-            }
-            // Nothing highlighted means Enter is not ours: it bubbles, so a
-            // form still submits.
-            Key::Enter if opened && active_row.is_some() => {
-                event.prevent_default();
-                if let Some(pick) = active_pick() {
-                    pick.call(());
-                }
-                if close_on_pick {
-                    request(false);
-                }
-            }
-            Key::Escape if opened => {
-                event.prevent_default();
-                request(false);
-            }
-            Key::Tab if opened => request(false),
-            _ => {}
-        }
-    };
 
     let states: Input<States> = props
         .states
@@ -372,7 +281,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                         groups: props.groups,
                         row_disabled: props.row_disabled,
                         active: active_row,
-                        id: id(),
+                        id: (context.id)(),
                         max_height: theme.combobox.max_dropdown_height,
                         scroll_y,
                         empty: props.empty,
@@ -404,4 +313,144 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 }
             },
         )
+}
+
+/// The four signals every portaled row reads.
+///
+/// Owned by the root scope, not by the component's, and dropped by hand on
+/// unmount. The rows that read them are portaled, so they mount under
+/// `PortalOutlet` and are *not* descendants of `ComboboxCore` - a signal
+/// created there would be read from outside the scope that owns it, which
+/// dioxus warns about and which really can drop the value while a row still
+/// holds it.
+fn use_combobox_context(state_id: String, size: Size, radius: Size) -> ComboboxContext {
+    let id = use_hook(|| Signal::new_in_scope(state_id, ScopeId::ROOT));
+    let mut shared_size = use_hook(|| Signal::new_in_scope(size, ScopeId::ROOT));
+    if *shared_size.peek() != size {
+        shared_size.set(size);
+    }
+    let mut shared_radius = use_hook(|| Signal::new_in_scope(radius, ScopeId::ROOT));
+    if *shared_radius.peek() != radius {
+        shared_radius.set(radius);
+    }
+    let active_pick = use_hook(|| Signal::new_in_scope(None, ScopeId::ROOT));
+    use_drop(move || {
+        id.manually_drop();
+        shared_size.manually_drop();
+        shared_radius.manually_drop();
+        active_pick.manually_drop();
+    });
+
+    ComboboxContext {
+        id,
+        size: shared_size,
+        radius: shared_radius,
+        active_pick,
+    }
+}
+
+/// Where each arrow lands, worked out in render rather than inside the
+/// handler: they depend only on what this render already knows, and four
+/// `Option<usize>` keep the handler `Copy` - which is what lets the wrapper
+/// and the portaled dropdown share one closure.
+#[derive(Clone, Copy)]
+struct Arrows {
+    down: Option<usize>,
+    up: Option<usize>,
+    first: Option<usize>,
+    last: Option<usize>,
+}
+
+fn arrow_targets(enabled: &[usize], active_row: Option<usize>, opened: bool) -> Arrows {
+    let at = active_row.and_then(|row| enabled.iter().position(|row_at| *row_at == row));
+    let step = |delta: isize| {
+        let at = at?.saturating_add_signed(delta);
+        enabled
+            .get(at.min(enabled.len().saturating_sub(1)))
+            .copied()
+    };
+    let first = enabled.first().copied();
+
+    Arrows {
+        // From no highlight, both arrows land on the first row the keyboard
+        // may have - the first press arms the list rather than moving inside
+        // it.
+        down: match (opened, active_row) {
+            (true, Some(_)) => step(1),
+            _ => active_row.or(first),
+        },
+        up: step(-1),
+        first,
+        last: enabled.last().copied(),
+    }
+}
+
+/// The list's one keyboard, shared by the wrapper and the portaled dropdown.
+/// Every field is `Copy`, so the closure that forwards to it is `Copy` too.
+#[derive(Clone, Copy)]
+struct ComboboxKeys {
+    active_row: Option<usize>,
+    arrows: Arrows,
+    set_active: EventHandler<usize>,
+    onopened: EventHandler<bool>,
+    active_pick: Signal<Option<Callback<()>>>,
+    opened: bool,
+    disabled: bool,
+    close_on_pick: bool,
+}
+
+impl ComboboxKeys {
+    fn handle(self, event: KeyboardEvent) {
+        let (opened, active_row) = (self.opened, self.active_row);
+        if self.disabled {
+            return;
+        }
+        let request = |next: bool| self.onopened.call(next);
+        // A list of nothing but disabled rows has nowhere to go, and the
+        // arrows then only open it.
+        let go_to = |row: Option<usize>| {
+            if let Some(row) = row {
+                self.set_active.call(row);
+            }
+            if !opened {
+                request(true);
+            }
+        };
+
+        match event.key() {
+            Key::ArrowDown => {
+                event.prevent_default();
+                go_to(self.arrows.down);
+            }
+            Key::ArrowUp if opened => {
+                event.prevent_default();
+                go_to(self.arrows.up);
+            }
+            Key::Home if opened => {
+                event.prevent_default();
+                go_to(self.arrows.first);
+            }
+            Key::End if opened => {
+                event.prevent_default();
+                go_to(self.arrows.last);
+            }
+            // Nothing highlighted means Enter is not ours: it bubbles, so a
+            // form still submits.
+            Key::Enter if opened && active_row.is_some() => {
+                event.prevent_default();
+                if let Some(pick) = (self.active_pick)() {
+                    pick.call(());
+                }
+                if self.close_on_pick {
+                    request(false);
+                }
+            }
+            Key::Escape if opened => {
+                event.prevent_default();
+                request(false);
+            }
+            Key::Tab if opened => request(false),
+            _ => {}
+        }
+    }
 }

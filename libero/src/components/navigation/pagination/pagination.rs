@@ -7,10 +7,10 @@ use crate::{
             ChevronFirstIcon, ChevronLastIcon, ChevronLeftIcon, ChevronRightIcon, base_color,
             base_props, contrast_color, fill_color,
         },
-        layout::use_box,
+        layout::{BoxStyle, use_box},
         variables,
     },
-    hooks::use_element,
+    hooks::{ElementHandle, use_element},
     platform::ElementApi,
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
@@ -178,9 +178,6 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let labels = theme.pagination_labels;
 
     let list = use_element();
-    // Set when a click is about to disable the control under the pointer, spent
-    // by the effect below. `FileField`'s `FocusDebt` shape.
-    let mut owed_focus = use_signal(|| false);
 
     let size = props.size.copied_or(defaults.size);
     let radius = props.radius.copied_or(defaults.radius);
@@ -216,36 +213,7 @@ pub fn Pagination(props: PaginationProps) -> Element {
     let total = props.total;
     let page = props.page.clamp(1, total.max(1));
 
-    // The repair: the control the user just clicked disables in place, so focus
-    // falls to `<body>` with nothing removed. Spent on the render where `page`
-    // has actually changed, and skipped if focus already went somewhere inside.
-    use_effect(use_reactive!(|(page,)| {
-        // `page` is read only to make it the dependency: the repair has to run
-        // on the render where the control actually disabled, not on the one
-        // where the click happened.
-        let _ = page;
-        // `peek`, not a read. Reading would subscribe this effect to the debt
-        // as well, so setting the flag in the click handler would run the
-        // repair immediately - while the control is still enabled and still
-        // holds focus. It would find focus inside, return early, and clear the
-        // debt; then the caller's `onchange` resolves, the control disables,
-        // and focus falls to the document with nothing left owing.
-        //
-        // That is invisible when `onchange` is synchronous, because both
-        // signals land in one batch, and it is the normal case for the table
-        // pagination this component is mostly for - the caller fetches, then
-        // sets the page. Found by Karen3.
-        if !*owed_focus.peek() {
-            return;
-        }
-        owed_focus.set(false);
-        if list.query_selector(":focus").is_ok() {
-            return;
-        }
-        let _ = list
-            .query_selector("[aria-current=\"page\"]")
-            .and_then(|current| current.focus());
-    }));
+    let owed_focus = use_pagination_focus_repair(list, page);
 
     let states: Input<States> = props
         .states
@@ -395,24 +363,17 @@ pub fn Pagination(props: PaginationProps) -> Element {
                                 PaginationItem::Page(number) => {
                                     let number = *number;
                                     let current = number == page;
-                                    let frame = match current {
-                                        true => control_current.clone(),
-                                        false => control.clone(),
-                                    };
-                                    frame
-                                        .attr("type", "button")
-                                        .attr("aria-label", name(PaginationLabel::Page { number, current }))
-                                        .attr("aria-current", current.then_some("page"))
-                                        .attr("disabled", disabled)
-                                        .event(
-                                            "onclick",
-                                            move |_: Event<MouseData>| {
-                                                if !disabled {
-                                                    go(number, false)
-                                                }
-                                            },
-                                        )
-                                        .render(HtmlTag::Button, vec![], rsx! { "{number}" })
+                                    page_button(
+                                        match current {
+                                            true => control_current.clone(),
+                                            false => control.clone(),
+                                        },
+                                        number,
+                                        name(PaginationLabel::Page { number, current }),
+                                        current,
+                                        disabled,
+                                        go,
+                                    )
                                 }
                             }
                         }
@@ -428,4 +389,67 @@ pub fn Pagination(props: PaginationProps) -> Element {
         );
     nav.attr("aria-label", props.aria_label)
         .render(HtmlTag::Nav, props.attributes, list_element)
+}
+
+/// The focus repair: the control the user just clicked disables in place, so
+/// focus falls to `<body>` with nothing removed. `FileField`'s `FocusDebt`
+/// shape. The returned signal is set by a click that is about to disable its
+/// own control, and spent on the render where `page` has actually changed.
+fn use_pagination_focus_repair(list: ElementHandle, page: u32) -> Signal<bool> {
+    let mut owed_focus = use_signal(|| false);
+
+    // Spent on the render where `page` has actually changed, and skipped if
+    // focus already went somewhere inside.
+    use_effect(use_reactive!(|(page,)| {
+        // `page` is read only to make it the dependency: the repair has to run
+        // on the render where the control actually disabled, not on the one
+        // where the click happened.
+        let _ = page;
+        // `peek`, not a read. Reading would subscribe this effect to the debt
+        // as well, so setting the flag in the click handler would run the
+        // repair immediately - while the control is still enabled and still
+        // holds focus. It would find focus inside, return early, and clear the
+        // debt; then the caller's `onchange` resolves, the control disables,
+        // and focus falls to the document with nothing left owing.
+        //
+        // That is invisible when `onchange` is synchronous, because both
+        // signals land in one batch, and it is the normal case for the table
+        // pagination this component is mostly for - the caller fetches, then
+        // sets the page. Found by Karen3.
+        if !*owed_focus.peek() {
+            return;
+        }
+        owed_focus.set(false);
+        if list.query_selector(":focus").is_ok() {
+            return;
+        }
+        let _ = list
+            .query_selector("[aria-current=\"page\"]")
+            .and_then(|current| current.focus());
+    }));
+
+    owed_focus
+}
+
+/// One page number. `frame` is the prepared box for its state - current or
+/// not - because `use_box` is a hook and cannot run inside the list's loop.
+fn page_button(
+    frame: BoxStyle,
+    number: u32,
+    label: String,
+    current: bool,
+    disabled: bool,
+    go: impl Fn(u32, bool) + 'static,
+) -> Element {
+    frame
+        .attr("type", "button")
+        .attr("aria-label", label)
+        .attr("aria-current", current.then_some("page"))
+        .attr("disabled", disabled)
+        .event("onclick", move |_: Event<MouseData>| {
+            if !disabled {
+                go(number, false)
+            }
+        })
+        .render(HtmlTag::Button, vec![], rsx! { "{number}" })
 }

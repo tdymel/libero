@@ -10,9 +10,9 @@ use crate::{
         },
     },
     hooks::{
-        DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxOpening,
-        LightboxOptions, drag_handle_sx, id_selector, use_drag, use_element, use_id,
-        use_modal_close, use_theme,
+        Drag, DragMove, DragOptions, DragPoint, DragStart, ElementHandle, LightboxItem,
+        LightboxOpening, LightboxOptions, drag_handle_sx, id_selector, use_drag, use_element,
+        use_id, use_modal_close, use_theme,
     },
     platform::{Dimensions, ElementApi},
     sx::{REDUCED_MOTION, StaticSx, sx},
@@ -367,6 +367,366 @@ fn zoom_about(
     });
 }
 
+/// The zoom and the gesture, and the two scales that move them. One `Copy`
+/// argument, so the drag, the keys, the wheel and the double-click all read
+/// the same state.
+#[derive(Clone, Copy)]
+struct Zooming {
+    index: Signal<usize>,
+    zoom: Signal<Zoom>,
+    /// Measured whenever a zoom starts, so a zoomed picture always has bounds
+    /// to pan within - and a key can decide synchronously whether it pans.
+    fit: Signal<Option<Fit>>,
+    gesture: Signal<Option<Gesture>>,
+    max_zoom: f64,
+}
+
+impl Zooming {
+    /// The zoom held for the picture showing, or a fresh fit when the held one
+    /// belongs to another index.
+    fn held(self) -> Zoom {
+        match *self.zoom.peek() {
+            held if held.index == *self.index.peek() => held,
+            _ => Zoom::fitted(*self.index.peek()),
+        }
+    }
+
+    /// Double-click and `z` toggle between fit and [`TOGGLE_ZOOM`].
+    fn toggle_scale(self, scale: f64) -> f64 {
+        match scale > 1.0 {
+            true => 1.0,
+            false => TOGGLE_ZOOM.min(self.max_zoom),
+        }
+    }
+}
+
+/// Everything a picture and a thumbnail read: the zoom, the drag, the ids and
+/// the mover.
+#[derive(Clone, Copy)]
+struct Stage {
+    zooming: Zooming,
+    drag: Drag,
+    stage: ElementHandle,
+    base_id: Signal<String>,
+    /// The element a move sends focus to, read by the effect that focuses it.
+    focus_next: Signal<Option<String>>,
+    current: usize,
+    last: usize,
+    active: Zoom,
+    zoomable: bool,
+    swipe: bool,
+    preload: usize,
+    /// How far a swipe-to-close has travelled down, while one is in progress.
+    swiping: Option<f64>,
+}
+
+impl Stage {
+    /// Moves to picture `target`, and focus with it when focus was on the
+    /// picture - otherwise the keyboard is stranded on a slide scrolled away.
+    fn go(self, target: usize, refocus: bool) {
+        let target = target.min(self.last);
+        let (mut index, mut focus_next) = (self.zooming.index, self.focus_next);
+        if target == *index.peek() {
+            return;
+        }
+        index.set(target);
+        if refocus {
+            focus_next.set(Some(image_id(&(self.base_id)(), target)));
+        }
+    }
+}
+
+/// The pan and the swipe-to-close, on the picture showing. Not on the stage:
+/// pointer capture retargets the click that follows a press
+/// ([[codebase/components/scroller]]), so a double-click on a zoomed picture
+/// would land on the stage, not on the picture's own `ondoubleclick`.
+fn use_lightbox_drag(zooming: Zooming, capture: ElementHandle, close: Callback<()>) -> Drag {
+    let Zooming {
+        mut zoom,
+        fit,
+        mut gesture,
+        ..
+    } = zooming;
+
+    use_drag(DragOptions {
+        capture,
+        onstart: Callback::new(move |_: DragStart| {}),
+        onmove: Callback::new(move |moved: DragMove| {
+            let delta = moved.delta();
+            let held_gesture = *gesture.peek();
+            match held_gesture {
+                Some(Gesture::Pan { origin }) => {
+                    let Some(bounds) = *fit.peek() else {
+                        return;
+                    };
+                    let from = zooming.held();
+                    zoom.set(
+                        Zoom {
+                            x: origin.x + delta.x,
+                            y: origin.y + delta.y,
+                            ..from
+                        }
+                        .clamped(bounds),
+                    );
+                }
+                Some(Gesture::Swipe { .. }) => gesture.set(Some(Gesture::Swipe { delta })),
+                None => {}
+            }
+        }),
+        onend: Callback::new(move |()| {
+            if let Some(Gesture::Swipe { delta }) = *gesture.peek()
+                && swipe_closes(delta)
+            {
+                close.call(());
+            }
+            gesture.set(None);
+        }),
+    })
+}
+
+/// One picture: the pan surface, the tab stop while it is the one showing, and
+/// the four ways it zooms.
+fn lightbox_slide(
+    stage: Stage,
+    i: usize,
+    item: &LightboxItem,
+    image: ElementHandle,
+    described: Option<String>,
+) -> Element {
+    let Stage {
+        zooming,
+        drag,
+        stage: root,
+        base_id,
+        current,
+        last,
+        active,
+        zoomable,
+        swipe,
+        preload,
+        swiping,
+        ..
+    } = stage;
+    let Zooming {
+        index,
+        mut zoom,
+        fit,
+        mut gesture,
+        max_zoom,
+    } = zooming;
+
+    let is_current = i == current;
+    let zoomed = is_current && active.is_zoomed();
+    let image_states: Input<States> = states()
+        .with("zoomable", zoomable && !zoomed)
+        .with("swipe", swipe && !zoomed)
+        .with("zoomed", zoomed)
+        .with("dragging", is_current && gesture().is_some())
+        .into();
+    let transform = match (is_current, swiping) {
+        (false, _) => None,
+        (true, Some(down)) => Some(format!("translateY({down}px)")),
+        (true, None) => active.is_zoomed().then(|| active.transform()),
+    };
+    let image_variables: Input<Variables> = variables().with(LIGHTBOX_TRANSFORM, transform).into();
+    let loading = match i.abs_diff(current) <= preload {
+        true => "eager",
+        false => "lazy",
+    };
+
+    // Keyed by picture, so a gallery swapped in by a second `open_with`
+    // gets new `<img>`s: Chromium fetches a new `src` at once on an
+    // element that has loaded before, whatever `loading` says (todo 227).
+    // `Carousel` keys its slide wrappers by position, so the strip and its
+    // scroll stay put and only what is inside a wrapper is replaced.
+    rsx! {
+        Box { key: "{item.src}", framework_sx: &LIGHTBOX_FRAME_SX, "data-lightbox-frame": i,
+            Box {
+                component: "img",
+                framework_sx: &LIGHTBOX_IMAGE_SX,
+                states: image_states,
+                variables: image_variables,
+                id: image_id(&base_id(), i),
+                src: item.src.clone(),
+                alt: item.alt.clone(),
+                loading,
+                draggable: "false",
+                // The picture is the pan surface, so it takes the keys:
+                // one tab stop, on the one showing.
+                tabindex: zoomable.then_some(if is_current { "0" } else { "-1" }),
+                aria_describedby: if is_current { described.clone() } else { None },
+                onkeydown: move |event: Event<KeyboardData>| {
+                    if !zoomable || i != *index.peek() {
+                        return;
+                    }
+                    let from = zooming.held();
+                    let pan = match event.key() {
+                        Key::ArrowLeft => Some((PAN_STEP, 0.0)),
+                        Key::ArrowRight => Some((-PAN_STEP, 0.0)),
+                        Key::ArrowUp => Some((0.0, PAN_STEP)),
+                        Key::ArrowDown => Some((0.0, -PAN_STEP)),
+                        _ => None,
+                    };
+                    if let Some((dx, dy)) = pan
+                        && from.is_zoomed()
+                        && let Some(bounds) = *fit.peek()
+                    {
+                        let moved = from.panned(dx, dy, bounds);
+                        // Only a pan that moved is a pan. At the edge the
+                        // key falls through to the slide change, so a
+                        // zoomed picture never traps the keyboard - our
+                        // call, not Mantine's, which never falls through.
+                        if moved != from {
+                            event.prevent_default();
+                            zoom.set(moved);
+                            return;
+                        }
+                    }
+                    match event.key() {
+                        Key::ArrowLeft => stage.go(i.saturating_sub(1), true),
+                        Key::ArrowRight => stage.go(i + 1, true),
+                        Key::Home => stage.go(0, true),
+                        Key::End => stage.go(last, true),
+                        Key::Character(ref c)
+                            if c.eq_ignore_ascii_case("z")
+                                && !event.modifiers().ctrl()
+                                && !event.modifiers().meta()
+                                && !event.modifiers().alt() =>
+                        {
+                            zoom_about(root, image, zoom, fit, i, None, move |scale| {
+                                zooming.toggle_scale(scale)
+                            });
+                        }
+                        _ => return,
+                    }
+                    event.prevent_default();
+                },
+                onwheel: move |event: Event<WheelData>| {
+                    if !zoomable || i != *index.peek() {
+                        return;
+                    }
+                    event.prevent_default();
+                    let closer = event.data().delta().strip_units().y > 0.0;
+                    let client = event.client_coordinates();
+                    zoom_about(
+                        root,
+                        image,
+                        zoom,
+                        fit,
+                        i,
+                        Some(DragPoint { x: client.x, y: client.y }),
+                        move |scale| {
+                            match closer {
+                                true => scale / WHEEL_FACTOR,
+                                false => scale * WHEEL_FACTOR,
+                            }
+                            .clamp(1.0, max_zoom)
+                        },
+                    );
+                },
+                ondoubleclick: move |event: Event<MouseData>| {
+                    if !zoomable || i != *index.peek() {
+                        return;
+                    }
+                    let client = event.client_coordinates();
+                    zoom_about(
+                        root,
+                        image,
+                        zoom,
+                        fit,
+                        i,
+                        Some(DragPoint { x: client.x, y: client.y }),
+                        move |scale| zooming.toggle_scale(scale),
+                    );
+                },
+                onmounted: image.mount(),
+                onpointermove: drag.onpointermove,
+                onpointerup: drag.onpointerup,
+                onpointercancel: drag.onpointercancel,
+                onpointerdown: move |event: Event<PointerData>| {
+                    if i != *index.peek() {
+                        return;
+                    }
+                    let from = zooming.held();
+                    let next = match (from.is_zoomed(), event.data().pointer_type() == "mouse") {
+                        (true, _) => Gesture::Pan {
+                            origin: DragPoint { x: from.x, y: from.y },
+                        },
+                        // A mouse has the arrows and Escape; a swipe is a
+                        // touch gesture.
+                        (false, false) if swipe => Gesture::Swipe {
+                            delta: DragPoint { x: 0.0, y: 0.0 },
+                        },
+                        _ => return,
+                    };
+                    gesture.set(Some(next));
+                    drag.onpointerdown.call(event);
+                },
+            }
+            {ring_overlay()}
+        }
+    }
+}
+
+/// The strip under the stage: one roving tab stop for the whole thing, and a
+/// click or an arrow moves the picture without taking the focus off the strip.
+fn lightbox_thumbnails(
+    stage: Stage,
+    items: &[LightboxItem],
+    thumbnail_label: &'static str,
+) -> Vec<Element> {
+    let Stage {
+        base_id,
+        mut focus_next,
+        current,
+        last,
+        ..
+    } = stage;
+    let count = items.len();
+
+    items
+        .iter()
+        .enumerate()
+        .map(|(i, item)| {
+            let is_current = i == current;
+            let thumbnail_states: Input<States> = states().with("current", is_current).into();
+            rsx! {
+                Box {
+                    component: "button",
+                    r#type: "button",
+                    framework_sx: &LIGHTBOX_THUMBNAIL_SX,
+                    states: thumbnail_states,
+                    id: thumbnail_id(&base_id(), i),
+                    aria_label: CarouselDefaults::format_label(thumbnail_label, i, count),
+                    aria_current: is_current.then(|| "true".to_string()),
+                    // Roving: one tab stop for the strip.
+                    tabindex: if is_current { "0" } else { "-1" },
+                    onclick: move |_| stage.go(i, false),
+                    onkeydown: move |event: Event<KeyboardData>| {
+                        let target = match event.key() {
+                            Key::ArrowLeft => i.saturating_sub(1),
+                            Key::ArrowRight => (i + 1).min(last),
+                            Key::Home => 0,
+                            Key::End => last,
+                            _ => return,
+                        };
+                        event.prevent_default();
+                        stage.go(target, false);
+                        focus_next.set(Some(thumbnail_id(&base_id(), target)));
+                    },
+                    Box {
+                        component: "img",
+                        framework_sx: &LIGHTBOX_THUMBNAIL_IMAGE_SX,
+                        src: item.thumbnail_src.clone().unwrap_or_else(|| item.src.clone()),
+                        alt: "",
+                        draggable: "false",
+                    }
+                }
+            }
+        })
+        .collect()
+}
+
 /// The viewer [`crate::hooks::use_lightbox`] opens. Only rendered inside that
 /// hook's modal.
 #[component]
@@ -429,31 +789,23 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         }
     }));
 
-    // Measured whenever a zoom starts, so a zoomed picture always has bounds
-    // to pan within - and a key can decide synchronously whether it pans.
-    let fit = use_signal(|| None::<Fit>);
-    let mut gesture = use_signal(|| None::<Gesture>);
+    let zooming = Zooming {
+        index,
+        zoom,
+        fit: use_signal(|| None::<Fit>),
+        gesture: use_signal(|| None::<Gesture>),
+        max_zoom: options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0),
+    };
 
     // Read either way, so this render stays subscribed to the reset.
     let current = match index() {
         _ if pending => opening.index.min(last),
         settled => settled,
     };
-    let held = move || match *zoom.peek() {
-        held if held.index == *index.peek() => held,
-        _ => Zoom::fitted(*index.peek()),
-    };
     let active = match zoom() {
         held if held.index == current && !pending => held,
         _ => Zoom::fitted(current),
     };
-    let max_zoom = options.max_zoom.unwrap_or(theme.lightbox.max_zoom).max(1.0);
-    let toggle_scale = move |scale: f64| match scale > 1.0 {
-        true => 1.0,
-        false => TOGGLE_ZOOM.min(max_zoom),
-    };
-    let zoomable = options.zoom;
-    let swipe = options.close_on_swipe_down;
 
     // The element a move sends focus to. Focused from an effect, not from the
     // handler: until the render that moves the carousels, the target's slide
@@ -468,27 +820,10 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         }
     });
 
-    // Moves to picture `target`, and focus with it when focus was on the
-    // picture - otherwise the keyboard is stranded on a slide scrolled away.
-    let go = move |target: usize, refocus: bool| {
-        let target = target.min(last);
-        let (mut index, mut focus_next) = (index, focus_next);
-        if target == *index.peek() {
-            return;
-        }
-        index.set(target);
-        if refocus {
-            focus_next.set(Some(image_id(&base_id(), target)));
-        }
-    };
-
-    // One handle per picture, and the drag captures on the one showing. Not on
-    // the stage: pointer capture retargets the click that follows a press
-    // ([[codebase/components/scroller]]), so a double-click on a zoomed
-    // picture would land on the stage, not on the picture's own
-    // `ondoubleclick`. Grown in render,
-    // where a signal may be created, because a later opening can bring more
-    // pictures; a `RefCell`, not a signal, so growing it re-renders nothing.
+    // One handle per picture, and the drag captures on the one showing. Grown
+    // in render, where a signal may be created, because a later opening can
+    // bring more pictures; a `RefCell`, not a signal, so growing it re-renders
+    // nothing.
     let pictures = use_hook(|| Rc::new(RefCell::new(Vec::<ElementHandle>::new())));
     {
         let mut pictures = pictures.borrow_mut();
@@ -498,209 +833,41 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     }
     let picture = |i: usize| pictures.borrow()[i];
 
-    let drag = use_drag(DragOptions {
-        capture: if count > 0 { picture(current) } else { stage },
-        onstart: Callback::new(move |_: DragStart| {}),
-        onmove: Callback::new(move |moved: DragMove| {
-            let delta = moved.delta();
-            let held_gesture = *gesture.peek();
-            match held_gesture {
-                Some(Gesture::Pan { origin }) => {
-                    let Some(bounds) = *fit.peek() else {
-                        return;
-                    };
-                    let from = held();
-                    zoom.set(
-                        Zoom {
-                            x: origin.x + delta.x,
-                            y: origin.y + delta.y,
-                            ..from
-                        }
-                        .clamped(bounds),
-                    );
-                }
-                Some(Gesture::Swipe { .. }) => gesture.set(Some(Gesture::Swipe { delta })),
-                None => {}
-            }
-        }),
-        onend: Callback::new(move |()| {
-            if let Some(Gesture::Swipe { delta }) = *gesture.peek()
-                && swipe_closes(delta)
-            {
-                close.call(());
-            }
-            gesture.set(None);
-        }),
-    });
+    let drag = use_lightbox_drag(
+        zooming,
+        if count > 0 { picture(current) } else { stage },
+        close,
+    );
 
-    let show_captions = options.captions;
-    let caption = items
-        .get(current)
-        .and_then(|item| item.caption.clone())
-        .filter(|_| show_captions);
-    let described = caption.as_ref().map(|_| caption_id());
-
+    let gesture = zooming.gesture;
     let swiping = match gesture() {
         Some(Gesture::Swipe { delta }) => Some(delta.y.max(0.0)),
         _ => None,
     };
-
-    let slide = |i: usize| -> Element {
-        let item = &items[i];
-        let image = picture(i);
-        let is_current = i == current;
-        let zoomed = is_current && active.is_zoomed();
-        let image_states: Input<States> = states()
-            .with("zoomable", zoomable && !zoomed)
-            .with("swipe", swipe && !zoomed)
-            .with("zoomed", zoomed)
-            .with("dragging", is_current && gesture().is_some())
-            .into();
-        let transform = match (is_current, swiping) {
-            (false, _) => None,
-            (true, Some(down)) => Some(format!("translateY({down}px)")),
-            (true, None) => active.is_zoomed().then(|| active.transform()),
-        };
-        let image_variables: Input<Variables> =
-            variables().with(LIGHTBOX_TRANSFORM, transform).into();
-        let loading = match i.abs_diff(current) <= options.preload {
-            true => "eager",
-            false => "lazy",
-        };
-
-        // Keyed by picture, so a gallery swapped in by a second `open_with`
-        // gets new `<img>`s: Chromium fetches a new `src` at once on an
-        // element that has loaded before, whatever `loading` says (todo 227).
-        // `Carousel` keys its slide wrappers by position, so the strip and its
-        // scroll stay put and only what is inside a wrapper is replaced.
-        rsx! {
-            Box { key: "{item.src}", framework_sx: &LIGHTBOX_FRAME_SX, "data-lightbox-frame": i,
-                Box {
-                    component: "img",
-                    framework_sx: &LIGHTBOX_IMAGE_SX,
-                    states: image_states,
-                    variables: image_variables,
-                    id: image_id(&base_id(), i),
-                    src: item.src.clone(),
-                    alt: item.alt.clone(),
-                    loading,
-                    draggable: "false",
-                    // The picture is the pan surface, so it takes the keys:
-                    // one tab stop, on the one showing.
-                    tabindex: zoomable.then_some(if is_current { "0" } else { "-1" }),
-                    aria_describedby: if is_current { described.clone() } else { None },
-                    onkeydown: move |event: Event<KeyboardData>| {
-                        if !zoomable || i != *index.peek() {
-                            return;
-                        }
-                        let from = held();
-                        let pan = match event.key() {
-                            Key::ArrowLeft => Some((PAN_STEP, 0.0)),
-                            Key::ArrowRight => Some((-PAN_STEP, 0.0)),
-                            Key::ArrowUp => Some((0.0, PAN_STEP)),
-                            Key::ArrowDown => Some((0.0, -PAN_STEP)),
-                            _ => None,
-                        };
-                        if let Some((dx, dy)) = pan
-                            && from.is_zoomed()
-                            && let Some(bounds) = *fit.peek()
-                        {
-                            let moved = from.panned(dx, dy, bounds);
-                            // Only a pan that moved is a pan. At the edge the
-                            // key falls through to the slide change, so a
-                            // zoomed picture never traps the keyboard - our
-                            // call, not Mantine's, which never falls through.
-                            if moved != from {
-                                event.prevent_default();
-                                zoom.set(moved);
-                                return;
-                            }
-                        }
-                        match event.key() {
-                            Key::ArrowLeft => go(i.saturating_sub(1), true),
-                            Key::ArrowRight => go(i + 1, true),
-                            Key::Home => go(0, true),
-                            Key::End => go(last, true),
-                            Key::Character(ref c)
-                                if c.eq_ignore_ascii_case("z")
-                                    && !event.modifiers().ctrl()
-                                    && !event.modifiers().meta()
-                                    && !event.modifiers().alt() =>
-                            {
-                                zoom_about(stage, image, zoom, fit, i, None, toggle_scale);
-                            }
-                            _ => return,
-                        }
-                        event.prevent_default();
-                    },
-                    onwheel: move |event: Event<WheelData>| {
-                        if !zoomable || i != *index.peek() {
-                            return;
-                        }
-                        event.prevent_default();
-                        let closer = event.data().delta().strip_units().y > 0.0;
-                        let client = event.client_coordinates();
-                        zoom_about(
-                            stage,
-                            image,
-                            zoom,
-                            fit,
-                            i,
-                            Some(DragPoint { x: client.x, y: client.y }),
-                            move |scale| {
-                                match closer {
-                                    true => scale / WHEEL_FACTOR,
-                                    false => scale * WHEEL_FACTOR,
-                                }
-                                .clamp(1.0, max_zoom)
-                            },
-                        );
-                    },
-                    ondoubleclick: move |event: Event<MouseData>| {
-                        if !zoomable || i != *index.peek() {
-                            return;
-                        }
-                        let client = event.client_coordinates();
-                        zoom_about(
-                            stage,
-                            image,
-                            zoom,
-                            fit,
-                            i,
-                            Some(DragPoint { x: client.x, y: client.y }),
-                            toggle_scale,
-                        );
-                    },
-                    onmounted: image.mount(),
-                    onpointermove: drag.onpointermove,
-                    onpointerup: drag.onpointerup,
-                    onpointercancel: drag.onpointercancel,
-                    onpointerdown: move |event: Event<PointerData>| {
-                        if i != *index.peek() {
-                            return;
-                        }
-                        let from = held();
-                        let next = match (from.is_zoomed(), event.data().pointer_type() == "mouse") {
-                            (true, _) => Gesture::Pan {
-                                origin: DragPoint { x: from.x, y: from.y },
-                            },
-                            // A mouse has the arrows and Escape; a swipe is a
-                            // touch gesture.
-                            (false, false) if swipe => Gesture::Swipe {
-                                delta: DragPoint { x: 0.0, y: 0.0 },
-                            },
-                            _ => return,
-                        };
-                        gesture.set(Some(next));
-                        drag.onpointerdown.call(event);
-                    },
-                }
-                {ring_overlay()}
-            }
-        }
+    let stage_parts = Stage {
+        zooming,
+        drag,
+        stage,
+        base_id,
+        focus_next,
+        current,
+        last,
+        active,
+        zoomable: options.zoom,
+        swipe: options.close_on_swipe_down,
+        preload: options.preload,
+        swiping,
     };
 
-    let slides: Vec<Element> = (0..count).map(slide).collect();
+    let caption = items
+        .get(current)
+        .and_then(|item| item.caption.clone())
+        .filter(|_| options.captions);
+    let described = caption.as_ref().map(|_| caption_id());
+
+    let slides: Vec<Element> = (0..count)
+        .map(|i| lightbox_slide(stage_parts, i, &items[i], picture(i), described.clone()))
+        .collect();
     use_name_warning(
         options.aria_label.is_some(),
         "Lightbox: no `aria_label`, falling back to the theme's. A dialog needs a name of its own to be told apart.",
@@ -734,46 +901,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     let thumbnails_variables: Input<Variables> = variables()
         .with(LIGHTBOX_THUMBNAILS_SHOWN, shown.to_string())
         .into();
-    let thumbnails: Vec<Element> = (0..count)
-        .map(|i| {
-            let item = &items[i];
-            let is_current = i == current;
-            let thumbnail_states: Input<States> = states().with("current", is_current).into();
-            rsx! {
-                Box {
-                    component: "button",
-                    r#type: "button",
-                    framework_sx: &LIGHTBOX_THUMBNAIL_SX,
-                    states: thumbnail_states,
-                    id: thumbnail_id(&base_id(), i),
-                    aria_label: CarouselDefaults::format_label(theme.lightbox.thumbnail_label, i, count),
-                    aria_current: is_current.then(|| "true".to_string()),
-                    // Roving: one tab stop for the strip.
-                    tabindex: if is_current { "0" } else { "-1" },
-                    onclick: move |_| go(i, false),
-                    onkeydown: move |event: Event<KeyboardData>| {
-                        let target = match event.key() {
-                            Key::ArrowLeft => i.saturating_sub(1),
-                            Key::ArrowRight => (i + 1).min(last),
-                            Key::Home => 0,
-                            Key::End => last,
-                            _ => return,
-                        };
-                        event.prevent_default();
-                        go(target, false);
-                        focus_next.set(Some(thumbnail_id(&base_id(), target)));
-                    },
-                    Box {
-                        component: "img",
-                        framework_sx: &LIGHTBOX_THUMBNAIL_IMAGE_SX,
-                        src: item.thumbnail_src.clone().unwrap_or_else(|| item.src.clone()),
-                        alt: "",
-                        draggable: "false",
-                    }
-                }
-            }
-        })
-        .collect();
+    let thumbnails = lightbox_thumbnails(stage_parts, &items, theme.lightbox.thumbnail_label);
     let show_thumbnails = options.thumbnails && count > 1;
 
     rsx! {

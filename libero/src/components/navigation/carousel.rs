@@ -16,7 +16,8 @@ use crate::{
         },
     },
     hooks::{
-        DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id, use_theme,
+        Drag, DragMove, DragOptions, DragStart, ElementHandle, use_drag, use_element, use_id,
+        use_theme,
     },
     platform::{ElementApi, TimerSubscription, arrow_target, key_taken, timer, typing_target},
     sx::{REDUCED_MOTION, StaticSx, Sx, ThemeAwareValue, sx},
@@ -720,34 +721,226 @@ pub fn Carousel(props: CarouselProps) -> Element {
     let indicators = !empty && props.indicators.unwrap_or(theme.carousel.indicators);
     let (first, last) = index_range(count, per_view, align);
 
-    // Two indices, deliberately: `current` follows the scroll frame by frame so
-    // the indicators and the controls feel live, `settled` only moves when the
-    // scroll comes to rest, so the live region does not read every frame.
-    let mut current = use_signal(|| props.index.unwrap_or(0));
-    let mut settled = use_signal(|| props.index.unwrap_or(0));
+    // Read in render, so a slide swap is a dependency of the effect that
+    // applies a controlled index, which then runs even when the swap leaves
+    // the index where it was.
+    let swaps = jump.as_ref().map(CarouselJump::count);
 
-    let mut paused = use_signal(|| false);
-    let mut hovered = use_signal(|| false);
-    let mut focused = use_signal(|| false);
-    let mut subscription = use_signal(|| None::<Box<dyn TimerSubscription>>);
-    let mut dragging = use_signal(|| false);
-    let mut seam = use_signal(|| false);
-    let mut drag_origin = use_signal(|| 0.0_f64);
+    let setup = CarouselSetup {
+        track,
+        count,
+        per_view,
+        orientation,
+        align,
+        first,
+        last,
+        onindexchange: props.onindexchange,
+        controlled: props.index,
+        swaps,
+        r#loop: props.r#loop,
+        autoplay: props.autoplay,
+        autoplay_delay: props
+            .autoplay_delay
+            .unwrap_or(theme.carousel.autoplay_delay),
+        named: props.aria_label.is_some(),
+    };
+    let state = use_carousel_state(setup);
+    let drag = use_carousel_drag(setup, state, props.draggable);
+
+    let view = CarouselView {
+        setup,
+        state,
+        theme: &theme.carousel,
+        track_id,
+        status_id,
+        root: root_handle,
+    };
 
     // A named region beats an unnamed one even when the name is generic, so
-    // the theme's stands in - and the warning still says to do better.
-    use_name_warning(
-        props.aria_label.is_some(),
-        "Carousel: no `aria_label`, falling back to the theme's. A region needs a name of its own to be told apart in a landmark list.",
-    );
+    // the theme's stands in - and `use_carousel_state`'s warning still says to
+    // do better.
     let aria_label = props
         .aria_label
         .clone()
         .unwrap_or_else(|| theme.carousel.label.to_string());
 
+    let nav = state.nav;
+    let settled = nav.settled;
+    let root_states: Input<States> = props
+        .states
+        .clone()
+        .unwrap_or_default()
+        .with(orientation.state_name(), true)
+        .into();
+    let variables: Input<Variables> =
+        carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
+
+    let (position, positions) = snap_position(settled(), count, first, last, nav.clones > 0);
+    let status = CarouselDefaults::format_label(theme.carousel.status_label, position, positions);
+    let running = state.running;
+
+    let root = use_box()
+        .framework_sx(&CAROUSEL_ROOT_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&root_states)
+        .variables(&variables)
+        .prepare()
+        .element(&root_handle)
+        .attr("role", (!empty).then_some("region"))
+        .attr("aria-roledescription", (!empty).then_some("carousel"))
+        .attr("aria-label", (!empty).then(|| aria_label.clone()))
+        .event("onmouseenter", move |_: Event<MouseData>| {
+            let mut hovered = state.hovered;
+            hovered.set(true)
+        })
+        .event("onmouseleave", move |_: Event<MouseData>| {
+            let mut hovered = state.hovered;
+            hovered.set(false)
+        })
+        .event("onfocusin", move |_: Event<FocusData>| {
+            let mut focused = state.focused;
+            focused.set(true)
+        })
+        .event("onfocusout", move |_: Event<FocusData>| {
+            let mut focused = state.focused;
+            focused.set(false)
+        });
+
+    let body = carousel_slides(view, &props.slides, props.slide_label);
+
+    root.render(
+        HtmlTag::Section,
+        props.attributes,
+        rsx! {
+            if !empty {
+                VisuallyHidden {
+                    id: status_id(),
+                    role: "status",
+                    // Off while it rotates on its own: an unattended change is not
+                    // worth interrupting a screen reader for, and it becomes
+                    // `polite` the moment the rotation stops. WCAG 2.2.2.
+                    aria_live: if running { "off" } else { "polite" },
+                    aria_atomic: "true",
+                    "{status}"
+                }
+            }
+            Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
+                {carousel_track(view, aria_label, props.draggable, drag, body)}
+                if controls {
+                    {carousel_controls(view)}
+                }
+            }
+            if props.autoplay && !empty {
+                {carousel_pause_button(view)}
+            }
+            if indicators {
+                {carousel_indicators(view)}
+            }
+        },
+    )
+}
+
+/// Everything `Carousel`'s state hook reads off the props and the theme, in
+/// one reactive argument: an effect keyed on this re-runs when any of it
+/// moves.
+#[derive(Clone, Copy, PartialEq)]
+struct CarouselSetup {
+    track: ScrollAreaHandle,
+    count: usize,
+    per_view: f64,
+    orientation: Orientation,
+    align: CarouselAlign,
+    first: usize,
+    last: usize,
+    onindexchange: Option<EventHandler<usize>>,
+    /// The caller's `index`, when one drives the carousel from outside.
+    controlled: Option<usize>,
+    /// `CarouselJump`'s swap counter, or `None` without a provider.
+    swaps: Option<u64>,
+    r#loop: bool,
+    autoplay: bool,
+    autoplay_delay: u32,
+    /// Whether the caller named the region, for the name warning.
+    named: bool,
+}
+
+/// `Carousel`'s live state: the strip mover and the two indices in `nav`, the
+/// three reasons autoplay pauses, and the drag. Every effect that moves the
+/// strip lives in [`use_carousel_state`], so the component body is left with
+/// rendering.
+#[derive(Clone, Copy)]
+struct CarouselState {
+    nav: Nav,
+    paused: Signal<bool>,
+    hovered: Signal<bool>,
+    focused: Signal<bool>,
+    dragging: Signal<bool>,
+    drag_origin: Signal<f64>,
+    /// The controlled index the effect last applied. Until it runs, a new one
+    /// stands in for `settled` when the slides go `inert` - see `carousel_slides`.
+    applied: Signal<Option<usize>>,
+    /// Autoplay is on and nothing is holding it back.
+    running: bool,
+}
+
+/// One argument for every part of the carousel's chrome: the resolved props,
+/// the live state, the theme block and the ids.
+#[derive(Clone, Copy)]
+struct CarouselView {
+    setup: CarouselSetup,
+    state: CarouselState,
+    theme: &'static CarouselDefaults,
+    track_id: Signal<String>,
+    status_id: Signal<String>,
+    root: ElementHandle,
+}
+
+/// The carousel's own state, and every effect that moves the strip: the
+/// reachable window, the looping strip's opening position, the seam jump, a
+/// controlled `index`, and autoplay.
+fn use_carousel_state(setup: CarouselSetup) -> CarouselState {
+    let CarouselSetup {
+        track,
+        count,
+        per_view,
+        orientation,
+        align,
+        first,
+        last,
+        onindexchange,
+        controlled,
+        swaps,
+        autoplay,
+        autoplay_delay: delay,
+        named,
+        ..
+    } = setup;
+
+    // Two indices, deliberately: `current` follows the scroll frame by frame so
+    // the indicators and the controls feel live, `settled` only moves when the
+    // scroll comes to rest, so the live region does not read every frame.
+    let mut current = use_signal(|| controlled.unwrap_or(0));
+    let mut settled = use_signal(|| controlled.unwrap_or(0));
+
+    let paused = use_signal(|| false);
+    let hovered = use_signal(|| false);
+    let focused = use_signal(|| false);
+    let mut subscription = use_signal(|| None::<Box<dyn TimerSubscription>>);
+    let dragging = use_signal(|| false);
+    let mut seam = use_signal(|| false);
+    let drag_origin = use_signal(|| 0.0_f64);
+
+    // A named region beats an unnamed one even when the name is generic, so
+    // the theme's stands in - and the warning still says to do better.
+    use_name_warning(
+        named,
+        "Carousel: no `aria_label`, falling back to the theme's. A region needs a name of its own to be told apart in a landmark list.",
+    );
+
     // One clone per visible slide at each end, so the strip can scroll a full
     // viewport past either edge before the seam is crossed.
-    let clones = match props.r#loop && count > 1 {
+    let clones = match setup.r#loop && count > 1 {
         true => (per_view.ceil() as usize).min(count),
         false => 0,
     };
@@ -762,7 +955,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         align,
         first,
         last,
-        onindexchange: props.onindexchange,
+        onindexchange,
         clones,
     };
 
@@ -800,14 +993,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // A caller driving `index` from outside. The whole tuple is reactive, so
     // the closure is rebuilt whenever any of it changes rather than capturing
     // the first render's values.
-    let controlled = props.index;
     let mut mounting = use_signal(|| true);
-    // The controlled index this effect last applied. Until it runs, a new one
-    // stands in for `settled` when the slides go `inert` - see `rest` below.
     let mut applied = use_signal(|| None::<usize>);
-    // Read in render, so a swap is a dependency of the effect below, which
-    // runs even when the swap leaves the index where it was.
-    let swaps = jump.as_ref().map(CarouselJump::count);
     let mut swaps_seen = use_signal(|| swaps);
     use_effect(use_reactive!(|controlled, nav, swaps| {
         let Some(index) = controlled else {
@@ -850,10 +1037,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         }
     }));
 
-    let running = props.autoplay && !paused() && !hovered() && !focused() && count > 1;
-    let delay = props
-        .autoplay_delay
-        .unwrap_or(theme.carousel.autoplay_delay);
+    let running = autoplay && !paused() && !hovered() && !focused() && count > 1;
     // The timer's callback runs outside every scope (`TimerApi`), and a move
     // needs one: `scroll_to_index` spawns. So a tick only counts, and the
     // effect below it, which has a scope, does the moving. A `go_to` from the
@@ -898,6 +1082,180 @@ pub fn Carousel(props: CarouselProps) -> Element {
         };
         nav.go_to(next);
     }));
+
+    CarouselState {
+        nav,
+        paused,
+        hovered,
+        focused,
+        dragging,
+        drag_origin,
+        applied,
+        running,
+    }
+}
+
+/// Mouse drag-to-scroll over the track. Deliberately **not** given
+/// `drag_handle_sx()`: that is `touch-action: none`, and it would take away
+/// the native touch swipe that is the whole reason the track is a scroll
+/// container. So a finger scrolls the platform's way and a mouse drags, on
+/// every backend.
+fn use_carousel_drag(setup: CarouselSetup, state: CarouselState, draggable: bool) -> Drag {
+    let track = setup.track;
+    let orientation = setup.orientation;
+    let mut dragging = state.dragging;
+    let mut drag_origin = state.drag_origin;
+
+    use_drag(DragOptions {
+        capture: track.element,
+        onstart: Callback::new(move |start: DragStart| {
+            if !draggable {
+                start.cancel.call(());
+                return;
+            }
+            dragging.set(true);
+            let offset = track.element.scroll_offset();
+            spawn(async move {
+                if let Ok((x, y)) = offset.await {
+                    drag_origin.set(match orientation {
+                        Orientation::Horizontal => x,
+                        Orientation::Vertical => y,
+                    });
+                }
+            });
+        }),
+        onmove: Callback::new(move |moved: DragMove| {
+            let delta = moved.delta();
+            let target = match orientation {
+                Orientation::Horizontal => drag_origin() - delta.x,
+                Orientation::Vertical => drag_origin() - delta.y,
+            }
+            .max(0.0);
+            match orientation {
+                Orientation::Horizontal => track.scroll_to(target, 0.0),
+                Orientation::Vertical => track.scroll_to(0.0, target),
+            }
+        }),
+        // No settle of our own: releasing hands the strip back to the
+        // browser, which snaps and fires `onscrollend`.
+        onend: Callback::new(move |()| dragging.set(false)),
+    })
+}
+
+/// The strip: the tail cloned onto the front, the slides, the head cloned onto
+/// the back, each in its own slide group. Without looping the clones are empty
+/// and this is just the slides.
+fn carousel_slides(
+    view: CarouselView,
+    slides: &[Element],
+    slide_label: Option<Callback<usize, String>>,
+) -> Vec<Element> {
+    let CarouselView {
+        setup,
+        state,
+        theme,
+        ..
+    } = view;
+    let nav = state.nav;
+    let track = setup.track;
+    let count = setup.count;
+    let clones = nav.clones;
+    let current = nav.current;
+    let settled = nav.settled;
+
+    let label_for = move |index: usize| match &slide_label {
+        Some(label) => label.call(index),
+        None => CarouselDefaults::format_label(theme.slide_label, index, count),
+    };
+
+    let mut strip: Vec<(usize, Element, bool)> = Vec::with_capacity(nav.strip_count());
+    for offset in 0..clones {
+        let real = count + offset - clones;
+        strip.push((real, slides[real].clone(), true));
+    }
+    for (index, slide) in slides.iter().enumerate() {
+        strip.push((index, slide.clone(), false));
+    }
+    for (index, slide) in slides.iter().enumerate().take(clones) {
+        strip.push((index, slide.clone(), true));
+    }
+
+    // Where the strip rests, for `inert`: `settled`, never `current`, or the
+    // slides would flip on every scroll frame. A controlled index the effect
+    // has not applied yet counts already, so the slide a caller moves to is
+    // live in the same render - `Lightbox` focuses its picture from an effect
+    // of its own, which may run before ours.
+    let rest = match setup.controlled {
+        Some(index) if Some(index) != *state.applied.peek() => nav.clamp_index(index),
+        _ => settled(),
+    };
+    let rest = nav.raw_for(rest);
+    let strip_len = nav.strip_count();
+
+    strip
+        .into_iter()
+        .enumerate()
+        .map(|(position, (index, slide, is_clone))| {
+            // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one,
+            // and `data-current` below is what a caller actually reads.
+            let slide_states: Input<States> = states().with(setup.align.state_name(), true).into();
+            // Wholly offscreen at rest: out of the Tab order and the reading
+            // order. A press on it still reaches the track (measured).
+            let hidden = outside_viewport(position, rest, strip_len, setup.per_view, setup.align);
+            rsx! {
+                Box {
+                    key: "{position}",
+                    framework_sx: &CAROUSEL_SLIDE_SX,
+                    states: slide_states,
+                    role: if is_clone { None } else { Some("group") },
+                    aria_roledescription: if is_clone { None } else { Some("slide") },
+                    aria_label: if is_clone { None } else { Some(label_for(index)) },
+                    // A clone is the same content twice over, so it is hidden
+                    // rather than announced a second time.
+                    aria_hidden: is_clone.then(|| "true".to_string()),
+                    inert: hidden.then_some(true),
+                    // Focus inside a slide that has just gone `inert` - the
+                    // wheel, a drag, a native arrow on a button, a caller's
+                    // index - is blurred by the browser and lands on `<body>`.
+                    // The track takes it instead: it is what the keyboard
+                    // was on, one level up.
+                    onfocusout: move |_| {
+                        if hidden {
+                            let _ = track.element.focus();
+                        }
+                    },
+                    "data-current": (!is_clone && index == current()).then_some("true"),
+                    {slide}
+                }
+            }
+        })
+        .collect()
+}
+
+/// The scroll container, which is also the carousel's tab stop: the strip, the
+/// two scroll listeners that keep the indices honest, the arrow keys and the
+/// mouse drag.
+fn carousel_track(
+    view: CarouselView,
+    aria_label: String,
+    draggable: bool,
+    drag: Drag,
+    body: Vec<Element>,
+) -> Element {
+    let CarouselView {
+        setup,
+        state,
+        track_id,
+        status_id,
+        ..
+    } = view;
+    let nav = state.nav;
+    let orientation = setup.orientation;
+    let empty = setup.count == 0;
+    let dragging = state.dragging;
+    let mut current = nav.current;
+    let mut settled = nav.settled;
+    let mut seam = nav.seam;
 
     let mut onscroll = move |x: f64, y: f64| {
         let next = nav.real_for(nav.raw_at(x, y));
@@ -946,7 +1304,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
     // of preventing a bubble by structure instead of stopping it.
     //
     // A slide's own focusable content is the case structure cannot separate,
-    // and the two guards below are how it is separated instead. A caller's
+    // and the three guards below are how it is separated instead. A caller's
     // `TextField` inside a slide is not code this component owns and cannot be
     // asked to stop propagating - without them, `prevent_default` here eats
     // caret movement, Home/End and option selection from slide content *and*
@@ -965,30 +1323,8 @@ pub fn Carousel(props: CarouselProps) -> Element {
         if key_taken(&event) || typing_target(&event) || arrow_target(&event) {
             return;
         }
-        let key = event.key();
-        let (previous, next) = match orientation {
-            Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
-            Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
-        };
-        let wraps = nav.clones > 0;
-        let target = match key {
-            key if key == previous => match (wraps, current()) {
-                (true, 0) => count.saturating_sub(1),
-                (_, index) => index.saturating_sub(1).max(first),
-            },
-            key if key == next => match wraps && current() >= count.saturating_sub(1) {
-                true => 0,
-                false => (current() + 1).min(last),
-            },
-            Key::Home => match wraps {
-                true => 0,
-                false => first,
-            },
-            Key::End => match wraps {
-                true => count.saturating_sub(1),
-                false => last,
-            },
-            _ => return,
+        let Some(target) = track_key_target(event.key(), orientation, nav, current()) else {
+            return;
         };
         // Bubble phase is enough: a default action is preventable from any
         // phase, and no slide stops propagation. Without this the native
@@ -997,142 +1333,16 @@ pub fn Carousel(props: CarouselProps) -> Element {
         nav.go_to(target);
     };
 
-    // Mouse drag-to-scroll. Deliberately **not** given `drag_handle_sx()`:
-    // that is `touch-action: none`, and it would take away the native touch
-    // swipe that is the whole reason this is a scroll container. So a finger
-    // scrolls the platform's way and a mouse drags, on every backend.
-    let draggable = props.draggable;
-    let drag = use_drag(DragOptions {
-        capture: track.element,
-        onstart: Callback::new(move |start: DragStart| {
-            if !draggable {
-                start.cancel.call(());
-                return;
-            }
-            dragging.set(true);
-            let offset = track.element.scroll_offset();
-            spawn(async move {
-                if let Ok((x, y)) = offset.await {
-                    drag_origin.set(match orientation {
-                        Orientation::Horizontal => x,
-                        Orientation::Vertical => y,
-                    });
-                }
-            });
-        }),
-        onmove: Callback::new(move |moved: DragMove| {
-            let delta = moved.delta();
-            let target = match orientation {
-                Orientation::Horizontal => drag_origin() - delta.x,
-                Orientation::Vertical => drag_origin() - delta.y,
-            }
-            .max(0.0);
-            match orientation {
-                Orientation::Horizontal => track.scroll_to(target, 0.0),
-                Orientation::Vertical => track.scroll_to(0.0, target),
-            }
-        }),
-        // No settle of our own: releasing hands the strip back to the
-        // browser, which snaps and fires `onscrollend`.
-        onend: Callback::new(move |()| dragging.set(false)),
-    });
-
-    let slide_label = props.slide_label;
-    let label_for = move |index: usize| match &slide_label {
-        Some(label) => label.call(index),
-        None => CarouselDefaults::format_label(theme.carousel.slide_label, index, count),
-    };
-
-    let root_states: Input<States> = props
-        .states
-        .clone()
-        .unwrap_or_default()
-        .with(orientation.state_name(), true)
-        .into();
     let track_states: Input<States> = states()
         .with(orientation.state_name(), true)
         .with("dragging", dragging())
         // The seam jump has to be instant, or the strip visibly rewinds.
         .with("seam", seam())
         .into();
-    let variables: Input<Variables> =
-        carousel_variables(per_view, props.gap.as_ref().copied(), props.height.as_ref()).into();
 
-    let (position, positions) = snap_position(settled(), count, first, last, clones > 0);
-    let status = CarouselDefaults::format_label(theme.carousel.status_label, position, positions);
-
-    // The strip: the tail cloned onto the front, the slides, the head cloned
-    // onto the back. Without looping the clones are empty and this is just the
-    // slides.
-    let strip: Vec<(usize, Element, bool)> = {
-        let slides = &props.slides;
-        let mut strip = Vec::with_capacity(nav.strip_count());
-        for offset in 0..clones {
-            let real = count + offset - clones;
-            strip.push((real, slides[real].clone(), true));
-        }
-        for (index, slide) in slides.iter().enumerate() {
-            strip.push((index, slide.clone(), false));
-        }
-        for (index, slide) in slides.iter().enumerate().take(clones) {
-            strip.push((index, slide.clone(), true));
-        }
-        strip
-    };
-
-    // Where the strip rests, for `inert`: `settled`, never `current`, or the
-    // slides would flip on every scroll frame. A controlled index the effect
-    // has not applied yet counts already, so the slide a caller moves to is
-    // live in the same render - `Lightbox` focuses its picture from an effect
-    // of its own, which may run before ours.
-    let rest = match controlled {
-        Some(index) if Some(index) != *applied.peek() => nav.clamp_index(index),
-        _ => settled(),
-    };
-    let rest = nav.raw_for(rest);
-    let strip_len = nav.strip_count();
-
-    let track_body = strip
-        .into_iter()
-        .enumerate()
-        .map(|(position, (index, slide, is_clone))| {
-            // No `current` token: nothing in `CAROUSEL_SLIDE_SX` styles one,
-            // and `data-current` below is what a caller actually reads.
-            let slide_states: Input<States> = states().with(align.state_name(), true).into();
-            // Wholly offscreen at rest: out of the Tab order and the reading
-            // order. A press on it still reaches the track (measured).
-            let hidden = outside_viewport(position, rest, strip_len, per_view, align);
-            rsx! {
-                Box {
-                    key: "{position}",
-                    framework_sx: &CAROUSEL_SLIDE_SX,
-                    states: slide_states,
-                    role: if is_clone { None } else { Some("group") },
-                    aria_roledescription: if is_clone { None } else { Some("slide") },
-                    aria_label: if is_clone { None } else { Some(label_for(index)) },
-                    // A clone is the same content twice over, so it is hidden
-                    // rather than announced a second time.
-                    aria_hidden: is_clone.then(|| "true".to_string()),
-                    inert: hidden.then_some(true),
-                    // Focus inside a slide that has just gone `inert` - the
-                    // wheel, a drag, a native arrow on a button, a caller's
-                    // index - is blurred by the browser and lands on `<body>`.
-                    // The track takes it instead: it is what the keyboard
-                    // was on, one level up.
-                    onfocusout: move |_| {
-                        if hidden {
-                            let _ = track.element.focus();
-                        }
-                    },
-                    "data-current": (!is_clone && index == current()).then_some("true"),
-                    {slide}
-                }
-            }
-        });
-
-    let track_element = rsx! {
+    rsx! {
         ScrollArea {
-            handle: track,
+            handle: setup.track,
             scrollbars: match orientation {
                 Orientation::Horizontal => "horizontal",
                 Orientation::Vertical => "vertical",
@@ -1167,41 +1377,59 @@ pub fn Carousel(props: CarouselProps) -> Element {
             onpointermove: drag.onpointermove,
             onpointerup: drag.onpointerup,
             onpointercancel: drag.onpointercancel,
-            {track_body}
+            {body.into_iter()}
         }
-    };
+    }
+}
 
-    let root = use_box()
-        .framework_sx(&CAROUSEL_ROOT_SX)
-        .class(&props.class)
-        .sx(&props.sx)
-        .states(&root_states)
-        .variables(&variables)
-        .prepare()
-        .element(&root_handle)
-        .attr("role", (!empty).then_some("region"))
-        .attr("aria-roledescription", (!empty).then_some("carousel"))
-        .attr("aria-label", (!empty).then_some(aria_label))
-        .event("onmouseenter", move |_: Event<MouseData>| hovered.set(true))
-        .event("onmouseleave", move |_: Event<MouseData>| {
-            hovered.set(false)
-        })
-        .event("onfocusin", move |_: Event<FocusData>| focused.set(true))
-        .event("onfocusout", move |_: Event<FocusData>| focused.set(false));
-
-    let track_id_value = track_id();
-    // A looping carousel has no ends, so its controls never disable and its
-    // indicator strip is one dot per real slide rather than one per scroll
-    // position.
-    let looping = clones > 0;
-    let at_start = !looping && current() <= first;
-    let at_end = !looping && current() >= last;
-    // One dot per reachable position, which under a centred or end alignment
-    // does not start at zero.
-    let (low, high) = match looping {
-        true => (0, count.saturating_sub(1)),
-        false => (first, last),
+/// Where an arrow, `Home` or `End` on the track goes; `None` for a key the
+/// carousel does not act on. A looping strip wraps, a plain one clamps to the
+/// reachable window.
+fn track_key_target(key: Key, orientation: Orientation, nav: Nav, current: usize) -> Option<usize> {
+    let (previous, next) = match orientation {
+        Orientation::Horizontal => (Key::ArrowLeft, Key::ArrowRight),
+        Orientation::Vertical => (Key::ArrowUp, Key::ArrowDown),
     };
+    let wraps = nav.clones > 0;
+    let count = nav.count;
+    Some(match key {
+        key if key == previous => match (wraps, current) {
+            (true, 0) => count.saturating_sub(1),
+            (_, index) => index.saturating_sub(1).max(nav.first),
+        },
+        key if key == next => match wraps && current >= count.saturating_sub(1) {
+            true => 0,
+            false => (current + 1).min(nav.last),
+        },
+        Key::Home => match wraps {
+            true => 0,
+            false => nav.first,
+        },
+        Key::End => match wraps {
+            true => count.saturating_sub(1),
+            false => nav.last,
+        },
+        _ => return None,
+    })
+}
+
+/// The previous/next pair, over the viewport. A looping carousel has no ends,
+/// so its controls never disable.
+fn carousel_controls(view: CarouselView) -> Element {
+    let CarouselView {
+        setup,
+        state,
+        theme,
+        track_id,
+        ..
+    } = view;
+    let nav = state.nav;
+    let count = setup.count;
+    let orientation = setup.orientation;
+    let current = nav.current;
+    let looping = nav.clones > 0;
+    let at_start = !looping && current() <= setup.first;
+    let at_end = !looping && current() >= setup.last;
     let control_states = |disabled: bool| -> Input<States> {
         states()
             .with(orientation.state_name(), true)
@@ -1209,131 +1437,162 @@ pub fn Carousel(props: CarouselProps) -> Element {
             .into()
     };
     let strip_states: Input<States> = states().with(orientation.state_name(), true).into();
+    let track_id_value = track_id();
 
-    root.render(HtmlTag::Section, props.attributes, rsx! {
-        if !empty {
-            VisuallyHidden {
-                id: status_id(),
-                role: "status",
-                // Off while it rotates on its own: an unattended change is not
-                // worth interrupting a screen reader for, and it becomes
-                // `polite` the moment the rotation stops. WCAG 2.2.2.
-                aria_live: if running { "off" } else { "polite" },
-                aria_atomic: "true",
-                "{status}"
-            }
-        }
-        Box { framework_sx: &CAROUSEL_VIEWPORT_SX,
-            {track_element}
-            if controls {
-                Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states.clone(),
-                    Box {
-                        component: "button",
-                        r#type: "button",
-                        framework_sx: &CAROUSEL_CONTROL_SX,
-                        states: control_states(at_start),
-                        aria_controls: track_id_value.clone(),
-                        aria_disabled: at_start.to_string(),
-                        aria_label: theme.carousel.previous_label,
-                        onclick: move |_| match (looping, current()) {
-                            (true, 0) => nav.go_to(count.saturating_sub(1)),
-                            (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
-                            _ => {}
-                        },
-                        {match orientation {
-                            Orientation::Horizontal => rsx! { ChevronLeftIcon {} },
-                            Orientation::Vertical => rsx! { ChevronUpIcon {} },
-                        }}
-                    }
-                    Box {
-                        component: "button",
-                        r#type: "button",
-                        framework_sx: &CAROUSEL_CONTROL_SX,
-                        states: control_states(at_end),
-                        aria_controls: track_id_value.clone(),
-                        aria_disabled: at_end.to_string(),
-                        aria_label: theme.carousel.next_label,
-                        onclick: move |_| match looping && current() >= count.saturating_sub(1) {
-                            true => nav.go_to(0),
-                            false if !at_end => nav.go_to(current() + 1),
-                            false => {}
-                        },
-                        {match orientation {
-                            Orientation::Horizontal => rsx! { ChevronRightIcon {} },
-                            Orientation::Vertical => rsx! { ChevronDownIcon {} },
-                        }}
-                    }
-                }
-            }
-        }
-        if props.autoplay && !empty {
+    rsx! {
+        Box { framework_sx: &CAROUSEL_CONTROLS_SX, states: strip_states,
             Box {
                 component: "button",
                 r#type: "button",
-                framework_sx: &CAROUSEL_PAUSE_SX,
-                aria_label: theme.carousel.pause_label,
-                aria_pressed: paused().to_string(),
-                onclick: move |_| paused.toggle(),
-                if paused() {
-                    PlayIcon {}
-                } else {
-                    PauseIcon {}
+                framework_sx: &CAROUSEL_CONTROL_SX,
+                states: control_states(at_start),
+                aria_controls: track_id_value.clone(),
+                aria_disabled: at_start.to_string(),
+                aria_label: theme.previous_label,
+                onclick: move |_| match (looping, current()) {
+                    (true, 0) => nav.go_to(count.saturating_sub(1)),
+                    (_, index) if !at_start => nav.go_to(index.saturating_sub(1)),
+                    _ => {}
+                },
+                {match orientation {
+                    Orientation::Horizontal => rsx! { ChevronLeftIcon {} },
+                    Orientation::Vertical => rsx! { ChevronUpIcon {} },
+                }}
+            }
+            Box {
+                component: "button",
+                r#type: "button",
+                framework_sx: &CAROUSEL_CONTROL_SX,
+                states: control_states(at_end),
+                aria_controls: track_id_value.clone(),
+                aria_disabled: at_end.to_string(),
+                aria_label: theme.next_label,
+                onclick: move |_| match looping && current() >= count.saturating_sub(1) {
+                    true => nav.go_to(0),
+                    false if !at_end => nav.go_to(current() + 1),
+                    false => {}
+                },
+                {match orientation {
+                    Orientation::Horizontal => rsx! { ChevronRightIcon {} },
+                    Orientation::Vertical => rsx! { ChevronDownIcon {} },
+                }}
+            }
+        }
+    }
+}
+
+/// The autoplay toggle. Its name stays the same whether the slideshow runs or
+/// not: `aria-pressed` carries the state.
+fn carousel_pause_button(view: CarouselView) -> Element {
+    let mut paused = view.state.paused;
+    let theme = view.theme;
+
+    rsx! {
+        Box {
+            component: "button",
+            r#type: "button",
+            framework_sx: &CAROUSEL_PAUSE_SX,
+            aria_label: theme.pause_label,
+            aria_pressed: paused().to_string(),
+            onclick: move |_| paused.toggle(),
+            if paused() {
+                PlayIcon {}
+            } else {
+                PauseIcon {}
+            }
+        }
+    }
+}
+
+/// The dot strip: one dot per reachable position, which under a centred or end
+/// alignment does not start at zero. A looping carousel is one dot per real
+/// slide instead.
+fn carousel_indicators(view: CarouselView) -> Element {
+    let CarouselView {
+        setup,
+        state,
+        theme,
+        track_id,
+        root,
+        ..
+    } = view;
+    let nav = state.nav;
+    let count = setup.count;
+    let orientation = setup.orientation;
+    let current = nav.current;
+    let looping = nav.clones > 0;
+    let (low, high) = match looping {
+        true => (0, count.saturating_sub(1)),
+        false => (setup.first, setup.last),
+    };
+    let strip_states: Input<States> = states().with(orientation.state_name(), true).into();
+
+    rsx! {
+        Box { framework_sx: &CAROUSEL_INDICATORS_SX, states: strip_states,
+            for index in low..=high {
+                Box {
+                    key: "{index}",
+                    component: "button",
+                    r#type: "button",
+                    framework_sx: &CAROUSEL_INDICATOR_SX,
+                    states: states()
+                        .with(orientation.state_name(), true)
+                        .with("current", index == current()),
+                    aria_label: CarouselDefaults::format_label(
+                        theme.indicator_label,
+                        index - low,
+                        high - low + 1,
+                    ),
+                    aria_current: (index == current()).then(|| "true".to_string()),
+                    // Roving: one tab stop for the whole strip. The
+                    // arrows move the slide and the focus with it -
+                    // leaving focus on a `tabindex="-1"` dot would
+                    // strand the keyboard there.
+                    id: indicator_id(&track_id(), index),
+                    tabindex: if index == current() { "0" } else { "-1" },
+                    onclick: move |_| nav.go_to(index),
+                    onkeydown: move |event: Event<KeyboardData>| {
+                        let Some(target) = indicator_key_target(event.key(), index, low, high, looping)
+                        else {
+                            return;
+                        };
+                        event.prevent_default();
+                        nav.go_to(target);
+                        focus_indicator(root, &track_id(), target);
+                    },
                 }
             }
         }
-        if indicators {
-            Box { framework_sx: &CAROUSEL_INDICATORS_SX, states: strip_states,
-                for index in low..=high {
-                    Box {
-                        key: "{index}",
-                        component: "button",
-                        r#type: "button",
-                        framework_sx: &CAROUSEL_INDICATOR_SX,
-                        states: states()
-                            .with(orientation.state_name(), true)
-                            .with("current", index == current()),
-                        aria_label: CarouselDefaults::format_label(
-                            theme.carousel.indicator_label,
-                            index - low,
-                            high - low + 1,
-                        ),
-                        aria_current: (index == current()).then(|| "true".to_string()),
-                        // Roving: one tab stop for the whole strip. The
-                        // arrows move the slide and the focus with it -
-                        // leaving focus on a `tabindex="-1"` dot would
-                        // strand the keyboard there.
-                        id: indicator_id(&track_id(), index),
-                        tabindex: if index == current() { "0" } else { "-1" },
-                        onclick: move |_| nav.go_to(index),
-                        onkeydown: move |event: Event<KeyboardData>| {
-                            // Wraps only when the carousel does. Wrapping
-                            // here unconditionally made the same key wrap
-                            // through the dots and clamp through the
-                            // track, so the two disagreed about whether
-                            // this carousel loops.
-                            let target = match event.key() {
-                                Key::ArrowRight | Key::ArrowDown => match index >= high {
-                                    true if looping => low,
-                                    true => high,
-                                    false => index + 1,
-                                },
-                                Key::ArrowLeft | Key::ArrowUp => match index <= low {
-                                    true if looping => high,
-                                    true => low,
-                                    false => index - 1,
-                                },
-                                Key::Home => low,
-                                Key::End => high,
-                                _ => return,
-                            };
-                            event.prevent_default();
-                            nav.go_to(target);
-                            focus_indicator(root_handle, &track_id(), target);
-                        },
-                    }
-                }
-            }
-        }
+    }
+}
+
+/// Where an arrow, `Home` or `End` on a dot goes; `None` for a key the strip
+/// does not act on.
+///
+/// It wraps only when the carousel does. Wrapping here unconditionally made
+/// the same key wrap through the dots and clamp through the track, so the two
+/// disagreed about whether this carousel loops.
+fn indicator_key_target(
+    key: Key,
+    index: usize,
+    low: usize,
+    high: usize,
+    looping: bool,
+) -> Option<usize> {
+    Some(match key {
+        Key::ArrowRight | Key::ArrowDown => match index >= high {
+            true if looping => low,
+            true => high,
+            false => index + 1,
+        },
+        Key::ArrowLeft | Key::ArrowUp => match index <= low {
+            true if looping => high,
+            true => low,
+            false => index - 1,
+        },
+        Key::Home => low,
+        Key::End => high,
+        _ => return None,
     })
 }
 

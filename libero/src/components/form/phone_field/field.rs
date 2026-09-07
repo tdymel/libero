@@ -4,15 +4,16 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        ComboboxCore, ComboboxOption, HtmlTag, Input,
+        ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input,
         common::{ChevronDownIcon, field_props, ring_overlay},
         form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
-        layout::use_box,
+        layout::{BoxStyle, use_box},
         use_combobox,
     },
-    hooks::{PopoverWidth, use_element, use_theme},
+    hooks::{ElementHandle, PopoverWidth, use_element, use_theme},
     platform::ElementApi,
     sx::{StaticSx, sx},
+    theme::Size,
 };
 
 use super::countries::{self, COUNTRIES, Country};
@@ -189,7 +190,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     // shape. It is what the control shows for as long as it still assembles
     // into the E.164 the caller holds - otherwise the caller's value wins,
     // which is what makes the field controlled.
-    let mut text = use_signal(String::new);
+    let text = use_signal(String::new);
     let display = match &current {
         None => text(),
         Some(value) if countries::to_e164(country, &text()) == *value => text(),
@@ -286,44 +287,19 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     // reason: `use_box` is a hook and a row is not a component.
     let row_box = use_box().framework_sx(&ROW_SX).prepare();
 
-    // Nothing is built while the list is closed. 240 rows is a `Vec<Element>`
-    // and 240 name lookups per render, and a closed `ComboboxCore` draws none
-    // of them - which is exactly the cost [[todos]] 29 is about.
     let opened = state.is_open() && !disabled;
-    let needle = query().trim().to_lowercase();
-    let rows: Vec<Element> = match opened {
-        false => Vec::new(),
-        true => offered(&props.countries)
-            .into_iter()
-            .filter(|country| {
-                needle.is_empty()
-                    || name_of(country).to_lowercase().contains(&needle)
-                    || country.iso.to_lowercase().starts_with(&needle)
-                    || country.dial.starts_with(needle.trim_start_matches('+'))
-            })
-            .map(|row| {
-                let name = name_of(row);
-                let drawn = flag.map(|flag| flag.call(row.iso.to_string()));
-                let pick = pick.clone();
-                let content = row_box.clone().render(
-                    HtmlTag::Div,
-                    Vec::new(),
-                    rsx! {
-                        {drawn}
-                        span { "data-slot": "name", "{name}" }
-                        span { "data-slot": "dial", "+{row.dial}" }
-                    },
-                );
-                rsx! {
-                    ComboboxOption {
-                        selected: row.iso == country.iso,
-                        onpick: move |_| pick(row, true),
-                        {content}
-                    }
-                }
-            })
-            .collect(),
-    };
+    let rows = phone_rows(
+        RowList {
+            opened,
+            codes: props.countries.clone(),
+            needle: query().trim().to_lowercase(),
+            country,
+            row_box,
+            flag,
+        },
+        name_of,
+        &pick,
+    );
 
     let picker_box = use_box()
         .framework_sx(&PICKER_SX)
@@ -355,76 +331,39 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .event("onblur", move |_: FocusEvent| state.close())
         .render(HtmlTag::Input, state.a11y_attributes(), ());
 
-    let picker_name = name_of(country);
-    let picker_flag = flag.map(|flag| flag.call(country.iso.to_string()));
-    let picker = picker_box
-        .element(&picker_element)
-        // A button inside a form submits it unless it says otherwise.
-        .attr_default("type", "button")
-        // Two elements cannot both be the combobox: while the list is open the
-        // search box owns the role, `aria-controls` and the active descendant,
-        // and the button keeps only what says a list hangs off it.
-        .attr("aria-haspopup", "listbox")
-        .attr("aria-expanded", state.is_open().to_string())
-        // The content reads `DE +49`, which names a code and not a country.
-        .attr("aria-label", format!("Country: {picker_name}"))
-        .attr("disabled", disabled)
-        // Or clicking the button while the list is open closes it twice over:
-        // the press blurs the search box, which closes the list, and the click
-        // that follows opens it again.
-        .event("onmousedown", move |event: MouseEvent| {
-            event.prevent_default()
-        })
-        .event("onclick", move |_: MouseEvent| {
-            if !disabled && !readonly {
-                state.toggle();
-            }
-        })
-        .render(
-            HtmlTag::Button,
-            Vec::new(),
-            rsx! {
-                {picker_flag}
-                span { "data-slot": "iso", "{country.iso}" }
-                span { "data-slot": "dial", "+{country.dial}" }
-                ChevronDownIcon {}
-            },
-        );
+    let picker = phone_picker(
+        picker_box,
+        PickerButton {
+            element: picker_element,
+            state,
+            country,
+            picker_name: name_of(country),
+            flag,
+            disabled,
+            readonly,
+        },
+    );
 
-    let leading = match props
-        .country_select
-        .unwrap_or(theme.phone_field.country_select)
-    {
-        true => Some(rsx! {
-            ComboboxCore {
-                rows,
-                active: state.active(),
-                onactive: move |row| state.set_active(Some(row)),
-                opened,
-                onopened: move |opened: bool| {
-                    state.set_open(opened);
-                    if !opened {
-                        query.set(String::new());
-                        // Escape, Enter and Tab all close through here, and the
-                        // box that held the focus has just unmounted.
-                        let _ = picker_element.focus();
-                    }
-                },
-                state,
-                size,
-                radius,
-                disabled,
-                width: PopoverWidth::Min,
-                header: opened.then_some(search),
-                autofocus: search_element,
-                {picker}
-                // The picker sits inside the combobox's wrapper, not straight
-                // in the slot, so it brings the ring overlay it needs.
-                {ring_overlay()}
-            }
-        }),
-        false => Some(prefix_box.render(HtmlTag::Span, Vec::new(), rsx! { "+{country.dial}" })),
-    };
+    let leading = phone_leading(
+        props
+            .country_select
+            .unwrap_or(theme.phone_field.country_select),
+        Picker {
+            picker,
+            prefix_box,
+            search,
+            search_element,
+            picker_element,
+            state,
+            query,
+            opened,
+            size,
+            radius,
+            disabled,
+            dial: country.dial,
+        },
+        rows,
+    );
 
     let frame = use_field_frame()
         .leading(&leading)
@@ -437,57 +376,22 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
         .focus_ring(false)
         .prepare();
 
-    let input_emit = emit.clone();
-    let blur_country = country;
-    let input = field
-        .aria(control)
-        .attr_default("type", "tel")
-        .attr_default("inputmode", "tel")
-        // The dial code is the picker's, so the browser should offer the
-        // national part alone.
-        .attr_default("autocomplete", "tel-national")
-        // The hidden input below is what posts - this one holds the text.
-        .attr("value", display)
-        .attr("data-controlled", true)
-        .attr("placeholder", props.placeholder)
-        .attr("disabled", disabled)
-        .attr("readonly", readonly)
-        .attr("required", required)
-        .event("oninput", move |event: FormEvent| {
-            let raw = event.value();
-            if let Some(emit) = &input_emit {
-                emit(countries::to_e164(country, &raw));
-            }
-            text.set(raw);
-        })
-        // Grouped on the way out rather than on every keystroke: regrouping as
-        // the text is typed moves the caret, and `ElementApi` has no
-        // `selection_start` to put it back.
-        .event("onblur", move |_: FocusEvent| {
-            // Only where the plan has a fixed shape. A plan without one has no
-            // grouping to apply, and the bare digits are not an improvement on
-            // what the user typed - blurring a German number used to strip its
-            // spaces, and so did every re-render after it (todo 87b).
-            if let Some(grouped) = countries::group(blur_country, &text())
-                && grouped != text()
-            {
-                text.set(grouped);
-            }
-        })
-        .render(HtmlTag::Input, props.attributes, ());
+    let input = phone_input(
+        field.aria(control),
+        Entry {
+            display,
+            text,
+            country,
+            placeholder: props.placeholder,
+            disabled,
+            readonly,
+            required,
+        },
+        emit.clone(),
+        props.attributes,
+    );
 
-    // The E.164 is what posts. The visible input holds the display text and
-    // would otherwise post that - the `Slider`/`PinField`/`TagsField` shape.
-    let hidden = bound.name().map(str::to_string).map(|name| {
-        rsx! {
-            input {
-                r#type: "hidden",
-                name,
-                value: "{e164}",
-                disabled: disabled.then_some(true),
-            }
-        }
-    });
+    let hidden = phone_hidden(bound.name().map(str::to_string), &e164, disabled);
 
     field.render(rsx! {
         {frame.render(input)}
@@ -520,6 +424,287 @@ pub(crate) fn country_for(value: Option<&str>, picked: &'static Country) -> &'st
         return picked;
     }
     countries::by_dial(&digits).unwrap_or(picked)
+}
+
+/// What the country list is drawn from.
+struct RowList {
+    opened: bool,
+    codes: Option<Vec<String>>,
+    needle: String,
+    country: &'static Country,
+    row_box: BoxStyle,
+    flag: Option<Callback<String, Element>>,
+}
+
+/// The country rows. Nothing is built while the list is closed: 240 rows is a
+/// `Vec<Element>` and 240 name lookups per render, and a closed
+/// `ComboboxCore` draws none of them - which is exactly the cost [[todos]] 29
+/// is about.
+fn phone_rows(
+    list: RowList,
+    name_of: impl Fn(&'static Country) -> String,
+    pick: &Rc<dyn Fn(&'static Country, bool)>,
+) -> Vec<Element> {
+    let RowList {
+        opened,
+        codes,
+        needle,
+        country,
+        row_box,
+        flag,
+    } = list;
+    let codes = &codes;
+    // Nothing is built while the list is closed. 240 rows is a `Vec<Element>`
+    // and 240 name lookups per render, and a closed `ComboboxCore` draws none
+    // of them - which is exactly the cost [[todos]] 29 is about.
+    match opened {
+        false => Vec::new(),
+        true => offered(codes)
+            .into_iter()
+            .filter(|country| {
+                needle.is_empty()
+                    || name_of(country).to_lowercase().contains(&needle)
+                    || country.iso.to_lowercase().starts_with(&needle)
+                    || country.dial.starts_with(needle.trim_start_matches('+'))
+            })
+            .map(|row| {
+                let name = name_of(row);
+                let drawn = flag.map(|flag| flag.call(row.iso.to_string()));
+                let pick = pick.clone();
+                let content = row_box.clone().render(
+                    HtmlTag::Div,
+                    Vec::new(),
+                    rsx! {
+                        {drawn}
+                        span { "data-slot": "name", "{name}" }
+                        span { "data-slot": "dial", "+{row.dial}" }
+                    },
+                );
+                rsx! {
+                    ComboboxOption {
+                        selected: row.iso == country.iso,
+                        onpick: move |_| pick(row, true),
+                        {content}
+                    }
+                }
+            })
+            .collect(),
+    }
+}
+
+/// What the country button shows and what its click toggles.
+struct PickerButton {
+    element: ElementHandle,
+    state: ComboboxState,
+    country: &'static Country,
+    picker_name: String,
+    flag: Option<Callback<String, Element>>,
+    disabled: bool,
+    readonly: bool,
+}
+
+/// The country button in the frame's leading slot: a real `<button>` and a
+/// real tab stop, because it is the only way to reach what it does.
+fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
+    let PickerButton {
+        element,
+        state,
+        country,
+        picker_name,
+        flag,
+        disabled,
+        readonly,
+    } = button;
+    let picker_flag = flag.map(|flag| flag.call(country.iso.to_string()));
+    picker_box
+        .element(&element)
+        // A button inside a form submits it unless it says otherwise.
+        .attr_default("type", "button")
+        // Two elements cannot both be the combobox: while the list is open the
+        // search box owns the role, `aria-controls` and the active descendant,
+        // and the button keeps only what says a list hangs off it.
+        .attr("aria-haspopup", "listbox")
+        .attr("aria-expanded", state.is_open().to_string())
+        // The content reads `DE +49`, which names a code and not a country.
+        .attr("aria-label", format!("Country: {picker_name}"))
+        .attr("disabled", disabled)
+        // Or clicking the button while the list is open closes it twice over:
+        // the press blurs the search box, which closes the list, and the click
+        // that follows opens it again.
+        .event("onmousedown", move |event: MouseEvent| {
+            event.prevent_default()
+        })
+        .event("onclick", move |_: MouseEvent| {
+            if !disabled && !readonly {
+                state.toggle();
+            }
+        })
+        .render(
+            HtmlTag::Button,
+            Vec::new(),
+            rsx! {
+                {picker_flag}
+                span { "data-slot": "iso", "{country.iso}" }
+                span { "data-slot": "dial", "+{country.dial}" }
+                ChevronDownIcon {}
+            },
+        )
+}
+
+/// What the picker needs to be the frame's leading slot: the button, the
+/// search box the open list carries, and the two handles the focus moves
+/// between.
+struct Picker {
+    picker: Element,
+    prefix_box: BoxStyle,
+    search: Element,
+    search_element: ElementHandle,
+    picker_element: ElementHandle,
+    state: ComboboxState,
+    query: Signal<String>,
+    opened: bool,
+    size: Size,
+    radius: Size,
+    disabled: bool,
+    dial: &'static str,
+}
+
+/// The frame's leading slot: the country picker with its list, or - with
+/// `country_select` off - the bare dial code.
+fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option<Element> {
+    let Picker {
+        picker,
+        prefix_box,
+        search,
+        search_element,
+        picker_element,
+        state,
+        mut query,
+        opened,
+        size,
+        radius,
+        disabled,
+        dial,
+    } = parts;
+
+    match with_select {
+        true => Some(rsx! {
+            ComboboxCore {
+                rows,
+                active: state.active(),
+                onactive: move |row| state.set_active(Some(row)),
+                opened,
+                onopened: move |opened: bool| {
+                    state.set_open(opened);
+                    if !opened {
+                        query.set(String::new());
+                        // Escape, Enter and Tab all close through here, and the
+                        // box that held the focus has just unmounted.
+                        let _ = picker_element.focus();
+                    }
+                },
+                state,
+                size,
+                radius,
+                disabled,
+                width: PopoverWidth::Min,
+                header: opened.then_some(search),
+                autofocus: search_element,
+                {picker}
+                // The picker sits inside the combobox's wrapper, not straight
+                // in the slot, so it brings the ring overlay it needs.
+                {ring_overlay()}
+            }
+        }),
+        false => Some(prefix_box.render(HtmlTag::Span, Vec::new(), rsx! { "+{dial}" })),
+    }
+}
+
+/// What the national-number input shows and writes. The text is the
+/// component's edit buffer, not the value.
+struct Entry {
+    display: String,
+    text: Signal<String>,
+    country: &'static Country,
+    placeholder: Option<String>,
+    disabled: bool,
+    readonly: bool,
+    required: bool,
+}
+
+/// The national number. The E.164 posts from the hidden input beside it; this
+/// one only ever holds the text.
+fn phone_input<F: Fn(String) + Clone + 'static>(
+    control: BoxStyle,
+    entry: Entry,
+    emit: Option<F>,
+    attributes: Vec<Attribute>,
+) -> Element {
+    let Entry {
+        display,
+        mut text,
+        country,
+        placeholder,
+        disabled,
+        readonly,
+        required,
+    } = entry;
+
+    let input_emit = emit;
+    let blur_country = country;
+    control
+        .attr_default("type", "tel")
+        .attr_default("inputmode", "tel")
+        // The dial code is the picker's, so the browser should offer the
+        // national part alone.
+        .attr_default("autocomplete", "tel-national")
+        // The hidden input below is what posts - this one holds the text.
+        .attr("value", display)
+        .attr("data-controlled", true)
+        .attr("placeholder", placeholder)
+        .attr("disabled", disabled)
+        .attr("readonly", readonly)
+        .attr("required", required)
+        .event("oninput", move |event: FormEvent| {
+            let raw = event.value();
+            if let Some(emit) = &input_emit {
+                emit(countries::to_e164(country, &raw));
+            }
+            text.set(raw);
+        })
+        // Grouped on the way out rather than on every keystroke: regrouping as
+        // the text is typed moves the caret, and `ElementApi` has no
+        // `selection_start` to put it back.
+        .event("onblur", move |_: FocusEvent| {
+            // Only where the plan has a fixed shape. A plan without one has no
+            // grouping to apply, and the bare digits are not an improvement on
+            // what the user typed - blurring a German number used to strip its
+            // spaces, and so did every re-render after it (todo 87b).
+            if let Some(grouped) = countries::group(blur_country, &text())
+                && grouped != text()
+            {
+                text.set(grouped);
+            }
+        })
+        .render(HtmlTag::Input, attributes, ())
+}
+
+/// The E.164 is what posts. The visible input holds the display text and would
+/// otherwise post that - the `Slider`/`PinField`/`TagsField` shape.
+fn phone_hidden(name: Option<String>, e164: &str, disabled: bool) -> Option<Element> {
+    let e164 = e164.to_string();
+    // The E.164 is what posts. The visible input holds the display text and
+    // would otherwise post that - the `Slider`/`PinField`/`TagsField` shape.
+    name.map(|name| {
+        rsx! {
+            input {
+                r#type: "hidden",
+                name,
+                value: "{e164}",
+                disabled: disabled.then_some(true),
+            }
+        }
+    })
 }
 
 #[cfg(test)]

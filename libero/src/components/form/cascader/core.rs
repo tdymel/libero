@@ -13,8 +13,8 @@ use crate::{
         layout::{BoxStyle, ScrollArea, use_box},
     },
     hooks::{
-        ElementHandle, PopoverOptions, PopoverWidth, use_element, use_field_list_layer,
-        use_popover, use_theme,
+        ElementHandle, PopoverHandle, PopoverOptions, PopoverWidth, use_element,
+        use_field_list_layer, use_popover, use_theme,
     },
     platform::ElementApi,
     str_enum::str_enum,
@@ -393,82 +393,40 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
         size,
         radius,
     };
-    let max_height = theme.combobox.max_dropdown_height;
-    // The strip of columns, which scrolls sideways once the viewport holds
-    // the dropdown narrower than them. The cursor always sits in the last
-    // column, so each new column is scrolled into view as it opens - by
-    // pointer or by the arrows, which would otherwise move into a column no
-    // one can see.
-    let strip = use_element();
-    let depth = cursor_now.len();
-    use_effect(use_reactive!(|depth| {
-        let _ = depth;
-        // Read, not branched on: it subscribes the effect to every reopen,
-        // which mounts a new strip at the same handle.
-        if strip.mount_token().is_some() {
-            // Past the end on purpose: the browser clamps it to the range.
-            let _ = strip.scroll_to(f64::from(u32::MAX), 0.0);
-        }
-    }));
-    let columns = use_box()
-        .framework_sx(&CASCADER_COLUMNS_SX)
-        .prepare()
-        .element(&strip);
-    let body = match layout {
-        CascaderLayout::Columns => rows.columns(
-            columns,
-            &listbox_id,
-            field.label_id(),
-            &props.column_width,
-            max_height,
-        ),
-        CascaderLayout::Paths => rows.paths(
-            &visible,
+    let body = use_cascader_body(
+        rows,
+        Body {
+            layout,
+            depth: cursor_now.len(),
+            visible: visible.clone(),
             path_row,
-            &listbox_id,
-            field.label_id(),
-            max_height,
-        ),
-    };
-
-    // ---- the dropdown -------------------------------------------------
-    // On the Escape stack exactly while the key handler would take
-    // Escape, so a `HoverCard` around this field leaves the press to it.
-    use_field_list_layer(opened);
-    let anchor = use_element();
-    // The box changes shape while it is open: a column appears, and a query
-    // shortens the list.
-    let remeasure = (cursor_now.len() * 4096 + visible.len()) as u64;
-    let popover = use_popover(
-        anchor,
-        opened,
-        PopoverOptions::new(theme.popover.gap, theme.popover.padding)
-            // The columns are the content and are wider than the trigger, so
-            // the box must not be clipped to it. A `Paths` row is a whole
-            // joined path, which is long for the same reason.
-            .width(PopoverWidth::Min)
-            .remeasure(remeasure),
+            listbox_id: listbox_id.clone(),
+            label_id: field.label_id(),
+            column_width: props.column_width.clone(),
+            max_height: theme.combobox.max_dropdown_height,
+        },
     );
 
-    let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
-    let wrapper = use_box().prepare();
-    let dropdown_states: Input<States> = States::new()
-        .with(size.state_name(), true)
-        .with(radius.radius_state_name(), true)
-        .with("bordered", true)
-        .with(layout.state_name(), true)
-        .into();
-    let dropdown = use_box()
-        // Held inside the viewport by `use_popover`'s own cap: three columns
-        // side by side are wider than a phone, and a fixed box that runs off
-        // the right edge cannot be scrolled to - the columns scroll inside it
-        // instead.
-        .framework_sx(&COMBOBOX_DROPDOWN_SX)
-        .states(&dropdown_states)
-        .style(popover.style())
-        .prepare();
-
-    use_focus_search(opened, searchable, popover.placed(), search);
+    // ---- the dropdown -------------------------------------------------
+    let Dropdown {
+        anchor,
+        popover,
+        search_box,
+        wrapper,
+        dropdown,
+    } = use_cascader_dropdown(DropdownSetup {
+        opened,
+        searchable,
+        search,
+        size,
+        radius,
+        layout,
+        // The box changes shape while it is open: a column appears, and a
+        // query shortens the list.
+        remeasure: (cursor_now.len() * 4096 + visible.len()) as u64,
+        gap: theme.popover.gap,
+        padding: theme.popover.padding,
+    });
 
     let descendant = active_descendant(&id, layout, &cursor_now, path_row);
     let header = searchable.then(|| {
@@ -501,45 +459,27 @@ pub(crate) fn CascaderCore(props: CascaderCoreProps) -> Element {
     }));
 
     // ---- the trigger --------------------------------------------------
-    let mut attributes = trigger_aria(searchable, opened, &controlled_id, descendant);
-    attributes.extend(props.attributes);
-
-    let value_slot = value_slot(&props.display, props.placeholder.as_deref());
-
-    let toggle = open.clone();
-    let trigger = field
-        .aria(control)
-        .element(&trigger_element)
-        .attr("aria-labelledby", field.label_id())
-        .attr("aria-disabled", disabled.then_some("true"))
-        .attr("aria-readonly", readonly.then_some("true"))
-        .attr("tabindex", (!disabled).then_some("0"))
-        .event("onclick", move |_: MouseEvent| {
-            if !disabled && !readonly {
-                toggle(!state.is_open());
-            }
-        })
-        // While searchable the focus moves into the search box, so closing on
-        // the trigger's blur would shut the list before a key could land.
-        .event("onblur", move |_: FocusEvent| {
-            if !searchable {
-                state.close();
-            }
-        })
-        // On the trigger, not on a wrapper around the frame: the frame also
-        // holds the x, and a wrapper would take its Enter and Space to open
-        // the list instead of letting the button clear.
-        .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
-        .render(
-            HtmlTag::Div,
-            attributes,
-            rsx! {
-                {value_slot}
-                if clear.is_none() {
-                    ChevronDownIcon {}
-                }
-            },
-        );
+    let trigger = cascader_trigger(
+        field
+            .aria(control)
+            .attr("aria-labelledby", field.label_id()),
+        Trigger {
+            element: trigger_element,
+            state,
+            open: open.clone(),
+            keys,
+            disabled,
+            readonly,
+            searchable,
+            chevron: clear.is_none(),
+            display: props.display.clone(),
+            placeholder: props.placeholder.clone(),
+            controlled_id,
+            descendant,
+        },
+        opened,
+        props.attributes,
+    );
 
     let hidden = hidden_input(props.name.clone(), props.form_value.clone(), disabled);
 
@@ -1225,6 +1165,222 @@ fn active_descendant(
             let (last, parents) = cursor.split_last()?;
             Some(option_id(id, parents.len(), *last))
         }
+    }
+}
+
+/// What the dropdown is built from: the open state, the two things that change
+/// its shape, and the chrome tokens its box carries.
+struct DropdownSetup {
+    opened: bool,
+    searchable: bool,
+    search: ElementHandle,
+    size: Size,
+    radius: Size,
+    layout: CascaderLayout,
+    remeasure: u64,
+    gap: f64,
+    padding: f64,
+}
+
+/// The dropdown's own plumbing: the Escape layer, the popover, and the three
+/// prepared boxes it draws with.
+struct Dropdown {
+    anchor: ElementHandle,
+    popover: PopoverHandle,
+    search_box: BoxStyle,
+    wrapper: BoxStyle,
+    dropdown: BoxStyle,
+}
+
+fn use_cascader_dropdown(setup: DropdownSetup) -> Dropdown {
+    let DropdownSetup {
+        opened,
+        searchable,
+        search,
+        size,
+        radius,
+        layout,
+        remeasure,
+        gap,
+        padding,
+    } = setup;
+
+    // On the Escape stack exactly while the key handler would take
+    // Escape, so a `HoverCard` around this field leaves the press to it.
+    use_field_list_layer(opened);
+    let anchor = use_element();
+    let popover = use_popover(
+        anchor,
+        opened,
+        PopoverOptions::new(gap, padding)
+            // The columns are the content and are wider than the trigger, so
+            // the box must not be clipped to it. A `Paths` row is a whole
+            // joined path, which is long for the same reason.
+            .width(PopoverWidth::Min)
+            .remeasure(remeasure),
+    );
+
+    let search_box = use_box().framework_sx(&CASCADER_SEARCH_SX).prepare();
+    let wrapper = use_box().prepare();
+    let dropdown_states: Input<States> = States::new()
+        .with(size.state_name(), true)
+        .with(radius.radius_state_name(), true)
+        .with("bordered", true)
+        .with(layout.state_name(), true)
+        .into();
+    let dropdown = use_box()
+        // Held inside the viewport by `use_popover`'s own cap: three columns
+        // side by side are wider than a phone, and a fixed box that runs off
+        // the right edge cannot be scrolled to - the columns scroll inside it
+        // instead.
+        .framework_sx(&COMBOBOX_DROPDOWN_SX)
+        .states(&dropdown_states)
+        .style(popover.style())
+        .prepare();
+
+    use_focus_search(opened, searchable, popover.placed(), search);
+
+    Dropdown {
+        anchor,
+        popover,
+        search_box,
+        wrapper,
+        dropdown,
+    }
+}
+
+/// What the trigger draws and what its one keyboard moves.
+struct Trigger {
+    element: ElementHandle,
+    state: ComboboxState,
+    open: Rc<dyn Fn(bool)>,
+    keys: Rc<CascaderKeys>,
+    disabled: bool,
+    readonly: bool,
+    searchable: bool,
+    /// The trigger draws its own chevron: nothing to clear.
+    chevron: bool,
+    display: String,
+    placeholder: Option<String>,
+    controlled_id: String,
+    descendant: Option<String>,
+}
+
+/// The trigger: the frame's control, and the one element that is a tab stop.
+fn cascader_trigger(
+    control: BoxStyle,
+    parts: Trigger,
+    opened: bool,
+    extra: Vec<Attribute>,
+) -> Element {
+    let Trigger {
+        element,
+        state,
+        open,
+        keys,
+        disabled,
+        readonly,
+        searchable,
+        chevron,
+        display,
+        placeholder,
+        controlled_id,
+        descendant,
+    } = parts;
+
+    let mut attributes = trigger_aria(searchable, opened, &controlled_id, descendant);
+    attributes.extend(extra);
+
+    let value_slot = value_slot(&display, placeholder.as_deref());
+
+    let toggle = open;
+    control
+        .element(&element)
+        .attr("aria-disabled", disabled.then_some("true"))
+        .attr("aria-readonly", readonly.then_some("true"))
+        .attr("tabindex", (!disabled).then_some("0"))
+        .event("onclick", move |_: MouseEvent| {
+            if !disabled && !readonly {
+                toggle(!state.is_open());
+            }
+        })
+        // While searchable the focus moves into the search box, so closing on
+        // the trigger's blur would shut the list before a key could land.
+        .event("onblur", move |_: FocusEvent| {
+            if !searchable {
+                state.close();
+            }
+        })
+        // On the trigger, not on a wrapper around the frame: the frame also
+        // holds the x, and a wrapper would take its Enter and Space to open
+        // the list instead of letting the button clear.
+        .event("onkeydown", move |event: KeyboardEvent| keys.handle(event))
+        .render(
+            HtmlTag::Div,
+            attributes,
+            rsx! {
+                {value_slot}
+                if chevron {
+                    ChevronDownIcon {}
+                }
+            },
+        )
+}
+
+/// What the open tree is drawn from, beside the rows themselves.
+struct Body {
+    layout: CascaderLayout,
+    /// How deep the cursor is, which is how many columns are open.
+    depth: usize,
+    visible: Rc<Vec<FlatPath>>,
+    path_row: Option<usize>,
+    listbox_id: String,
+    label_id: Option<String>,
+    column_width: String,
+    max_height: &'static str,
+}
+
+/// The tree itself: a strip of columns, or the flat list of paths.
+fn use_cascader_body(rows: CascaderRows, parts: Body) -> Element {
+    let Body {
+        layout,
+        depth,
+        visible,
+        path_row,
+        listbox_id,
+        label_id,
+        column_width,
+        max_height,
+    } = parts;
+
+    // The strip of columns, which scrolls sideways once the viewport holds
+    // the dropdown narrower than them. The cursor always sits in the last
+    // column, so each new column is scrolled into view as it opens - by
+    // pointer or by the arrows, which would otherwise move into a column no
+    // one can see.
+    let strip = use_element();
+    use_effect(use_reactive!(|depth| {
+        let _ = depth;
+        // Read, not branched on: it subscribes the effect to every reopen,
+        // which mounts a new strip at the same handle.
+        if strip.mount_token().is_some() {
+            // Past the end on purpose: the browser clamps it to the range.
+            let _ = strip.scroll_to(f64::from(u32::MAX), 0.0);
+        }
+    }));
+    let columns = use_box()
+        .framework_sx(&CASCADER_COLUMNS_SX)
+        .prepare()
+        .element(&strip);
+    match layout {
+        CascaderLayout::Columns => rows.columns(
+            columns,
+            &listbox_id,
+            label_id.clone(),
+            &column_width,
+            max_height,
+        ),
+        CascaderLayout::Paths => rows.paths(&visible, path_row, &listbox_id, label_id, max_height),
     }
 }
 

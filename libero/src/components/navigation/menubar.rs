@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, States,
-        common::{base_props, inset_focus_ring_sx},
+        common::{base_props, has_shortcut_modifier, inset_focus_ring_sx},
         layout::use_box,
     },
     hooks::{
@@ -387,13 +387,6 @@ pub fn Menubar(props: MenubarProps) -> Element {
         .attr("aria-orientation", "horizontal")
         .attr("aria-label", props.aria_label.clone())
         .render(HtmlTag::Div, props.attributes, columns)
-}
-
-// Shift is part of ordinary typing; the rest mark a browser or OS shortcut.
-// `Menu`'s rule.
-fn has_shortcut_modifier(event: &KeyboardEvent) -> bool {
-    let modifiers = event.modifiers();
-    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
 }
 
 /// The trigger after (or before) `from` in a row of `len`, or `None` at an end
