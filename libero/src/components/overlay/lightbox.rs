@@ -392,9 +392,14 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
     // and cannot be taken back (todo 227).
     let pending = settled.borrow().0 != opening;
     // The swap's own move is instant: a smooth scroll back from the old index
-    // would pass over new pictures that are not shown, and fetch them.
+    // would pass over new pictures that are not shown, and fetch them. Counted
+    // once per gallery, not once per pending render: a second count for the
+    // same gallery would still be unread when the user's next move arrives,
+    // and that move would jump as well.
     let jump = use_context_provider(CarouselJump::default);
-    if pending {
+    let counted = use_hook(|| Rc::new(RefCell::new(opening.clone())));
+    if pending && *counted.borrow() != opening {
+        *counted.borrow_mut() = opening.clone();
         jump.swapped();
     }
     if pending {

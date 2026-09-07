@@ -461,6 +461,14 @@ impl CarouselJump {
     }
 }
 
+/// Whether a swap has arrived since the last time this was asked, and mark it
+/// as read. Reading it is what consumes it: a count that stayed unread would
+/// make every later controlled move instant too, and the carousel would have
+/// lost its animation for good.
+fn consume_swap(seen: &mut Option<u64>, swaps: Option<u64>) -> bool {
+    swaps != std::mem::replace(seen, swaps)
+}
+
 /// Scrolls the track so `index` is the snapped slide. The offset is a share of
 /// the range, so it goes over as a percent and `ScrollArea` measures the range.
 fn scroll_to_index(
@@ -847,7 +855,7 @@ pub fn Carousel(props: CarouselProps) -> Element {
         // that puts it in the DOM - the effect that reads it - and the settle
         // on a real slide lowers it again.
         let first_scroll = std::mem::replace(&mut *mounting.write(), false);
-        let swapped = swaps != std::mem::replace(&mut *swaps_seen.write(), swaps);
+        let swapped = consume_swap(&mut swaps_seen.write(), swaps);
         match instant_scroll(first_scroll, swapped, nav.clones, index, from, nav.first) {
             true => seam.set(true),
             false => nav.scroll_to_raw(nav.raw_for(index)),
@@ -1744,6 +1752,30 @@ mod tests {
         assert!(!instant_scroll(true, false, 0, 0, 0, 0));
         assert!(!instant_scroll(true, false, 0, 2, 2, 2));
         assert!(!instant_scroll(true, false, 2, 5, 0, 0));
+    }
+
+    /// Todo 367: a swap counts once. The second read of the same count is no
+    /// swap, or every later controlled move would take the instant path.
+    #[test]
+    fn a_swap_is_consumed_by_the_first_read() {
+        let mut seen = Some(0);
+
+        assert!(!consume_swap(&mut seen, Some(0)));
+        assert!(consume_swap(&mut seen, Some(1)));
+        assert!(!consume_swap(&mut seen, Some(1)));
+        assert!(!consume_swap(&mut seen, Some(1)));
+        assert!(consume_swap(&mut seen, Some(2)));
+        assert!(!consume_swap(&mut seen, Some(2)));
+    }
+
+    /// No provider, no swaps: a plain carousel never takes the instant path
+    /// through this door.
+    #[test]
+    fn without_a_provider_nothing_is_a_swap() {
+        let mut seen = None;
+
+        assert!(!consume_swap(&mut seen, None));
+        assert!(!consume_swap(&mut seen, None));
     }
 
     /// Todo 323: a move that arrives with a swap of the slides is instant

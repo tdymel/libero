@@ -355,5 +355,6 @@ async fn gallery_swap(page: &Page, viewport: Viewport) -> Result<()> {
             "the swap to index 2 fetched the second gallery's pictures {fetched:?}; expected [1, 2, 3], and never 5"
         );
     }
+
     Ok(())
 }

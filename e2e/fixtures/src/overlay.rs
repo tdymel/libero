@@ -94,6 +94,11 @@ pub fn SpotlightPage() -> Element {
         actions: Some(Callback::new(move |query: String| {
             spotlight_filter(&query, &all)
         })),
+        // Named, or every open logs the missing-name warning and the console
+        // pass fails.
+        // The theme's own name, so the fixture reads as a caller doing it
+        // right rather than renaming the component.
+        aria_label: Some("Command palette".into()),
         ..Default::default()
     });
 
@@ -142,7 +147,13 @@ fn gallery(name: &str) -> Vec<LightboxItem> {
 /// the viewer is open (todo 323), which no control inside the viewer makes.
 #[component]
 pub fn LightboxPage() -> Element {
-    let lightbox = use_lightbox(LightboxOptions::default());
+    let lightbox = use_lightbox(LightboxOptions {
+        // Named, or every open logs the missing-name warning and the console
+        // pass fails. The theme's own name, so the fixture reads as a caller
+        // doing it right rather than renaming the component.
+        aria_label: Some("Gallery".into()),
+        ..LightboxOptions::default()
+    });
 
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
