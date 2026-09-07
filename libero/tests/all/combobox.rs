@@ -11,7 +11,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Button, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, use_combobox,
+        Button, Combobox, ComboboxOption, ComboboxOptionArgs, ComboboxState, OptionList,
+        use_combobox,
     },
     theme::{ComboboxDefaults, ComboboxLabels, Theme},
 };
@@ -41,8 +42,9 @@ fn App() -> Element {
         LiberoProvider {
             Combobox {
                 state: fruit,
-                options: options(),
-                loading: loading(),
+                // `None` is the pending list - the shape a `Resource` that
+                // has not answered yet converts into.
+                options: (!loading()).then(|| OptionList::from(options())),
                 option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
                     ComboboxOption { onpick: move |_| {}, "{o.value}" }
                 },
@@ -210,8 +212,7 @@ fn Loading(label: Option<String>) -> Element {
     rsx! {
         Combobox {
             state: fruit,
-            options: Vec::<&'static str>::new(),
-            loading: true,
+            options: None::<OptionList<&'static str>>,
             loading_label: label,
             option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
                 ComboboxOption { onpick: move |_| {}, "{o.value}" }
@@ -571,5 +572,162 @@ mod combobox_highlight {
             row_of(&html, 1).contains(&button["aria-activedescendant"]),
             "the trigger names a row other than the active one"
         );
+    }
+}
+
+/// Groups, per-option `disabled` and the pending list, which all arrive
+/// through the one `options` prop.
+///
+/// The list is open from the first render, so SSR sees the rows.
+mod option_list {
+    use super::*;
+    use libero::components::{OptionItem, OptionList};
+
+    /// An open list over `options`, rendered once.
+    fn html(options: fn() -> Option<OptionList<&'static str>>) -> String {
+        #[component]
+        fn App(options: Option<OptionList<&'static str>>) -> Element {
+            let fruit = use_combobox();
+            use_hook(|| fruit.open());
+            rsx! {
+                LiberoProvider {
+                    Combobox {
+                        state: fruit,
+                        options,
+                        option: move |o: ComboboxOptionArgs<&'static str>| rsx! {
+                            ComboboxOption { onpick: move |_| {}, "{o.value}" }
+                        },
+                        empty: rsx! { "No fruit" },
+                        Button { attributes: fruit.a11y_attributes(), "pick" }
+                    }
+                }
+            }
+        }
+
+        let options = options();
+        let mut dom = VirtualDom::new_with_props(App, AppProps { options });
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        body(&dioxus_ssr::render(&dom))
+    }
+
+    /// Each named run is its own `role="group"`, named by a heading that is
+    /// `role="presentation"` - the group's `aria-labelledby` already speaks it,
+    /// so as an element of its own it would be read twice.
+    #[test]
+    fn a_named_run_is_a_group_that_its_heading_names() {
+        let html = html(|| {
+            Some(
+                OptionList::grouped()
+                    .group("Pome", ["apple"])
+                    .group("Berry", ["grape", "fig"]),
+            )
+        });
+
+        assert_eq!(html.matches(r#"role="group""#).count(), 2, "{html}");
+        assert_eq!(html.matches(r#"role="presentation""#).count(), 2, "{html}");
+
+        // Every `aria-labelledby` inside the list has to name exactly one
+        // element, or the group is left unnamed. The ids are keyed on the
+        // group's first row, so they differ.
+        let named: Vec<String> = html
+            .split(r#"aria-labelledby=""#)
+            .skip(1)
+            .map(|rest| rest.split('"').next().unwrap().to_string())
+            .filter(|id| id.contains("-group-"))
+            .collect();
+        assert_eq!(named.len(), 2, "{html}");
+        assert_ne!(named[0], named[1], "both groups share one heading id");
+        for id in &named {
+            assert_eq!(
+                html.matches(&format!(r#"id="{id}""#)).count(),
+                1,
+                "{id} names no element, or more than one:\n{html}"
+            );
+        }
+        assert!(html.contains(">Pome<"), "{html}");
+        assert!(html.contains(">Berry<"), "{html}");
+    }
+
+    /// A label that comes back after another group is drawn twice rather than
+    /// merged, so the caller's order survives. The two headings carry
+    /// different ids - nothing requires a `role="group"` to be uniquely named,
+    /// but two elements may never share an id.
+    #[test]
+    fn a_repeated_group_label_is_drawn_twice_in_the_callers_order() {
+        let html = html(|| {
+            Some(
+                OptionList::grouped()
+                    .group("Pome", ["apple"])
+                    .group("Berry", ["grape"])
+                    .group("Pome", ["pear"]),
+            )
+        });
+
+        assert_eq!(html.matches(r#"role="group""#).count(), 3, "{html}");
+        // The rows are in the order they were listed, not regrouped.
+        let order: Vec<&str> = ["apple", "grape", "pear"]
+            .into_iter()
+            .filter(|row| html.contains(row))
+            .collect();
+        assert_eq!(order, ["apple", "grape", "pear"], "{html}");
+        let apple = html.find("apple").expect("apple");
+        let grape = html.find("grape").expect("grape");
+        let pear = html.find("pear").expect("pear");
+        assert!(apple < grape && grape < pear, "reordered:\n{html}");
+
+        // Two headings say "Pome", and no id is shared.
+        assert_eq!(html.matches(">Pome<").count(), 2, "{html}");
+        let ids: Vec<String> = html
+            .split(r#"aria-labelledby=""#)
+            .skip(1)
+            .map(|rest| rest.split('"').next().unwrap().to_string())
+            .filter(|id| id.contains("-group-"))
+            .collect();
+        assert_eq!(ids.len(), 3, "{html}");
+        for id in &ids {
+            assert_eq!(html.matches(&format!(r#"id="{id}""#)).count(), 1, "{id}");
+        }
+    }
+
+    /// An ungrouped list keeps the markup it has always had: no wrapper at
+    /// all, rows straight inside the listbox.
+    #[test]
+    fn an_ungrouped_list_wraps_nothing() {
+        let html = html(|| Some(OptionList::from(vec!["apple", "grape"])));
+        assert!(!html.contains(r#"role="group""#), "{html}");
+        assert_eq!(html.matches(r#"role="option""#).count(), 2, "{html}");
+    }
+
+    /// A disabled row is drawn and reachable by a reader - `aria-disabled`,
+    /// not the `disabled` attribute, which means nothing on a `div`.
+    #[test]
+    fn a_disabled_option_says_so_and_stays_in_the_list() {
+        let html = html(|| {
+            Some(OptionList::new([
+                "apple".into(),
+                OptionItem::new("grape").disabled(true),
+            ]))
+        });
+
+        assert_eq!(html.matches(r#"role="option""#).count(), 2, "{html}");
+        assert_eq!(html.matches(r#"aria-disabled="true""#).count(), 1, "{html}");
+        assert!(html.contains("grape"), "{html}");
+    }
+
+    /// The pending list holds the empty state back. An async list is empty
+    /// between the request and its answer, so without this every keystroke
+    /// would flash "no results" before the data lands.
+    #[test]
+    fn a_pending_list_shows_the_loader_and_not_the_empty_state() {
+        let pending = html(|| None);
+        assert!(!pending.contains("No fruit"), "{pending}");
+        assert!(pending.contains(r#"aria-busy="true""#), "{pending}");
+
+        // Ready and empty is a real answer - a fetch that failed looks exactly
+        // like this - so the empty state is what it shows.
+        let empty = html(|| Some(OptionList::default()));
+        assert!(empty.contains("No fruit"), "{empty}");
+        assert!(!empty.contains(r#"aria-busy="true""#), "{empty}");
     }
 }

@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::{
-    components::{ClassList, Input, States},
+    components::{ClassList, Input, OptionSource, States},
     hooks::use_theme,
     sx::Sx,
     theme::Size,
@@ -21,25 +21,21 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
     state: ComboboxState,
     /// The options to list, already filtered. There is no query prop: a
     /// suggestion list narrows by handing a shorter `options` in.
-    options: Vec<T>,
+    ///
+    /// A `Vec<T>` converts, which is the flat list. An
+    /// [`OptionList`](crate::components::OptionList) adds named groups and
+    /// per-option `disabled`, and a [`Resource`] adds the fetch: the list then
+    /// reads pending against ready itself, and derives the loader, `aria-busy`
+    /// and the held-back empty state from it.
+    #[props(into)]
+    options: OptionSource<T>,
     /// Draws one row - typically a [`ComboboxOption`](super::ComboboxOption),
     /// which is themed and wires the click for you.
     option: Callback<ComboboxOptionArgs<T>, Element>,
     /// Shown in place of the list when `options` is empty.
     #[props(default)]
     empty: Option<Element>,
-    /// The options are being fetched. Replaces the list - and `empty` - with
-    /// a [`Loader`](crate::components::Loader), marks the dropdown
-    /// `aria-busy`, and puts `loading_label` in a status region beside the
-    /// trigger.
-    ///
-    /// It has to win over `empty`: an async combobox's `options` is empty
-    /// between a keystroke and its results, so without it every keystroke
-    /// would flash "no results" before the data lands. It replaces the rows
-    /// too, which belong to the previous query.
-    #[props(default)]
-    loading: Option<bool>,
-    /// What the status region says while `loading`. Unset, the theme's
+    /// What the status region says while the options are being fetched. Unset, the theme's
     /// [`ComboboxLabels`](crate::theme::ComboboxLabels) says it.
     #[props(default, into)]
     loading_label: Option<String>,
@@ -77,7 +73,14 @@ pub struct ComboboxProps<T: Clone + PartialEq + 'static> {
 #[component]
 pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Element {
     let theme = use_theme();
-    let count = props.options.len();
+    let list = props.options.list();
+    let values = list.values();
+    let count = values.len();
+    // The list has been asked for and has not answered yet. It wins over
+    // `empty`: an async list is empty between the request and its results, so
+    // without this every keystroke would flash "no results" before the data
+    // lands. It replaces the rows too, which belong to the previous query.
+    let loading = props.options.is_pending();
     let state = props.state;
 
     // Opening always starts at the top; nothing carries over from last time.
@@ -99,8 +102,9 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     // filtered `options` would leave stale rows on screen. A `Vec<Element>`
     // never compares equal, which is exactly the guarantee this needs.
     let option = props.option;
-    let rows: Vec<Element> = props
-        .options
+    let row_disabled = list.disabled();
+    let groups = list.group_labels();
+    let rows: Vec<Element> = values
         .iter()
         .enumerate()
         .map(|(index, value)| {
@@ -108,6 +112,7 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
                 value: value.clone(),
                 index,
                 active: active_row == Some(index),
+                disabled: row_disabled[index],
             })
         })
         .collect();
@@ -115,13 +120,15 @@ pub fn Combobox<T: Clone + PartialEq + 'static>(props: ComboboxProps<T>) -> Elem
     rsx! {
         ComboboxCore {
             rows,
+            groups,
+            row_disabled,
             active: active_row,
             onactive: move |row| state.set_active(Some(row)),
             opened: state.is_open(),
             onopened: move |opened| state.set_open(opened),
             state,
             empty: props.empty,
-            loading: props.loading.unwrap_or(false).then(|| {
+            loading: loading.then(|| {
                 props
                     .loading_label
                     .unwrap_or_else(|| theme.combobox.labels.loading.to_string())

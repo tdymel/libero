@@ -3,6 +3,7 @@ mod color_variant;
 mod field_props;
 mod icons;
 mod number_value;
+mod option_list;
 mod options;
 mod orientation;
 mod polymorphic;
@@ -28,6 +29,7 @@ pub(crate) use icons::{
     UploadIcon,
 };
 pub use number_value::NumberValue;
+pub use option_list::{OptionItem, OptionList, OptionSource};
 pub use options::{OptionLabel, Options};
 // The derive and the trait share a name and one import, the way serde's do.
 pub use crate::sx::states::{States, states};

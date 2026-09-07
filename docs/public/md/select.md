@@ -147,11 +147,48 @@ a form sends. For a runtime set like `String` it is the string itself.
 
 A disabled select posts nothing: the hidden input is disabled with the field.
 
+## Groups and unavailable options
+
+Both arrive through `options`, as an `OptionList<T>` the caller builds:
+
+```rust,ignore
+OptionList::grouped()
+    .group("Orchard", [Fruit::Apple.into(), OptionItem::new(Fruit::Cherry).disabled(true)])
+    .group("Tropical", [Fruit::Banana, Fruit::Mango].map(OptionItem::new))
+```
+
+Groups are explicit - not a field on the option and not a `group_by` closure -
+because the caller is the only one who knows both the order the groups go in
+and what each is called. A named run is drawn as a `role="group"` named by its
+heading; a group named twice appends to the run it already has. Custom rows are
+unaffected: richness lives in the `option` callback, which is orthogonal to the
+shape of the list. **The caller's order is always kept**: a label used again
+after another group draws its heading a second time rather than merging the two
+runs, since merging would silently reorder options that were listed in a
+particular order. Two adjacent calls with one label still draw one heading.
+
+`disabled` is a flag on the option, not a closure and not a value your `T`
+refuses everywhere - a row this particular field will not take. It is drawn and
+read out, `aria-disabled="true"`, and the arrows, typeahead and clicks all pass
+over it.
+
+Groups change how rows are wrapped, never which index a row reports, and a
+search that empties a group simply leaves its heading out.
+
 ## Accessibility
 
 Enter, Space and ArrowDown open the list on the selected row; the arrows, Home
-and End move the highlight; Enter picks; Escape and Tab close. Typeahead -
-jumping to a row by its first letter - is not implemented yet.
+and End move the highlight; Enter picks; Escape and Tab close.
+
+Typing searches the labels. The characters are buffered for half a second, so
+"b", "e", "r" finds Berlin while a lone "b" after the pause cycles the rows
+starting with it - a native `<select>`'s rule, and Space still opens the list
+rather than typing, except mid-query where it is part of "new york". A **closed
+trigger changes the value in place**, as the native control does - which needs
+`onchange` to actually move `value`, since the search starts from the selected
+row: a control whose value never changes has typeahead land on the same row
+every press. Disabled rows are skipped. With `searchable` the search box replaces typeahead: it is a
+different affordance, and it takes the focus while the list is open.
 
 ## Props
 
@@ -163,7 +200,7 @@ jumping to a row by its first letter - is not implemented yet.
 | `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
 | `value` | `Option<T>` | - | The selected option; strictly controlled. `None` shows `placeholder`. |
 | `onchange` | `EventHandler<Option<T>>` | - | The option to select next, or `None` from the clear button. |
-| `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes it here. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A runtime set passes it here. A `Vec<T>` converts, as do an `OptionList<T>` (named groups, per-option `disabled`) and a `Resource<Vec<T>>` (the whole async wiring). |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
 | `selection` | `Callback<T, Element>` | `T::label()` | Draws the selected value inside the trigger. |
 | `placeholder` | `String` | - | Shown while `value` is `None`. |
@@ -180,7 +217,7 @@ jumping to a row by its first letter - is not implemented yet.
 | `disabled` | `bool` | `false` | Takes the trigger out of the tab order and dims the field. |
 | `readonly` | `bool` | `false` | Focusable and posted with the form, but not editable - unlike `disabled`, which drops the field from the tab order and from the post. |
 
-`SelectOptionArgs<T>` carries `value`, `index` and `selected`.
+`SelectOptionArgs<T>` carries `value`, `index`, `selected` and `disabled`.
 `SelectFilterArgs<T>` carries `value` and `query`.
 
 Like every component, it also takes the shared props `sx`, `class`, `style`,

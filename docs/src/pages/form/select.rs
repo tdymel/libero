@@ -1,8 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Code, FieldStatus, Flex, Options, Select, SelectFilterArgs, SelectOptionArgs, Text,
+        Code, FieldStatus, Flex, OptionItem, OptionList, Options, Select, SelectFilterArgs,
+        SelectOptionArgs, Text,
     },
     sx::sx,
 };
@@ -81,6 +82,39 @@ const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Fruit>| {
         || f.value.note().to_lowercase().contains(&query)
 }"#;
 
+/// Named runs, built explicitly: the caller is the only one who knows both
+/// the order the groups go in and what each is called.
+// snippet: after FRUIT_ENUM
+// snippet: let mut value = use_signal(|| None::<Fruit>);
+// snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
+const GROUPED: &str = r#"options: OptionList::grouped()
+    .group("Orchard", [Fruit::Apple, Fruit::Cherry])
+    .group("Tropical", [Fruit::Banana, Fruit::Mango, Fruit::Passion])"#;
+
+/// The flag sits on the option, in the same builder as the group - a row the
+/// list refuses, rather than a value the type refuses everywhere.
+// snippet: after FRUIT_ENUM
+// snippet: let mut value = use_signal(|| None::<Fruit>);
+// snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
+const UNAVAILABLE: &str = r#"options: OptionList::new([
+    Fruit::Apple.into(),
+    Fruit::Banana.into(),
+    OptionItem::new(Fruit::Cherry).disabled(true),
+    Fruit::Mango.into(),
+    Fruit::Passion.into(),
+])"#;
+
+/// Both at once, since the two switches share the one `options` prop.
+// snippet: after FRUIT_ENUM
+// snippet: let mut value = use_signal(|| None::<Fruit>);
+// snippet: in Select { value: value(), onchange: move |next| value.set(next), .. }
+const GROUPED_UNAVAILABLE: &str = r#"options: OptionList::grouped()
+    .group("Orchard", [
+        Fruit::Apple.into(),
+        OptionItem::new(Fruit::Cherry).disabled(true),
+    ])
+    .group("Tropical", [Fruit::Banana, Fruit::Mango, Fruit::Passion])"#;
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Fruit {
     Apple,
@@ -133,6 +167,28 @@ fn fruit_filter(f: SelectFilterArgs<Fruit>) -> bool {
         || f.value.note().to_lowercase().contains(&query)
 }
 
+/// The two switches drive one prop, so the list is built once from both.
+/// Cherry is the out-of-season row, which is why `status: warning` says so.
+fn fruit_options(values: &DemoValues) -> OptionList<Fruit> {
+    let out_of_season = values.str("unavailable") == "true";
+    let cherry = OptionItem::new(Fruit::Cherry).disabled(out_of_season);
+    match values.str("grouped") == "true" {
+        true => OptionList::grouped()
+            .group("Orchard", [Fruit::Apple.into(), cherry])
+            .group(
+                "Tropical",
+                [Fruit::Banana, Fruit::Mango, Fruit::Passion].map(OptionItem::new),
+            ),
+        false => OptionList::new([
+            Fruit::Apple.into(),
+            Fruit::Banana.into(),
+            cherry,
+            Fruit::Mango.into(),
+            Fruit::Passion.into(),
+        ]),
+    }
+}
+
 fn fruit_row(o: SelectOptionArgs<Fruit>) -> Element {
     rsx! {
         Text { component: "span", size: "xl", "{o.value.emoji()}" }
@@ -174,9 +230,9 @@ pub fn SelectPage() -> Element {
                         .doc("The selected option; strictly controlled. `None` shows `placeholder`."),
                     prop("onchange", "EventHandler<Option<T>>")
                         .doc("Called with the option the caller should select next, or `None` when the clear button is clicked."),
-                    prop("options", "Vec<T>")
+                    prop("options", "OptionSource<T>")
                         .default("T::options()")
-                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here."),
+                        .doc("Narrows or reorders the list. A runtime set - `String`s, or records fetched from a server - passes them here. A `Vec<T>` converts; an `OptionList<T>` adds named groups and per-option `disabled`; a `Resource<Vec<T>>` is the whole of the async wiring, and the list derives its loader, `aria-busy` and the held-back empty state from it. A fetch that failed is an empty list - show your own error beside the field."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
                         .default("T::label()")
                         .doc("Draws one row's content. The row itself - highlight, `aria-selected`, click - stays the component's."),
@@ -299,6 +355,19 @@ pub fn SelectPage() -> Element {
                             true => vec![CUSTOM_FILTER.to_string()],
                             false => vec![],
                         }),
+                    // Named runs, drawn as `role="group"` with a heading each.
+                    Control::switch("grouped").code(|_, values| {
+                        match (values.str("grouped").as_str(), values.str("unavailable").as_str()) {
+                            ("true", "true") => vec![GROUPED_UNAVAILABLE.to_string()],
+                            ("true", _) => vec![GROUPED.to_string()],
+                            (_, "true") => vec![UNAVAILABLE.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    // Prints through the `grouped` switch above, since the two
+                    // share the one `options` prop and one snippet has to show
+                    // whatever both say.
+                    Control::switch("unavailable").code(|_, _| vec![]),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -318,6 +387,7 @@ pub fn SelectPage() -> Element {
                             "error" => FieldStatus::Error("Pick a fruit.".to_string()),
                             _ => FieldStatus::Valid,
                         },
+                        options: fruit_options(&values),
                         option: custom(&values).then(|| Callback::new(fruit_row)),
                         selection: custom(&values).then(|| Callback::new(fruit_selection)),
                         searchable: (values.str("searchable") == "true").then_some(true),
@@ -331,6 +401,28 @@ pub fn SelectPage() -> Element {
                         onchange: move |next| value.set(next),
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Closed, the trigger opens on ArrowDown, Enter or Space. Open, ArrowDown and "
+                    "ArrowUp move the highlight, Home and End jump to the ends, Enter picks and "
+                    "Escape closes. Typing searches the labels: the characters are buffered for "
+                    "half a second, so \"b\", \"e\", \"r\" finds Berlin while a lone \"b\" after the "
+                    "pause cycles the rows starting with it. A closed trigger changes the value "
+                    "in place, the way a native "
+                    Code { source: "<select>" }
+                    " does - which needs "
+                    Code { source: "onchange" }
+                    " to actually move "
+                    Code { source: "value" }
+                    ", since the search starts from the selected row: a control whose value never "
+                    "changes has typeahead land on the same row every press. Disabled options are "
+                    "read out but skipped by the arrows, by typeahead and by the mouse. With "
+                    Code { source: "searchable" }
+                    " the search box replaces typeahead, and takes the focus while the list is "
+                    "open."
+                }
             }
         }
     }

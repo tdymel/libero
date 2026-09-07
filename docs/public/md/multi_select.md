@@ -105,11 +105,33 @@ nothing.
 
 An empty selection posts an empty value, and a disabled field posts nothing.
 
+## Groups and unavailable options
+
+Both arrive through `options`, as an `OptionList<T>` the caller builds, exactly
+as on [Select](select.md):
+
+```rust,ignore
+OptionList::grouped()
+    .group("Vegetables", [Topping::Mushrooms, Topping::Olives].map(OptionItem::new))
+    .group("Fruit", [OptionItem::new(Topping::Pineapple).disabled(true)])
+```
+
+A named run is drawn as a `role="group"` named by its heading. A disabled row
+is drawn and read out, `aria-disabled="true"`, and the arrows, typeahead and
+clicks all pass over it.
+
 ## Accessibility
 
 Enter, Space and ArrowDown open the list on the selected row; the arrows, Home
 and End move the highlight; Enter toggles the highlighted row and keeps the
-list open; Escape and Tab close. Typeahead is not implemented yet.
+list open; Escape and Tab close. Disabled rows are skipped.
+
+Typing searches the labels, buffered for half a second the way a native
+`<select>`'s typeahead is, and **opens the list on the match** rather than
+picking - unlike [Select](select.md), whose closed trigger changes the value in
+place. A pick here toggles, so typing in place would silently drop a value that
+was already chosen, and that is the one keyboard difference between the two. Space still opens the list, except mid-query where it
+is part of "new york". With `searchable` the search box replaces typeahead.
 
 The control is one tab stop. ArrowLeft and ArrowRight move a cursor over the
 chips - from no cursor, ArrowLeft lands on the last one - and Backspace or
@@ -167,7 +189,7 @@ ticked without retyping it. It is cleared when the list closes.
 | `radius` | `Size` | `sm` | Corner radius of the frame and the list. |
 | `value` | `Vec<T>` | - | The selection, in pick order; strictly controlled. Empty shows `placeholder`. |
 | `onchange` | `EventHandler<Vec<T>>` | - | The whole selection the caller should hold next. |
-| `options` | `Vec<T>` | `T::options()` | Narrows or reorders the list. |
+| `options` | `OptionSource<T>` | `T::options()` | Narrows or reorders the list. A `Vec<T>` converts, as do an `OptionList<T>` (named groups, per-option `disabled`) and a `Resource<Vec<T>>` (the whole async wiring). |
 | `option` | `Callback<SelectOptionArgs<T>, Element>` | `T::label()` | Draws one row's content. |
 | `selection` | `Callback<SelectionArgs<T>, Element>` | `Chip` with an x | Draws one selected value beside the trigger, the remove control included. `remove` on the args drops that value. |
 | `placeholder` | `String` | - | Shown while `value` is empty. |

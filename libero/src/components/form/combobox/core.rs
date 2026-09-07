@@ -10,7 +10,7 @@ use crate::{
         use_popover, use_theme,
     },
     platform::ElementApi,
-    sx::StaticSx,
+    sx::{StaticSx, sx},
     theme::{COMBOBOX_PADDING, Size, SizeCss, Z_INDEX_POPOVER},
 };
 
@@ -34,6 +34,21 @@ pub(crate) static COMBOBOX_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .overflow("hidden")
         // A dropdown floats over the page, where the surface default rests.
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
+        // A group's heading. Styled from here, by a selector, because the
+        // headings are drawn inside a loop where a `use_box` would be a hook
+        // called a variable number of times - the shape `Spotlight`'s own group
+        // labels use.
+        .selector(
+            "& [data-slot='group-label']",
+            sx().padding("4px 8px")
+                .font_size("0.75em")
+                .font_weight("600")
+                .line_height("1.5")
+                .color("text-dimmed")
+                .white_space("nowrap")
+                .overflow("hidden")
+                .text_overflow("ellipsis"),
+        )
 });
 
 base_props! {
@@ -41,6 +56,17 @@ base_props! {
         /// The rows, already drawn - which is what erases the caller's `T`,
         /// and what stops anything below here from memoizing.
         rows: Vec<Element>,
+        /// One group label per row, parallel to `rows`, `None` for a row in no
+        /// group. Handed straight to the dropdown, which draws adjacent equal
+        /// labels as one `role="group"`. Groups change how rows are wrapped,
+        /// never which index a row reports.
+        #[props(default)]
+        groups: Vec<Option<String>>,
+        /// One flag per row, parallel to `rows`. A disabled row is drawn and
+        /// read out, `aria-disabled`; the arrows pass over it and it registers
+        /// no Enter target, so the keyboard can never pick it.
+        #[props(default)]
+        row_disabled: Vec<bool>,
         /// The highlighted row, or `None` for no highlight - which is what an
         /// autocomplete opens with, so Enter commits the typed text instead of
         /// the top suggestion.
@@ -148,11 +174,50 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // neither drawn nor reachable by the arrows.
     let count = if loading { 0 } else { props.rows.len() };
     props.state.set_rows(count);
+    // The rows the keyboard is allowed on, in order. Everything the arrows do
+    // is a move inside this list, so a disabled row is not a case any of them
+    // has to remember.
+    let enabled: Vec<usize> = (0..count)
+        .filter(|row| !props.row_disabled.get(*row).copied().unwrap_or(false))
+        .collect();
+    // A disabled row is never the highlight. Opening, a filter change and a
+    // caller's own `set_active` can each land on one, so it is snapped here,
+    // once, rather than guarded at all three: forward first, because a list
+    // opens at or after what is selected, and back only when there is nothing
+    // left ahead.
     let active_row = props
         .active
         .filter(|_| count > 0)
-        .map(|row| row.min(count - 1));
+        .map(|row| row.min(count - 1))
+        .and_then(|row| {
+            enabled
+                .iter()
+                .copied()
+                .find(|candidate| *candidate >= row)
+                .or_else(|| enabled.last().copied())
+        });
     let set_active = props.onactive;
+
+    // Every arrow's destination, worked out here rather than inside the
+    // handler. They depend only on what this render already knows, and four
+    // `Option<usize>` keep the handler `Copy` - which is what lets the wrapper
+    // and the portaled dropdown share one closure.
+    let at = active_row.and_then(|row| enabled.iter().position(|row_at| *row_at == row));
+    let step = |delta: isize| {
+        let at = at?.saturating_add_signed(delta);
+        enabled
+            .get(at.min(enabled.len().saturating_sub(1)))
+            .copied()
+    };
+    let first_enabled = enabled.first().copied();
+    let last_enabled = enabled.last().copied();
+    // From no highlight, both arrows land on the first row the keyboard may
+    // have - the first press arms the list rather than moving inside it.
+    let arrow_down = match (opened, active_row) {
+        (true, Some(_)) => step(1),
+        _ => active_row.or(first_enabled),
+    };
+    let arrow_up = step(-1);
 
     let disabled = props.disabled;
     let close_on_pick = props.close_on_pick;
@@ -163,35 +228,33 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
         if disabled {
             return;
         }
-        let last = count.saturating_sub(1);
-        let go_to = |row: usize| {
-            set_active.call(row);
+        // A list of nothing but disabled rows has nowhere to go, and the arrows
+        // then only open it.
+        let go_to = |row: Option<usize>| {
+            if let Some(row) = row {
+                set_active.call(row);
+            }
             if !opened {
                 request(true);
             }
         };
 
         match event.key() {
-            // From no highlight, both arrows land on row 0 - the first press
-            // arms the list rather than moving inside it.
             Key::ArrowDown => {
                 event.prevent_default();
-                match (opened, active_row) {
-                    (true, Some(row)) => go_to((row + 1).min(last)),
-                    _ => go_to(active_row.unwrap_or(0)),
-                }
+                go_to(arrow_down);
             }
             Key::ArrowUp if opened => {
                 event.prevent_default();
-                go_to(active_row.map_or(0, |row| row.saturating_sub(1)));
+                go_to(arrow_up);
             }
             Key::Home if opened => {
                 event.prevent_default();
-                go_to(0);
+                go_to(first_enabled);
             }
             Key::End if opened => {
                 event.prevent_default();
-                go_to(last);
+                go_to(last_enabled);
             }
             // Nothing highlighted means Enter is not ours: it bubbles, so a
             // form still submits.
@@ -306,6 +369,8 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
                 rsx! {
                     ComboboxDropdown {
                         rows: props.rows,
+                        groups: props.groups,
+                        row_disabled: props.row_disabled,
                         active: active_row,
                         id: id(),
                         max_height: theme.combobox.max_dropdown_height,

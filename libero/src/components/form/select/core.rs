@@ -11,7 +11,9 @@ use crate::{
         layout::use_box,
         use_combobox,
     },
-    hooks::{PopoverWidth, use_element, use_theme},
+    hooks::{
+        PopoverWidth, TYPEAHEAD_RESET, typeahead_match, use_element, use_theme, use_typeahead,
+    },
     platform::ElementApi,
     sx::{StaticSx, sx},
 };
@@ -141,6 +143,20 @@ field_props! {
         rows: Vec<Element>,
         /// Parallel to `rows`.
         selected: Vec<bool>,
+        /// One group label per row, parallel to `rows`, `None` for a row in no
+        /// group. Filtered alongside the rows and handed on, so a search
+        /// narrows the groups with the list.
+        #[props(default)]
+        groups: Vec<Option<String>>,
+        /// One flag per row, parallel to `rows`. A disabled row is drawn and
+        /// read out; the arrows, typeahead and the click all pass over it.
+        #[props(default)]
+        row_disabled: Vec<bool>,
+        /// `Some(label)` while the options are being fetched: the list shows a
+        /// loader in place of the rows and the empty state, and a status region
+        /// beside the trigger says `label`.
+        #[props(default)]
+        loading: Option<String>,
         onpick: EventHandler<usize>,
         /// Drawn inside the trigger - beside it when `multiple` - as a
         /// function of the chip cursor - the
@@ -188,6 +204,17 @@ field_props! {
         /// What the skin's `validate` rules say; `T` never reaches here.
         #[props(default)]
         rules: Option<crate::components::FieldStatus>,
+        /// Each row's plain text, parallel to `rows`, which is what the
+        /// typeahead searches. Empty turns typeahead off.
+        ///
+        /// A `Vec<String>` rather than a callback, for the same reason
+        /// `selected` is a `Vec<bool>`: it erases the skin's `T` just as well,
+        /// and it lets the core do the matching itself against the disabled
+        /// mask it already holds. `matches` cannot serve - it carries the
+        /// caller's `filter` semantics, and typeahead is
+        /// prefix-from-current-with-wrap.
+        #[props(default)]
+        row_labels: Vec<String>,
         /// Which rows survive the query, one `bool` per row. The skin closes
         /// over its own `Vec<T>` and the caller's filter, so `T` never reaches
         /// here - the mask is the same erasure `rows: Vec<Element>` performs.
@@ -218,6 +245,15 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let state = use_combobox();
     let opened = state.is_open() && !disabled && !readonly;
     let searchable = props.searchable && !disabled;
+
+    // The typed characters, forgotten after a pause - the buffer a native
+    // `<select>` keeps, so "b","e","r" inside the window finds Berlin while a
+    // lone "b" after it cycles the B rows. A hook, so it is prepared whether
+    // or not this list answers typeahead at all.
+    let typeahead = use_typeahead(TYPEAHEAD_RESET);
+    // Never while `searchable`: there the search box is the affordance, and
+    // once the list is open the focus is inside it anyway.
+    let typeahead_on = !searchable && !props.row_labels.is_empty();
 
     // The query lives here, beside the open and highlight state. The skins
     // stay stateless: they hand down `matches` and nothing else.
@@ -297,6 +333,52 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         move |_| onclear.call(()),
     );
 
+    // Where typeahead searches from: the highlight while the list is open, the
+    // selection while it is closed. Neither starts at the top.
+    let typeahead_from = match state.is_open() {
+        true => state.active(),
+        false => props.selected.iter().position(|selected| *selected),
+    };
+    let labels = props.row_labels.clone();
+    let typed_mask = props.row_disabled.clone();
+    let typed_pick = props.onpick;
+    let typed_multiple = props.multiple;
+    // One typed character, folded into the buffer and acted on. `true` when it
+    // landed on a row, which is what decides whether the key was ours.
+    // A clone, so the keydown arms can still ask the buffer whether a space is
+    // being typed. Both halves share one `Rc`, so it is the same buffer.
+    let buffer = typeahead.clone();
+    let type_to = move |ch: char| {
+        let query = buffer.push(ch);
+        let found = typeahead_match(labels.len(), typeahead_from, &query, |row| match typed_mask
+            .get(row)
+            .copied()
+            .unwrap_or(false)
+        {
+            true => None,
+            false => labels.get(row).map(String::as_str),
+        });
+        let Some(row) = found else {
+            return false;
+        };
+        match (state.is_open(), typed_multiple) {
+            // An open list moves its highlight and picks nothing: Enter or a
+            // click still commits, exactly as with the arrows.
+            (true, _) => state.set_active(Some(row)),
+            // A closed single select changes its value in place, the way a
+            // native `<select>` does.
+            (false, false) => typed_pick.call(row),
+            // A closed multi-select opens instead. A pick there *toggles*, so
+            // typing would silently drop a value the caller had chosen - the
+            // one thing the native control never has to worry about.
+            (false, true) => {
+                open(true);
+                state.set_active(Some(row));
+            }
+        }
+        true
+    };
+
     let multiple = props.multiple;
     // The trigger no longer spans the chips, so the slot around them and the
     // chevron each open the list and hand the focus to the trigger. Read
@@ -356,6 +438,18 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
         .focus_ring(false)
         .states(&trigger_states)
         .prepare();
+
+    // Filtered exactly as `rows` is, so the three stay parallel: a search that
+    // empties a group simply leaves no row carrying its label, and the group
+    // is gone from the list.
+    let groups: Vec<Option<String>> = visible
+        .iter()
+        .map(|index| props.groups.get(*index).cloned().flatten())
+        .collect();
+    let row_disabled: Vec<bool> = visible
+        .iter()
+        .map(|index| props.row_disabled.get(*index).copied().unwrap_or(false))
+        .collect();
 
     let onpick = props.onpick;
     let close_on_pick = !props.multiple;
@@ -504,9 +598,26 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
                     event.prevent_default();
                     open(true);
                 }
+                // A browser or OS shortcut is never typeahead.
+                Key::Character(_) if has_shortcut_modifier(&event) => {}
+                // A space mid-query is part of "new york", not an activation.
+                Key::Character(ref key) if key == " " && typeahead_on && typeahead.is_typing() => {
+                    event.prevent_default();
+                    type_to(' ');
+                }
                 Key::Character(ref key) if key == " " && !state.is_open() => {
                     event.prevent_default();
                     open(true);
+                }
+                Key::Character(ref key) if typeahead_on && key != " " => {
+                    // Only when it lands somewhere: a key that matches no row
+                    // still belongs to the page, as it does in a native
+                    // control.
+                    if let Some(ch) = key.chars().next()
+                        && type_to(ch)
+                    {
+                        event.prevent_default();
+                    }
                 }
                 _ => {}
             }
@@ -553,6 +664,9 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
     let listbox = rsx! {
         ComboboxCore {
             rows,
+            groups,
+            row_disabled,
+            loading: props.loading,
             active: state.active(),
             onactive: move |row| state.set_active(Some(row)),
             opened,
@@ -598,4 +712,11 @@ pub(crate) fn SelectCore(props: SelectCoreProps) -> Element {
             {announcer}
         }
     })
+}
+
+// Shift is part of ordinary typing; the rest mark a browser or OS shortcut.
+// `Menu`'s rule, and its fourth private copy - worth one helper one day.
+fn has_shortcut_modifier(event: &KeyboardEvent) -> bool {
+    let modifiers = event.modifiers();
+    modifiers.ctrl() || modifiers.alt() || modifiers.meta()
 }

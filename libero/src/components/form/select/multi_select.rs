@@ -3,14 +3,14 @@ use dioxus::prelude::*;
 use crate::components::form::use_bound;
 
 use crate::{
-    components::{Input, Options, common::field_props, form::removable_chip},
+    components::{Input, OptionSource, Options, common::field_props, form::removable_chip},
     hooks::use_theme,
     utils::warn,
 };
 
 use super::{
     core::{SelectCore, SelectionRenderArgs},
-    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows},
+    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows, option_list},
 };
 
 field_props! {
@@ -25,8 +25,14 @@ field_props! {
         /// The options to list. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
         /// here.
-        #[props(default)]
-        options: Option<Vec<T>>,
+        ///
+        /// A `Vec<T>` converts, which is the flat list. An
+        /// [`OptionList`](crate::components::OptionList) adds named groups and
+        /// per-option `disabled`, and a [`Resource`] adds the fetch: the list
+        /// then reads pending against ready itself, and derives the loader,
+        /// `aria-busy` and the held-back empty state from it.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Draws one row's content. Defaults to `Options::label`, in a
         /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
         #[props(default)]
@@ -84,16 +90,18 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         warn("MultiSelect: without `onchange` the selection can never change.");
     }
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
-    if values.is_empty() {
+    let list = option_list(&props.options);
+    let values = list.values();
+    // The same rule as `Select`: a request still in flight lists nothing, and
+    // says nothing about being empty.
+    let loading = props.options.is_pending();
+    if values.is_empty() && !loading {
         warn("MultiSelect: no options - a `T` without static `options()` needs `options`.");
     }
 
     let selected: Vec<bool> = values.iter().map(|option| held.contains(option)).collect();
-    let rows = draw_rows(&values, &selected, props.option.as_ref());
+    let row_disabled = list.disabled();
+    let rows = draw_rows(&values, &selected, &row_disabled, props.option.as_ref());
     // The chips, redrawn from the cursor the core owns. Each wrapper carries the
     // id `aria-activedescendant` points at; what is inside it is the skin's, or
     // the caller's.
@@ -162,6 +170,10 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
         SelectCore {
             rows,
             selected,
+            groups: list.group_labels(),
+            row_disabled,
+            row_labels: values.iter().map(Options::label).collect::<Vec<_>>(),
+            loading: loading.then(|| theme.combobox.labels.loading.to_string()),
             multiple: true,
             onpick: move |index: usize| {
                 let (Some(onchange), Some(value)) = (&pick_change, values.get(index)) else {

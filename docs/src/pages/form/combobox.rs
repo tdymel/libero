@@ -4,8 +4,8 @@ use crate::components::{Child, Control, Demo, DemoValues, DocPage, Wrap, prop, p
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, Options, Text, TextField,
-        use_combobox,
+        Button, Code, Combobox, ComboboxOption, ComboboxOptionArgs, Flex, OptionList, Options,
+        Text, TextField, use_combobox,
     },
     platform::{TimerSubscription, timer},
     sx::sx,
@@ -29,13 +29,14 @@ fn matching(query: &str) -> Vec<Fruit> {
 
 "#;
 
-/// A fetch per keystroke. `loading` is what keeps `empty` from flashing
-/// between the keystroke and the answer.
+/// A fetch per keystroke. `None` is the search in flight, and it is what keeps
+/// `empty` from flashing between the keystroke and the answer.
 // snippet: after FRUIT_ENUM
 const FETCHING_STATE: &str = r#"let suggestions = use_combobox();
 let mut text = use_signal(String::new);
-let mut results = use_signal(Vec::<Fruit>::new);
-let mut loading = use_signal(|| false);
+// One signal, not a list plus a `loading` flag: `None` *is* the search in
+// flight, so the two can never disagree.
+let mut results = use_signal(|| Some(Vec::<Fruit>::new()));
 // The answer still on its way. Replacing it drops the older one, so a slow
 // answer never overwrites a newer query's.
 let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
@@ -52,15 +53,9 @@ const FETCHING_TRIGGER: &str = r#"TextField {
     oninput: move |next: String| {
         text.set(next.clone());
         suggestions.open();
-        loading.set(true);
+        results.set(None);
         let answer = timer().map(|timer| {
-            timer.after(
-                LATENCY,
-                Box::new(move || {
-                    results.set(matching(&next));
-                    loading.set(false);
-                }),
-            )
+            timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
         });
         pending.set(answer);
     },
@@ -188,8 +183,7 @@ fn mode_code(_: &Control, values: &DemoValues) -> Vec<String> {
     if fetching(values) {
         return [
             "state: suggestions",
-            "options: results()",
-            "loading: loading()",
+            "options: results().map(OptionList::from)",
             r#"loading_label: "Searching fruit""#,
             r#"empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } }"#,
         ]
@@ -372,8 +366,9 @@ fn FetchingDemo(values: DemoValues) -> Element {
     let rich = values.str("option") == "true";
     let disabled = values.str("disabled") == "true";
     let mut text = use_signal(String::new);
-    let mut results = use_signal(Vec::<Fruit>::new);
-    let mut loading = use_signal(|| false);
+    // One signal, not a list plus a `loading` flag: `None` *is* the search in
+    // flight, so the two can never disagree.
+    let mut results = use_signal(|| Some(Vec::<Fruit>::new()));
     let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
     use_drop(move || pending.set(None));
 
@@ -383,8 +378,7 @@ fn FetchingDemo(values: DemoValues) -> Element {
             radius: values.str("radius"),
             disabled: disabled.then_some(true),
             state: suggestions,
-            options: results(),
-            loading: loading(),
+            options: results().map(OptionList::from),
             loading_label: "Searching fruit",
             empty: rsx! { Text { size: "sm", sx: sx().padding("xs"), "No fruit matches" } },
             option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
@@ -405,14 +399,11 @@ fn FetchingDemo(values: DemoValues) -> Element {
                 oninput: move |next: String| {
                     text.set(next.clone());
                     suggestions.open();
-                    loading.set(true);
+                    results.set(None);
                     let answer = timer().map(|timer| {
                         timer.after(
                             LATENCY,
-                            Box::new(move || {
-                                results.set(matching(&next));
-                                loading.set(false);
-                            }),
+                            Box::new(move || results.set(Some(matching(&next)))),
                         )
                     });
                     pending.set(answer);
@@ -484,20 +475,17 @@ pub fn ComboboxPage() -> Element {
                 props("Combobox", vec![
                     prop("state", "ComboboxState")
                         .doc("From `use_combobox()`: the open state, the arrow-key highlight, and the id the aria wiring is built from. Required."),
-                    prop("options", "Vec<T>")
-                        .doc("The options to list, already filtered. Required."),
+                    prop("options", "OptionSource<T>")
+                        .doc("The options to list, already filtered. Required. A `Vec<T>` converts, and so do an `OptionList<T>` - named groups and per-option `disabled` - and a `Resource<Vec<T>>`, which is the whole of the async wiring: the list reads pending against ready itself. `None::<OptionList<T>>` says pending for a fetch you drive by hand."),
                     prop("option", "Callback<ComboboxOptionArgs<T>, Element>")
                         .doc("Draws one row - typically a `ComboboxOption`. Required."),
                     prop("children", "Element")
                         .doc("The trigger, and anything else that belongs with it - a hidden input, say."),
                     prop("empty", "Element")
                         .doc("Shown in place of the list when `options` is empty."),
-                    prop("loading", "bool")
-                        .default("false")
-                        .doc("The options are being fetched. Replaces the rows and `empty` with a `Loader`, marks the dropdown `aria-busy`, and puts `loading_label` in a status region beside the trigger. It wins over `empty`, so an async list does not flash \"no results\" on every keystroke."),
                     prop("loading_label", "String")
                         .default("theme")
-                        .doc("What the status region says while `loading`. Unset, `theme.combobox.labels.loading` - \"Loading\" in `ComboboxLabels::ENGLISH`."),
+                        .doc("What the status region says while `options` is pending. A pending list replaces the rows and `empty` with a `Loader` and marks the dropdown `aria-busy`; it wins over `empty`, so an async list does not flash \"no results\" on every keystroke. Unset, `theme.combobox.labels.loading` - \"Loading\" in `ComboboxLabels::ENGLISH`."),
                     prop("size", "Size")
                         .default("md")
                         .doc("A row's height and font size."),

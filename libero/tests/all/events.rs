@@ -2157,3 +2157,162 @@ fn a_plan_without_a_fixed_shape_keeps_the_text_the_user_typed() {
         );
     }
 }
+
+/// `Select`'s typeahead, and the arrows passing over a disabled row. Both are
+/// keyboard-only, so they need real dispatched events rather than SSR.
+mod select_keyboard {
+    use super::*;
+    use libero::components::{OptionItem, OptionList, Select};
+
+    thread_local! {
+        static PICKED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    fn cities() -> OptionList<String> {
+        OptionList::new([
+            "Berlin".to_string().into(),
+            "Bonn".to_string().into(),
+            // Skipped by the arrows and by typeahead alike, which is why it
+            // sits between two rows that a "B" would otherwise walk through.
+            OptionItem::new("Bochum".to_string()).disabled(true),
+            "Cologne".to_string().into(),
+        ])
+    }
+
+    /// Really controlled: `Select` renders `value` and asks for a new one, so
+    /// a test that never moves it would have typeahead searching from the same
+    /// place every time - and would never see the cycle at all.
+    fn app() -> Element {
+        let mut city = use_signal(|| None::<String>);
+        rsx! {
+            LiberoProvider {
+                Select::<String> {
+                    label: "City",
+                    options: cities(),
+                    value: city(),
+                    onchange: move |next: Option<String>| {
+                        PICKED.with_borrow_mut(|picked| picked.push(next.clone().unwrap_or_default()));
+                        city.set(next);
+                    },
+                }
+            }
+        }
+    }
+
+    /// A dom with the event converter installed and the picks reset, plus the
+    /// trigger's element id - the innermost element carrying a `keydown`,
+    /// since `ComboboxCore`'s wrapper registers one first.
+    fn mount() -> (VirtualDom, ElementId) {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        PICKED.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindClickListener::default();
+        dom.rebuild(&mut find);
+        let trigger = *find.keydown.last().expect("the trigger listens for keys");
+        (dom, trigger)
+    }
+
+    fn type_keys(dom: &mut VirtualDom, trigger: ElementId, keys: &str) {
+        for ch in keys.chars() {
+            press(dom, trigger, Key::Character(ch.to_string()));
+        }
+    }
+
+    /// Two passes: the list reports its row count while it renders, after the
+    /// trigger has been drawn, so the trigger catches up one pass later.
+    fn press(dom: &mut VirtualDom, trigger: ElementId, key: Key) {
+        dom.runtime()
+            .handle_event("keydown", Event::new(key_event(key), true), trigger);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    }
+
+    fn picked() -> Vec<String> {
+        PICKED.with_borrow(Clone::clone)
+    }
+
+    /// The buffer: three characters inside the window narrow to one row, and
+    /// a closed trigger changes the value in place the way a native `<select>`
+    /// does - no list is opened at all.
+    #[test]
+    fn a_buffered_query_picks_in_place_on_a_closed_trigger() {
+        let (mut dom, trigger) = mount();
+        type_keys(&mut dom, trigger, "ber");
+
+        // "b" lands on Berlin, and "be" then "ber" stay on it while it still
+        // matches - the narrowing half of the buffer.
+        assert_eq!(picked(), ["Berlin", "Berlin", "Berlin"]);
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(
+            !html.contains(r#"role="listbox""#),
+            "typing opened the list:\n{html}"
+        );
+    }
+
+    /// One character, pressed again, cycles - `typeahead_match` treats a
+    /// repeat as a single-character search that starts *after* the current
+    /// row. Bochum is disabled, so "B" walks Berlin, Bonn and back.
+    #[test]
+    fn a_repeated_character_cycles_and_skips_a_disabled_row() {
+        let (mut dom, trigger) = mount();
+        type_keys(&mut dom, trigger, "b");
+        assert_eq!(picked(), ["Berlin"]);
+
+        // Each press searches from the row the last one selected, so the
+        // repeat walks on rather than landing on Berlin again.
+        type_keys(&mut dom, trigger, "b");
+        assert_eq!(picked(), ["Berlin", "Bonn"]);
+        type_keys(&mut dom, trigger, "b");
+        assert_eq!(
+            picked(),
+            ["Berlin", "Bonn", "Berlin"],
+            "Bochum is disabled, so the cycle wraps past it"
+        );
+    }
+
+    /// Space still opens the list, as it always has - typeahead takes a space
+    /// only mid-query, where it is part of "new york".
+    #[test]
+    fn space_opens_the_list_rather_than_typing() {
+        let (mut dom, trigger) = mount();
+        press(&mut dom, trigger, Key::Character(" ".into()));
+
+        assert_eq!(picked(), Vec::<String>::new());
+        let html = body(&dioxus_ssr::render(&dom));
+        assert!(html.contains(r#"role="listbox""#), "{html}");
+    }
+
+    /// An open list moves its highlight instead of picking, and the arrows
+    /// pass over the disabled row: Berlin, Bonn, then Cologne.
+    #[test]
+    fn the_arrows_skip_a_disabled_row() {
+        let (mut dom, trigger) = mount();
+        press(&mut dom, trigger, Key::Character(" ".into()));
+
+        let rows = |dom: &VirtualDom| {
+            let html = body(&dioxus_ssr::render(dom));
+            let at = html
+                .find(r#"aria-activedescendant=""#)
+                .map(|at| at + r#"aria-activedescendant=""#.len());
+            at.map(|at| html[at..].split('"').next().unwrap().to_string())
+        };
+
+        // Opening already arms the first row, as a native `<select>` does.
+        assert!(rows(&dom).is_some_and(|id| id.ends_with("-option-0")));
+        press(&mut dom, trigger, Key::ArrowDown);
+        assert!(rows(&dom).is_some_and(|id| id.ends_with("-option-1")));
+        // Row 2 is Bochum, which is disabled.
+        press(&mut dom, trigger, Key::ArrowDown);
+        let id = rows(&dom).expect("a row to point at");
+        assert!(
+            id.ends_with("-option-3"),
+            "the arrows stopped on Bochum: {id}"
+        );
+        // And back up over it.
+        press(&mut dom, trigger, Key::ArrowUp);
+        let id = rows(&dom).expect("a row to point at");
+        assert!(id.ends_with("-option-1"), "{id}");
+
+        assert_eq!(picked(), Vec::<String>::new(), "an arrow picked something");
+    }
+}

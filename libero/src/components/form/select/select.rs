@@ -3,7 +3,7 @@ use dioxus::prelude::*;
 use crate::components::form::{row_label, use_bound};
 
 use crate::{
-    components::{Input, Options, common::field_props},
+    components::{Input, OptionList, OptionSource, Options, common::field_props},
     hooks::use_theme,
     utils::warn,
 };
@@ -19,6 +19,10 @@ pub struct SelectOptionArgs<T> {
     pub index: usize,
     /// Whether this row is part of the selection, for a checkmark.
     pub selected: bool,
+    /// Whether the list refuses this row. The row's greying and its
+    /// `aria-disabled` are the component's either way - this is for a caller
+    /// who wants to say so in the content too.
+    pub disabled: bool,
 }
 
 /// One selected value, handed to the `selection` callback of `MultiSelect`
@@ -61,8 +65,14 @@ field_props! {
         /// The options to list. Defaults to every `Options::options()` - which
         /// `String` and any other runtime type leave empty, so those pass them
         /// here.
-        #[props(default)]
-        options: Option<Vec<T>>,
+        ///
+        /// A `Vec<T>` converts, which is the flat list. An
+        /// [`OptionList`](crate::components::OptionList) adds named groups and
+        /// per-option `disabled`, and a [`Resource`] adds the fetch: the list
+        /// then reads pending against ready itself, and derives the loader,
+        /// `aria-busy` and the held-back empty state from it.
+        #[props(default, into)]
+        options: OptionSource<T>,
         /// Draws one row's content. Defaults to `Options::label`, in a
         /// `span { "data-slot": "label" }`, which is what ellipsises a long one.
         #[props(default)]
@@ -120,11 +130,13 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         warn("Select: without `onchange` the selection can never change.");
     }
 
-    let values = props
-        .options
-        .clone()
-        .unwrap_or_else(|| T::options().to_vec());
-    if values.is_empty() {
+    let list = option_list(&props.options);
+    let values = list.values();
+    // A list that has been asked for and has not answered yet lists nothing,
+    // and says nothing about being empty: the rows belong to the request still
+    // in flight.
+    let loading = props.options.is_pending();
+    if values.is_empty() && !loading {
         warn("Select: no options - a `T` without static `options()` needs `options`.");
     }
     let selected_index = current
@@ -137,7 +149,8 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     let selected: Vec<bool> = (0..values.len())
         .map(|index| selected_index == Some(index))
         .collect();
-    let rows = draw_rows(&values, &selected, props.option.as_ref());
+    let row_disabled = list.disabled();
+    let rows = draw_rows(&values, &selected, &row_disabled, props.option.as_ref());
     // A single selection has no chips, so the cursor the core hands down is
     // always `None` here.
     let draw_selection = props.selection;
@@ -185,6 +198,10 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
         SelectCore {
             rows,
             selected,
+            groups: list.group_labels(),
+            row_disabled,
+            row_labels: values.iter().map(Options::label).collect::<Vec<_>>(),
+            loading: loading.then(|| theme.combobox.labels.loading.to_string()),
             onpick: move |index: usize| {
                 if let (Some(onchange), Some(value)) = (&onchange, values.get(index)) {
                     onchange(Some(value.clone()));
@@ -221,10 +238,25 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     }
 }
 
+/// What the skin lists: the caller's options, or every `Options::options()`
+/// when the prop was left unset - which is the fallback a runtime type like
+/// `String` leaves empty, so those pass their own.
+///
+/// Unset is not the same as an empty list, which is why the prop is an
+/// `OptionSource` rather than an `Option<Vec<T>>`: a caller who passes nothing
+/// wants the enum's own options, and one who passes an empty list means it.
+pub(super) fn option_list<T: Options>(source: &OptionSource<T>) -> OptionList<T> {
+    match source.is_unset() {
+        true => OptionList::from(T::options().to_vec()),
+        false => source.list().clone(),
+    }
+}
+
 /// Each row's content - the caller's `option`, or the label.
 pub(super) fn draw_rows<T: Options>(
     values: &[T],
     selected: &[bool],
+    disabled: &[bool],
     option: Option<&Callback<SelectOptionArgs<T>, Element>>,
 ) -> Vec<Element> {
     values
@@ -236,6 +268,7 @@ pub(super) fn draw_rows<T: Options>(
                 value: value.clone(),
                 index,
                 selected: *selected,
+                disabled: disabled.get(index).copied().unwrap_or(false),
             }),
             None => row_label(value.label()),
         })
@@ -251,7 +284,7 @@ mod tests {
     #[test]
     fn a_default_row_puts_its_text_in_the_label_slot() {
         let values = vec!["Apple".to_string(), "Banana".to_string()];
-        let rows = draw_rows(&values, &[false, true], None);
+        let rows = draw_rows(&values, &[false, true], &[false, false], None);
         let html: Vec<String> = rows.into_iter().map(dioxus_ssr::render_element).collect();
         assert_eq!(
             html,

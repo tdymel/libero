@@ -182,14 +182,62 @@ That also covers a filter on something other than the label - an option shown by
 name but searched by email is a different closure in the same `filter` call, not
 a prop.
 
+## Groups and unavailable options
+
+Both arrive through `options`, as an `OptionList<T>` the caller builds:
+
+```rust,ignore
+OptionList::grouped()
+    .group("Orchard", [Fruit::Apple.into(), OptionItem::new(Fruit::Cherry).disabled(true)])
+    .group("Tropical", [Fruit::Banana, Fruit::Mango].map(OptionItem::new))
+```
+
+Groups are explicit - not a field on the option and not a `group_by` closure -
+because the caller is the only one who knows both the order the groups go in
+and what each is called. A named run is drawn as a `role="group"` named by its
+heading; a group named twice appends to the run it already has. Custom rows are
+unaffected: richness lives in the `option` callback, which is orthogonal to the
+shape of the list. **The caller's order is always kept**: a label used again
+after another group draws its heading a second time rather than merging the two
+runs, since merging would silently reorder options that were listed in a
+particular order. Two adjacent calls with one label still draw one heading.
+
+`disabled` is a flag on the option, not a closure and not a value your `T`
+refuses everywhere - a row this particular field will not take. It is drawn and
+read out, `aria-disabled="true"`, and the arrows, typeahead and clicks all pass
+over it.
+
+Groups change how rows are wrapped, never which index a row reports, and a
+search that empties a group simply leaves its heading out.
+
 ## Fetching options
 
-When the options come from a request, set `loading` while it runs. The dropdown
-then shows a [`Loader`](loader.md) in place of the rows **and of `empty`** - an
-async list's `options` is empty between a keystroke and its answer, and without
-`loading` every keystroke would flash the `empty` content first. The rows are
-replaced too: they belong to the previous query, and the arrows and Enter skip
-them.
+`options` is an `OptionSource<T>`, and the shortest async list is a
+`use_resource` handed straight to it:
+
+```rust,ignore
+let fruit = use_resource(move || async move { search(query()).await });
+
+rsx! {
+    Combobox { state: suggestions, options: fruit, .. }
+}
+```
+
+There is **no `loading` flag**. A source is pending until it first holds a
+value, and the list derives everything from that: a [`Loader`](loader.md) in
+place of the rows **and of `empty`**, `aria-busy` on the dropdown, and
+`loading_label` in the status region beside the trigger. Holding the empty
+state back is the point - an async list's options are empty between a keystroke
+and its answer, so a separate flag that someone forgets to set flashes "no
+results" on every keystroke. The rows are replaced too: they belong to the
+previous query, and the arrows and Enter skip them.
+
+A fetch that **failed** is an empty list. The library knows pending and ready,
+nothing else - show your own error beside the field, where you can say what
+went wrong and offer a retry.
+
+Driving the request yourself, `None` is pending and `Some(list)` is the answer,
+an empty one included:
 
 ```rust,ignore
 /// How long the fake search takes.
@@ -207,8 +255,9 @@ fn matching(query: &str) -> Vec<Fruit> {
 
 let suggestions = use_combobox();
 let mut text = use_signal(String::new);
-let mut results = use_signal(Vec::<Fruit>::new);
-let mut loading = use_signal(|| false);
+// One signal, not a list plus a `loading` flag: `None` *is* the search in
+// flight, so the two can never disagree.
+let mut results = use_signal(|| Some(Vec::<Fruit>::new()));
 // The answer still on its way. Replacing it drops the older one, so a slow
 // answer never overwrites a newer query's.
 let mut pending = use_signal(|| None::<Box<dyn TimerSubscription>>);
@@ -217,8 +266,7 @@ use_drop(move || pending.set(None));
 rsx! {
     Combobox {
         state: suggestions,
-        options: results(),
-        loading: loading(),
+        options: results().map(OptionList::from),
         loading_label: "Searching fruit",
         empty: rsx! { Text { size: "sm", "No fruit matches" } },
         option: move |o: ComboboxOptionArgs<Fruit>| rsx! {
@@ -233,15 +281,9 @@ rsx! {
             oninput: move |next: String| {
                 text.set(next.clone());
                 suggestions.open();
-                loading.set(true);
+                results.set(None);
                 let answer = timer().map(|timer| {
-                    timer.after(
-                        LATENCY,
-                        Box::new(move || {
-                            results.set(matching(&next));
-                            loading.set(false);
-                        }),
-                    )
+                    timer.after(LATENCY, Box::new(move || results.set(Some(matching(&next)))))
                 });
                 pending.set(answer);
             },
@@ -253,7 +295,7 @@ rsx! {
 ## What it does not do yet
 
 Multi-selection is nothing but a longer list of `selected` rows, so it needs no
-support here, but there is no creatable mode and no option groups. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet. The dropdown is
+support here, but there is no creatable mode. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet. The dropdown is
 positioned with plain absolute placement below the wrapper - it is not portaled
 and it does not flip when it runs out of room below.
 
@@ -277,7 +319,7 @@ has no selection to announce.
 
 Keyboard, from anywhere inside the wrapper: ArrowDown opens and moves down,
 ArrowUp moves up, Home and End jump to the ends, Enter picks the active row and
-closes, Escape and Tab close.
+closes, Escape and Tab close. Disabled rows are skipped by every one of them.
 
 Close the list on your trigger's blur (`onblur: move |_| suggestions.close()`),
 or an enclosing `Modal` or `HoverCard` stops hearing Escape on the web while
@@ -290,12 +332,11 @@ the list stays open.
 | Prop | Type | Default | Description |
 |---|---|---|---|
 | `state` | `ComboboxState` | - | From `use_combobox()`. Required. |
-| `options` | `Vec<T>` | - | The options to list, already filtered. Required. |
+| `options` | `OptionSource<T>` | - | The options to list, already filtered. Required. A `Vec<T>` converts, as do an `OptionList<T>` (named groups, per-option `disabled`) and a `Resource<Vec<T>>` (the whole async wiring). `None::<OptionList<T>>` is pending. |
 | `option` | `Callback<ComboboxOptionArgs<T>, Element>` | - | Draws one row. Required. |
 | `children` | `Element` | - | The trigger, and anything else that belongs with it. |
 | `empty` | `Element` | - | Shown in place of the list when `options` is empty. |
-| `loading` | `bool` | `false` | The options are being fetched: a `Loader` replaces the rows and `empty`, the dropdown is `aria-busy`, and the status region says `loading_label`. |
-| `loading_label` | `String` | theme | What the status region says while `loading`. Unset, `theme.combobox.labels.loading` - "Loading" in `ComboboxLabels::ENGLISH`. |
+| `loading_label` | `String` | theme | What the status region says while `options` is pending. Unset, `theme.combobox.labels.loading` - "Loading" in `ComboboxLabels::ENGLISH`. |
 | `size` | `Size` | `md` | A row's height and font size. |
 | `radius` | `Size` | `sm` | The dropdown's corner radius. |
 | `disabled` | `bool` | `false` | Blocks the arrow keys. |
@@ -329,6 +370,7 @@ it goes into event handlers by value.
 | `value` | `T` | The option this row draws. |
 | `index` | `usize` | Its position in `options`. |
 | `active` | `bool` | Whether the arrow keys are on this row. |
+| `disabled` | `bool` | Whether the list refuses this row. |
 
 ### `ComboboxOption`
 
@@ -336,6 +378,7 @@ it goes into event handlers by value.
 |---|---|---|---|
 | `selected` | `bool` | - | The current selection - `aria-selected` and a tint. Unset for a suggestion list. |
 | `active` | `bool` | from the `Combobox` | Overrides the keyboard highlight. |
+| `disabled` | `bool` | from the `Combobox` | Overrides whether the list refuses this row: greyed, `aria-disabled`, and answering neither the click nor Enter. |
 | `onpick` | `EventHandler<()>` | - | A click, or Enter while the row is active. |
 | `size` | `Size` | the `Combobox`'s | Row height and font size. |
 | `radius` | `Size` | the `Combobox`'s | Corner radius, tightened by the dropdown's padding. |

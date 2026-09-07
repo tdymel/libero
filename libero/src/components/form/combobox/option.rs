@@ -28,6 +28,9 @@ pub(super) struct ComboboxContext {
 pub(super) struct ComboboxRowContext {
     pub index: usize,
     pub active: bool,
+    /// The list refuses this row. It reaches the row the same way `active`
+    /// does, so a caller's `option` callback needs to pass nothing on.
+    pub disabled: bool,
 }
 
 /// One option, handed to `Combobox`'s `option` callback.
@@ -38,6 +41,10 @@ pub struct ComboboxOptionArgs<T> {
     /// Whether the arrow keys are on this row. `ComboboxOption` reads it for
     /// itself - this is for a row drawn without one.
     pub active: bool,
+    /// Whether the list refuses this row. `ComboboxOption` reads it for itself
+    /// too - this is for a row drawn without one, which then owes its reader
+    /// both the greying and `aria-disabled`.
+    pub disabled: bool,
 }
 
 static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
@@ -76,6 +83,15 @@ static COMBOBOX_ROW_SX: StaticSx = StaticSx::new(|| {
         // cannot say "highlighted" on a row that is already tinted. Inset, so
         // it neither overlaps the row above nor is clipped by the dropdown.
         .when("active", inset_focus_ring_sx("-2px"))
+        // Folded last, so it wins over the tints above it: a disabled row is
+        // drawn and read out, and answers nothing. The hover has to be undone
+        // by hand - a row the pointer cannot pick must not light up under it.
+        .when(
+            "disabled",
+            sx().opacity("0.5")
+                .cursor("not-allowed")
+                .hover(sx().background("transparent")),
+        )
 });
 
 base_props! {
@@ -88,6 +104,11 @@ base_props! {
         /// `Combobox` drawing this row.
         #[props(default)]
         active: Option<bool>,
+        /// Overrides whether the list refuses this row, which otherwise comes
+        /// from the `Combobox` drawing it. A refused row is greyed and
+        /// `aria-disabled`, and answers neither the click nor Enter.
+        #[props(default)]
+        disabled: Option<bool>,
         #[props(default)]
         onpick: Option<EventHandler<()>>,
         /// Row height and font size. Defaults to the `Combobox`'s own `size`.
@@ -122,15 +143,27 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         None => theme.combobox.radius,
     });
 
-    let active = props
-        .active
-        .unwrap_or_else(|| row.is_some_and(|row| row().active));
+    let disabled = props
+        .disabled
+        .unwrap_or_else(|| row.is_some_and(|row| row().disabled));
+    // A disabled row is never the highlight, whatever the list thinks: the
+    // core snaps the highlight off one already, and this is the second lock,
+    // for a caller who sets `active` by hand.
+    let active = !disabled
+        && props
+            .active
+            .unwrap_or_else(|| row.is_some_and(|row| row().active));
     let id = combobox
         .zip(row)
         .map(|(combobox, row)| super::aria::option_id(&(combobox.id)(), row().index));
 
     let onpick = props.onpick;
+    // The one gate both the click and Enter go through: Enter fires this same
+    // callback, which the active row registers as the `active_pick`.
     let pick = use_callback(move |()| {
+        if disabled {
+            return;
+        }
         if let Some(onpick) = &onpick {
             onpick.call(());
         }
@@ -148,6 +181,7 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .with(radius.radius_state_name(), true)
         .with("active", active)
         .with("selected", props.selected.unwrap_or(false))
+        .with("disabled", disabled)
         .into();
 
     use_box()
@@ -159,6 +193,9 @@ pub fn ComboboxOption(props: ComboboxOptionProps) -> Element {
         .attr_default("id", id)
         .attr_default("role", "option")
         .attr("aria-selected", props.selected.map(|on| on.to_string()))
+        // Not `disabled`, which is no attribute on a `div` - and an option a
+        // screen reader can still reach and read is the point of `aria-`.
+        .attr("aria-disabled", disabled.then_some("true"))
         // Or the click blurs whatever the caller focused first.
         .event("onmousedown", move |event: MouseEvent| {
             event.prevent_default();

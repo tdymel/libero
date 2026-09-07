@@ -1,9 +1,9 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, Wrap, prop, props};
 use dioxus::prelude::*;
 use libero::{
     components::{
-        ActionIcon, Chip, Code, FieldStatus, MultiSelect, Options, SelectFilterArgs,
-        SelectOptionArgs, SelectionArgs, Text,
+        ActionIcon, Chip, Code, FieldStatus, MultiSelect, OptionItem, OptionList, Options,
+        SelectFilterArgs, SelectOptionArgs, SelectionArgs, Text,
     },
     sx::sx,
 };
@@ -98,6 +98,39 @@ const CUSTOM_FILTER: &str = r#"filter: move |f: SelectFilterArgs<Topping>| {
         || f.value.note().to_lowercase().contains(&query)
 }"#;
 
+/// Named runs, built explicitly: the caller is the only one who knows both
+/// the order the groups go in and what each is called.
+// snippet: after TOPPING_ENUM
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+const GROUPED: &str = r#"options: OptionList::grouped()
+    .group("Dairy", [Topping::Cheese])
+    .group("Vegetables", [Topping::Mushrooms, Topping::Olives, Topping::Onions, Topping::Peppers])
+    .group("Fruit", [Topping::Pineapple])"#;
+
+/// The flag sits on the option, in the same builder as the group - a row the
+/// list refuses, rather than a value the type refuses everywhere.
+// snippet: after TOPPING_ENUM
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+const SOLD_OUT: &str = r#"options: OptionList::new([
+    Topping::Cheese.into(),
+    Topping::Mushrooms.into(),
+    Topping::Olives.into(),
+    Topping::Onions.into(),
+    Topping::Peppers.into(),
+    OptionItem::new(Topping::Pineapple).disabled(true),
+])"#;
+
+/// Both at once, since the two switches share the one `options` prop.
+// snippet: after TOPPING_ENUM
+// snippet: let mut value = use_signal(Vec::<Topping>::new);
+// snippet: in MultiSelect { value: value(), onchange: move |next| value.set(next), .. }
+const GROUPED_SOLD_OUT: &str = r#"options: OptionList::grouped()
+    .group("Dairy", [Topping::Cheese])
+    .group("Vegetables", [Topping::Mushrooms, Topping::Olives, Topping::Onions, Topping::Peppers])
+    .group("Fruit", [OptionItem::new(Topping::Pineapple).disabled(true)])"#;
+
 #[derive(Clone, Copy, PartialEq, Options)]
 enum Topping {
     Cheese,
@@ -106,6 +139,32 @@ enum Topping {
     Onions,
     Peppers,
     Pineapple,
+}
+
+/// The two switches drive one prop, so the list is built once from both.
+/// Pineapple is the one that sells out, which is what `status: warning` is
+/// already about.
+fn topping_options(values: &DemoValues) -> OptionList<Topping> {
+    let pineapple = OptionItem::new(Topping::Pineapple).disabled(values.str("sold_out") == "true");
+    let vegetables = [
+        Topping::Mushrooms,
+        Topping::Olives,
+        Topping::Onions,
+        Topping::Peppers,
+    ];
+    match values.str("grouped") == "true" {
+        true => OptionList::grouped()
+            .group("Dairy", [Topping::Cheese])
+            .group("Vegetables", vegetables)
+            .group("Fruit", [pineapple]),
+        false => OptionList::new(
+            [Topping::Cheese]
+                .into_iter()
+                .chain(vegetables)
+                .map(OptionItem::new)
+                .chain([pineapple]),
+        ),
+    }
 }
 
 impl Topping {
@@ -207,7 +266,7 @@ pub fn MultiSelectPage() -> Element {
                         .doc("The selection, in the order it was picked; strictly controlled. Empty shows `placeholder`."),
                     prop("onchange", "EventHandler<Vec<T>>")
                         .doc("Called with the whole selection the caller should hold next."),
-                    prop("options", "Vec<T>")
+                    prop("options", "OptionSource<T>")
                         .default("T::options()")
                         .doc("Narrows or reorders the list. A runtime set passes it here."),
                     prop("option", "Callback<SelectOptionArgs<T>, Element>")
@@ -332,6 +391,19 @@ pub fn MultiSelectPage() -> Element {
                             true => vec![CUSTOM_FILTER.to_string()],
                             false => vec![],
                         }),
+                    // Named runs, drawn as `role="group"` with a heading each.
+                    Control::switch("grouped").code(|_, values| {
+                        match (values.str("grouped").as_str(), values.str("sold_out").as_str()) {
+                            ("true", "true") => vec![GROUPED_SOLD_OUT.to_string()],
+                            ("true", _) => vec![GROUPED.to_string()],
+                            (_, "true") => vec![SOLD_OUT.to_string()],
+                            _ => vec![],
+                        }
+                    }),
+                    // Prints through the `grouped` switch above, since the two
+                    // share the one `options` prop and one snippet has to show
+                    // whatever both say.
+                    Control::switch("sold_out").code(|_, _| vec![]),
                     Control::switch("clearable"),
                     Control::switch("required"),
                     Control::switch("disabled"),
@@ -351,6 +423,7 @@ pub fn MultiSelectPage() -> Element {
                             "error" => FieldStatus::Error("Pick at least one.".to_string()),
                             _ => FieldStatus::Valid,
                         },
+                        options: topping_options(&values),
                         option: custom(&values).then(|| Callback::new(topping_row)),
                         selection: custom(&values).then(|| Callback::new(topping_selection)),
                         searchable: (values.str("searchable") == "true").then_some(true),
@@ -364,6 +437,25 @@ pub fn MultiSelectPage() -> Element {
                         onchange: move |next| value.set(next),
                     }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Closed, the trigger opens on ArrowDown, Enter or Space. Open, ArrowDown and "
+                    "ArrowUp move the highlight, Enter toggles the row and leaves the list open, "
+                    "and Escape closes. ArrowLeft and ArrowRight move a cursor over the chips, "
+                    "and Backspace or Delete removes the one it is on - or the last, with no "
+                    "cursor. Typing searches the labels, buffered for half a second, and opens "
+                    "the list on the match - unlike "
+                    Code { source: "Select" }
+                    ", whose closed trigger changes the value in place. A pick here toggles, so "
+                    "typing in place would silently drop a value that was already chosen, and "
+                    "that is the one keyboard difference between the two. Disabled options are "
+                    "read out but skipped by the arrows, by typeahead and by the mouse. With "
+                    Code { source: "searchable" }
+                    " the search box replaces typeahead, and takes the focus while the list is "
+                    "open."
+                }
             }
         }
     }

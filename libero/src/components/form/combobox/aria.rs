@@ -10,6 +10,14 @@ pub(crate) fn option_id(id: &str, index: usize) -> String {
     format!("{id}-option-{index}")
 }
 
+/// A group heading's id, which the `role="group"` around it points at with
+/// `aria-labelledby`. Keyed on the group's first row, not on its position in
+/// the list: the search filter can empty a whole group, and an id that shifts
+/// under a surviving group would re-label it.
+pub(crate) fn group_id(id: &str, first_row: usize) -> String {
+    format!("{id}-group-{first_row}")
+}
+
 /// The trigger's half of the listbox wiring. Reached through
 /// [`ComboboxState::trigger`](crate::hooks::ComboboxState::trigger), which is
 /// the only place that knows the `id` and the active row at once.
