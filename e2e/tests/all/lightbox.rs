@@ -6,6 +6,10 @@
 //! lands in a slide that is scrolled away (todo 57). And todo 323: a second
 //! `open_with` while the viewer is open jumps to the new gallery's index,
 //! rather than scrolling past - and so fetching - the pictures between.
+//!
+//! `contrast_covers` guards todo 327: the scroll lock made axe judge both
+//! arrows and every thumbnail off-screen, so nothing below the close button was
+//! contrast-checked in the open state.
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
@@ -24,6 +28,7 @@ const PICTURE: &str = "[role=dialog] [data-lightbox-frame] img[tabindex='0']";
 fn it_meets_the_baseline() {
     Suite::new("lightbox", "/lightbox")
         .focusable(TRIGGER)
+        .contrast_covers(DIALOG)
         .state(
             "open",
             &[Step::TabTo(TRIGGER), Step::Press(keyboard::ENTER)],

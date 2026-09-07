@@ -363,6 +363,77 @@ fn select_with_faint_options_fails_the_contrast_pass_in_the_open_state() {
     });
 }
 
+/// `Spotlight`'s open result list with `#ddd` text, checked where `Suite`
+/// checks it.
+///
+/// **This is the positive control for todo 327.** This exact plant was made on
+/// 2026-09-19 and stayed green: `Modal`'s `body { overflow: hidden }` scroll
+/// lock made axe's `overflowHidden` judge every row below the search box
+/// clipped away by a content-sized body, so `color-contrast` was inapplicable
+/// to the entire list. The lock is lifted for the axe run now, and this test is
+/// what says so - it fails if the lift is ever removed, because the rows go
+/// back to being unreachable and no violation is reported.
+#[test]
+fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
+    block_on(async {
+        must_fail(
+            "/spotlight",
+            Some(&stylesheet(
+                "[role=dialog] [role=option] * { color: #dddddd !important; }",
+            )),
+            "color-contrast",
+            |fixture| async move {
+                let page = &fixture.page;
+                let result = async {
+                    keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
+                    keyboard::press(page, keyboard::ENTER).await?;
+                    wait::for_visible(page, "[role=dialog] [role=option]").await?;
+                    contrast::assert_clean(page, "[data-fixture-ready]").await
+                }
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// The coverage guard itself, proved able to fail.
+///
+/// `contrast_covers` asserts axe *evaluated* text rather than merely finding
+/// nothing wrong with it, so its own defect is text axe cannot reach. Pinning
+/// the scroll lock back on reproduces todo 327 exactly, and the guard has to
+/// name the rows it could not account for.
+///
+/// An **inline** `!important` is the plant, not a stylesheet: the harness lifts
+/// the lock with a stylesheet of its own appended at run time, which would win
+/// the cascade against any rule planted earlier. A style attribute outranks
+/// both.
+#[test]
+fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
+    block_on(async {
+        must_fail(
+            "/spotlight",
+            Some("document.body.style.setProperty('overflow', 'hidden', 'important')"),
+            "never evaluated by axe's `color-contrast` rule",
+            |fixture| async move {
+                let page = &fixture.page;
+                let result = async {
+                    keyboard::tab_to(page, crate::spotlight::TRIGGER, 10).await?;
+                    keyboard::press(page, keyboard::ENTER).await?;
+                    wait::for_visible(page, "[role=dialog] [role=option]").await?;
+                    contrast::assert_covers(page, "[data-fixture-ready]", "[role=dialog]")
+                        .await
+                        .map(|_| ())
+                }
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
 /// `Drawer` whose trigger is disabled while the drawer is open - a common way
 /// to stop a double open, and one that leaves focus nowhere to return to.
 ///

@@ -71,8 +71,73 @@ pub struct Node {
     pub failure_summary: Option<String>,
 }
 
-/// Run axe over the subtree at `selector`.
-pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
+/// Lift `Modal`'s scroll lock for the duration of an axe run, and prove that
+/// lifting it moved nothing.
+///
+/// ## Why this is here at all (todo 327)
+///
+/// axe's `isVisibleOnScreen` runs five screen checks, and one of them is
+/// `overflowHidden`: it collects the element's `overflow: hidden` ancestors and
+/// calls the element hidden when any of their rects fails to overlap it.
+///
+/// `Modal` locks scroll with `body { overflow: hidden; }`
+/// (`components/overlay/modal.rs`). That makes `<body>` an overflow-hidden
+/// ancestor of everything in the dialog - and `<body>`'s border box is sized to
+/// the page's own content, which on a fixture is a couple of hundred pixels,
+/// while the dialog is `position: fixed` and draws wherever the viewport puts
+/// it. axe's ancestor walk does not stop at the fixed-position containing
+/// block, so it concludes that a 122px-tall body clips away a row at y=171 -
+/// and `color-contrast` becomes **inapplicable** to it. Measured 2026-09-20:
+/// every element in `/modal`'s dialog, both arrows and all six thumbnails in
+/// `/lightbox`, and every result row in `/spotlight`. `/drawer` was green only
+/// because its content happens to sit inside the body box. Nothing to do with
+/// the scroll box, the portal or `overflow: hidden auto`, which is what the
+/// todo guessed.
+///
+/// The browser is not clipping anything: when `<html>`'s overflow is `visible`
+/// the body's overflow propagates to the viewport and the body's own used value
+/// becomes `visible`, but `getComputedStyle` still reports `hidden`, which is
+/// what axe reads. So this is a tool defect, and the component is right.
+///
+/// ## Why the harness compensates rather than the component
+///
+/// `body { overflow: hidden }` is the scroll lock every modal in the world
+/// uses. Changing it to please a checker would be distorting the library to fit
+/// a tool. Lifting it for the length of one axe run restores exactly the state
+/// the page has when no modal is open, and is only done when the page is not
+/// scrollable anyway (the body box is shorter than the viewport), so no
+/// scrollbar can appear and nothing can reflow.
+///
+/// That last sentence is an assertion, not a hope: `__moved` records whether
+/// any element under `<body>` changed its rect across the lift, and a run that
+/// moved something fails instead of reporting a measurement taken of a layout
+/// nobody sees.
+const UNLOCK: &str = r#"
+    const __boxes = () => Array.from(document.querySelectorAll('body *')).map(el => {
+        const r = el.getBoundingClientRect();
+        return r.x + ',' + r.y + ',' + r.width + ',' + r.height;
+    });
+    const __lifting = getComputedStyle(document.body).overflow.split(' ')[0] === 'hidden'
+        && document.body.getBoundingClientRect().height < window.innerHeight;
+    let __style = null;
+    let __moved = null;
+    if (__lifting) {
+        const before = __boxes();
+        __style = document.createElement('style');
+        __style.textContent = 'body { overflow: visible !important; }';
+        document.head.append(__style);
+        const after = __boxes();
+        const at = before.findIndex((box, i) => box !== after[i]);
+        __moved = before.length !== after.length
+            ? 'the number of elements changed from ' + before.length + ' to ' + after.length
+            : (at >= 0 ? 'element ' + at + ' moved from ' + before[at] + ' to ' + after[at] : null);
+    }
+"#;
+
+/// Puts the scroll lock back. Always paired with [`UNLOCK`].
+const RELOCK: &str = "if (__style) { __style.remove(); }";
+
+async fn inject(page: &Page) -> Result<()> {
     let injected: bool = page
         .evaluate("typeof window.axe !== 'undefined'")
         .await?
@@ -80,27 +145,149 @@ pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
     if !injected {
         page.evaluate(axe_source()?).await?;
     }
+    Ok(())
+}
+
+#[derive(Debug, Deserialize)]
+struct Run {
+    /// `Some` when lifting the scroll lock changed the layout, which would make
+    /// every reading in this run one of a page nobody sees.
+    moved: Option<String>,
+    violations: Vec<Violation>,
+}
+
+/// Run axe over the subtree at `selector`.
+pub async fn run(page: &Page, selector: &str) -> Result<Vec<Violation>> {
+    inject(page).await?;
 
     let script = format!(
         r#"(async () => {{
+            {UNLOCK}
             const result = await window.axe.run(document.querySelector({}), {{
                 runOnly: {{ type: 'rule', values: {} }},
             }});
-            return result.violations.map(v => ({{
-                id: v.id,
-                help: v.help,
-                nodes: v.nodes.map(n => ({{
-                    html: n.html,
-                    failure_summary: n.failureSummary || null,
+            {RELOCK}
+            return {{
+                moved: __moved,
+                violations: result.violations.map(v => ({{
+                    id: v.id,
+                    help: v.help,
+                    nodes: v.nodes.map(n => ({{
+                        html: n.html,
+                        failure_summary: n.failureSummary || null,
+                    }})),
                 }})),
-            }}));
+            }};
         }})()"#,
         serde_json::to_string(selector)?,
         serde_json::to_string(RULES)?,
     );
 
-    let violations = page.evaluate(script).await?.into_value()?;
-    Ok(violations)
+    let run: Run = page.evaluate(script).await?.into_value()?;
+    if let Some(moved) = run.moved {
+        bail!(
+            "lifting the modal scroll lock for the axe run changed the layout ({moved}), \
+             so the contrast reading would be of a page nobody sees. See `UNLOCK` in \
+             `passes/contrast.rs` and todo 327."
+        );
+    }
+    Ok(run.violations)
+}
+
+#[derive(Debug, Deserialize)]
+struct Coverage {
+    moved: Option<String>,
+    /// On-screen elements holding their own text, under the selector.
+    wanted: usize,
+    /// Of those, the ones `color-contrast` never evaluated.
+    missing: Vec<String>,
+}
+
+/// Every on-screen element under `selector` that holds text of its own must
+/// have been **evaluated** by axe's `color-contrast` rule.
+///
+/// A contrast pass reports absence, so "axe found nothing" and "axe looked at
+/// nothing" are the same green. Todo 327 is four components' worth of the
+/// second, and it survived a `#ddd` plant. This is the difference asserted:
+/// axe's result lists the nodes each rule passed, failed and could not decide,
+/// and an element with visible text in none of those three was never checked.
+pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<usize> {
+    inject(page).await?;
+
+    let script = format!(
+        r#"(async () => {{
+            {UNLOCK}
+            const result = await window.axe.run(document.querySelector({root}), {{
+                runOnly: {{ type: 'rule', values: ['color-contrast'] }},
+            }});
+            {RELOCK}
+
+            const seen = new Set();
+            for (const bucket of ['passes', 'violations', 'incomplete']) {{
+                for (const rule of result[bucket]) {{
+                    if (rule.id !== 'color-contrast') continue;
+                    for (const node of rule.nodes) {{
+                        const target = node.target[0];
+                        const css = Array.isArray(target) ? target[target.length - 1] : target;
+                        document.querySelectorAll(css).forEach(el => seen.add(el));
+                    }}
+                }}
+            }}
+
+            const wanted = [];
+            for (const host of document.querySelectorAll({selector})) {{
+                for (const el of [host, ...host.querySelectorAll('*')]) {{
+                    // The element that *owns* the text is the one axe reports,
+                    // so a wrapper whose text lives in a child is not wanted.
+                    const owns = Array.from(el.childNodes)
+                        .some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+                    if (!owns) continue;
+                    if (el.closest('[aria-hidden=true]')) continue;
+                    const style = getComputedStyle(el);
+                    if (style.display === 'none' || style.visibility === 'hidden'
+                        || style.opacity === '0') continue;
+                    const r = el.getBoundingClientRect();
+                    // Smaller than this is a visually-hidden recipe, which no
+                    // sighted user reads and axe rightly skips.
+                    if (r.width < 4 || r.height < 4) continue;
+                    if (r.bottom <= 0 || r.right <= 0
+                        || r.top >= window.innerHeight || r.left >= window.innerWidth) continue;
+                    wanted.push(el);
+                }}
+            }}
+
+            return {{
+                moved: __moved,
+                wanted: wanted.length,
+                missing: wanted.filter(el => !seen.has(el))
+                    .map(el => el.outerHTML.slice(0, 200)),
+            }};
+        }})()"#,
+        root = serde_json::to_string(root)?,
+        selector = serde_json::to_string(selector)?,
+    );
+
+    let coverage: Coverage = page.evaluate(script).await?.into_value()?;
+    if let Some(moved) = coverage.moved {
+        bail!(
+            "lifting the modal scroll lock for the coverage run changed the layout ({moved}). \
+             See `UNLOCK` in `passes/contrast.rs` and todo 327."
+        );
+    }
+    if !coverage.missing.is_empty() {
+        let mut report = String::new();
+        for html in &coverage.missing {
+            report.push_str(&format!("\n      {html}"));
+        }
+        bail!(
+            "contrast coverage: {} of {} on-screen text element(s) under {selector} were \
+             never evaluated by axe's `color-contrast` rule, so a contrast failure in them \
+             would read as green:{report}",
+            coverage.missing.len(),
+            coverage.wanted,
+        );
+    }
+    Ok(coverage.wanted)
 }
 
 /// A violation we know about and have decided not to fix yet.

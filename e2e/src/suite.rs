@@ -74,6 +74,7 @@ pub struct Suite {
     focusable: Vec<&'static str>,
     targets: Vec<Target>,
     waivers: &'static [contrast::Waiver],
+    covers: Vec<&'static str>,
     snapshot: bool,
     states: Vec<State>,
     viewports: Vec<Viewport>,
@@ -93,6 +94,7 @@ impl Suite {
             focusable: Vec::new(),
             targets: Vec::new(),
             waivers: &[],
+            covers: Vec::new(),
             snapshot: true,
             states: Vec::new(),
             viewports: Viewport::ALL.to_vec(),
@@ -144,6 +146,23 @@ impl Suite {
     /// violations are still printed.
     pub fn waive(mut self, waivers: &'static [contrast::Waiver]) -> Self {
         self.waivers = waivers;
+        self
+    }
+
+    /// Text that axe must be shown to have **looked at**, not merely found
+    /// nothing wrong with. Repeatable.
+    ///
+    /// `assert_clean` reports absence, so a rule that never ran and a rule that
+    /// found nothing are the same green. Todo 327 was four components' worth of
+    /// the first kind, surviving a `#ddd` plant in silence. Point this at the
+    /// text a unit believes it is checking - a result row, a dialog's body -
+    /// and the belief becomes an assertion.
+    ///
+    /// Like `targets`, it is measured wherever the text exists: content that
+    /// only appears in an open state matches nothing at rest. A selector that
+    /// matched in no state at all is a failure, not a pass.
+    pub fn contrast_covers(mut self, selector: &'static str) -> Self {
+        self.covers.push(selector);
         self
     }
 
@@ -221,6 +240,8 @@ impl Suite {
 
         // Contrast and the ARIA-validity rules, at rest.
         contrast::assert_clean_except(page, self.root, self.waivers).await?;
+        let mut covered: Vec<usize> = vec![0; self.covers.len()];
+        self.assert_coverage(page, &mut covered).await?;
 
         // A ring on every control that can be tabbed to, and enough contrast on
         // it to be seen.
@@ -245,9 +266,22 @@ impl Suite {
         for state in &self.states {
             self.reach(page, state).await?;
             contrast::assert_clean_except(page, self.root, self.waivers).await?;
+            self.assert_coverage(page, &mut covered).await?;
             self.measure_targets(page, &mut seen).await?;
             if self.snapshot {
                 self.take_snapshot(fixture, state.name).await?;
+            }
+        }
+
+        // Same rule as the targets below: a coverage selector that found text
+        // in no state checked nothing, which is the failure this method exists
+        // to make impossible.
+        for (selector, found) in self.covers.iter().zip(&covered) {
+            if *found == 0 {
+                anyhow::bail!(
+                    "contrast coverage: {selector} held no on-screen text at rest or in any \
+                     declared state, so requiring axe to have checked it asserts nothing"
+                );
             }
         }
 
@@ -268,6 +302,20 @@ impl Suite {
         fixture
             .console
             .assert_clean(&format!("the {} battery", self.name))?;
+        Ok(())
+    }
+
+    /// `covered[i]` accumulates the most text `covers[i]` ever held, so a
+    /// selector that matches only in an open state still counts.
+    async fn assert_coverage(
+        &self,
+        page: &chromiumoxide::Page,
+        covered: &mut [usize],
+    ) -> anyhow::Result<()> {
+        for (index, selector) in self.covers.iter().enumerate() {
+            let wanted = contrast::assert_covers(page, self.root, selector).await?;
+            covered[index] = covered[index].max(wanted);
+        }
         Ok(())
     }
 

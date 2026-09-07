@@ -1,5 +1,10 @@
 //! `Modal`: the overlay archetype.
 //!
+//! `contrast_covers` is load-bearing here. Todo 327: the scroll lock this
+//! component injects, `body { overflow: hidden }`, made axe judge **every**
+//! element in the dialog off-screen, so the open-state axe run checked nothing
+//! at all. Fixed in `passes/contrast.rs`; this line keeps it fixed.
+//!
 //! The focus-return half of this contract is the one that fails silently
 //! everywhere else: nothing looks wrong on screen when focus falls back to
 //! `<body>`, and the keyboard user is simply dumped at the top of the document.
@@ -16,6 +21,7 @@ const DIALOG: &str = "[role=dialog]";
 fn it_meets_the_baseline() {
     Suite::new("modal", "/modal")
         .focusable(TRIGGER)
+        .contrast_covers(DIALOG)
         .state(
             "open",
             &[Step::TabTo(TRIGGER), Step::Press(keyboard::ENTER)],

@@ -1,4 +1,8 @@
 //! `Drawer`: the overlay archetype, as a modal docked to an edge.
+//!
+//! It escaped todo 327 only by geometry - its panel happens to sit inside the
+//! fixture's short body box, where the scroll lock's phantom clip did not
+//! reach. `contrast_covers` makes that an assertion rather than luck.
 
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
@@ -12,6 +16,7 @@ const DIALOG: &str = "[role=dialog]";
 fn it_meets_the_baseline() {
     Suite::new("drawer", "/drawer")
         .focusable(TRIGGER)
+        .contrast_covers(DIALOG)
         .targets(TRIGGER)
         .state(
             "open",

@@ -3,11 +3,13 @@
 //! Focus goes to the search box and stays there while the highlight moves, so
 //! the palette is a trap with a single stop in it.
 //!
-//! **axe does not check the result rows' contrast** (todo 327): axe 4.10.2
-//! judges the palette's listbox not visible on screen, so `color-contrast` is
-//! inapplicable to every row in it. A `#ddd` description planted there stayed
-//! green. The open-state axe run here covers the search box and nothing below
-//! it.
+//! `contrast_covers` on the dialog is not decoration. Until todo 327 was found
+//! axe judged every row below the search box off-screen - `Modal`'s
+//! `body { overflow: hidden }` scroll lock against a content-sized body box -
+//! so `color-contrast` was inapplicable to the whole result list and a `#ddd`
+//! description planted there stayed green. The lock is lifted for the axe run
+//! now (`passes/contrast.rs`), and this line is what stops that regressing
+//! into silence again.
 
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
@@ -22,6 +24,7 @@ fn it_meets_the_baseline() {
     Suite::new("spotlight", "/spotlight")
         .focusable(TRIGGER)
         .targets("[role=dialog] [role=option]")
+        .contrast_covers(DIALOG)
         .state(
             "open",
             &[Step::TabTo(TRIGGER), Step::Press(keyboard::ENTER)],
