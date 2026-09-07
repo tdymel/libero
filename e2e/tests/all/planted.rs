@@ -17,7 +17,7 @@
 //! capturing listener - so the library is untouched and the fixture is the one
 //! its own unit runs against. One needs a prop, and has a route of its own.
 
-use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex};
+use e2e::archetypes::{Combobox, Orientation, Overlay, RadioSet, RovingTabindex, count_tab_stops};
 use e2e::browser::block_on;
 use e2e::passes::{contrast, focus, keyboard, motion, pointer, target_size};
 use e2e::{Fixture, Viewport, wait};
@@ -189,6 +189,60 @@ fn tabs_with_a_tab_stop_inside_a_tab_fail_the_roving_contract() {
             },
         )
         .await;
+    });
+}
+
+/// `Tree` with every row out of the tab order: the other direction the count
+/// has to tell apart.
+///
+/// Too many stops and none at all are different defects, and a count that
+/// cannot report zero would give the same green for a keyboard-unreachable
+/// widget as for a correct one - which is how the notification unit's missing
+/// target selector read as coverage (todo 366). An observer keeps every
+/// `[role=treeitem]` at `tabindex="-1"`, so nothing inside the tree is
+/// reachable, and the count has to say `0` rather than erroring or defaulting
+/// to the one stop the unit expects.
+///
+/// **This is evidence, not the guard.** The mechanism already distinguishes
+/// zero: `count_tab_stops` bails when the item selector matches nothing, and
+/// both `assert_single_tab_stop` and `tree::it_is_a_single_tab_stop` fail on
+/// any count other than 1. What this test is for is the day someone changes
+/// the counter - a budget, an early return, a "default to one if the walk
+/// never entered" - and turns zero back into a green.
+#[test]
+fn tree_with_no_tab_stop_at_all_counts_zero() {
+    block_on(async {
+        let fixture = Fixture::open("/tree", Viewport::Desktop).await.unwrap();
+        fixture
+            .page
+            .evaluate(
+                // The guard on the write is not a nicety. `setAttribute` records
+                // a mutation even when the value is unchanged, so an observer
+                // that writes unconditionally re-triggers itself forever, the
+                // main thread never yields, and every later CDP call fails as
+                // `Timeout` - which reads as a slow machine rather than as a
+                // plant that froze the page. Measured 2026-09-20: 661s.
+                "(() => { const strip = () => document.querySelectorAll('[role=treeitem]')\
+                 .forEach(el => { if (el.getAttribute('tabindex') !== '-1') \
+                 el.setAttribute('tabindex', '-1'); }); \
+                 new MutationObserver(strip).observe(document.body, \
+                 { subtree: true, childList: true, attributes: true, \
+                 attributeFilter: ['tabindex'] }); \
+                 strip(); })()",
+            )
+            .await
+            .unwrap();
+
+        let stops = count_tab_stops(&fixture.page, "[role=treeitem]")
+            .await
+            .unwrap();
+        let _ = fixture.close().await;
+
+        assert_eq!(
+            stops, 0,
+            "a tree nothing can tab into should count 0 stops, not {stops}; \
+             `tree::it_is_a_single_tab_stop` is what this makes fail"
+        );
     });
 }
 

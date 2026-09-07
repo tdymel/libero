@@ -430,6 +430,14 @@ fn the_live_regions_are_mounted_and_silent_before_anything_happens() {
 /// the declaration guards is a future layout that crowds it. That the
 /// computation can refuse a real case is proved separately, on two 20x20
 /// buttons edge to edge (`negative.rs`).
+///
+/// **It asserts the count, not only the verdict.** The defect todo 366 was
+/// filed for was not a wrong measurement, it was no measurement: the unit had
+/// no target selector at all and reported green. A selector that matches
+/// nothing gives that same green, so a rename of `[data-slot=close]` has to
+/// turn this red rather than quietly reduce it to a no-op.
+/// `Suite::targets_spaced` guards the same thing from the other side - it
+/// fails a selector that matched in no state - and this pins the exact count.
 #[test]
 fn its_close_button_is_undersized_and_clears_its_neighbours() {
     block_on(async {
@@ -444,8 +452,12 @@ fn its_close_button_is_undersized_and_clears_its_neighbours() {
             assert_eq!(
                 measured.len(),
                 1,
-                "expected one close button at {}, found {measured:?}",
-                viewport.name()
+                "at {}: {CLOSE} matched {} element(s), expected exactly one. A selector that \
+                 matches nothing measures nothing and reports the same green as one that \
+                 measures and passes, which is the defect this test exists for. Found: \
+                 {measured:?}",
+                viewport.name(),
+                measured.len()
             );
             println!("{}: {measured:?}", viewport.name());
             assert!(
