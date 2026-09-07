@@ -2,5 +2,5 @@
 source: e2e/tests/all/focus_contrast.rs
 expression: "format!(\"outline: {outline}\\noutline-color: {colour}\")"
 ---
-outline: rgb(34, 139, 230) solid 2px
-outline-color: rgb(34, 139, 230)
+outline: rgb(0, 0, 0) solid 2px
+outline-color: rgb(0, 0, 0)
