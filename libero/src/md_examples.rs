@@ -33,6 +33,7 @@ macro_rules! md_pages {
 pub struct PageSnippets;
 
 md_pages! {
+    Accessibility => "accessibility",
     Accordion => "accordion",
     ActionIcon => "action_icon",
     Alert => "alert",

@@ -1,4 +1,6 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, indent, prop, props};
+use crate::components::{
+    Control, Demo, DemoValues, DocPage, DocSection, Wrap, indent, prop, props,
+};
 use dioxus::prelude::*;
 use libero::components::{
     AlphaSlider, Code, ColorCode, ColorPicker, ColorSwatch, Flex, HueSlider, SliderChangeEvent,
@@ -204,6 +206,33 @@ pub fn ColorPickerPage() -> Element {
                     },
                     _ => rsx! { ColorPickerDemo { values } },
                 },
+            }
+
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "A press anywhere on the hue or alpha track moves its thumb there, so "
+                    "the target is the track, not just the thumb - and the track is only as "
+                    "tall as its thumb, so its height is what decides. They meet WCAG 2.5.8 "
+                    "(target size) from "
+                    Code { source: "md" }
+                    " upward and not below it: the two tracks sit 24px apart centre to "
+                    "centre at "
+                    Code { source: "md" }
+                    ", 18px at "
+                    Code { source: "sm" }
+                    " and 12px at "
+                    Code { source: "xs" }
+                    ", so at the two smallest steps neither the height nor that spacing "
+                    "reaches the 24px the criterion wants. Choose "
+                    Code { source: "md" }
+                    " or larger where 2.5.8 has to be met."
+                }
+                Text {
+                    "The saturation panel is its own target - a press anywhere in it moves "
+                    "the thumb, and the panel is far larger than 24x24 at every size - so it "
+                    "meets 2.5.8 throughout."
+                }
             }
         }
     }

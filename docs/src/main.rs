@@ -62,6 +62,8 @@ pub(crate) enum Route {
     HooksPage {},
     #[route("/about/platform")]
     PlatformPage {},
+    #[route("/about/accessibility")]
+    AccessibilityPage {},
 
     #[route("/a11y/focus-trap")]
     FocusTrapPage {},

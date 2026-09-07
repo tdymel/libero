@@ -17,6 +17,7 @@ fetch only the file you need.
 - [Performance](performance.md): What a libero component actually costs per render, measured by ablation - scope and dynamic-node counts, memoization boundaries, and how to measure it yourself.
 - [Hooks](hooks.md): The public hooks libero's components are built from - `use_drag` for pointer drags, `use_clipboard` for copying, and `use_root_id` for ids that respect a caller's own.
 - [Platform](platform.md): The platform traits and their accessors - timers, document-level keys, scroll, focus and viewport, the clock - each an `Option` that is `None` where the renderer cannot do it.
+- [Accessibility](accessibility.md): What libero's accessibility support covers across the whole library, and what it does not - starting with forced colors, which is out of scope.
 
 ## A11y
 
