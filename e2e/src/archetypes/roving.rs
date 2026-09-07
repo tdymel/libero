@@ -1,9 +1,14 @@
 //! The APG roving-tabindex pattern.
 //!
 //! A composite widget is **one** tab stop, and the arrow keys move within it.
-//! `Tabs`, `Menubar` and `Toolbar` are this, and `Tree` shares part of it (todo
-//! 310). A radio group is not: selection follows focus and Home and End are
-//! not in its pattern, so `RadioGroup` and `SegmentedControl` use `RadioSet`.
+//! `Tabs`, `Menubar` and `Toolbar` are this. Two widgets that look like it are
+//! not: a radio group selects as it moves and has no Home or End, so
+//! `RadioGroup` and `SegmentedControl` use [`RadioSet`]; a tree's Left and
+//! Right open and close rows rather than moving along an axis, and the set of
+//! rows changes under the walk, so `Tree` uses [`TreeWalk`] (todo 310).
+//!
+//! [`RadioSet`]: super::RadioSet
+//! [`TreeWalk`]: super::TreeWalk
 //!
 //! ## What this is checked against
 //!

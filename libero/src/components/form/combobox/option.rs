@@ -232,6 +232,28 @@ mod tests {
         assert_eq!(css.matches("text-overflow").count(), 1, "{css}");
     }
 
+    /// The greying beats the active and selected tints by **source order at
+    /// equal specificity**, not by specificity, so it only works while the
+    /// `disabled` fold is the last one. A reorder - or a merge conflict in
+    /// this static, which happened once - would leave a disabled row tinted
+    /// and pointer-hovering with every other test still green.
+    #[test]
+    fn the_disabled_greying_folds_after_the_tints_it_has_to_beat() {
+        let css = Stylesheet::from(&COMBOBOX_ROW_SX);
+        let css = css.as_str();
+
+        let greying = css.find("opacity:0.5").expect("the disabled greying");
+        for state in ["active", "selected"] {
+            let tint = css
+                .rfind(&format!("[data-state~=\"{state}\"]"))
+                .unwrap_or_else(|| panic!("a {state} rule: {css}"));
+            assert!(
+                greying > tint,
+                "the disabled greying folds before the last {state} rule: {css}"
+            );
+        }
+    }
+
     #[test]
     fn a_row_label_is_a_label_slot_holding_the_text() {
         assert_eq!(

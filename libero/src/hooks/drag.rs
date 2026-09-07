@@ -173,9 +173,11 @@ pub fn use_drag(options: DragOptions) -> Drag {
 /// It carries no colour, so it changes nothing about the handle's focus ring.
 /// Worth knowing anyway, because a drag handle is usually a filled knob: a
 /// handle with `background("primary.6")` takes a **white** focus ring drawn
-/// outside itself, which is 1.11:1 on a light track. Inset the ring into the
-/// fill - `focus_visible(sx().outline_offset("-4px"))` - where the colour the
-/// fill publishes is the right one. See [`crate::components::Box`].
+/// outside itself, which is 1.11:1 on a light track - and the two-tone ring
+/// does not save it, because the fill overrides the stripe and leaves it the
+/// same white as the halo. Inset the ring into the fill -
+/// `focus_visible(sx().outline_offset("-4px"))` - where the colour the fill
+/// publishes is the right one. See [`crate::components::Box`].
 pub fn drag_handle_sx() -> Sx {
     sx().touch_action("none")
 }

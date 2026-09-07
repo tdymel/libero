@@ -74,8 +74,10 @@ fn Knob() -> Element {
                 sx: drag_handle_sx().position("absolute").width("32px").height("32px")
                     .border_radius("16px").background("primary.6").cursor("grab")
                     // The fill publishes its contrast colour, white, for what is
-                    // drawn *on* it - and the ring is drawn outside, where it
-                    // vanishes. Inset it into the fill: 4.86:1 rather than 1.11:1.
+                    // drawn *on* it - which overrides the ring's stripe and
+                    // leaves it the same white as the halo, so the ring drawn
+                    // outside vanishes rather than reading against itself.
+                    // Inset it into the fill: 4.86:1 rather than 1.11:1.
                     .focus_visible(sx().outline_offset("-4px")),
                 style: "left: {x}px",
             }

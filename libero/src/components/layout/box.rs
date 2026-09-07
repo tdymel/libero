@@ -361,7 +361,13 @@ impl BoxStyle {
 /// it, and the standard ring is drawn 2px *outside*, where the surrounding
 /// surface's twin would be the right one. So a knob with
 /// `background("primary.6")` takes a **white** ring, on whatever the knob sits
-/// on: 1.11:1 on a light track, measured. An element cannot read its parent's
+/// on: 1.11:1 on a light track, measured.
+///
+/// The two-tone ring does not rescue this one, which is the natural guess:
+/// `--lsx-focus-contrast` overrides the **stripe** and not the halo, so on a
+/// fill whose twin is white both tones come out white and the pair has nothing
+/// left to read against itself (measured 2026-09-20: `outline-color` and
+/// `--lsx-focus-ring-halo` both `#FFFFFF`). An element cannot read its parent's
 /// value of a property it also sets, so nothing here can repair it for you -
 /// draw the ring inside the fill instead, where the published twin is right:
 ///
