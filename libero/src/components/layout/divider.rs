@@ -41,7 +41,7 @@ const DIVIDER_SPACING_VAR: CssVar = CssVar::new("--lsx-divider-spacing");
 
 /// The caller's `color` if they set one, else the theme's grey-4.
 fn divider_color() -> String {
-    DIVIDER_COLOR_VAR.value_or(ColorCss::GREY.value(ColorShade::S4))
+    DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S4))
 }
 
 /// The line thickness for the current `size`.
@@ -81,7 +81,7 @@ static DIVIDER_BASE_SX: StaticSx = StaticSx::new(|| {
             sx().display("flex")
                 .align_items("center")
                 .border("0")
-                .color("grey.9")
+                .color("muted.9")
                 .selector(
                     "&::before, &::after",
                     sx().content("\"\"").flex("1").background(divider_color()),

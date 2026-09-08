@@ -12,7 +12,7 @@ use libero::{
 /// there is more content than the frame is tall.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "Box {{\n    sx: sx().height(\"200px\").width(\"100%\").overflow_y(\"auto\")\n        .border(\"1px solid var(--lsx-grey-3)\"),\n{}    Box {{\n        sx: sx().padding(\"md\"),\n        for i in 0..12 {{\n            Text {{ key: \"{{i}}\", \"Scroll me - line {{i}}\" }}\n        }}\n    }}\n}}",
+        "Box {{\n    sx: sx().height(\"200px\").width(\"100%\").overflow_y(\"auto\")\n        .border(\"1px solid var(--lsx-muted-3)\"),\n{}    Box {{\n        sx: sx().padding(\"md\"),\n        for i in 0..12 {{\n            Text {{ key: \"{{i}}\", \"Scroll me - line {{i}}\" }}\n        }}\n    }}\n}}",
         indent(code)
     )
 }
@@ -80,7 +80,7 @@ pub fn HeaderPage() -> Element {
                             .height("200px")
                             .width("100%")
                             .overflow_y("auto")
-                            .border("1px solid var(--lsx-grey-3)"),
+                            .border("1px solid var(--lsx-muted-3)"),
                         Header {
                             position: values.str("position"),
                             size: or_unset(values.str("size")),

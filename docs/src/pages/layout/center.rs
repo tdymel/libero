@@ -19,7 +19,7 @@ const SX: &str = r#"sx: sx().height("120px").background("primary.1")"#;
 /// wrapper gives it one, and the code block prints it.
 fn wrap_parent(_: &DemoValues, code: &str) -> String {
     format!(
-        "Box {{\n    sx: sx().width(\"260px\").background(\"grey.2\"),\n{}}}",
+        "Box {{\n    sx: sx().width(\"260px\").background(\"muted.2\"),\n{}}}",
         indent(code)
     )
 }
@@ -57,7 +57,7 @@ pub fn CenterPage() -> Element {
                 controls: vec![Control::switch("inline")],
                 render: move |values: DemoValues| rsx! {
                     Box {
-                        sx: sx().width("260px").background("grey.2"),
+                        sx: sx().width("260px").background("muted.2"),
                         Center {
                             inline: (values.str("inline") == "true").then_some(true),
                             sx: sx().height("120px").background("primary.1"),

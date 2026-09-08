@@ -84,7 +84,7 @@ let mut edge = use_signal(|| "none");
 /// so they belong in the preview too. The code block prints all of it.
 fn wrap_frame(_: &DemoValues, code: &str) -> String {
     format!(
-        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-grey-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
+        "{PREAMBLE}rsx! {{\n    Flex {{\n        direction: \"column\",\n        gap: \"sm\",\n        sx: sx().width(\"100%\"),\n        Box {{\n            sx: sx().height(\"160px\").width(\"100%\").border(\"1px solid var(--lsx-muted-3)\"),\n{}        }}\n        Text {{ size: \"sm\", \"{{readout(position())}} - last edge: {{edge()}}\" }}\n        Flex {{\n            gap: \"sm\",\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(0.0)), \"Scroll to top\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to_percent(None, Some(100.0)), \"Scroll to bottom\" }}\n            Button {{ size: \"sm\", variant: \"outlined\", onclick: move |_| area.scroll_to(0.0, 120.0), \"Scroll to 120px\" }}\n        }}\n    }}\n}}",
         indent(&indent(&indent(code)))
     )
 }
@@ -187,7 +187,7 @@ pub fn ScrollAreaPage() -> Element {
                     // is painted grey-5 rather than white: the swatch shows
                     // what the scrollbar actually draws without the prop.
                     Control::color("scrollbar_color").with_unset()
-                    .unset_swatch("grey.5"),
+                    .unset_swatch("muted.5"),
                     // Not a prop: swaps the content for a `Virtualize` list,
                     // which renders only the rows in view.
                     Control::switch("virtualize").code(|_, _| vec![]),
@@ -203,7 +203,7 @@ pub fn ScrollAreaPage() -> Element {
                             sx: sx()
                                 .height("160px")
                                 .width("100%")
-                                .border("1px solid var(--lsx-grey-3)"),
+                                .border("1px solid var(--lsx-muted-3)"),
                             ScrollArea {
                                 scrollbars: values.str("scrollbars"),
                                 scrollbar_visibility: values.str("scrollbar_visibility"),
@@ -283,7 +283,7 @@ pub fn ScrollAreaPage() -> Element {
                     sx: sx()
                         .height("120px")
                         .width("100%")
-                        .border("1px solid var(--lsx-grey-3)"),
+                        .border("1px solid var(--lsx-muted-3)"),
                     ScrollArea {
                         id: "focusable-demo",
                         focusable: true,

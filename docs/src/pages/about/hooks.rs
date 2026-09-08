@@ -30,7 +30,7 @@ fn Knob() -> Element {
             onpointerup: move |event| drag.onpointerup.call(event),
             onpointercancel: move |event| drag.onpointercancel.call(event),
             sx: sx().position("relative").width("232px").height("32px")
-                .background("grey.1").border_radius("16px"),
+                .background("muted.1").border_radius("16px"),
             Box {
                 onpointerdown: move |event| drag.onpointerdown.call(event),
                 // The keyboard path a drag needs: focusable, named, and on the arrows.
@@ -159,7 +159,7 @@ fn Knob() -> Element {
             onpointerup: move |event| drag.onpointerup.call(event),
             onpointercancel: move |event| drag.onpointercancel.call(event),
             sx: sx().position("relative").width("232px").height("32px")
-                .background("grey.1").border_radius("16px"),
+                .background("muted.1").border_radius("16px"),
             Box {
                 onpointerdown: move |event| drag.onpointerdown.call(event),
                 // The keyboard path a drag needs: focusable, named, and on the arrows.

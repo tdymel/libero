@@ -55,7 +55,7 @@ pub fn OverlayPage() -> Element {
                             .z_index("0")
                             .height("160px")
                             .width("100%")
-                            .background("grey.2"),
+                            .background("muted.2"),
                         Text { sx: sx().padding("16px"), "Content behind the overlay" }
                         Overlay {
                             opacity: values.str("opacity"),

@@ -102,7 +102,7 @@ label is better. With neither, it warns in a debug build.
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `color` | `ThemeAwareValue` | `primary` | Track color when checked; a theme color name or a literal CSS color. Unchecked is always `grey.3`. |
+| `color` | `ThemeAwareValue` | `primary` | Track color when checked; a theme color name or a literal CSS color. Unchecked is always `muted.3`. |
 | `size` | `Size` | `md` | Controls track and thumb size, and the label beside them. |
 | `radius` | `Size` | `xl` | Track corner radius; the thumb is always a circle. |
 | `checked` | `bool` | - | Pair it with `onchange`. Left out, the switch keeps its own state unless a `name` binds it to the form around it. |
@@ -142,7 +142,7 @@ label and caption typography comes from `FieldDefaults`.
 | `--lsx-switch-thumb-size-<size>` | Thumb diameter for that size step. |
 | `--lsx-switch-track-w` / `-track-h` / `--lsx-switch-thumb` | The picked size step, resolved on the control so the track and thumb - which carry no `data-state` - inherit it. |
 | `--lsx-switch-radius` | The picked radius step, same mechanism. |
-| `--lsx-switch-color` | Track background: the resolved `color` when checked, `grey.3` when not. |
+| `--lsx-switch-color` | Track background: the resolved `color` when checked, `muted.3` when not. |
 | `--lsx-switch-thumb-color` | Thumb fill: the color's contrast when checked, `white` when not. |
 | `--lsx-switch-on` | `0` or `1`, multiplied by the travel distance, so only this var changes between states. |
 

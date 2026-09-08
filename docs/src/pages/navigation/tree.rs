@@ -99,7 +99,7 @@ fn file_icon(entry: &FileEntry) -> Element {
         Icon {
             variant: "transparent",
             size: "sm",
-            color: if folder { "primary" } else { "grey.6" },
+            color: if folder { "primary" } else { "muted.6" },
             if folder { FolderIcon {} } else { FileIcon {} }
         }
     }

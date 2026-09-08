@@ -40,7 +40,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: AutocompleteOptionArgs<String>| 
         align: "flex-start",
         sx: sx().gap("0"),
         Text { component: "span", size: "sm", "{o.value}" }
-        Text { component: "span", size: "xs", sx: sx().color("grey.6"), "{country(&o.value)}" }
+        Text { component: "span", size: "xs", sx: sx().color("muted.6"), "{country(&o.value)}" }
     }
 }"#;
 
@@ -94,7 +94,7 @@ fn city_row(o: AutocompleteOptionArgs<String>) -> Element {
             Text {
                 component: "span",
                 size: "xs",
-                sx: sx().color("grey.6"),
+                sx: sx().color("muted.6"),
                 "{country(&o.value)}"
             }
         }

@@ -12,7 +12,7 @@ const THEME_COLORS: [&str; 8] = [
     "warning",
     "info",
     "neutral",
-    "grey",
+    "muted",
 ];
 
 /// How a control offers its options.

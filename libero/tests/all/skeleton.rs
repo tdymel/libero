@@ -187,7 +187,7 @@ fn the_theme_colour_and_duration_reach_the_stylesheet() {
 
     let html = render(default);
     assert!(
-        html.contains("--lsx-skeleton-color:var(--lsx-grey-3);"),
+        html.contains("--lsx-skeleton-color:var(--lsx-muted-3);"),
         "{html}"
     );
     assert!(html.contains("--lsx-skeleton-duration:1500ms;"), "{html}");

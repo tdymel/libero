@@ -65,7 +65,7 @@ static HEADER_BASE_SX: StaticSx = StaticSx::new(|| {
         .background(HEADER_BACKGROUND_VAR.value_or(PAPER_BACKGROUND.value()))
         .color(HEADER_COLOR_VAR.value_or("inherit"))
         .border_bottom("1px solid")
-        .border_bottom_color("grey.4")
+        .border_bottom_color("muted.4")
         .z_index(Z_INDEX_HEADER.overridable())
         .position("sticky")
         .top("0")

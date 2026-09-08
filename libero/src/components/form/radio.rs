@@ -72,7 +72,7 @@ fn radio_variables(checked: bool, base: &ThemeAwareValue) -> String {
             RADIO_COLOR,
             match checked {
                 true => fill_color(base),
-                false => ThemeAwareValue::from("grey.5").resolve(None),
+                false => ThemeAwareValue::from("muted.5").resolve(None),
             },
         )
         .with(RADIO_ON, Some(if checked { "1" } else { "0" }.to_string()))

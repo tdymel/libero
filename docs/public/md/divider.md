@@ -59,7 +59,7 @@ fn Demo() -> Element {
 | `size` | `Size` | `xs` | Line thickness. |
 | `label_position` | `LabelPosition` | `center` | Where the label sits along the rule: `center`, `start` or `end`. |
 | `spacing` | `ThemeAwareValue` | `none` | Margin on either side of the rule, from the spacing scale. |
-| `color` | `ThemeAwareValue` | `grey.4` | Line color. A bare theme color is tinted to shade 3. |
+| `color` | `ThemeAwareValue` | `muted.4` | Line color. A bare theme color is tinted to shade 3. |
 | `children` | `Element` | - | The optional centered/positioned label. |
 
 Like every component, `Divider` also takes the shared props `sx`, `class`,
@@ -82,7 +82,7 @@ Like every component, `Divider` also takes the shared props `sx`, `class`,
 | `--lsx-divider-thickness-<size>` | Line thickness for that size step. |
 | `--lsx-divider-line` | The thickness in effect, resolved from the `size` state. |
 | `--lsx-divider-spacing` | Margin either side of the rule - declared by the theme, overwritten per instance by the `spacing` prop. |
-| `--lsx-divider-color` | Line color; unset leaves the base `grey.4`. |
+| `--lsx-divider-color` | Line color; unset leaves the base `muted.4`. |
 
 ## Data attributes
 

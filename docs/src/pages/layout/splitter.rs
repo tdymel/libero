@@ -43,7 +43,7 @@ fn panels_code(_control: &Control, values: &DemoValues) -> Vec<String> {
 fn wrap_splitter(_values: &DemoValues, code: &str) -> String {
     let indented = indent(code);
     format!(
-        "Box {{\n    sx: sx().height(\"160px\").width(\"100%\").max_width(\"320px\").border(\"1px solid var(--lsx-grey-3)\"),\n{indented}}}"
+        "Box {{\n    sx: sx().height(\"160px\").width(\"100%\").max_width(\"320px\").border(\"1px solid var(--lsx-muted-3)\"),\n{indented}}}"
     )
 }
 
@@ -124,7 +124,7 @@ pub fn SplitterPage() -> Element {
                         .default("sm"),
                     // A bare `grey` is what an unset `divider_color`
                     // falls back to, so that swatch prints nothing.
-                    Control::color("divider_color").default("grey"),
+                    Control::color("divider_color").default("muted"),
                     // Last, so the panes print below the props they
                     // configure.
                     Control::switch("composed").code(panels_code),
@@ -135,7 +135,7 @@ pub fn SplitterPage() -> Element {
                             .height("160px")
                             .width("100%")
                             .max_width("320px")
-                            .border("1px solid var(--lsx-grey-3)"),
+                            .border("1px solid var(--lsx-muted-3)"),
                         Splitter {
                             orientation: values.str("orientation"),
                             initial_size: 50.0,
@@ -143,7 +143,7 @@ pub fn SplitterPage() -> Element {
                             min_size: percent(values.str("min_size")),
                             divider_size: or_unset(values.str("divider_size")),
                             divider_color: match values.str("divider_color").as_str() {
-                                "grey" => Input::None,
+                                "muted" => Input::None,
                                 color => Input::from(color),
                             },
                             panel_a: rsx! {

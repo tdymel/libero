@@ -12,7 +12,7 @@ fn divider_renders_as_a_separator() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
-                Divider { color: Color::Grey }
+                Divider { color: Color::Muted }
             }
         }
     }

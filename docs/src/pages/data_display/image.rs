@@ -10,7 +10,7 @@ use libero::{
 /// anything - neither is a control, so both print as `fixed`.
 const FIXED: [&str; 2] = [
     r#"alt: "A stylised landscape""#,
-    r#"sx: sx().width("160px").height("160px").background("grey.1")"#,
+    r#"sx: sx().width("160px").height("160px").background("muted.1")"#,
 ];
 
 const MISSING_SRC: &str = "/does-not-exist.png";
@@ -92,7 +92,7 @@ pub fn ImagePage() -> Element {
                         fit: values.str("fit"),
                         radius: values.str("radius"),
                         zoomable: values.str("zoomable") == "true",
-                        sx: sx().width("160px").height("160px").background("grey.1"),
+                        sx: sx().width("160px").height("160px").background("muted.1"),
                     }
                 },
             }

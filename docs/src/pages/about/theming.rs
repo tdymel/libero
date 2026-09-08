@@ -56,7 +56,7 @@ const PALETTE: [&str; 8] = [
     "warning",
     "info",
     "neutral",
-    "grey",
+    "muted",
 ];
 
 #[component]
@@ -126,8 +126,10 @@ pub fn ThemingPage() -> Element {
                     Code { source: "neutral" }
                     " is the text-dark role a control reaches for when it should not compete "
                     "with the page's accent; "
-                    Code { source: "grey" }
-                    " stays the mid-grey of borders and dividers. This is the palette of the "
+                    Code { source: "muted" }
+                    " is the ramp measured as distance from the page - borders, dividers "
+                    "and quiet text - so it is greyish on a light theme and the other way "
+                    "round on a dark one. This is the palette of the "
                     "theme this site is running:"
                 }
                 Text {
@@ -144,7 +146,7 @@ pub fn ThemingPage() -> Element {
                     Code { source: "#228BE6" }
                     " as a border, a ring or a decoration, and resolves to "
                     Code { source: "#1C74C1" }
-                    " as a label or under white text. The greys are taken literally - a grey "
+                    " as a label or under white text. The muted ramp is taken literally - it "
                     "is picked for how quiet it should look - so text that means to be quiet "
                     "asks for it by name, with "
                     Code { source: "text-dimmed" }

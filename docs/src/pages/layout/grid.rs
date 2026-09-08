@@ -105,7 +105,7 @@ static PAGE: StaticGridTemplate<PageArea> = StaticGridTemplate::new(|template| {
 rsx! {
     Grid {
         template: PAGE.clone(),
-        sx: sx().background("grey.1").padding("12px").border_radius("sm"),
+        sx: sx().background("muted.1").padding("12px").border_radius("sm"),
         GridZone {
             area: PageArea::Content,
             masonry: true,
@@ -222,7 +222,7 @@ pub fn GridPage() -> Element {
                     "page" => rsx! {
                         Grid {
                             template: PAGE.clone(),
-                            sx: sx().width("100%").background("grey.1").padding("12px").border_radius("sm"),
+                            sx: sx().width("100%").background("muted.1").padding("12px").border_radius("sm"),
                             GridZone {
                                 area: PageArea::Content,
                                 masonry: true,
@@ -249,7 +249,7 @@ pub fn GridPage() -> Element {
                     "responsive" => rsx! {
                         Grid {
                             template: SPANS.clone(),
-                            sx: sx().width("100%").background("grey.1").padding("12px").border_radius("sm"),
+                            sx: sx().width("100%").background("muted.1").padding("12px").border_radius("sm"),
                             GridZone {
                                 area: SpanArea::Row,
                                 gap: "xs",

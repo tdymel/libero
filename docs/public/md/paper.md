@@ -93,7 +93,7 @@ reaches the element.
 | `shadow` | `Size` | `Sm` | Elevation of a `Paper` that names none. |
 | `background` | `&'static str` | `#fff` | The surface colour itself. A dark theme changes this value, not any component. |
 | `contrast` | `ColorValue` | `black` | What reads against `background`. Change one and change the other. |
-| `border_color` | `ColorValue` | `grey.3` | The `bordered` hairline. |
+| `border_color` | `ColorValue` | `muted.3` | The `bordered` hairline. |
 
 ## CSS variables
 

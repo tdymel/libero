@@ -57,12 +57,12 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         // same.
         .selector(
             "& [data-menubar-index]:hover:not([aria-disabled=\"true\"])",
-            sx().background("grey.1"),
+            sx().background("muted.1"),
         )
-        .selector("& [data-menubar-index]:focus", sx().background("grey.1"))
+        .selector("& [data-menubar-index]:focus", sx().background("muted.1"))
         .selector(
             "& [data-menubar-index][aria-expanded=\"true\"]",
-            sx().background("grey.1"),
+            sx().background("muted.1"),
         )
         // `appearance: none` and `border: 0` take the UA's ring with them.
         .selector(
@@ -71,7 +71,7 @@ static MENUBAR_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [data-menubar-index][aria-disabled=\"true\"]",
-            sx().color("grey.5").cursor("not-allowed"),
+            sx().color("muted.5").cursor("not-allowed"),
         )
 });
 

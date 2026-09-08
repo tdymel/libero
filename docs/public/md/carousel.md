@@ -212,11 +212,11 @@ Like every component, `Carousel` also takes the shared props `sx`, `class`,
 | `indicator_current_length` | `&'static str` | `40px` | The current dot's length - the second channel beside its colour. |
 | `indicator_thickness` | `&'static str` | `5px` | Across it. |
 | `indicators_gap` | `&'static str` | `8px` | Between dots. |
-| `indicator_color` | `ColorValue` | `grey.6` | An idle dot. It is a button carrying the only visible position affordance, so it owes 3:1 against the surface (SC 1.4.11): `grey.6` is 3.32:1 on white, `grey.4` is 1.49:1. |
+| `indicator_color` | `ColorValue` | `muted.6` | An idle dot. It is a button carrying the only visible position affordance, so it owes 3:1 against the surface (SC 1.4.11): `muted.6` is 3.32:1 on white, `muted.4` is 1.49:1. |
 | `indicator_current_color` | `ColorValue` | `primary.6` | The current dot. |
 | `control_background` | `ColorValue` | `white` | The previous/next and pause buttons' fill. |
-| `control_hover_background` | `ColorValue` | `grey.1` | A previous/next button's fill under the pointer. |
-| `control_color` | `ColorValue` | `grey.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
+| `control_hover_background` | `ColorValue` | `muted.1` | A previous/next button's fill under the pointer. |
+| `control_color` | `ColorValue` | `muted.7` | The controls' glyph, and their focus ring. Change it with `control_background`. |
 | `autoplay_delay` | `u32` | `4000` | Milliseconds between advances. |
 | `label` | `&'static str` | `Carousel` | Stands in when a caller omits `aria_label` - which also warns. |
 | `previous_label` / `next_label` | `&'static str` | `Previous slide` / `Next slide` | The controls' names. |

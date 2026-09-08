@@ -27,7 +27,7 @@ fn Demo() -> Element {
             size: "lg",
             gutters: "md",
             component: "div",
-            sx: sx().background("grey.1").padding_top("16px").padding_bottom("16px"),
+            sx: sx().background("muted.1").padding_top("16px").padding_bottom("16px"),
             "Centered, width-capped content."
         }
     }

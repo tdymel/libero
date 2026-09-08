@@ -36,7 +36,7 @@ static FIELDSET_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot]",
-            sx().color("grey.7")
+            sx().color("muted.7")
                 .font_size(FIELD_CAPTION_FONT_SIZE.value(Size::Md)),
         )
         .when(

@@ -39,7 +39,7 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
     FieldDefaults::theme_vars()
         .display("flex")
         .flex_direction("column")
-        .selector("& > [data-slot]", sx().color("grey.7"))
+        .selector("& > [data-slot]", sx().color("muted.7"))
         .selector(
             "& label > [data-slot='required']",
             sx().color("error.7").margin_left("2px"),
@@ -88,8 +88,8 @@ static FIELD_SX: StaticSx = StaticSx::new(|| {
         // multiply.
         .when(
             "disabled",
-            sx().color("grey.6")
-                .selector("& > [data-slot]", sx().color("grey.6")),
+            sx().color("muted.6")
+                .selector("& > [data-slot]", sx().color("muted.6")),
         )
         .when(
             "warning",

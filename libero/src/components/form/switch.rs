@@ -87,7 +87,7 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
             if checked {
                 fill_color(base)
             } else {
-                ThemeAwareValue::from("grey.3").resolve(None)
+                ThemeAwareValue::from("muted.3").resolve(None)
             },
         )
         .with(SWITCH_ON, Some(if checked { "1" } else { "0" }.to_string()))

@@ -356,11 +356,11 @@ fn AppShell() -> Element {
                     sx: sx()
                         .margin_left("auto")
                         .background(PAPER_BACKGROUND.value())
-                        .color("grey.7")
+                        .color("muted.7")
                         // A placeholder's weight, not a button label's.
                         .font_weight("400")
                         .gap("sm")
-                        .hover(sx().background("grey.1"))
+                        .hover(sx().background("muted.1"))
                         .breakpoint(Size::Sm, sx().width("240px").justify_content("flex-start")),
                     onclick: move |_| search.open(),
                     span {

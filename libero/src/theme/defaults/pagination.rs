@@ -30,7 +30,7 @@ pub struct PaginationDefaults {
     /// Control box, in px. Mantine's scale plus an `xxl`.
     pub control_sizes: Sizes<u16>,
     pub font_sizes: Sizes<u16>,
-    /// `ColorValue`, not a `&'static str`: a raw `"grey.4"` is declared
+    /// `ColorValue`, not a `&'static str`: a raw `"muted.4"` is declared
     /// verbatim, and a bare palette token is not a CSS colour.
     pub border: ColorValue,
 }
@@ -46,7 +46,7 @@ impl PaginationDefaults {
         // Mantine's control scale, plus an `xxl` continuing its steps.
         control_sizes: Sizes::new(22, 26, 32, 38, 44, 52),
         font_sizes: Sizes::new(11, 12, 14, 16, 18, 20),
-        border: ColorValue::Shade(Color::Grey, ColorShade::S4),
+        border: ColorValue::Shade(Color::Muted, ColorShade::S4),
     };
 
     fn size_sx(size: Size) -> Sx {

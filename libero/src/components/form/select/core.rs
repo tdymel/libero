@@ -47,7 +47,7 @@ static SELECT_TRIGGER_SX: StaticSx = StaticSx::new(|| {
             sx().flex("0 0 auto")
                 .width("1em")
                 .height("1em")
-                .color("grey.6"),
+                .color("muted.6"),
         )
         // In the chips' flow, after the last one. A zero basis keeps it on the
         // last row whatever is left there, and the negative margin cancels
@@ -108,7 +108,7 @@ static MULTI_CHEVRON_SX: StaticSx = StaticSx::new(|| {
     sx().display("flex")
         .margin_left("-4px")
         .cursor("pointer")
-        .selector("& > svg", sx().width("1em").height("1em").color("grey.6"))
+        .selector("& > svg", sx().width("1em").height("1em").color("muted.6"))
         .when("disabled", sx().cursor("not-allowed"))
 });
 
@@ -126,7 +126,7 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         .padding("4px 8px")
         .border_bottom("1px solid")
-        .border_color("grey.3")
+        .border_color("muted.3")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
 

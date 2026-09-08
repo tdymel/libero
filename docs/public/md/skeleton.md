@@ -125,7 +125,7 @@ Like every component, `Skeleton` also takes the shared props `sx`, `class`,
 | Field | Type | Description |
 |---|---|---|
 | `radius` | `Size` | `Sm`. |
-| `color` | `ColorValue` | The grey: `grey.3`. |
+| `color` | `ColorValue` | The grey: `muted.3`. |
 | `duration` | `&'static str` | One full pulse: `1500ms`. |
 | `animate` | `bool` | Default `animate` when the prop is omitted (`true`). |
 

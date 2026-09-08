@@ -242,7 +242,7 @@ pub fn ScrollerPage() -> Element {
                         }),
                     Control::slider("control_size", ["xs", "sm", "md", "lg", "xl", "xxl"])
                         .default(theme.scroller.control_size.as_str()),
-                    Control::color_shades("fade_color", [UNSET, "grey.1", "primary.1", "warning.1"]),
+                    Control::color_shades("fade_color", [UNSET, "muted.1", "primary.1", "warning.1"]),
                     Control::switch("draggable"),
                 ],
                 wrap: Wrap(wrap_edges),

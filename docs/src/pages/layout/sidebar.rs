@@ -23,7 +23,7 @@ fn wrap_layout(values: &DemoValues, code: &str) -> String {
         _ => format!("{panel}{rest}"),
     };
     format!(
-        "Flex {{\n    direction: \"row\",\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"grey.3\"),\n{body}}}"
+        "Flex {{\n    direction: \"row\",\n    sx: sx().height(\"120px\").width(\"100%\").border(\"1px solid\").border_color(\"muted.3\"),\n{body}}}"
     )
 }
 
@@ -79,7 +79,7 @@ pub fn SidebarPage() -> Element {
                     rsx! {
                         Flex {
                             direction: "row",
-                            sx: sx().height("120px").width("100%").border("1px solid").border_color("grey.3"),
+                            sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
                             {first}
                             {second}
                         }

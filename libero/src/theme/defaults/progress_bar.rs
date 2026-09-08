@@ -55,7 +55,7 @@ pub struct ProgressBarDefaults {
     /// (`xxl`, 20px) separates only as far as `lg`. Shipped as specified
     /// anyway; the docs page says so.
     pub radius: Size,
-    /// Grey step of the unfilled groove.
+    /// Muted step of the unfilled groove.
     pub track_shade: ColorShade,
     /// How long the fill eases to a new value.
     pub transition: &'static str,
@@ -94,7 +94,7 @@ impl ToCssDeclarations for ProgressBarDefaults {
         for size in Size::ALL {
             declarations.push(PROGRESS_BAR_THICKNESS.declare(size, self.sizes.get(size)));
         }
-        declarations.push(PROGRESS_BAR_TRACK.declare(ColorCss::GREY.value(self.track_shade)));
+        declarations.push(PROGRESS_BAR_TRACK.declare(ColorCss::MUTED.value(self.track_shade)));
         declarations.push(PROGRESS_BAR_TRANSITION.declare(self.transition));
         declarations
     }

@@ -58,7 +58,7 @@ const CUSTOM_OPTION: &str = r#"option: move |o: SelectOptionArgs<Fruit>| rsx! {
         align: "flex-start",
         sx: sx().gap("0"),
         Text { component: "span", size: "sm", "{o.value.label()}" }
-        Text { component: "span", size: "xs", sx: sx().color("grey.6"), "{o.value.note()}" }
+        Text { component: "span", size: "xs", sx: sx().color("muted.6"), "{o.value.note()}" }
     }
 }"#;
 
@@ -200,7 +200,7 @@ fn fruit_row(o: SelectOptionArgs<Fruit>) -> Element {
             Text {
                 component: "span",
                 size: "xs",
-                sx: sx().color("grey.6"),
+                sx: sx().color("muted.6"),
                 "{o.value.note()}"
             }
         }

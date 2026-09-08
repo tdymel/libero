@@ -48,7 +48,7 @@ fn Demo() -> Element {
             gap: "sm",
             sx: sx().width("100%"),
             Box {
-                sx: sx().height("160px").width("100%").border("1px solid var(--lsx-grey-3)"),
+                sx: sx().height("160px").width("100%").border("1px solid var(--lsx-muted-3)"),
                 ScrollArea {
                     handle: area,
                     onscroll: move |event: ScrollPositionEvent| position.set(event),
@@ -160,7 +160,7 @@ unreachable, so use it only when something else provides the scrolling.
 | `scrollbars` | `ScrollAxis` | `vertical` | Which axes show a scrollbar and allow overflow: `vertical`, `horizontal`, `both` or `none`. |
 | `scrollbar_visibility` | `ScrollbarVisibility` | `always` | `always`, `hover`, `hidden`, or `scroll` (currently identical to `hover`). |
 | `scrollbar_size` | `ScrollbarSize` | `thin` | CSS `scrollbar-width`: `thin` or `auto`. |
-| `scrollbar_color` | `ThemeAwareValue` | - | Scrollbar thumb color - the track stays transparent. Unset it is `grey.5`. |
+| `scrollbar_color` | `ThemeAwareValue` | - | Scrollbar thumb color - the track stays transparent. Unset it is `muted.5`. |
 | `scroll_position_x` | `f64` | - | Percent (0-100) to scroll to horizontally. Bound to a signal it re-applies on every change; a literal applies once, at mount. |
 | `scroll_position_y` | `f64` | - | Percent (0-100) along the vertical axis - see `scroll_position_x`. |
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Scrolls the area from a handler, in percent or px, on every call. |
@@ -202,7 +202,7 @@ percent of that axis's scrollable range.
 
 | Variable | Description |
 |---|---|
-| `--lsx-scroll-area-thumb-color` | Set by `scrollbar_color`; falls back to `grey.5`. The track is always transparent. |
+| `--lsx-scroll-area-thumb-color` | Set by `scrollbar_color`; falls back to `muted.5`. The track is always transparent. |
 | `--lsx-scroll-area-leading` | Space standing in for the rows a `Virtualize` skipped above the window, on the content box rather than the container. Unset outside virtualization. |
 | `--lsx-scroll-area-trailing` | The same below the window. |
 

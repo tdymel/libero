@@ -33,7 +33,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
-            sx: sx().height("120px").width("100%").border("1px solid").border_color("grey.3"),
+            sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
             Sidebar {
                 Text { "Navigation" }
             }
@@ -61,7 +61,7 @@ fn Demo() -> Element {
     rsx! {
         Flex {
             direction: "row",
-            sx: sx().height("120px").width("100%").border("1px solid").border_color("grey.3"),
+            sx: sx().height("120px").width("100%").border("1px solid").border_color("muted.3"),
             Flex {
                 direction: "column",
                 sx: sx().flex("1").padding("12px"),

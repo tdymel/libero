@@ -248,7 +248,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         info,
         success,
         neutral,
-        grey,
+        muted,
         ink,
         surface,
         // Plain values read from Rust - no CSS vars of their own.
@@ -369,7 +369,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     // carries it - see `NamedColorCss::TEXT_DIMMED`.
     declarations.push(CssDeclaration::new(
         NamedColorCss::TEXT_DIMMED.name(),
-        ColorValue::Text(Color::Grey, ColorShade::DEFAULT).value(),
+        ColorValue::Text(Color::Muted, ColorShade::DEFAULT).value(),
     ));
     push_color_declarations(&mut declarations, Color::Primary, *primary, ends);
     push_color_declarations(&mut declarations, Color::Secondary, *secondary, ends);
@@ -378,7 +378,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_color_declarations(&mut declarations, Color::Info, *info, ends);
     push_color_declarations(&mut declarations, Color::Success, *success, ends);
     push_color_declarations(&mut declarations, Color::Neutral, *neutral, ends);
-    push_color_declarations(&mut declarations, Color::Grey, *grey, ends);
+    push_color_declarations(&mut declarations, Color::Muted, *muted, ends);
     declarations
 }
 
@@ -506,7 +506,7 @@ mod tests {
         "info",
         "success",
         "neutral",
-        "grey",
+        "muted",
     ];
 
     /// A `*Defaults` that declares a colour as `"primary.6"` rather than
@@ -628,12 +628,12 @@ mod tests {
 
         assert_eq!(
             root_var(&css, NamedColorCss::TEXT_DIMMED.name()),
-            "var(--lsx-grey-text-6)"
+            "var(--lsx-muted-text-6)"
         );
-        assert_eq!(root_var(&css, "--lsx-grey-text-6"), "#4C5055");
-        assert_eq!(root_var(&css, "--lsx-grey-7"), "#4C5055");
+        assert_eq!(root_var(&css, "--lsx-muted-text-6"), "#4C5055");
+        assert_eq!(root_var(&css, "--lsx-muted-7"), "#4C5055");
 
-        let dimmed = HexColor::parse(&root_var(&css, "--lsx-grey-text-6")).expect("a hex");
+        let dimmed = HexColor::parse(&root_var(&css, "--lsx-muted-text-6")).expect("a hex");
         assert!(dimmed.contrast_ratio(white) >= TEXT_CONTRAST);
     }
 
@@ -765,7 +765,7 @@ mod tests {
             ("--lsx-paper-shadow", "var(--lsx-shadow-sm)"),
             ("--lsx-paper-background", "#fff"),
             ("--lsx-paper-contrast", "var(--lsx-ink)"),
-            ("--lsx-paper-border-color", "var(--lsx-grey-3)"),
+            ("--lsx-paper-border-color", "var(--lsx-muted-3)"),
         ]);
     }
 
@@ -856,10 +856,10 @@ mod tests {
             ("--lsx-warning-6", "#FAB005"),
             ("--lsx-info-6", "#15AABF"),
             ("--lsx-success-6", "#40C057"),
-            ("--lsx-grey-6", "#868E96"),
+            ("--lsx-muted-6", "#868E96"),
             ("--lsx-primary-contrast-1", "var(--lsx-ink)"),
             ("--lsx-primary-contrast-6", "var(--lsx-surface)"),
-            ("--lsx-grey-contrast-6", "var(--lsx-ink)"),
+            ("--lsx-muted-contrast-6", "var(--lsx-ink)"),
         ]);
     }
 
@@ -880,10 +880,10 @@ mod tests {
         }
 
         for (var, hex) in [
-            ("--lsx-grey-1", "#F2F3F4"),
-            ("--lsx-grey-3", "#E0E2E4"),
-            ("--lsx-grey-6", "#868E96"),
-            ("--lsx-grey-9", "#212325"),
+            ("--lsx-muted-1", "#F2F3F4"),
+            ("--lsx-muted-3", "#E0E2E4"),
+            ("--lsx-muted-6", "#868E96"),
+            ("--lsx-muted-9", "#212325"),
         ] {
             assert!(css.contains(&format!("{var}:{hex};")), "{var} != {hex}");
         }

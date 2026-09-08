@@ -10,7 +10,7 @@ use crate::{
 
 static CODE_INLINE_SX: StaticSx = StaticSx::new(|| {
     sx().display("inline")
-        .background("grey.2")
+        .background("muted.2")
         .border_radius("4px")
         .padding("2px 6px")
         .font_family(CODE_FONT_FAMILY.value())

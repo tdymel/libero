@@ -161,8 +161,8 @@ mod tests {
             Some(ColorValue::Shade(Color::Primary, ColorShade::S6))
         );
         assert_eq!(
-            ColorValue::parse("grey.7"),
-            Some(ColorValue::Shade(Color::Grey, ColorShade::S7))
+            ColorValue::parse("muted.7"),
+            Some(ColorValue::Shade(Color::Muted, ColorShade::S7))
         );
         assert_eq!(
             ColorValue::parse("warning-contrast"),

@@ -41,7 +41,7 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .font_size("inherit")
         .cursor("pointer")
-        .hover(sx().background("grey.1"));
+        .hover(sx().background("muted.1"));
     DatePickerDefaults::theme_vars()
         .display("inline-flex")
         .flex_direction("column")
@@ -87,7 +87,7 @@ static TIME_PICKER_SX: StaticSx = StaticSx::new(|| {
                 .width(format!("calc(7 * {day})"))
                 .height(format!("calc(7 * {day})"))
                 .border_radius("50%")
-                .background("grey.1"),
+                .background("muted.1"),
         )
         .selector(
             "& [data-slot='mark']",

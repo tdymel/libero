@@ -28,7 +28,7 @@ fn Demo() -> Element {
             src: "/landscape.png",
             fallback_src: "/placeholder.png",
             alt: "A stylised landscape",
-            sx: sx().width("160px").height("160px").background("grey.1"),
+            sx: sx().width("160px").height("160px").background("muted.1"),
         }
     }
 }

@@ -68,7 +68,7 @@ static CALENDAR_SX: StaticSx = StaticSx::new(|| {
         .font_family("inherit")
         .font_size("inherit")
         .cursor("pointer")
-        .hover(sx().background("grey.1"));
+        .hover(sx().background("muted.1"));
     DatePickerDefaults::theme_vars()
         .display("inline-flex")
         .flex_direction("column")

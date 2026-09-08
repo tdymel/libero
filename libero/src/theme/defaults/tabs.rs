@@ -85,8 +85,8 @@ impl TabsDefaults {
                 icon_gap: "14px",
             },
         ),
-        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
-        hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
     };
 
     // Resolved on the tab list so each tab button inherits them.

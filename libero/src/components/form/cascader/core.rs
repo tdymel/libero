@@ -122,7 +122,7 @@ static CASCADER_TRIGGER_SX: StaticSx = StaticSx::new(|| {
             sx().flex("0 0 auto")
                 .width("1em")
                 .height("1em")
-                .color("grey.6"),
+                .color("muted.6"),
         )
         .when("disabled", sx().cursor("not-allowed"))
 });
@@ -180,7 +180,7 @@ static CASCADER_COLUMNS_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& > [data-slot='column'] + [data-slot='column']",
-            sx().border_left("1px solid").border_color("grey.2"),
+            sx().border_left("1px solid").border_color("muted.2"),
         )
 });
 
@@ -201,7 +201,7 @@ static CASCADER_SEARCH_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         .padding("4px 8px")
         .border_bottom("1px solid")
-        .border_color("grey.3")
+        .border_color("muted.3")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
 

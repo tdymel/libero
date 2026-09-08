@@ -130,7 +130,7 @@ fn a_fade_color_overrides_the_surface() {
     fn with_fade() -> Element {
         rsx! {
             LiberoProvider {
-                Scroller { aria_label: "Tags", fade_color: "grey.1", span { "one" } }
+                Scroller { aria_label: "Tags", fade_color: "muted.1", span { "one" } }
             }
         }
     }
@@ -144,7 +144,7 @@ fn a_fade_color_overrides_the_surface() {
 
     let html = render(with_fade);
     assert!(
-        body(&html).contains("--lsx-scroller-fade-override:var(--lsx-grey-1)"),
+        body(&html).contains("--lsx-scroller-fade-override:var(--lsx-muted-1)"),
         "{html}"
     );
     assert!(

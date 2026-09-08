@@ -52,15 +52,16 @@ without every call site checking. `color()` asks for the text role and
 at the first shade that clears 4.5:1 on the page, the fill ramp at the first
 whose black-or-white foreground clears it. So `primary` is still `#228BE6` as a
 border, a ring or a decoration, and resolves to `#1C74C1` as a label or under
-white text. The greys are taken literally - a grey is picked for how quiet it
+white text. The muted ramp is taken literally - it is picked for how quiet it
 should look - so text that means to be quiet asks for it by name, with
 `text-dimmed`.
 
 The roles are `primary`, `secondary`, `success`, `error`, `warning`, `info`,
-`neutral` and `grey`, plus the plain `black` and `white`. `neutral` is the
+`neutral` and `muted`, plus the plain `ink` and `surface`. `neutral` is the
 text-dark role a control reaches for when it should not compete with the
-page's accent; `grey` stays the mid-grey used for borders and dividers. Addressing a shade in `sx` is
-`role.shade`:
+page's accent; `muted` is the ramp measured as distance from the page - borders,
+dividers and quiet text - so it is greyish on a light theme and the other way
+round on a dark one. Addressing a shade in `sx` is `role.shade`:
 
 ```rust
 use dioxus::prelude::*;
@@ -147,8 +148,8 @@ theme says.
 | `spacing` | `Sizes<u8>` | Pixels per spacing step; what `gap`/`padding` size words resolve through. |
 | `radius` | `Sizes<u8>` | Pixels per radius step. |
 | `elevation` | `Sizes<&'static str>` | One `box-shadow` per elevation step. |
-| `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `grey` | `HexColor` | One hex per palette role; the 1-9 shade ramp and its `-contrast` twin are generated. |
-| `black`, `white` | `HexColor` | The two ends the shades mix towards. |
+| `primary`, `secondary`, `success`, `error`, `warning`, `info`, `neutral`, `muted` | `HexColor` | One hex per palette role; the 1-9 shade ramp and its `-contrast` twin are generated. |
+| `ink`, `surface` | `HexColor` | What text is set in, and the page it is set on. Every colour role is derived against `surface`. |
 | `font_smoothing` | `bool` | Whether the reset asks for antialiased text. |
 | one field per component | `*Defaults` | e.g. `button: ButtonDefaults`, `dialog: DialogDefaults`, `mark: MarkDefaults` - each component's markdown page documents its own struct. |
 

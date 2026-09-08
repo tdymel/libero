@@ -21,7 +21,7 @@ Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }"#;
 /// ever fill it.
 // snippet: in Flex { .. }
 const BOX_SX: &str =
-    r#"sx: sx().width("400px").height("200px").padding("8px").background("grey.1")"#;
+    r#"sx: sx().width("400px").height("200px").padding("8px").background("muted.1")"#;
 
 /// The divider a row needs is vertical; a column's is the default rule.
 #[cfg(feature = "dioxus-fork")]
@@ -124,7 +124,7 @@ pub fn FlexPage() -> Element {
                             .width("400px")
                             .height("200px")
                             .padding("8px")
-                            .background("grey.1"),
+                            .background("muted.1"),
                         direction: values.str("direction"),
                         gap: values.str("gap"),
                         align: or_unset(values.str("align")),

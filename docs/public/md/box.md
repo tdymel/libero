@@ -24,7 +24,7 @@ use libero::sx::sx;
 fn Demo() -> Element {
     rsx! {
         Box {
-            sx: sx().padding("16px").background("grey.1").border_radius("md"),
+            sx: sx().padding("16px").background("muted.1").border_radius("md"),
             "Styled entirely via sx"
         }
     }
@@ -46,7 +46,7 @@ fn Demo() -> Element {
             component: "a",
             href: "https://dioxuslabs.com",
             target: "_blank",
-            sx: sx().padding("16px").background("grey.1").border_radius("md"),
+            sx: sx().padding("16px").background("muted.1").border_radius("md"),
             "Styled entirely via sx"
         }
     }

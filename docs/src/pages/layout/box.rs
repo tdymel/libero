@@ -7,7 +7,7 @@ use libero::{
 
 const HREF: &str = "https://dioxuslabs.com";
 // snippet: in Box { .., "Styled entirely via sx" }
-const SX: &str = r#"sx: sx().padding("16px").background("grey.1").border_radius("md")"#;
+const SX: &str = r#"sx: sx().padding("16px").background("muted.1").border_radius("md")"#;
 
 /// The escape-hatch attributes only exist on some tags, so they follow
 /// `component` rather than standing as controls of their own.
@@ -80,7 +80,7 @@ pub fn BoxPage() -> Element {
                             href: (tag == "a").then(|| HREF.to_string()),
                             target: (tag == "a").then(|| "_blank".to_string()),
                             r#type: (tag == "button").then(|| "button".to_string()),
-                            sx: sx().padding("16px").background("grey.1").border_radius("md"),
+                            sx: sx().padding("16px").background("muted.1").border_radius("md"),
                             "Styled entirely via sx"
                         }
                     }

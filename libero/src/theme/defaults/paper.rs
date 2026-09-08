@@ -43,7 +43,7 @@ impl PaperDefaults {
         shadow: Size::Sm,
         background: "#fff",
         contrast: ColorValue::Shade(Color::Ink, ColorShade::S1),
-        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
     };
 
     fn radius_sx(radius: Size) -> Sx {

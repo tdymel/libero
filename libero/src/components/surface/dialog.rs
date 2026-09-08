@@ -140,7 +140,7 @@ pub fn Dialog(props: DialogProps) -> Element {
                     if close_button {
                         ActionIcon {
                             variant: "transparent",
-                            color: "grey",
+                            color: "muted",
                             size: "sm",
                             aria_label: props.close_label.clone().unwrap_or_else(|| "Close".to_string()),
                             onclick: move |_| {

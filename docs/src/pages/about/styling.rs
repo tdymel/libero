@@ -45,14 +45,14 @@ fn card_sx(values: &DemoValues) -> Sx {
 const STATES_SX: &str = r#"sx: sx()
         .padding("sm")
         .border_radius("xl")
-        .background("grey.2")
+        .background("muted.2")
         .when("active", sx().background("primary").color("primary-contrast"))
         .when("danger", sx().background("error").color("error-contrast"))"#;
 
 fn states_sx() -> Sx {
     sx().padding("sm")
         .border_radius("xl")
-        .background("grey.2")
+        .background("muted.2")
         .when(
             "active",
             sx().background("primary").color("primary-contrast"),
@@ -74,7 +74,7 @@ const SELECTORS: &str = r#"sx()
     .selector("& svg", sx().width("18px"))                // a descendant
     .selector("&::before", sx().content("\"*\""))           // a pseudo-element
     .selector("&:not(:last-child)", sx().margin_bottom("sm"))
-    .selector(".dark &", sx().background("grey.8"))       // this element, in a context
+    .selector(".dark &", sx().background("muted.8"))       // this element, in a context
     .selector("&::before, &::after", sx().display("block"))"#;
 
 const RESPONSIVE: &str = r#"sx()
@@ -123,7 +123,7 @@ const TAILWIND_LAYER_ORDER: &str = "@layer theme, base, lsx-base, lsx-framework,
 const STATIC_SX: &str = r#"static CARD_SX: StaticSx = StaticSx::new(|| {
     sx().padding("md")
         .border_radius("md")
-        .background("grey.1")
+        .background("muted.1")
         .when("selected", sx().background("primary.1"))
 });
 

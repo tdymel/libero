@@ -61,7 +61,7 @@ static CHECKBOX_BOX_SX: StaticSx = StaticSx::new(|| {
 
 /// Depends on `(on, color)` alone - see the `use_cache` below.
 fn checkbox_variables(on: bool, base: &ThemeAwareValue) -> String {
-    let off = ThemeAwareValue::from("grey.5");
+    let off = ThemeAwareValue::from("muted.5");
     variables()
         .with(
             CHECKBOX_BACKGROUND,

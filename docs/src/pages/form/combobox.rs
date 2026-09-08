@@ -161,7 +161,7 @@ const RICH_ROW: &str = r#"        Text { component: "span", size: "xl", "{o.valu
             Text {
                 component: "span",
                 size: "xs",
-                sx: sx().color("grey.6"),
+                sx: sx().color("muted.6"),
                 "{o.value.note()}"
             }
         }"#;
@@ -285,7 +285,7 @@ fn RowContent(fruit: Fruit, rich: bool) -> Element {
                 Text {
                     component: "span",
                     size: "xs",
-                    sx: sx().color("grey.6"),
+                    sx: sx().color("muted.6"),
                     "{fruit.note()}"
                 }
             }
@@ -338,7 +338,7 @@ fn SelectDemo(values: DemoValues) -> Element {
             }
             Text {
                 size: "sm",
-                sx: sx().color("grey.6"),
+                sx: sx().color("muted.6"),
                 match picked() {
                     Some(fruit) => rsx! { "Picked: {fruit.label()}" },
                     None => rsx! { "Nothing picked yet" },

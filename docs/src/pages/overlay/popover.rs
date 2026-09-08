@@ -152,7 +152,7 @@ fn PopoverDemo(
                 onmounted: floating.mount(),
                 sx: sx()
                     .background("surface")
-                    .border("1px solid var(--lsx-grey-3)")
+                    .border("1px solid var(--lsx-muted-3)")
                     .border_radius("6px")
                     .box_shadow("md")
                     .padding("var(--lsx-popover-padding)")

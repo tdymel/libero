@@ -325,7 +325,7 @@ mod tests {
 
     #[test]
     fn a_divider_color_is_appended_when_given() {
-        let color = ThemeAwareValue::Color(Color::Grey);
+        let color = ThemeAwareValue::Color(Color::Muted);
         let variables = splitter_variables(50.0, Some(&color));
 
         assert_eq!(
@@ -334,7 +334,7 @@ mod tests {
                 "{}:50%;{}:{};",
                 SPLITTER_A_VAR.name(),
                 SPLITTER_DIVIDER_COLOR_VAR.name(),
-                ColorValue::Shade(Color::Grey, ColorShade::DEFAULT).value()
+                ColorValue::Shade(Color::Muted, ColorShade::DEFAULT).value()
             )
         );
     }

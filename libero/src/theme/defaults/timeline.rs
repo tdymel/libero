@@ -95,7 +95,7 @@ impl TimelineDefaults {
     pub const DEFAULT: Self = Self {
         align: TimelineAlign::Left,
         color: ColorValue::Shade(Color::Primary, ColorShade::S6),
-        line_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        line_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
         bullet_background: TIMELINE_BULLET_BACKGROUND_DEFAULT,
         radius: Size::Xl,
         bullet_size: Size::Md,

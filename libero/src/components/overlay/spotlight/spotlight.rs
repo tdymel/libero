@@ -39,7 +39,7 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .color("inherit")
                 .background("transparent")
                 .border("0")
-                .border_bottom("2px solid var(--lsx-grey-3)")
+                .border_bottom("2px solid var(--lsx-muted-3)")
                 .outline("none"),
         )
         // The input always holds focus, so its indicator is the line under it
@@ -68,10 +68,10 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .cursor("pointer")
                 .user_select("none"),
         )
-        .selector("& [role=\"option\"]:hover", sx().background("grey.1"))
+        .selector("& [role=\"option\"]:hover", sx().background("muted.1"))
         .selector(
             "& [role=\"option\"][data-active]",
-            sx().background("grey.2"),
+            sx().background("muted.2"),
         )
         .selector(
             "& [role=\"option\"][data-active]",

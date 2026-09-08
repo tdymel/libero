@@ -56,7 +56,7 @@ static NAV_LINK_BASE_SX: StaticSx = StaticSx::new(|| {
         .scroll_margin("8rem")
         // Hover is neutral grey, not `color`: it shouldn't preview the
         // selected look. Active gets the light color tint instead.
-        .hover(sx().background("grey.2"))
+        .hover(sx().background("muted.2"))
         .when(
             "active",
             sx().background(NAV_LINK_ACTIVE_BACKGROUND_VAR.value())

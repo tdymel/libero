@@ -39,7 +39,7 @@ fn Demo() -> Element {
     rsx! {
         Box {
             sx: sx().height("200px").width("100%").overflow_y("auto")
-                .border("1px solid var(--lsx-grey-3)"),
+                .border("1px solid var(--lsx-muted-3)"),
             Header { position: "sticky", "Libero" }
             Box {
                 sx: sx().padding("md"),

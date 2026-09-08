@@ -49,7 +49,7 @@ pub fn DividerPage() -> Element {
                     .default("none")
                     .doc("Margin on either side of the rule, from the spacing scale."),
                 prop("color", "ThemeAwareValue")
-                    .default("grey.4")
+                    .default("muted.4")
                     .doc("Line color. A bare theme color is tinted to shade 3."),
                 prop("children", "Element")
                     .doc("The optional centered/positioned label."),
@@ -81,7 +81,7 @@ pub fn DividerPage() -> Element {
                     // other bare color. So the first swatch is unset, painted
                     // the grey-4 the rule actually draws.
                     Control::color("color").with_unset()
-                    .unset_swatch("grey.4"),
+                    .unset_swatch("muted.4"),
                     Control::slider("spacing", ["auto", "xs", "sm", "md", "lg", "xl"])
                         .default("md")
                         .code(

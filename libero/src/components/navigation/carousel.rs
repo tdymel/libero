@@ -193,7 +193,7 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
     sx().padding("0")
         .border_width("0")
         .border_radius("999px")
-        // Behind a var, not a literal: `background("grey.6")` would publish
+        // Behind a var, not a literal: `background("muted.6")` would publish
         // this dot's own `--lsx-focus-contrast`, and the ring - drawn outside
         // the dot, on the page - would then contrast against the dot instead
         // of against what it sits on. On the current dot that was a white ring

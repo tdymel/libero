@@ -79,7 +79,7 @@ static SCROLL_AREA_BASE_SX: StaticSx = StaticSx::new(|| {
         .when("axis-none", sx().overflow_x("hidden").overflow_y("hidden"))
         .scrollbar_color(format!(
             "{} transparent",
-            SCROLL_AREA_THUMB_VAR.value_or(ColorCss::GREY.value(ColorShade::S5))
+            SCROLL_AREA_THUMB_VAR.value_or(ColorCss::MUTED.value(ColorShade::S5))
         ))
         .when("visible-hidden", sx().scrollbar_width("none"));
 

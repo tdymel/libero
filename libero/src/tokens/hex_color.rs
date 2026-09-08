@@ -344,8 +344,8 @@ mod tests {
 
         assert!((ratio(0x22_8B_E6) - 3.56).abs() < 0.01, "blue.6");
         assert!((ratio(0x1C_74_C1) - 4.86).abs() < 0.01, "blue.8");
-        assert!((ratio(0x86_8E_96) - 3.32).abs() < 0.01, "grey.6");
-        assert!((ratio(0x4C_50_55) - 8.12).abs() < 0.01, "grey.7");
+        assert!((ratio(0x86_8E_96) - 3.32).abs() < 0.01, "muted.6");
+        assert!((ratio(0x4C_50_55) - 8.12).abs() < 0.01, "muted.7");
     }
 
     /// `blue.6` is the case Mantine's `autoContrast` alone cannot fix: white

@@ -115,14 +115,17 @@ impl ThemeAwareValue {
     }
 }
 
-/// `gray` is a CSS keyword, and the palette name is `grey`: the one spelling
-/// that falls through to an off-theme colour without a sound. Once per
-/// spelling, since this runs on every render of every `color: "gray"`.
+/// `gray` and `grey` are both CSS keywords, and the palette name is `muted`:
+/// the two spellings that fall through to an off-theme colour without a
+/// sound. `grey` named the palette until the ramp was re-based on the
+/// surface, so a call site that predates the rename keeps compiling and
+/// paints the CSS keyword. Once per spelling, since this runs on every render
+/// of every `color: "gray"`.
 fn warn_misspelled_palette(value: &str) {
     thread_local! {
         static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
     }
-    if value.eq_ignore_ascii_case("gray")
+    if (value.eq_ignore_ascii_case("gray") || value.eq_ignore_ascii_case("grey"))
         && WARNED.with_borrow_mut(|warned| {
             let first = !warned.iter().any(|spelling| spelling == value);
             if first {
@@ -132,7 +135,7 @@ fn warn_misspelled_palette(value: &str) {
         })
     {
         warn(&format!(
-            "`{value}` is the CSS keyword, not a palette colour; the palette name is `grey`."
+            "`{value}` is a CSS keyword, not a palette colour; the palette name is `muted`."
         ));
     }
 }
@@ -242,7 +245,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn gray_stays_the_css_keyword_but_warns_once() {
+    fn gray_and_grey_stay_css_keywords_but_warn_once_each() {
         crate::utils::take_warnings();
         assert_eq!(
             ThemeAwareValue::from("gray"),
@@ -254,11 +257,15 @@ mod tests {
         );
         assert_eq!(
             ThemeAwareValue::from("grey"),
-            ThemeAwareValue::Color(Color::Grey)
+            ThemeAwareValue::String("grey".to_string())
+        );
+        assert_eq!(
+            ThemeAwareValue::from("muted"),
+            ThemeAwareValue::Color(Color::Muted)
         );
         let warnings = crate::utils::take_warnings();
-        assert_eq!(warnings.len(), 1, "{warnings:?}");
-        assert!(warnings[0].contains("`grey`"));
+        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert!(warnings.iter().all(|warning| warning.contains("`muted`")));
     }
 
     #[test]
@@ -322,10 +329,10 @@ mod tests {
         );
     }
 
-    /// A grey is picked for how quiet it looks, so it is taken literally -
+    /// A muted colour is picked for how quiet it looks, so it is taken literally -
     /// a disabled label and a chevron must not darken into looking enabled.
     #[test]
-    fn the_text_role_moves_an_accent_and_leaves_a_grey_alone() {
+    fn the_text_role_moves_an_accent_and_leaves_a_muted_one_alone() {
         use crate::tokens::{Color, ColorShade, ColorValue};
 
         assert_eq!(
@@ -333,14 +340,14 @@ mod tests {
             ThemeAwareValue::ColorValue(ColorValue::Text(Color::Primary, ColorShade::S6))
         );
         assert_eq!(
-            ThemeAwareValue::from("grey.6").in_color_role(ColorRole::Text),
-            ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Grey, ColorShade::S6))
+            ThemeAwareValue::from("muted.6").in_color_role(ColorRole::Text),
+            ThemeAwareValue::ColorValue(ColorValue::Shade(Color::Muted, ColorShade::S6))
         );
-        // The fill role has no such exception: a grey fill still has to
+        // The fill role has no such exception: a muted fill still has to
         // carry its foreground.
         assert_eq!(
-            ThemeAwareValue::from("grey.6").in_color_role(ColorRole::Fill),
-            ThemeAwareValue::ColorValue(ColorValue::Fill(Color::Grey, ColorShade::S6))
+            ThemeAwareValue::from("muted.6").in_color_role(ColorRole::Fill),
+            ThemeAwareValue::ColorValue(ColorValue::Fill(Color::Muted, ColorShade::S6))
         );
     }
 

@@ -121,7 +121,7 @@ fn Demo() -> Element {
     rsx! {
         Grid {
             template: PAGE.clone(),
-            sx: sx().background("grey.1").padding("12px").border_radius("sm"),
+            sx: sx().background("muted.1").padding("12px").border_radius("sm"),
             GridZone {
                 area: PageArea::Content,
                 masonry: true,

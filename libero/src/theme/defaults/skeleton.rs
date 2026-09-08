@@ -37,7 +37,7 @@ pub struct SkeletonDefaults {
 impl SkeletonDefaults {
     pub const DEFAULT: Self = Self {
         radius: Size::Sm,
-        color: ColorValue::Shade(Color::Grey, ColorShade::S3),
+        color: ColorValue::Shade(Color::Muted, ColorShade::S3),
         duration: "1500ms",
         animate: true,
     };

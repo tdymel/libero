@@ -16,7 +16,7 @@ static SPLITTER_BAR_SX: StaticSx = StaticSx::new(|| {
         .position("relative")
         .flex_shrink("0")
         .align_self("stretch")
-        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::GREY.value(ColorShade::S4)));
+        .background(SPLITTER_DIVIDER_COLOR_VAR.value_or(ColorCss::MUTED.value(ColorShade::S4)));
 
     Size::ALL.into_iter().fold(base, |acc, size| {
         acc.when(

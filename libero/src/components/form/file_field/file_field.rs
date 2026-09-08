@@ -114,7 +114,7 @@ static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
         .min_height(FILE_FIELD_DROPZONE_HEIGHT.value())
         .padding(FILE_FIELD_PADDING.value())
         .border("2px dashed")
-        .border_color("grey.4")
+        .border_color("muted.4")
         .border_radius(FILE_FIELD_RADIUS.value())
         .background("transparent")
         .cursor("pointer")
@@ -123,7 +123,7 @@ static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
         .selector("& [data-slot='hint']", sx().color("text-dimmed"))
         // Sized against the text, which is the one thing on the surface that
         // already scales.
-        .selector("& > svg", sx().width("2em").height("2em").color("grey.6"))
+        .selector("& > svg", sx().width("2em").height("2em").color("muted.6"))
         .when(
             "dragging",
             sx().border_color("primary")
@@ -131,7 +131,7 @@ static FILE_DROPZONE_SX: StaticSx = StaticSx::new(|| {
         )
         .when(
             "disabled",
-            sx().cursor("not-allowed").border_color("grey.3"),
+            sx().cursor("not-allowed").border_color("muted.3"),
         )
 });
 
@@ -164,7 +164,7 @@ static FILE_CARD_SX: StaticSx = StaticSx::new(|| {
             FILE_FIELD_PADDING.value()
         ))
         .border("1px solid")
-        .border_color("grey.3")
+        .border_color("muted.3")
         .border_radius(FILE_FIELD_RADIUS.value())
         .selector(
             "& [data-slot='name']",

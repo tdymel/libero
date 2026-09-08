@@ -44,7 +44,7 @@ On a surface that is not the page's paper, pass that surface's colour as
 `fade_color`, or the control strip shows as a band:
 
 ```rust,ignore
-Scroller { aria_label: "Tags", fade_color: "grey.1", /* .. */ }
+Scroller { aria_label: "Tags", fade_color: "muted.1", /* .. */ }
 ```
 
 ## Reacting to the edges

@@ -24,8 +24,8 @@ impl TableDefaults {
         padding_x: 12,
         padding_y: 10,
         font_size: 14,
-        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
-        hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
     };
 
     fn border() -> String {

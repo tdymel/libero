@@ -93,7 +93,7 @@ static SLIDER_TRACK_SX: StaticSx = StaticSx::new(|| {
     sx().position("relative")
         .flex("1 1 auto")
         .height(SLIDER_TRACK.value())
-        .background("grey.2")
+        .background("muted.2")
         // A pill, always: the radius scale starts at 2px and a track is 2-10px
         // tall, so every step above the smallest clamped to the same half-height
         // curve. The shared `radius` prop is not wired here for that reason.
@@ -183,7 +183,7 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
         .width(dot.clone())
         .height(dot)
         .border_radius("50%")
-        .background(ColorValue::Shade(Color::Grey, ColorShade::S4).value())
+        .background(ColorValue::Shade(Color::Muted, ColorShade::S4).value())
         // White on the filled bar, the way the thumb is - the grey dot would
         // disappear into it.
         .when("filled", sx().background("surface"))
@@ -211,7 +211,7 @@ static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {
             "translateX(calc({} * -100%))",
             SLIDER_MARK_AT.value_or("0")
         ))
-        .color("grey.7")
+        .color("muted.7")
         .white_space("nowrap")
 });
 

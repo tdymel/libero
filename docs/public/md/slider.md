@@ -216,7 +216,7 @@ smallest clamped to the same half-height curve.
 | `--lsx-slider-color` | Accent color of the track fill and thumb. |
 | `--lsx-slider-filled` | Filled fraction of the track, `0` to `1`. |
 | `--lsx-slider-mark-at` | A mark's position along the track, `0` to `1`. |
-| `--lsx-slider-mark-fill` | A mark's tick color; defaults to `grey.4` when it is past the value. |
+| `--lsx-slider-mark-fill` | A mark's tick color; defaults to `muted.4` when it is past the value. |
 
 ## Data attributes
 

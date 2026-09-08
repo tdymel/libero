@@ -19,7 +19,7 @@ pub enum Color {
     Info,
     Success,
     Neutral,
-    Grey,
+    Muted,
     /// What text is set in. The dark end of the page on a light theme, the
     /// light end on a dark one - which is why it is not called "black".
     Ink,
@@ -30,10 +30,10 @@ pub enum Color {
 }
 
 impl Color {
-    /// Greys and ink/surface walk the neutral mix curve, hues the chromatic one.
+    /// Muted, neutral and ink/surface walk the neutral mix curve, hues the chromatic one.
     pub(crate) const fn shade_ramp(self) -> ShadeRamp {
         match self {
-            Self::Neutral | Self::Grey | Self::Ink | Self::Surface => ShadeRamp::Neutral,
+            Self::Neutral | Self::Muted | Self::Ink | Self::Surface => ShadeRamp::Neutral,
             _ => ShadeRamp::Chromatic,
         }
     }
@@ -57,7 +57,7 @@ impl Color {
             "info" => Some(Self::Info),
             "success" => Some(Self::Success),
             "neutral" => Some(Self::Neutral),
-            "grey" => Some(Self::Grey),
+            "muted" => Some(Self::Muted),
             "ink" => Some(Self::Ink),
             "surface" => Some(Self::Surface),
             _ => None,
@@ -76,7 +76,7 @@ impl Color {
             Self::Info => ColorVars::Palette(ColorCss::INFO, ColorCss::INFO_CONTRAST),
             Self::Success => ColorVars::Palette(ColorCss::SUCCESS, ColorCss::SUCCESS_CONTRAST),
             Self::Neutral => ColorVars::Palette(ColorCss::NEUTRAL, ColorCss::NEUTRAL_CONTRAST),
-            Self::Grey => ColorVars::Palette(ColorCss::GREY, ColorCss::GREY_CONTRAST),
+            Self::Muted => ColorVars::Palette(ColorCss::MUTED, ColorCss::MUTED_CONTRAST),
             Self::Ink => ColorVars::Named(NamedColorCss::INK, NamedColorCss::SURFACE),
             Self::Surface => ColorVars::Named(NamedColorCss::SURFACE, NamedColorCss::INK),
         }
@@ -91,7 +91,7 @@ impl Color {
             Self::Info => "info",
             Self::Success => "success",
             Self::Neutral => "neutral",
-            Self::Grey => "grey",
+            Self::Muted => "muted",
             Self::Ink => "ink",
             Self::Surface => "surface",
         }

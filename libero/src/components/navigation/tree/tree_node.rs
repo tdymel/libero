@@ -199,7 +199,7 @@ pub fn default_tree_render<T: TreeLabel>(args: TreeNodeRenderArgs<T>) -> Element
             Icon {
                 variant: "transparent",
                 size: "xs",
-                color: "grey.6",
+                color: "muted.6",
                 "data-tree-chevron": true,
                 states: States::new().with("expanded", expanded),
                 ChevronRightIcon {}

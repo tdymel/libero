@@ -26,7 +26,7 @@ use libero::{
 fn Demo() -> Element {
     rsx! {
         Flex {
-            sx: sx().width("400px").height("200px").padding("8px").background("grey.1"),
+            sx: sx().width("400px").height("200px").padding("8px").background("muted.1"),
             Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
@@ -53,7 +53,7 @@ fn Demo() -> Element {
             justify: "space-between",
             align: "center",
             wrap: "wrap",
-            sx: sx().width("400px").height("200px").padding("8px").background("grey.1"),
+            sx: sx().width("400px").height("200px").padding("8px").background("muted.1"),
             Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }
@@ -83,7 +83,7 @@ fn Demo() -> Element {
         Flex {
             direction: "row",
             divider: rsx! { Divider { orientation: "vertical" } },
-            sx: sx().width("400px").height("200px").padding("8px").background("grey.1"),
+            sx: sx().width("400px").height("200px").padding("8px").background("muted.1"),
             Box { sx: sx().padding("8px 16px").background("primary.1"), "One" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Two" }
             Box { sx: sx().padding("8px 16px").background("primary.1"), "Three" }

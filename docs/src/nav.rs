@@ -416,7 +416,7 @@ pub fn DocsNav(open: Signal<bool>, burger: ElementHandle) -> Element {
                                             .padding_left(format!("{padding_left}px"))
                                             .border_left(format!(
                                                 "2px solid {}",
-                                                ColorCss::GREY.value(ColorShade::S3),
+                                                ColorCss::MUTED.value(ColorShade::S3),
                                             ))
                                             .when(
                                                 "active",

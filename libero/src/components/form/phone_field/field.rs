@@ -41,7 +41,7 @@ static PICKER_SX: StaticSx = StaticSx::new(|| {
             sx().flex("0 0 auto")
                 .width("1em")
                 .height("1em")
-                .color("grey.6"),
+                .color("muted.6"),
         )
         .selector("& > [data-slot='dial']", sx().color("text-dimmed"))
         .when("disabled", sx().cursor("not-allowed"))
@@ -66,7 +66,7 @@ static SEARCH_SX: StaticSx = StaticSx::new(|| {
         .line_height("1.5")
         .padding("4px 8px")
         .border_bottom("1px solid")
-        .border_color("grey.3")
+        .border_color("muted.3")
         .selector("::placeholder", sx().color("text-dimmed"))
 });
 

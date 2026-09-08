@@ -20,7 +20,7 @@ input_from_str!(SidebarSide);
 static SIDEBAR_SCROLL_SX: StaticSx = StaticSx::new(|| sx().padding("lg"));
 
 static SIDEBAR_BASE_SX: StaticSx = StaticSx::new(|| {
-    let border = format!("1px solid {}", ColorCss::GREY.value(ColorShade::S4));
+    let border = format!("1px solid {}", ColorCss::MUTED.value(ColorShade::S4));
 
     let base = sx()
         .flex_shrink("0")

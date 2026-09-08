@@ -152,7 +152,7 @@ impl ColorCss {
     pub const INFO: ColorCss = ColorCss::new("--lsx-info-");
     pub const SUCCESS: ColorCss = ColorCss::new("--lsx-success-");
     pub const NEUTRAL: ColorCss = ColorCss::new("--lsx-neutral-");
-    pub const GREY: ColorCss = ColorCss::new("--lsx-grey-");
+    pub const MUTED: ColorCss = ColorCss::new("--lsx-muted-");
     pub const PRIMARY_CONTRAST: ColorCss = ColorCss::new("--lsx-primary-contrast-");
     pub const SECONDARY_CONTRAST: ColorCss = ColorCss::new("--lsx-secondary-contrast-");
     pub const ERROR_CONTRAST: ColorCss = ColorCss::new("--lsx-error-contrast-");
@@ -160,7 +160,7 @@ impl ColorCss {
     pub const INFO_CONTRAST: ColorCss = ColorCss::new("--lsx-info-contrast-");
     pub const SUCCESS_CONTRAST: ColorCss = ColorCss::new("--lsx-success-contrast-");
     pub const NEUTRAL_CONTRAST: ColorCss = ColorCss::new("--lsx-neutral-contrast-");
-    pub const GREY_CONTRAST: ColorCss = ColorCss::new("--lsx-grey-contrast-");
+    pub const MUTED_CONTRAST: ColorCss = ColorCss::new("--lsx-muted-contrast-");
 
     pub const fn new(prefix: &'static str) -> Self {
         Self { prefix }
@@ -207,7 +207,7 @@ impl NamedColorCss {
     /// background without either side knowing about the other.
     pub const FOCUS_CONTRAST: NamedColorCss = NamedColorCss::new("--lsx-focus-contrast");
     /// Secondary text - a placeholder, a hint, a unit, a day outside the
-    /// month. The one name for "this text is quieter"; `grey.6` stays what an
+    /// month. The one name for "this text is quieter"; `muted.6` stays what an
     /// icon or a chevron is drawn in. Spelled `"text-dimmed"` in an `Sx`.
     pub const TEXT_DIMMED: NamedColorCss = NamedColorCss::new("--lsx-text-dimmed");
 

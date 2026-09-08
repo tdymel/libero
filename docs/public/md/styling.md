@@ -83,7 +83,7 @@ fn Demo() -> Element {
             sx: sx()
                 .padding("sm")
                 .border_radius("xl")
-                .background("grey.2")
+                .background("muted.2")
                 .when("active", sx().background("primary").color("primary-contrast"))
                 .when("danger", sx().background("error").color("error-contrast")),
             states: States::new().active("active"),
@@ -108,7 +108,7 @@ sx()
     .selector("& svg", sx().width("18px"))                // a descendant
     .selector("&::before", sx().content("\"*\""))         // a pseudo-element
     .selector("&:not(:last-child)", sx().margin_bottom("sm"))
-    .selector(".dark &", sx().background("grey.8"))       // this element, in a context
+    .selector(".dark &", sx().background("muted.8"))       // this element, in a context
     .selector("&::before, &::after", sx().display("block"))
 ```
 
@@ -312,7 +312,7 @@ use libero::sx::{StaticSx, sx};
 static CARD_SX: StaticSx = StaticSx::new(|| {
     sx().padding("md")
         .border_radius("md")
-        .background("grey.1")
+        .background("muted.1")
         .when("selected", sx().background("primary.1"))
 });
 

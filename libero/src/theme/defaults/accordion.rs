@@ -79,8 +79,8 @@ impl AccordionDefaults {
                 chevron: "24px",
             },
         ),
-        border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
-        hover_color: ColorValue::Shade(Color::Grey, ColorShade::S1),
+        border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
+        hover_color: ColorValue::Shade(Color::Muted, ColorShade::S1),
         chevron_duration: 150,
     };
 

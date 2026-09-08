@@ -168,7 +168,7 @@ every size, which is what tells it apart from a checkbox at a glance.
 |---|---|
 | `--lsx-radio-circle-size-<size>` | Circle diameter for that size step. |
 | `--lsx-radio-circle` | The picked step, resolved on the control so the circle and dot inherit it. |
-| `--lsx-radio-color` | Ring and dot color: the resolved `color` when checked, `grey.5` when not. |
+| `--lsx-radio-color` | Ring and dot color: the resolved `color` when checked, `muted.5` when not. |
 | `--lsx-radio-on` | `0` or `1`, scaling the dot, so only this var changes between states. |
 
 ## Data attributes

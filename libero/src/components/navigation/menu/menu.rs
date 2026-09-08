@@ -56,7 +56,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             sx().padding(format!("6px {}", MENU_ITEM_PAD_X.value()))
                 .font_size(MENU_LABEL_FONT.value())
                 .font_weight("600")
-                .color("grey.7")
+                .color("muted.7")
                 .user_select("none"),
         )
         .selector(
@@ -85,9 +85,9 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
         // back.
         .selector(
             "& [role=\"menuitem\"]:hover:not([aria-disabled=\"true\"])",
-            sx().background("grey.1"),
+            sx().background("muted.1"),
         )
-        .selector("& [role=\"menuitem\"]:focus", sx().background("grey.1"))
+        .selector("& [role=\"menuitem\"]:focus", sx().background("muted.1"))
         // `appearance: none` and `border: 0` take the UA's ring with them.
         // Inset, because the box clips at its padding edge while it scrolls.
         .selector(
@@ -96,7 +96,7 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
         )
         .selector(
             "& [role=\"menuitem\"][aria-disabled=\"true\"]",
-            sx().color("grey.5").cursor("not-allowed"),
+            sx().color("muted.5").cursor("not-allowed"),
         )
         .selector(
             "& [data-menu-label]",

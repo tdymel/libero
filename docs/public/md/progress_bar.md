@@ -101,7 +101,7 @@ Where the radius stops mattering, radius scale `2/4/8/16/32/64px`:
 | `--lsx-progress-bar-thickness-<size>` | Track height for that size step. |
 | `--lsx-progress-bar-size` | The picked height, resolved on the root. |
 | `--lsx-progress-bar-radius` | The picked radius, resolved on the root; the fill inherits the corner. |
-| `--lsx-progress-bar-track` | The unfilled track, `grey.2`. Themed once. |
+| `--lsx-progress-bar-track` | The unfilled track, `muted.2`. Themed once. |
 | `--lsx-progress-bar-transition` | Duration of the fill's `width` transition. Themed once. |
 | `--lsx-progress-bar-color` | The resolved `color`, per instance. |
 | `--lsx-progress-bar-fill` | The drawn percentage, e.g. `42%`, per instance. Not written while indeterminate, and nothing reads it then. |

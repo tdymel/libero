@@ -23,7 +23,7 @@ use libero::{components::{Box, Center}, sx::sx};
 #[component]
 fn Demo() -> Element {
     rsx! {
-        Box { sx: sx().width("260px").background("grey.2"),
+        Box { sx: sx().width("260px").background("muted.2"),
             Center { sx: sx().height("120px").background("primary.1"),
                 Box { sx: sx().padding("8px 16px").background("primary"), "Centered" }
             }

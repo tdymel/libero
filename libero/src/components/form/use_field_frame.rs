@@ -20,7 +20,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .width("100%")
         .border_style("solid")
         .border_width("1px")
-        .border_color("grey.5")
+        .border_color("muted.5")
         // The surface's own colour rather than a control token of its own: a
         // field sits on a surface and matches it until a theme says otherwise.
         .and(PaperDefaults::background_sx())
@@ -52,7 +52,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
             "disabled",
             sx().opacity("0.5")
                 .cursor("not-allowed")
-                .background("grey.1"),
+                .background("muted.1"),
         )
         .selector(
             "& > [data-slot]",
