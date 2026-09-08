@@ -2,11 +2,13 @@ mod defaults;
 mod stylesheet;
 mod theme;
 mod theme_set;
+mod themes;
 
 // `defaults` curates its own per-component export list.
 pub use defaults::*;
 pub use theme::Theme;
 pub use theme_set::ThemeSet;
+pub use themes::*;
 
 // `DARK_SCHEME_QUERY` is read by the web backend only; off wasm nothing asks
 // the platform what it is set to.

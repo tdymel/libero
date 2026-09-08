@@ -4,10 +4,15 @@ use super::Theme;
 ///
 /// ```ignore
 /// ThemeSet::new()
+///     .with_name("Acme")
 ///     .light(&LIGHT)
 ///     .dark(&DARK)
 ///     .named("sepia", &SEPIA)
 /// ```
+///
+/// The library ships several ready-made ones - [`ThemeSet::DEFAULT`] and the
+/// community palettes beside it, all of them in
+/// [`CATALOGUE`](Self::CATALOGUE).
 ///
 /// The light/dark pair is emitted into the stylesheet up front, so switching
 /// between the two is one attribute on the document root: no re-render to see
@@ -18,6 +23,7 @@ use super::Theme;
 /// theme an app happens to own.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ThemeSet {
+    name: &'static str,
     light: &'static Theme,
     dark: Option<&'static Theme>,
     extras: Vec<(&'static str, &'static Theme)>,
@@ -34,10 +40,22 @@ impl ThemeSet {
     /// still gets a working dark scheme, and `prefers-color-scheme` alone
     /// switches it.
     pub const DEFAULT: ThemeSet = ThemeSet {
+        name: "Libero",
         light: &Theme::DEFAULT,
         dark: Some(&Theme::DARK),
         extras: Vec::new(),
     };
+
+    /// A named pair, which is what every set the library ships is. `const`,
+    /// so a palette can be one.
+    pub const fn pair(name: &'static str, light: &'static Theme, dark: &'static Theme) -> Self {
+        Self {
+            name,
+            light,
+            dark: Some(dark),
+            extras: Vec::new(),
+        }
+    }
 
     pub fn new() -> Self {
         Self::DEFAULT
@@ -49,10 +67,22 @@ impl ThemeSet {
     /// own has not authored a dark counterpart for it.
     pub fn of(theme: &'static Theme) -> Self {
         Self {
+            name: "Custom",
             light: theme,
             dark: None,
             extras: Vec::new(),
         }
+    }
+
+    /// What a picker calls this set. Only a label - nothing resolves through
+    /// it, and two sets may share one.
+    pub fn with_name(mut self, name: &'static str) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn name(&self) -> &'static str {
+        self.name
     }
 
     pub fn light(mut self, theme: &'static Theme) -> Self {

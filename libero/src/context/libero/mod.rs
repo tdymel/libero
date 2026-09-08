@@ -22,8 +22,10 @@ pub(crate) use css_layer::CssLayer;
 
 #[derive(Clone)]
 pub struct LiberoContext {
-    /// Every theme the app ships, and which of them is its light and its dark.
-    pub themes: ThemeSet,
+    /// Every theme the app ships, and which of them is its light and its
+    /// dark. A `Signal`, because a whole set can be swapped at runtime -
+    /// which is what a theme picker does.
+    pub themes: Signal<ThemeSet>,
     /// The active one. A `Signal` so [`use_theme`](crate::hooks::use_theme) is
     /// reactive: a component that reads a spacing number, a label or a
     /// `HexColor` off the theme re-renders when the theme changes, and so
@@ -52,7 +54,7 @@ impl LiberoContext {
     /// `use_context`, never by building it.
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn new(
-        themes: ThemeSet,
+        themes: Signal<ThemeSet>,
         theme: Signal<&'static Theme>,
         active: Signal<&'static str>,
         scheme_setting: Signal<ColorSchemeSetting>,
@@ -81,7 +83,7 @@ impl LiberoContext {
     /// the colours change before the re-render that follows. Anything else,
     /// or any platform with no reachable root, rebuilds the sheet.
     pub fn set_active_theme(&self, name: &'static str) {
-        let Some(theme) = self.themes.get(name) else {
+        let Some(theme) = self.themes.peek().get(name) else {
             warn(&format!(
                 "unknown theme `{name}`; the set has no such theme, so nothing changed"
             ));
@@ -93,7 +95,7 @@ impl LiberoContext {
             return;
         }
 
-        let by_attribute = self.themes.is_in_pair(name)
+        let by_attribute = self.themes.peek().is_in_pair(name)
             && document()
                 .is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, Some(name)));
         if !by_attribute {
@@ -114,15 +116,20 @@ impl LiberoContext {
     /// because otherwise a click on "dark" while the platform is dark would
     /// leave the page following the platform.
     pub(crate) fn set_color_scheme(&self, setting: ColorSchemeSetting) {
-        if let Some(scheme) = setting.fixed()
-            && self.themes.get(scheme.as_str()).is_none()
-        {
-            warn(&format!(
-                "no `{}` theme in this set, so the colour scheme did not change",
-                scheme.as_str()
-            ));
-            return;
-        }
+        // A set with no dark half cannot be pinned to dark. Falling back to
+        // the system setting rather than refusing outright, because this also
+        // runs when a *picker* swaps to such a set while dark was pinned:
+        // refusing would leave the pin describing a theme that is not there.
+        let setting = match setting.fixed() {
+            Some(scheme) if self.themes.peek().get(scheme.as_str()).is_none() => {
+                warn(&format!(
+                    "no `{}` theme in this set, so the colour scheme follows the platform",
+                    scheme.as_str()
+                ));
+                ColorSchemeSetting::System
+            }
+            _ => setting,
+        };
 
         let mut stored = self.scheme_setting;
         stored.set(setting);
@@ -138,7 +145,7 @@ impl LiberoContext {
 
     fn pin_scheme(&self, scheme: ColorScheme) {
         let name = scheme.as_str();
-        let Some(theme) = self.themes.get(name) else {
+        let Some(theme) = self.themes.peek().get(name) else {
             return;
         };
 
@@ -161,10 +168,8 @@ impl LiberoContext {
     /// page it is painted on.
     pub(crate) fn follow_system(&self, scheme: ColorScheme) {
         let name = scheme.as_str();
-        let theme = self
-            .themes
-            .get(name)
-            .unwrap_or_else(|| self.themes.light_theme());
+        let themes = self.themes.peek().clone();
+        let theme = themes.get(name).unwrap_or_else(|| themes.light_theme());
 
         let cleared =
             document().is_some_and(|document| document.set_root_attribute(THEME_ATTRIBUTE, None));
@@ -173,12 +178,32 @@ impl LiberoContext {
             // itself. The whole set, not this one theme: the media block is
             // what makes the system case work without us.
             let mut css = self.theme_css;
-            css.set(Rc::from(Stylesheet::from(&self.themes).as_str()));
+            css.set(Rc::from(Stylesheet::from(&themes).as_str()));
         }
 
         let (mut active, mut current) = (self.active, self.theme);
         active.set(name);
         current.set(theme);
+    }
+
+    /// Swaps the whole set - what a theme picker does.
+    ///
+    /// The sheet is rebuilt, because the pair it carries is this set's pair:
+    /// nothing in the old sheet describes the new palette. The colour-scheme
+    /// *setting* is kept and re-applied on top, so a reader who pinned dark
+    /// stays in dark through the swap.
+    pub fn set_theme_set(&self, themes: ThemeSet) {
+        let (mut current_set, mut css) = (self.themes, self.theme_css);
+        current_set.set(themes.clone());
+        css.set(Rc::from(Stylesheet::from(&themes).as_str()));
+
+        // Read out first: `set_color_scheme` writes this same signal, and a
+        // `peek()` guard held across the call is a borrow panic, not a
+        // compile error.
+        let setting = *self.scheme_setting.peek();
+        // Re-applied rather than assumed: the new set may have no dark half,
+        // in which case this falls back to following the platform.
+        self.set_color_scheme(setting);
     }
 }
 
@@ -273,11 +298,12 @@ pub fn LiberoProvider(
         let themes = themes.clone();
         move || Rc::<str>::from(Stylesheet::from(&themes).as_str())
     });
+    let theme_set = use_signal(|| themes);
 
     let stylesheet_registry_version = use_signal(|| 0u64);
     let context = use_context_provider(|| {
         LiberoContext::new(
-            themes,
+            theme_set,
             theme_signal,
             active,
             scheme_setting,

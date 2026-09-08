@@ -194,10 +194,22 @@ impl HexColor {
             },
         };
 
+        // The near end is the page itself, in both ramps: a low step is a
+        // tint of the surface it will be drawn on. The far end differs. A
+        // neutral ramp ends at the theme's own `ink`, because its far steps
+        // *are* text. A chromatic one ends at pure black or pure white,
+        // whichever is opposite the page: its far steps exist to be legible,
+        // and a palette whose ink is only 6:1 on its own page would otherwise
+        // cap every accent's text role below 4.5:1.
+        let far = match ramp {
+            ShadeRamp::Neutral => ends.ink,
+            ShadeRamp::Chromatic => ends.surface.contrast(),
+        };
+
         if percent >= 0 {
             self.mix(ends.surface, percent as u8)
         } else {
-            self.mix(ends.ink, (-percent) as u8)
+            self.mix(far, (-percent) as u8)
         }
     }
 

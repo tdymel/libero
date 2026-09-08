@@ -5,7 +5,7 @@ use libero::{
     ColorSchemeHandle, LiberoProvider,
     components::Text,
     hooks::use_color_scheme,
-    theme::{ColorScheme, ColorSchemeSetting, Theme},
+    theme::{ColorScheme, ColorSchemeSetting, Theme, ThemeSet},
 };
 
 /// Reads the scheme the way an app's own toggle would, so the assertions
@@ -175,4 +175,62 @@ fn a_set_with_no_dark_half_cannot_be_toggled_into_one() {
             Theme::DEFAULT.surface
         )
     );
+}
+
+/// Swapping the whole set rebuilds the sheet with the new palette, and keeps
+/// the pinned scheme: a reader who chose dark stays in dark through the swap.
+#[test]
+fn a_set_swap_rebuilds_the_sheet_and_keeps_the_scheme() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Reader {}
+                SwapSet {}
+            }
+        }
+    }
+
+    // Both writes in one effect: `render` renders once after the effects
+    // run, so a second effect's write would need a second pass to be seen.
+    #[component]
+    fn SwapSet() -> Element {
+        let scheme = use_color_scheme();
+        let themes = libero::hooks::use_theme_set();
+        use_effect(move || {
+            scheme.set(ColorScheme::Dark);
+            themes.set(ThemeSet::GRUVBOX);
+        });
+
+        rsx! {}
+    }
+
+    let html = render(app);
+
+    assert!(scheme_line(&html).contains(&format!("setting={:?}", ColorSchemeSetting::Dark)));
+    assert!(
+        scheme_line(&html).contains(&format!("surface={}", libero::theme::GRUVBOX_DARK.surface))
+    );
+    assert!(html.contains(&format!(
+        "--lsx-surface:{};",
+        libero::theme::GRUVBOX_DARK.surface
+    )));
+    // The old palette is gone, not merely overridden further down.
+    assert!(!html.contains(&format!("--lsx-surface:{};", Theme::DARK.surface)));
+}
+
+/// Every set in the catalogue is a real pair with a name a picker can show.
+#[test]
+fn the_catalogue_is_all_named_pairs() {
+    assert!(ThemeSet::CATALOGUE.len() >= 2);
+
+    for set in ThemeSet::CATALOGUE {
+        assert!(!set.name().is_empty());
+        let dark = set
+            .dark_theme()
+            .unwrap_or_else(|| panic!("{} has no dark half", set.name()));
+        assert_ne!(dark.surface, set.light_theme().surface, "{}", set.name());
+        // By value: `&ThemeSet::DEFAULT` is a promoted temporary at every
+        // use site, so `ptr::eq` on two of them proves nothing.
+        assert_eq!(ThemeSet::from_catalogue(set.name()), Some(*set));
+    }
 }

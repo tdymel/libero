@@ -23,4 +23,6 @@ pub use chrono;
 pub(crate) use context::CssLayer;
 pub use context::{LiberoContext, LiberoProvider};
 pub use css::Stylesheet;
-pub use hooks::{ColorSchemeHandle, use_color_scheme, use_stylesheet, use_theme};
+pub use hooks::{
+    ColorSchemeHandle, ThemeSetHandle, use_color_scheme, use_stylesheet, use_theme, use_theme_set,
+};

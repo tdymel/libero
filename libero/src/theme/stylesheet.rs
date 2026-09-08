@@ -627,6 +627,60 @@ mod tests {
         assert_eq!(text_roles_falling_short(&Theme::DARK), Vec::<&str>::new());
     }
 
+    /// Every shipped set, both halves, measured on its own page.
+    ///
+    /// Two things are pinned. **The ink has to read on the page and on the
+    /// card** - a ported palette names both, and nothing else checks that the
+    /// two agree. And **which accents fall short as text**, as a list rather
+    /// than a bound, because a ported palette is somebody else's design and
+    /// the honest answer is a record, not an assertion that it is fine.
+    ///
+    /// `warning` is ours, not theirs: no palette in the pack carries one, so
+    /// every ported theme keeps Libero's amber, and amber on a cream page is
+    /// what most of this list is.
+    #[test]
+    fn every_shipped_set_reads_on_its_own_page() {
+        let mut short = Vec::new();
+
+        for set in ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let paper = HexColor::parse(theme.paper.background).expect("a hex");
+                let scheme = theme.surface.color_scheme();
+
+                for (what, against) in [("page", theme.surface), ("card", paper)] {
+                    let ratio = theme.ink.contrast_ratio(against);
+                    assert!(
+                        ratio >= TEXT_CONTRAST,
+                        "{} {scheme}: ink on its own {what} is {ratio:.2}:1",
+                        set.name()
+                    );
+                }
+
+                let falling = text_roles_falling_short(theme);
+                if !falling.is_empty() {
+                    short.push(format!("{} {scheme}: {}", set.name(), falling.join(" ")));
+                }
+            }
+        }
+
+        assert_eq!(
+            short,
+            [
+                "Libero light: warning success",
+                "Ayu light: warning info success",
+                "Catppuccin light: warning",
+                "Everforest light: warning",
+                "Gruvbox light: warning",
+                "One light: warning",
+                "Rosé Pine light: warning",
+            ],
+            "the shipped palettes' text roles moved"
+        );
+    }
+
     /// Which palette colours cannot reach [`TEXT_CONTRAST`] on `theme`'s own
     /// surface, however far their text ramp walks.
     fn text_roles_falling_short(theme: &Theme) -> Vec<&'static str> {
