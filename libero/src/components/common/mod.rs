@@ -26,7 +26,7 @@ pub(crate) use icons::{
     ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyIcon,
     EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon, PauseIcon, PersonIcon, PlayIcon,
-    PlusIcon, SunIcon, UploadIcon,
+    PlusIcon, SunIcon, SystemSchemeIcon, UploadIcon,
 };
 pub use number_value::NumberValue;
 pub use option_list::{OptionItem, OptionList, OptionSource};

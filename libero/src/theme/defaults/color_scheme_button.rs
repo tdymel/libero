@@ -1,22 +1,35 @@
 use crate::theme::{Color, Variant};
 
 /// What a [`ColorSchemeButton`](crate::components::ColorSchemeButton)
-/// announces itself with: one place to translate. Each names what a press
-/// *does*, not what is on screen - a screen reader user cannot see the glyph
-/// it swaps. Split from the chrome beside it for the
-/// [`BurgerLabels`](crate::theme::BurgerLabels) reason.
+/// announces itself with: one place to translate. Split from the chrome
+/// beside it for the [`BurgerLabels`](crate::theme::BurgerLabels) reason.
+///
+/// The three `to_*` name what a press *does*: the glyph shows the setting in
+/// effect, and a screen reader user cannot see it.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColorSchemeButtonLabels {
-    /// Names the button while the dark scheme is showing.
+    /// Names the button when a press pins the light scheme.
     pub to_light: &'static str,
-    /// Names the button while the light scheme is showing.
+    /// Names the button when a press pins the dark scheme.
     pub to_dark: &'static str,
+    /// Names the button when a press hands the choice back to the platform.
+    pub to_system: &'static str,
+    /// Names the pair of buttons, when a theme picker makes it a pair.
+    pub group: &'static str,
+    /// Names the picker's own button.
+    pub picker: &'static str,
+    /// Names the group of theme sets inside the picker's menu.
+    pub themes: &'static str,
 }
 
 impl ColorSchemeButtonLabels {
     pub const ENGLISH: Self = Self {
         to_light: "Switch to the light theme",
         to_dark: "Switch to the dark theme",
+        to_system: "Follow the system theme",
+        group: "Theme",
+        picker: "Choose a theme",
+        themes: "Themes",
     };
 }
 

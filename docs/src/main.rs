@@ -11,14 +11,13 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd, Menu,
-        MenuItem, Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_menu,
-        use_spotlight,
+        ActionIcon, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd,
+        Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
-    hooks::{use_element, use_theme_set},
+    hooks::use_element,
     platform::ElementApi,
     sx::sx,
-    theme::{HEADER_HEIGHT, PAPER_BACKGROUND, Size, ThemeSet},
+    theme::{HEADER_HEIGHT, ICON_SIZE, PAPER_BACKGROUND, Size, ThemeSet},
 };
 
 mod components;
@@ -28,7 +27,7 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::{CheckmarkIcon, PaletteIcon, SearchIcon};
+use icons::SearchIcon;
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
@@ -274,64 +273,6 @@ fn App() -> Element {
     }
 }
 
-/// The shell's theme-set picker: every set in `ThemeSet::CATALOGUE`, with
-/// the active one marked.
-///
-/// In the header for the same reason the scheme toggle is - a reviewer
-/// checking a component against a palette should not have to go somewhere
-/// else to change it. Swapping a set rebuilds the stylesheet, which is the
-/// accepted cost of not emitting every palette an app owns.
-#[component]
-fn ThemeSetPicker() -> Element {
-    let themes = use_theme_set();
-    let menu = use_menu();
-    let active = themes.name();
-
-    let items = ThemeSet::CATALOGUE
-        .iter()
-        .map(|set| {
-            let themes = themes.clone();
-            MenuItem::new(set.name())
-                .trailing(match set.name() == active {
-                    // The mark is the only thing saying which set is on, so
-                    // it is sized rather than left to the glyph's own box.
-                    true => rsx! {
-                        span {
-                            display: "inline-flex",
-                            width: "14px",
-                            height: "14px",
-                            CheckmarkIcon {}
-                        }
-                    },
-                    false => rsx! {},
-                })
-                .onselect(move |_| themes.set((*set).clone()))
-                .into()
-        })
-        .collect::<Vec<_>>();
-
-    rsx! {
-        Menu {
-            state: menu,
-            items,
-            align: libero::hooks::Align::End,
-            ActionIcon {
-                variant: "outlined",
-                color: "muted",
-                size: "lg",
-                aria_label: "Theme: {active}",
-                attributes: menu.a11y_attributes(),
-                span {
-                    display: "inline-flex",
-                    width: "18px",
-                    height: "18px",
-                    PaletteIcon {}
-                }
-            }
-        }
-    }
-}
-
 #[component]
 fn AppShell() -> Element {
     let mut open = use_signal(|| false);
@@ -450,6 +391,9 @@ fn AppShell() -> Element {
                         // transparent, and on a palette whose paper is close to
                         // its page the field had no edge at all.
                         .border_color("muted.5")
+                        // The icon buttons' `lg` box, not a `Button`'s own 36px:
+                        // one row of controls, one height.
+                        .height(ICON_SIZE.value(Size::Lg))
                         .gap("sm")
                         .hover(sx().background("muted.1"))
                         .breakpoint(
@@ -474,11 +418,10 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
-                ThemeSetPicker {}
                 // In the header rather than on a page: its job is to let a
-                // reviewer check any component in both schemes, from wherever
-                // they are. `lg`, to match the two icon buttons beside it.
-                ColorSchemeButton { size: "lg" }
+                // reviewer check any component in every scheme and palette,
+                // from wherever they are. `lg`, to match the search beside it.
+                ColorSchemeButton { size: "lg", themes: ThemeSet::CATALOGUE }
             }
             // This row itself never scrolls - the nav scrolls its own
             // content internally (`Sidebar` does), and only the rest of the

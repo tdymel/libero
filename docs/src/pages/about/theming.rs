@@ -296,8 +296,8 @@ pub fn ThemingPage() -> Element {
                     Code { source: "Libero" }
                     ", plus Ayu, Catppuccin, Everforest, Flexoki, GitHub, Gruvbox, Kanagawa, One "
                     "and Rosé Pine, each a "
-                    "real light/dark pair from its upstream palette. The palette button in "
-                    "this site's header is built from it, through "
+                    "real light/dark pair from its upstream palette. The chevron beside "
+                    "the scheme button in this site's header is built from it, through "
                     Code { source: "use_theme_set()" }
                     " - try it on any page. A ported palette is ten hex values and nothing "
                     "else: every ramp, role and contrast twin derives from them. "
@@ -307,10 +307,12 @@ pub fn ThemingPage() -> Element {
                 }
                 Text {
                     Code { source: "ColorSchemeButton" }
-                    " is the ready-made switch - the one in this header. A toggle pins the "
-                    "other scheme only while it differs from the platform's, so flipping back "
-                    "follows the platform, and any devtools emulation of it, again. Anything "
-                    "else is built on "
+                    " is the ready-made switch - the one in this header. It steps through "
+                    "following the platform, the other scheme, and the platform's own scheme "
+                    "pinned, and back, so a reader can always return to the platform's choice "
+                    "and to any devtools emulation of it; with "
+                    Code { source: "themes" }
+                    " it adds a theme-set picker beside it. Anything else is built on "
                     Code { source: "use_color_scheme()" }
                     ": "
                     Code { source: "setting()" }

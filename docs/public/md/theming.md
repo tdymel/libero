@@ -172,9 +172,10 @@ a cream page that is the one role which does not reach 4.5:1.
 ### The switch
 
 [`ColorSchemeButton`](color_scheme_button.md) is the ready-made switch: an
-icon button that flips between the pair. A toggle pins the other scheme only
-while it differs from the platform's, so flipping back follows the platform -
-and any devtools emulation of it - again. Anything else is built on
+icon button that steps through following the platform, the other scheme, and
+the platform's own scheme pinned, and back - so a reader can always return to
+the platform's choice, and to any devtools emulation of it. With `themes` it
+adds a theme-set picker beside it. Anything else is built on
 `use_color_scheme()`, out of an `ActionIcon`, a `Switch` or a
 `SegmentedControl`:
 

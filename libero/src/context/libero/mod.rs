@@ -326,17 +326,8 @@ pub fn LiberoProvider(
             platform.on_change(Box::new(move |scheme| {
                 let mut system = context.system_scheme;
                 system.set(scheme);
-                // Copied out: `set_color_scheme` writes this same signal.
-                let setting = *context.scheme_setting.peek();
-                match setting.fixed() {
-                    None => context.follow_system(scheme),
-                    // The platform came round to the pinned scheme, so the pin
-                    // no longer says anything. Dropping it is what lets the
-                    // next platform change be followed again.
-                    Some(pinned) if pinned == scheme => {
-                        context.set_color_scheme(ColorSchemeSetting::System)
-                    }
-                    Some(_) => {}
+                if *context.scheme_setting.peek() == ColorSchemeSetting::System {
+                    context.follow_system(scheme);
                 }
             }))
         }))

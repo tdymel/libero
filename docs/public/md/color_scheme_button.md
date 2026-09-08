@@ -4,16 +4,17 @@ Crate: `libero`
 Import: `use libero::components::ColorSchemeButton;`
 Source: <https://github.com/tdymel/libero/tree/main/libero/src/components/inputs/color_scheme_button.rs>
 Index: [index.md](index.md) - every other component's markdown page
-Description: An icon button that flips the app between its light and dark theme - an `ActionIcon` over `use_color_scheme()`.
+Description: An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
 
-An icon button that flips the app between its light and dark theme: a moon
-while the light scheme shows, a sun while the dark one does. It is an
-`ActionIcon` over `use_color_scheme()`, named for what a press does.
+An icon button that steps the app's colour scheme: following the platform,
+then the scheme the platform is not showing, then the one it is, then back to
+following it. The glyph shows the setting in effect - a half-filled disc, a
+sun or a moon - and the accessible name says what a press does. It is an
+`ActionIcon` over `use_color_scheme()`.
 
-A press pins the other scheme only while it differs from the platform's.
-Flipping back hands the choice to the platform again, so an OS switch - or a
-devtools emulation of one - is followed from then on. The platform coming
-round to a pinned scheme drops the pin too.
+While it follows the platform, an OS switch - or a devtools emulation of
+`prefers-color-scheme` - is followed live. A pinned scheme stays pinned until a
+press hands the choice back.
 
 ## Usage
 
@@ -29,7 +30,23 @@ fn Demo() -> Element {
 }
 ```
 
-The two names come from the theme, so a translation is one struct:
+With `themes` it becomes a split button: a chevron beside the toggle opens a
+menu of theme sets, the active one checked. Two buttons rather than one with a
+second gesture, so each has one job, one name and its own tab stop.
+
+```rust
+use dioxus::prelude::*;
+use libero::{components::ColorSchemeButton, theme::ThemeSet};
+
+#[component]
+fn Demo() -> Element {
+    rsx! {
+        ColorSchemeButton { size: "lg", themes: ThemeSet::CATALOGUE }
+    }
+}
+```
+
+The names come from the theme, so a translation is one struct:
 
 ```rust
 use libero::theme::{ColorSchemeButtonDefaults, ColorSchemeButtonLabels, Theme};
@@ -39,6 +56,10 @@ static GERMAN: Theme = Theme {
         labels: ColorSchemeButtonLabels {
             to_light: "Helles Design",
             to_dark: "Dunkles Design",
+            to_system: "Wie das System",
+            group: "Design",
+            picker: "Design wählen",
+            themes: "Designs",
         },
         ..ColorSchemeButtonDefaults::DEFAULT
     },
@@ -51,9 +72,14 @@ An app that wants an explicit "follow the system" choice builds it from
 
 ## Accessibility
 
-The accessible name says what a press does - "Switch to the dark theme" - not
-which scheme is showing: a screen reader user cannot see the glyph it swaps.
-The glyph is `aria-hidden`.
+The accessible name says what a press does - "Switch to the dark theme",
+"Follow the system theme" - because the glyph, which shows the current
+setting, is `aria-hidden`.
+
+With `themes`, the pair is a `role="group"` named "Theme". The chevron is its
+own button, "Choose a theme", with `aria-haspopup="menu"` and `aria-expanded`;
+the sets in its menu are `menuitemradio`s with `aria-checked`. It is never
+narrower than 24px (WCAG 2.5.8).
 
 ## Props
 
@@ -63,7 +89,8 @@ The glyph is `aria-hidden`.
 | `color` | `ThemeAwareValue` | `muted` | Accent color. Unset, the theme's `color_scheme_button.color`. |
 | `size` | `ThemeAwareValue` | `md` | Button size; the glyph takes 55% of it. |
 | `radius` | `ThemeAwareValue` | `sm` | Corner radius, independent of size. |
-| `label` | `Callback<ColorScheme, String>` | - | Replaces the theme's two names. Given the scheme on screen, it names what a press does. |
+| `themes` | `&'static [&'static ThemeSet]` | - | Opts into the theme picker: a chevron beside the toggle opening a menu of these sets, the active one checked. The pair is then a named `group`, and `class`, `sx` and extra attributes land on it. |
+| `label` | `Callback<ColorSchemeSetting, String>` | - | Replaces the theme's three toggle names. Given the setting a press moves to, it names what the press does. |
 | `disabled` | `bool` | `false` | Disables interaction and dims the button. |
 
 Like every component, `ColorSchemeButton` also takes the shared props `sx`,
@@ -77,7 +104,7 @@ Like every component, `ColorSchemeButton` also takes the shared props `sx`,
 |---|---|---|
 | `variant` | `Variant` | Default `variant` when the prop is omitted (`outlined`). |
 | `color` | `Color` | Default `color` when the prop is omitted (`muted`). |
-| `labels` | `ColorSchemeButtonLabels` | `to_light` and `to_dark`, the two accessible names. |
+| `labels` | `ColorSchemeButtonLabels` | `to_light`, `to_dark`, `to_system` (the toggle's names), `group`, `picker` and `themes` (the picker's). |
 
 ## CSS variables
 

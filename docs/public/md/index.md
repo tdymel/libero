@@ -81,7 +81,7 @@ fetch only the file you need.
 
 - [ActionIcon](action_icon.md): An icon-only button - `Icon`'s sizing, color and variant system rendered as a real `button` (or a link), with a required `aria_label`.
 - [Button](button.md): A clickable action, a toggle, or a router-aware link.
-- [ColorSchemeButton](color_scheme_button.md): An icon button that flips the app between its light and dark theme - an `ActionIcon` over `use_color_scheme()`.
+- [ColorSchemeButton](color_scheme_button.md): An icon button that steps the colour scheme through system, dark and light, with an opt-in theme-set picker beside it.
 
 ## Layout
 

@@ -3,13 +3,14 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         HtmlTag, Input, Variant,
-        common::{MoonIcon, SunIcon, base_props},
+        common::{ChevronDownIcon, MoonIcon, SunIcon, SystemSchemeIcon, base_props},
         inputs::ActionIcon,
         layout::use_box,
+        navigation::{Menu, MenuEntry, MenuItem, use_menu},
     },
-    hooks::{use_color_scheme, use_theme},
+    hooks::{Align, use_color_scheme, use_theme, use_theme_set},
     sx::{StaticSx, ThemeAwareValue, sx},
-    theme::ColorScheme,
+    theme::{ACTION_ICON_SIZE, ColorSchemeSetting, ThemeSet},
 };
 
 /// The glyph's box. `ActionIcon` stretches any `svg` to its whole box, so an
@@ -17,6 +18,35 @@ use crate::{
 /// margin Mantine's own scheme toggle has.
 static GLYPH_SX: StaticSx =
     StaticSx::new(|| sx().display("inline-flex").width("55%").height("55%"));
+
+/// The pair drawn as one control: the two halves share the seam, and the
+/// focused one is lifted so its ring is not painted under its neighbour.
+/// The toggle is a direct child; the chevron sits inside the `div` `Menu`
+/// wraps its trigger in.
+static SPLIT_SX: StaticSx = StaticSx::new(|| {
+    sx().display("inline-flex")
+        .align_items("stretch")
+        .selector("& button", sx().position("relative"))
+        .selector("& button:focus-visible", sx().z_index("1"))
+        .selector(
+            "& > button",
+            sx().border_top_right_radius("0")
+                .border_bottom_right_radius("0"),
+        )
+        // One seam, not two borders side by side.
+        .selector("& > div", sx().display("flex").margin_left("-1px"))
+        .selector(
+            "& > div > button",
+            sx().border_top_left_radius("0")
+                .border_bottom_left_radius("0")
+                // Narrower than the toggle, as a split button's arrow is,
+                // but never under WCAG 2.5.8's 24px.
+                .width(format!(
+                    "max(24px, calc({} * 0.75))",
+                    ACTION_ICON_SIZE.overridable()
+                )),
+        )
+});
 
 base_props! {
     pub struct ColorSchemeButtonProps {
@@ -32,19 +62,25 @@ base_props! {
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
         radius: Input<ThemeAwareValue>,
-        /// Replaces the theme's two labels. Given the scheme on screen, it
-        /// names what a press does. Runs during render, so it can read a live
-        /// locale.
+        /// Opts into the theme picker: a second button beside the toggle, a
+        /// chevron that opens a menu of these sets with the active one
+        /// checked. Unset, it is the toggle alone.
         #[props(default)]
-        label: Option<Callback<ColorScheme, String>>,
+        themes: Option<&'static [&'static ThemeSet]>,
+        /// Replaces the theme's three toggle names. Given the setting a press
+        /// moves to, it names what the press does. Runs during render, so it
+        /// can read a live locale.
+        #[props(default)]
+        label: Option<Callback<ColorSchemeSetting, String>>,
         #[props(default)]
         disabled: Option<bool>,
     }
 }
 
-/// An icon button that flips the app between its light and dark theme: an
-/// [`ActionIcon`] over [`use_color_scheme`], showing a moon in the light
-/// scheme and a sun in the dark one.
+/// An icon button that steps the app's colour scheme: following the
+/// platform, then the scheme the platform is not showing, then the one it is,
+/// then back to following it. The glyph shows the setting in effect - a
+/// half-filled disc, a sun or a moon - and the name says what a press does.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -54,25 +90,38 @@ base_props! {
 /// # }
 /// ```
 ///
-/// A press pins the other scheme only while it differs from the platform's,
-/// so flipping back hands the choice to the platform again - an OS switch or
-/// a devtools emulation is followed from then on. An app that wants an
-/// explicit "follow the system" choice builds it from `use_color_scheme()`,
-/// which is also the hook to reach for when a button is the wrong control.
+/// With `themes`, it becomes a split button: the toggle, and beside it a
+/// chevron opening a menu of theme sets. Two buttons, not one with a second
+/// gesture - each keeps one job and one name, and both are reachable from
+/// the keyboard. The pair is a named `group`, and `class`, `sx` and the extra
+/// attributes land on it rather than on either half.
+///
+/// ```no_run
+/// # use dioxus::prelude::*;
+/// # use libero::{components::ColorSchemeButton, theme::ThemeSet};
+/// # fn app() -> Element {
+/// rsx! { ColorSchemeButton { themes: ThemeSet::CATALOGUE } }
+/// # }
+/// ```
 #[component]
 pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
     let theme = use_theme();
     let scheme = use_color_scheme();
-    let showing = scheme.resolved();
+    let theme_set = use_theme_set();
+    let menu = use_menu();
+    let labels = theme.color_scheme_button.labels;
 
+    let next = scheme.next_in_cycle();
     let aria_label = match props.label {
-        Some(label) => label.call(showing),
-        None => match showing {
-            ColorScheme::Dark => theme.color_scheme_button.labels.to_light.to_string(),
-            ColorScheme::Light => theme.color_scheme_button.labels.to_dark.to_string(),
-        },
+        Some(label) => label.call(next),
+        None => match next {
+            ColorSchemeSetting::Light => labels.to_light,
+            ColorSchemeSetting::Dark => labels.to_dark,
+            ColorSchemeSetting::System => labels.to_system,
+        }
+        .to_string(),
     };
-    let variant = props.variant.copied_or(theme.color_scheme_button.variant);
+    let variant = Input::Value(props.variant.copied_or(theme.color_scheme_button.variant));
     let color = props
         .color
         .into_option()
@@ -81,26 +130,91 @@ pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
-        match showing {
-            ColorScheme::Dark => rsx! { SunIcon {} },
-            ColorScheme::Light => rsx! { MoonIcon {} },
+        match scheme.setting() {
+            ColorSchemeSetting::System => rsx! { SystemSchemeIcon {} },
+            ColorSchemeSetting::Light => rsx! { SunIcon {} },
+            ColorSchemeSetting::Dark => rsx! { MoonIcon {} },
         },
     );
+    let chevron = use_box().framework_sx(&GLYPH_SX).prepare().render(
+        HtmlTag::Span,
+        Vec::new(),
+        rsx! { ChevronDownIcon {} },
+    );
+    // A hook, so above the branch: the picker's wrapper is built either way.
+    let split = use_box()
+        .framework_sx(&SPLIT_SX)
+        .class(&props.class)
+        .sx(&props.sx)
+        .states(&props.states)
+        .prepare()
+        .attr("role", "group")
+        .attr("aria-label", labels.group);
 
-    rsx! {
-        ActionIcon {
-            aria_label,
-            onclick: move |_| scheme.toggle(),
-            variant: Input::Value(variant),
-            color,
-            size: props.size,
-            radius: props.radius,
-            disabled: props.disabled,
-            class: props.class,
-            sx: props.sx,
-            states: props.states,
-            attributes: props.attributes,
-            {glyph}
-        }
-    }
+    let Some(sets) = props.themes else {
+        return rsx! {
+            ActionIcon {
+                aria_label,
+                onclick: move |_| scheme.cycle(),
+                variant: variant.clone(),
+                color: color.clone(),
+                size: props.size.clone(),
+                radius: props.radius.clone(),
+                disabled: props.disabled,
+                class: props.class.clone(),
+                sx: props.sx.clone(),
+                states: props.states.clone(),
+                attributes: props.attributes.clone(),
+                {glyph}
+            }
+        };
+    };
+
+    let active = theme_set.name();
+    let items = vec![MenuEntry::Group {
+        label: labels.themes.to_string(),
+        items: sets
+            .iter()
+            .map(|&set| {
+                let theme_set = theme_set.clone();
+                MenuItem::new(set.name())
+                    .checked(set.name() == active)
+                    .onselect(move |_| theme_set.set(set.clone()))
+                    .into()
+            })
+            .collect(),
+    }];
+
+    split.render(
+        HtmlTag::Div,
+        props.attributes.clone(),
+        rsx! {
+            ActionIcon {
+                aria_label,
+                onclick: move |_| scheme.cycle(),
+                variant: variant.clone(),
+                color: color.clone(),
+                size: props.size.clone(),
+                radius: props.radius.clone(),
+                disabled: props.disabled,
+                {glyph}
+            }
+            Menu {
+                state: menu,
+                items,
+                align: Align::End,
+                disabled: props.disabled.unwrap_or(false),
+                ActionIcon {
+                    aria_label: labels.picker,
+                    variant,
+                    color,
+                    size: props.size.clone(),
+                    radius: props.radius.clone(),
+                    disabled: props.disabled,
+                    attributes: menu.a11y_attributes(),
+                    {chevron}
+                }
+            }
+        },
+    )
 }

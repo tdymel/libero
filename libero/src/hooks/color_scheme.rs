@@ -73,6 +73,25 @@ impl ColorSchemeHandle {
         }
     }
 
+    /// Steps through all three settings: from following the platform to
+    /// the scheme it is *not* showing, then to the one it is, then back to
+    /// following it. Every press changes what is on screen except the last,
+    /// which changes what the app listens to - so a reader can always get
+    /// back to the platform's choice, and to a devtools emulation of it.
+    pub fn cycle(&self) {
+        self.set(self.next_in_cycle());
+    }
+
+    /// The setting [`cycle`](Self::cycle) would move to next.
+    pub fn next_in_cycle(&self) -> ColorSchemeSetting {
+        let system = *self.context.system_scheme.read();
+        match self.setting().fixed() {
+            None => system.flipped().into(),
+            Some(pinned) if pinned != system => system.into(),
+            Some(_) => ColorSchemeSetting::System,
+        }
+    }
+
     /// Selects a theme beyond the pair, by the name it was given to
     /// [`ThemeSet::named`](crate::theme::ThemeSet::named).
     ///

@@ -240,22 +240,3 @@ pub fn SearchIcon() -> Element {
         }
     }
 }
-
-/// The theme-set picker's glyph: a painter's palette.
-#[component]
-pub fn PaletteIcon() -> Element {
-    rsx! {
-        svg {
-            view_box: "0 0 24 24",
-            fill: "none",
-            stroke: "currentColor",
-            stroke_width: "2",
-            stroke_linecap: "round",
-            stroke_linejoin: "round",
-            path { d: "M12 3a9 9 0 0 0 0 18h1.5a2 2 0 0 0 1.4-3.4 2 2 0 0 1 1.4-3.4H18a3 3 0 0 0 3-3 9 9 0 0 0-9-8.2z" }
-            circle { cx: "7.5", cy: "11.5", r: "1.2" }
-            circle { cx: "10.5", cy: "7.5", r: "1.2" }
-            circle { cx: "15", cy: "8.5", r: "1.2" }
-        }
-    }
-}

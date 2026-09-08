@@ -297,7 +297,26 @@ pub(crate) fn UploadIcon() -> Element {
     }
 }
 
-/// `ColorSchemeButton` while the dark scheme shows: a press brings the sun.
+/// `ColorSchemeButton` while the app follows the platform: a disc half
+/// filled, the usual "automatic" mark.
+#[component]
+pub(crate) fn SystemSchemeIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            circle { cx: "12", cy: "12", r: "9" }
+            path { d: "M12 3a9 9 0 0 0 0 18z", fill: "currentColor" }
+        }
+    }
+}
+
+/// `ColorSchemeButton` while the light scheme is pinned.
 #[component]
 pub(crate) fn SunIcon() -> Element {
     rsx! {
@@ -315,7 +334,7 @@ pub(crate) fn SunIcon() -> Element {
     }
 }
 
-/// `ColorSchemeButton` while the light scheme shows.
+/// `ColorSchemeButton` while the dark scheme is pinned.
 #[component]
 pub(crate) fn MoonIcon() -> Element {
     rsx! {

@@ -1,5 +1,6 @@
-//! `ColorSchemeButton`'s rendered contract: the glyph and the name follow the
-//! scheme on screen, the name is the theme's, and a press flips the scheme.
+//! `ColorSchemeButton`'s rendered contract: the glyph shows the setting, the
+//! name says where a press goes and comes from the theme, and `themes` adds a
+//! picker beside the toggle.
 
 use crate::common::{attributes_of, body, render};
 
@@ -8,52 +9,87 @@ use libero::{
     LiberoProvider,
     components::ColorSchemeButton,
     hooks::use_color_scheme,
-    theme::{ColorScheme, ColorSchemeButtonDefaults, ColorSchemeButtonLabels, Theme, ThemeSet},
+    theme::{
+        ColorSchemeButtonDefaults, ColorSchemeButtonLabels, ColorSchemeSetting, Theme, ThemeSet,
+    },
 };
 
-/// The moon's only path, and the sun's disc: which glyph is drawn.
+/// The three glyphs, told apart by a path only each one draws.
+const SYSTEM: &str = "M12 3a9 9";
+const SUN: &str = "<circle cx=\"12\" cy=\"12\" r=\"4\"";
 const MOON: &str = "M20 14.5A8.5";
-const SUN: &str = "<circle";
 
-/// Flips the scheme once, after the first render, the way a press would.
+thread_local! {
+    static PRESSES: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// Presses the button `PRESSES` times, after the first render, the way a
+/// reader would.
 #[component]
-fn Flip() -> Element {
+fn Press() -> Element {
     let scheme = use_color_scheme();
-    use_effect(move || scheme.toggle());
+    use_effect(move || {
+        for _ in 0..PRESSES.get() {
+            scheme.cycle();
+        }
+    });
     rsx! {}
 }
 
-/// Light is showing, so the button offers dark: a moon, named for what the
-/// press does, in the theme's outlined chrome.
-#[test]
-fn in_the_light_scheme_it_offers_the_dark_one() {
+fn pressed(times: usize) -> String {
     fn app() -> Element {
-        rsx! { LiberoProvider { ColorSchemeButton {} } }
+        rsx! { LiberoProvider { ColorSchemeButton {} Press {} } }
     }
-
-    let html = body(&render(app));
-    let button = attributes_of(&html, "button");
-
-    assert_eq!(button["aria-label"], "Switch to the dark theme", "{html}");
-    assert!(button["data-state"].contains("outlined"), "{html}");
-    assert!(html.contains(MOON) && !html.contains(SUN), "{html}");
+    PRESSES.set(times);
+    body(&render(app))
 }
 
-/// After a flip the dark scheme is showing, and the button offers light.
+/// The cycle, with a platform that reads light: following it, then dark
+/// (the scheme it is not showing), then light pinned, then following it
+/// again. The glyph shows where the button is; the name, where a press goes.
 #[test]
-fn in_the_dark_scheme_it_offers_the_light_one() {
+fn it_steps_from_the_system_to_the_other_scheme_and_back() {
+    let steps = [
+        (SYSTEM, "Switch to the dark theme"),
+        (MOON, "Switch to the light theme"),
+        (SUN, "Follow the system theme"),
+        (SYSTEM, "Switch to the dark theme"),
+    ];
+
+    for (presses, (glyph, name)) in steps.into_iter().enumerate() {
+        let html = pressed(presses);
+        let button = attributes_of(&html, "button");
+        assert_eq!(button["aria-label"], name, "after {presses}: {html}");
+        assert!(html.contains(glyph), "after {presses}: {html}");
+        assert!(button["data-state"].contains("outlined"), "{html}");
+    }
+}
+
+/// Without `themes` it is one button, not a group of one.
+#[test]
+fn without_themes_it_is_the_toggle_alone() {
+    let html = pressed(0);
+    assert_eq!(html.matches("<button").count(), 1, "{html}");
+    assert!(!html.contains(r#"role="group""#), "{html}");
+}
+
+/// With `themes` it is a named group of two buttons: the toggle, and a
+/// chevron that announces the menu it opens.
+#[test]
+fn themes_add_a_picker_beside_the_toggle() {
     fn app() -> Element {
-        rsx! { LiberoProvider { ColorSchemeButton {} Flip {} } }
+        rsx! { LiberoProvider { ColorSchemeButton { themes: ThemeSet::CATALOGUE } } }
     }
 
     let html = body(&render(app));
+    let group = attributes_of(&html, "div");
 
-    assert_eq!(
-        attributes_of(&html, "button")["aria-label"],
-        "Switch to the light theme",
-        "{html}"
-    );
-    assert!(html.contains(SUN) && !html.contains(MOON), "{html}");
+    assert_eq!(group["role"], "group", "{html}");
+    assert_eq!(group["aria-label"], "Theme", "{html}");
+    assert_eq!(html.matches("<button").count(), 2, "{html}");
+    assert!(html.contains(r#"aria-label="Choose a theme""#), "{html}");
+    assert!(html.contains(r#"aria-haspopup="menu""#), "{html}");
+    assert!(html.contains(r#"aria-expanded="false""#), "{html}");
 }
 
 static GERMAN: Theme = Theme {
@@ -61,6 +97,7 @@ static GERMAN: Theme = Theme {
         labels: ColorSchemeButtonLabels {
             to_light: "Helles Design",
             to_dark: "Dunkles Design",
+            ..ColorSchemeButtonLabels::ENGLISH
         },
         ..ColorSchemeButtonDefaults::DEFAULT
     },
@@ -87,14 +124,15 @@ fn the_name_comes_from_the_theme() {
     );
 }
 
-/// `label` replaces the theme's names, and is handed the scheme on screen.
+/// `label` replaces the theme's names, and is handed the setting a press
+/// moves to.
 #[test]
 fn a_label_callback_replaces_the_theme_s_names() {
     fn app() -> Element {
         rsx! {
             LiberoProvider {
                 ColorSchemeButton {
-                    label: move |showing: ColorScheme| format!("showing {showing:?}"),
+                    label: move |next: ColorSchemeSetting| format!("to {next:?}"),
                 }
             }
         }
@@ -102,8 +140,5 @@ fn a_label_callback_replaces_the_theme_s_names() {
 
     let html = body(&render(app));
 
-    assert_eq!(
-        attributes_of(&html, "button")["aria-label"],
-        "showing Light"
-    );
+    assert_eq!(attributes_of(&html, "button")["aria-label"], "to Dark");
 }
