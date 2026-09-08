@@ -369,6 +369,17 @@ fn it_meets_the_baseline() {
         // page ends in a scroll event at the old offset, which puts the index
         // back (todo 375).
         .reduced_motion()
+        // Coverage cannot hold here, and the reason is the component being
+        // right: exactly one slide is live and the rest are `inert`, which
+        // axe skips. In the advanced state the live slide is not the drawn
+        // one either, because the strip's smooth scroll never lands in a
+        // `background: true` page (todo 375). So no slide is both live and on
+        // screen. axe still runs over the whole root in both states, so a
+        // contrast violation in drawn text fails the run; what is not claimed
+        // is that it looked at every slide. Full reasoning in the module doc.
+        .no_contrast_coverage(
+            "exactly one slide is live and the rest are `inert`, which axe skips;              in the advanced state the live slide is not the drawn one (todo 375)",
+        )
         .state("advanced", &[Step::Click(NEXT)], SECOND_CURRENT)
         .run();
 }
