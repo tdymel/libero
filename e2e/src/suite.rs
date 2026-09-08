@@ -23,7 +23,7 @@
 //! the component's own test (unique to it).
 
 use crate::passes::keyboard::{self, Key};
-use crate::passes::{contrast, focus, pointer, target_size};
+use crate::passes::{contrast, focus, motion, pointer, target_size};
 use crate::{Fixture, Viewport, ax, browser};
 
 /// How long a state's entry animation may take before the wait fails. Well
@@ -83,6 +83,7 @@ pub struct Suite {
     states: Vec<State>,
     viewports: Vec<Viewport>,
     tab_budget: usize,
+    reduced_motion: bool,
 }
 
 impl Suite {
@@ -104,6 +105,7 @@ impl Suite {
             states: Vec::new(),
             viewports: Viewport::ALL.to_vec(),
             tab_budget: 10,
+            reduced_motion: false,
         }
     }
 
@@ -232,6 +234,28 @@ impl Suite {
         self
     }
 
+    /// Emulate `prefers-reduced-motion: reduce` for the whole battery, so
+    /// every scroll a step asks for is instant.
+    ///
+    /// For a component whose state is **derived from a scroll offset**. A
+    /// smooth scroll does not land in a page created `background: true`, and
+    /// `Carousel` tracks the scroll frame by frame: a `Step::Click` on its next
+    /// control moved `data-current` to the second slide and then, at 390px, let
+    /// a scroll event at the old offset put the index back, so the same
+    /// declared state snapshotted the previous control both enabled and
+    /// `[disabled]` on two runs of the same code. `codebase/e2e-harness`
+    /// records the trap at both widths; the house rule that follows from it is
+    /// that a test which moves a scroller runs under reduced motion unless the
+    /// smooth scroll is the thing it checks.
+    ///
+    /// It is opt-in rather than the default: a state reached under emulation is
+    /// a state the emulation may have changed, and most units declare no step
+    /// that scrolls anything.
+    pub fn reduced_motion(mut self) -> Self {
+        self.reduced_motion = true;
+        self
+    }
+
     pub fn tab_budget(mut self, budget: usize) -> Self {
         self.tab_budget = budget;
         self
@@ -254,6 +278,10 @@ impl Suite {
 
     async fn run_at(&self, viewport: Viewport) -> anyhow::Result<()> {
         let fixture = Fixture::open(self.route, viewport).await?;
+        if self.reduced_motion {
+            motion::set_reduced_motion(&fixture.page, true).await?;
+            motion::assert_reduced_motion_matches(&fixture.page).await?;
+        }
 
         let outcome = self.battery(&fixture).await;
 

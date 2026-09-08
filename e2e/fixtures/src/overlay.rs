@@ -1,13 +1,17 @@
 //! Fixtures for the overlay archetype beyond the `Modal` pilot: `Drawer`,
-//! `Menu`, `Spotlight` and `Lightbox`.
+//! `Menu`, `Spotlight`, `Lightbox` and `FloatingWindow`.
 
 use dioxus::prelude::*;
 use libero::{
     components::{
-        Anchor, Button, Flex, Menu, MenuEntry, MenuItem, SpotlightAction, SpotlightOptions, Text,
-        Title, spotlight_filter, use_menu, use_spotlight,
+        Anchor, Button, Flex, FloatingWindowOptions, Menu, MenuEntry, MenuItem, SpotlightAction,
+        SpotlightOptions, Text, Title, WindowRect, spotlight_filter, use_menu, use_spotlight,
     },
-    hooks::{DrawerOptions, LightboxItem, LightboxOptions, ModalScope, use_drawer, use_lightbox},
+    hooks::{
+        DrawerOptions, LightboxItem, LightboxOptions, ModalScope, use_drawer, use_floating_window,
+        use_lightbox,
+    },
+    sx::sx,
 };
 
 #[component]
@@ -183,4 +187,77 @@ pub fn LightboxPage() -> Element {
             }
         }
     }
+}
+
+/// `FloatingWindow`: a non-modal window whose live state is its geometry.
+///
+/// The window is resizable and carries explicit bounds in its own `sx`, so the
+/// separator's Home and End have something to clamp against: Home asks for
+/// `0x0` and End for `u16::MAX`, and what comes back is the caller's minimum
+/// and maximum. Without bounds both would land on the viewport, which measures
+/// the browser rather than the component.
+///
+/// Both reports are wired into text on the page. `onmove` and `onresize` are
+/// the only way a caller learns where the window went, and they are owed to an
+/// effect rather than written in the handler - reading the rect in the same
+/// task reports the *previous* one
+/// (`codebase/components/floating-window`). A report nobody reads is a claim
+/// no test can check, so the fixture reads them.
+///
+/// The two readouts are empty until the window says something, so the resting
+/// accessibility baseline carries no text of theirs.
+#[component]
+pub fn FloatingWindowPage() -> Element {
+    let mut moved = use_signal(String::new);
+    let mut resized = use_signal(String::new);
+    let record_move = use_callback(move |rect: WindowRect| moved.set(rect_text(rect)));
+    let record_resize = use_callback(move |rect: WindowRect| resized.set(rect_text(rect)));
+
+    let inspector = use_floating_window(
+        FloatingWindowOptions {
+            title: Some("Inspector".into()),
+            resizable: true,
+            sx: sx()
+                .min_width("240px")
+                .min_height("120px")
+                .max_width("480px")
+                .max_height("360px")
+                .into(),
+            onmove: Some(record_move),
+            onresize: Some(record_resize),
+            ..Default::default()
+        },
+        |window| {
+            rsx! {
+                Text { "Drag the title bar, or focus it and use the arrow keys." }
+                Button { id: "window-done", variant: "text", onclick: move |_| window.close(), "Done" }
+            }
+        },
+    );
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button {
+                id: "open-window",
+                variant: "outlined",
+                onclick: move |_| {
+                    inspector.open();
+                },
+                "Inspector"
+            }
+            div { id: "move-report", "{moved}" }
+            div { id: "resize-report", "{resized}" }
+        }
+    }
+}
+
+/// `x y width height`, rounded, which is what the tests parse.
+fn rect_text(rect: WindowRect) -> String {
+    format!(
+        "{} {} {} {}",
+        rect.x.round(),
+        rect.y.round(),
+        rect.width.round(),
+        rect.height.round()
+    )
 }

@@ -90,6 +90,8 @@ enum Route {
     CollapsePage {},
     #[route("/lightbox")]
     LightboxPage {},
+    #[route("/floating-window")]
+    FloatingWindowPage {},
 
     // A real component with one defect planted through a prop. Most plants
     // are injected by the test instead (`tests/all/planted.rs`); these are
@@ -204,7 +206,7 @@ fn NotificationsPage() -> Element {
 const TIMED_AUTO_CLOSE_MS: u32 = 4321;
 
 use combobox::{MultiSelectPage, SelectPage, TagsFieldPage};
-use overlay::{DrawerPage, LightboxPage, MenuPage, SpotlightPage};
+use overlay::{DrawerPage, FloatingWindowPage, LightboxPage, MenuPage, SpotlightPage};
 use roving::{MenubarPage, RadioGroupPage, SegmentedControlPage};
 
 #[component]
@@ -424,6 +426,10 @@ fn CarouselPage() -> Element {
         Flex { direction: "column", gap: "md", max_width: "420px",
             Carousel {
                 aria_label: "Slide content",
+                // Not the theme default (`false`). The dots are a carousel's
+                // likeliest WCAG 2.5.8 failure and the `Suite` baseline cannot
+                // measure a control that is not drawn (todo 381).
+                indicators: true,
                 slides: vec![
                     rsx! {
                         Flex { direction: "column", gap: "sm",

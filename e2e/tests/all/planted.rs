@@ -723,3 +723,171 @@ fn radio_group_rows_crammed_together_fail_the_spacing_exception() {
         .await;
     });
 }
+
+/// `FloatingWindow` whose title bar is deaf to the arrows: a capturing
+/// listener swallows the key before the handle's own `onkeydown` sees it.
+///
+/// The window still opens, still takes focus, and still looks right - which is
+/// the point. A keyboard move that quietly stopped working would change
+/// nothing a snapshot or an axe run can see, so this is the plant for the half
+/// of the unit that only a browser can test.
+#[test]
+fn a_floating_window_with_a_deaf_title_bar_never_moves() {
+    block_on(async {
+        must_fail(
+            "/floating-window",
+            Some(
+                "document.addEventListener('keydown', e => { \
+                 if (e.target.closest('[data-window-handle]')) e.stopImmediatePropagation(); }, true)",
+            ),
+            "the window to move by (10.0, 0.0)",
+            |fixture| async move {
+                let result = crate::floating_window::keyboard_move(&fixture.page).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `FloatingWindow` reporting the rect it had *before* the move.
+///
+/// This is the defect the component's `owed` effect exists to prevent: reading
+/// the rect in the same task as the write reports the previous one
+/// (`codebase/components/floating-window`). The plant re-creates it without
+/// touching the library - a `MutationObserver` rewrites the readout's `x` one
+/// move back, so every report is exactly one step stale.
+///
+/// It remembers what it last wrote and skips that value, rather than guarding
+/// with a flag: a `MutationObserver` callback is a microtask, so a flag set and
+/// cleared synchronously is already false by the time the next one runs, and
+/// the first version of this plant rewrote the node for ever and hung the page
+/// (the run reported "Request timed out", not the planted reason).
+///
+/// Ten pixels is the whole difference, and nothing on the page shows it. The
+/// unit catches it only because it compares what the component *said* against
+/// the rect the browser *drew*, rather than only asserting that the report
+/// changed.
+#[test]
+fn a_floating_window_reporting_a_stale_rect_fails_the_move_report() {
+    block_on(async {
+        must_fail(
+            "/floating-window",
+            Some(
+                "(() => { let written = null; \
+                 new MutationObserver(() => { const el = document.querySelector('#move-report'); \
+                 if (!el) return; const now = el.textContent; if (now === written) return; \
+                 const parts = now.trim().split(' '); if (parts.length !== 4) return; \
+                 written = [Number(parts[0]) - 10, parts[1], parts[2], parts[3]].join(' '); \
+                 el.textContent = written; }) \
+                 .observe(document.body, { subtree: true, childList: true, characterData: true }); })()",
+            ),
+            "but it reported",
+            |fixture| async move {
+                let result = crate::floating_window::keyboard_move(&fixture.page).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `FloatingWindow` whose corner handle is deaf to Home and End, so the two
+/// presses that ask for `0x0` and `u16::MAX` never reach the geometry and the
+/// caller's own bounds are never what answers.
+///
+/// The arrow step is left alone, so the separator still resizes: this plant
+/// removes the clamp alone, which is the half a reviewer would not notice
+/// missing.
+#[test]
+fn a_floating_window_that_ignores_home_on_its_separator_never_reaches_the_minimum() {
+    block_on(async {
+        must_fail(
+            "/floating-window",
+            Some(
+                "document.addEventListener('keydown', e => { \
+                 if ((e.key === 'Home' || e.key === 'End') && e.target.closest('[role=separator]')) \
+                 e.stopImmediatePropagation(); }, true)",
+            ),
+            "Home to size the window to 240x120",
+            |fixture| async move {
+                let result = crate::floating_window::keyboard_resize(&fixture.page).await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `FloatingWindow`'s close button crammed against the move handle.
+///
+/// It is 20x20 - an `ActionIcon` at `size: "sm"` - so it is under WCAG 2.5.8's
+/// 24x24 outright and `floating_window::it_meets_the_baseline` declares it with
+/// `targets_spaced`. A spacing exception is silently green on a target with no
+/// neighbours in reach, so the declaration is only worth having once something
+/// has watched it fail on **this** component (todo 377). The plant takes the
+/// title bar's gap away and shrinks the move handle from `flex: 1` to a strip,
+/// which brings the two centres inside the 24px circle.
+#[test]
+fn a_floating_windows_crammed_title_bar_fails_the_spacing_exception() {
+    block_on(async {
+        must_fail(
+            "/floating-window",
+            Some(&stylesheet(
+                "[data-window-title-bar] { gap: 0 !important; } \
+                 [data-window-handle] { flex: 0 0 8px !important; min-width: 0 !important; }",
+            )),
+            "spacing exception fails",
+            |fixture| async move {
+                let page = &fixture.page;
+                let result = async {
+                    keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
+                    keyboard::press(page, keyboard::ENTER).await?;
+                    wait::for_visible(page, crate::floating_window::DIALOG).await?;
+                    target_size::assert_minimum_or_spacing(page, crate::floating_window::CLOSE)
+                        .await
+                }
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// `FloatingWindow` with `#ddd` text in its body, checked where `Suite` checks
+/// it: axe over `[data-fixture-ready]`.
+///
+/// A window is portaled beside the fixture, which is the arrangement that left
+/// every overlay's axe pass measuring the trigger alone until `dc3766db`, and
+/// the one that made todo 327's scroll lock invisible. Neither hole reports
+/// anything - both read as a clean run - so the only proof that
+/// `floating_window::it_meets_the_baseline` looks at the window at all is a
+/// defect planted in the window that it has to catch.
+///
+/// The window is **not** modal, so it locks no scroll and needs no `UNLOCK`
+/// lift; this is the plain half of the pair.
+#[test]
+fn a_floating_window_with_faint_text_fails_the_contrast_pass_in_the_open_state() {
+    block_on(async {
+        must_fail(
+            "/floating-window",
+            Some(&stylesheet(
+                "[role=dialog] [data-window-body] * { color: #dddddd !important; }",
+            )),
+            "color-contrast",
+            |fixture| async move {
+                let page = &fixture.page;
+                let result = async {
+                    keyboard::tab_to(page, crate::floating_window::TRIGGER, 8).await?;
+                    keyboard::press(page, keyboard::ENTER).await?;
+                    wait::for_visible(page, crate::floating_window::DIALOG).await?;
+                    contrast::assert_clean(page, "[data-fixture-ready]").await
+                }
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}

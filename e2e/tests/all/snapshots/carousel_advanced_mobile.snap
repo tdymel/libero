@@ -1,0 +1,20 @@
+---
+source: e2e/src/suite.rs
+description: carousel at mobile (advanced)
+expression: tree
+---
+region "Slide content"
+  status [atomic] [live=polite]
+    StaticText "Slide 2 of 3"
+  generic
+    group "Slide content"
+      group "2 of 3"
+        paragraph
+          StaticText "The second slide, and nothing to press on it."
+    generic
+      button "Previous slide"
+      button "Next slide"
+  button "Go to slide 1"
+  button "Go to slide 2"
+  button "Go to slide 3"
+--> aria-controls [id="lsx-N"] (rendered above)

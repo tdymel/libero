@@ -33,7 +33,8 @@ use chromiumoxide::Page;
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
-use e2e::{Fixture, Viewport, wait};
+use e2e::suite::Step;
+use e2e::{Fixture, Suite, Viewport, wait};
 
 /// The scroll container, which is also the tab stop and where the key handler
 /// sits. Not `[role=group]` alone: every slide is one too. The track is the
@@ -45,6 +46,22 @@ const RANGE: &str = "#raw-range";
 const RADIO_A: &str = "#raw-radio-a";
 const RADIO_B: &str = "#raw-radio-b";
 const BUTTON: &str = "#slide-button";
+/// The two chevrons. They are the only buttons in the component that point at
+/// the track with `aria-controls`.
+const CONTROLS: &str = "[aria-roledescription=carousel] button[aria-controls]";
+/// The dots. Their ids are `<track id>-indicator-<n>`, and the track id is
+/// generated, so the stable half of it is what this matches.
+///
+/// Unused on purpose: `it_meets_the_baseline` cannot declare `targets` over it
+/// until todo 389 gives the dots a hit area, and keeping the selector here
+/// makes that fix one line rather than a rediscovery.
+#[allow(dead_code)]
+const INDICATORS: &str = "[aria-roledescription=carousel] button[id*='-indicator-']";
+const NEXT: &str = "[aria-roledescription=carousel] button[aria-label='Next slide']";
+/// The second slide once it is the current one. Nothing carries `data-current`
+/// but the resting slide, so at rest this matches nothing - which is what
+/// `Suite` requires of a state's settle selector.
+const SECOND_CURRENT: &str = "[aria-roledescription=slide]:nth-of-type(2)[data-current]";
 
 /// The track, the text field, the slider, the range, the radio and the button,
 /// with room to spare.
@@ -293,4 +310,65 @@ pub fn plant_arm_out(arm: &str) -> String {
         arm = serde_json::to_string(arm).unwrap(),
         track = serde_json::to_string(TRACK).unwrap(),
     )
+}
+
+/// The generic battery, added by todo 381.
+///
+/// `81d44d8e` gave `/carousel` a fixture and a behaviour test and no
+/// `Suite::new`, so axe, the AX snapshot, the focus-ring pass and the
+/// target-size pass had never seen a real `Carousel` - on a page that draws
+/// two chevrons and, since this todo, a strip of dots.
+///
+/// **The advanced state is the point of the second declaration.** A carousel's
+/// resting render is the easy half: at index 0 the previous control is
+/// `aria-disabled`, one slide is live and two are `inert`, and the first dot is
+/// the strip's only tab stop. Every one of those flips on the first advance,
+/// and an accessibility tree that is right at rest and wrong one slide along is
+/// the normal shape of these bugs.
+///
+/// `focusable` is the track alone, because that is what `Suite` can reach: it
+/// measures the resting state, and the controls and dots are there too but the
+/// track is the component's own tab stop and the ring that matters. The dots'
+/// roving focus is exercised by the component's own keyboard tests in `libero`.
+///
+/// ## Two passes not declared, and why
+///
+/// * **`targets(INDICATORS)`**, the dots. Declared, it goes red: the dots
+///   measure **40x5, 24x5 and 24x5** at 1280x900 (todo 389). Five pixels tall
+///   is a WCAG 2.5.8 failure in the component, not in the test, and a unit that
+///   both adds coverage and repairs what it reveals cannot be reviewed - so it
+///   is filed and the declaration waits for the fix. `targets_spaced` is not
+///   the answer either: the dots clear each other (32 and 40px centre to
+///   centre) but sit **12.5px** below the track's bottom edge against the 12px
+///   the exception needs, and a pass with half a pixel of margin flips on the
+///   next theme change. `INDICATORS` is kept above so the fix is one line.
+/// * **`contrast_covers`, at all.** Three selectors were tried and all three
+///   fail, each naming text axe's `color-contrast` rule never evaluated:
+///   the whole region (the second and third slides' paragraphs), the
+///   `[data-current]` slide (the second slide's paragraph, in the advanced
+///   state) and the first slide (all four of its controls, in the advanced
+///   state). The reason is the component, and it is correct: exactly one
+///   slide is live and the rest are `inert`, which axe skips - and the
+///   advanced state's live slide is not the drawn one, because the strip's
+///   smooth scroll never lands in a `background: true` page (todo 375,
+///   `codebase/e2e-harness`). So in the advanced state there is no slide that
+///   is both live and on screen, and a coverage guard that cannot hold in a
+///   state the unit declares is a guard that would be deleted the first time
+///   somebody read it. axe still runs over the whole root in both states, so
+///   a contrast violation in drawn text fails the run; what is not claimed is
+///   that it looked at every slide.
+#[test]
+fn it_meets_the_baseline() {
+    Suite::new("carousel", "/carousel")
+        .focusable(TRACK)
+        .targets(CONTROLS)
+        // The strip is scroll-driven, and `current` follows the scroll frame
+        // by frame. Without this the advanced state snapshotted the previous
+        // control both enabled and `[disabled]` on two runs of the same code
+        // at 390px: a smooth scroll that never lands in a `background: true`
+        // page ends in a scroll event at the old offset, which puts the index
+        // back (todo 375).
+        .reduced_motion()
+        .state("advanced", &[Step::Click(NEXT)], SECOND_CURRENT)
+        .run();
 }

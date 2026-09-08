@@ -9,6 +9,7 @@ mod carousel;
 mod code;
 mod collapse;
 mod drawer;
+mod floating_window;
 mod focus_contrast;
 mod isolation;
 mod journal;

@@ -1,0 +1,22 @@
+---
+source: e2e/src/suite.rs
+description: floating_window at desktop (open)
+expression: tree
+---
+button "Inspector"
+  StaticText "Inspector"
+generic
+generic
+generic
+  generic
+    dialog "Inspector"
+      group "Move window"
+        heading "Inspector" [level=2]
+          StaticText "Inspector"
+      button "Close"
+      paragraph
+        StaticText "Drag the title bar, or focus it and use the arrow keys."
+      button "Done"
+        StaticText "Done"
+        generic
+      separator "Resize window" = 100 [valuemax=100] [valuemin=0]

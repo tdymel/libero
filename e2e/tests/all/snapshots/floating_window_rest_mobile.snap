@@ -1,0 +1,9 @@
+---
+source: e2e/src/suite.rs
+description: floating_window at mobile (rest)
+expression: tree
+---
+button "Inspector"
+  StaticText "Inspector"
+generic
+generic
