@@ -163,7 +163,7 @@ pub fn Checkbox(props: CheckboxProps) -> Element {
     }
 
     let onchange = bound.emit(props.onchange);
-    let next = !(checked || indeterminate);
+    let next = indeterminate || !checked;
     let toggle = move || {
         if let Some(onchange) = &onchange
             && !disabled

@@ -105,7 +105,6 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let theme = use_theme();
     let root = use_element();
     let buffer = use_signal(String::new);
-    let completed = use_signal(|| false);
 
     let size = props.size.copied_or(theme.pin_field.size);
     let radius = props.radius.copied_or(theme.pin_field.radius);
@@ -171,11 +170,14 @@ pub fn PinField(props: PinFieldProps) -> Element {
     let oninput = bound.emit(props.oninput);
     let oncomplete = props.oncomplete;
     let controlled = props.value.is_some() || bound.is_bound();
+    // The latch reads the rendered value, not a flag of our own: a parent
+    // resetting `value` re-arms it just as the field's own edits do.
+    let was_full = cells.iter().all(Option::is_some);
     // An `Rc` rather than a `use_callback`: every cell holds one, and it writes
     // signals this component reads from inside an input event
     // ([[codebase/reentrant-handlers]]).
     let report: Rc<dyn Fn(Vec<Option<char>>)> = Rc::new(move |cells: Vec<Option<char>>| {
-        let (mut buffer, mut completed) = (buffer, completed);
+        let mut buffer = buffer;
         let next: String = cells.iter().flatten().collect();
         let full = next.chars().count() == length;
         if !controlled {
@@ -186,15 +188,11 @@ pub fn PinField(props: PinFieldProps) -> Element {
         }
         // Latched: without it every keystroke on a full pin reports a
         // completion, and a submit handler would run again on each.
-        match full {
-            true if !completed() => {
-                completed.set(true);
-                if let Some(oncomplete) = &oncomplete {
-                    oncomplete.call(next);
-                }
-            }
-            false => completed.set(false),
-            true => {}
+        if full
+            && !was_full
+            && let Some(oncomplete) = &oncomplete
+        {
+            oncomplete.call(next);
         }
     });
 

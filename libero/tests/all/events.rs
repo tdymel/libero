@@ -942,6 +942,50 @@ fn an_empty_field_draws_no_clear_button() {
     assert_eq!(click_clear(app), None);
 }
 
+/// Toggling a mixed checkbox gives `true`, as its prop doc promises: a mixed
+/// "select all" fills its group rather than clearing it (todo 412).
+#[test]
+fn clicking_an_indeterminate_checkbox_reports_true() {
+    fn app() -> Element {
+        let reported = use_signal(Vec::<bool>::new);
+        rsx! {
+            LiberoProvider {
+                Checkbox {
+                    label: "Select all",
+                    checked: false,
+                    indeterminate: true,
+                    onchange: move |on: bool| {
+                        let mut reported = reported;
+                        reported.write().push(on);
+                    },
+                }
+                "reported: {reported():?}"
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let checkbox = find.click.expect("registered no click listener");
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), checkbox);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    let html = dioxus_ssr::render(&dom);
+    let reported = html
+        .split("reported: ")
+        .nth(1)
+        .and_then(|rest| rest.split('<').next());
+    assert_eq!(
+        reported,
+        Some("[true]"),
+        "a mixed checkbox toggles to `true`"
+    );
+}
+
 /// A field with rules, no value of its own and no place in a form's value used
 /// to validate `T::default()` for ever, so inside a `Form` it cancelled every
 /// submit however the user answered it (todo 185). The checkbox is the case
@@ -2317,4 +2361,75 @@ mod select_keyboard {
 
         assert_eq!(picked(), Vec::<String>::new(), "an arrow picked something");
     }
+}
+
+thread_local! {
+    static PIN_COMPLETIONS: std::cell::RefCell<u32> = const { std::cell::RefCell::new(0) };
+}
+
+/// A parent resetting the controlled `value` between attempts - "wrong code,
+/// try again" - re-arms `oncomplete`, so a pasted retry completes (todo 413).
+#[test]
+fn oncomplete_fires_again_after_a_parent_resets_the_controlled_value() {
+    fn app() -> Element {
+        let mut pin = use_signal(String::new);
+
+        rsx! {
+            LiberoProvider {
+                Button { onclick: move |_| pin.set(String::new()), "Reset" }
+                PinField {
+                    label: "Code",
+                    length: 4,
+                    value: pin(),
+                    oninput: move |next: String| pin.set(next),
+                    oncomplete: move |_: String| {
+                        PIN_COMPLETIONS.with_borrow_mut(|count| *count += 1);
+                    },
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    PIN_COMPLETIONS.with_borrow_mut(|count| *count = 0);
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    let cells = find.keydown.clone();
+    assert_eq!(cells.len(), 4, "expected one cell per pin position");
+    let reset = find.first_click.expect("registered no click listener");
+
+    let type_pin = |dom: &mut VirtualDom, digits: &str| {
+        for (cell, digit) in cells.iter().zip(digits.chars()) {
+            dom.runtime().handle_event(
+                "input",
+                Event::new(input_event(&digit.to_string()), true),
+                *cell,
+            );
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+    };
+
+    type_pin(&mut dom, "1234");
+    assert_eq!(
+        PIN_COMPLETIONS.with_borrow(|count| *count),
+        1,
+        "the first full pin must complete"
+    );
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), reset);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    // An OTP autofill (or a paste) lands the whole code in one `input` event
+    // on the first cell, rather than one keystroke per cell.
+    dom.runtime()
+        .handle_event("input", Event::new(input_event("5678"), true), cells[0]);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    assert_eq!(
+        PIN_COMPLETIONS.with_borrow(|count| *count),
+        2,
+        "a pin pasted after the parent reset it must complete again"
+    );
 }
