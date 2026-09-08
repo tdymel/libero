@@ -53,7 +53,7 @@ pub trait NumberValue:
 
     /// Clamped into the field's range. A `min` above `max` is the caller's
     /// error and `max` wins, the way a native input resolves it.
-    fn clamp_to(self, min: Option<Self>, max: Option<Self>) -> Self {
+    fn clamp_between(self, min: Option<Self>, max: Option<Self>) -> Self {
         let mut value = self;
         if let Some(min) = min
             && value < min
@@ -101,7 +101,7 @@ macro_rules! number_value {
                 /// Rust's `from_str` accepts `nan`, `inf` and `infinity` in
                 /// any case, and the field can do nothing sensible with
                 /// either: every comparison with `NaN` is false, so it slips
-                /// past both `min` and `max` in `clamp_to`, and once it is
+                /// past both `min` and `max` in `clamp_between`, and once it is
                 /// committed the steppers are stuck - `NaN + step` is `NaN`,
                 /// and so is `inf - step`. So they are not a number.
                 fn parse(text: &str) -> Option<Self> {
@@ -144,7 +144,7 @@ number_value! {
 mod tests {
     use super::NumberValue;
 
-    /// `f64::from_str` accepts them, `clamp_to` cannot hold them - every
+    /// `f64::from_str` accepts them, `clamp_between` cannot hold them - every
     /// comparison with `NaN` is false, so it passed both bounds, and `inf`
     /// passed an open `max`. The field then showed `NaN`, reported
     /// `aria-valuenow="NaN"`, and its steppers were stuck.

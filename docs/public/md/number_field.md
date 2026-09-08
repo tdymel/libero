@@ -87,7 +87,7 @@ plumbing, and `onchange` hands back a `Cents`.
 
 The trait's other methods have default bodies: `parse` (`FromStr`), `format`
 (`Display`), `zero` (parsing `"0"`, the stepper's starting point for an empty
-field), `step_up`/`step_down` (`Add`/`Sub`) and `clamp_to` (`PartialOrd`).
+field), `step_up`/`step_down` (`Add`/`Sub`) and `clamp_between` (`PartialOrd`).
 Override one when the type needs it - a wrapping angle, a logarithmic step.
 
 ## Steppers and keys
@@ -164,7 +164,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 | `format(&self)` | `Display` | What the control shows for a value from outside. |
 | `zero()` | `parse("0")` | Where a stepper starts from in an empty field. |
 | `step_up`/`step_down` | `Add`/`Sub` | One step in each direction. |
-| `clamp_to(min, max)` | `PartialOrd` | The value pulled into the field's range. |
+| `clamp_between(min, max)` | `PartialOrd` | The value pulled into the field's range. |
 
 ## Theme defaults
 

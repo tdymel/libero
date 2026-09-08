@@ -133,7 +133,7 @@ pub fn NumberField<T: NumberValue>(props: NumberFieldProps<T>) -> Element {
     // Not `use_callback`: a stepper is a click handler, and a click handler
     // that writes a signal the field also reads is re-entrant.
     let publish = move |next: T| {
-        let next = next.clamp_to(min, max);
+        let next = next.clamp_between(min, max);
         match (&onchange, &setter) {
             (Some(onchange), _) => onchange.call(next),
             (None, Some(setter)) => setter.set(Some(next)),
