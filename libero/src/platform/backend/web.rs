@@ -3,7 +3,7 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use dioxus::prelude::{
-    Event, Key, KeyboardData, Modifiers, MountedData, MouseData, TransitionData,
+    Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, TransitionData,
 };
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -84,6 +84,20 @@ pub(super) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
         Some(hit != boundary && boundary.contains(Some(&hit)))
     };
     nested().unwrap_or(false)
+}
+
+pub(super) fn focus_entered_from(
+    event: &Event<FocusData>,
+    boundary: &str,
+) -> Option<Option<Box<dyn ElementApi>>> {
+    let from = event.downcast::<web_sys::FocusEvent>()?.related_target();
+    let Some(element) = from.and_then(|from| from.dyn_into::<web_sys::Element>().ok()) else {
+        return Some(None);
+    };
+    if element.closest(boundary).ok().flatten().is_some() {
+        return None;
+    }
+    Some(Some(Box::new(WebElement { element })))
 }
 
 pub(super) fn prefers_reduced_motion() -> bool {

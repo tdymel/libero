@@ -140,7 +140,8 @@ impl Overlay<'_> {
         Ok(())
     }
 
-    /// Tab all the way round and confirm focus never leaves the panel.
+    /// Tab all the way round, forwards then backwards, and confirm focus never
+    /// leaves the panel.
     ///
     /// The budget is the panel's own tabbable count plus two, so the walk
     /// wraps at least once. Tabbing a fixed large number instead would pass
@@ -159,22 +160,30 @@ impl Overlay<'_> {
             .await?
             .into_value()?;
 
-        for step in 0..tabbables + 2 {
-            keyboard::press(page, keyboard::TAB).await?;
-            let inside: bool = page
-                .evaluate(format!(
-                    "(() => {{ const p = document.querySelector({}); return !!p && p.contains(document.activeElement); }})()",
-                    serde_json::to_string(self.panel)?
-                ))
-                .await?
-                .into_value()?;
-            if !inside {
-                let actual = focus::active_element(page).await?;
-                bail!(
-                    "focus escaped {} after {} tab press(es); the document holds {actual:?}",
-                    self.panel,
-                    step + 1
-                );
+        // Both directions: a trap can leak backwards from its first item alone.
+        for shift in [false, true] {
+            for step in 0..tabbables + 2 {
+                if shift {
+                    keyboard::press_shift(page, keyboard::TAB).await?;
+                } else {
+                    keyboard::press(page, keyboard::TAB).await?;
+                }
+                let inside: bool = page
+                    .evaluate(format!(
+                        "(() => {{ const p = document.querySelector({}); return !!p && p.contains(document.activeElement); }})()",
+                        serde_json::to_string(self.panel)?
+                    ))
+                    .await?
+                    .into_value()?;
+                if !inside {
+                    let actual = focus::active_element(page).await?;
+                    bail!(
+                        "focus escaped {} after {} {}tab press(es); the document holds {actual:?}",
+                        self.panel,
+                        step + 1,
+                        if shift { "shift+" } else { "" }
+                    );
+                }
             }
         }
         Ok(())

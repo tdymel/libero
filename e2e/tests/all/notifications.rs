@@ -475,3 +475,77 @@ fn its_close_button_is_undersized_and_clears_its_neighbours() {
         }
     });
 }
+
+/// Closing a focused notification hands focus to the next one's close button,
+/// the previous one's if it was the last, and back where it came from once the
+/// stack is empty (todo 423). Before, focus fell to `<body>`.
+#[test]
+fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications", viewport).await.unwrap();
+            let page = &fixture.page;
+
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            for _ in 0..3 {
+                keyboard::press(page, keyboard::ENTER).await.unwrap();
+            }
+            wait::for_js_true(
+                page,
+                &format!("document.querySelectorAll({CLOSE:?}).length === 3"),
+                "three notifications",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            let _: bool = js(
+                page,
+                format!("(window.__closes = [...document.querySelectorAll({CLOSE:?})], true)"),
+            )
+            .await;
+
+            // Entered from the last page control, into the first notification.
+            keyboard::tab_to(page, TIMED_TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+            keyboard::press(page, keyboard::TAB).await.unwrap();
+
+            for (closed, lands, on) in [
+                (1, "window.__closes[2]", "the next close button"),
+                (
+                    2,
+                    "window.__closes[0]",
+                    "the previous close button, after the last",
+                ),
+                (
+                    0,
+                    &format!("document.querySelector({TIMED_TRIGGER:?})"),
+                    "the control focus came from",
+                ),
+            ] {
+                let focused: bool = js(
+                    page,
+                    format!("document.activeElement === window.__closes[{closed}]"),
+                )
+                .await;
+                assert!(
+                    focused,
+                    "at {at}: close button {closed} does not hold focus"
+                );
+                keyboard::press(page, keyboard::ENTER).await.unwrap();
+                wait::for_js_true(
+                    page,
+                    &format!("document.activeElement === {lands} && document.activeElement.matches(':focus-visible')"),
+                    &format!("closing notification {closed} to focus {on}, visibly"),
+                )
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            }
+
+            fixture
+                .console
+                .assert_clean(&format!("closing notifications at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{HtmlTag, Input, States, layout::use_box},
-    hooks::drag_handle_sx,
+    hooks::{ElementHandle, drag_handle_sx},
     sx::{StaticSx, sx},
     theme::{ColorCss, ColorShade, CssVar, SPLITTER_DIVIDER_SIZE, SPLITTER_HIT_SIZE, Size},
 };
@@ -68,6 +68,7 @@ static SPLITTER_HIT_SX: StaticSx = StaticSx::new(|| {
 /// largest single block of `Splitter`'s render cost.
 #[component]
 pub(super) fn SplitterDivider(
+    element: ElementHandle,
     /// Pane A's percentage. A signal so moving the divider re-renders this
     /// alone, not `Splitter`'s panes.
     a: ReadSignal<f64>,
@@ -96,6 +97,7 @@ pub(super) fn SplitterDivider(
         .prepare();
 
     let hit = hit
+        .element(&element)
         .attr("role", "separator")
         .attr("tabindex", "0")
         .attr("aria-label", aria_label)

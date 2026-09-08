@@ -1,6 +1,7 @@
 use std::{
     any::Any,
     cell::{Cell, RefCell},
+    collections::HashMap,
     marker::PhantomData,
     rc::{Rc, Weak},
     sync::atomic::{AtomicU64, Ordering},
@@ -14,12 +15,12 @@ use dioxus::{
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variant,
+        FOCUSABLE_SELECTOR, HtmlTag, Input, States, Variant,
         feedback::Alert,
         layout::{Box, Float, use_box},
     },
     hooks::{use_portal, use_theme},
-    platform::{TimerSubscription, timer},
+    platform::{ElementApi, TimerSubscription, backend, focus_entered_from, timer},
     sx::{REDUCED_MOTION, StaticSx, ThemeAwareValue, sx},
     theme::{
         AutoClose, NOTIFICATION_GAP, NOTIFICATION_IN, NOTIFICATION_OFFSET, NOTIFICATION_OUT,
@@ -207,6 +208,14 @@ struct NotificationStore {
     /// and a close button someone tabbed to must not disappear under them.
     hovered: Signal<Option<NotificationId>>,
     focused: Signal<Option<NotificationId>>,
+    /// Each stack's ids in document order, as the host last drew them.
+    drawn: CopyValue<Vec<Vec<NotificationId>>>,
+    /// Each drawn notification's element, to hand focus on to.
+    elements: CopyValue<HashMap<NotificationId, Rc<MountedData>>>,
+    /// What held focus before it entered the notifications (todo 423).
+    return_to: CopyValue<Option<Rc<dyn ElementApi>>>,
+    /// Set while the store moves focus itself, so that move is no entry.
+    handing_off: CopyValue<bool>,
     /// The runtime the store was made in. `show` creates a signal, which
     /// needs one, and may be called from a timer callback that runs outside
     /// every runtime. Weak: the runtime owns the store.
@@ -222,6 +231,10 @@ impl NotificationStore {
             entries: Signal::new_in_scope(Vec::new(), owner),
             hovered: Signal::new_in_scope(None, owner),
             focused: Signal::new_in_scope(None, owner),
+            drawn: CopyValue::new_in_scope(Vec::new(), owner),
+            elements: CopyValue::new_in_scope(HashMap::new(), owner),
+            return_to: CopyValue::new_in_scope(None, owner),
+            handing_off: CopyValue::new_in_scope(false, owner),
             runtime: CopyValue::new_in_scope(Rc::downgrade(&Runtime::current()), owner),
             owner,
         }
@@ -262,6 +275,61 @@ impl NotificationStore {
         } else {
             entries.remove(index);
         }
+        drop(entries);
+        if *self.focused.peek() == Some(id) {
+            self.hand_focus_on(id);
+        }
+    }
+
+    /// Focus leaves a closing notification for the next one in its stack, the
+    /// previous one if it was the last, else for where it came from.
+    fn hand_focus_on(&self, id: NotificationId) {
+        let entries = self.entries.peek();
+        let open = |other: &&NotificationId| {
+            entries
+                .iter()
+                .any(|entry| entry.id == **other && !entry.leaving)
+        };
+        let drawn = self.drawn.peek();
+        let elements = self.elements.peek();
+        let stack = drawn
+            .iter()
+            .find(|stack| stack.contains(&id))
+            .map(Vec::as_slice)
+            .unwrap_or_default();
+        let at = stack.iter().position(|other| *other == id).unwrap_or(0);
+        let next = stack.get(at + 1..).unwrap_or_default().iter();
+        let previous = stack[..at].iter().rev();
+        let target = next
+            .chain(previous)
+            .filter(open)
+            .filter_map(|other| elements.get(other))
+            .find_map(|item| {
+                let item = backend::element(item);
+                item.query_selector(r#"[data-slot="close"]"#)
+                    .or_else(|_| item.query_selector(FOCUSABLE_SELECTOR))
+                    .ok()
+            })
+            .map(Rc::from)
+            .or_else(|| {
+                let return_to = self.return_to.peek().clone();
+                return_to.filter(|element| element.is_connected())
+            });
+        let Some(target) = target else {
+            return;
+        };
+        let Some(runtime) = self.runtime.peek().upgrade() else {
+            return;
+        };
+        // Spawned: this may run inside the close button's click dispatch.
+        let mut handing_off = self.handing_off;
+        handing_off.set(true);
+        runtime.in_scope(self.owner, || {
+            spawn(async move {
+                let _ = target.focus();
+                handing_off.set(false);
+            })
+        });
     }
 
     fn remove(&self, id: NotificationId) {
@@ -537,8 +605,10 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 /// # #[component] fn SaveButton() -> Element { rsx! {} }
 /// ```
 ///
-/// No keyboard behaviour of its own and no `Escape`: nothing here ever takes
-/// focus. A close button is reached by `Tab` in document order.
+/// No keyboard behaviour of its own and no `Escape`. A close button is reached
+/// by `Tab` in document order. Closing the focused notification hands focus to
+/// the next one in its stack (its `data-slot="close"`, else its first
+/// focusable), the previous one after the last, else back where it came from.
 #[component]
 pub fn Notifications(
     /// The stack a notification joins unless it names its own. Defaults to
@@ -582,6 +652,7 @@ pub fn Notifications(
     // Every placement, always: both live regions of a stack have to be in the
     // document before anything is added to them, or nothing is announced. So
     // a stack cannot appear with its first notification.
+    let mut drawn = Vec::new();
     let stacks = Placement::ALL.iter().map(|&placement| {
         let items = entries
             .iter()
@@ -608,6 +679,13 @@ pub fn Notifications(
             .iter()
             .filter(|item| item.live == NotificationLive::Polite)
             .cloned();
+        drawn.push(
+            assertive
+                .clone()
+                .chain(polite.clone())
+                .map(|item| item.id)
+                .collect(),
+        );
 
         rsx! {
             Float {
@@ -659,8 +737,11 @@ pub fn Notifications(
             }
         }
     });
+    let stacks = stacks.collect::<Vec<_>>();
+    let mut stored = store.drawn;
+    stored.set(drawn);
     let content = rsx! {
-        {stacks}
+        {stacks.into_iter()}
     };
     drop(entries);
 
@@ -789,15 +870,22 @@ fn NotificationItem(props: ItemProps) -> Element {
         if *focused.peek() == Some(id) {
             focused.set(None);
         }
+        let mut elements = store.elements;
+        elements.write().remove(&id);
     });
 
     let states: Input<States> = States::default().with("leaving", leaving).into();
     let (mut hovered, mut focused) = (store.hovered, store.focused);
+    let (mut elements, mut return_to) = (store.elements, store.return_to);
 
     use_box()
         .framework_sx(&ITEM_SX)
         .states(&states)
         .prepare()
+        .attr("data-notification", true)
+        .event("onmounted", move |event: Event<MountedData>| {
+            elements.write().insert(id, event.data());
+        })
         .event("onmouseenter", move |_: Event<MouseData>| {
             hovered.set(Some(id))
         })
@@ -806,7 +894,12 @@ fn NotificationItem(props: ItemProps) -> Element {
                 hovered.set(None);
             }
         })
-        .event("onfocusin", move |_: Event<FocusData>| {
+        .event("onfocusin", move |event: Event<FocusData>| {
+            if !*store.handing_off.peek()
+                && let Some(from) = focus_entered_from(&event, "[data-notification]")
+            {
+                return_to.set(from.map(Rc::from));
+            }
             focused.set(Some(id))
         })
         .event("onfocusout", move |_: Event<FocusData>| {

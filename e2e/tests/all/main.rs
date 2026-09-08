@@ -26,6 +26,7 @@ mod radio_group;
 mod segmented_control;
 mod select;
 mod slider;
+mod splitter;
 mod spotlight;
 mod tabs;
 mod tags_field;

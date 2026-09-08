@@ -578,12 +578,15 @@ pub fn NotificationsPage() -> Element {
             DocSection {
                 title: "Accessibility",
                 Text {
-                    "Nothing takes focus. Each stack holds a polite and an assertive live "
+                    "Showing one takes no focus. Each stack holds a polite and an assertive live "
                     "region, both mounted before anything is announced into them, and "
                     Code { source: "live" }
                     " picks which one. A close button is reached with "
                     Kbd { "Tab" }
-                    " in document order, and focusing one pauses its timer. Your own "
+                    " in document order, and focusing one pauses its timer. Closing the "
+                    "focused one moves focus to the next close button in its stack, the "
+                    "previous one after the last, and back where it came from once the "
+                    "stack is empty. Your own "
                     "template draws that button itself: read "
                     Code { source: "s.closable()" }
                     " and give it an "

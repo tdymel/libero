@@ -1,0 +1,17 @@
+---
+source: e2e/src/suite.rs
+description: splitter at mobile (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+generic
+  paragraph
+    StaticText "Pane A"
+generic
+  separator "Resize panes" = 50 [valuemax=90] [valuemin=10]
+paragraph
+  StaticText "Pane B"
+button "After"
+  StaticText "After"
+--> aria-controls [id="lsx-N"] (rendered above)

@@ -29,8 +29,8 @@ use libero::{
     components::{
         Anchor, Autocomplete, Button, Carousel, Code, CodeBlock, Collapse, Dialog, Flex, Mark,
         NotificationData, NotificationLive, NotificationOptions, Notifications, Options, Slider,
-        SliderChangeEvent, Tabs, Text, TextField, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
-        use_notifications,
+        SliderChangeEvent, Splitter, Tabs, Text, TextField, Tree, TreeItem, TreeNode,
+        TreeNodeRenderArgs, use_notifications,
     },
     hooks::{ModalScope, use_modal},
     theme::AutoClose,
@@ -129,6 +129,8 @@ enum Route {
     BrokenStaticHighlight {},
     #[route("/notifications")]
     NotificationsPage {},
+    #[route("/splitter")]
+    SplitterPage {},
 }
 
 /// The component the framework was **not** built for.
@@ -340,6 +342,26 @@ fn SliderPage() -> Element {
                 max: 100.0f64,
                 oninput: move |e: SliderChangeEvent<f64>| volume.set(e.value()),
             }
+        }
+    }
+}
+
+/// A `Splitter` between two buttons, so focus has somewhere to be before a
+/// drag and a Shift+Tab never sits at the document edge.
+#[component]
+fn SplitterPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            div { style: "height: 160px",
+                Splitter {
+                    initial_size: 50.0,
+                    aria_label: "Resize panes",
+                    panel_a: rsx! { Text { "Pane A" } },
+                    panel_b: rsx! { Text { "Pane B" } },
+                }
+            }
+            Button { id: "after", "After" }
         }
     }
 }

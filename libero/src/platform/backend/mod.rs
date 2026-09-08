@@ -14,7 +14,9 @@
 
 use std::rc::Rc;
 
-use dioxus::prelude::{Element, Event, KeyboardData, MountedData, MouseData, TransitionData};
+use dioxus::prelude::{
+    Element, Event, FocusData, KeyboardData, MountedData, MouseData, TransitionData,
+};
 
 use super::{ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
@@ -162,6 +164,20 @@ pub(crate) fn nested_interactive(event: &Event<MouseData>, boundary: &str) -> bo
     return web::nested_interactive(event, boundary);
     #[cfg(not(target_arch = "wasm32"))]
     return false;
+}
+
+/// Only the web can see a focus event's `relatedTarget` - see
+/// [`focus_entered_from`](crate::platform::focus_entered_from).
+pub(crate) fn focus_entered_from(
+    event: &Event<FocusData>,
+    boundary: &str,
+) -> Option<Option<Box<dyn ElementApi>>> {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (event, boundary);
+    #[cfg(target_arch = "wasm32")]
+    return web::focus_entered_from(event, boundary);
+    #[cfg(not(target_arch = "wasm32"))]
+    return None;
 }
 
 /// Only the web can read a media query today - see

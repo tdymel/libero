@@ -146,6 +146,7 @@ base_props! {
 pub fn Splitter(props: SplitterProps) -> Element {
     let theme = use_theme();
     let root = use_element();
+    let divider = use_element();
     // The divider controls pane A, so it points there.
     let panel_a_id = use_id();
     use_name_warning(
@@ -214,6 +215,9 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     return;
                 }
 
+                // `use_drag` cancels the pointerdown, and with it the browser's
+                // own focus: the keyboard must still reach it after a drag.
+                let _ = divider.focus();
                 container_size.set(size);
                 start_a.set(a());
                 notify(SplitterResizeEvent::Start(a(), 100.0 - a()));
@@ -293,6 +297,7 @@ pub fn Splitter(props: SplitterProps) -> Element {
             rsx! {
                 div { id: panel_a_id, class: panel_a_class, {panel_a} }
                 SplitterDivider {
+                    element: divider,
                     a,
                     vertical,
                     size,
