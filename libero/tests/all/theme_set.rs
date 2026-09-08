@@ -65,7 +65,9 @@ fn one_theme_still_emits_one_root_block() {
     let html = render(app);
 
     assert!(!html.contains("prefers-color-scheme: dark"));
-    assert!(!html.contains("data-lsx-theme"));
+    // The selector, not the name: the provider's restore script names the
+    // attribute too, and it is emitted whatever the set holds.
+    assert!(!html.contains("[data-lsx-theme"));
     assert!(html.contains("color-scheme:light;"));
     assert_eq!(html.matches("--lsx-primary-6:").count(), 1);
 }
@@ -207,6 +209,7 @@ fn a_named_theme_beyond_the_pair_rebuilds_the_sheet() {
     let html = render(app);
 
     assert!(html.contains("--lsx-primary-6:#704214;"));
-    // The rebuilt sheet is one theme's, so the pair's blocks are gone with it.
-    assert!(!html.contains("data-lsx-theme"));
+    // The rebuilt sheet is one theme's, so the pair's blocks are gone with
+    // it. The selector, not the name - the restore script names it too.
+    assert!(!html.contains("[data-lsx-theme"));
 }

@@ -32,6 +32,7 @@ mod code;
 mod code_block;
 mod collapse;
 mod color_picker;
+mod color_scheme;
 mod combobox;
 mod common;
 mod container;

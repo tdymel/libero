@@ -69,8 +69,8 @@ impl From<&ThemeSet> for Stylesheet {
         // choice below wins wherever it lands in the cascade - a media block
         // carries no specificity of its own.
         css.push_str(&format!(
-            "@media (prefers-color-scheme: dark){{{}}}",
-            root_block(":root:not([data-lsx-theme])", dark)
+            "@media {DARK_SCHEME_QUERY}{{{}}}",
+            root_block(&format!(":root:not([{THEME_ATTRIBUTE}])"), dark)
         ));
         css.push_str(&root_block(&theme_selector(ThemeSet::LIGHT), light));
         css.push_str(&root_block(&theme_selector(ThemeSet::DARK), dark));
@@ -85,6 +85,11 @@ impl From<&ThemeSet> for Stylesheet {
 
 /// The attribute a document root carries to pin one theme of the pair.
 pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
+
+/// The media query the dark half of a pair is emitted behind, and the one the
+/// web backend reads the platform's own scheme from. One string, so the sheet
+/// and the reading of it cannot drift apart.
+pub(crate) const DARK_SCHEME_QUERY: &str = "(prefers-color-scheme: dark)";
 
 fn theme_selector(name: &str) -> String {
     format!(":root[{THEME_ATTRIBUTE}=\"{name}\"]")

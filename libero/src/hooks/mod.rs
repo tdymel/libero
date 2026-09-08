@@ -1,5 +1,6 @@
 mod cache;
 mod clipboard;
+mod color_scheme;
 mod dismiss;
 mod drag;
 mod element;
@@ -16,6 +17,7 @@ mod typeahead;
 
 pub(crate) use cache::use_cache;
 pub use clipboard::{Clipboard, use_clipboard};
+pub use color_scheme::{ColorSchemeHandle, use_color_scheme};
 pub(crate) use dismiss::{
     DismissHandle, DismissOptions, escape_closes, use_dismiss, use_dismiss_layer,
     use_field_list_layer,

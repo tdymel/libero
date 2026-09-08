@@ -3,6 +3,7 @@
 //! these, and knows nothing of `Theme`, which sits above `sx`.
 
 mod color;
+mod color_scheme;
 mod color_shade;
 mod color_value;
 mod css_var;
@@ -11,6 +12,7 @@ mod size;
 mod sizes;
 
 pub use color::Color;
+pub use color_scheme::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting};
 pub use color_shade::ColorShade;
 pub(crate) use color_shade::ShadeRamp;
 pub use color_value::ColorValue;

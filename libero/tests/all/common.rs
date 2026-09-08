@@ -20,21 +20,27 @@ pub fn render(app: fn() -> Element) -> String {
     dioxus_ssr::render(&dom)
 }
 
-/// The rendered markup with the `<style>` blocks stripped - the CSS is
-/// bigger than the markup and full of words like `first-child`, so anything
-/// searching for text has to look past it. They are removed wherever they
-/// sit, since `StyleOutlet` renders the registered sheets *after* the
-/// markup while the static ones still come before it.
+/// The rendered markup with the `<style>` and `<script>` blocks stripped -
+/// the CSS is bigger than the markup and full of words like `first-child`,
+/// and the provider's colour-scheme script carries `light`/`dark`, so
+/// anything searching for text has to look past both. They are removed
+/// wherever they sit, since `StyleOutlet` renders the registered sheets
+/// *after* the markup while the static ones still come before it.
 pub fn body(html: &str) -> String {
+    strip(&strip(html, "style"), "script")
+}
+
+fn strip(html: &str, tag: &str) -> String {
+    let (open, close) = (format!("<{tag}"), format!("</{tag}>"));
     let mut body = String::with_capacity(html.len());
     let mut rest = html;
 
-    while let Some(start) = rest.find("<style") {
-        let Some(end) = rest[start..].find("</style>") else {
+    while let Some(start) = rest.find(&open) {
+        let Some(end) = rest[start..].find(&close) else {
             break;
         };
         body.push_str(&rest[..start]);
-        rest = &rest[start + end + "</style>".len()..];
+        rest = &rest[start + end + close.len()..];
     }
     body.push_str(rest);
 

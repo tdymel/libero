@@ -16,7 +16,7 @@ use std::rc::Rc;
 
 use dioxus::prelude::{Element, Event, KeyboardData, MountedData, MouseData, TransitionData};
 
-use super::{DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
+use super::{ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
 
 #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
 mod blitz;
@@ -60,6 +60,16 @@ pub(crate) fn document() -> Option<&'static dyn DocumentApi> {
     #[cfg(all(not(target_arch = "wasm32"), feature = "native"))]
     return blitz::document();
     #[cfg(all(not(target_arch = "wasm32"), not(feature = "native")))]
+    return None;
+}
+
+/// Only the web can tell Rust what the platform is set to, and only the web
+/// has somewhere to persist an override - see
+/// [`color_scheme`](crate::platform::color_scheme).
+pub(crate) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
+    #[cfg(target_arch = "wasm32")]
+    return web::color_scheme();
+    #[cfg(not(target_arch = "wasm32"))]
     return None;
 }
 

@@ -10,10 +10,12 @@ use wasm_bindgen::{JsCast, JsValue};
 use wasm_bindgen::prelude::Closure;
 
 use crate::platform::{
-    Dimensions, DocumentApi, ElementApi, KeyChord, KeySubscription, KeyboardApi, PlatformError,
-    Read, ScrollApi, ScrollSubscription, TimerApi, TimerSubscription,
+    ColorSchemeApi, ColorSchemeSubscription, Dimensions, DocumentApi, ElementApi, KeyChord,
+    KeySubscription, KeyboardApi, PlatformError, Read, ScrollApi, ScrollSubscription, TimerApi,
+    TimerSubscription,
     keyboard::{takes_arrows, takes_typing, warn_reserved_chord},
 };
+use crate::tokens::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting};
 
 /// dioxus-web backs a mounted element with the `web_sys::Element` itself, so
 /// the whole trait is answerable - no id, no document lookup.
@@ -92,6 +94,87 @@ pub(super) fn prefers_reduced_motion() -> bool {
 
 pub(super) fn document() -> Option<&'static dyn DocumentApi> {
     Some(&DOCUMENT)
+}
+
+pub(super) fn color_scheme() -> Option<&'static dyn ColorSchemeApi> {
+    Some(&COLOR_SCHEME)
+}
+
+struct WebColorScheme;
+
+static COLOR_SCHEME: WebColorScheme = WebColorScheme;
+
+fn dark_query() -> Option<web_sys::MediaQueryList> {
+    web_sys::window()
+        .and_then(|window| window.match_media(crate::theme::DARK_SCHEME_QUERY).ok())
+        .flatten()
+}
+
+impl ColorSchemeApi for WebColorScheme {
+    fn system(&self) -> ColorScheme {
+        match dark_query().is_some_and(|query| query.matches()) {
+            true => ColorScheme::Dark,
+            false => ColorScheme::Light,
+        }
+    }
+
+    fn on_change(&self, callback: Box<dyn Fn(ColorScheme)>) -> Box<dyn ColorSchemeSubscription> {
+        // The event carries the new state, but reading it off the query is
+        // one fewer downcast and cannot disagree with `system()`.
+        let closure = Closure::<dyn FnMut()>::new(move || {
+            let dark = dark_query().is_some_and(|query| query.matches());
+            callback(match dark {
+                true => ColorScheme::Dark,
+                false => ColorScheme::Light,
+            });
+        });
+
+        let query = dark_query().filter(|query| {
+            query
+                .add_event_listener_with_callback("change", closure.as_ref().unchecked_ref())
+                .is_ok()
+        });
+
+        Box::new(WebColorSchemeSubscription { query, closure })
+    }
+
+    fn stored(&self) -> Option<ColorSchemeSetting> {
+        let stored = local_storage()?.get_item(COLOR_SCHEME_STORAGE_KEY).ok()??;
+        Some(ColorSchemeSetting::parse(&stored))
+    }
+
+    fn store(&self, setting: ColorSchemeSetting) {
+        if let Some(storage) = local_storage() {
+            let _ = storage.set_item(COLOR_SCHEME_STORAGE_KEY, setting.as_str());
+        }
+    }
+}
+
+/// `None` wherever the browser refuses the store - a private window with site
+/// data blocked throws on access rather than returning nothing.
+fn local_storage() -> Option<web_sys::Storage> {
+    web_sys::window()?.local_storage().ok()?
+}
+
+struct WebColorSchemeSubscription {
+    /// `None` when there was no query to listen on, so `Drop` has nothing to
+    /// undo - the subscription exists, it just never fires.
+    query: Option<web_sys::MediaQueryList>,
+    /// Kept alive for exactly as long as the listener is registered.
+    closure: Closure<dyn FnMut()>,
+}
+
+impl ColorSchemeSubscription for WebColorSchemeSubscription {}
+
+impl Drop for WebColorSchemeSubscription {
+    fn drop(&mut self) {
+        if let Some(query) = &self.query {
+            let _ = query.remove_event_listener_with_callback(
+                "change",
+                self.closure.as_ref().unchecked_ref(),
+            );
+        }
+    }
 }
 
 struct WebDocument;
