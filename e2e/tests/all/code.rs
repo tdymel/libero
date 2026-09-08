@@ -69,3 +69,40 @@ fn a_keyword_after_a_non_ascii_letter_is_highlighted_by_the_browsers_regexp() {
         fixture.close().await.unwrap();
     });
 }
+
+/// Todo 424. The gutter is drawn only once highlighting resolves, which SSR
+/// never sees; read aloud, its numbers interleave with the code.
+#[test]
+fn a_code_blocks_line_numbers_are_hidden_from_readers() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+
+        // A row is a `div` holding exactly the gutter span and the content span.
+        const GUTTER: &str = r#"[...document.querySelectorAll('#numbered-block div')]
+            .filter(d => d.children.length === 2 && [...d.children].every(c => c.tagName === 'SPAN'))
+            .map(d => [d.children[0].textContent, d.children[0].getAttribute('aria-hidden')])"#;
+        wait::for_js_true(
+            &fixture.page,
+            &format!("{GUTTER}.length === 2"),
+            "the highlighter to draw the gutter",
+        )
+        .await
+        .unwrap();
+
+        let gutter: Vec<(String, Option<String>)> = fixture
+            .page
+            .evaluate(GUTTER)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let hidden = Some("true".to_string());
+        assert_eq!(
+            gutter,
+            vec![("1".into(), hidden.clone()), ("2".into(), hidden)]
+        );
+
+        fixture.console.assert_clean("the code fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}

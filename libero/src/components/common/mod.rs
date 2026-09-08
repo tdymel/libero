@@ -24,9 +24,9 @@ pub(crate) use color_variant::{
 pub(crate) use field_props::field_props;
 pub(crate) use icons::{
     ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,
-    ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyIcon,
-    EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon, PauseIcon, PersonIcon, PlayIcon,
-    PlusIcon, SunIcon, SystemSchemeIcon, UploadIcon,
+    ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyFailedIcon,
+    CopyIcon, EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon, PauseIcon, PersonIcon,
+    PlayIcon, PlusIcon, SunIcon, SystemSchemeIcon, UploadIcon,
 };
 pub use number_value::NumberValue;
 pub use option_list::{OptionItem, OptionList, OptionSource};

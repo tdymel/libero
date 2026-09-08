@@ -20,3 +20,20 @@ fn nav_link_renders_a_link_with_its_active_background() {
     assert!(attributes["style"].contains("--lsx-nav-link-active-background"));
     assert!(attributes["data-state"].contains("active"));
 }
+
+/// Disabling the current page's link still marks it as the current page.
+#[test]
+fn an_active_disabled_nav_link_keeps_aria_current() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                NavLink { to: "https://example.com", active: true, disabled: true, "Docs" }
+            }
+        }
+    }
+
+    let attributes = attributes_of(&render(app), "a");
+
+    assert_eq!(attributes["aria-current"], "page");
+    assert_eq!(attributes["aria-disabled"], "true");
+}

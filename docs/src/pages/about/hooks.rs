@@ -77,7 +77,9 @@ fn CopyLink() -> Element {
             "Copy link"
         }
         // Mounted before it has anything to say, so the change is announced.
-        span { role: "status", if clipboard.copied() { "Copied" } }
+        span { role: "status",
+            if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" }
+        }
     }
 }"#;
 
@@ -206,7 +208,9 @@ fn CopyLink() -> Element {
             onblur: move |_| clipboard.reset(),
             "Copy link"
         }
-        span { role: "status", if clipboard.copied() { "Copied" } }
+        span { role: "status",
+            if clipboard.copied() { "Copied" } else if clipboard.failed() { "Copy failed" }
+        }
     }
 }
 
@@ -267,8 +271,10 @@ pub fn HooksPage() -> Element {
                     Code { source: "copy(text)" }
                     " writes to the clipboard, and "
                     Code { source: "copied()" }
-                    " turns true once the platform confirms the write - a denied permission "
-                    "leaves it false and logs a warning. The flag stays up until you call "
+                    " turns true once the platform confirms the write. A denied permission "
+                    "raises "
+                    Code { source: "failed()" }
+                    " instead and logs a warning. Either flag stays up until you call "
                     Code { source: "reset()" }
                     ". Say the result in a status region that is already mounted; a button "
                     "whose own label changes is not announced."

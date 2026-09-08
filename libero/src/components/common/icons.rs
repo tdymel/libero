@@ -405,6 +405,25 @@ pub(crate) fn CopiedIcon() -> Element {
     }
 }
 
+/// [`CopyIcon`]'s state after a denied write: a circled exclamation mark.
+#[component]
+pub(crate) fn CopyFailedIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            "aria-hidden": "true",
+            circle { cx: "12", cy: "12", r: "9" }
+            path { d: "M12 8v4" }
+            path { d: "M12 16h.01" }
+        }
+    }
+}
+
 /// The last link in `Avatar`'s fallback chain: a head and shoulders.
 #[component]
 pub(crate) fn PersonIcon() -> Element {

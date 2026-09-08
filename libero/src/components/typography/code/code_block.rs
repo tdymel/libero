@@ -8,7 +8,9 @@ use crate::{
     CssLayer,
     components::{
         ActionIcon, Box, HtmlTag, Input, States, Variables, VisuallyHidden,
-        common::{CopiedIcon, CopyIcon, base_props, inset_focus_ring_sx, variables},
+        common::{
+            CopiedIcon, CopyFailedIcon, CopyIcon, base_props, inset_focus_ring_sx, variables,
+        },
         layout::use_box,
     },
     hooks::{Clipboard, use_clipboard, use_css, use_element, use_theme},
@@ -285,6 +287,8 @@ fn code_line_row(
                 Box {
                     component: "span",
                     framework_sx: &CODE_BLOCK_LINE_NUMBER_SX,
+                    // Read aloud, the numbers interleave with the code.
+                    aria_hidden: "true",
                     {(index + 1).to_string()}
                 }
             }
@@ -359,6 +363,8 @@ fn CopyButton(source: String, floating: bool) -> Element {
             onblur: move |_| clipboard.reset(),
             if clipboard.copied() {
                 CopiedIcon {}
+            } else if clipboard.failed() {
+                CopyFailedIcon {}
             } else {
                 CopyIcon {}
             }
@@ -368,6 +374,8 @@ fn CopyButton(source: String, floating: bool) -> Element {
         VisuallyHidden { role: "status",
             if clipboard.copied() {
                 "Copied"
+            } else if clipboard.failed() {
+                "Copy failed"
             }
         }
     }

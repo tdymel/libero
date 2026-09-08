@@ -148,6 +148,7 @@ pub fn NavLink(props: NavLinkProps) -> Element {
         return boxed
             .attr("aria-disabled", "true")
             .attr("tabindex", "-1")
+            .attr("aria-current", aria_current)
             .render(HtmlTag::A, props.attributes, props.children);
     }
 

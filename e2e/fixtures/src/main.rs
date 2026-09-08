@@ -27,7 +27,7 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Anchor, Autocomplete, Button, Carousel, Code, Collapse, Dialog, Flex, Mark,
+        Anchor, Autocomplete, Button, Carousel, Code, CodeBlock, Collapse, Dialog, Flex, Mark,
         NotificationData, NotificationLive, NotificationOptions, Notifications, Options, Slider,
         SliderChangeEvent, Tabs, Text, TextField, Tree, TreeItem, TreeNode, TreeNodeRenderArgs,
         use_notifications,
@@ -591,6 +591,7 @@ fn CodePage() -> Element {
     rsx! {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Code { id: "non-ascii-code", language: "rust", source: NON_ASCII_SOURCE }
+            CodeBlock { id: "numbered-block", language: "rust", line_numbers: true, source: "let a = 1;\nlet b = 2;" }
         }
     }
 }

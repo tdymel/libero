@@ -138,7 +138,14 @@ pub fn GridItem(props: GridItemProps) -> Element {
     // on specificity otherwise, and *before* `props.sx` so a caller's own
     // `grid-column` still overrides them.
     let sx = match zone.map(|zone| zone.state.peek().container).unwrap_or("") {
-        "" => props.sx.clone(),
+        "" => {
+            if zone.is_some() && span.breakpoints().next().is_some() {
+                warn(
+                    "GridItem: sp() breakpoints are ignored in a GridZone without an area, which has no container to query.",
+                );
+            }
+            props.sx.clone()
+        }
         zone_container => span
             .breakpoints()
             .fold(sx(), |base, (size, span)| {
@@ -169,7 +176,43 @@ pub fn GridItem(props: GridItemProps) -> Element {
 
 #[cfg(test)]
 mod tests {
+    use dioxus::prelude::*;
+
     use super::rows_spanned;
+    use crate::{
+        LiberoProvider,
+        components::{GridItem, GridSpan, GridZone, sp},
+        utils::take_warnings,
+    };
+
+    fn warnings_of(app: fn() -> Element) -> Vec<String> {
+        take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        take_warnings()
+    }
+
+    #[test]
+    fn breakpoints_in_a_zone_without_an_area_warn() {
+        let dropped = warnings_of(|| {
+            rsx! {
+                LiberoProvider {
+                    GridZone { GridItem { span: sp().base(GridSpan::Full).md(GridSpan::Half), "x" } }
+                }
+            }
+        });
+        let plain = warnings_of(|| {
+            rsx! {
+                LiberoProvider { GridZone { GridItem { span: GridSpan::Half, "x" } } }
+            }
+        });
+
+        assert!(
+            dropped.iter().any(|w| w.contains("sp() breakpoints")),
+            "{dropped:?}"
+        );
+        assert!(plain.is_empty(), "{plain:?}");
+    }
 
     #[test]
     fn an_item_spans_the_rows_it_covers_plus_its_gap() {

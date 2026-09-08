@@ -10,8 +10,8 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Box, Button, Checkbox, Chip, Collapse, ColorCode, ColorField, Dialog,
-        FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
+        ActionIcon, Box, Button, Checkbox, Chip, CodeBlock, Collapse, ColorCode, ColorField,
+        Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
         OptionList, Options, PhoneField, PinField, RadioGroup, RangeSlider, Rule, SegmentedControl,
         SelectionArgs, Slider, SliderChangeEvent, Tabs, TagsField, TextField, not_empty, use_form,
         use_menu,
@@ -608,9 +608,9 @@ fn global_attributes_carry_event_listeners_through_the_spread() {
     }
 }
 
-/// Clicks the only listener `app` registers - `Marquee`'s pause toggle - and
-/// returns the markup before and after.
-fn click_the_pause_toggle(app: fn() -> Element) -> (String, String) {
+/// Clicks the last click listener `app` registers - `Marquee`'s pause toggle,
+/// `CodeBlock`'s copy button - and returns the markup before and after.
+fn click_the_last_listener(app: fn() -> Element) -> (String, String) {
     dioxus::html::set_event_converter(Box::new(TestConverter));
     let mut dom = VirtualDom::new(app);
     let mut find = FindClickListener::default();
@@ -621,6 +621,22 @@ fn click_the_pause_toggle(app: fn() -> Element) -> (String, String) {
         .handle_event("click", Event::new(click_event(), true), toggle);
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
     (before, dioxus_ssr::render(&dom))
+}
+
+/// No clipboard in a test build, so the copy fails and the status says so.
+#[test]
+fn a_failed_copy_is_announced() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { CodeBlock { source: "let x = 1;" } } }
+    }
+
+    let (before, after) = click_the_last_listener(app);
+    let status = |html: &str| {
+        let status = &html[html.find(r#"role="status""#).expect("a status region")..];
+        status[..status.find("</span>").unwrap()].to_string()
+    };
+    assert!(!status(&before).contains("Copy failed"), "{before}");
+    assert!(status(&after).contains("Copy failed"), "{after}");
 }
 
 fn marquee_paused(html: &str) -> (bool, bool) {
@@ -642,7 +658,7 @@ fn a_controlled_marquee_follows_the_caller() {
         }
     }
 
-    let (before, after) = click_the_pause_toggle(app);
+    let (before, after) = click_the_last_listener(app);
     assert_eq!(marquee_paused(&before), (false, false), "{before}");
     assert_eq!(marquee_paused(&after), (true, true), "{after}");
 }
@@ -667,7 +683,7 @@ fn a_controlled_marquee_ignores_its_own_toggle() {
         }
     }
 
-    let (_, after) = click_the_pause_toggle(app);
+    let (_, after) = click_the_last_listener(app);
     assert_eq!(CALLS.load(std::sync::atomic::Ordering::SeqCst), 1);
     assert_eq!(marquee_paused(&after), (false, false), "{after}");
 }
@@ -679,7 +695,7 @@ fn an_uncontrolled_marquee_pauses_on_its_toggle() {
         rsx! { LiberoProvider { Marquee { "x" } } }
     }
 
-    let (_, after) = click_the_pause_toggle(app);
+    let (_, after) = click_the_last_listener(app);
     assert_eq!(marquee_paused(&after), (true, true), "{after}");
 }
 
