@@ -30,6 +30,3 @@ insta = "1.48"
 # `curl`: a harness that fails when a system binary is missing fails for a
 # reason that has nothing to do with the code under test.
 zip = { version = "2", default-features = false, features = ["deflate"] }
-
-[lints]
-workspace = true

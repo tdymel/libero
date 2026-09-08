@@ -13,6 +13,3 @@ libero = { path = "../../libero" }
 [features]
 # Must match whichever tree `.dioxus-active` points at, same as `docs`.
 dioxus-fork = ["libero/dioxus-fork"]
-
-[lints]
-workspace = true
