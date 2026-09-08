@@ -29,11 +29,13 @@ impl ThemeSet {
     /// The name the dark half of the pair answers to.
     pub const DARK: &'static str = "dark";
 
-    /// The library's own themes: [`Theme::DEFAULT`] as the light one, and no
-    /// dark one yet (todo 69, phase 3).
+    /// The library's own pair: [`Theme::DEFAULT`] as the light theme and
+    /// [`Theme::DARK`] as the dark one. An app that authors no theme at all
+    /// still gets a working dark scheme, and `prefers-color-scheme` alone
+    /// switches it.
     pub const DEFAULT: ThemeSet = ThemeSet {
         light: &Theme::DEFAULT,
-        dark: None,
+        dark: Some(&Theme::DARK),
         extras: Vec::new(),
     };
 
@@ -42,9 +44,15 @@ impl ThemeSet {
     }
 
     /// One theme and nothing else - what `LiberoProvider`'s `theme:` prop is
-    /// sugar for.
+    /// sugar for. Deliberately not `new().light(theme)`: the default set
+    /// carries [`Theme::DARK`], and an app that hands over one theme of its
+    /// own has not authored a dark counterpart for it.
     pub fn of(theme: &'static Theme) -> Self {
-        Self::new().light(theme)
+        Self {
+            light: theme,
+            dark: None,
+            extras: Vec::new(),
+        }
     }
 
     pub fn light(mut self, theme: &'static Theme) -> Self {
@@ -115,16 +123,27 @@ mod tests {
     static OTHER: Theme = Theme::DEFAULT;
 
     #[test]
-    fn a_bare_set_is_the_default_theme_and_nothing_else() {
+    fn a_bare_set_is_the_library_s_own_pair_and_nothing_else() {
         let set = ThemeSet::new();
 
         // By value, not by pointer: `Theme::DEFAULT` is an associated const,
         // so every `&Theme::DEFAULT` is its own promoted temporary and
         // `ptr::eq` on two of them is not required to hold.
         assert_eq!(set.light_theme(), &Theme::DEFAULT);
-        assert!(set.dark_theme().is_none());
+        assert_eq!(set.dark_theme(), Some(&Theme::DARK));
         assert!(set.get("sepia").is_none());
         assert!(set.is_in_pair("light"));
+        assert!(set.is_in_pair("dark"));
+    }
+
+    /// One theme is one theme: an app that hands over a theme of its own has
+    /// not authored a dark counterpart for it, so `of` must not quietly pair
+    /// it with the library's.
+    #[test]
+    fn one_theme_carries_no_dark_half() {
+        let set = ThemeSet::of(&OTHER);
+
+        assert!(set.dark_theme().is_none());
         assert!(!set.is_in_pair("dark"));
     }
 

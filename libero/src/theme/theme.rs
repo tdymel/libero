@@ -248,4 +248,35 @@ impl Theme {
         surface: HexColor::new(0xFFFFFF),
         font_smoothing: true,
     };
+
+    /// The library's dark counterpart to [`DEFAULT`](Self::DEFAULT), and the
+    /// dark half of [`ThemeSet::DEFAULT`](crate::theme::ThemeSet::DEFAULT):
+    /// an app gets a working dark scheme without authoring a theme.
+    ///
+    /// Almost all of it is the default theme. The palette bases do not move -
+    /// `primary` is the brand blue on both pages, and the text and fill roles
+    /// are derived against `surface`, so each one walks its own ramp the
+    /// right way here (see `theme::stylesheet::push_color_declarations`). The
+    /// `muted` ramp does not move either: it is mixed between `ink` and
+    /// `surface`, so swapping those two is what turns it round.
+    ///
+    /// What is spelled out is everything that is *not* derived: the two ends
+    /// of the page, the `neutral` control colour - which is a text-dark
+    /// neutral on paper and so has to be a text-light one here - and the five
+    /// `*Defaults` that carry literal CSS colours rather than theme ones.
+    pub const DARK: Theme = Theme {
+        // Mantine's `dark.7`, with `dark.6` as the card in `PaperDefaults`.
+        surface: HexColor::new(0x1A1B1E),
+        ink: HexColor::new(0xE9ECEF),
+        // The counterpart of the default's `#373A3C`: what a `neutral`
+        // control is labelled and outlined in when it must not compete with
+        // the page's accent.
+        neutral: HexColor::new(0xCED4DA),
+        paper: PaperDefaults::DARK,
+        code: CodeDefaults::DARK,
+        code_block: CodeBlockDefaults::DARK,
+        kbd: KbdDefaults::DARK,
+        tooltip: TooltipDefaults::DARK,
+        ..Theme::DEFAULT
+    };
 }

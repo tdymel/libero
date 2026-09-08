@@ -31,6 +31,14 @@ impl KbdDefaults {
         color: "#57606a",
     };
 
+    /// The same key on an inked page.
+    pub const DARK: Self = Self {
+        background: "#21262d",
+        border: "#30363d",
+        color: "#c9d1d9",
+        ..Self::DEFAULT
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().font_size(KBD_FONT_SIZE.value(size))
     }

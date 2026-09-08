@@ -152,7 +152,7 @@ fn body_scope(theme: &Theme) -> CssScope {
     // Ink and paper have no per-shade contrast var, so it's computed here the
     // way `push_color_declarations` does for palette shades. A theme whose
     // paper is dark gets its paper-coloured text this way round too.
-    let text_color_var = foreground_var(theme.surface.contrast(), theme.ink);
+    let text_color_var = foreground_var(theme.surface.contrast(), theme_ends(theme));
 
     CssScope::new(
         "body",
@@ -365,6 +365,7 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         surface: *surface,
         ink: *ink,
     };
+
     push_named_color_declarations(&mut declarations, ends);
     // Dimmed text is the grey ramp's own text role, so a re-themed `grey`
     // carries it - see `NamedColorCss::TEXT_DIMMED`.
@@ -407,11 +408,16 @@ fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, ends: E
 ///
 /// Not a black/white lookup: on a dark theme the ink is the *light* end, so a
 /// fill that wants a white label wants `--lsx-ink`, not `--lsx-surface`.
-fn foreground_var(foreground: HexColor, ink: HexColor) -> String {
-    let wants_dark = foreground.rgb() == 0x00_00_00;
-    let ink_is_dark = ink.contrast().rgb() == 0xFF_FF_FF;
+/// A theme's two ends of the page, in the order every derivation wants them.
+fn theme_ends(theme: &Theme) -> Ends {
+    Ends {
+        surface: theme.surface,
+        ink: theme.ink,
+    }
+}
 
-    if wants_dark == ink_is_dark {
+fn foreground_var(foreground: HexColor, ends: Ends) -> String {
+    if ends.foreground_is_ink(foreground) {
         NamedColorCss::INK.value()
     } else {
         NamedColorCss::SURFACE.value()
@@ -475,8 +481,8 @@ fn push_color_declarations(
         declarations.push(CssDeclaration::new(
             ColorValue::Contrast(color, shade).var_name(),
             foreground_var(
-                fill_base.shade(shade, ramp, ends).readable_contrast(),
-                ends.ink,
+                fill_base.shade(shade, ramp, ends).readable_contrast(ends),
+                ends,
             ),
         ));
     }
@@ -490,7 +496,7 @@ mod tests {
 
     /// Every palette name, so the check below cannot be defeated by a colour
     /// nobody thought of.
-    const PALETTE: &[&str] = &[
+    pub(super) const PALETTE: &[&str] = &[
         "primary",
         "secondary",
         "error",
@@ -515,14 +521,7 @@ mod tests {
     /// including the ones not written yet.
     /// Reads the var out of the rendered `:root`, so these assert on what
     /// ships rather than on the helper that built it.
-    fn theme_ends(theme: &Theme) -> Ends {
-        Ends {
-            surface: theme.surface,
-            ink: theme.ink,
-        }
-    }
-
-    fn root_var(css: &str, name: &str) -> String {
+    pub(super) fn root_var(css: &str, name: &str) -> String {
         let root = css
             .split_once(":root{")
             .and_then(|(_, rest)| rest.split_once('}'))
@@ -578,22 +577,28 @@ mod tests {
     /// rescue as *text* - see the test below.
     #[test]
     fn every_default_fill_carries_its_own_foreground() {
-        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+        // Both shipped themes. The foreground is resolved to the colour the
+        // theme actually paints - a dark theme's ink is not pure white, so
+        // measuring against white would flatter it.
+        for theme in [&Theme::DEFAULT, &Theme::DARK] {
+            let css = Stylesheet::from(theme).as_str().to_string();
 
-        for name in PALETTE {
-            let fill =
-                HexColor::parse(&root_var(&css, &format!("--lsx-{name}-fill-6"))).expect("a hex");
-            let foreground = match root_var(&css, &format!("--lsx-{name}-contrast-6")).as_str() {
-                "var(--lsx-ink)" => HexColor::new(0x00_00_00),
-                "var(--lsx-surface)" => HexColor::new(0xFF_FF_FF),
-                other => panic!("unexpected contrast value {other}"),
-            };
+            for name in PALETTE {
+                let fill = HexColor::parse(&root_var(&css, &format!("--lsx-{name}-fill-6")))
+                    .expect("a hex");
+                let foreground = match root_var(&css, &format!("--lsx-{name}-contrast-6")).as_str()
+                {
+                    "var(--lsx-ink)" => theme.ink,
+                    "var(--lsx-surface)" => theme.surface,
+                    other => panic!("unexpected contrast value {other}"),
+                };
 
-            let ratio = fill.contrast_ratio(foreground);
-            assert!(
-                ratio >= TEXT_CONTRAST,
-                "{name} fill {fill} labelled at {ratio:.2}:1"
-            );
+                let ratio = fill.contrast_ratio(foreground);
+                assert!(
+                    ratio >= TEXT_CONTRAST,
+                    "{name} fill {fill} labelled at {ratio:.2}:1"
+                );
+            }
         }
     }
 
@@ -603,19 +608,33 @@ mod tests {
     /// only fix is a different base colour, which is the Maintainer's call.
     #[test]
     fn the_text_role_is_the_best_the_ramp_can_do_and_two_colors_fall_short() {
-        let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
-        let white = HexColor::new(0xFF_FF_FF);
-        let short: Vec<&str> = PALETTE
+        assert_eq!(
+            text_roles_falling_short(&Theme::DEFAULT),
+            ["warning", "success"]
+        );
+    }
+
+    /// The same measurement on the shipped dark theme. Nothing falls short
+    /// there: yellow and green run out of ramp against white, and here they
+    /// have the other end of it to walk into.
+    #[test]
+    fn every_text_role_reads_on_the_dark_theme_s_page() {
+        assert_eq!(text_roles_falling_short(&Theme::DARK), Vec::<&str>::new());
+    }
+
+    /// Which palette colours cannot reach [`TEXT_CONTRAST`] on `theme`'s own
+    /// surface, however far their text ramp walks.
+    fn text_roles_falling_short(theme: &Theme) -> Vec<&'static str> {
+        let css = Stylesheet::from(theme).as_str().to_string();
+        PALETTE
             .iter()
             .filter(|name| {
                 let text = HexColor::parse(&root_var(&css, &format!("--lsx-{name}-text-6")))
                     .expect("a hex");
-                text.contrast_ratio(white) < TEXT_CONTRAST
+                text.contrast_ratio(theme.surface) < TEXT_CONTRAST
             })
             .copied()
-            .collect();
-
-        assert_eq!(short, ["warning", "success"]);
+            .collect()
     }
 
     /// Todo 240: the one name for quieter text, `grey.7` at 8.12:1, not the
@@ -714,17 +733,27 @@ mod tests {
         assert!(here.contrast_ratio(theme.surface) >= TEXT_CONTRAST);
         assert!(there.contrast_ratio(theme.surface) < TEXT_CONTRAST);
 
-        // A fill wanting a light label asks for the ink, because on this theme
-        // the ink *is* the light end. On the default theme it asks for the
-        // surface, and both are right.
+        // Both pages label a filled control in the page colour, for opposite
+        // reasons: the light theme's fill is a dark blue under white, the
+        // dark theme's is a light one under the near-black page. The var is
+        // the same name because the *role* is the same; what changed is which
+        // end of the greyscale that name holds.
         assert_eq!(
             root_var(&dark, "--lsx-primary-contrast-6"),
-            "var(--lsx-ink)"
+            "var(--lsx-surface)"
         );
         assert_eq!(
             root_var(&light, "--lsx-primary-contrast-6"),
             "var(--lsx-surface)"
         );
+        let dark_fill = HexColor::parse(&root_var(&dark, "--lsx-primary-fill-6")).expect("a hex");
+        let light_fill = HexColor::parse(&root_var(&light, "--lsx-primary-fill-6")).expect("a hex");
+        assert!(
+            dark_fill.relative_luminance() > light_fill.relative_luminance(),
+            "the dark theme's fill did not walk away from its own page"
+        );
+        // 1.4.11 asks 3:1 of a control against what is behind it.
+        assert!(dark_fill.contrast_ratio(theme.surface) >= 3.0);
 
         assert!(dark.contains("background-color:var(--lsx-surface);"));
         assert!(dark.contains("color:var(--lsx-ink);"));

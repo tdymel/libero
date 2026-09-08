@@ -46,6 +46,14 @@ impl PaperDefaults {
         border_color: ColorValue::Shade(Color::Muted, ColorShade::S3),
     };
 
+    /// The card on an inked page: one step off the surface, the way the light
+    /// one is one step off white. `contrast` and `border_color` are already
+    /// theme colours, so only the background is spelled again here.
+    pub const DARK: Self = Self {
+        background: "#25262B",
+        ..Self::DEFAULT
+    };
+
     fn radius_sx(radius: Size) -> Sx {
         sx().border_radius(SizeCss::RADIUS.value(radius))
     }

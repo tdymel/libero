@@ -65,6 +65,28 @@ pub(crate) struct Ends {
 }
 
 impl Ends {
+    /// Which of the two ends `pick` - always pure black or pure white,
+    /// because that is all [`HexColor::contrast`] returns - is painted as.
+    ///
+    /// Not a black/white lookup: on a dark theme the ink is the *light* end,
+    /// so a fill that wants a white label is painted in the ink, and the ink
+    /// is not pure white. Everything that measures a foreground measures the
+    /// colour this returns, or it flatters the pair.
+    pub(crate) fn foreground(self, pick: HexColor) -> HexColor {
+        if self.foreground_is_ink(pick) {
+            self.ink
+        } else {
+            self.surface
+        }
+    }
+
+    /// The same choice, for a caller that names the var instead of the hex.
+    pub(crate) fn foreground_is_ink(self, pick: HexColor) -> bool {
+        let wants_dark = pick.rgb() == 0x00_00_00;
+        let ink_is_dark = self.ink.contrast().rgb() == 0xFF_FF_FF;
+        wants_dark == ink_is_dark
+    }
+
     /// Absolute white and black - what a chromatic ramp always mixes towards,
     /// and what the light theme's own ends happen to be.
     pub(crate) const ABSOLUTE: Ends = Ends {
@@ -264,9 +286,9 @@ impl HexColor {
     /// disagree. It never overrides the pick on a step that passes, which is
     /// why a `blue` fill still gets white and is darkened instead of being
     /// labelled in black.
-    pub(crate) fn readable_contrast(self) -> Self {
+    pub(crate) fn readable_contrast(self, ends: Ends) -> Self {
         let picked = self.contrast();
-        if self.contrast_ratio(picked) >= TEXT_CONTRAST {
+        if self.contrast_ratio(ends.foreground(picked)) >= TEXT_CONTRAST {
             return picked;
         }
 
@@ -276,7 +298,9 @@ impl HexColor {
             HexColor::new(0x00_00_00)
         };
 
-        if self.contrast_ratio(other) > self.contrast_ratio(picked) {
+        if self.contrast_ratio(ends.foreground(other))
+            > self.contrast_ratio(ends.foreground(picked))
+        {
             other
         } else {
             picked
@@ -298,18 +322,27 @@ impl HexColor {
         })
     }
 
-    /// The step a *fill* use of `shade` resolves to: the first step at or
-    /// below it on which the foreground [`contrast`](Self::contrast) picks
-    /// passes [`TEXT_CONTRAST`]. Mantine's `autoContrast` stops at picking the
-    /// foreground and leaves a fill like `blue.6` - where white is picked and
-    /// only reaches 3.56:1 - alone; this walks the ramp until the pair works.
-    /// The walk is always towards S9, whatever the surface: a fill carries
-    /// its own foreground, so the pair reads the same on any page. `ends` is
-    /// here only because a neutral ramp is mixed between them.
+    /// The step a *fill* use of `shade` resolves to: the first step from it
+    /// **away from `surface`** on which the foreground
+    /// [`contrast`](Self::contrast) picks passes [`TEXT_CONTRAST`]. Mantine's
+    /// `autoContrast` stops at picking the foreground and leaves a fill like
+    /// `blue.6` - where white is picked and only reaches 3.56:1 - alone; this
+    /// walks the ramp until the pair works.
+    ///
+    /// The walk follows the surface for the same reason the text one does. On
+    /// a paper page the ramp darkens into white labels; on an inked one it
+    /// lightens into dark ones, which is also what keeps a filled control
+    /// visibly separate from the page it sits on. `info` is the case that
+    /// proves it: walking darker on the dark theme runs out of ramp at
+    /// `#0F7F8F`, whose label lands at 3.98:1, and leaves a button 2:1 off
+    /// its own page.
+    ///
+    /// The foreground measured is the one the theme paints - `ends.ink` or
+    /// `ends.surface` - not the pure black or white that picked the side.
     pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
-        self.first_shade_from(shade, ShadeWalk::TowardS9, |step| {
+        self.first_shade_from(shade, ShadeWalk::away_from(ramp, ends.surface), |step| {
             let fill = self.shade(step, ramp, ends);
-            fill.contrast_ratio(fill.contrast()) >= TEXT_CONTRAST
+            fill.contrast_ratio(ends.foreground(fill.contrast())) >= TEXT_CONTRAST
         })
     }
 
@@ -409,8 +442,14 @@ mod tests {
         // would keep the fill and label the button in black. White is the
         // foreground a blue fill wants; the fill moves instead.
         assert_eq!(BLUE.contrast(), WHITE);
-        assert_eq!(BLUE.readable_contrast(), HexColor::new(0x00_00_00));
-        assert_eq!(HexColor::new(0x1C_74_C1).readable_contrast(), WHITE);
+        assert_eq!(
+            BLUE.readable_contrast(Ends::ABSOLUTE),
+            HexColor::new(0x00_00_00)
+        );
+        assert_eq!(
+            HexColor::new(0x1C_74_C1).readable_contrast(Ends::ABSOLUTE),
+            WHITE
+        );
 
         // `green.6` already carries black, so its fill stays where it is.
         const GREEN: HexColor = HexColor::new(0x40_C0_57);

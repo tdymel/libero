@@ -46,6 +46,22 @@ impl CodeDefaults {
         tok_attribute: "#0969da",
         tok_heading: "#cf222e",
     };
+
+    /// GitHub's dark tokens, measured against
+    /// [`CodeBlockDefaults::DARK`]'s background rather than against black.
+    pub const DARK: Self = Self {
+        font_family: MONO_FONT_FAMILY,
+        tok_keyword: "#ff7b72",
+        tok_string: "#a5d6ff",
+        tok_comment: "#8b949e",
+        tok_number: "#79c0ff",
+        tok_constant: "#79c0ff",
+        tok_function: "#d2a8ff",
+        tok_type: "#ffa657",
+        tok_tag: "#7ee787",
+        tok_attribute: "#79c0ff",
+        tok_heading: "#ff7b72",
+    };
 }
 
 impl ToCssDeclarations for CodeDefaults {

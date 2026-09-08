@@ -18,6 +18,14 @@ static DARK: Theme = Theme {
     ..Theme::DEFAULT
 };
 
+/// A theme of the caller's own, and not the library's default by value:
+/// `LiberoProvider` pairs `Theme::DEFAULT` with `Theme::DARK`, and it decides
+/// that by comparing the theme it was handed.
+static SOLO: Theme = Theme {
+    primary: HexColor::new(0x22_E6_8B),
+    ..Theme::DEFAULT
+};
+
 fn set() -> ThemeSet {
     ThemeSet::new().light(&LIGHT).dark(&DARK)
 }
@@ -51,7 +59,7 @@ fn a_pair_emits_both_themes_and_the_attribute_blocks() {
 #[test]
 fn one_theme_still_emits_one_root_block() {
     fn app() -> Element {
-        rsx! { LiberoProvider { theme: &LIGHT, Text { "hello" } } }
+        rsx! { LiberoProvider { theme: &SOLO, Text { "hello" } } }
     }
 
     let html = render(app);
@@ -60,6 +68,22 @@ fn one_theme_still_emits_one_root_block() {
     assert!(!html.contains("data-lsx-theme"));
     assert!(html.contains("color-scheme:light;"));
     assert_eq!(html.matches("--lsx-primary-6:").count(), 1);
+}
+
+/// An app that names no theme at all still gets the library's own pair, so
+/// `prefers-color-scheme` switches it with no JS and no theme authoring.
+#[test]
+fn the_default_provider_ships_the_library_s_pair() {
+    fn app() -> Element {
+        rsx! { LiberoProvider { Text { "hello" } } }
+    }
+
+    let html = render(app);
+
+    assert!(html.contains("@media (prefers-color-scheme: dark){:root:not([data-lsx-theme]){"));
+    assert!(html.contains("color-scheme:light dark;"));
+    // The dark theme's own page, which the light one never emits.
+    assert!(html.contains("--lsx-surface:#1A1B1E;"));
 }
 
 /// `use_theme()` is reactive: a component that read the old theme re-renders

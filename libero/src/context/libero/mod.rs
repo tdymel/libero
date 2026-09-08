@@ -135,6 +135,12 @@ fn StyleOutlet() -> Element {
 pub fn LiberoProvider(
     /// One theme, and sugar for a [`ThemeSet`] holding only it. Ignored when
     /// `themes` is given.
+    ///
+    /// The library's own [`Theme::DEFAULT`] is the exception: it is paired
+    /// with [`Theme::DARK`], so an app that names no theme at all still
+    /// follows `prefers-color-scheme`. A theme of the caller's own has no
+    /// dark counterpart for us to pair it with, so it stays alone until they
+    /// hand over a `themes:` set.
     #[props(default = &Theme::DEFAULT)]
     theme: &'static Theme,
     /// Every theme the app ships. Its light and dark halves are emitted into
@@ -143,7 +149,15 @@ pub fn LiberoProvider(
     themes: Option<ThemeSet>,
     children: Element,
 ) -> Element {
-    let themes = use_hook(|| themes.clone().unwrap_or_else(|| ThemeSet::of(theme)));
+    let themes = use_hook(|| {
+        themes.clone().unwrap_or_else(|| {
+            if theme == &Theme::DEFAULT {
+                ThemeSet::DEFAULT
+            } else {
+                ThemeSet::of(theme)
+            }
+        })
+    });
     let active = use_signal(|| ThemeSet::LIGHT);
     let theme_signal = use_signal({
         let themes = themes.clone();

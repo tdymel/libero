@@ -37,6 +37,14 @@ impl TooltipDefaults {
         color: "#ffffff",
     };
 
+    /// A tooltip is drawn against the page, not on it, so its two colours
+    /// swap ends with the theme rather than following it.
+    pub const DARK: Self = Self {
+        background: "#e9ecef",
+        color: "#1f2328",
+        ..Self::DEFAULT
+    };
+
     fn size_sx(size: Size) -> Sx {
         sx().font_size(TOOLTIP_FONT_SIZE.value(size))
     }

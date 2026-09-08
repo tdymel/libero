@@ -42,6 +42,18 @@ impl CodeBlockDefaults {
         copyable: true,
         line_numbers: true,
     };
+
+    /// The same block on an inked page. GitHub's own dark theme, because the
+    /// token colours in [`CodeDefaults::DARK`] are measured against it.
+    pub const DARK: Self = Self {
+        background: "#161b22",
+        border: "#30363d",
+        muted_text: "#8b949e",
+        line_number: "#8b949e",
+        copy_hover_background: "rgba(240, 246, 252, 0.10)",
+        copy_hover_text: "#c9d1d9",
+        ..Self::DEFAULT
+    };
 }
 
 impl ToCssDeclarations for CodeBlockDefaults {
@@ -74,6 +86,45 @@ mod tests {
     /// are measured on white - do not carry over.
     #[test]
     fn the_code_theme_reads_on_its_own_background() {
+        the_code_theme_reads_on(CodeBlockDefaults::DEFAULT, CodeDefaults::DEFAULT);
+    }
+
+    /// The same measurement for the dark theme's block. GitHub's dark tokens
+    /// are published against `#0d1117`, and ours sits on `#161b22`, so the
+    /// numbers have to be taken again rather than inherited.
+    #[test]
+    fn the_dark_code_theme_reads_on_its_own_background() {
+        the_code_theme_reads_on(CodeBlockDefaults::DARK, CodeDefaults::DARK);
+    }
+
+    fn the_code_theme_reads_on(block: CodeBlockDefaults, code: CodeDefaults) {
+        let background = block.background;
+        for (name, token) in [
+            ("keyword", code.tok_keyword),
+            ("string", code.tok_string),
+            ("number", code.tok_number),
+            ("constant", code.tok_constant),
+            ("function", code.tok_function),
+            ("type", code.tok_type),
+            ("tag", code.tok_tag),
+            ("attribute", code.tok_attribute),
+            ("heading", code.tok_heading),
+        ] {
+            let ratio = ratio(token, background);
+            assert!(
+                ratio >= 4.5,
+                "{name} {token} on {background} at {ratio:.2}:1"
+            );
+        }
+
+        // A line number is held to 1.4.11 rather than 1.4.3 (todo 241): it is
+        // a way to cite a line, not text the reader is meant to read through.
+        let ratio = ratio(block.line_number, background);
+        assert!(ratio >= 3.0, "line number at {ratio:.2}:1");
+    }
+
+    #[test]
+    fn the_light_code_theme_reads_on_its_own_background_the_way_todo_241_measured_it() {
         let background = CodeBlockDefaults::DEFAULT.background;
 
         assert!(
