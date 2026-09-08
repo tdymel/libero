@@ -76,11 +76,11 @@ fn Demo() -> Element {
 
 - **A badge announces nothing on its own.** When one really does report a
   change, put your own `role="status"` region around it.
-- **Contrast is the palette's.** At shade 6 some roles stay under 4.5:1 for
-  text this size - `filled` is 3.56:1 primary, 3.28:1 error and 2.79:1 info,
-  and `elevated`, `outlined` and `standard` put a warning accent on the page at
-  1.86:1. `tonal` is 15.9:1 or better for every role. Pick `tonal`, or
-  `neutral`, where the label has to be read rather than noticed.
+- **Contrast is the palette's.** `filled` labels every role at 4.5:1 or
+  better, and `tonal` at 15.9:1 or better. `elevated`, `outlined` and
+  `standard` print the label in the colour's text role, which stays under
+  4.5:1 on a white page for `warning` (3.27:1) and `success` (4.05:1). Pick
+  `filled` or `tonal` for those where the label has to be read.
 
 ## Props
 

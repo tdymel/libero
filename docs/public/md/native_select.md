@@ -210,7 +210,7 @@ Like every component, it also takes the shared props `sx`, `class`, `style`,
 
 ## Theme defaults
 
-Almost everything is `FieldDefaults`, shared by every field. `SelectDefaults`
+Almost everything is `FieldDefaults`, shared by every field. `NativeSelectDefaults`
 keeps only what is genuinely this component's: which `size` and `radius` it
 starts at.
 
@@ -219,8 +219,8 @@ starts at.
 | `field.gap` | `&'static str` | Vertical gap between the slots. |
 | `field.frame_gap` | `&'static str` | Horizontal gap inside the frame. |
 | `field.sizes` | `Sizes<FieldSizeLevel>` | `label_font_size`, `caption_font_size`, `font_size`, `height`, `padding_y`, `padding_x` per size. |
-| `select.size` | `Size` | Default `size` when the prop is omitted; `md`. |
-| `select.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
+| `native_select.size` | `Size` | Default `size` when the prop is omitted; `md`. |
+| `native_select.radius` | `Size` | Default `radius` when the prop is omitted; `sm`. |
 
 ## CSS variables
 

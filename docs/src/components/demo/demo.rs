@@ -169,7 +169,7 @@ fn ToggleSegments(control: Control, value: String, onchange: EventHandler<String
             variant: "outlined",
             size: "sm",
             full_width: true,
-            "aria-label": control.name,
+            "aria-label": label(control.name),
             value,
             // A control panel's options are data, so they arrive here rather
             // than from a `T` that could list them statically.
@@ -401,7 +401,7 @@ pub fn Demo(
                                     ControlKind::Slider => rsx! {
                                         Slider {
                                             size: "lg",
-                                            aria_label: control.name,
+                                            aria_label: label(control.name),
                                             min: 0.0,
                                             max: (control.options.len() - 1) as f64,
                                             step: 1.0,
@@ -455,7 +455,7 @@ pub fn Demo(
                                     },
                                     ControlKind::Switch => rsx! {
                                         Switch {
-                                            aria_label: control.name,
+                                            aria_label: label(control.name),
                                             checked: control.is_on(&values().str(control.name)),
                                             onchange: move |on: bool| {
                                                 values.write().0[index].1 = on.to_string();
@@ -497,7 +497,7 @@ pub fn Demo(
                                                     // already names it, so
                                                     // the field draws no
                                                     // second label.
-                                                    "aria-label": control.name,
+                                                    "aria-label": label(control.name),
                                                     value: Some(values().str(control.name)),
                                                     options: control.options.clone(),
                                                     option_label: {
@@ -532,6 +532,24 @@ pub fn Demo(
                 header: false,
                 sx: sx().border("none").border_radius("0"),
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    /// WCAG 2.5.3: a control's accessible name must contain its visible caption.
+    #[test]
+    fn controls_are_named_by_their_caption() {
+        let source = include_str!("demo.rs");
+        let sites: Vec<&str> = source
+            .lines()
+            .map(str::trim)
+            .filter(|line| line.starts_with("aria_label:") || line.starts_with("\"aria-label\":"))
+            .collect();
+        assert_eq!(sites.len(), 4, "{sites:?}");
+        for site in sites {
+            assert!(site.ends_with(": label(control.name),"), "{site}");
         }
     }
 }

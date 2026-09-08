@@ -2,7 +2,9 @@ use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
-    components::{Alert, Code, Text},
+    components::{Alert, Button, Code, Flex, Text},
+    hooks::use_element,
+    platform::ElementApi,
     use_theme,
 };
 
@@ -12,6 +14,10 @@ const MESSAGE: &str = "Your card ends 09/26. Update it before the next invoice."
 #[component]
 pub fn AlertPage() -> Element {
     let theme = use_theme();
+    // Mounted on demand: `role="alert"` mounted with its text on first paint
+    // is the live-region shape `Notifications` avoids.
+    let mut shown = use_signal(|| false);
+    let trigger = use_element();
 
     rsx! {
         DocPage {
@@ -95,15 +101,29 @@ pub fn AlertPage() -> Element {
                     }),
                 ],
                 render: move |values: DemoValues| rsx! {
-                    Alert {
-                        variant: values.str("variant"),
-                        color: values.str("color"),
-                        radius: values.str("radius"),
-                        title: (values.str("title") == "true").then(|| TITLE.to_string()),
-                        icon: (values.str("icon") == "true").then(|| rsx! { CheckmarkIcon {} }),
-                        onclose: (values.str("onclose") == "true")
-                            .then(|| EventHandler::new(|_| {})),
-                        {MESSAGE}
+                    Flex { direction: "column", align: "center", gap: "md",
+                        Button {
+                            variant: "outlined",
+                            onmounted: trigger.mount(),
+                            onclick: move |_| shown.toggle(),
+                            if shown() { "Hide alert" } else { "Show alert" }
+                        }
+                        if shown() {
+                            Alert {
+                                variant: values.str("variant"),
+                                color: values.str("color"),
+                                radius: values.str("radius"),
+                                title: (values.str("title") == "true").then(|| TITLE.to_string()),
+                                icon: (values.str("icon") == "true").then(|| rsx! { CheckmarkIcon {} }),
+                                onclose: (values.str("onclose") == "true")
+                                    .then(|| EventHandler::new(move |_| {
+                                        shown.set(false);
+                                        // The close button unmounts with it.
+                                        let _ = trigger.focus();
+                                    })),
+                                {MESSAGE}
+                            }
+                        }
                     }
                 },
             }

@@ -12,7 +12,7 @@ use libero::{
 const CUSTOM_TAG: &str = r##"tag: move |t: SelectionArgs<String>| rsx! {
     Chip { size: "xs", variant: "outlined",
         "#{t.value}"
-        span {
+        span { "data-slot": "remove",
             ActionIcon {
                 aria_label: "Remove {t.value}",
                 size: "xs",

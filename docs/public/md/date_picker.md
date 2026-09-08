@@ -90,8 +90,11 @@ else the first.
 | Page Up / Page Down | a month; with Shift a year | a year / a decade |
 | Enter / Space | picks | picks |
 
-Enter on a heading climbs a level and keeps focus on the new heading; picking
-a month or a year below the lowest level climbs back down with focus on it.
+Enter on the month heading climbs to the months and keeps focus on the year
+heading. Enter on the year heading climbs to the years and moves focus into the
+years: the decade heading is disabled, there is no level above it.
+Picking a month or a year below the lowest level climbs back down with focus on
+it.
 
 The mini calendar's days are one tab stop too. Arrow Left / Right move a day
 and slide the row one day past its ends, Home / End go to the row's ends, and

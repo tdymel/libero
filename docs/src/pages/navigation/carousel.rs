@@ -10,10 +10,12 @@ use libero::{
 /// without them, and there is nothing here for a reader to vary. It opens on
 /// slide 3 because at slide 1 the strip is at its very start, where every
 /// `align` rests the same way; on a middle slide switching it moves the slide
-/// to the left, the middle or the right at once.
-const FIXED: [&str; 3] = [
+/// to the left, the middle or the right at once. Controlled, so a control
+/// change keeps the slide the reader moved to rather than snapping back.
+const FIXED: [&str; 4] = [
     r#"aria_label: "Product photos""#,
-    "index: 2",
+    "index: index()",
+    "onindexchange: move |next| index.set(next)",
     r#"slides: (1..=6)
     .map(|n| rsx! {
         Box {
@@ -59,6 +61,7 @@ fn demo_slides() -> Vec<Element> {
 #[component]
 pub fn CarouselPage() -> Element {
     let theme = use_theme();
+    let mut index = use_signal(|| 2);
 
     rsx! {
         DocPage {
@@ -122,6 +125,7 @@ pub fn CarouselPage() -> Element {
                     "next one peeking."
                 }
             },
+            // snippet: let mut index = use_signal(|| 2);
             Demo {
                 component: "Carousel",
                 children_text: "",
@@ -189,7 +193,8 @@ pub fn CarouselPage() -> Element {
                     rsx! {
                         Carousel {
                             aria_label: "Product photos",
-                            index: 2,
+                            index: index(),
+                            onindexchange: move |next| index.set(next),
                             per_view: values.str("per_view").parse::<f64>().unwrap_or(1.0),
                             gap: values.str("gap"),
                             align: values.str("align"),

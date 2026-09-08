@@ -62,8 +62,9 @@ fn Demo() -> Element {
 ## It holds nothing
 
 There is no `value`, no `onchange`, and no open state inside. `Combobox` is an
-arrangement, not a control: a relative wrapper, your `children` in it, and an
-absolutely positioned list under them.
+arrangement, not a control: a wrapper, your `children` in it, and a list
+portaled to `PortalOutlet` and placed under them, or above when there is
+no room below.
 
 What open state there is lives in **your** scope. `use_combobox()` returns a
 `ComboboxState` - three signals and the id that ties them together - which you
@@ -295,9 +296,8 @@ rsx! {
 ## What it does not do yet
 
 Multi-selection is nothing but a longer list of `selected` rows, so it needs no
-support here, but there is no creatable mode. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet. The dropdown is
-positioned with plain absolute placement below the wrapper - it is not portaled
-and it does not flip when it runs out of room below.
+support here, but there is no creatable mode. One `ComboboxState` drives one `Combobox`. `max_dropdown_height` is not a prop yet, only the theme's
+`combobox.max_dropdown_height`.
 
 ## Accessibility
 

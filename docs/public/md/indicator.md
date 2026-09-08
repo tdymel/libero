@@ -65,8 +65,9 @@ fn Demo(unread: u32) -> Element {
   noun is the caller's vocabulary.
 - To have the indicator itself read out, pass `aria_hidden: "false"` plus a
   `role="status"` of your own.
-- **Contrast is the palette's.** At shade 6 the default `error` fill measures
-  3.28:1 with white; pick a darker `color` shade where the count has to be read.
+- **Contrast is the palette's.** A theme color's fill labels the count at
+  4.5:1 or better. A literal CSS `color` brings no contrast twin, so check its
+  label yourself.
 
 ## Props
 

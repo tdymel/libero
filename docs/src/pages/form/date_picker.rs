@@ -169,7 +169,7 @@ pub fn DatePickerPage() -> Element {
                     Kbd { "Home" } " " Kbd { "End" } " to the ends of the week or row, and "
                     Kbd { "PageUp" } " " Kbd { "PageDown" } " page a month, a year or a decade - with "
                     Kbd { "Shift" } " a year among days. "
-                    Kbd { "Enter" } " and " Kbd { "Space" } " pick. Enter on a heading climbs a level and keeps focus on the new heading."
+                    Kbd { "Enter" } " and " Kbd { "Space" } " pick. Enter on the month heading climbs to the months and keeps focus on the year heading. Enter on the year heading climbs to the years and moves focus into the years: the decade heading is disabled, there is no level above it."
                 }
                 Text {
                     "The analog clock face is one tab stop: "
