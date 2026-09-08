@@ -46,7 +46,7 @@ impl Color {
     /// `--lsx-surface`/`--lsx-ink` - they fall through to the CSS keywords
     /// `white` and `black`, which are valid CSS and so fail **silently**,
     /// pinning the color to one scheme instead of following the theme. Todo
-    /// 378 asks whether an unrecognised color name should fall through at
+    /// 385 asks whether an unrecognised color name should fall through at
     /// all.
     pub fn parse(value: &str) -> Option<Self> {
         match value {

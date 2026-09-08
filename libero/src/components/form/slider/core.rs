@@ -148,7 +148,7 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         // `value_or`'s fallback is interpolated as raw CSS - `sx` never sees
         // it - so it has to be a var reference, not a colour name. `"surface"`
         // here would be an unknown CSS keyword and the thumb would compute to
-        // transparent (todo 378).
+        // transparent (todo 385).
         .background(SLIDER_THUMB_FILL.value_or(NamedColorCss::SURFACE.value()))
         .border_style("solid")
         .border_width("2px")

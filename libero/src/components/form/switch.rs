@@ -97,7 +97,7 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
                 contrast_color(base).and_then(|color| color.resolve(None))
             } else {
                 // A `Variables` value is raw CSS, so this is the var and not
-                // the colour name `sx` would have parsed (todo 378).
+                // the colour name `sx` would have parsed (todo 385).
                 Some(NamedColorCss::SURFACE.value())
             },
         )
