@@ -16,6 +16,7 @@ pub(crate) use stylesheet::{DARK_SCHEME_QUERY, THEME_ATTRIBUTE};
 // Re-exported from `crate::tokens` (a layer below `sx`), so
 // `libero::theme::Size` stays the public path.
 pub use crate::tokens::{
-    COLOR_SCHEME_STORAGE_KEY, Color, ColorCss, ColorScheme, ColorSchemeSetting, ColorShade,
-    ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss, Sizes,
+    COLOR_SCHEME_RESTORE_SCRIPT, COLOR_SCHEME_STORAGE_KEY, Color, ColorCss, ColorScheme,
+    ColorSchemeSetting, ColorShade, ColorValue, CssVar, HexColor, NamedColorCss, Size, SizeCss,
+    Sizes,
 };

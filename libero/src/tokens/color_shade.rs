@@ -45,6 +45,9 @@ impl ColorShade {
         }
     }
 
+    /// One step further from the page. There is no step *towards* it: every
+    /// ramp is mixed between the theme's own ends, so nothing ever walks a
+    /// ramp back towards the surface it is measured against (todo 69).
     pub(crate) const fn darker(self) -> Self {
         match self {
             Self::S1 => Self::S2,
@@ -55,19 +58,6 @@ impl ColorShade {
             Self::S6 => Self::S7,
             Self::S7 => Self::S8,
             Self::S8 | Self::S9 => Self::S9,
-        }
-    }
-
-    pub(crate) const fn lighter(self) -> Self {
-        match self {
-            Self::S1 | Self::S2 => Self::S1,
-            Self::S3 => Self::S2,
-            Self::S4 => Self::S3,
-            Self::S5 => Self::S4,
-            Self::S6 => Self::S5,
-            Self::S7 => Self::S6,
-            Self::S8 => Self::S7,
-            Self::S9 => Self::S8,
         }
     }
 
@@ -94,11 +84,5 @@ mod tests {
     fn darker_steps_up_and_caps_at_s9() {
         assert_eq!(ColorShade::S6.darker(), ColorShade::S7);
         assert_eq!(ColorShade::S9.darker(), ColorShade::S9);
-    }
-
-    #[test]
-    fn lighter_steps_down_and_caps_at_s1() {
-        assert_eq!(ColorShade::S6.lighter(), ColorShade::S5);
-        assert_eq!(ColorShade::S1.lighter(), ColorShade::S1);
     }
 }

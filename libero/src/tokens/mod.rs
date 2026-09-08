@@ -12,7 +12,9 @@ mod size;
 mod sizes;
 
 pub use color::Color;
-pub use color_scheme::{COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting};
+pub use color_scheme::{
+    COLOR_SCHEME_RESTORE_SCRIPT, COLOR_SCHEME_STORAGE_KEY, ColorScheme, ColorSchemeSetting,
+};
 pub use color_shade::ColorShade;
 pub(crate) use color_shade::ShadeRamp;
 pub use color_value::ColorValue;

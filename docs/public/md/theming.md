@@ -109,6 +109,93 @@ static THEME: Theme = Theme {
 };
 ```
 
+## Light and dark
+
+`LiberoProvider` takes a `ThemeSet` rather than one theme: it names every theme
+an app ships and designates which is its light and which its dark. An app that
+names none at all gets `ThemeSet::DEFAULT`, which pairs `Theme::DEFAULT` with
+`Theme::DARK`, so `prefers-color-scheme` already works with no JavaScript.
+
+```rust,ignore
+LiberoProvider {
+    themes: ThemeSet::new().light(&LIGHT).dark(&DARK).named("sepia", &SEPIA),
+    Router::<Route> {}
+}
+```
+
+The pair is emitted into the sheet **up front**, so switching between the two
+is one attribute on the document root - no re-render to see the new colours,
+right on the first paint, right under SSR:
+
+```css
+:root { /* the light theme */ }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-lsx-theme]) { /* the dark theme, system case */ }
+}
+:root[data-lsx-theme="light"] { }
+:root[data-lsx-theme="dark"]  { }
+```
+
+A theme added with `named` is not in that sheet. Selecting one rebuilds it,
+which is what keeps the sheet from growing with every theme an app owns.
+
+### The switch
+
+`use_color_scheme()` is the whole API - the library ships no toggle, because
+only the app knows where that control belongs. Build one out of an
+`ActionIcon`, a `Switch` or a `SegmentedControl`:
+
+```rust,ignore
+let scheme = use_color_scheme();
+
+rsx! {
+    ActionIcon {
+        aria_label: match scheme.resolved() {
+            ColorScheme::Dark => "Switch to the light theme",
+            ColorScheme::Light => "Switch to the dark theme",
+        },
+        onclick: move |_| scheme.toggle(),
+        if scheme.resolved() == ColorScheme::Dark { SunIcon {} } else { MoonIcon {} }
+    }
+}
+```
+
+`setting()` is what the app asked for (`System`, `Light` or `Dark`) and
+`resolved()` is which one is on screen. `set(ColorSchemeSetting::System)`
+hands the choice back to the platform; `set_theme("sepia")` selects a theme
+beyond the pair. Every read is reactive, so a control showing the scheme
+re-renders when the *platform* changes its mind too.
+
+On the web the choice is persisted in `localStorage` under `lsx-color-scheme`.
+Off the web it lives for the session, and the app persists it if it cares.
+
+### No flash on load
+
+A stored choice has to reach the document root before the first paint, and the
+wasm bundle has not run by then. So an app that persists one pastes
+`libero::theme::COLOR_SCHEME_RESTORE_SCRIPT` into its own `index.html`, in the
+head - `LiberoProvider` cannot do it, because a `<script>` a renderer inserts
+into the DOM never executes:
+
+```html
+<script>try{var s=localStorage.getItem('lsx-color-scheme');
+if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}</script>
+```
+
+It is inline, so a strict CSP needs its hash:
+`sha256-i2dSUtjYkvH3Km+1WnMbJX1ZfgYnbdyuKeoc3clqFQ0=`. Without the script
+everything still works - the page just paints the system scheme for one frame
+before the app restores the stored one.
+
+### Authoring a dark theme
+
+A dark theme is a theme whose `surface` is dark. The palette bases do not have
+to move: the text and fill roles are derived against `surface`, so each one
+walks its ramp the right way, and the `muted` ramp is mixed between `ink` and
+`surface`, so swapping those two turns it round. What does have to be written
+down is anything the theme states as a literal CSS colour - `Theme::DARK`
+spells out five `*Defaults` for exactly that reason.
+
 ## Reading the theme
 
 `use_theme()` returns the active `&'static Theme`. Components use it for the

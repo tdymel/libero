@@ -34,6 +34,26 @@ const COMPONENT_DEFAULTS: &str = r#"static THEME: Theme = Theme {
     ..Theme::DEFAULT
 };"#;
 
+// snippet: ignore - the themes and `Route` are the app's own
+const THEME_SET: &str = r#"LiberoProvider {
+    themes: ThemeSet::new().light(&LIGHT).dark(&DARK).named("sepia", &SEPIA),
+    Router::<Route> {}
+}"#;
+
+// snippet: ignore - the icons are the docs site's own
+const SCHEME_TOGGLE: &str = r#"let scheme = use_color_scheme();
+
+rsx! {
+    ActionIcon {
+        aria_label: match scheme.resolved() {
+            ColorScheme::Dark => "Switch to the light theme",
+            ColorScheme::Light => "Switch to the dark theme",
+        },
+        onclick: move |_| scheme.toggle(),
+        if scheme.resolved() == ColorScheme::Dark { SunIcon {} } else { MoonIcon {} }
+    }
+}"#;
+
 // snippet: ignore - `Control` is the docs site's own
 const READING_THE_THEME: &str = r#"let theme = use_theme();
 
@@ -245,6 +265,64 @@ pub fn ThemingPage() -> Element {
                     "."
                 }
                 CodeBlock { source: COMPONENT_DEFAULTS, language: "rust" }
+            }
+
+            DocSection {
+                title: "Light and dark",
+                Text {
+                    Code { source: "LiberoProvider" }
+                    " takes a "
+                    Code { source: "ThemeSet" }
+                    " rather than one theme: it names every theme an app ships and "
+                    "designates which is its light and which its dark. An app that names "
+                    "none at all gets "
+                    Code { source: "ThemeSet::DEFAULT" }
+                    ", which pairs "
+                    Code { source: "Theme::DEFAULT" }
+                    " with "
+                    Code { source: "Theme::DARK" }
+                    ", so "
+                    Code { source: "prefers-color-scheme" }
+                    " already works with no JavaScript. The pair is emitted into the sheet "
+                    "up front, so switching between the two is one attribute on the "
+                    "document root - no re-render to see the new colours, right on the "
+                    "first paint. The sun above switches this site."
+                }
+                CodeBlock { source: THEME_SET, language: "rust" }
+                Text {
+                    Code { source: "use_color_scheme()" }
+                    " is the whole API - the library ships no toggle, because only the app "
+                    "knows where that control belongs. "
+                    Code { source: "setting()" }
+                    " is what the app asked for and "
+                    Code { source: "resolved()" }
+                    " which scheme is on screen; "
+                    Code { source: "set(ColorSchemeSetting::System)" }
+                    " hands the choice back to the platform. On the web the choice is kept "
+                    "in "
+                    Code { source: "localStorage" }
+                    ", and an app that wants no flash on load pastes "
+                    Code { source: "COLOR_SCHEME_RESTORE_SCRIPT" }
+                    " into its own "
+                    Code { source: "index.html" }
+                    " - the wasm bundle has not run when the first frame is painted."
+                }
+                CodeBlock { source: SCHEME_TOGGLE, language: "rust" }
+                Text {
+                    "A dark theme is a theme whose "
+                    Code { source: "surface" }
+                    " is dark: the palette bases do not have to move, because every role is "
+                    "derived against the surface and every ramp is mixed between "
+                    Code { source: "ink" }
+                    " and "
+                    Code { source: "surface" }
+                    ". What has to be written down is anything spelled as a literal CSS "
+                    "colour - "
+                    Code { source: "Theme::DARK" }
+                    " restates five "
+                    Code { source: "*Defaults" }
+                    " for exactly that."
+                }
             }
 
             DocSection {

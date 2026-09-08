@@ -240,3 +240,37 @@ pub fn SearchIcon() -> Element {
         }
     }
 }
+
+/// Shown while the dark theme is on, because the button offers the *other*
+/// scheme: a sun means "switch to light".
+#[component]
+pub fn SunIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            circle { cx: "12", cy: "12", r: "4" }
+            path { d: "M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" }
+        }
+    }
+}
+
+/// Shown while the light theme is on - the button offers the dark one.
+#[component]
+pub fn MoonIcon() -> Element {
+    rsx! {
+        svg {
+            view_box: "0 0 24 24",
+            fill: "none",
+            stroke: "currentColor",
+            stroke_width: "2",
+            stroke_linecap: "round",
+            stroke_linejoin: "round",
+            path { d: "M20 14.5A8.5 8.5 0 1 1 9.5 4a6.6 6.6 0 0 0 10.5 10.5z" }
+        }
+    }
+}

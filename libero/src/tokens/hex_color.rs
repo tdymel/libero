@@ -7,51 +7,24 @@ use super::{ColorShade, ShadeRamp};
 /// know how big the text on it will be.
 pub(crate) const TEXT_CONTRAST: f32 = 4.5;
 
-/// Which way [`HexColor::first_shade_from`] walks a ramp looking for the first
-/// step that reads. A ramp only ever gains contrast in one direction, and
-/// which one depends on the ramp and on the surface it is measured against
-/// (todo 69).
+/// How [`HexColor::first_shade_from`] walks a ramp looking for the first step
+/// that reads: **towards S9, always**.
 ///
-/// Named by the step index rather than by lightness on purpose: a neutral
-/// ramp mixes towards the theme's own ends, so `TowardS9` is darker on a
-/// light theme and *lighter* on a dark one - it is always the end furthest
-/// from the page, which is the only thing the walk cares about.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum ShadeWalk {
-    TowardS9,
-    TowardS1,
-}
+/// Every ramp is mixed between the theme's own ends, so S9 is the step
+/// furthest from the page in either scheme - darker on a light theme, lighter
+/// on a dark one - and that is the only direction a ramp gains contrast in.
+/// It is a type rather than a bare call to `darker()` because the *end* of
+/// the walk is part of the rule: a ramp that never passes stops at S9 and
+/// returns the best it had (todo 69).
+struct ShadeWalk;
 
 impl ShadeWalk {
-    /// The direction a `ramp` gains contrast in, on `surface`.
-    ///
-    /// A neutral ramp is mixed between the theme's own ends, so its S9 is
-    /// always the far end of the page whichever scheme it is - the walk is
-    /// the same in both. A chromatic ramp mixes towards absolute white and
-    /// black, so it gains contrast as it darkens on a light surface and as it
-    /// lightens on a dark one. `contrast()` is the same brightness split the
-    /// rest of the role system sorts by, so the two never disagree about
-    /// which end a surface is at.
-    fn away_from(ramp: ShadeRamp, surface: HexColor) -> Self {
-        match ramp {
-            ShadeRamp::Neutral => Self::TowardS9,
-            ShadeRamp::Chromatic if surface.contrast().rgb() == 0x00_00_00 => Self::TowardS9,
-            ShadeRamp::Chromatic => Self::TowardS1,
-        }
+    const fn step(shade: ColorShade) -> ColorShade {
+        shade.darker()
     }
 
-    const fn step(self, shade: ColorShade) -> ColorShade {
-        match self {
-            Self::TowardS9 => shade.darker(),
-            Self::TowardS1 => shade.lighter(),
-        }
-    }
-
-    const fn end(self) -> ColorShade {
-        match self {
-            Self::TowardS9 => ColorShade::S9,
-            Self::TowardS1 => ColorShade::S1,
-        }
+    const fn end() -> ColorShade {
+        ColorShade::S9
     }
 }
 
@@ -87,8 +60,10 @@ impl Ends {
         wants_dark == ink_is_dark
     }
 
-    /// Absolute white and black - what a chromatic ramp always mixes towards,
-    /// and what the light theme's own ends happen to be.
+    /// The light theme's own ends. Nothing in the library mixes against
+    /// absolute white and black any more - every ramp uses the theme's ends -
+    /// so this is the tests' stand-in for "the default theme".
+    #[cfg(test)]
     pub(crate) const ABSOLUTE: Ends = Ends {
         surface: HexColor::new(0xFF_FF_FF),
         ink: HexColor::new(0x00_00_00),
@@ -219,15 +194,10 @@ impl HexColor {
             },
         };
 
-        let (near_page, near_ink) = match ramp {
-            ShadeRamp::Chromatic => (Ends::ABSOLUTE.surface, Ends::ABSOLUTE.ink),
-            ShadeRamp::Neutral => (ends.surface, ends.ink),
-        };
-
         if percent >= 0 {
-            self.mix(near_page, percent as u8)
+            self.mix(ends.surface, percent as u8)
         } else {
-            self.mix(near_ink, (-percent) as u8)
+            self.mix(ends.ink, (-percent) as u8)
         }
     }
 
@@ -317,7 +287,7 @@ impl HexColor {
     ///
     /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
     pub(crate) fn text_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
-        self.first_shade_from(shade, ShadeWalk::away_from(ramp, ends.surface), |step| {
+        self.first_shade_from(shade, |step| {
             self.shade(step, ramp, ends).contrast_ratio(ends.surface) >= TEXT_CONTRAST
         })
     }
@@ -340,7 +310,7 @@ impl HexColor {
     /// The foreground measured is the one the theme paints - `ends.ink` or
     /// `ends.surface` - not the pure black or white that picked the side.
     pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
-        self.first_shade_from(shade, ShadeWalk::away_from(ramp, ends.surface), |step| {
+        self.first_shade_from(shade, |step| {
             let fill = self.shade(step, ramp, ends);
             fill.contrast_ratio(ends.foreground(fill.contrast())) >= TEXT_CONTRAST
         })
@@ -349,15 +319,14 @@ impl HexColor {
     fn first_shade_from(
         self,
         shade: ColorShade,
-        walk: ShadeWalk,
         passes: impl Fn(ColorShade) -> bool,
     ) -> ColorShade {
         let mut step = shade;
         loop {
-            if passes(step) || step == walk.end() {
+            if passes(step) || step == ShadeWalk::end() {
                 return step;
             }
-            step = walk.step(step);
+            step = ShadeWalk::step(step);
         }
     }
 

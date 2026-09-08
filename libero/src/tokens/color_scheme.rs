@@ -3,6 +3,31 @@
 /// contract, not an implementation detail: an app may write it itself.
 pub const COLOR_SCHEME_STORAGE_KEY: &str = "lsx-color-scheme";
 
+/// Restores a stored scheme onto the document root **before first paint**.
+///
+/// It exists because Rust cannot do this job: the wasm bundle has not run
+/// when the first frame is painted, so a Rust-side write is one flash of the
+/// wrong scheme too late. `LiberoProvider` does not emit it - a `<script>` a
+/// renderer inserts into the DOM never executes, and it has to be in the
+/// served `<head>` to beat the paint anyway. An app that wants no flash
+/// pastes it into its own `index.html`:
+///
+/// ```html
+/// <script>try{var s=localStorage.getItem('lsx-color-scheme');
+/// if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}</script>
+/// ```
+///
+/// Nothing else belongs in it. It writes one attribute, it swallows its own
+/// errors - `localStorage` throws rather than returning nothing in a private
+/// window with site data blocked - and it leaves the root untouched for the
+/// system case, where the sheet's own media block is already right.
+///
+/// **It is inline, so a strict CSP needs its hash:**
+/// `sha256-i2dSUtjYkvH3Km+1WnMbJX1ZfgYnbdyuKeoc3clqFQ0=`. The test below
+/// pins the script, so the hash cannot silently stop matching.
+pub const COLOR_SCHEME_RESTORE_SCRIPT: &str = "try{var s=localStorage.getItem('lsx-color-scheme');\
+if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}";
+
 /// Which end of the greyscale a page is drawn at.
 ///
 /// The resolved answer, never "whatever the system says": that is a
@@ -109,6 +134,27 @@ mod tests {
         assert_eq!(
             ColorSchemeSetting::System.resolve(ColorScheme::Dark),
             ColorScheme::Dark
+        );
+    }
+
+    /// Nothing makes the script follow the three names it depends on - it is
+    /// a literal, because `concat!` takes literals only. This does. It pins
+    /// the script itself too, because a strict CSP allows it by hash: an edit
+    /// here is an edit to a number published in the docs.
+    #[test]
+    fn the_restore_script_matches_the_names_it_depends_on() {
+        assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(COLOR_SCHEME_STORAGE_KEY));
+        assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(crate::theme::THEME_ATTRIBUTE));
+        assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::Light.as_str()));
+        assert!(COLOR_SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::Dark.as_str()));
+        // The system case leaves the root alone, so the sheet's own media
+        // block answers - naming it here would be a bug, not an omission.
+        assert!(!COLOR_SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::System.as_str()));
+
+        assert_eq!(
+            COLOR_SCHEME_RESTORE_SCRIPT,
+            "try{var s=localStorage.getItem('lsx-color-scheme');\
+if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}"
         );
     }
 

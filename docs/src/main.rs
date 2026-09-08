@@ -11,13 +11,13 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        Burger, Button, Container, Flex, Header, Image, Kbd, Notifications, ScrollArea,
+        ActionIcon, Burger, Button, Container, Flex, Header, Image, Kbd, Notifications, ScrollArea,
         SpotlightOptions, Title, spotlight_filter, use_spotlight,
     },
-    hooks::use_element,
+    hooks::{use_color_scheme, use_element},
     platform::ElementApi,
     sx::sx,
-    theme::{HEADER_HEIGHT, PAPER_BACKGROUND, Size},
+    theme::{ColorScheme, HEADER_HEIGHT, PAPER_BACKGROUND, Size},
 };
 
 mod components;
@@ -27,7 +27,7 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::SearchIcon;
+use icons::{MoonIcon, SearchIcon, SunIcon};
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
@@ -271,6 +271,42 @@ fn App() -> Element {
     }
 }
 
+/// The shell's scheme switch. It belongs in the header rather than on a page:
+/// its job is to let a reviewer check any component in both schemes, from
+/// wherever they are.
+///
+/// The library ships no toggle of its own - `use_color_scheme()` is the whole
+/// API, and this is what an app builds on it.
+#[component]
+fn ColorSchemeToggle() -> Element {
+    let scheme = use_color_scheme();
+    let dark = scheme.resolved() == ColorScheme::Dark;
+
+    rsx! {
+        ActionIcon {
+            // The label names what the press *does*, not what is on screen:
+            // a screen reader user cannot see the icon it swaps.
+            aria_label: match dark {
+                true => "Switch to the light theme",
+                false => "Switch to the dark theme",
+            },
+            onclick: move |_| scheme.toggle(),
+            // Same reasoning as the burger above: no `variant`/`color` prop,
+            // so this `sx` is the only thing that styles it, and a
+            // translucent white hover is what a light control on the solid
+            // primary banner wants.
+            sx: sx()
+                .color("surface")
+                .hover(sx().background("rgba(255, 255, 255, 0.15)")),
+            if dark {
+                SunIcon {}
+            } else {
+                MoonIcon {}
+            }
+        }
+    }
+}
+
 #[component]
 fn AppShell() -> Element {
     let mut open = use_signal(|| false);
@@ -380,6 +416,7 @@ fn AppShell() -> Element {
                         "Ctrl K"
                     }
                 }
+                ColorSchemeToggle {}
             }
             // This row itself never scrolls - the nav scrolls its own
             // content internally (`Sidebar` does), and only the rest of the

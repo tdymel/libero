@@ -182,23 +182,6 @@ impl LiberoContext {
     }
 }
 
-/// Restores a stored scheme onto the document root **before first paint**,
-/// which is the whole reason it is inline rather than Rust: the wasm bundle
-/// has not run yet when the first frame is painted, so a Rust-side write is
-/// one flash of the wrong scheme too late.
-///
-/// Nothing else belongs in here. It writes one attribute, it swallows its own
-/// errors - `localStorage` throws rather than returning nothing in a private
-/// window with site data blocked - and it leaves the root untouched for the
-/// system case, where the sheet's own media block is already right.
-///
-/// **It is inline, so a strict CSP needs its hash** (or a nonce, which dioxus
-/// gives us no way to thread through). The hash is in the theming docs, and
-/// `the_restore_script_matches_the_names_it_depends_on` pins the script so
-/// the hash cannot silently stop matching.
-const SCHEME_RESTORE_SCRIPT: &str = "try{var s=localStorage.getItem('lsx-color-scheme');\
-if(s==='light'||s==='dark')document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}";
-
 /// The theme's own `<style>`. Its own component so that a rebuilt sheet - a
 /// named theme beyond the pair, or a platform that cannot carry the attribute
 /// - re-renders this leaf instead of everything under `{children}`.
@@ -362,43 +345,10 @@ pub fn LiberoProvider(
         style {
             dangerous_inner_html: "{context.layer_order_css}"
         }
-        script {
-            dangerous_inner_html: "{SCHEME_RESTORE_SCRIPT}"
-        }
         ThemeStyle {}
         {children}
         PortalOutlet {}
         StyleOutlet {}
         backend::Outlet {}
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::tokens::COLOR_SCHEME_STORAGE_KEY;
-
-    /// The script is a literal - `concat!` takes literals only, and a
-    /// `format!` would cost an allocation on every render of every app - so
-    /// nothing makes it follow the three names it depends on. This does.
-    ///
-    /// It also pins the script itself, because a strict CSP has to allow it
-    /// by hash: an edit here is an edit to a number published in the docs.
-    #[test]
-    fn the_restore_script_matches_the_names_it_depends_on() {
-        assert!(SCHEME_RESTORE_SCRIPT.contains(COLOR_SCHEME_STORAGE_KEY));
-        assert!(SCHEME_RESTORE_SCRIPT.contains(THEME_ATTRIBUTE));
-        assert!(SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::Light.as_str()));
-        assert!(SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::Dark.as_str()));
-        // The system case leaves the root alone, so the sheet's own media
-        // block answers - naming it here would be a bug, not an omission.
-        assert!(!SCHEME_RESTORE_SCRIPT.contains(ColorSchemeSetting::System.as_str()));
-
-        assert_eq!(
-            SCHEME_RESTORE_SCRIPT,
-            "try{var s=localStorage.getItem('lsx-color-scheme');\
-             if(s==='light'||s==='dark')\
-             document.documentElement.setAttribute('data-lsx-theme',s)}catch(e){}"
-        );
     }
 }
