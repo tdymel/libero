@@ -54,6 +54,22 @@ pub(super) fn snap(raw: f64, min: f64, max: f64, step: f64) -> f64 {
     round_to(value.clamp(min, max), decimals(step).max(decimals(min)))
 }
 
+/// `value` moved onto the `step` grid in one direction, `down` or up. A
+/// `min_range` that is no multiple of `step` clamps a thumb between two grid points.
+fn snap_towards(value: f64, min: f64, step: f64, down: bool) -> f64 {
+    if step <= 0.0 {
+        return value;
+    }
+    let steps = (value - min) / step;
+    // A value already on the grid stays put despite float drift.
+    let steps = match steps.round() {
+        near if (steps - near).abs() < 1e-9 => near,
+        _ if down => steps.floor(),
+        _ => steps.ceil(),
+    };
+    round_to(min + step * steps, decimals(step).max(decimals(min)))
+}
+
 /// `value`'s position in `min..=max` as a 0-1 fraction. A zero-width range
 /// has no position, so it reads as empty.
 pub(super) fn fraction(value: f64, min: f64, max: f64) -> f64 {
@@ -128,14 +144,15 @@ impl SliderCoreValue {
             Self::Single(_) => Self::Single(value),
             // The outer clamp wins over `min_range`: a gap wider than the
             // range itself has no solution, and leaving the track is worse.
+            // The gap clamp snaps back towards the thumb's origin, to stay on the grid.
             Self::Range { from, to } => match index {
                 0 => Self::Range {
-                    from: value.min(to - min_range).max(min),
+                    from: snap_towards(value.min(to - min_range), min, step, true).max(min),
                     to,
                 },
                 _ => Self::Range {
                     from,
-                    to: value.max(from + min_range).min(max),
+                    to: snap_towards(value.max(from + min_range), min, step, false).min(max),
                 },
             },
         }
@@ -157,11 +174,23 @@ impl SliderCoreValue {
 
     /// `aria-valuemin`/`aria-valuemax` for one thumb, which is how far it can
     /// actually travel rather than how wide the track is.
-    pub(super) fn bounds(self, index: usize, min: f64, max: f64, min_range: f64) -> (f64, f64) {
+    pub(super) fn bounds(
+        self,
+        index: usize,
+        min: f64,
+        max: f64,
+        step: f64,
+        min_range: f64,
+    ) -> (f64, f64) {
         match (self, index) {
             (Self::Single(_), _) => (min, max),
-            (Self::Range { to, .. }, 0) => (min, (to - min_range).max(min)),
-            (Self::Range { from, .. }, _) => ((from + min_range).min(max), max),
+            (Self::Range { to, .. }, 0) => {
+                (min, snap_towards(to - min_range, min, step, true).max(min))
+            }
+            (Self::Range { from, .. }, _) => (
+                snap_towards(from + min_range, min, step, false).min(max),
+                max,
+            ),
         }
     }
 }
@@ -335,12 +364,55 @@ mod tests {
             from: 20.0,
             to: 80.0,
         };
-        assert_eq!(value.bounds(0, 0.0, 100.0, 0.0), (0.0, 80.0));
-        assert_eq!(value.bounds(1, 0.0, 100.0, 0.0), (20.0, 100.0));
-        assert_eq!(value.bounds(0, 0.0, 100.0, 10.0), (0.0, 70.0));
+        assert_eq!(value.bounds(0, 0.0, 100.0, 1.0, 0.0), (0.0, 80.0));
+        assert_eq!(value.bounds(1, 0.0, 100.0, 1.0, 0.0), (20.0, 100.0));
+        assert_eq!(value.bounds(0, 0.0, 100.0, 1.0, 10.0), (0.0, 70.0));
         assert_eq!(
-            SliderCoreValue::Single(1.0).bounds(0, 0.0, 10.0, 0.0),
+            SliderCoreValue::Single(1.0).bounds(0, 0.0, 10.0, 1.0, 0.0),
             (0.0, 10.0)
+        );
+    }
+
+    /// `step: 10, min_range: 3` clamped `from` to 47, off the grid the docs promise.
+    #[test]
+    fn an_off_grid_min_range_snaps_back_towards_the_thumbs_origin() {
+        let value = SliderCoreValue::Range {
+            from: 20.0,
+            to: 50.0,
+        };
+        assert_eq!(
+            value.moved(0, 45.0, 0.0, 100.0, 10.0, 3.0),
+            SliderCoreValue::Range {
+                from: 40.0,
+                to: 50.0
+            }
+        );
+        assert_eq!(
+            value.moved(1, 25.0, 0.0, 100.0, 10.0, 3.0),
+            SliderCoreValue::Range {
+                from: 20.0,
+                to: 30.0
+            }
+        );
+        // A move that stays clear of the gap is untouched.
+        assert_eq!(
+            value.moved(0, 30.0, 0.0, 100.0, 10.0, 3.0),
+            SliderCoreValue::Range {
+                from: 30.0,
+                to: 50.0
+            }
+        );
+        assert_eq!(value.bounds(0, 0.0, 100.0, 10.0, 3.0), (0.0, 40.0));
+        assert_eq!(value.bounds(1, 0.0, 100.0, 10.0, 3.0), (30.0, 100.0));
+    }
+
+    /// The grid runs from `min`, and keeps its precision after the second snap.
+    #[test]
+    fn the_second_snap_keeps_the_grid_from_min() {
+        let value = SliderCoreValue::Range { from: 0.5, to: 0.9 };
+        assert_eq!(
+            value.moved(0, 0.9, 0.1, 1.0, 0.2, 0.05),
+            SliderCoreValue::Range { from: 0.7, to: 0.9 }
         );
     }
 

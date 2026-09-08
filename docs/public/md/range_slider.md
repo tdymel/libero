@@ -52,7 +52,8 @@ short of the other rather than pushing it along. It is written in the same unit
 as `step` - a distance continuously, a count of options discretely - and
 defaults to zero, which lets the thumbs meet. The track's own `min` and `max`
 win over the gap, so a range too narrow to hold one never puts a thumb off the
-track.
+track. Both thumbs stay on the step grid, so a gap that is no multiple of
+`step` rounds up to one: `step: 10, min_range: 3` keeps them a full step apart.
 
 ```rust,ignore
 RangeSlider {

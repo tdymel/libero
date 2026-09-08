@@ -536,7 +536,7 @@ pub(in crate::components::form) fn SliderCore(props: SliderCoreProps) -> Element
     let aria_labels = [props.aria_label.clone(), props.aria_label_to.clone()];
     let range = matches!(value, SliderCoreValue::Range { .. });
     let thumbs = value.thumbs().enumerate().map(|(index, thumb_value)| {
-        let (thumb_min, thumb_max) = value.bounds(index, min, max, min_range);
+        let (thumb_min, thumb_max) = value.bounds(index, min, max, step, min_range);
         // Only a custom label is worth an `aria-valuetext` - the bare value
         // is already in `aria-valuenow`.
         let text = props.label.map(|label| label.call(thumb_value));

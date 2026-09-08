@@ -216,7 +216,6 @@ smallest clamped to the same half-height curve.
 | `--lsx-slider-color` | Accent color of the track fill and thumb. |
 | `--lsx-slider-filled` | Filled fraction of the track, `0` to `1`. |
 | `--lsx-slider-mark-at` | A mark's position along the track, `0` to `1`. |
-| `--lsx-slider-mark-fill` | A mark's tick color; defaults to `muted.4` when it is past the value. |
 
 ## Data attributes
 
@@ -231,3 +230,6 @@ below, space separated.
 | `disabled` | `disabled` is set. |
 | `readonly` | `readonly` is set: the thumbs keep their tab stop, and neither a key nor a drag moves them. |
 | `marks-labeled` | At least one mark carries a label, so the captions need room. |
+
+A mark's tick is `muted.4`. A mark on the filled bar carries
+`data-state="filled"` and turns `surface`, so it stays visible on the bar.
