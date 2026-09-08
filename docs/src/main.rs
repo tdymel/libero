@@ -445,6 +445,11 @@ fn AppShell() -> Element {
                         .color("muted.7")
                         // A placeholder's weight, not a button label's.
                         .font_weight("400")
+                        // A field's border, from the same step `use_field_frame`
+                        // draws one in: `standard` paints its own border
+                        // transparent, and on a palette whose paper is close to
+                        // its page the field had no edge at all.
+                        .border_color("muted.5")
                         .gap("sm")
                         .hover(sx().background("muted.1"))
                         .breakpoint(
