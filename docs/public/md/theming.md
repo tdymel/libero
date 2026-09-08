@@ -139,6 +139,36 @@ right on the first paint, right under SSR:
 A theme added with `named` is not in that sheet. Selecting one rebuilds it,
 which is what keeps the sheet from growing with every theme an app owns.
 
+### The ones we ship
+
+`ThemeSet::CATALOGUE` holds every set the library ships: our own `Libero`,
+plus `Ayu`, `Catppuccin`, `Everforest`, `Gruvbox`, `One` and `Rosé Pine`,
+each a real light/dark pair from its upstream palette. The picker in this
+site's header is built from it, and so is anything else that lets a reader
+choose:
+
+```rust,ignore
+let themes = use_theme_set();
+
+for set in ThemeSet::CATALOGUE {
+    rsx! {
+        Button { onclick: move |_| themes.set((*set).clone()), "{set.name()}" }
+    }
+}
+```
+
+`use_theme_set()` gives `get()`, `name()` and `set()`. Swapping a set
+rebuilds the stylesheet - the pair in the sheet is *that* set's pair - and
+keeps the colour-scheme setting, so a reader who pinned dark stays in dark.
+
+A ported palette is ten hex values: upstream names colours by what they are
+for, so `bg`, `text`, `text-muted`, `accent`, `highlight`, `accent-soft`,
+`progress`, `danger` and `raised` land on `surface`, `ink`/`neutral`,
+`muted`, `primary`, `secondary`, `info`, `success`, `error` and
+`paper.background`. Everything else derives. **`warning` is the exception** -
+no palette carries one - so every ported theme keeps Libero's amber, and on
+a cream page that is the one role which does not reach 4.5:1.
+
 ### The switch
 
 `use_color_scheme()` is the whole API - the library ships no toggle, because

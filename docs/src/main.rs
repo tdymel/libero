@@ -11,13 +11,14 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Burger, Button, Container, Flex, Header, Image, Kbd, Notifications, ScrollArea,
-        SpotlightOptions, Title, spotlight_filter, use_spotlight,
+        ActionIcon, Burger, Button, Container, Flex, Header, Image, Kbd, Menu, MenuItem,
+        Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_menu,
+        use_spotlight,
     },
-    hooks::{use_color_scheme, use_element},
+    hooks::{use_color_scheme, use_element, use_theme_set},
     platform::ElementApi,
     sx::sx,
-    theme::{ColorScheme, HEADER_HEIGHT, PAPER_BACKGROUND, Size},
+    theme::{ColorScheme, HEADER_HEIGHT, PAPER_BACKGROUND, Size, ThemeSet},
 };
 
 mod components;
@@ -27,7 +28,7 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::{MoonIcon, SearchIcon, SunIcon};
+use icons::{CheckmarkIcon, MoonIcon, PaletteIcon, SearchIcon, SunIcon};
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
@@ -271,6 +272,64 @@ fn App() -> Element {
     }
 }
 
+/// The shell's theme-set picker: every set in `ThemeSet::CATALOGUE`, with
+/// the active one marked.
+///
+/// In the header for the same reason the scheme toggle is - a reviewer
+/// checking a component against a palette should not have to go somewhere
+/// else to change it. Swapping a set rebuilds the stylesheet, which is the
+/// accepted cost of not emitting every palette an app owns.
+#[component]
+fn ThemeSetPicker() -> Element {
+    let themes = use_theme_set();
+    let menu = use_menu();
+    let active = themes.name();
+
+    let items = ThemeSet::CATALOGUE
+        .iter()
+        .map(|set| {
+            let themes = themes.clone();
+            MenuItem::new(set.name())
+                .trailing(match set.name() == active {
+                    // The mark is the only thing saying which set is on, so
+                    // it is sized rather than left to the glyph's own box.
+                    true => rsx! {
+                        span {
+                            display: "inline-flex",
+                            width: "14px",
+                            height: "14px",
+                            CheckmarkIcon {}
+                        }
+                    },
+                    false => rsx! {},
+                })
+                .onselect(move |_| themes.set((*set).clone()))
+                .into()
+        })
+        .collect::<Vec<_>>();
+
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            align: libero::hooks::Align::End,
+            ActionIcon {
+                variant: "outlined",
+                color: "muted",
+                size: "lg",
+                aria_label: "Theme: {active}",
+                attributes: menu.a11y_attributes(),
+                span {
+                    display: "inline-flex",
+                    width: "18px",
+                    height: "18px",
+                    PaletteIcon {}
+                }
+            }
+        }
+    }
+}
+
 /// The shell's scheme switch. It belongs in the header rather than on a page:
 /// its job is to let a reviewer check any component in both schemes, from
 /// wherever they are.
@@ -291,17 +350,25 @@ fn ColorSchemeToggle() -> Element {
                 false => "Switch to the dark theme",
             },
             onclick: move |_| scheme.toggle(),
-            // Same reasoning as the burger above: no `variant`/`color` prop,
-            // so this `sx` is the only thing that styles it, and a
-            // translucent white hover is what a light control on the solid
-            // primary banner wants.
-            sx: sx()
-                .color("surface")
-                .hover(sx().background("rgba(255, 255, 255, 0.15)")),
-            if dark {
-                SunIcon {}
-            } else {
-                MoonIcon {}
+            // `outlined`, so it reads as a control with a box of its own
+            // rather than a bare glyph floating in the bar - Mantine's
+            // `default` action icon. `muted` keeps the border quiet: the
+            // primary accent belongs to the page, not to the chrome.
+            variant: "outlined",
+            color: "muted",
+            size: "lg",
+            // Sized here, not in the icon: `icons.rs` ships glyphs without a
+            // box of their own, so an unsized one fills whatever it is in -
+            // a 22px moon inside a 24px button.
+            span {
+                display: "inline-flex",
+                width: "18px",
+                height: "18px",
+                if dark {
+                    SunIcon {}
+                } else {
+                    MoonIcon {}
+                }
             }
         }
     }
@@ -338,8 +405,16 @@ fn AppShell() -> Element {
                 }
             },
             Header {
-                color: "primary",
-                sx: sx().gap("md"),
+                // No `color`: the header is the page's own surface, the way
+                // Mantine's is, so it reads as chrome rather than as a
+                // banner and follows the colour scheme without a second
+                // palette. Translucent plus a blur, so content scrolling
+                // under it is suggested rather than hidden - the bar is
+                // sticky, and an opaque one reads as a lid.
+                sx: sx()
+                    .gap("md")
+                    .background("color-mix(in srgb, var(--lsx-paper-background) 80%, transparent)")
+                    .backdrop_filter("blur(12px)"),
                 // Where focus goes when a page link closes the drawer: the
                 // link hides with it, and focus would fall to `<body>`.
                 // `Burger` takes no `onmounted`, so a `display: contents`
@@ -352,21 +427,11 @@ fn AppShell() -> Element {
                         // No `variant`/`color` prop - the underlying ActionIcon
                         // then contributes no background/color/hover of its own
                         // (same reasoning as `Code`'s copy button), so this `sx`
-                        // is the only thing controlling its look. Needed here
-                        // specifically: the shade-based hover `variant`/`color`
-                        // would compute (tinting `color` a shade lighter) is a
-                        // no-op on white - there's no lighter shade of white, so
-                        // it rendered as a solid white box instead of a subtle
-                        // hover. A translucent white overlay is the actual right
-                        // look for a light control against Header's solid
-                        // primary banner.
-                        //
-                        // `color` stays an `sx` rather than the `color` prop: the
-                        // bars fall back to `currentColor`, so one declaration
-                        // still drives them.
+                        // is the only thing controlling its look. The bars fall
+                        // back to `currentColor`, so inheriting the header's
+                        // text colour is one declaration fewer.
                         sx: sx()
-                            .color("surface")
-                            .hover(sx().background("rgba(255, 255, 255, 0.15)"))
+                            .hover(sx().background("muted.1"))
                             // Only relevant below `Sm` - the burger is the only
                             // way to set `open`, so hiding it here means the
                             // mobile drawer can never actually be open at
@@ -385,19 +450,54 @@ fn AppShell() -> Element {
                 // dialog, so it stays a button. The name is fixed, so the
                 // hidden hint on a phone does not change it; the shortcut
                 // rides `aria-keyshortcuts` instead of the name.
+                // On a phone the search is an icon button and nothing else -
+                // the room belongs to the burger and the title, and that is
+                // what Mantine's own mobile header does. From `Sm` up it
+                // grows into the field-shaped button, label and shortcut
+                // included. Two controls rather than one arm of it, because
+                // the two want different shapes; only one is ever rendered.
+                ActionIcon {
+                    aria_label: "Search",
+                    "aria-keyshortcuts": "Control+K Meta+K",
+                    onclick: move |_| search.open(),
+                    // Same box as the two beside it: three icon buttons in a
+                    // row, one of them borderless, reads as an oversight.
+                    variant: "outlined",
+                    color: "muted",
+                    size: "lg",
+                    sx: sx()
+                        .margin_left("auto")
+                        .breakpoint(Size::Sm, sx().display("none")),
+                    span {
+                        display: "inline-flex",
+                        width: "18px",
+                        height: "18px",
+                        SearchIcon {}
+                    }
+                }
+                // Looks like a search field, but it opens the Spotlight
+                // dialog, so it stays a button. The name is fixed, so the
+                // shortcut rides `aria-keyshortcuts` instead of the name.
                 Button {
                     variant: "standard",
                     aria_label: "Search",
                     "aria-keyshortcuts": "Control+K Meta+K",
                     sx: sx()
-                        .margin_left("auto")
-                        .background(PAPER_BACKGROUND.value())
+                        .display("none")
                         .color("muted.7")
                         // A placeholder's weight, not a button label's.
                         .font_weight("400")
                         .gap("sm")
                         .hover(sx().background("muted.1"))
-                        .breakpoint(Size::Sm, sx().width("240px").justify_content("flex-start")),
+                        .breakpoint(
+                            Size::Sm,
+                            sx()
+                                .display("inline-flex")
+                                .margin_left("auto")
+                                .width("240px")
+                                .justify_content("flex-start")
+                                .background(PAPER_BACKGROUND.value()),
+                        ),
                     onclick: move |_| search.open(),
                     span {
                         display: "inline-flex",
@@ -407,15 +507,11 @@ fn AppShell() -> Element {
                     }
                     "Search"
                     Kbd {
-                        // A phone has no Ctrl K to press, and the room is the
-                        // burger's.
-                        sx: sx()
-                            .display("none")
-                            .margin_left("auto")
-                            .breakpoint(Size::Sm, sx().display("revert-layer")),
+                        sx: sx().margin_left("auto"),
                         "Ctrl K"
                     }
                 }
+                ThemeSetPicker {}
                 ColorSchemeToggle {}
             }
             // This row itself never scrolls - the nav scrolls its own

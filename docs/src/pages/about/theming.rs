@@ -290,6 +290,20 @@ pub fn ThemingPage() -> Element {
                 }
                 CodeBlock { source: THEME_SET, language: "rust" }
                 Text {
+                    Code { source: "ThemeSet::CATALOGUE" }
+                    " holds every set the library ships: our own "
+                    Code { source: "Libero" }
+                    ", plus Ayu, Catppuccin, Everforest, Gruvbox, One and Rosé Pine, each a "
+                    "real light/dark pair from its upstream palette. The palette button in "
+                    "this site's header is built from it, through "
+                    Code { source: "use_theme_set()" }
+                    " - try it on any page. A ported palette is ten hex values and nothing "
+                    "else: every ramp, role and contrast twin derives from them. "
+                    Code { source: "warning" }
+                    " is the one role no palette in the pack carries, so a ported theme "
+                    "keeps Libero's amber."
+                }
+                Text {
                     Code { source: "use_color_scheme()" }
                     " is the whole API - the library ships no toggle, because only the app "
                     "knows where that control belongs. "
