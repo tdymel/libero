@@ -75,6 +75,10 @@ pub struct Suite {
     targets: Vec<Target>,
     waivers: &'static [contrast::Waiver],
     covers: Vec<&'static str>,
+    /// `Some(why)` when this unit has opted out of the default coverage run
+    /// over `root`. The reason is required, because an unexplained exclusion is
+    /// how a coverage hole comes back.
+    coverage_waived: Option<&'static str>,
     snapshot: bool,
     states: Vec<State>,
     viewports: Vec<Viewport>,
@@ -95,6 +99,7 @@ impl Suite {
             targets: Vec::new(),
             waivers: &[],
             covers: Vec::new(),
+            coverage_waived: None,
             snapshot: true,
             states: Vec::new(),
             viewports: Viewport::ALL.to_vec(),
@@ -164,6 +169,40 @@ impl Suite {
     pub fn contrast_covers(mut self, selector: &'static str) -> Self {
         self.covers.push(selector);
         self
+    }
+
+    /// Opt this unit out of the **default** coverage run over `root`, naming
+    /// why in one line.
+    ///
+    /// Coverage is on by default (todo 378), because the units that most need
+    /// it are the ones that will forget to declare it: a unit whose axe run has
+    /// gone blind is by construction a unit that looks green, so nothing
+    /// prompts anybody to go and add the declaration. An opt-in *applicability*
+    /// check fails towards "this conforms".
+    ///
+    /// The reason is a required argument rather than a comment, so an exclusion
+    /// cannot be added without one. It belongs in the unit file, where the next
+    /// person reads it. A unit that opts out still gets `assert_clean`, and any
+    /// explicit `contrast_covers` it declares still runs - the opt-out removes
+    /// only the blanket run over the whole fixture.
+    pub fn no_contrast_coverage(mut self, why: &'static str) -> Self {
+        assert!(
+            !why.trim().is_empty(),
+            "{}: an opt-out from the default contrast coverage must say why",
+            self.name
+        );
+        self.coverage_waived = Some(why);
+        self
+    }
+
+    /// Every selector the coverage pass runs over: `root` unless this unit has
+    /// waived it, plus whatever it declared explicitly.
+    fn coverage_selectors(&self) -> Vec<&'static str> {
+        let default = self.coverage_waived.is_none().then_some(self.root);
+        default
+            .into_iter()
+            .chain(self.covers.iter().copied())
+            .collect()
     }
 
     /// Snapshot the component in another state, and run axe there too.
@@ -240,8 +279,9 @@ impl Suite {
 
         // Contrast and the ARIA-validity rules, at rest.
         contrast::assert_clean_except(page, self.root, self.waivers).await?;
-        let mut covered: Vec<usize> = vec![0; self.covers.len()];
-        self.assert_coverage(page, &mut covered).await?;
+        let covers = self.coverage_selectors();
+        let mut covered: Vec<usize> = vec![0; covers.len()];
+        self.assert_coverage(page, &covers, &mut covered).await?;
 
         // A ring on every control that can be tabbed to, and enough contrast on
         // it to be seen.
@@ -266,7 +306,7 @@ impl Suite {
         for state in &self.states {
             self.reach(page, state).await?;
             contrast::assert_clean_except(page, self.root, self.waivers).await?;
-            self.assert_coverage(page, &mut covered).await?;
+            self.assert_coverage(page, &covers, &mut covered).await?;
             self.measure_targets(page, &mut seen).await?;
             if self.snapshot {
                 self.take_snapshot(fixture, state.name).await?;
@@ -276,7 +316,7 @@ impl Suite {
         // Same rule as the targets below: a coverage selector that found text
         // in no state checked nothing, which is the failure this method exists
         // to make impossible.
-        for (selector, found) in self.covers.iter().zip(&covered) {
+        for (selector, found) in covers.iter().zip(&covered) {
             if *found == 0 {
                 anyhow::bail!(
                     "contrast coverage: {selector} held no on-screen text at rest or in any \
@@ -310,9 +350,10 @@ impl Suite {
     async fn assert_coverage(
         &self,
         page: &chromiumoxide::Page,
+        covers: &[&'static str],
         covered: &mut [usize],
     ) -> anyhow::Result<()> {
-        for (index, selector) in self.covers.iter().enumerate() {
+        for (index, selector) in covers.iter().enumerate() {
             let wanted = contrast::assert_covers(page, self.root, selector).await?;
             covered[index] = covered[index].max(wanted);
         }
