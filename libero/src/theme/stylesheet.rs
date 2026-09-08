@@ -440,10 +440,10 @@ fn foreground_var(foreground: HexColor, ends: Ends) -> String {
 /// its rest state. Snapping collapses `fill-6` and `fill-7` onto the same
 /// colour and the hover disappears.
 ///
-/// - `text-N` walks from `base.shade(text_shade(N))`, the first step that
-///   clears 4.5:1 on `surface`, walking away from it - darker on a paper,
-///   lighter on an inked one.
-/// - `fill-N` walks from `base.shade(fill_shade(N))`, the first step whose
+/// - `text-N` walks from `base.text_base()`, the smallest mix away from
+///   `surface` that clears 4.5:1 on it - darker on a paper, lighter on an
+///   inked one.
+/// - `fill-N` walks from `base.fill_base()`, the smallest mix whose
 ///   auto-contrast foreground clears 4.5:1 on it.
 /// - `contrast-N` is that foreground, computed on `fill-N` - the two are
 ///   always used as a pair.
@@ -458,8 +458,8 @@ fn push_color_declarations(
     ends: Ends,
 ) {
     let ramp = color.shade_ramp();
-    let text_base = base.shade(base.text_shade(ramp, ColorShade::DEFAULT, ends), ramp, ends);
-    let fill_base = base.shade(base.fill_shade(ramp, ColorShade::DEFAULT, ends), ramp, ends);
+    let text_base = base.text_base(ramp, ends);
+    let fill_base = base.fill_base(ramp, ends);
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
@@ -539,18 +539,20 @@ mod tests {
             .to_string()
     }
 
-    /// The numbers the Maintainer approved on 2026-09-19 (todo 239): the
-    /// brand colour stays `blue.6`, text on paper lands on `primary.8` at
-    /// 4.86:1, and the fill lands there too, because white on `blue.6` is
-    /// 3.56:1.
+    /// Todo 239's shape, approved on 2026-09-19: the brand colour stays
+    /// `blue.6`, and text on paper and the fill under a white label both move
+    /// off it, because white on `blue.6` is 3.56:1. Since 2026-09-22 they move
+    /// by the smallest mix that reads - `#1D78C8` at 4.59:1 - rather than a
+    /// whole step to `primary.8` at 4.86:1, so a palette's accent stays as
+    /// close to the colour its author picked as contrast allows.
     #[test]
     fn primary_keeps_its_brand_shade_and_moves_only_in_its_two_roles() {
         let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
         let white = HexColor::new(0xFF_FF_FF);
 
         assert_eq!(root_var(&css, "--lsx-primary-6"), "#228BE6");
-        assert_eq!(root_var(&css, "--lsx-primary-text-6"), "#1C74C1");
-        assert_eq!(root_var(&css, "--lsx-primary-fill-6"), "#1C74C1");
+        assert_eq!(root_var(&css, "--lsx-primary-text-6"), "#1D78C8");
+        assert_eq!(root_var(&css, "--lsx-primary-fill-6"), "#1D78C8");
 
         let text = HexColor::parse(&root_var(&css, "--lsx-primary-text-6")).expect("a hex");
         assert!(
@@ -696,8 +698,11 @@ mod tests {
             .collect()
     }
 
-    /// Todo 240: the one name for quieter text, `grey.7` at 8.12:1, not the
-    /// `grey.6` the library used to set real text in.
+    /// Todo 240: the one name for quieter text, the muted ramp's text role,
+    /// not the `muted.6` the library used to set real text in. It was
+    /// `muted.7` at 8.12:1 while roles moved a whole step; the smallest mix
+    /// that reads is `#70777E` at 4.54:1, which is quieter, as dimmed text
+    /// is meant to be, and still passes.
     #[test]
     fn dimmed_text_is_the_grey_ramps_text_role() {
         let css = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
@@ -707,8 +712,7 @@ mod tests {
             root_var(&css, NamedColorCss::TEXT_DIMMED.name()),
             "var(--lsx-muted-text-6)"
         );
-        assert_eq!(root_var(&css, "--lsx-muted-text-6"), "#4C5055");
-        assert_eq!(root_var(&css, "--lsx-muted-7"), "#4C5055");
+        assert_eq!(root_var(&css, "--lsx-muted-text-6"), "#70777E");
 
         let dimmed = HexColor::parse(&root_var(&css, "--lsx-muted-text-6")).expect("a hex");
         assert!(dimmed.contrast_ratio(white) >= TEXT_CONTRAST);

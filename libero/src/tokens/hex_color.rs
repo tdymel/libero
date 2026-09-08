@@ -7,27 +7,6 @@ use super::{ColorShade, ShadeRamp};
 /// know how big the text on it will be.
 pub(crate) const TEXT_CONTRAST: f32 = 4.5;
 
-/// How [`HexColor::first_shade_from`] walks a ramp looking for the first step
-/// that reads: **towards S9, always**.
-///
-/// Every ramp is mixed between the theme's own ends, so S9 is the step
-/// furthest from the page in either scheme - darker on a light theme, lighter
-/// on a dark one - and that is the only direction a ramp gains contrast in.
-/// It is a type rather than a bare call to `darker()` because the *end* of
-/// the walk is part of the rule: a ramp that never passes stops at S9 and
-/// returns the best it had (todo 69).
-struct ShadeWalk;
-
-impl ShadeWalk {
-    const fn step(shade: ColorShade) -> ColorShade {
-        shade.darker()
-    }
-
-    const fn end() -> ColorShade {
-        ColorShade::S9
-    }
-}
-
 /// The two ends of a theme's page: the `surface` it is painted on and the
 /// `ink` text is set in. Carried together because a neutral ramp is mixed
 /// between them and every role derivation is measured against one of them.
@@ -169,42 +148,9 @@ impl HexColor {
     /// itself black. On a light theme `ends` is white and black, so this is
     /// exactly what it emitted before (todo 69 phase 3).
     pub(crate) const fn shade(self, shade: ColorShade, ramp: ShadeRamp, ends: Ends) -> Self {
-        let percent = match ramp {
-            ShadeRamp::Chromatic => match shade {
-                ColorShade::S1 => 80,
-                ColorShade::S2 => 62,
-                ColorShade::S3 => 41,
-                ColorShade::S4 => 22,
-                ColorShade::S5 => 9,
-                ColorShade::S6 => 0,
-                ColorShade::S7 => -7,
-                ColorShade::S8 => -16,
-                ColorShade::S9 => -25,
-            },
-            ShadeRamp::Neutral => match shade {
-                ColorShade::S1 => 90,
-                ColorShade::S2 => 84,
-                ColorShade::S3 => 75,
-                ColorShade::S4 => 62,
-                ColorShade::S5 => 35,
-                ColorShade::S6 => 0,
-                ColorShade::S7 => -43,
-                ColorShade::S8 => -59,
-                ColorShade::S9 => -75,
-            },
-        };
-
-        // The near end is the page itself, in both ramps: a low step is a
-        // tint of the surface it will be drawn on. The far end differs. A
-        // neutral ramp ends at the theme's own `ink`, because its far steps
-        // *are* text. A chromatic one ends at pure black or pure white,
-        // whichever is opposite the page: its far steps exist to be legible,
-        // and a palette whose ink is only 6:1 on its own page would otherwise
-        // cap every accent's text role below 4.5:1.
-        let far = match ramp {
-            ShadeRamp::Neutral => ends.ink,
-            ShadeRamp::Chromatic => ends.surface.contrast(),
-        };
+        let percent = mix_percent(ramp, shade);
+        // The near end is the page itself; the far end is `far_end`'s.
+        let far = far_end(ramp, ends);
 
         if percent >= 0 {
             self.mix(ends.surface, percent as u8)
@@ -289,57 +235,57 @@ impl HexColor {
         }
     }
 
-    /// The step a *text* use of `shade` resolves to: the first step from it
-    /// **away from `surface`** whose colour passes [`TEXT_CONTRAST`] against
-    /// it. On a light surface the ramp gains contrast as it darkens, on a
-    /// dark one as it lightens, so the walk follows the surface rather than
-    /// always heading for `S9`. The end of that walk when the whole ramp fails,
-    /// because there is nothing further to offer and a wrong-looking colour
-    /// beats no colour.
+    /// The colour a *text* use of this base resolves to: the base itself
+    /// when it passes [`TEXT_CONTRAST`] on the surface, and otherwise the
+    /// **smallest** mix towards the ramp's far end that does - the end
+    /// furthest from the page, so darker on a paper and lighter on an inked
+    /// one. The far end itself when nothing passes, because there is nothing
+    /// further to offer and a wrong-looking colour beats no colour.
+    ///
+    /// The smallest mix, not the next ramp step: a step is up to 9% of a mix
+    /// away from the last, and jumping a whole one moved a palette's accent
+    /// visibly further from the colour its author picked than contrast asked
+    /// for. The ramps derived from this base are still ordinary ramps.
     ///
     /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
-    pub(crate) fn text_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
-        self.first_shade_from(shade, |step| {
-            self.shade(step, ramp, ends).contrast_ratio(ends.surface) >= TEXT_CONTRAST
+    pub(crate) fn text_base(self, ramp: ShadeRamp, ends: Ends) -> Self {
+        self.first_mix(ramp, ends, |text| {
+            text.contrast_ratio(ends.surface) >= TEXT_CONTRAST
         })
     }
 
-    /// The step a *fill* use of `shade` resolves to: the first step from it
-    /// **away from `surface`** on which the foreground
-    /// [`contrast`](Self::contrast) picks passes [`TEXT_CONTRAST`]. Mantine's
-    /// `autoContrast` stops at picking the foreground and leaves a fill like
-    /// `blue.6` - where white is picked and only reaches 3.56:1 - alone; this
-    /// walks the ramp until the pair works.
+    /// The colour a *fill* use of this base resolves to: the smallest mix
+    /// towards the far end on which the foreground [`contrast`](Self::contrast)
+    /// picks passes [`TEXT_CONTRAST`]. Mantine's `autoContrast` stops at
+    /// picking the foreground and leaves a fill like `blue.6` - where white is
+    /// picked and only reaches 3.56:1 - alone; this moves the fill until the
+    /// pair works.
     ///
-    /// The walk follows the surface for the same reason the text one does. On
-    /// a paper page the ramp darkens into white labels; on an inked one it
+    /// It moves away from the surface for the same reason the text one does.
+    /// On a paper page the fill darkens into white labels; on an inked one it
     /// lightens into dark ones, which is also what keeps a filled control
     /// visibly separate from the page it sits on. `info` is the case that
-    /// proves it: walking darker on the dark theme runs out of ramp at
-    /// `#0F7F8F`, whose label lands at 3.98:1, and leaves a button 2:1 off
-    /// its own page.
+    /// proves it: darkening on the dark theme runs out at `#0F7F8F`, whose
+    /// label lands at 3.98:1, and leaves a button 2:1 off its own page.
     ///
     /// The foreground measured is the one the theme paints - `ends.ink` or
     /// `ends.surface` - not the pure black or white that picked the side.
-    pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
-        self.first_shade_from(shade, |step| {
-            let fill = self.shade(step, ramp, ends);
+    pub(crate) fn fill_base(self, ramp: ShadeRamp, ends: Ends) -> Self {
+        self.first_mix(ramp, ends, |fill| {
             fill.contrast_ratio(ends.foreground(fill.contrast())) >= TEXT_CONTRAST
         })
     }
 
-    fn first_shade_from(
-        self,
-        shade: ColorShade,
-        passes: impl Fn(ColorShade) -> bool,
-    ) -> ColorShade {
-        let mut step = shade;
-        loop {
-            if passes(step) || step == ShadeWalk::end() {
-                return step;
-            }
-            step = ShadeWalk::step(step);
-        }
+    /// Walks the mix from this base towards the ramp's far end one percent at
+    /// a time, as far as [`ColorShade::S9`] goes, and stops at the first
+    /// colour that `passes`.
+    fn first_mix(self, ramp: ShadeRamp, ends: Ends, passes: impl Fn(Self) -> bool) -> Self {
+        let far = far_end(ramp, ends);
+        let deepest = self.shade(ColorShade::S9, ramp, ends);
+        (0..=(-mix_percent(ramp, ColorShade::S9)) as u8)
+            .map(|weight| self.mix(far, weight))
+            .find(|&color| passes(color))
+            .unwrap_or(deepest)
     }
 
     const fn mix(self, other: Self, weight: u8) -> Self {
@@ -357,6 +303,50 @@ impl HexColor {
 impl Display for HexColor {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "#{:02X}{:02X}{:02X}", self.r(), self.g(), self.b())
+    }
+}
+
+/// How far each step of a ramp is mixed from its base, in percent: towards
+/// the surface when positive, towards [`far_end`] when negative. Fitted to
+/// Mantine's palettes.
+const fn mix_percent(ramp: ShadeRamp, shade: ColorShade) -> i8 {
+    match ramp {
+        ShadeRamp::Chromatic => match shade {
+            ColorShade::S1 => 80,
+            ColorShade::S2 => 62,
+            ColorShade::S3 => 41,
+            ColorShade::S4 => 22,
+            ColorShade::S5 => 9,
+            ColorShade::S6 => 0,
+            ColorShade::S7 => -7,
+            ColorShade::S8 => -16,
+            ColorShade::S9 => -25,
+        },
+        ShadeRamp::Neutral => match shade {
+            ColorShade::S1 => 90,
+            ColorShade::S2 => 84,
+            ColorShade::S3 => 75,
+            ColorShade::S4 => 62,
+            ColorShade::S5 => 35,
+            ColorShade::S6 => 0,
+            ColorShade::S7 => -43,
+            ColorShade::S8 => -59,
+            ColorShade::S9 => -75,
+        },
+    }
+}
+
+/// Where a ramp's dark-side steps mix towards. The near end is the page
+/// itself, in both ramps: a low step is a tint of the surface it will be
+/// drawn on. The far end differs. A neutral ramp ends at the theme's own
+/// `ink`, because its far steps *are* text. A chromatic one ends at pure black
+/// or pure white, whichever is opposite the page: its far steps exist to be
+/// legible, and a palette whose ink is only 6:1 on its own page would
+/// otherwise cap every accent's text role below 4.5:1.
+const fn far_end(ramp: ShadeRamp, ends: Ends) -> HexColor {
+    match ramp {
+        ShadeRamp::Neutral => ends.ink,
+        ShadeRamp::Chromatic => ends.surface.contrast(),
     }
 }
 
@@ -404,21 +394,29 @@ mod tests {
 
     /// `blue.6` is the case Mantine's `autoContrast` alone cannot fix: white
     /// is the right foreground for it and only reaches 3.56:1, so the fill
-    /// walks down the ramp instead of relabelling itself in black.
+    /// darkens instead of relabelling itself in black - but only as far as
+    /// the pair needs, not a whole ramp step.
     #[test]
-    fn the_two_roles_walk_the_ramp_until_they_read() {
+    fn the_two_roles_move_only_as_far_as_they_must() {
         const BLUE: HexColor = HexColor::new(0x22_8B_E6);
         const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
 
-        assert_eq!(
-            BLUE.text_shade(ShadeRamp::Chromatic, ColorShade::S6, Ends::ABSOLUTE),
-            ColorShade::S8
-        );
-        assert_eq!(
-            BLUE.fill_shade(ShadeRamp::Chromatic, ColorShade::S6, Ends::ABSOLUTE),
-            ColorShade::S8
-        );
-        // Why `fill_shade` asks `contrast()` and not `readable_contrast()`:
+        let text = BLUE.text_base(ShadeRamp::Chromatic, Ends::ABSOLUTE);
+        let fill = BLUE.fill_base(ShadeRamp::Chromatic, Ends::ABSOLUTE);
+        assert!(text.contrast_ratio(WHITE) >= TEXT_CONTRAST);
+        assert!(fill.contrast_ratio(WHITE) >= TEXT_CONTRAST);
+        // One percent less of the mix would fail: nothing overshoots.
+        for weight in 0..(0..=25)
+            .find(|&w| BLUE.mix(HexColor::new(0), w) == text)
+            .expect("a mix")
+        {
+            assert!(BLUE.mix(HexColor::new(0), weight).contrast_ratio(WHITE) < TEXT_CONTRAST);
+        }
+        // Closer to the brand than the whole-step walk's `blue.8` was.
+        let brand_distance = |c: HexColor| c.contrast_ratio(BLUE);
+        assert!(brand_distance(text) < brand_distance(HexColor::new(0x1C_74_C1)));
+
+        // Why `fill_base` asks `contrast()` and not `readable_contrast()`:
         // black *does* clear 4.5:1 on `blue.6` (5.90:1), so the readable pick
         // would keep the fill and label the button in black. White is the
         // foreground a blue fill wants; the fill moves instead.
@@ -427,17 +425,11 @@ mod tests {
             BLUE.readable_contrast(Ends::ABSOLUTE),
             HexColor::new(0x00_00_00)
         );
-        assert_eq!(
-            HexColor::new(0x1C_74_C1).readable_contrast(Ends::ABSOLUTE),
-            WHITE
-        );
+        assert_eq!(fill.readable_contrast(Ends::ABSOLUTE), WHITE);
 
         // `green.6` already carries black, so its fill stays where it is.
         const GREEN: HexColor = HexColor::new(0x40_C0_57);
-        assert_eq!(
-            GREEN.fill_shade(ShadeRamp::Chromatic, ColorShade::S6, Ends::ABSOLUTE),
-            ColorShade::S6
-        );
+        assert_eq!(GREEN.fill_base(ShadeRamp::Chromatic, Ends::ABSOLUTE), GREEN);
     }
 
     #[test]

@@ -159,13 +159,14 @@ pub fn ThemingPage() -> Element {
                     " asks for the text role and "
                     Code { source: "background()" }
                     " for the fill role, and each is its own ramp: the text ramp starts at "
-                    "the first shade that clears 4.5:1 on the page, the fill ramp at the "
-                    "first whose black-or-white foreground clears it. So "
+                    "the palette colour moved just far enough away from the page to clear "
+                    "4.5:1 on it, the fill ramp at the colour moved just far enough for its "
+                    "black-or-white foreground to clear it. So "
                     Code { source: "primary" }
                     " is still "
                     Code { source: "#228BE6" }
                     " as a border, a ring or a decoration, and resolves to "
-                    Code { source: "#1C74C1" }
+                    Code { source: "#1D78C8" }
                     " as a label or under white text. The muted ramp is taken literally - it "
                     "is picked for how quiet it should look - so text that means to be quiet "
                     "asks for it by name, with "
