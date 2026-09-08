@@ -172,3 +172,59 @@ fn a_disabled_menu_is_closed_not_hidden() {
     assert_eq!(trigger["aria-expanded"], "false");
     assert!(!trigger.contains_key("aria-controls"));
 }
+
+/// A `checked` item is a `menuitemradio` that says whether it is the one
+/// picked; an item that never called `checked` stays a plain `menuitem` with
+/// no `aria-checked` at all. Every radio row draws the check slot, so one
+/// group's labels line up, and only the checked one fills it.
+#[test]
+fn a_checked_item_is_a_radio_that_says_so() {
+    fn app() -> Element {
+        let menu = use_menu();
+        use_hook(|| menu.open());
+
+        rsx! {
+            LiberoProvider {
+                Menu {
+                    state: menu,
+                    items: vec![
+                        MenuEntry::Group {
+                            label: "Theme".into(),
+                            items: vec![
+                                MenuItem::new("Light").checked(true).onselect(|_| {}).into(),
+                                MenuItem::new("Dark").checked(false).onselect(|_| {}).into(),
+                            ],
+                        },
+                        MenuItem::new("Settings").onselect(|_| {}).into(),
+                    ],
+                    Button { attributes: menu.a11y_attributes(), "Theme" }
+                }
+            }
+        }
+    }
+
+    let html = body(&render(app));
+    let radios = tags_with(&html, r#"role="menuitemradio""#);
+
+    assert_eq!(radios.len(), 2, "{html}");
+    assert!(
+        radios[0].contains(r#"aria-checked="true""#),
+        "{}",
+        radios[0]
+    );
+    assert!(
+        radios[1].contains(r#"aria-checked="false""#),
+        "{}",
+        radios[1]
+    );
+    assert_eq!(html.matches("data-menu-check").count(), 2, "{html}");
+    assert_eq!(
+        html.matches("<svg").count(),
+        1,
+        "one check, on the picked row"
+    );
+
+    let settings = tags_with(&html, r#"data-menu-index="2""#);
+    assert!(settings[0].contains(r#"role="menuitem""#));
+    assert!(!settings[0].contains("aria-checked"));
+}

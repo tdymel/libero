@@ -58,6 +58,7 @@ pub struct MenuItem {
     action: Action,
     pub(super) leading: Option<Element>,
     pub(super) trailing: Option<Element>,
+    pub(super) checked: Option<bool>,
     pub(super) disabled: bool,
 }
 
@@ -81,6 +82,7 @@ impl MenuItem {
             action: Action::None,
             leading: None,
             trailing: None,
+            checked: None,
             disabled: false,
         }
     }
@@ -114,6 +116,15 @@ impl MenuItem {
     /// Drawn after the label, at the far end - a shortcut hint.
     pub fn trailing(mut self, trailing: Element) -> Self {
         self.trailing = Some(trailing);
+        self
+    }
+
+    /// Makes it one choice of several - a `menuitemradio` announcing
+    /// `aria-checked` - with a check drawn before the label while `checked`.
+    /// Put the choices in one [`MenuEntry::Group`], which is the radio group
+    /// a reader hears; keeping exactly one of them checked is the caller's.
+    pub fn checked(mut self, checked: bool) -> Self {
+        self.checked = Some(checked);
         self
     }
 

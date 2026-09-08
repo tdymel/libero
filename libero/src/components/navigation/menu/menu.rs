@@ -5,7 +5,9 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         Divider, HtmlTag, Input, States,
-        common::{ChevronRightIcon, base_props, has_shortcut_modifier, inset_focus_ring_sx},
+        common::{
+            CheckIcon, ChevronRightIcon, base_props, has_shortcut_modifier, inset_focus_ring_sx,
+        },
         layout::use_box,
         surface::paper_sx,
     },
@@ -27,7 +29,9 @@ use super::{
     state::{MenuFocus, MenuState, menu_id, trigger_id},
 };
 
-const ITEM: &str = "& [role=\"menuitem\"]";
+// Every row carries its index, whichever of `menuitem` and `menuitemradio`
+// it is, so the rules key on that rather than on a role.
+const ITEM: &str = "& [data-menu-index]";
 
 // A surface, so its background, border and corner are `paper_sx()`'s - the
 // `bordered` and `radius-{step}` tokens the box renders with are the ones its
@@ -84,18 +88,18 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
         // the two only ever part for the moment a submenu delay holds focus
         // back.
         .selector(
-            "& [role=\"menuitem\"]:hover:not([aria-disabled=\"true\"])",
+            "& [data-menu-index]:hover:not([aria-disabled=\"true\"])",
             sx().background("muted.1"),
         )
-        .selector("& [role=\"menuitem\"]:focus", sx().background("muted.1"))
+        .selector("& [data-menu-index]:focus", sx().background("muted.1"))
         // `appearance: none` and `border: 0` take the UA's ring with them.
         // Inset, because the box clips at its padding edge while it scrolls.
         .selector(
-            "& [role=\"menuitem\"]:focus-visible",
+            "& [data-menu-index]:focus-visible",
             inset_focus_ring_sx("-2px"),
         )
         .selector(
-            "& [role=\"menuitem\"][aria-disabled=\"true\"]",
+            "& [data-menu-index][aria-disabled=\"true\"]",
             sx().color("muted.5").cursor("not-allowed"),
         )
         .selector(
@@ -107,14 +111,14 @@ static MENU_SX: StaticSx = StaticSx::new(|| {
             sx().display("inline-flex").align_items("center"),
         )
         .selector(
-            "& [data-menu-chevron]",
+            "& :is([data-menu-chevron], [data-menu-check])",
             sx().display("inline-flex")
                 .width("1em")
                 .height("1em")
                 .margin_right("-4px"),
         )
         .selector(
-            "& [data-menu-chevron] svg",
+            "& :is([data-menu-chevron], [data-menu-check]) svg",
             sx().width("100%").height("100%"),
         )
 });
@@ -902,8 +906,9 @@ struct ItemDraw {
     level_id: String,
 }
 
-/// One `menuitem` row: its three handlers, its aria, and the leading,
-/// trailing and chevron slots.
+/// One `menuitem` row - or a `menuitemradio` one, when the item is
+/// [`checked`](MenuItem::checked) either way: its three handlers, its aria,
+/// and the check, leading, trailing and chevron slots.
 fn menu_item(
     draw: &ItemDraw,
     item: &MenuItem,
@@ -921,6 +926,7 @@ fn menu_item(
     } = draw;
     let (level, tabbable) = (*level, *tabbable);
     let has_submenu = item.submenu_items().is_some();
+    let checked = item.checked;
     let disabled = item.disabled;
     let onselect = item.onselect_callback();
     let item_id = format!("{level_id}-item-{index}");
@@ -953,8 +959,9 @@ fn menu_item(
         button {
             key: "{index}",
             r#type: "button",
-            "role": "menuitem",
+            "role": if checked.is_some() { "menuitemradio" } else { "menuitem" },
             id: "{item_id}",
+            "aria-checked": checked.map(|checked| checked.to_string()),
             tabindex: if index == tabbable { "0" } else { "-1" },
             "data-menu-index": "{index}",
             "aria-disabled": disabled.then_some("true"),
@@ -969,6 +976,15 @@ fn menu_item(
             onclick,
             onkeydown,
             onmouseenter,
+            // Drawn on every radio row, checked or not, so the labels of one
+            // group line up.
+            if let Some(checked) = checked {
+                span { "data-menu-check": "",
+                    if checked {
+                        CheckIcon {}
+                    }
+                }
+            }
             if let Some(leading) = item.leading.clone() {
                 span { "data-menu-section": "leading", {leading} }
             }

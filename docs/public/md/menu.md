@@ -79,6 +79,8 @@ item stays in the arrow order but cannot be chosen.
   menu.
 - `leading` and `trailing` sit inside the item's button: never put anything
   interactive there.
+- A picked-one-of-several item takes `checked`, not a checkmark in
+  `trailing`: a drawn mark says nothing to a screen reader.
 
 ## Props
 
@@ -100,7 +102,12 @@ item stays in the arrow order but cannot be chosen.
 
 `MenuItem` builder: `new(label)`, `onselect(FnMut(()))`, `submenu(Vec<MenuEntry>)`
 (an item does one or the other; the later call wins), `leading(Element)`,
-`trailing(Element)`, `disabled(bool)`.
+`trailing(Element)`, `checked(bool)`, `disabled(bool)`.
+
+`checked` makes an item one choice of several: a `menuitemradio` announcing
+`aria-checked`, with a check drawn before the label while it is checked. Put
+the choices in one `Group`, which is the radio group a reader hears; keeping
+exactly one checked is yours.
 
 ## Theme defaults
 
