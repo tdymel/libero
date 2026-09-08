@@ -456,7 +456,17 @@ impl Level {
 }
 
 /// Remembers where focus returns to, and focuses the requested item.
-fn use_level_focus(level: Level, open: bool, placed: bool, request: u64, initial: MenuFocus) {
+/// `first` is where [`MenuFocus::First`] lands: the checked item of a
+/// menu that has one, because opening a menu of choices should put the
+/// reader on the one in effect, not make them hunt for it.
+fn use_level_focus(
+    level: Level,
+    open: bool,
+    placed: bool,
+    request: u64,
+    initial: MenuFocus,
+    first: usize,
+) {
     let (floating, dismiss, len) = (level.floating, level.dismiss, level.len);
     // Remembered on the opening edge, before anything has moved focus: focus
     // only enters the box once it is placed, which is a measurement later.
@@ -477,7 +487,7 @@ fn use_level_focus(level: Level, open: bool, placed: bool, request: u64, initial
     // A request only counts while it is newer than the last one handled, so a
     // submenu the pointer opened does not steal focus from its parent item.
     let mut seen = use_signal(|| request);
-    use_effect(use_reactive!(|(open, placed, request, len)| {
+    use_effect(use_reactive!(|(open, placed, request, len, first)| {
         // Read first, branch second: this subscribes the effect to a remount.
         let mounted = floating.mount_token().is_some();
         if !open || !placed || !mounted || len == 0 || request <= *seen.peek() {
@@ -485,7 +495,7 @@ fn use_level_focus(level: Level, open: bool, placed: bool, request: u64, initial
         }
         seen.set(request);
         let index = match initial {
-            MenuFocus::First => 0,
+            MenuFocus::First => first,
             MenuFocus::Last => len - 1,
         };
         // Out of this dispatch: the click that opened the menu ends by
@@ -706,7 +716,11 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         close_on_select: props.close_on_select,
     };
 
-    use_level_focus(level, open, placed, props.request, props.initial);
+    let first = flat
+        .iter()
+        .position(|item| item.checked == Some(true))
+        .unwrap_or(0);
+    use_level_focus(level, open, placed, props.request, props.initial, first);
     let hover = use_hover_delay(
         level,
         Duration::from_millis(theme.menu.submenu_delay.into()),
@@ -751,8 +765,8 @@ fn MenuLevel(props: MenuLevelProps) -> Element {
         labels,
         hover: hover.clone(),
         // The roving `tabindex`: exactly one item is tabbable, the focused
-        // one, or the first before anything has been focused.
-        tabbable: active().unwrap_or(0),
+        // one, or where focus lands before anything has been focused.
+        tabbable: active().unwrap_or(first),
         expanded,
         level_id: level_id.clone(),
     };

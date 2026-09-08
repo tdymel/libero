@@ -123,6 +123,7 @@ impl MenuItem {
     /// `aria-checked` - with a check drawn before the label while `checked`.
     /// Put the choices in one [`MenuEntry::Group`], which is the radio group
     /// a reader hears; keeping exactly one of them checked is the caller's.
+    /// A menu holding a checked item opens with focus on it.
     pub fn checked(mut self, checked: bool) -> Self {
         self.checked = Some(checked);
         self

@@ -176,7 +176,8 @@ fn a_disabled_menu_is_closed_not_hidden() {
 /// A `checked` item is a `menuitemradio` that says whether it is the one
 /// picked; an item that never called `checked` stays a plain `menuitem` with
 /// no `aria-checked` at all. Every radio row draws the check slot, so one
-/// group's labels line up, and only the checked one fills it.
+/// group's labels line up, and only the checked one fills it - and the
+/// checked one is the menu's tab stop, where opening it lands.
 #[test]
 fn a_checked_item_is_a_radio_that_says_so() {
     fn app() -> Element {
@@ -191,8 +192,8 @@ fn a_checked_item_is_a_radio_that_says_so() {
                         MenuEntry::Group {
                             label: "Theme".into(),
                             items: vec![
-                                MenuItem::new("Light").checked(true).onselect(|_| {}).into(),
-                                MenuItem::new("Dark").checked(false).onselect(|_| {}).into(),
+                                MenuItem::new("Light").checked(false).onselect(|_| {}).into(),
+                                MenuItem::new("Dark").checked(true).onselect(|_| {}).into(),
                             ],
                         },
                         MenuItem::new("Settings").onselect(|_| {}).into(),
@@ -208,15 +209,18 @@ fn a_checked_item_is_a_radio_that_says_so() {
 
     assert_eq!(radios.len(), 2, "{html}");
     assert!(
-        radios[0].contains(r#"aria-checked="true""#),
+        radios[0].contains(r#"aria-checked="false""#),
         "{}",
         radios[0]
     );
     assert!(
-        radios[1].contains(r#"aria-checked="false""#),
+        radios[1].contains(r#"aria-checked="true""#),
         "{}",
         radios[1]
     );
+    // The checked item, not the first, is where the menu is entered.
+    assert!(radios[0].contains(r#"tabindex="-1""#), "{}", radios[0]);
+    assert!(radios[1].contains(r#"tabindex="0""#), "{}", radios[1]);
     assert_eq!(html.matches("data-menu-check").count(), 2, "{html}");
     assert_eq!(
         html.matches("<svg").count(),

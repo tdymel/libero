@@ -107,7 +107,8 @@ item stays in the arrow order but cannot be chosen.
 `checked` makes an item one choice of several: a `menuitemradio` announcing
 `aria-checked`, with a check drawn before the label while it is checked. Put
 the choices in one `Group`, which is the radio group a reader hears; keeping
-exactly one checked is yours.
+exactly one checked is yours. A menu with a checked item opens on it rather
+than on its first item, and it is the tab stop until another is focused.
 
 ## Theme defaults
 
