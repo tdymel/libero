@@ -533,7 +533,7 @@ fn select_listbox(list: Listbox) -> Element {
             state,
             size,
             radius,
-            disabled: open.disabled,
+            disabled: open.disabled || open.readonly,
             close_on_pick: !multiple,
             multiselectable: multiple,
             header,

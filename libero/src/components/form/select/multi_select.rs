@@ -10,7 +10,7 @@ use crate::{
 
 use super::{
     core::{SelectCore, SelectionRenderArgs},
-    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows},
+    select::{SelectFilterArgs, SelectOptionArgs, SelectionArgs, draw_rows, search_mask},
 };
 
 field_props! {
@@ -140,24 +140,7 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
     // The same mask `Select` builds, and the same memoization reasoning - see
     // the comment there.
     let searchable = props.searchable.unwrap_or(false);
-    let filter = props.filter;
-    let filtered = values.clone();
-    let matches = searchable.then(|| {
-        Callback::new(move |query: String| {
-            let needle = query.to_lowercase();
-            filtered
-                .iter()
-                .map(|value| match &filter {
-                    Some(filter) => filter.call(SelectFilterArgs {
-                        value: value.clone(),
-                        query: query.clone(),
-                    }),
-                    None => value.label().to_lowercase().contains(&needle),
-                })
-                // Annotated for the same reason as in `select.rs`.
-                .collect::<Vec<bool>>()
-        })
-    });
+    let matches = search_mask(searchable, values.clone(), props.filter);
 
     let current = held.clone();
     // Built before the pick closure takes `current`.

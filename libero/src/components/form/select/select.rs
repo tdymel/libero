@@ -172,25 +172,7 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
     // fresh callback is always the one called. Anything that later drops `rows`
     // from those props has to revisit this.
     let searchable = props.searchable.unwrap_or(false);
-    let filter = props.filter;
-    let filtered = values.clone();
-    let matches = searchable.then(|| {
-        Callback::new(move |query: String| {
-            let needle = query.to_lowercase();
-            filtered
-                .iter()
-                .map(|value| match &filter {
-                    Some(filter) => filter.call(SelectFilterArgs {
-                        value: value.clone(),
-                        query: query.clone(),
-                    }),
-                    None => value.label().to_lowercase().contains(&needle),
-                })
-                // Annotated: a `Callback`'s return type is inferred through
-                // `SpawnIfAsync`, which leaves a bare `collect` ambiguous.
-                .collect::<Vec<bool>>()
-        })
-    });
+    let matches = search_mask(searchable, values.clone(), props.filter);
 
     let onchange = bound.emit(props.onchange);
     let clear = onchange.clone();
@@ -236,6 +218,32 @@ pub fn Select<T: Options>(props: SelectProps<T>) -> Element {
             attributes: props.attributes,
         }
     }
+}
+
+/// Which rows a query keeps, through the caller's `filter` or by label. `None`
+/// unless `searchable`.
+pub(super) fn search_mask<T: Options>(
+    searchable: bool,
+    values: Vec<T>,
+    filter: Option<Callback<SelectFilterArgs<T>, bool>>,
+) -> Option<Callback<String, Vec<bool>>> {
+    searchable.then(|| {
+        Callback::new(move |query: String| {
+            let needle = query.to_lowercase();
+            values
+                .iter()
+                .map(|value| match &filter {
+                    Some(filter) => filter.call(SelectFilterArgs {
+                        value: value.clone(),
+                        query: query.clone(),
+                    }),
+                    None => value.label().to_lowercase().contains(&needle),
+                })
+                // Annotated: a `Callback`'s return type is inferred through
+                // `SpawnIfAsync`, which leaves a bare `collect` ambiguous.
+                .collect::<Vec<bool>>()
+        })
+    })
 }
 
 /// Each row's content - the caller's `option`, or the label.

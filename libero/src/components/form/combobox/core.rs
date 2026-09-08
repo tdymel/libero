@@ -103,6 +103,7 @@ base_props! {
         size: Input<Size>,
         #[props(default, into)]
         radius: Input<Size>,
+        /// Disabled or read-only: the list is neither drawn nor opened by a key.
         disabled: bool,
         /// Whether Enter closes the list after picking. A multi-select keeps
         /// it open, so each pick toggles a row and the next one is one key
@@ -136,7 +137,10 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     // portaled dropdown as a prop, which mounts outside this scope entirely.
     use_context_provider(|| context);
 
-    let opened = props.opened;
+    // A disabled or read-only list is never drawn, whatever the state says:
+    // the pointer and the ARIA go through this gate, not only the keys.
+    let opened = props.opened && !props.disabled;
+    props.state.set_held(props.state.is_open() && !opened);
     let loading = props.loading.is_some();
     // Said by a region outside the dropdown, not by the loader inside it. The
     // dropdown is `aria-busy` while loading, and some screen readers hold a
@@ -199,7 +203,7 @@ pub(crate) fn ComboboxCore(props: ComboboxCoreProps) -> Element {
     //
     // On the Escape stack exactly while the key handler above would take
     // Escape, so a `HoverCard` around this field leaves the press to it.
-    use_field_list_layer(opened && !disabled);
+    use_field_list_layer(opened);
     let anchor = use_element();
     let popover = use_popover(
         anchor,

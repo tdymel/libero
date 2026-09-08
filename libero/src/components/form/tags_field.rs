@@ -290,12 +290,12 @@ pub fn TagsField(props: TagsFieldProps) -> Element {
                 rows,
                 active: state.active(),
                 onactive: move |row| state.set_active(Some(row)),
-                opened: state.is_open() && !disabled,
+                opened: state.is_open() && !disabled && !readonly,
                 onopened: move |opened| state.set_open(opened),
                 state,
                 size,
                 radius,
-                disabled,
+                disabled: disabled || readonly,
                 // The list stays up after a pick, the way Mantine's `TagsInput`
                 // and our own `MultiSelect` keep it up: the picked row leaves
                 // the list and the next one is one key away. `Autocomplete`

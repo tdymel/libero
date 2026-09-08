@@ -271,7 +271,7 @@ pub fn Autocomplete<T: Options>(props: AutocompleteProps<T>) -> Element {
             empty: props.empty,
             size,
             radius,
-            disabled,
+            disabled: disabled || readonly,
             width: PopoverWidth::Match,
             {frame.render(input)}
         }

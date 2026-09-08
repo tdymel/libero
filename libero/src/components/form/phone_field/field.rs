@@ -287,7 +287,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
     // reason: `use_box` is a hook and a row is not a component.
     let row_box = use_box().framework_sx(&ROW_SX).prepare();
 
-    let opened = state.is_open() && !disabled;
+    let opened = state.is_open() && !disabled && !readonly;
     let rows = phone_rows(
         RowList {
             opened,
@@ -339,6 +339,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             country,
             picker_name: name_of(country),
             flag,
+            opened,
             disabled,
             readonly,
         },
@@ -359,7 +360,7 @@ pub fn PhoneField(props: PhoneFieldProps) -> Element {
             opened,
             size,
             radius,
-            disabled,
+            disabled: disabled || readonly,
             dial: country.dial,
         },
         rows,
@@ -499,6 +500,8 @@ struct PickerButton {
     country: &'static Country,
     picker_name: String,
     flag: Option<Callback<String, Element>>,
+    /// Whether the list is drawn, which a disabled or read-only field never is.
+    opened: bool,
     disabled: bool,
     readonly: bool,
 }
@@ -512,6 +515,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         country,
         picker_name,
         flag,
+        opened,
         disabled,
         readonly,
     } = button;
@@ -524,7 +528,7 @@ fn phone_picker(picker_box: BoxStyle, button: PickerButton) -> Element {
         // search box owns the role, `aria-controls` and the active descendant,
         // and the button keeps only what says a list hangs off it.
         .attr("aria-haspopup", "listbox")
-        .attr("aria-expanded", state.is_open().to_string())
+        .attr("aria-expanded", opened.to_string())
         // The content reads `DE +49`, which names a code and not a country.
         .attr("aria-label", format!("Country: {picker_name}"))
         .attr("disabled", disabled)

@@ -21,6 +21,9 @@ pub struct ComboboxState {
     /// while it is loading. The trigger must never point at a row that is not
     /// in the DOM, and only the list knows what it drew.
     rows: Signal<usize>,
+    /// Open, but refused by a disabled or read-only list, written by the list:
+    /// the trigger must not claim a listbox the list did not draw.
+    held: Signal<bool>,
 }
 
 /// One `Combobox`'s state. Positional, like every hook.
@@ -30,6 +33,7 @@ pub fn use_combobox() -> ComboboxState {
         opened: use_signal(|| false),
         active: use_signal(|| None),
         rows: use_signal(|| 0),
+        held: use_signal(|| false),
     }
 }
 
@@ -81,6 +85,14 @@ impl ComboboxState {
         }
     }
 
+    /// Written by `ComboboxCore` on render, peek-compared like `set_rows`.
+    pub(crate) fn set_held(&self, held: bool) {
+        let mut signal = self.held;
+        if *signal.peek() != held {
+            signal.set(held);
+        }
+    }
+
     /// `role`, `aria-haspopup`, `aria-expanded`, and, while the list is open
     /// and has a row to point at, `aria-controls` and `aria-activedescendant`.
     ///
@@ -109,7 +121,8 @@ impl ComboboxState {
     /// [`a11y_attributes`](Self::a11y_attributes) for a list that is not a
     /// `ComboboxCore`'s, whose drawer says whether its listbox is mounted.
     pub(crate) fn aria(&self, listbox: bool) -> Vec<Attribute> {
-        let opened = self.is_open();
+        let opened = self.is_open() && !(self.held)();
+        let listbox = listbox && opened;
         // Clamped the way the list clamps its highlight, so the id named here
         // is the row drawn as active.
         let rows = (self.rows)();
