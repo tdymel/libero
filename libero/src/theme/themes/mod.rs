@@ -1,10 +1,11 @@
-//! Ready-made [`ThemeSet`]s: the library's own, and six community palettes.
+//! Ready-made [`ThemeSet`]s: the library's own, and nine community palettes.
 //!
 //! Every ported set is a real light/dark **pair** from its upstream palette,
 //! because a `ThemeSet` designates both halves. Ten of the palettes in the
-//! pack these came from are dark-only and are not here (Maintainer's call,
-//! 2026-09-20): a set whose light half we invented would be our palette
-//! wearing somebody else's name.
+//! Kopuz pack the first six came from are dark-only and are not here
+//! (Maintainer's call, 2026-09-20): a set whose light half we invented would
+//! be our palette wearing somebody else's name. Flexoki, GitHub and Kanagawa
+//! were taken straight from their upstream repositories, named in each file.
 //!
 //! ## How a palette is mapped
 //!
@@ -24,7 +25,8 @@
 //! | `error` | `danger` | |
 //! | `paper.background` | `raised` | The card drawn on the page. |
 //!
-//! **`warning` has no counterpart** - none of these palettes carries one - so
+//! **`warning` has no counterpart** - the Kopuz pack carries none, and the
+//! palettes that do name a yellow are kept on ours for one catalogue - so
 //! every ported theme keeps Libero's amber. The shade ramps, the text and
 //! fill roles and the `muted` ramp are all derived from the four colours
 //! above by [`super::stylesheet`], so a ported theme is ten hex values and
@@ -38,14 +40,20 @@
 mod ayu;
 mod catppuccin;
 mod everforest;
+mod flexoki;
+mod github;
 mod gruvbox;
+mod kanagawa;
 mod one;
 mod rose_pine;
 
 pub use ayu::{AYU_DARK, AYU_LIGHT};
 pub use catppuccin::{CATPPUCCIN_DARK, CATPPUCCIN_LIGHT};
 pub use everforest::{EVERFOREST_DARK, EVERFOREST_LIGHT};
+pub use flexoki::{FLEXOKI_DARK, FLEXOKI_LIGHT};
+pub use github::{GITHUB_DARK, GITHUB_LIGHT};
 pub use gruvbox::{GRUVBOX_DARK, GRUVBOX_LIGHT};
+pub use kanagawa::{KANAGAWA_DARK, KANAGAWA_LIGHT};
 pub use one::{ONE_DARK, ONE_LIGHT};
 pub use rose_pine::{ROSE_PINE_DARK, ROSE_PINE_LIGHT};
 
@@ -63,7 +71,10 @@ impl ThemeSet {
         &ThemeSet::AYU,
         &ThemeSet::CATPPUCCIN,
         &ThemeSet::EVERFOREST,
+        &ThemeSet::FLEXOKI,
+        &ThemeSet::GITHUB,
         &ThemeSet::GRUVBOX,
+        &ThemeSet::KANAGAWA,
         &ThemeSet::ONE,
         &ThemeSet::ROSE_PINE,
     ];

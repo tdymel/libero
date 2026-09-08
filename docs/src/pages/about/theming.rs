@@ -294,20 +294,25 @@ pub fn ThemingPage() -> Element {
                     Code { source: "ThemeSet::CATALOGUE" }
                     " holds every set the library ships: our own "
                     Code { source: "Libero" }
-                    ", plus Ayu, Catppuccin, Everforest, Gruvbox, One and Rosé Pine, each a "
+                    ", plus Ayu, Catppuccin, Everforest, Flexoki, GitHub, Gruvbox, Kanagawa, One "
+                    "and Rosé Pine, each a "
                     "real light/dark pair from its upstream palette. The palette button in "
                     "this site's header is built from it, through "
                     Code { source: "use_theme_set()" }
                     " - try it on any page. A ported palette is ten hex values and nothing "
                     "else: every ramp, role and contrast twin derives from them. "
                     Code { source: "warning" }
-                    " is the one role no palette in the pack carries, so a ported theme "
-                    "keeps Libero's amber."
+                    " is the one role a ported theme does not take from its palette: every "
+                    "one keeps Libero's amber."
                 }
                 Text {
+                    Code { source: "ColorSchemeButton" }
+                    " is the ready-made switch - the one in this header. A toggle pins the "
+                    "other scheme only while it differs from the platform's, so flipping back "
+                    "follows the platform, and any devtools emulation of it, again. Anything "
+                    "else is built on "
                     Code { source: "use_color_scheme()" }
-                    " is the whole API - the library ships no toggle, because only the app "
-                    "knows where that control belongs. "
+                    ": "
                     Code { source: "setting()" }
                     " is what the app asked for and "
                     Code { source: "resolved()" }

@@ -639,8 +639,8 @@ mod tests {
     /// than a bound, because a ported palette is somebody else's design and
     /// the honest answer is a record, not an assertion that it is fine.
     ///
-    /// `warning` is ours, not theirs: no palette in the pack carries one, so
-    /// every ported theme keeps Libero's amber, and amber on a cream page is
+    /// `warning` is ours, not theirs: no ported theme takes the palette's own,
+    /// so every one keeps Libero's amber, and amber on a cream page is
     /// what most of this list is.
     #[test]
     fn every_shipped_set_reads_on_its_own_page() {
@@ -677,7 +677,10 @@ mod tests {
                 "Ayu light: warning info success",
                 "Catppuccin light: warning",
                 "Everforest light: warning",
+                "Flexoki light: warning",
+                "GitHub light: warning",
                 "Gruvbox light: warning",
+                "Kanagawa light: warning",
                 "One light: warning",
                 "Rosé Pine light: warning",
             ],
