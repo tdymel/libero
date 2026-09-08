@@ -37,8 +37,9 @@ pub fn ColorSchemeButtonPage() -> Element {
                 Text {
                     "An icon button that steps the app's colour scheme: following the "
                     "platform, then the scheme the platform is not showing, then the one it "
-                    "is, then back to following it. The glyph shows the setting in effect - a "
-                    "half-filled disc, a sun or a moon - and the name says what a press does. "
+                    "is, then back to following it. The glyph and the name both say where a "
+                    "press goes: a sun switches to light, a moon to dark, a half-filled disc "
+                    "back to following the platform. "
                     "It is an "
                     Code { source: "ActionIcon" }
                     " over "

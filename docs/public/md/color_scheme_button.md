@@ -8,8 +8,9 @@ Description: An icon button that steps the colour scheme through system, dark an
 
 An icon button that steps the app's colour scheme: following the platform,
 then the scheme the platform is not showing, then the one it is, then back to
-following it. The glyph shows the setting in effect - a half-filled disc, a
-sun or a moon - and the accessible name says what a press does. It is an
+following it. The glyph and the accessible name both say where a press goes:
+a sun switches to light, a moon to dark, a half-filled disc back to following
+the platform. It is an
 `ActionIcon` over `use_color_scheme()`.
 
 While it follows the platform, an OS switch - or a devtools emulation of
@@ -73,8 +74,8 @@ An app that wants an explicit "follow the system" choice builds it from
 ## Accessibility
 
 The accessible name says what a press does - "Switch to the dark theme",
-"Follow the system theme" - because the glyph, which shows the current
-setting, is `aria-hidden`.
+"Follow the system theme" - the same thing the `aria-hidden` glyph shows.
+Opening the picker puts focus on the checked theme set, not the first one.
 
 With `themes`, the pair is a `role="group"` named "Theme". The chevron is its
 own button, "Choose a theme", with `aria-haspopup="menu"` and `aria-expanded`;

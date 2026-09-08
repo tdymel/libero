@@ -4,8 +4,8 @@ use crate::theme::{Color, Variant};
 /// announces itself with: one place to translate. Split from the chrome
 /// beside it for the [`BurgerLabels`](crate::theme::BurgerLabels) reason.
 ///
-/// The three `to_*` name what a press *does*: the glyph shows the setting in
-/// effect, and a screen reader user cannot see it.
+/// The three `to_*` name what a press *does*, as the glyph beside them shows
+/// it - a screen reader user cannot see the glyph.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct ColorSchemeButtonLabels {
     /// Names the button when a press pins the light scheme.

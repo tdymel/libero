@@ -1,5 +1,5 @@
-//! `ColorSchemeButton`'s rendered contract: the glyph shows the setting, the
-//! name says where a press goes and comes from the theme, and `themes` adds a
+//! `ColorSchemeButton`'s rendered contract: the glyph and the name say where a
+//! press goes, the name comes from the theme, and `themes` adds a
 //! picker beside the toggle.
 
 use crate::common::{attributes_of, body, render};
@@ -46,14 +46,14 @@ fn pressed(times: usize) -> String {
 
 /// The cycle, with a platform that reads light: following it, then dark
 /// (the scheme it is not showing), then light pinned, then following it
-/// again. The glyph shows where the button is; the name, where a press goes.
+/// again. The glyph and the name both say where a press goes.
 #[test]
 fn it_steps_from_the_system_to_the_other_scheme_and_back() {
     let steps = [
-        (SYSTEM, "Switch to the dark theme"),
-        (MOON, "Switch to the light theme"),
-        (SUN, "Follow the system theme"),
-        (SYSTEM, "Switch to the dark theme"),
+        (MOON, "Switch to the dark theme"),
+        (SUN, "Switch to the light theme"),
+        (SYSTEM, "Follow the system theme"),
+        (MOON, "Switch to the dark theme"),
     ];
 
     for (presses, (glyph, name)) in steps.into_iter().enumerate() {

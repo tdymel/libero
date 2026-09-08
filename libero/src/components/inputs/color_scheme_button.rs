@@ -79,8 +79,9 @@ base_props! {
 
 /// An icon button that steps the app's colour scheme: following the
 /// platform, then the scheme the platform is not showing, then the one it is,
-/// then back to following it. The glyph shows the setting in effect - a
-/// half-filled disc, a sun or a moon - and the name says what a press does.
+/// then back to following it. The glyph and the name both say where a press
+/// goes: a sun switches to light, a moon to dark, a half-filled disc back to
+/// following the platform.
 ///
 /// ```no_run
 /// # use dioxus::prelude::*;
@@ -130,7 +131,8 @@ pub fn ColorSchemeButton(props: ColorSchemeButtonProps) -> Element {
     let glyph = use_box().framework_sx(&GLYPH_SX).prepare().render(
         HtmlTag::Span,
         Vec::new(),
-        match scheme.setting() {
+        // Where a press goes, the same as the name: a sun switches to light.
+        match next {
             ColorSchemeSetting::System => rsx! { SystemSchemeIcon {} },
             ColorSchemeSetting::Light => rsx! { SunIcon {} },
             ColorSchemeSetting::Dark => rsx! { MoonIcon {} },
