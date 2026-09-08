@@ -9,38 +9,68 @@ pub(crate) const TEXT_CONTRAST: f32 = 4.5;
 
 /// Which way [`HexColor::first_shade_from`] walks a ramp looking for the first
 /// step that reads. A ramp only ever gains contrast in one direction, and
-/// which one depends on the surface it is measured against (todo 69).
+/// which one depends on the ramp and on the surface it is measured against
+/// (todo 69).
+///
+/// Named by the step index rather than by lightness on purpose: a neutral
+/// ramp mixes towards the theme's own ends, so `TowardS9` is darker on a
+/// light theme and *lighter* on a dark one - it is always the end furthest
+/// from the page, which is the only thing the walk cares about.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum ShadeWalk {
-    Darker,
-    Lighter,
+    TowardS9,
+    TowardS1,
 }
 
 impl ShadeWalk {
-    /// Away from `surface`: darker on a light one, lighter on a dark one.
-    /// `contrast()` is the same brightness split the rest of the role system
-    /// sorts by, so the two never disagree about which end a surface is at.
-    fn away_from(surface: HexColor) -> Self {
-        if surface.contrast().rgb() == 0x00_00_00 {
-            Self::Darker
-        } else {
-            Self::Lighter
+    /// The direction a `ramp` gains contrast in, on `surface`.
+    ///
+    /// A neutral ramp is mixed between the theme's own ends, so its S9 is
+    /// always the far end of the page whichever scheme it is - the walk is
+    /// the same in both. A chromatic ramp mixes towards absolute white and
+    /// black, so it gains contrast as it darkens on a light surface and as it
+    /// lightens on a dark one. `contrast()` is the same brightness split the
+    /// rest of the role system sorts by, so the two never disagree about
+    /// which end a surface is at.
+    fn away_from(ramp: ShadeRamp, surface: HexColor) -> Self {
+        match ramp {
+            ShadeRamp::Neutral => Self::TowardS9,
+            ShadeRamp::Chromatic if surface.contrast().rgb() == 0x00_00_00 => Self::TowardS9,
+            ShadeRamp::Chromatic => Self::TowardS1,
         }
     }
 
     const fn step(self, shade: ColorShade) -> ColorShade {
         match self {
-            Self::Darker => shade.darker(),
-            Self::Lighter => shade.lighter(),
+            Self::TowardS9 => shade.darker(),
+            Self::TowardS1 => shade.lighter(),
         }
     }
 
     const fn end(self) -> ColorShade {
         match self {
-            Self::Darker => ColorShade::S9,
-            Self::Lighter => ColorShade::S1,
+            Self::TowardS9 => ColorShade::S9,
+            Self::TowardS1 => ColorShade::S1,
         }
     }
+}
+
+/// The two ends of a theme's page: the `surface` it is painted on and the
+/// `ink` text is set in. Carried together because a neutral ramp is mixed
+/// between them and every role derivation is measured against one of them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Ends {
+    pub(crate) surface: HexColor,
+    pub(crate) ink: HexColor,
+}
+
+impl Ends {
+    /// Absolute white and black - what a chromatic ramp always mixes towards,
+    /// and what the light theme's own ends happen to be.
+    pub(crate) const ABSOLUTE: Ends = Ends {
+        surface: HexColor::new(0xFF_FF_FF),
+        ink: HexColor::new(0x00_00_00),
+    };
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -131,7 +161,17 @@ impl HexColor {
 
     /// Fitted to Mantine's palettes, so a Mantine shade-6 base reproduces
     /// its ramp.
-    pub(crate) const fn shade(self, shade: ColorShade, ramp: ShadeRamp) -> Self {
+    ///
+    /// **A neutral ramp mixes between the theme's own ends, a chromatic one
+    /// between absolute white and black.** The neutral ramp is not a
+    /// lightness scale, it is distance from the page: S1 is the step that
+    /// barely separates from the surface - a hover background - and S9 the
+    /// one furthest from it, up against the ink. Mixing it towards white
+    /// would put every subtle background at the wrong end of a dark theme,
+    /// and mixing it towards black would overshoot a surface that is not
+    /// itself black. On a light theme `ends` is white and black, so this is
+    /// exactly what it emitted before (todo 69 phase 3).
+    pub(crate) const fn shade(self, shade: ColorShade, ramp: ShadeRamp, ends: Ends) -> Self {
         let percent = match ramp {
             ShadeRamp::Chromatic => match shade {
                 ColorShade::S1 => 80,
@@ -157,10 +197,15 @@ impl HexColor {
             },
         };
 
+        let (near_page, near_ink) = match ramp {
+            ShadeRamp::Chromatic => (Ends::ABSOLUTE.surface, Ends::ABSOLUTE.ink),
+            ShadeRamp::Neutral => (ends.surface, ends.ink),
+        };
+
         if percent >= 0 {
-            self.mix(HexColor::new(0xFF_FF_FF), percent as u8)
+            self.mix(near_page, percent as u8)
         } else {
-            self.mix(HexColor::new(0x00_00_00), (-percent) as u8)
+            self.mix(near_ink, (-percent) as u8)
         }
     }
 
@@ -247,14 +292,9 @@ impl HexColor {
     /// beats no colour.
     ///
     /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
-    pub(crate) fn text_shade(
-        self,
-        ramp: ShadeRamp,
-        shade: ColorShade,
-        surface: HexColor,
-    ) -> ColorShade {
-        self.first_shade_from(shade, ShadeWalk::away_from(surface), |step| {
-            self.shade(step, ramp).contrast_ratio(surface) >= TEXT_CONTRAST
+    pub(crate) fn text_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
+        self.first_shade_from(shade, ShadeWalk::away_from(ramp, ends.surface), |step| {
+            self.shade(step, ramp, ends).contrast_ratio(ends.surface) >= TEXT_CONTRAST
         })
     }
 
@@ -263,12 +303,12 @@ impl HexColor {
     /// passes [`TEXT_CONTRAST`]. Mantine's `autoContrast` stops at picking the
     /// foreground and leaves a fill like `blue.6` - where white is picked and
     /// only reaches 3.56:1 - alone; this walks the ramp until the pair works.
-    /// No `surface` argument on purpose: a fill carries its own foreground,
-    /// so the pair reads the same on any surface and the walk is always
-    /// downwards.
-    pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade) -> ColorShade {
-        self.first_shade_from(shade, ShadeWalk::Darker, |step| {
-            let fill = self.shade(step, ramp);
+    /// The walk is always towards S9, whatever the surface: a fill carries
+    /// its own foreground, so the pair reads the same on any page. `ends` is
+    /// here only because a neutral ramp is mixed between them.
+    pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade, ends: Ends) -> ColorShade {
+        self.first_shade_from(shade, ShadeWalk::TowardS9, |step| {
+            let fill = self.shade(step, ramp, ends);
             fill.contrast_ratio(fill.contrast()) >= TEXT_CONTRAST
         })
     }
@@ -327,7 +367,7 @@ mod tests {
     #[test]
     fn hex_color_shade_and_contrast() {
         const COLOR: HexColor = HexColor::new(0x228BE6);
-        const SHADE: HexColor = COLOR.shade(ColorShade::S1, ShadeRamp::Chromatic);
+        const SHADE: HexColor = COLOR.shade(ColorShade::S1, ShadeRamp::Chromatic, Ends::ABSOLUTE);
         const CONTRAST: HexColor = COLOR.contrast();
 
         assert_eq!(SHADE.rgb(), 0xD2_E7_FA);
@@ -357,11 +397,11 @@ mod tests {
         const WHITE: HexColor = HexColor::new(0xFF_FF_FF);
 
         assert_eq!(
-            BLUE.text_shade(ShadeRamp::Chromatic, ColorShade::S6, WHITE),
+            BLUE.text_shade(ShadeRamp::Chromatic, ColorShade::S6, Ends::ABSOLUTE),
             ColorShade::S8
         );
         assert_eq!(
-            BLUE.fill_shade(ShadeRamp::Chromatic, ColorShade::S6),
+            BLUE.fill_shade(ShadeRamp::Chromatic, ColorShade::S6, Ends::ABSOLUTE),
             ColorShade::S8
         );
         // Why `fill_shade` asks `contrast()` and not `readable_contrast()`:
@@ -375,7 +415,7 @@ mod tests {
         // `green.6` already carries black, so its fill stays where it is.
         const GREEN: HexColor = HexColor::new(0x40_C0_57);
         assert_eq!(
-            GREEN.fill_shade(ShadeRamp::Chromatic, ColorShade::S6),
+            GREEN.fill_shade(ShadeRamp::Chromatic, ColorShade::S6, Ends::ABSOLUTE),
             ColorShade::S6
         );
     }

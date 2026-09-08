@@ -1,5 +1,6 @@
 use crate::CssLayer;
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
+use crate::tokens::Ends;
 
 use super::{
     Color, ColorShade, ColorValue, HexColor, INDICATOR_KEYFRAMES, LOADER_KEYFRAMES,
@@ -401,15 +402,6 @@ fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, ends: E
     ));
 }
 
-/// The theme's two ends of the page, carried together because every role
-/// derivation needs both: the `surface` a colour is measured on, and the
-/// `ink` that is its opposite.
-#[derive(Clone, Copy)]
-struct Ends {
-    surface: HexColor,
-    ink: HexColor,
-}
-
 /// Which of the two ends `foreground` - always pure black or pure white,
 /// because that is all `contrast()` returns - is spelled as.
 ///
@@ -455,37 +447,37 @@ fn push_color_declarations(
     ends: Ends,
 ) {
     let ramp = color.shade_ramp();
-    let text_base = base.shade(
-        base.text_shade(ramp, ColorShade::DEFAULT, ends.surface),
-        ramp,
-    );
-    let fill_base = base.shade(base.fill_shade(ramp, ColorShade::DEFAULT), ramp);
+    let text_base = base.shade(base.text_shade(ramp, ColorShade::DEFAULT, ends), ramp, ends);
+    let fill_base = base.shade(base.fill_shade(ramp, ColorShade::DEFAULT, ends), ramp, ends);
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Shade(color, shade).var_name(),
-            base.shade(shade, ramp).to_string(),
+            base.shade(shade, ramp, ends).to_string(),
         ));
     }
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Text(color, shade).var_name(),
-            text_base.shade(shade, ramp).to_string(),
+            text_base.shade(shade, ramp, ends).to_string(),
         ));
     }
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Fill(color, shade).var_name(),
-            fill_base.shade(shade, ramp).to_string(),
+            fill_base.shade(shade, ramp, ends).to_string(),
         ));
     }
 
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Contrast(color, shade).var_name(),
-            foreground_var(fill_base.shade(shade, ramp).readable_contrast(), ends.ink),
+            foreground_var(
+                fill_base.shade(shade, ramp, ends).readable_contrast(),
+                ends.ink,
+            ),
         ));
     }
 }
@@ -523,6 +515,13 @@ mod tests {
     /// including the ones not written yet.
     /// Reads the var out of the rendered `:root`, so these assert on what
     /// ships rather than on the helper that built it.
+    fn theme_ends(theme: &Theme) -> Ends {
+        Ends {
+            surface: theme.surface,
+            ink: theme.ink,
+        }
+    }
+
     fn root_var(css: &str, name: &str) -> String {
         let root = css
             .split_once(":root{")
@@ -641,6 +640,52 @@ mod tests {
     /// a dark one walks its ramps the other way instead of inheriting a light
     /// theme's answers. No `Theme::DARK` yet - this measures the mechanism on
     /// a surface and ink swapped by hand.
+    /// The neutral ramp is distance from the page, not lightness: `muted.1`
+    /// is the step that barely separates from the surface - every hover
+    /// background in the library - and `muted.9` the one up against the ink.
+    /// Mixing it towards absolute white, the way a chromatic ramp is mixed,
+    /// put `muted.1` at the wrong end of a dark theme, and that is a bright
+    /// patch on a dark page rather than a subtle one.
+    #[test]
+    fn the_neutral_ramp_is_mixed_between_the_theme_s_own_ends() {
+        let mut theme = Theme::DEFAULT;
+        theme.surface = HexColor::new(0x1A_1B_1E);
+        theme.ink = HexColor::new(0xE9_EC_EF);
+
+        let dark = Stylesheet::from(&theme).as_str().to_string();
+        let light = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+
+        let step = |css: &str, shade: u8| {
+            HexColor::parse(&root_var(css, &format!("--lsx-muted-{shade}"))).expect("a hex")
+        };
+
+        // Both ends, both schemes: S1 sits on the page, S9 against the ink.
+        for (css, ends) in [
+            (&dark, theme_ends(&theme)),
+            (&light, theme_ends(&Theme::DEFAULT)),
+        ] {
+            assert!(
+                step(css, 1).contrast_ratio(ends.surface) < 1.2,
+                "muted.1 does not sit on its own surface"
+            );
+            assert!(
+                step(css, 9).contrast_ratio(ends.surface) > 8.0,
+                "muted.9 is not up against the ink"
+            );
+        }
+
+        // The base is shade 6 in both, untouched by the mixing.
+        assert_eq!(step(&dark, 6), Theme::DEFAULT.muted);
+        assert_eq!(step(&light, 6), Theme::DEFAULT.muted);
+
+        // The defect this closes, measured rather than assumed: the light
+        // theme's `muted.1` is a near-white patch on this page.
+        assert!(
+            step(&light, 1).contrast_ratio(theme.surface) > 10.0,
+            "the light theme's hover background was not a bright patch here"
+        );
+    }
+
     #[test]
     fn a_dark_surface_derives_its_roles_the_other_way() {
         let mut theme = Theme::DEFAULT;
