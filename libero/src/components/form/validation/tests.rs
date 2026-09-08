@@ -138,6 +138,112 @@ fn a_composite_rule_lands_on_every_field_it_names() {
     assert_eq!(after.matches("Passwords differ").count(), 2);
 }
 
+thread_local! {
+    static SHOWN: Cell<Option<Signal<bool>>> = const { Cell::new(None) };
+}
+
+/// The composite rule of `a_composite_rule_lands_on_every_field_it_names`,
+/// with both fields behind a toggle.
+fn toggled_signup() -> Element {
+    let signup = use_store(|| Signup {
+        password: "a".into(),
+        confirm: "b".into(),
+    });
+    let shown = use_signal(|| true);
+    SHOWN.with(|cell| cell.set(Some(shown)));
+    rsx! {
+        LiberoProvider {
+            Form {
+                value: signup,
+                validate: [
+                    (|s: &Signup| s.password == s.confirm)
+                        .error("Passwords differ")
+                        .on([crate::path!(Signup => password), crate::path!(Signup => confirm)]),
+                ],
+                Spy {}
+                if shown() {
+                    TextField { name: "password", value: "a" }
+                    TextField { name: "confirm", value: "b" }
+                }
+            }
+        }
+    }
+}
+
+fn toggle(dom: &mut VirtualDom, to: bool) -> String {
+    dom.in_runtime(|| SHOWN.with(Cell::get).expect("mounted").set(to));
+    settle(dom)
+}
+
+/// What each field's `focusout` does to the shared scope.
+fn touch(dom: &mut VirtualDom, names: &[&str]) -> String {
+    dom.in_runtime(|| {
+        let mut scope = SCOPE.with(Cell::get).expect("a Spy inside a form");
+        for name in names {
+            scope.touch(name);
+        }
+    });
+    settle(dom)
+}
+
+#[test]
+fn a_remounted_field_waits_for_its_own_blur_again() {
+    let (mut dom, _) = mount(toggled_signup);
+    let touched = touch(&mut dom, &["password", "confirm"]);
+    assert_eq!(touched.matches("Passwords differ").count(), 2, "{touched}");
+
+    toggle(&mut dom, false);
+    let remounted = toggle(&mut dom, true);
+    assert!(
+        !remounted.contains("Passwords differ"),
+        "a remounted field kept its old touched state: {remounted}"
+    );
+    assert!(!dom.in_runtime(|| SCOPE.with(Cell::get).expect("mounted").touched_under("")));
+}
+
+#[test]
+fn a_remounted_field_after_a_failed_submit_still_shows_its_error() {
+    let (mut dom, _) = mount(toggled_signup);
+    submit(&mut dom);
+
+    toggle(&mut dom, false);
+    let remounted = toggle(&mut dom, true);
+    assert_eq!(
+        remounted.matches("Passwords differ").count(),
+        2,
+        "{remounted}"
+    );
+}
+
+#[test]
+fn a_field_leaving_keeps_the_touched_name_another_field_still_carries() {
+    fn app() -> Element {
+        let shown = use_signal(|| true);
+        SHOWN.with(|cell| cell.set(Some(shown)));
+        rsx! {
+            LiberoProvider {
+                Form::<()> {
+                    Spy {}
+                    TextField { name: "topic", value: "" }
+                    if shown() {
+                        TextField { name: "topic", value: "" }
+                    }
+                }
+            }
+        }
+    }
+
+    let (mut dom, _) = mount(app);
+    touch(&mut dom, &["topic"]);
+    toggle(&mut dom, false);
+    assert!(dom.in_runtime(|| {
+        SCOPE
+            .with(Cell::get)
+            .expect("mounted")
+            .touched_under("topic")
+    }));
+}
+
 #[test]
 fn a_fieldset_puts_its_prefix_in_front_and_shows_an_unnamed_rule_itself() {
     #[derive(Clone, PartialEq, Default)]

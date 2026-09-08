@@ -56,8 +56,9 @@ pub fn max<V: PartialOrd + 'static>(bound: V) -> impl Fn(&V) -> bool {
     move |value| *value <= bound
 }
 
-/// One `@` with something before it and a dotted domain after. A shape check,
-/// not delivery - the only proof an address works is mail arriving.
+/// One `@` with something before it and a dotted domain with no empty label
+/// after. A shape check, not delivery - the only proof an address works is
+/// mail arriving.
 // `&String`, not `&str`: a rule over a `String` field is `Fn(&String) -> bool`.
 #[allow(clippy::ptr_arg)]
 pub fn is_email(value: &String) -> bool {
@@ -67,9 +68,8 @@ pub fn is_email(value: &String) -> bool {
     !local.is_empty()
         && !domain.contains('@')
         && !value.chars().any(char::is_whitespace)
-        && domain.split_once('.').is_some_and(|(host, rest)| {
-            !host.is_empty() && !rest.is_empty() && !rest.ends_with('.')
-        })
+        && domain.contains('.')
+        && domain.split('.').all(|label| !label.is_empty())
 }
 
 #[cfg(test)]
@@ -112,6 +112,9 @@ mod tests {
             "tom@@libero.dev",
             "t om@x.de",
             "tom@x.",
+            "tom@.libero.dev",
+            "tom@libero..dev",
+            "tom@mail..libero.dev",
         ] {
             assert!(!is_email(&bad.to_string()), "{bad}");
         }

@@ -194,15 +194,35 @@ impl FormScope {
     }
 
     /// Tolerates a form that is already gone: a field inside it can drop after
-    /// the form's own signals did.
+    /// the form's own signals did. Forgets the field's touched name unless
+    /// another field still carries it, so a remount waits for its own blur.
     pub fn unregister(&mut self, key: usize) {
         let fields = self.fields;
+        let mut touched = self.touched;
         in_owner(self.owner, || {
             let present = fields
                 .try_peek()
                 .is_ok_and(|fields| fields.contains_key(&key));
-            if present {
-                fields.write_unchecked().remove(&key);
+            if !present {
+                return;
+            }
+            let name = fields
+                .write_unchecked()
+                .remove(&key)
+                .and_then(|entry| entry.name);
+            let Some(name) = name else {
+                return;
+            };
+            let shared = fields
+                .peek()
+                .values()
+                .any(|field| field.name.as_deref() == Some(name.as_str()));
+            if !shared
+                && touched
+                    .try_peek()
+                    .is_ok_and(|touched| touched.contains(&name))
+            {
+                touched.write().remove(&name);
             }
         });
     }
