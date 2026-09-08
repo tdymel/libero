@@ -31,7 +31,36 @@ fn a_time_picker_draws_a_column_per_part_and_posts_the_time() {
     // 24 hours, then 00, 15, 30 and 45.
     assert_eq!(html.matches("data-slot=\"option\"").count(), 28);
     assert_eq!(html.matches("data-selected=\"true\"").count(), 2);
+    assert_eq!(html.matches("aria-pressed=\"true\"").count(), 2);
+    assert_eq!(html.matches("aria-pressed=\"false\"").count(), 26);
     assert!(html.contains("type=\"hidden\" name=\"at\" value=\"09:30:00\""));
+}
+
+#[test]
+fn an_analog_time_picker_tells_its_toggles_apart_by_aria_pressed() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                TimePicker { value: NaiveTime::from_hms_opt(21, 30, 0), onchange: move |_| {}, variant: "analog", twelve_hour: true }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    // The hour hand and PM are pressed; the minute hand and AM are not.
+    assert_eq!(html.matches("aria-pressed=\"true\"").count(), 2);
+    assert_eq!(html.matches("aria-pressed=\"false\"").count(), 2);
+    let pressed = html
+        .split("aria-pressed=\"true\"")
+        .nth(2)
+        .expect("a second pressed toggle");
+    assert!(
+        pressed
+            .split("</button>")
+            .next()
+            .unwrap_or_default()
+            .contains(">PM")
+    );
 }
 
 #[test]

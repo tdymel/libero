@@ -552,6 +552,7 @@ impl ClockView {
                 button {
                     r#type: "button",
                     "data-active": (value.is_some() && !pm).then_some("true"),
+                    "aria-pressed": if value.is_some() && !pm { "true" } else { "false" },
                     tabindex,
                     onclick: move |_| self.emit(at(base.hour() % 12, base.minute(), base.second())),
                     {names.am}
@@ -559,6 +560,7 @@ impl ClockView {
                 button {
                     r#type: "button",
                     "data-active": (value.is_some() && pm).then_some("true"),
+                    "aria-pressed": if value.is_some() && pm { "true" } else { "false" },
                     tabindex,
                     onclick: move |_| self.emit(at(base.hour() % 12 + 12, base.minute(), base.second())),
                     {names.pm}
@@ -585,6 +587,7 @@ impl ClockView {
                     r#type: "button",
                     "aria-label": names.hours_label,
                     "data-active": (hand() == Hand::Hour).then_some("true"),
+                    "aria-pressed": if hand() == Hand::Hour { "true" } else { "false" },
                     tabindex,
                     onclick: move |_| hand.set(Hand::Hour),
                     "{hour_text}"
@@ -594,6 +597,7 @@ impl ClockView {
                     r#type: "button",
                     "aria-label": names.minutes_label,
                     "data-active": (hand() == Hand::Minute).then_some("true"),
+                    "aria-pressed": if hand() == Hand::Minute { "true" } else { "false" },
                     tabindex,
                     onclick: move |_| hand.set(Hand::Minute),
                     "{minute_text}"
@@ -782,6 +786,7 @@ fn ClockColumn(props: ClockColumnProps) -> Element {
                 "data-slot": "option",
                 "data-index": "{index}",
                 "data-selected": choice.selected.then_some("true"),
+                "aria-pressed": if choice.selected { "true" } else { "false" },
                 disabled: choice.disabled,
                 tabindex: if focusable && stop == Some(index) { "0" } else { "-1" },
                 onfocus: move |_| active.set(Some((column, index))),

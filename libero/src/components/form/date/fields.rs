@@ -9,7 +9,7 @@ use chrono::{NaiveDate, NaiveDateTime, NaiveTime};
 use super::{
     DateRange,
     date_field::{FieldOptions, date_field},
-    format::uses_twelve_hours,
+    format::{Token, WeekdayWidth, tokens, uses_twelve_hours},
     picker_field::picker_field,
     props::date_props,
 };
@@ -42,24 +42,107 @@ pub(super) fn moment_allowed(
 }
 
 /// The time format a field shows when the caller names none: the theme's,
-/// unless the caller asks for seconds or the other clock.
+/// adjusted for `with_seconds` and `twelve_hour`; separators, padding and text stay.
 pub(super) fn time_format(
     names: &DateDefaults,
     twelve_hour: Option<bool>,
     with_seconds: bool,
 ) -> String {
-    match (twelve_hour, with_seconds) {
-        (None, false) => names.time_format.to_string(),
-        (twelve, seconds) => {
-            let twelve = twelve.unwrap_or_else(|| uses_twelve_hours(names.time_format));
-            match (twelve, seconds) {
-                (false, false) => "HH:mm",
-                (false, true) => "HH:mm:ss",
-                (true, false) => "h:mm A",
-                (true, true) => "h:mm:ss A",
+    let theme = names.time_format;
+    let twelve = twelve_hour.unwrap_or_else(|| uses_twelve_hours(theme));
+    if !with_seconds && twelve == uses_twelve_hours(theme) {
+        return theme.to_string();
+    }
+    let mut parts = tokens(theme);
+    // Seconds go after the minutes, split off as the minutes are from the hour.
+    // `with_seconds: false` leaves a theme's own seconds alone.
+    if with_seconds
+        && !parts
+            .iter()
+            .any(|part| matches!(part, Token::Second { .. }))
+    {
+        let minute = parts
+            .iter()
+            .position(|part| matches!(part, Token::Minute { .. }));
+        let separator = match minute.and_then(|at| at.checked_sub(1)).map(|at| parts[at]) {
+            Some(Token::Literal(separator)) => separator,
+            _ => ":",
+        };
+        let at = minute
+            .or_else(|| last_clock_part(&parts))
+            .map_or(parts.len(), |at| at + 1);
+        parts.splice(
+            at..at,
+            [Token::Literal(separator), Token::Second { padded: true }],
+        );
+    }
+    if twelve != uses_twelve_hours(theme) {
+        for part in &mut parts {
+            if let Token::Hour { twelve: hour, .. } = part {
+                *hour = twelve;
             }
-            .to_string()
         }
+        if twelve {
+            // `A` goes after the last clock part, as in `h:mm A`.
+            let at = last_clock_part(&parts).map_or(parts.len(), |at| at + 1);
+            parts.splice(
+                at..at,
+                [Token::Literal(" "), Token::Meridiem { upper: true }],
+            );
+        } else {
+            // A meridiem goes with the blank that set it apart.
+            while let Some(at) = parts
+                .iter()
+                .position(|part| matches!(part, Token::Meridiem { .. }))
+            {
+                parts.remove(at);
+                let blank = |part: Option<&Token>| matches!(part, Some(Token::Literal(text)) if text.trim().is_empty());
+                if at > 0 && blank(parts.get(at - 1)) {
+                    parts.remove(at - 1);
+                } else if at == 0 && blank(parts.first()) {
+                    parts.remove(0);
+                }
+            }
+        }
+    }
+    parts.iter().map(token_text).collect()
+}
+
+/// The index of the last hour, minute or second.
+fn last_clock_part(parts: &[Token]) -> Option<usize> {
+    parts.iter().rposition(|part| {
+        matches!(
+            part,
+            Token::Hour { .. } | Token::Minute { .. } | Token::Second { .. }
+        )
+    })
+}
+
+/// A token written back as format text. Literal text with letters goes in
+/// brackets, so it cannot read as a token.
+fn token_text(token: &Token) -> String {
+    let pick = |yes: bool, long: &str, short: &str| if yes { long } else { short }.to_string();
+    match *token {
+        Token::Literal(text) if text.chars().any(char::is_alphabetic) => format!("[{text}]"),
+        Token::Literal(text) => text.to_string(),
+        Token::Year => "YYYY".into(),
+        Token::Month { padded } => pick(padded, "MM", "M"),
+        Token::MonthName { short } => pick(short, "MMM", "MMMM"),
+        Token::Day { padded } => pick(padded, "DD", "D"),
+        Token::WeekdayName(WeekdayWidth::Min) => "dd".into(),
+        Token::WeekdayName(WeekdayWidth::Short) => "ddd".into(),
+        Token::WeekdayName(WeekdayWidth::Long) => "dddd".into(),
+        Token::Hour {
+            padded,
+            twelve: false,
+        } => pick(padded, "HH", "H"),
+        Token::Hour {
+            padded,
+            twelve: true,
+        } => pick(padded, "hh", "h"),
+        Token::Minute { padded } => pick(padded, "mm", "m"),
+        Token::Second { padded } => pick(padded, "ss", "s"),
+        Token::Meridiem { upper } => pick(upper, "A", "a"),
     }
 }
 
@@ -180,4 +263,35 @@ pub fn DateTimeRangeField(props: DateTimeRangeFieldProps) -> Element {
         ..FieldOptions::default()
     };
     date_field::<DateRange<NaiveDateTime>>(picker_field!(props, props.today), options)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn adjusted(theme: &'static str, twelve_hour: Option<bool>, with_seconds: bool) -> String {
+        let names = DateDefaults {
+            time_format: theme,
+            ..DateDefaults::ENGLISH
+        };
+        time_format(&names, twelve_hour, with_seconds)
+    }
+
+    #[test]
+    fn seconds_and_the_clock_adjust_a_dotted_theme() {
+        assert_eq!(adjusted("HH.mm", None, false), "HH.mm");
+        assert_eq!(adjusted("HH.mm", None, true), "HH.mm.ss");
+        assert_eq!(adjusted("HH.mm", Some(false), true), "HH.mm.ss");
+        assert_eq!(adjusted("HH.mm", Some(true), false), "hh.mm A");
+        assert_eq!(adjusted("HH.mm", Some(true), true), "hh.mm.ss A");
+        assert_eq!(adjusted("H.mm [Uhr]", Some(true), true), "h.mm.ss A [Uhr]");
+    }
+
+    #[test]
+    fn a_twelve_hour_theme_drops_its_meridiem_for_the_24_hour_clock() {
+        assert_eq!(adjusted("h:mm A", None, true), "h:mm:ss A");
+        assert_eq!(adjusted("h:mm A", Some(false), false), "H:mm");
+        assert_eq!(adjusted("a h:mm", Some(false), true), "H:mm:ss");
+        assert_eq!(adjusted("HH:mm:ss", Some(false), false), "HH:mm:ss");
+    }
 }
