@@ -11,6 +11,9 @@ memory
 # Written by `cargo test -p docs page_snippets`, compiled by libero's doc-tests
 libero/tests/page_snippets.md
 
+# qmd local search index (config .qmd/index.yml is tracked)
+.qmd/index.sqlite*
+
 # added by gcma: paths removed from history
 .agents/*
 .claude/*
