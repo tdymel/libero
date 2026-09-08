@@ -121,8 +121,12 @@ pub struct Theme {
     /// Text-dark neutral: the label and outline color of a `neutral` control.
     pub neutral: HexColor,
     pub grey: HexColor,
-    pub black: HexColor,
-    pub white: HexColor,
+    /// What text is set in, and the page it is set on. Every colour role is
+    /// derived against `surface`, so a dark theme is a theme whose `surface`
+    /// is dark - not one that redefines "white". `Paper`'s own background is
+    /// a different thing: the card drawn on top of this one.
+    pub ink: HexColor,
+    pub surface: HexColor,
     pub font_smoothing: bool,
 }
 
@@ -240,8 +244,8 @@ impl Theme {
         success: HexColor::new(0x40C057),
         neutral: HexColor::new(0x373A3C),
         grey: HexColor::new(0x868E96),
-        black: HexColor::new(0x000000),
-        white: HexColor::new(0xFFFFFF),
+        ink: HexColor::new(0x000000),
+        surface: HexColor::new(0xFFFFFF),
         font_smoothing: true,
     };
 }

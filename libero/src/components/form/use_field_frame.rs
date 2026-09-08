@@ -24,7 +24,7 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         // The surface's own colour rather than a control token of its own: a
         // field sits on a surface and matches it until a theme says otherwise.
         .and(PaperDefaults::background_sx())
-        .color("black")
+        .color("ink")
         .focus_within(sx().border_color("primary.6"))
         // The ring is the frame's, because focus lands on a child - the
         // control, or a button in a slot. Each of them is followed by a ring

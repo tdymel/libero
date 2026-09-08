@@ -151,7 +151,7 @@ fn PopoverDemo(
                 style: popover.style(),
                 onmounted: floating.mount(),
                 sx: sx()
-                    .background("white")
+                    .background("surface")
                     .border("1px solid var(--lsx-grey-3)")
                     .border_radius("6px")
                     .box_shadow("md")

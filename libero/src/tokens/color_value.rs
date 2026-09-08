@@ -80,14 +80,14 @@ impl ColorValue {
     }
 
     /// `"primary"`, `"primary.7"`, or a contrast of either
-    /// (`"primary-contrast.7"`). Black/white parse only as bare names.
+    /// (`"primary-contrast.7"`). Ink/surface parse only as bare names.
     pub(crate) fn parse(value: &str) -> Option<Self> {
-        if value == "black" {
-            return Some(Self::Shade(Color::Black, ColorShade::S1));
+        if value == "ink" {
+            return Some(Self::Shade(Color::Ink, ColorShade::S1));
         }
 
-        if value == "white" {
-            return Some(Self::Shade(Color::White, ColorShade::S1));
+        if value == "surface" {
+            return Some(Self::Shade(Color::Surface, ColorShade::S1));
         }
 
         let (name, shade) = match value.split_once('.') {
@@ -133,24 +133,24 @@ mod tests {
         assert_eq!(error, "var(--lsx-error-3)");
         assert_eq!(success_contrast, "--lsx-success-contrast-4");
         assert_eq!(
-            ColorValue::Shade(Color::Black, ColorShade::S7).value(),
-            "var(--lsx-black)"
+            ColorValue::Shade(Color::Ink, ColorShade::S7).value(),
+            "var(--lsx-ink)"
         );
         assert_eq!(
-            ColorValue::Shade(Color::White, ColorShade::S7).var_name(),
-            "--lsx-white"
+            ColorValue::Shade(Color::Surface, ColorShade::S7).var_name(),
+            "--lsx-surface"
         );
     }
 
     #[test]
     fn black_and_white_contrast_to_each_other() {
         assert_eq!(
-            ColorValue::Contrast(Color::Black, ColorShade::S5).value(),
-            "var(--lsx-white)"
+            ColorValue::Contrast(Color::Ink, ColorShade::S5).value(),
+            "var(--lsx-surface)"
         );
         assert_eq!(
-            ColorValue::Contrast(Color::White, ColorShade::S5).value(),
-            "var(--lsx-black)"
+            ColorValue::Contrast(Color::Surface, ColorShade::S5).value(),
+            "var(--lsx-ink)"
         );
     }
 
@@ -173,8 +173,8 @@ mod tests {
             Some(ColorValue::Contrast(Color::Info, ColorShade::S3))
         );
         assert_eq!(
-            ColorValue::parse("black"),
-            Some(ColorValue::Shade(Color::Black, ColorShade::S1))
+            ColorValue::parse("ink"),
+            Some(ColorValue::Shade(Color::Ink, ColorShade::S1))
         );
     }
 

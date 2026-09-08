@@ -96,6 +96,7 @@ mod table;
 mod tabs;
 mod tags_field;
 mod text;
+mod theme_set;
 mod timeline;
 mod title;
 mod tooltip;

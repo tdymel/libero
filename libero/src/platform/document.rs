@@ -12,6 +12,13 @@ pub trait DocumentApi {
     /// The visible viewport, in CSS pixels. No element owns it, and anything
     /// that has to stay on screen - a flipping popover - needs it.
     fn viewport(&self) -> Read<Dimensions>;
+
+    /// Sets an attribute on the element `:root` matches - the one thing above
+    /// the app's own tree that a stylesheet can select on. `None` removes it.
+    ///
+    /// `false` where the root is not reachable, which is how the theme switch
+    /// learns it has to rebuild the sheet instead of flipping an attribute.
+    fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool;
 }
 
 /// `None` where the renderer exposes no document - a webview, where Rust holds

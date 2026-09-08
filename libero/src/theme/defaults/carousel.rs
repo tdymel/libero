@@ -128,7 +128,7 @@ impl CarouselDefaults {
         indicators_gap: "8px",
         indicator_color: ColorValue::Shade(Color::Grey, ColorShade::S6),
         indicator_current_color: ColorValue::Shade(Color::Primary, ColorShade::S6),
-        control_background: ColorValue::Shade(Color::White, ColorShade::S1),
+        control_background: ColorValue::Shade(Color::Surface, ColorShade::S1),
         control_hover_background: ColorValue::Shade(Color::Grey, ColorShade::S1),
         control_color: ColorValue::Shade(Color::Grey, ColorShade::S7),
         autoplay_delay: 4000,

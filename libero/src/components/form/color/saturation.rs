@@ -52,7 +52,7 @@ static THUMB_SX: StaticSx = StaticSx::new(|| {
         .border_radius("50%")
         .border_style("solid")
         .border_width("2px")
-        .border_color("white")
+        .border_color("surface")
         .and(shadow_sx(
             "0 0 0 1px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(0, 0, 0, 0.3)".to_string(),
         ))

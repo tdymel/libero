@@ -69,9 +69,9 @@ impl ThemeAwareValue {
                 Some(ColorValue::Contrast(*color, *shade).value())
             }
             Self::RawColor(_, hex) => Some(if hex.contrast().rgb() == 0x00_00_00 {
-                NamedColorCss::BLACK.value()
+                NamedColorCss::INK.value()
             } else {
-                NamedColorCss::WHITE.value()
+                NamedColorCss::SURFACE.value()
             }),
             _ => None,
         }

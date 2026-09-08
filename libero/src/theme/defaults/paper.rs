@@ -42,7 +42,7 @@ impl PaperDefaults {
         radius: Size::Md,
         shadow: Size::Sm,
         background: "#fff",
-        contrast: ColorValue::Shade(Color::Black, ColorShade::S1),
+        contrast: ColorValue::Shade(Color::Ink, ColorShade::S1),
         border_color: ColorValue::Shade(Color::Grey, ColorShade::S3),
     };
 

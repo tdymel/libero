@@ -329,7 +329,7 @@ fn AppShell() -> Element {
                         // bars fall back to `currentColor`, so one declaration
                         // still drives them.
                         sx: sx()
-                            .color("white")
+                            .color("surface")
                             .hover(sx().background("rgba(255, 255, 255, 0.15)"))
                             // Only relevant below `Sm` - the burger is the only
                             // way to set `open`, so hiding it here means the

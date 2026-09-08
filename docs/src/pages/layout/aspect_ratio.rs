@@ -8,7 +8,7 @@ use libero::{
 /// The child is the fixture - `ratio` is the only prop - so the code block
 /// prints it verbatim.
 const CHILD: &str = r#"Flex {
-    sx: sx().background("primary").color("white"),
+    sx: sx().background("primary").color("surface"),
     align: "center",
     justify: "center",
     "The child fills the box"
@@ -76,7 +76,7 @@ pub fn AspectRatioPage() -> Element {
                         },
                         sx: sx().width("240px"),
                         Flex {
-                            sx: sx().background("primary").color("white"),
+                            sx: sx().background("primary").color("surface"),
                             align: "center",
                             justify: "center",
                             "The child fills the box"

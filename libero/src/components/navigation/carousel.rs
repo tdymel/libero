@@ -1910,7 +1910,7 @@ mod tests {
                 css.contains("--lsx-focus-contrast:var(--lsx-carousel-control-color)"),
                 "{css}"
             );
-            assert!(!css.contains("--lsx-white"), "{css}");
+            assert!(!css.contains("--lsx-surface"), "{css}");
             assert!(!css.contains("--lsx-grey"), "{css}");
         }
         let control = Stylesheet::from(&CAROUSEL_CONTROL_SX);

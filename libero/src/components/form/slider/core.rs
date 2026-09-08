@@ -16,6 +16,7 @@ use crate::{
     },
     platform::ElementApi,
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
+    theme::NamedColorCss,
     theme::{
         Color, ColorShade, ColorValue, CssVar, SLIDER_THUMB, SLIDER_TRACK, Size, SliderDefaults,
     },
@@ -81,7 +82,7 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
             "plain",
             sx().selector(
                 "& [role='slider']",
-                sx().border_color("white").and(shadow_sx(
+                sx().border_color("surface").and(shadow_sx(
                     "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)".to_string(),
                 )),
             ),
@@ -144,7 +145,11 @@ static SLIDER_THUMB_SX: StaticSx = StaticSx::new(|| {
         .width(SLIDER_THUMB.value())
         .height(SLIDER_THUMB.value())
         .border_radius("50%")
-        .background(SLIDER_THUMB_FILL.value_or("white"))
+        // `value_or`'s fallback is interpolated as raw CSS - `sx` never sees
+        // it - so it has to be a var reference, not a colour name. `"surface"`
+        // here would be an unknown CSS keyword and the thumb would compute to
+        // transparent (todo 378).
+        .background(SLIDER_THUMB_FILL.value_or(NamedColorCss::SURFACE.value()))
         .border_style("solid")
         .border_width("2px")
         .border_color(SLIDER_COLOR.value())
@@ -181,7 +186,7 @@ static SLIDER_MARK_SX: StaticSx = StaticSx::new(|| {
         .background(ColorValue::Shade(Color::Grey, ColorShade::S4).value())
         // White on the filled bar, the way the thumb is - the grey dot would
         // disappear into it.
-        .when("filled", sx().background("white"))
+        .when("filled", sx().background("surface"))
 });
 
 static SLIDER_MARK_LABEL_SX: StaticSx = StaticSx::new(|| {

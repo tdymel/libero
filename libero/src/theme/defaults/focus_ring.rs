@@ -55,15 +55,15 @@ impl FocusRingDefaults {
     /// The two tones are the theme's own black and white rather than
     /// literals, and rather than a palette shade.
     ///
-    /// `Color::Black`/`Color::White` have no ramp, so both resolve to the one
-    /// var each - `--lsx-black` and `--lsx-white`, which *are* `theme.black`
-    /// and `theme.white` - and the shade below is ignored. That is what makes
+    /// `Color::Ink`/`Color::Surface` have no ramp, so both resolve to the one
+    /// var each - `--lsx-ink` and `--lsx-surface`, which *are* `theme.ink`
+    /// and `theme.surface` - and the shade below is ignored. That is what makes
     /// the pair follow the theme: a scheme that redefines the two ends of the
     /// page redefines the ring with them, and the tones stay adjacent because
     /// they invert together.
     pub const DEFAULT: Self = Self {
-        color: ColorValue::Shade(Color::Black, ColorShade::DEFAULT),
-        halo: ColorValue::Shade(Color::White, ColorShade::DEFAULT),
+        color: ColorValue::Shade(Color::Ink, ColorShade::DEFAULT),
+        halo: ColorValue::Shade(Color::Surface, ColorShade::DEFAULT),
         width: 2,
         offset: 2,
         halo_width: 2,

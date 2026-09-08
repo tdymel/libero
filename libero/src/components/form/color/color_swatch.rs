@@ -38,8 +38,8 @@ static COLOR_SWATCH_SX: StaticSx = StaticSx::new(|| {
                 "inset 0 0 0 1px rgba(0, 0, 0, 0.1), inset 0 0 4px rgba(0, 0, 0, 0.1)".to_string(),
             ),
         )
-        .color("white")
-        .when("on-light", sx().color("black"))
+        .color("surface")
+        .when("on-light", sx().color("ink"))
         .when("clickable", sx().cursor("pointer"))
 });
 

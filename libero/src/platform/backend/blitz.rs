@@ -133,6 +133,21 @@ impl DocumentApi for BlitzDocument {
         let node_id = anchor.try_doc()?.get_focussed_node_id()?;
         Some(Box::new(BlitzElement { anchor, node_id }))
     }
+
+    /// Not natively, for now - so the theme switch rebuilds its sheet here
+    /// instead. **Conservative, not impossible**, and the comment that said
+    /// the root is unreachable was wrong: dioxus-native does build a real
+    /// `html`/`head`/`body`/`main` tree and `BaseDocument::root_element()`
+    /// reaches the `<html>` that `:root` matches. What is unverified is
+    /// whether mutating an attribute there marks the node dirty for a
+    /// restyle, so todo 69 phase 4 should try it before keeping this
+    /// fallback. `@media (prefers-color-scheme: dark)` *is* honoured
+    /// natively either way - stylo evaluates it off the window theme - so
+    /// only an explicit override needs this. See
+    /// [[codebase/blitz-platform-gaps]].
+    fn set_root_attribute(&self, _name: &str, _value: Option<&str>) -> bool {
+        false
+    }
 }
 
 struct BlitzElement {

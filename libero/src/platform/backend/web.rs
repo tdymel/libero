@@ -116,6 +116,20 @@ impl DocumentApi for WebDocument {
             .ok_or(PlatformError::Unsupported);
         Box::pin(std::future::ready(size))
     }
+
+    fn set_root_attribute(&self, name: &str, value: Option<&str>) -> bool {
+        let Some(root) = web_sys::window()
+            .and_then(|window| window.document())
+            .and_then(|document| document.document_element())
+        else {
+            return false;
+        };
+
+        match value {
+            Some(value) => root.set_attribute(name, value).is_ok(),
+            None => root.remove_attribute(name).is_ok(),
+        }
+    }
 }
 
 pub(super) fn scroll() -> Option<&'static dyn ScrollApi> {

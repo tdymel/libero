@@ -40,7 +40,7 @@ fn nav_responsive_sx(open: bool) -> Sx {
         // `Sidebar`'s own base has no background - fine sitting adjacent to
         // content in normal flow (desktop), but this mode overlaps the main
         // content, which would otherwise show through underneath it.
-        .background("white")
+        .background("surface")
         // `position: fixed` alone only creates a stacking context - without
         // an explicit z-index it's `auto`, which paints below anything else
         // on the page that happens to have a real (even low, even `0`)

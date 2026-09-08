@@ -5,7 +5,7 @@ use super::{
     Color, ColorShade, ColorValue, HexColor, INDICATOR_KEYFRAMES, LOADER_KEYFRAMES,
     MARQUEE_KEYFRAMES, NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES,
     RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE,
-    TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme,
+    TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme, ThemeSet,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -21,39 +21,118 @@ const SHADES: [ColorShade; 9] = [
 ];
 
 impl From<&Theme> for Stylesheet {
-    /// The vars and the keyframes stay unlayered - a custom property and an
-    /// `@keyframes` name are not cascaded rules, so a layer would only make
-    /// them harder to override. The reset and the `body` rules go into
-    /// `lsx-base`, the first layer: unlayered they would beat *every* layered
-    /// rule, so an app whose own base styles sit in a layer (Tailwind v4's
-    /// `@layer base`, any `@layer reset`) could not restyle `body` without
-    /// `!important`.
+    /// One theme's whole sheet: its vars at `:root`, then the reset, `body`
+    /// and the keyframes ([`base_layer_and_keyframes`] carries why those are
+    /// layered and these are not).
+    ///
+    /// One theme is one scheme, so the `color-scheme` follows this theme's
+    /// own surface - `light` for a paper one, `dark` for an inked one.
     fn from(theme: &Theme) -> Self {
-        let mut css = Stylesheet::new(vec![CssScope::new(":root", theme_declarations(theme))])
-            .as_str()
-            .to_string();
-
-        let mut base_scopes = global_reset_scopes(theme);
-        base_scopes.push(body_scope(theme));
-        css.push_str(&format!(
-            "@layer {}{{{}}}",
-            CssLayer::Base.css_name(),
-            Stylesheet::new(base_scopes).as_str()
+        let mut css = root_block(":root", theme);
+        css.push_str(&base_layer_and_keyframes(
+            theme,
+            theme.surface.color_scheme(),
         ));
-
-        css.push_str(RIPPLE_KEYFRAMES);
-        css.push_str(PROGRESS_BAR_KEYFRAMES);
-        css.push_str(LOADER_KEYFRAMES);
-        css.push_str(INDICATOR_KEYFRAMES);
-        css.push_str(SKELETON_KEYFRAMES);
-        css.push_str(MARQUEE_KEYFRAMES);
-        css.push_str(NOTIFICATION_KEYFRAMES);
         Stylesheet::from(css)
     }
 }
 
-fn global_reset_scopes(theme: &Theme) -> Vec<CssScope> {
-    let mut html_declarations = vec![CssDeclaration::new("box-sizing", "border-box")];
+impl From<&ThemeSet> for Stylesheet {
+    /// The pair up front, so switching between the light and the dark theme
+    /// is one attribute on the document root: nothing re-renders to show the
+    /// new colours, the first paint is already right, and
+    /// `prefers-color-scheme` needs no JS at all.
+    ///
+    /// ```css
+    /// :root { … }                            /* the light theme */
+    /// @media (prefers-color-scheme: dark) {
+    ///   :root:not([data-lsx-theme]) { … }    /* the dark theme, system case */
+    /// }
+    /// :root[data-lsx-theme="light"] { … }
+    /// :root[data-lsx-theme="dark"]  { … }
+    /// ```
+    ///
+    /// A set with no dark theme is exactly one theme's sheet - there is
+    /// nothing to switch to, so none of the blocks above would ever match. A
+    /// theme added with [`ThemeSet::named`] is not in here either: it costs a
+    /// rebuild when it is selected, which is what keeps this sheet from
+    /// growing with every theme an app happens to own.
+    fn from(set: &ThemeSet) -> Self {
+        let light = set.light_theme();
+        let Some(dark) = set.dark_theme() else {
+            return Stylesheet::from(light);
+        };
+
+        let mut css = root_block(":root", light);
+        // The system case. Guarded by `:not([data-lsx-theme])` so an explicit
+        // choice below wins wherever it lands in the cascade - a media block
+        // carries no specificity of its own.
+        css.push_str(&format!(
+            "@media (prefers-color-scheme: dark){{{}}}",
+            root_block(":root:not([data-lsx-theme])", dark)
+        ));
+        css.push_str(&root_block(&theme_selector(ThemeSet::LIGHT), light));
+        css.push_str(&root_block(&theme_selector(ThemeSet::DARK), dark));
+
+        // The base layer comes from the light theme: every colour in it is a
+        // var, so it follows whichever block above won, and `font_smoothing`
+        // is a typography choice rather than a scheme one.
+        css.push_str(&base_layer_and_keyframes(light, "light dark"));
+        Stylesheet::from(css)
+    }
+}
+
+/// The attribute a document root carries to pin one theme of the pair.
+pub(crate) const THEME_ATTRIBUTE: &str = "data-lsx-theme";
+
+fn theme_selector(name: &str) -> String {
+    format!(":root[{THEME_ATTRIBUTE}=\"{name}\"]")
+}
+
+fn root_block(selector: &str, theme: &Theme) -> String {
+    Stylesheet::new(vec![CssScope::new(selector, theme_declarations(theme))])
+        .as_str()
+        .to_string()
+}
+
+/// The reset, `body` and the keyframes - everything in a sheet that is not a
+/// custom property, and so is emitted once however many themes it carries.
+///
+/// The vars and the keyframes stay unlayered - a custom property and an
+/// `@keyframes` name are not cascaded rules, so a layer would only make them
+/// harder to override. The reset and the `body` rules go into `lsx-base`, the
+/// first layer: unlayered they would beat *every* layered rule, so an app
+/// whose own base styles sit in a layer (Tailwind v4's `@layer base`, any
+/// `@layer reset`) could not restyle `body` without `!important`.
+fn base_layer_and_keyframes(theme: &Theme, color_scheme: &str) -> String {
+    let mut base_scopes = global_reset_scopes(theme, color_scheme);
+    base_scopes.push(body_scope(theme));
+
+    let mut css = format!(
+        "@layer {}{{{}}}",
+        CssLayer::Base.css_name(),
+        Stylesheet::new(base_scopes).as_str()
+    );
+
+    css.push_str(RIPPLE_KEYFRAMES);
+    css.push_str(PROGRESS_BAR_KEYFRAMES);
+    css.push_str(LOADER_KEYFRAMES);
+    css.push_str(INDICATOR_KEYFRAMES);
+    css.push_str(SKELETON_KEYFRAMES);
+    css.push_str(MARQUEE_KEYFRAMES);
+    css.push_str(NOTIFICATION_KEYFRAMES);
+    css
+}
+
+fn global_reset_scopes(theme: &Theme, color_scheme: &str) -> Vec<CssScope> {
+    let mut html_declarations = vec![
+        CssDeclaration::new("box-sizing", "border-box"),
+        // So the canvas, the scrollbars and every native control follow the
+        // theme's own end of the greyscale instead of the UA's light default.
+        // One theme is one scheme; a `ThemeSet` carrying a pair passes
+        // `light dark` and lets the browser follow the blocks above it.
+        CssDeclaration::new("color-scheme", color_scheme),
+    ];
     if theme.font_smoothing {
         html_declarations.push(CssDeclaration::new("-webkit-font-smoothing", "antialiased"));
         html_declarations.push(CssDeclaration::new("-moz-osx-font-smoothing", "grayscale"));
@@ -69,19 +148,16 @@ fn global_reset_scopes(theme: &Theme) -> Vec<CssScope> {
 }
 
 fn body_scope(theme: &Theme) -> CssScope {
-    // Black/white have no per-shade contrast var, so it's computed here the
-    // way `push_color_declarations` does for palette shades.
-    let text_color_var = if theme.white.contrast().rgb() == 0x00_00_00 {
-        NamedColorCss::BLACK.value()
-    } else {
-        NamedColorCss::WHITE.value()
-    };
+    // Ink and paper have no per-shade contrast var, so it's computed here the
+    // way `push_color_declarations` does for palette shades. A theme whose
+    // paper is dark gets its paper-coloured text this way round too.
+    let text_color_var = foreground_var(theme.surface.contrast(), theme.ink);
 
     CssScope::new(
         "body",
         vec![
             CssDeclaration::new("margin", "0"),
-            CssDeclaration::new("background-color", NamedColorCss::WHITE.value()),
+            CssDeclaration::new("background-color", NamedColorCss::SURFACE.value()),
             CssDeclaration::new("color", text_color_var),
             CssDeclaration::new("font-family", TEXT_FONT_FAMILY.value()),
             CssDeclaration::new("font-size", TEXT_FONT_SIZE.value(Size::Md)),
@@ -173,8 +249,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         success,
         neutral,
         grey,
-        black,
-        white,
+        ink,
+        surface,
         // Plain values read from Rust - no CSS vars of their own.
         floating_window: _,
         phone_field: _,
@@ -284,21 +360,25 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     declarations.extend(avatar.to_css_declarations());
     declarations.extend(avatar_group.to_css_declarations());
     declarations.extend(anchor.to_css_declarations());
-    push_named_color_declarations(&mut declarations, *black, *white);
+    let ends = Ends {
+        surface: *surface,
+        ink: *ink,
+    };
+    push_named_color_declarations(&mut declarations, ends);
     // Dimmed text is the grey ramp's own text role, so a re-themed `grey`
     // carries it - see `NamedColorCss::TEXT_DIMMED`.
     declarations.push(CssDeclaration::new(
         NamedColorCss::TEXT_DIMMED.name(),
         ColorValue::Text(Color::Grey, ColorShade::DEFAULT).value(),
     ));
-    push_color_declarations(&mut declarations, Color::Primary, *primary, *white);
-    push_color_declarations(&mut declarations, Color::Secondary, *secondary, *white);
-    push_color_declarations(&mut declarations, Color::Error, *error, *white);
-    push_color_declarations(&mut declarations, Color::Warning, *warning, *white);
-    push_color_declarations(&mut declarations, Color::Info, *info, *white);
-    push_color_declarations(&mut declarations, Color::Success, *success, *white);
-    push_color_declarations(&mut declarations, Color::Neutral, *neutral, *white);
-    push_color_declarations(&mut declarations, Color::Grey, *grey, *white);
+    push_color_declarations(&mut declarations, Color::Primary, *primary, ends);
+    push_color_declarations(&mut declarations, Color::Secondary, *secondary, ends);
+    push_color_declarations(&mut declarations, Color::Error, *error, ends);
+    push_color_declarations(&mut declarations, Color::Warning, *warning, ends);
+    push_color_declarations(&mut declarations, Color::Info, *info, ends);
+    push_color_declarations(&mut declarations, Color::Success, *success, ends);
+    push_color_declarations(&mut declarations, Color::Neutral, *neutral, ends);
+    push_color_declarations(&mut declarations, Color::Grey, *grey, ends);
     declarations
 }
 
@@ -310,19 +390,40 @@ fn push_breakpoint_declarations(declarations: &mut Vec<CssDeclaration>) {
     }
 }
 
-fn push_named_color_declarations(
-    declarations: &mut Vec<CssDeclaration>,
-    black: HexColor,
-    white: HexColor,
-) {
+fn push_named_color_declarations(declarations: &mut Vec<CssDeclaration>, ends: Ends) {
     declarations.push(CssDeclaration::new(
-        NamedColorCss::BLACK.name(),
-        black.to_string(),
+        NamedColorCss::INK.name(),
+        ends.ink.to_string(),
     ));
     declarations.push(CssDeclaration::new(
-        NamedColorCss::WHITE.name(),
-        white.to_string(),
+        NamedColorCss::SURFACE.name(),
+        ends.surface.to_string(),
     ));
+}
+
+/// The theme's two ends of the page, carried together because every role
+/// derivation needs both: the `surface` a colour is measured on, and the
+/// `ink` that is its opposite.
+#[derive(Clone, Copy)]
+struct Ends {
+    surface: HexColor,
+    ink: HexColor,
+}
+
+/// Which of the two ends `foreground` - always pure black or pure white,
+/// because that is all `contrast()` returns - is spelled as.
+///
+/// Not a black/white lookup: on a dark theme the ink is the *light* end, so a
+/// fill that wants a white label wants `--lsx-ink`, not `--lsx-surface`.
+fn foreground_var(foreground: HexColor, ink: HexColor) -> String {
+    let wants_dark = foreground.rgb() == 0x00_00_00;
+    let ink_is_dark = ink.contrast().rgb() == 0xFF_FF_FF;
+
+    if wants_dark == ink_is_dark {
+        NamedColorCss::INK.value()
+    } else {
+        NamedColorCss::SURFACE.value()
+    }
 }
 
 /// Three ramps per palette colour, plus the foreground that pairs with the
@@ -337,22 +438,27 @@ fn push_named_color_declarations(
 /// colour and the hover disappears.
 ///
 /// - `text-N` walks from `base.shade(text_shade(N))`, the first step that
-///   clears 4.5:1 on `surface`.
+///   clears 4.5:1 on `surface`, walking away from it - darker on a paper,
+///   lighter on an inked one.
 /// - `fill-N` walks from `base.shade(fill_shade(N))`, the first step whose
 ///   auto-contrast foreground clears 4.5:1 on it.
 /// - `contrast-N` is that foreground, computed on `fill-N` - the two are
 ///   always used as a pair.
 ///
-/// `surface` is the theme's paper. A dark surface would want the ramp walked
-/// the other way; nothing in the library has one yet (todo 69).
+/// `surface` is `theme.surface`, whichever end of the greyscale it sits at:
+/// the text ramp is walked away from it, so a dark paper derives its roles
+/// correctly rather than inheriting a light one's (todo 69(b)).
 fn push_color_declarations(
     declarations: &mut Vec<CssDeclaration>,
     color: Color,
     base: HexColor,
-    surface: HexColor,
+    ends: Ends,
 ) {
     let ramp = color.shade_ramp();
-    let text_base = base.shade(base.text_shade(ramp, ColorShade::DEFAULT, surface), ramp);
+    let text_base = base.shade(
+        base.text_shade(ramp, ColorShade::DEFAULT, ends.surface),
+        ramp,
+    );
     let fill_base = base.shade(base.fill_shade(ramp, ColorShade::DEFAULT), ramp);
 
     for shade in SHADES {
@@ -379,11 +485,7 @@ fn push_color_declarations(
     for shade in SHADES {
         declarations.push(CssDeclaration::new(
             ColorValue::Contrast(color, shade).var_name(),
-            if fill_base.shade(shade, ramp).readable_contrast().rgb() == 0x00_00_00 {
-                ColorValue::Shade(Color::Black, shade).value()
-            } else {
-                ColorValue::Shade(Color::White, shade).value()
-            },
+            foreground_var(fill_base.shade(shade, ramp).readable_contrast(), ends.ink),
         ));
     }
 }
@@ -483,8 +585,8 @@ mod tests {
             let fill =
                 HexColor::parse(&root_var(&css, &format!("--lsx-{name}-fill-6"))).expect("a hex");
             let foreground = match root_var(&css, &format!("--lsx-{name}-contrast-6")).as_str() {
-                "var(--lsx-black)" => HexColor::new(0x00_00_00),
-                "var(--lsx-white)" => HexColor::new(0xFF_FF_FF),
+                "var(--lsx-ink)" => HexColor::new(0x00_00_00),
+                "var(--lsx-surface)" => HexColor::new(0xFF_FF_FF),
                 other => panic!("unexpected contrast value {other}"),
             };
 
@@ -533,6 +635,54 @@ mod tests {
 
         let dimmed = HexColor::parse(&root_var(&css, "--lsx-grey-text-6")).expect("a hex");
         assert!(dimmed.contrast_ratio(white) >= TEXT_CONTRAST);
+    }
+
+    /// Todo 69(b): every role is derived against the theme's own surface, so
+    /// a dark one walks its ramps the other way instead of inheriting a light
+    /// theme's answers. No `Theme::DARK` yet - this measures the mechanism on
+    /// a surface and ink swapped by hand.
+    #[test]
+    fn a_dark_surface_derives_its_roles_the_other_way() {
+        let mut theme = Theme::DEFAULT;
+        theme.surface = HexColor::new(0x1A_1B_1E);
+        theme.ink = HexColor::new(0xE9_EC_EF);
+
+        let dark = Stylesheet::from(&theme).as_str().to_string();
+        let light = Stylesheet::from(&Theme::DEFAULT).as_str().to_string();
+
+        for name in PALETTE {
+            let text =
+                HexColor::parse(&root_var(&dark, &format!("--lsx-{name}-text-6"))).expect("a hex");
+            let base =
+                HexColor::parse(&root_var(&dark, &format!("--lsx-{name}-6"))).expect("a hex");
+
+            assert!(
+                text.relative_luminance() >= base.relative_luminance(),
+                "{name} walked its text ramp darker on a dark surface"
+            );
+        }
+
+        // The light theme's answer is unreadable here - that is the bug this
+        // closes, not a hypothetical one.
+        let here = HexColor::parse(&root_var(&dark, "--lsx-primary-text-6")).expect("a hex");
+        let there = HexColor::parse(&root_var(&light, "--lsx-primary-text-6")).expect("a hex");
+        assert!(here.contrast_ratio(theme.surface) >= TEXT_CONTRAST);
+        assert!(there.contrast_ratio(theme.surface) < TEXT_CONTRAST);
+
+        // A fill wanting a light label asks for the ink, because on this theme
+        // the ink *is* the light end. On the default theme it asks for the
+        // surface, and both are right.
+        assert_eq!(
+            root_var(&dark, "--lsx-primary-contrast-6"),
+            "var(--lsx-ink)"
+        );
+        assert_eq!(
+            root_var(&light, "--lsx-primary-contrast-6"),
+            "var(--lsx-surface)"
+        );
+
+        assert!(dark.contains("background-color:var(--lsx-surface);"));
+        assert!(dark.contains("color:var(--lsx-ink);"));
     }
 
     #[test]
@@ -614,7 +764,7 @@ mod tests {
             ("--lsx-paper-radius", "var(--lsx-radius-md)"),
             ("--lsx-paper-shadow", "var(--lsx-shadow-sm)"),
             ("--lsx-paper-background", "#fff"),
-            ("--lsx-paper-contrast", "var(--lsx-black)"),
+            ("--lsx-paper-contrast", "var(--lsx-ink)"),
             ("--lsx-paper-border-color", "var(--lsx-grey-3)"),
         ]);
     }
@@ -641,8 +791,8 @@ mod tests {
         assert_declares(&[
             // Both tones are the theme's own two ends of the page, so a
             // scheme that redefines those redefines the ring with them.
-            ("--lsx-focus-ring-color", "var(--lsx-black)"),
-            ("--lsx-focus-ring-halo", "var(--lsx-white)"),
+            ("--lsx-focus-ring-color", "var(--lsx-ink)"),
+            ("--lsx-focus-ring-halo", "var(--lsx-surface)"),
             ("--lsx-focus-ring-width", "2px"),
             ("--lsx-focus-ring-offset", "2px"),
             ("--lsx-focus-ring-halo-width", "2px"),
@@ -699,17 +849,17 @@ mod tests {
     #[test]
     fn theme_css_declares_the_palette_and_its_contrasts() {
         assert_declares(&[
-            ("--lsx-black", "#000000"),
-            ("--lsx-white", "#FFFFFF"),
+            ("--lsx-ink", "#000000"),
+            ("--lsx-surface", "#FFFFFF"),
             ("--lsx-secondary-6", "#7950F2"),
             ("--lsx-error-6", "#FA5252"),
             ("--lsx-warning-6", "#FAB005"),
             ("--lsx-info-6", "#15AABF"),
             ("--lsx-success-6", "#40C057"),
             ("--lsx-grey-6", "#868E96"),
-            ("--lsx-primary-contrast-1", "var(--lsx-black)"),
-            ("--lsx-primary-contrast-6", "var(--lsx-white)"),
-            ("--lsx-grey-contrast-6", "var(--lsx-black)"),
+            ("--lsx-primary-contrast-1", "var(--lsx-ink)"),
+            ("--lsx-primary-contrast-6", "var(--lsx-surface)"),
+            ("--lsx-grey-contrast-6", "var(--lsx-ink)"),
         ]);
     }
 
@@ -745,15 +895,15 @@ mod tests {
         let css = Stylesheet::from(theme);
         let css = css.as_str();
 
-        assert!(css.contains("html{box-sizing:border-box;"));
+        assert!(css.contains("html{box-sizing:border-box;color-scheme:light;"));
         assert!(css.contains("-webkit-font-smoothing:antialiased;"));
         assert!(css.contains("-moz-osx-font-smoothing:grayscale;"));
         assert!(css.contains("*, *::before, *::after{box-sizing:inherit;}"));
 
         assert!(css.contains("body{margin:0;"));
-        assert!(css.contains("background-color:var(--lsx-white);"));
-        // Default theme's white has high luminance, so its contrast is black.
-        assert!(css.contains("color:var(--lsx-black);"));
+        assert!(css.contains("background-color:var(--lsx-surface);"));
+        // The default paper has high luminance, so its foreground is the ink.
+        assert!(css.contains("color:var(--lsx-ink);"));
         assert!(css.contains("font-family:var(--lsx-text-font-family);"));
         assert!(css.contains("font-size:var(--lsx-text-font-size-md);"));
     }
@@ -771,7 +921,7 @@ mod tests {
             .1;
         let layer = &layer[..layer.find("}}").expect("the layer block closes") + 2];
 
-        assert!(layer.contains("html{box-sizing:border-box;"));
+        assert!(layer.contains("html{box-sizing:border-box;color-scheme:light;"));
         assert!(layer.contains("*, *::before, *::after{box-sizing:inherit;}"));
         assert!(layer.contains("body{margin:0;"));
         assert!(!layer.contains(":root{"));
@@ -788,7 +938,7 @@ mod tests {
         let css = Stylesheet::from(&theme);
         let css = css.as_str();
 
-        assert!(css.contains("html{box-sizing:border-box;}"));
+        assert!(css.contains("html{box-sizing:border-box;color-scheme:light;}"));
         assert!(!css.contains("font-smoothing"));
     }
 }

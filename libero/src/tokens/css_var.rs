@@ -197,8 +197,11 @@ pub struct NamedColorCss {
 }
 
 impl NamedColorCss {
-    pub const BLACK: NamedColorCss = NamedColorCss::new("--lsx-black");
-    pub const WHITE: NamedColorCss = NamedColorCss::new("--lsx-white");
+    /// The theme's two ends of the page. `INK` is what text is set in and
+    /// `SURFACE` the page it is set on - not "black" and "white", because a
+    /// dark theme swaps which end of the greyscale each one sits at.
+    pub const INK: NamedColorCss = NamedColorCss::new("--lsx-ink");
+    pub const SURFACE: NamedColorCss = NamedColorCss::new("--lsx-surface");
     /// Published by `background()` when a color's contrast is known, and read
     /// by focus rings, so a ring contrasts against the nearest ancestor
     /// background without either side knowing about the other.

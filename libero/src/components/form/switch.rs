@@ -15,8 +15,8 @@ use crate::{
     hooks::{use_cache, use_css, use_element, use_theme},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{
-        ChoiceVariant, CssVar, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H, SWITCH_TRACK_W,
-        SwitchDefaults,
+        ChoiceVariant, CssVar, NamedColorCss, SWITCH_RADIUS, SWITCH_THUMB, SWITCH_TRACK_H,
+        SWITCH_TRACK_W, SwitchDefaults,
     },
     utils::warn,
 };
@@ -96,7 +96,9 @@ fn switch_variables(checked: bool, base: &ThemeAwareValue) -> String {
             if checked {
                 contrast_color(base).and_then(|color| color.resolve(None))
             } else {
-                Some("white".to_string())
+                // A `Variables` value is raw CSS, so this is the var and not
+                // the colour name `sx` would have parsed (todo 378).
+                Some(NamedColorCss::SURFACE.value())
             },
         )
         .render()

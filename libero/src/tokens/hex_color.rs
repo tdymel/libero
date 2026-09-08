@@ -7,6 +7,42 @@ use super::{ColorShade, ShadeRamp};
 /// know how big the text on it will be.
 pub(crate) const TEXT_CONTRAST: f32 = 4.5;
 
+/// Which way [`HexColor::first_shade_from`] walks a ramp looking for the first
+/// step that reads. A ramp only ever gains contrast in one direction, and
+/// which one depends on the surface it is measured against (todo 69).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ShadeWalk {
+    Darker,
+    Lighter,
+}
+
+impl ShadeWalk {
+    /// Away from `surface`: darker on a light one, lighter on a dark one.
+    /// `contrast()` is the same brightness split the rest of the role system
+    /// sorts by, so the two never disagree about which end a surface is at.
+    fn away_from(surface: HexColor) -> Self {
+        if surface.contrast().rgb() == 0x00_00_00 {
+            Self::Darker
+        } else {
+            Self::Lighter
+        }
+    }
+
+    const fn step(self, shade: ColorShade) -> ColorShade {
+        match self {
+            Self::Darker => shade.darker(),
+            Self::Lighter => shade.lighter(),
+        }
+    }
+
+    const fn end(self) -> ColorShade {
+        match self {
+            Self::Darker => ColorShade::S9,
+            Self::Lighter => ColorShade::S1,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct HexColor {
     rgb: u32,
@@ -141,6 +177,17 @@ impl HexColor {
         }
     }
 
+    /// Which `color-scheme` a surface of this colour is, so native controls
+    /// and the canvas are drawn on the same end of the greyscale as the rest
+    /// of the theme.
+    pub(crate) const fn color_scheme(self) -> &'static str {
+        if self.contrast().rgb() == 0xFF_FF_FF {
+            "dark"
+        } else {
+            "light"
+        }
+    }
+
     /// WCAG 2.x relative luminance. Not [`luminance`](Self::luminance): that
     /// one is the cheap integer approximation `contrast()` sorts by, and it
     /// is nowhere near the curve 1.4.3 is defined on.
@@ -191,10 +238,13 @@ impl HexColor {
         }
     }
 
-    /// The step a *text* use of `shade` resolves to: the first step at or
-    /// below it whose colour passes [`TEXT_CONTRAST`] against `surface`.
-    /// `S9` when the whole ramp fails, because there is nothing darker to
-    /// offer and a wrong-looking colour beats no colour.
+    /// The step a *text* use of `shade` resolves to: the first step from it
+    /// **away from `surface`** whose colour passes [`TEXT_CONTRAST`] against
+    /// it. On a light surface the ramp gains contrast as it darkens, on a
+    /// dark one as it lightens, so the walk follows the surface rather than
+    /// always heading for `S9`. The end of that walk when the whole ramp fails,
+    /// because there is nothing further to offer and a wrong-looking colour
+    /// beats no colour.
     ///
     /// `self` is the base (shade 6) of the ramp, as in [`shade`](Self::shade).
     pub(crate) fn text_shade(
@@ -203,7 +253,7 @@ impl HexColor {
         shade: ColorShade,
         surface: HexColor,
     ) -> ColorShade {
-        self.first_shade_from(shade, |step| {
+        self.first_shade_from(shade, ShadeWalk::away_from(surface), |step| {
             self.shade(step, ramp).contrast_ratio(surface) >= TEXT_CONTRAST
         })
     }
@@ -213,8 +263,11 @@ impl HexColor {
     /// passes [`TEXT_CONTRAST`]. Mantine's `autoContrast` stops at picking the
     /// foreground and leaves a fill like `blue.6` - where white is picked and
     /// only reaches 3.56:1 - alone; this walks the ramp until the pair works.
+    /// No `surface` argument on purpose: a fill carries its own foreground,
+    /// so the pair reads the same on any surface and the walk is always
+    /// downwards.
     pub(crate) fn fill_shade(self, ramp: ShadeRamp, shade: ColorShade) -> ColorShade {
-        self.first_shade_from(shade, |step| {
+        self.first_shade_from(shade, ShadeWalk::Darker, |step| {
             let fill = self.shade(step, ramp);
             fill.contrast_ratio(fill.contrast()) >= TEXT_CONTRAST
         })
@@ -223,14 +276,15 @@ impl HexColor {
     fn first_shade_from(
         self,
         shade: ColorShade,
+        walk: ShadeWalk,
         passes: impl Fn(ColorShade) -> bool,
     ) -> ColorShade {
         let mut step = shade;
         loop {
-            if passes(step) || step == ColorShade::S9 {
+            if passes(step) || step == walk.end() {
                 return step;
             }
-            step = step.darker();
+            step = walk.step(step);
         }
     }
 
