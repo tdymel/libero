@@ -19,6 +19,7 @@ mod code_block;
 mod collapse;
 mod color_field;
 mod color_picker;
+mod color_scheme_button;
 mod color_swatch;
 mod combobox;
 mod container;
@@ -154,6 +155,7 @@ pub use color_picker::{
     COLOR_PICKER_WIDTH, COLOR_PICKER_WIDTH_SIZE, ColorFormat, ColorPickerDefaults,
     ColorPickerSizeLevel,
 };
+pub use color_scheme_button::{ColorSchemeButtonDefaults, ColorSchemeButtonLabels};
 pub use color_swatch::{
     COLOR_SWATCH_RADIUS, COLOR_SWATCH_SIZE, COLOR_SWATCH_SIZE_SIZE, ColorSwatchDefaults,
 };

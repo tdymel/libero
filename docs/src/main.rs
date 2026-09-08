@@ -11,14 +11,14 @@ use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
     components::{
-        ActionIcon, Burger, Button, Container, Flex, Header, Image, Kbd, Menu, MenuItem,
-        Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_menu,
+        ActionIcon, Burger, Button, ColorSchemeButton, Container, Flex, Header, Image, Kbd, Menu,
+        MenuItem, Notifications, ScrollArea, SpotlightOptions, Title, spotlight_filter, use_menu,
         use_spotlight,
     },
-    hooks::{use_color_scheme, use_element, use_theme_set},
+    hooks::{use_element, use_theme_set},
     platform::ElementApi,
     sx::sx,
-    theme::{ColorScheme, HEADER_HEIGHT, PAPER_BACKGROUND, Size, ThemeSet},
+    theme::{HEADER_HEIGHT, PAPER_BACKGROUND, Size, ThemeSet},
 };
 
 mod components;
@@ -28,7 +28,7 @@ mod pages;
 #[cfg(test)]
 mod snippets;
 
-use icons::{CheckmarkIcon, MoonIcon, PaletteIcon, SearchIcon, SunIcon};
+use icons::{CheckmarkIcon, PaletteIcon, SearchIcon};
 use nav::DocsNav;
 // A glob, so a new page never edits this file's import list.
 use pages::*;
@@ -166,6 +166,8 @@ pub(crate) enum Route {
     ActionIconPage {},
     #[route("/inputs/button")]
     ButtonPage {},
+    #[route("/inputs/color-scheme-button")]
+    ColorSchemeButtonPage {},
     #[route("/layout/aspect-ratio")]
     AspectRatioPage {},
     #[route("/layout/box")]
@@ -330,50 +332,6 @@ fn ThemeSetPicker() -> Element {
     }
 }
 
-/// The shell's scheme switch. It belongs in the header rather than on a page:
-/// its job is to let a reviewer check any component in both schemes, from
-/// wherever they are.
-///
-/// The library ships no toggle of its own - `use_color_scheme()` is the whole
-/// API, and this is what an app builds on it.
-#[component]
-fn ColorSchemeToggle() -> Element {
-    let scheme = use_color_scheme();
-    let dark = scheme.resolved() == ColorScheme::Dark;
-
-    rsx! {
-        ActionIcon {
-            // The label names what the press *does*, not what is on screen:
-            // a screen reader user cannot see the icon it swaps.
-            aria_label: match dark {
-                true => "Switch to the light theme",
-                false => "Switch to the dark theme",
-            },
-            onclick: move |_| scheme.toggle(),
-            // `outlined`, so it reads as a control with a box of its own
-            // rather than a bare glyph floating in the bar - Mantine's
-            // `default` action icon. `muted` keeps the border quiet: the
-            // primary accent belongs to the page, not to the chrome.
-            variant: "outlined",
-            color: "muted",
-            size: "lg",
-            // Sized here, not in the icon: `icons.rs` ships glyphs without a
-            // box of their own, so an unsized one fills whatever it is in -
-            // a 22px moon inside a 24px button.
-            span {
-                display: "inline-flex",
-                width: "18px",
-                height: "18px",
-                if dark {
-                    SunIcon {}
-                } else {
-                    MoonIcon {}
-                }
-            }
-        }
-    }
-}
-
 #[component]
 fn AppShell() -> Element {
     let mut open = use_signal(|| false);
@@ -512,7 +470,10 @@ fn AppShell() -> Element {
                     }
                 }
                 ThemeSetPicker {}
-                ColorSchemeToggle {}
+                // In the header rather than on a page: its job is to let a
+                // reviewer check any component in both schemes, from wherever
+                // they are. `lg`, to match the two icon buttons beside it.
+                ColorSchemeButton { size: "lg" }
             }
             // This row itself never scrolls - the nav scrolls its own
             // content internally (`Sidebar` does), and only the rest of the

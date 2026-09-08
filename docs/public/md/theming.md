@@ -166,14 +166,17 @@ for, so `bg`, `text`, `text-muted`, `accent`, `highlight`, `accent-soft`,
 `progress`, `danger` and `raised` land on `surface`, `ink`/`neutral`,
 `muted`, `primary`, `secondary`, `info`, `success`, `error` and
 `paper.background`. Everything else derives. **`warning` is the exception** -
-no palette carries one - so every ported theme keeps Libero's amber, and on
+no ported theme takes the palette's own - so every one keeps Libero's amber, and on
 a cream page that is the one role which does not reach 4.5:1.
 
 ### The switch
 
-`use_color_scheme()` is the whole API - the library ships no toggle, because
-only the app knows where that control belongs. Build one out of an
-`ActionIcon`, a `Switch` or a `SegmentedControl`:
+[`ColorSchemeButton`](color_scheme_button.md) is the ready-made switch: an
+icon button that flips between the pair. A toggle pins the other scheme only
+while it differs from the platform's, so flipping back follows the platform -
+and any devtools emulation of it - again. Anything else is built on
+`use_color_scheme()`, out of an `ActionIcon`, a `Switch` or a
+`SegmentedControl`:
 
 ```rust,ignore
 let scheme = use_color_scheme();

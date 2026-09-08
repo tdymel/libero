@@ -1,5 +1,6 @@
 mod action_icon;
 mod button;
+mod color_scheme_button;
 
 pub use action_icon::ActionIcon;
 pub(crate) use button::{
@@ -8,3 +9,4 @@ pub(crate) use button::{
     variant_selected_sx,
 };
 pub use button::{Button, ButtonProps};
+pub use color_scheme_button::{ColorSchemeButton, ColorSchemeButtonProps};

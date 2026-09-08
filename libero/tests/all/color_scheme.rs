@@ -92,6 +92,39 @@ fn a_toggle_pins_the_other_scheme_and_the_theme_follows() {
     );
 }
 
+/// Toggling back to the scheme the platform is in drops the pin rather than
+/// pinning that scheme too. Otherwise one round trip through the toggle
+/// leaves the app deaf to the platform - and to a devtools emulation of it -
+/// until storage is cleared.
+#[test]
+fn toggling_back_to_the_system_scheme_follows_the_system_again() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                Reader {}
+                Act {
+                    act: move |scheme: ColorSchemeHandle| {
+                        scheme.toggle();
+                        scheme.toggle();
+                    },
+                }
+            }
+        }
+    }
+
+    let html = render(app);
+
+    assert_eq!(
+        scheme_line(&html),
+        format!(
+            "setting={:?} resolved={:?} surface={}",
+            ColorSchemeSetting::System,
+            ColorScheme::Light,
+            Theme::DEFAULT.surface
+        )
+    );
+}
+
 /// Off the web there is no document root to carry the attribute, so the
 /// switch falls back to rebuilding the sheet - with the pinned theme alone,
 /// because the media block would otherwise keep answering for a choice the

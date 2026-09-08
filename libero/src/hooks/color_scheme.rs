@@ -8,10 +8,9 @@ use crate::{
 /// The app's colour scheme: what it is set to, what that resolves to, and how
 /// to change it.
 ///
-/// A hook rather than a component, deliberately: the library ships no toggle.
-/// An app builds its own out of a `Switch`, an `ActionIcon` or a
-/// `SegmentedControl`, because only the app knows where that control belongs
-/// and what it should look like.
+/// [`ColorSchemeButton`](crate::components::ColorSchemeButton) is the
+/// ready-made switch built on it. Anything else - a `Switch`, or a
+/// `SegmentedControl` that offers "follow the system" - is built here.
 ///
 /// ```ignore
 /// let scheme = use_color_scheme();
@@ -61,11 +60,17 @@ impl ColorSchemeHandle {
         self.context.set_color_scheme(setting.into());
     }
 
-    /// Flips to the other scheme, and pins it. A toggle is an explicit
-    /// choice - following the platform again is [`set`](Self::set) with
-    /// [`ColorSchemeSetting::System`].
+    /// Flips to the other scheme. It pins that scheme only while it differs
+    /// from the platform's: flipping back to what the platform says hands
+    /// the choice back to it, so a toggle can never strand the app on a pin
+    /// that ignores the system - or a devtools emulation of it - for good.
     pub fn toggle(&self) {
-        self.set(self.resolved().flipped());
+        let target = self.resolved().flipped();
+        if target == *self.context.system_scheme.peek() {
+            self.set(ColorSchemeSetting::System);
+        } else {
+            self.set(target);
+        }
     }
 
     /// Selects a theme beyond the pair, by the name it was given to

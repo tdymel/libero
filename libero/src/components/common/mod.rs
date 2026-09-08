@@ -25,8 +25,8 @@ pub(crate) use field_props::field_props;
 pub(crate) use icons::{
     ArrowDownIcon, CheckIcon, CheckboxMarkIcon, ChevronDownIcon, ChevronFirstIcon, ChevronLastIcon,
     ChevronLeftIcon, ChevronRightIcon, ChevronUpIcon, CloseIcon, CopiedIcon, CopyIcon,
-    EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, PauseIcon, PersonIcon, PlayIcon, PlusIcon,
-    UploadIcon,
+    EyeDropperIcon, EyeIcon, EyeOffIcon, MinusIcon, MoonIcon, PauseIcon, PersonIcon, PlayIcon,
+    PlusIcon, SunIcon, UploadIcon,
 };
 pub use number_value::NumberValue;
 pub use option_list::{OptionItem, OptionList, OptionSource};

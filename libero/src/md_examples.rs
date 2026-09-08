@@ -56,6 +56,7 @@ md_pages! {
     Collapse => "collapse",
     ColorField => "color_field",
     ColorPicker => "color_picker",
+    ColorSchemeButton => "color_scheme_button",
     Combobox => "combobox",
     Container => "container",
     DataList => "data_list",

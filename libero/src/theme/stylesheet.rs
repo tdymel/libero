@@ -241,6 +241,8 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
         menubar,
         pagination,
         pagination_labels: _,
+        // Chrome and labels only - read by the component, never a var.
+        color_scheme_button: _,
         anchor,
         file_field,
         pin_field,
