@@ -17,6 +17,24 @@ blitz-shell = { path = ".blitz-fork/packages/blitz-shell" }
 blitz-traits = { path = ".blitz-fork/packages/blitz-traits" }
 stylo_taffy = { path = ".blitz-fork/packages/stylo_taffy" }
 
+# Full debug info is most of what a dev build writes, and on this encrypted
+# disk that write load is what stalls parallel builds. Line tables keep
+# backtraces readable. Set here, not per command, so the editor, `dx serve`
+# and every agent build the same way. `unpacked` keeps the debug info out of
+# the linked binaries on Linux; cargo skips it for wasm, which rejects it.
+[profile.dev]
+debug = "line-tables-only"
+split-debuginfo = "unpacked"
+
+# `dx`'s web dev profile. Nothing here reads wasm debug info, and the
+# `wasm-dev` dir had grown to 50 GB. The name section survives, so a panic in
+# the browser console still names its functions. To chase a browser error
+# with file and line, set `CARGO_PROFILE_WASM_DEV_DEBUG=line-tables-only` on
+# that one `dx` command instead of editing this.
+[profile.wasm-dev]
+inherits = "dev"
+debug = false
+
 # Blitz's stack (stylo, taffy, vello, wgpu) is unusably slow when compiled
 # without optimisations, and a debug `just start-native` spends nearly all its
 # time in it. Optimising only non-workspace crates keeps `libero`/`docs`

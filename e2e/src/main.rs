@@ -137,10 +137,6 @@ fn main() -> Result<()> {
             "--port",
             &port.to_string(),
         ])
-        // Line tables only, for the same reason every other build in this repo
-        // uses them: full debug info is most of what a build writes, and the
-        // write load stalls the machine.
-        .env("CARGO_PROFILE_DEV_DEBUG", "line-tables-only")
         // The env var, since `dx` takes no `--target-dir`. `RUSTC_WRAPPER` is
         // left alone: `dx` drives it itself for hot-patching.
         .env("CARGO_TARGET_DIR", &target_dir)
@@ -192,7 +188,6 @@ fn main() -> Result<()> {
         .env("E2E_BASE_URL", &base_url)
         .env("E2E_CHROME_PROFILE", &profile)
         .env("E2E_ARTIFACTS", &artifacts)
-        .env("CARGO_PROFILE_DEV_DEBUG", "line-tables-only")
         // Read here, to see whether anything ran. Echoed line by line.
         .stdout(Stdio::piped())
         // Its own group, so the guard can stop it and the Chrome it launched
