@@ -165,8 +165,8 @@ fn main() -> Result<()> {
 
     // A Chrome profile unique to this run. Chrome will not start against a
     // profile another process still holds, so sharing one means an interrupted
-    // run poisons every run after it.
-    let profile = std::env::temp_dir().join(format!("e2e-chrome-{}", std::process::id()));
+    // run poisons every run after it. Under the run's target dir, so seats never share one.
+    let profile = target_dir.join(format!("e2e-chrome-{}", std::process::id()));
     guard.tell(&format!("profile {}", profile.display()));
 
     eprintln!("e2e: server is up, running the suite");
