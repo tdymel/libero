@@ -566,6 +566,9 @@ fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) ->
     let started = Instant::now();
     let deadline = started + BUILD_TIMEOUT;
     let (mut polls, mut slowest) = (0u32, Duration::ZERO);
+    // Named in the timeout so a failure says which link of the chain never
+    // appeared, rather than only that something did not.
+    let mut reached;
     loop {
         if let Ok(Some(status)) = server.try_wait() {
             let tail = std::fs::read_to_string(dx_log)
@@ -578,34 +581,20 @@ fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) ->
         }
 
         let at = Instant::now();
-        let body = http_get(base_url);
+        let stage = app_readiness(base_url);
         polls += 1;
         slowest = slowest.max(at.elapsed());
-        if let Some(body) = body {
-            // The placeholder is served with a success status, so the check is
-            // on what came back, not on whether anything came back.
-            //
-            // And it is on something **only this app** can say (todo 364,
-            // 2026-09-20). "Not the placeholder string, and mentions wasm" was
-            // satisfied twice in one afternoon by something that was not the
-            // fixture app: by dx's *build splash*, which is served from the
-            // moment the port binds and for the whole compile - a red run's
-            // browser still held six pages titled "Dioxus Build" - and by
-            // another agent's **docs site**, when `E2E_PORT` named a port this
-            // run did not own. Both times the suite ran to completion against
-            // the wrong page and failed every test, which is exactly the shape
-            // this todo is about.
-            if body.contains(FIXTURE_TITLE) {
-                return Ok(());
-            }
+        if stage == Readiness::Ready {
+            return Ok(());
         }
+        reached = stage;
 
         if Instant::now() >= deadline {
             // The first of the three waits todo 364 could not tell apart.
             e2e::journal::gave_up(&e2e::journal::GaveUp {
                 kind: "served-body",
                 how: "expired",
-                what: "the fixture app's body at / (not dx's placeholder)",
+                what: &format!("the fixture app to be servable (got as far as {reached:?})"),
                 budget: BUILD_TIMEOUT,
                 elapsed: started.elapsed(),
                 slowest_poll: slowest,
@@ -613,7 +602,8 @@ fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) ->
             });
             bail!(
                 "timed out after {:.1?} (budget {BUILD_TIMEOUT:?}) waiting for the fixture \
-                 server's body [wait=served-body, {polls} poll(s), slowest {slowest:.2?}]; see {}",
+                 app to be servable; got as far as {reached:?} [wait=served-body, {polls} \
+                 poll(s), slowest {slowest:.2?}]; see {}",
                 started.elapsed(),
                 dx_log.display()
             );
@@ -622,14 +612,127 @@ fn wait_for_app(base_url: &str, server: &mut Child, dx_log: &std::path::Path) ->
     }
 }
 
+/// How far the served app has got. Ordered: each variant means every earlier
+/// one already held.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Readiness {
+    /// Nothing answered on the port.
+    NoServer,
+    /// Something answered, but not this app - dx's build splash, or an
+    /// entirely different application on a port we do not own.
+    NotOurApp,
+    /// Our index.html, but its script is not being served yet.
+    NoScript,
+    /// The script, but the wasm bundle it names is not being served yet.
+    NoBundle,
+    /// The index, the script and the bundle are all servable.
+    Ready,
+}
+
+/// Follow what the index references until something that only exists once the
+/// build has finished.
+///
+/// Three checks were tried here and the first two were both wrong in the same
+/// way (todo 364, 2026-09-20):
+///
+/// 1. *"The body does not say `dx is not serving a web app` and does contain
+///    `wasm`."* A double negative that dx's **build splash** satisfies, and so
+///    does any other app with a wasm bundle - another agent's docs site
+///    satisfied it when `E2E_PORT` named a port this run did not own.
+/// 2. *"The body contains the fixture app's `<title>`."* A positive assertion,
+///    and still wrong: **dx serves the real `index.html` from the moment it
+///    binds the port**, so the title is there about 44 s before the bundle is.
+///    Measured: with this check the first navigation went out at +2.6 s and
+///    the build finished at +46.5 s, and the suite failed all 87 browser
+///    tests exactly as before.
+///
+/// The lesson is the one this whole todo keeps teaching: a marker the app
+/// *emits* is not a marker that the app is *ready*. So this follows the chain
+/// to the wasm bundle, which cannot exist before the build has produced it,
+/// and it reads each link out of what was actually served rather than
+/// hardcoding a path - a hardcoded one that quietly stopped matching would
+/// make the check vacuous again, which is the failure mode being fixed.
+fn app_readiness(base_url: &str) -> Readiness {
+    let Some(index) = http_get(base_url) else {
+        return Readiness::NoServer;
+    };
+    if !index.contains(FIXTURE_TITLE) {
+        return Readiness::NotOurApp;
+    }
+    // `.js`, not merely the first `src="`: an icon or an image would send the
+    // rest of the chain looking at the wrong file, and the symptom would be a
+    // 45-minute timeout rather than anything that names the cause.
+    let Some(script) = quoted_ending_in(&index, ".js") else {
+        return Readiness::NoScript;
+    };
+    let Some(js) = http_get(&join(base_url, "", &script)) else {
+        return Readiness::NoScript;
+    };
+    if !is_ok(&js) {
+        return Readiness::NoScript;
+    }
+    // wasm-bindgen's glue names the bundle. It appears twice and in different
+    // shapes - `'e2e-fixtures_bg.wasm'` bare, and
+    // `"/./wasm/e2e-fixtures_bg.wasm"` rooted - so `join` resolves either
+    // against the script's own directory.
+    let Some(bundle) = quoted_ending_in(&js, ".wasm") else {
+        return Readiness::NoBundle;
+    };
+    let dir = script
+        .trim_start_matches(['.', '/'])
+        .rsplit_once('/')
+        .map(|(dir, _)| dir)
+        .unwrap_or("");
+    match http_get(&join(base_url, dir, &bundle)) {
+        Some(response) if is_ok(&response) => Readiness::Ready,
+        _ => Readiness::NoBundle,
+    }
+}
+
+/// A URL for `reference`, which is either rooted (`/./wasm/x.wasm`) or
+/// relative to `dir`.
+fn join(base_url: &str, dir: &str, reference: &str) -> String {
+    let path = reference.trim_start_matches(['.', '/']);
+    if reference.contains('/') || dir.is_empty() {
+        format!("{base_url}/{path}")
+    } else {
+        format!("{base_url}/{dir}/{path}")
+    }
+}
+
+/// The first single- or double-quoted run in `text` that ends with `suffix`.
+fn quoted_ending_in(text: &str, suffix: &str) -> Option<String> {
+    text.split(['"', '\''])
+        .find(|part| part.ends_with(suffix) && !part.contains(['<', '>', ' ']))
+        .map(str::to_string)
+}
+
+/// Whether a raw HTTP response carries a 2xx status.
+fn is_ok(response: &str) -> bool {
+    response
+        .lines()
+        .next()
+        .and_then(|line| line.split_whitespace().nth(1))
+        .is_some_and(|code| code.starts_with('2'))
+}
+
 /// A one-shot HTTP GET.
 ///
 /// Hand-rolled rather than shelling out to `curl`: a test harness that fails
 /// when a system binary is missing fails for a reason that has nothing to do
 /// with the code under test, and the failure would read as "the server never
 /// came up".
-fn http_get(base_url: &str) -> Option<String> {
-    let address = base_url.strip_prefix("http://")?;
+fn http_get(url: &str) -> Option<String> {
+    // Host and path split apart. This used to hardcode `GET /` and hand the
+    // whole remainder to `TcpStream::connect`, which was fine while `/` was
+    // the only thing ever fetched - and silently returned `None` for every
+    // URL with a path the moment the readiness check needed one, so the
+    // runner waited out its 45-minute budget saying nothing (todo 364).
+    let rest = url.strip_prefix("http://")?;
+    let (address, path) = match rest.find('/') {
+        Some(at) => (&rest[..at], &rest[at..]),
+        None => (rest, "/"),
+    };
     let mut stream = TcpStream::connect(address).ok()?;
     stream.set_read_timeout(Some(Duration::from_secs(5))).ok()?;
     stream
@@ -637,7 +740,7 @@ fn http_get(base_url: &str) -> Option<String> {
         .ok()?;
     write!(
         stream,
-        "GET / HTTP/1.0\r\nHost: {address}\r\nConnection: close\r\n\r\n"
+        "GET {path} HTTP/1.0\r\nHost: {address}\r\nConnection: close\r\n\r\n"
     )
     .ok()?;
     let mut body = Vec::new();
