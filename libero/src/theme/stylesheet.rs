@@ -641,7 +641,10 @@ mod tests {
     ///
     /// `warning` is ours, not theirs: no ported theme takes the palette's own,
     /// so every one keeps Libero's amber, and amber on a cream page is
-    /// what most of this list is.
+    /// what most of this list is. The long entries are light halves that
+    /// keep accents drawn for a dark page: Nord's bright ambiance, which
+    /// reuses Frost and Aurora as Nord's docs say to, and the three derived
+    /// halves (Vague, Osmium, kettek16), which take their dark half's.
     #[test]
     fn every_shipped_set_reads_on_its_own_page() {
         let mut short = Vec::new();
@@ -675,14 +678,24 @@ mod tests {
             [
                 "Libero light: warning success",
                 "Ayu light: warning info success",
+                "Ayu Mirage light: warning info success",
                 "Catppuccin light: warning",
+                "Dracula light: warning",
+                "Ef Night light: warning",
                 "Everforest light: warning",
                 "Flexoki light: warning",
                 "GitHub light: warning",
                 "Gruvbox light: warning",
+                "Gruvbox Classic light: warning",
+                "Gruvbox Soft light: warning",
                 "Kanagawa light: warning",
+                "Kanagawa Dragon light: warning",
+                "kettek16 light: primary warning info",
+                "Nord light: primary secondary warning info success",
                 "One light: warning",
+                "Osmium light: primary secondary warning info success",
                 "Rosé Pine light: warning",
+                "Vague light: secondary warning info success",
             ],
             "the shipped palettes' text roles moved"
         );

@@ -1,11 +1,34 @@
-//! Ready-made [`ThemeSet`]s: the library's own, and nine community palettes.
+//! Ready-made [`ThemeSet`]s: the library's own, and nineteen community
+//! palettes.
 //!
-//! Every ported set is a real light/dark **pair** from its upstream palette,
-//! because a `ThemeSet` designates both halves. Ten of the palettes in the
-//! Kopuz pack the first six came from are dark-only and are not here
-//! (Maintainer's call, 2026-09-20): a set whose light half we invented would
-//! be our palette wearing somebody else's name. Flexoki, GitHub and Kanagawa
-//! were taken straight from their upstream repositories, named in each file.
+//! Ayu, Catppuccin, Everforest, Gruvbox, One and Rosé Pine are light/dark
+//! pairs straight from the Kopuz theme pack; Flexoki, GitHub and Kanagawa
+//! were taken from their upstream repositories, named in each file.
+//!
+//! ## The pack's dark-only palettes
+//!
+//! Ten of the pack's palettes are dark-only, and a `ThemeSet` designates
+//! both halves. Their dark half is the pack's; the light half follows the
+//! Maintainer's rule (2026-09-22): **take the palette's popular light
+//! equivalent, and invent one only when there is none.** Each file names
+//! its source:
+//!
+//! - **Upstream's own light theme** - Dracula (Alucard, from the Dracula
+//!   spec), Nord (the bright ambiance Nord's docs describe, as Helix ships
+//!   it), Gruvbox Classic (`morhetz/gruvbox` light), Ef Night (ef-day, its
+//!   counterpart by name in `protesilaos/ef-themes`).
+//! - **A light half the catalogue already has** - Ayu Mirage takes
+//!   [`AYU_LIGHT`], Kanagawa Dragon [`KANAGAWA_LIGHT`] (Lotus), Gruvbox Soft
+//!   [`GRUVBOX_LIGHT`] (Light Soft): each is upstream's one light theme for
+//!   that family.
+//! - **Derived, because none exists** - Vague, Osmium and kettek16. The
+//!   light half keeps the dark half's five accents, since the stylesheet
+//!   derives every role's text and fill steps against the page anyway;
+//!   `ink` is the dark page; the page is the dark `text` mixed 80% toward
+//!   white and the card the same mixed 60%; `muted` is the dark
+//!   `text-muted` moved toward the ink or toward white until it sits as far
+//!   from the light page, by contrast ratio, as it does from the dark one.
+//!   Only the neutrals are ours, and each file shows its numbers.
 //!
 //! ## How a palette is mapped
 //!
@@ -39,23 +62,37 @@
 
 mod ayu;
 mod catppuccin;
+mod dracula;
+mod ef;
 mod everforest;
 mod flexoki;
 mod github;
 mod gruvbox;
 mod kanagawa;
+mod kettek16;
+mod nord;
 mod one;
+mod osmium;
 mod rose_pine;
+mod vague;
 
-pub use ayu::{AYU_DARK, AYU_LIGHT};
+pub use ayu::{AYU_DARK, AYU_LIGHT, AYU_MIRAGE_DARK};
 pub use catppuccin::{CATPPUCCIN_DARK, CATPPUCCIN_LIGHT};
+pub use dracula::{DRACULA_DARK, DRACULA_LIGHT};
+pub use ef::{EF_NIGHT_DARK, EF_NIGHT_LIGHT};
 pub use everforest::{EVERFOREST_DARK, EVERFOREST_LIGHT};
 pub use flexoki::{FLEXOKI_DARK, FLEXOKI_LIGHT};
 pub use github::{GITHUB_DARK, GITHUB_LIGHT};
-pub use gruvbox::{GRUVBOX_DARK, GRUVBOX_LIGHT};
-pub use kanagawa::{KANAGAWA_DARK, KANAGAWA_LIGHT};
+pub use gruvbox::{
+    GRUVBOX_CLASSIC_DARK, GRUVBOX_CLASSIC_LIGHT, GRUVBOX_DARK, GRUVBOX_LIGHT, GRUVBOX_SOFT_DARK,
+};
+pub use kanagawa::{KANAGAWA_DARK, KANAGAWA_DRAGON_DARK, KANAGAWA_LIGHT};
+pub use kettek16::{KETTEK16_DARK, KETTEK16_LIGHT};
+pub use nord::{NORD_DARK, NORD_LIGHT};
 pub use one::{ONE_DARK, ONE_LIGHT};
+pub use osmium::{OSMIUM_DARK, OSMIUM_LIGHT};
 pub use rose_pine::{ROSE_PINE_DARK, ROSE_PINE_LIGHT};
+pub use vague::{VAGUE_DARK, VAGUE_LIGHT};
 
 use super::ThemeSet;
 
@@ -69,14 +106,24 @@ impl ThemeSet {
     pub const CATALOGUE: &'static [&'static ThemeSet] = &[
         &ThemeSet::DEFAULT,
         &ThemeSet::AYU,
+        &ThemeSet::AYU_MIRAGE,
         &ThemeSet::CATPPUCCIN,
+        &ThemeSet::DRACULA,
+        &ThemeSet::EF_NIGHT,
         &ThemeSet::EVERFOREST,
         &ThemeSet::FLEXOKI,
         &ThemeSet::GITHUB,
         &ThemeSet::GRUVBOX,
+        &ThemeSet::GRUVBOX_CLASSIC,
+        &ThemeSet::GRUVBOX_SOFT,
         &ThemeSet::KANAGAWA,
+        &ThemeSet::KANAGAWA_DRAGON,
+        &ThemeSet::KETTEK16,
+        &ThemeSet::NORD,
         &ThemeSet::ONE,
+        &ThemeSet::OSMIUM,
         &ThemeSet::ROSE_PINE,
+        &ThemeSet::VAGUE,
     ];
 
     /// The set `name` labels, or `None`. Case-sensitive, and the names are

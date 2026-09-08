@@ -142,8 +142,13 @@ which is what keeps the sheet from growing with every theme an app owns.
 ### The ones we ship
 
 `ThemeSet::CATALOGUE` holds every set the library ships: our own `Libero`,
-plus `Ayu`, `Catppuccin`, `Everforest`, `Flexoki`, `GitHub`, `Gruvbox`,
-`Kanagawa`, `One` and `Rosé Pine`, each a real light/dark pair from its upstream palette. The picker in this
+plus `Ayu`, `Ayu Mirage`, `Catppuccin`, `Dracula`, `Ef Night`, `Everforest`,
+`Flexoki`, `GitHub`, `Gruvbox`, `Gruvbox Classic`, `Gruvbox Soft`, `Kanagawa`,
+`Kanagawa Dragon`, `kettek16`, `Nord`, `One`, `Osmium`, `Rosé Pine` and
+`Vague`. Each is a light/dark pair: where a palette is dark-only upstream,
+its light half is the palette's own light equivalent, and only `Vague`,
+`Osmium` and `kettek16`, which have none, get one derived from their dark
+half. The picker in this
 site's header is built from it, and so is anything else that lets a reader
 choose:
 

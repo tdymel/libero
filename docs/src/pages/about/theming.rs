@@ -294,10 +294,14 @@ pub fn ThemingPage() -> Element {
                     Code { source: "ThemeSet::CATALOGUE" }
                     " holds every set the library ships: our own "
                     Code { source: "Libero" }
-                    ", plus Ayu, Catppuccin, Everforest, Flexoki, GitHub, Gruvbox, Kanagawa, One "
-                    "and Rosé Pine, each a "
-                    "real light/dark pair from its upstream palette. The chevron beside "
-                    "the scheme button in this site's header is built from it, through "
+                    ", plus Ayu, Ayu Mirage, Catppuccin, Dracula, Ef Night, Everforest, "
+                    "Flexoki, GitHub, Gruvbox, Gruvbox Classic, Gruvbox Soft, Kanagawa, "
+                    "Kanagawa Dragon, kettek16, Nord, One, Osmium, Rosé Pine and Vague. "
+                    "Each is a light/dark pair: where a palette is dark-only upstream, "
+                    "its light half is the palette's own light equivalent, and only "
+                    "Vague, Osmium and kettek16, which have none, get one derived from "
+                    "their dark half. The chevron beside the scheme button in "
+                    "this site's header is built from it, through "
                     Code { source: "use_theme_set()" }
                     " - try it on any page. A ported palette is ten hex values and nothing "
                     "else: every ramp, role and contrast twin derives from them. "

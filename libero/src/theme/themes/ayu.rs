@@ -1,4 +1,4 @@
-//! Ayu - Ayu Dark and Ayu Light.
+//! Ayu - Ayu Dark and Ayu Light, and Ayu Mirage with the same light half.
 
 use super::super::{
     CodeBlockDefaults, CodeDefaults, HexColor, KbdDefaults, PaperDefaults, Theme, ThemeSet,
@@ -51,7 +51,34 @@ pub static AYU_DARK: Theme = Theme {
     ..Theme::DARK
 };
 
+/// Ayu Mirage.
+pub static AYU_MIRAGE_DARK: Theme = Theme {
+    surface: HexColor::new(0x1F2430),
+    ink: HexColor::new(0xCBCCC6),
+    neutral: HexColor::new(0xCBCCC6),
+    muted: HexColor::new(0x707A8C),
+    primary: HexColor::new(0x5CCFE6),
+    secondary: HexColor::new(0xD4BFFF),
+    info: HexColor::new(0x73D0FF),
+    success: HexColor::new(0xBAE67E),
+    error: HexColor::new(0xF28779),
+    // No warning colour in the palette, so Libero's amber stands in.
+    paper: PaperDefaults {
+        background: "#242936",
+        ..PaperDefaults::DARK
+    },
+    code: CodeDefaults::DARK,
+    code_block: CodeBlockDefaults::DARK,
+    kbd: KbdDefaults::DARK,
+    tooltip: TooltipDefaults::DARK,
+    ..Theme::DARK
+};
+
 impl ThemeSet {
     /// Ayu: [`AYU_LIGHT`] paired with [`AYU_DARK`].
     pub const AYU: ThemeSet = ThemeSet::pair("Ayu", &AYU_LIGHT, &AYU_DARK);
+
+    /// Ayu Mirage: [`AYU_LIGHT`] paired with [`AYU_MIRAGE_DARK`]. Ayu has
+    /// one light theme, the light half of Dark and Mirage alike.
+    pub const AYU_MIRAGE: ThemeSet = ThemeSet::pair("Ayu Mirage", &AYU_LIGHT, &AYU_MIRAGE_DARK);
 }
