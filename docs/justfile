@@ -39,9 +39,15 @@ mode-fork:
 # Per-mode target dir, so `cargo` picks it up too - not just these recipes.
 # Host builds (tests, native) link with mold: linking the test binaries is most
 # of an incremental rebuild. wasm keeps rust-lld, since the flag is host-only.
+# The toolchain is nightly (rust-toolchain.toml) for two things: rustc's
+# parallel frontend (`-Z threads`), since `libero` is one large crate, and
+# cargo's checksum freshness, so a seat moved to a newer main rebuilds only
+# files whose content changed, not every file git touched. A target's
+# rustflags replace `[build]` ones rather than adding to them, hence the flag
+# on each target.
 _target-dir mode:
     mkdir -p {{root}}/.cargo
-    printf '# Written by `just mode-main` / `just mode-fork` - do not edit.\n[build]\ntarget-dir = "target/%s"\n\n[target.x86_64-unknown-linux-gnu]\nrustflags = ["-C", "link-arg=-fuse-ld=mold"]\n' {{mode}} > {{root}}/.cargo/config.toml
+    printf '# Written by `just mode-main` / `just mode-fork` - do not edit.\n[build]\ntarget-dir = "target/%s"\n\n[unstable]\nchecksum-freshness = true\n\n[target.x86_64-unknown-linux-gnu]\nrustflags = ["-C", "link-arg=-fuse-ld=mold", "-Z", "threads=8"]\n\n[target.wasm32-unknown-unknown]\nrustflags = ["-Z", "threads=8"]\n' {{mode}} > {{root}}/.cargo/config.toml
     @echo "mode: {{mode}}"
 
 # Which tree is active, and does the feature flag follow it.

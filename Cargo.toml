@@ -3,6 +3,14 @@ members = ["libero", "libero-macros", "docs", "e2e", "e2e/fixtures"]
 exclude = [".dioxus-fork", ".dioxus-main", ".dioxus-active", ".blitz-fork"]
 resolver = "3"
 
+# Nightly clippy reads code that `rsx!` expands into as the caller's own:
+# every "{name}" text node's `format!` (79 hits on 2026-09-23) and every
+# `if ... {} else {}` attribute value. Stable did not. Allowed until clippy
+# stops looking into the macro, at the cost of the lints' real hits.
+[workspace.lints.clippy]
+useless_format = "allow"
+suspicious_else_formatting = "allow"
+
 # Blitz's `resolve_transforms` never refreshes the cached transform a node is
 # painted with unless that node also has RECALCULATE_OVERFLOW damage, so a
 # transform that changes without moving anything (Switch's thumb, Slider's

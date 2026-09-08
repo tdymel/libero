@@ -72,3 +72,6 @@ dioxus-fork = ["libero/dioxus-fork"]
 # without both fails to load - see `justfile`'s release recipes. The
 # wasm-split-cli fixes it relies on are fork-only, so this implies fork mode.
 wasm-split = ["dioxus/wasm-split", "dioxus-fork"]
+
+[lints]
+workspace = true

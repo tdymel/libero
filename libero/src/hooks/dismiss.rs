@@ -821,7 +821,6 @@ mod tests {
 
     use dioxus::core::{AttributeValue, ElementId, WriteMutations};
     use dioxus::html::{HasKeyboardData, PlatformEventData};
-    use dioxus::prelude::*;
 
     use super::*;
     use crate::{

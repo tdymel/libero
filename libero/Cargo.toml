@@ -145,3 +145,6 @@ code-lang-swift = []
 code-lang-toml = []
 code-lang-typescript = []
 code-lang-yaml = []
+
+[lints]
+workspace = true

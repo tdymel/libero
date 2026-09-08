@@ -1,0 +1,6 @@
+# Nightly for rustc's parallel frontend and cargo's checksum freshness; both
+# are switched on in `.cargo/config.toml`, which `just mode-main` writes.
+[toolchain]
+channel = "nightly"
+components = ["rustfmt", "clippy"]
+targets = ["wasm32-unknown-unknown"]

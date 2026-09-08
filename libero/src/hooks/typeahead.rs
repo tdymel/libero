@@ -180,8 +180,6 @@ mod tests {
         use std::thread;
         use std::time::{Duration, Instant};
 
-        use dioxus::prelude::*;
-
         use super::super::*;
 
         thread_local! {

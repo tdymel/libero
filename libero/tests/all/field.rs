@@ -573,9 +573,20 @@ fn an_integer_step_saturates_at_the_ends_of_its_type() {
 /// A saturated step still lands inside the caller's range.
 #[test]
 fn a_saturated_step_is_then_clamped_to_min_and_max() {
-    assert_eq!(0u8.step_down(1).clamp_to(Some(5), Some(10)), 5);
-    assert_eq!(u8::MAX.step_up(1).clamp_to(Some(5), Some(10)), 10);
-    assert_eq!(i32::MIN.step_down(1).clamp_to(Some(-3), None), -3);
+    // Fully qualified: std is adding an `Ord::clamp_to` that shadows ours on
+    // primitives, and nightly rejects the method call as ambiguous.
+    assert_eq!(
+        NumberValue::clamp_to(0u8.step_down(1), Some(5), Some(10)),
+        5
+    );
+    assert_eq!(
+        NumberValue::clamp_to(u8::MAX.step_up(1), Some(5), Some(10)),
+        10
+    );
+    assert_eq!(
+        NumberValue::clamp_to(i32::MIN.step_down(1), Some(-3), None),
+        -3
+    );
 }
 
 /// A float step lands on the step's precision, or the value's where that is
