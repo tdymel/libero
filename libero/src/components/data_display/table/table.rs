@@ -9,7 +9,7 @@ use crate::{
 use super::{
     cell_value::{SortDirection, SortKey},
     column::Column,
-    core::{HeaderSpec, RowSpec, render_body, sorted_order},
+    core::{HeaderSpec, RowSpec, active_sort, render_body, sorted_order},
 };
 
 static TABLE_SX: StaticSx = StaticSx::new(|| {
@@ -122,7 +122,7 @@ pub struct TableProps<T: Clone + PartialEq + 'static> {
 // off to is non-generic.
 #[component]
 pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
-    let sort = use_signal(|| None::<(usize, SortDirection)>);
+    let sort = use_signal(|| None::<(String, SortDirection)>);
 
     let headers: Vec<HeaderSpec> = props
         .columns
@@ -134,11 +134,7 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         })
         .collect();
 
-    // `columns` can shrink between renders while the sort signal still points
-    // at the old index, so the lookup has to be fallible.
-    let active = sort
-        .read()
-        .filter(|(index, _)| props.columns.get(*index).is_some_and(|c| c.sortable));
+    let active = active_sort(&headers, sort.read().as_ref());
 
     let order = match active {
         Some((index, direction)) => {
@@ -170,6 +166,6 @@ pub fn Table<T: Clone + PartialEq + 'static>(props: TableProps<T>) -> Element {
         .render(
             HtmlTag::Table,
             props.attributes,
-            render_body(headers, rows, sort),
+            render_body(headers, rows, active, sort),
         )
 }

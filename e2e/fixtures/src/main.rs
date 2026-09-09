@@ -29,9 +29,10 @@ use libero::{
     LiberoProvider,
     components::{
         Anchor, Autocomplete, Button, Carousel, Code, CodeBlock, Collapse, Dialog, Flex, Mark,
-        NotificationData, NotificationLive, NotificationOptions, Notifications, OptionList,
-        Options, Slider, SliderChangeEvent, Splitter, Tabs, Text, TextField, Tooltip, Tree,
-        TreeItem, TreeNode, TreeNodeRenderArgs, use_notifications,
+        NotificationData, NotificationLive, NotificationOptions, NotificationScope, Notifications,
+        OptionList, Options, Paper, Slider, SliderChangeEvent, Splitter, Tabs, Text, TextField,
+        Tooltip, Tree, TreeItem, TreeNode, TreeNodeRenderArgs, use_notifications,
+        use_notifications_with,
     },
     hooks::{ModalScope, use_modal},
     theme::AutoClose,
@@ -146,6 +147,8 @@ enum Route {
     BrokenStaticHighlight {},
     #[route("/notifications")]
     NotificationsPage {},
+    #[route("/notifications-clear")]
+    NotificationsClearPage {},
     #[route("/splitter")]
     SplitterPage {},
 }
@@ -216,6 +219,42 @@ fn NotificationsPage() -> Element {
                 },
                 "Notify for a while"
             }
+        }
+    }
+}
+
+/// Two notifications, each with a "Clear all" button, so `clear()` runs with
+/// focus inside one (todo 440). Its own route, so `/notifications`' baselines
+/// stay as they are.
+#[component]
+fn NotificationsClearPage() -> Element {
+    let notify = use_notifications_with(|s: NotificationScope<String>| {
+        let all = use_notifications();
+        rsx! {
+            Paper {
+                Text { "{s.args()}" }
+                Button { class: "clear-all", onclick: move |_| all.clear(), "Clear all" }
+            }
+        }
+    });
+
+    rsx! {
+        Notifications {}
+        Button {
+            id: "notify",
+            onclick: move |_| {
+                for message in ["First", "Second"] {
+                    notify
+                        .show_with(
+                            message,
+                            NotificationOptions {
+                                auto_close: Some(AutoClose::Never),
+                                ..Default::default()
+                            },
+                        );
+                }
+            },
+            "Notify twice"
         }
     }
 }

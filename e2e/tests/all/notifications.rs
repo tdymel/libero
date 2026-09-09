@@ -549,3 +549,52 @@ fn closing_one_hands_focus_on_and_back_out_of_an_empty_stack() {
         }
     });
 }
+
+/// `clear()` with focus inside a notification sends it back where it came
+/// from, as closing the last one does (todo 440). Before, focus fell to `<body>`.
+#[test]
+fn clearing_with_focus_inside_hands_focus_back_out() {
+    const CLEAR: &str = ".clear-all";
+
+    block_on(async {
+        for viewport in Viewport::ALL {
+            let at = viewport.name();
+            let fixture = Fixture::open("/notifications-clear", viewport)
+                .await
+                .unwrap();
+            let page = &fixture.page;
+
+            keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!("document.querySelectorAll({CLEAR:?}).length === 2"),
+                "two notifications",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            keyboard::tab_to(page, CLEAR, 5)
+                .await
+                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            keyboard::press(page, keyboard::ENTER).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.querySelectorAll({CLEAR:?}).length === 0 && \
+                     document.activeElement === document.querySelector({TRIGGER:?}) && \
+                     document.activeElement.matches(':focus-visible')"
+                ),
+                "clearing to focus the control focus came from, visibly",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
+
+            fixture
+                .console
+                .assert_clean(&format!("clearing notifications at {at}"))
+                .unwrap();
+            fixture.close().await.unwrap();
+        }
+    });
+}

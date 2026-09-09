@@ -311,10 +311,17 @@ impl NotificationStore {
                     .ok()
             })
             .map(Rc::from)
-            .or_else(|| {
-                let return_to = self.return_to.peek().clone();
-                return_to.filter(|element| element.is_connected())
-            });
+            .or_else(|| self.return_target());
+        self.focus(target);
+    }
+
+    /// Where focus came from, if that element is still in the document.
+    fn return_target(&self) -> Option<Rc<dyn ElementApi>> {
+        let return_to = self.return_to.peek().clone();
+        return_to.filter(|element| element.is_connected())
+    }
+
+    fn focus(&self, target: Option<Rc<dyn ElementApi>>) {
         let Some(target) = target else {
             return;
         };
@@ -486,13 +493,18 @@ impl<T: 'static> NotificationHandle<T> {
         self.store.hide(id);
     }
 
-    /// Removes every notification, of every template, at once.
+    /// Removes every notification, of every template, at once. Focus inside
+    /// one goes back where it came from.
     pub fn clear(&self) {
         if !self.store.alive() {
             return;
         }
         let mut entries = self.store.entries;
         entries.write().clear();
+        // No notification is left to hand focus on to (todo 440).
+        if self.store.focused.peek().is_some() {
+            self.store.focus(self.store.return_target());
+        }
     }
 }
 
@@ -609,6 +621,7 @@ fn default_template(s: NotificationScope<NotificationData>) -> Element {
 /// by `Tab` in document order. Closing the focused notification hands focus to
 /// the next one in its stack (its `data-slot="close"`, else its first
 /// focusable), the previous one after the last, else back where it came from.
+/// A `clear()` with focus inside sends it back where it came from.
 #[component]
 pub fn Notifications(
     /// The stack a notification joins unless it names its own. Defaults to

@@ -13,8 +13,8 @@ use libero::{
         ActionIcon, Box, Button, Checkbox, Chip, CodeBlock, Collapse, ColorCode, ColorField,
         Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
         OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup, RangeSlider, Rule,
-        SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Tabs, TagsField, TextField,
-        not_empty, use_form, use_menu,
+        SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Table, Tabs, TagsField,
+        TextField, column, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -412,6 +412,80 @@ fn clicking_a_tab_selects_it_and_swaps_the_panel() {
     assert!(html.contains("second body"));
     assert!(!html.contains("first body"));
     assert_eq!(markup(&html).matches("aria-selected=\"true\"").count(), 1);
+}
+
+/// Todo 428: the sort stays on its column when the columns move.
+#[test]
+fn a_table_sort_follows_its_column_through_a_reorder() {
+    #[derive(Clone, PartialEq)]
+    struct Person {
+        name: &'static str,
+        age: u32,
+    }
+
+    fn app() -> Element {
+        let layout = use_context_provider(|| Signal::new(vec!["Name", "Age"]));
+        let columns = layout()
+            .into_iter()
+            .map(|header| match header {
+                "Name" => column("Name")
+                    .value(|p: &Person| p.name.to_string())
+                    .sortable(),
+                _ => column("Age").value(|p: &Person| p.age).sortable(),
+            })
+            .collect::<Vec<_>>();
+
+        rsx! {
+            LiberoProvider {
+                Table {
+                    data: vec![
+                        Person { name: "Grace", age: 45 },
+                        Person { name: "Linus", age: 28 },
+                        Person { name: "Ada", age: 36 },
+                    ],
+                    columns,
+                }
+            }
+        }
+    }
+
+    fn row_order(html: &str) -> Vec<&'static str> {
+        let mut names = ["Grace", "Linus", "Ada"];
+        names.sort_by_key(|name| html.find(&format!(">{name}<")).expect("a missing row"));
+        names.to_vec()
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    // The last listener registered, i.e. the "Age" header.
+    let age = find.click.expect("registered no click listener");
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), age);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    assert_eq!(
+        row_order(&dioxus_ssr::render(&dom)),
+        ["Linus", "Ada", "Grace"]
+    );
+
+    let mut layout = dom.in_scope(ScopeId::APP, consume_context::<Signal<Vec<&str>>>);
+    dom.in_runtime(|| layout.set(vec!["Age", "Name"]));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(row_order(&html), ["Linus", "Ada", "Grace"]);
+    assert!(
+        html.contains(r#"aria-sort="ascending"><button type="button">Age"#),
+        "{html}"
+    );
+
+    // Without its column the sort is gone, not moved onto "Name".
+    dom.in_runtime(|| layout.set(vec!["Name"]));
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+    let html = dioxus_ssr::render(&dom);
+    assert_eq!(row_order(&html), ["Grace", "Linus", "Ada"]);
+    assert!(html.contains(r#"aria-sort="none"><button type="button">Name"#));
 }
 
 /// Everything but the `<style>` blocks, which carry selectors as CSS text.

@@ -35,6 +35,19 @@ pub(super) fn sorted_order(keys: &[SortKey], direction: SortDirection) -> Vec<us
     order
 }
 
+/// The column the sort sits on now. Keyed by header text, so reordering or
+/// hiding other columns can't move it; with duplicate headers the first wins.
+pub(super) fn active_sort(
+    headers: &[HeaderSpec],
+    sort: Option<&(String, SortDirection)>,
+) -> Option<(usize, SortDirection)> {
+    let (header, direction) = sort?;
+    headers
+        .iter()
+        .position(|spec| spec.sortable && spec.header == *header)
+        .map(|index| (index, *direction))
+}
+
 fn align_attr(align: CellAlign) -> Option<&'static str> {
     (align != CellAlign::Start).then(|| align.as_str())
 }
@@ -42,10 +55,9 @@ fn align_attr(align: CellAlign) -> Option<&'static str> {
 pub(super) fn render_body(
     headers: Vec<HeaderSpec>,
     rows: Vec<RowSpec>,
-    mut sort: Signal<Option<(usize, SortDirection)>>,
+    active: Option<(usize, SortDirection)>,
+    mut sort: Signal<Option<(String, SortDirection)>>,
 ) -> Element {
-    let active = *sort.read();
-
     rsx! {
         thead {
             tr {
@@ -63,14 +75,17 @@ pub(super) fn render_body(
                         if spec.sortable {
                             button {
                                 r#type: "button",
-                                onclick: move |_| {
-                                    let next = match *sort.read() {
-                                        Some((column, direction)) if column == index => {
-                                            (index, direction.flipped())
-                                        }
-                                        _ => (index, SortDirection::default()),
-                                    };
-                                    sort.set(Some(next));
+                                onclick: {
+                                    let header = spec.header.clone();
+                                    move |_| {
+                                        let direction = match active {
+                                            Some((column, direction)) if column == index => {
+                                                direction.flipped()
+                                            }
+                                            _ => SortDirection::default(),
+                                        };
+                                        sort.set(Some((header.clone(), direction)));
+                                    }
                                 },
                                 "{spec.header}"
                                 // Always rendered, so sorting a column can't
@@ -144,6 +159,40 @@ mod tests {
             sorted_order(&keys, SortDirection::Descending),
             vec![0, 1, 2]
         );
+    }
+
+    fn headers(names: &[&str]) -> Vec<HeaderSpec> {
+        names
+            .iter()
+            .map(|name| HeaderSpec {
+                header: name.to_string(),
+                align: CellAlign::Start,
+                sortable: true,
+            })
+            .collect()
+    }
+
+    #[test]
+    fn the_sort_follows_its_header_not_its_position() {
+        let sort = ("Age".to_string(), SortDirection::Descending);
+
+        let active = active_sort(&headers(&["Name", "Age"]), Some(&sort));
+        assert_eq!(active, Some((1, SortDirection::Descending)));
+
+        let reordered = active_sort(&headers(&["Age", "Name"]), Some(&sort));
+        assert_eq!(reordered, Some((0, SortDirection::Descending)));
+
+        assert_eq!(active_sort(&headers(&["Name"]), Some(&sort)), None);
+    }
+
+    #[test]
+    fn duplicate_headers_sort_the_first_sortable_match() {
+        let sort = ("Age".to_string(), SortDirection::Ascending);
+        let mut specs = headers(&["Age", "Name", "Age"]);
+
+        assert_eq!(active_sort(&specs, Some(&sort)).map(|a| a.0), Some(0));
+        specs[0].sortable = false;
+        assert_eq!(active_sort(&specs, Some(&sort)).map(|a| a.0), Some(2));
     }
 
     #[test]
