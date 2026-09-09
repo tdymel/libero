@@ -166,6 +166,7 @@ unreachable, so use it only when something else provides the scrolling.
 | `handle` | `ScrollAreaHandle` | - | From `use_scroll_area()`. Scrolls the area from a handler, in percent or px, on every call. |
 | `focusable` | `bool` | `false` | Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed. |
 | `onscroll` | `EventHandler<ScrollPositionEvent>` | - | Fires on every scroll tick with the position as a percent of each axis's scrollable range. |
+| `onresize` | `EventHandler<Event<ResizeData>>` | - | Fires after the area resized, once it has re-measured itself for a `Virtualize` child. |
 | `ontopreached` | `EventHandler<()>` | - | Fires once when the top edge is reached. |
 | `onbottomreached` | `EventHandler<()>` | - | Fires once when the bottom edge is reached. |
 | `onleftreached` | `EventHandler<()>` | - | Fires once when the left edge is reached. |

@@ -311,9 +311,6 @@ fn thumbnail_id(base: &str, index: usize) -> String {
     format!("{base}-thumbnail-{index}")
 }
 
-/// Rescales picture `index` to `next(current scale)`, about `client` or the
-/// centre. The frame and the picture's natural size are read first - for the
-/// pan bounds and for where the cursor sits - so the zoom lands once they do.
 /// Where a second `open_with` leaves the viewer: on its index, clamped to its
 /// gallery, and fitted. A zoom is keyed by index only, so kept, it would carry
 /// onto whichever new picture lands at the same index.
@@ -325,6 +322,28 @@ fn reopened(zoom: Zoom, index: usize, count: usize) -> (usize, Zoom) {
     (index.min(count.saturating_sub(1)), zoom)
 }
 
+/// Frame `index`'s bounds and its top-left in the viewport. Measures the
+/// untransformed frame, never the zoomed `<img>`.
+async fn measure_fit(
+    stage: ElementHandle,
+    picture: ElementHandle,
+    index: usize,
+) -> Option<(Fit, f64, f64)> {
+    let frame = stage.query_selector(&frame_selector(index)).ok()?;
+    let (dimensions, origin, natural) = (
+        frame.dimensions(),
+        frame.client_offset(),
+        picture.natural_size(),
+    );
+    let (Ok(dimensions), Ok((left, top))) = (dimensions.await, origin.await) else {
+        return None;
+    };
+    Some((Fit::new(dimensions, natural.await.ok()), left, top))
+}
+
+/// Rescales picture `index` to `next(current scale)`, about `client` or the
+/// centre. The frame and the picture's natural size are read first - for the
+/// pan bounds and for where the cursor sits - so the zoom lands once they do.
 fn zoom_about(
     stage: ElementHandle,
     picture: ElementHandle,
@@ -334,24 +353,15 @@ fn zoom_about(
     client: Option<DragPoint>,
     next: impl Fn(f64) -> f64 + 'static,
 ) {
-    let Ok(frame) = stage.query_selector(&frame_selector(index)) else {
-        return;
-    };
-    let (dimensions, origin, natural) = (
-        frame.dimensions(),
-        frame.client_offset(),
-        picture.natural_size(),
-    );
     spawn(async move {
-        let (Ok(dimensions), Ok((left, top))) = (dimensions.await, origin.await) else {
+        let Some((bounds, left, top)) = measure_fit(stage, picture, index).await else {
             return;
         };
-        let bounds = Fit::new(dimensions, natural.await.ok());
         fit.set(Some(bounds));
         let point = match client {
             Some(client) => DragPoint {
-                x: client.x - left - dimensions.width / 2.0,
-                y: client.y - top - dimensions.height / 2.0,
+                x: client.x - left - bounds.frame.width / 2.0,
+                y: client.y - top - bounds.frame.height / 2.0,
             },
             None => DragPoint { x: 0.0, y: 0.0 },
         };
@@ -364,6 +374,29 @@ fn zoom_about(
             true => from.scaled(scale, point, bounds),
             false => Zoom::fitted(index),
         });
+    });
+}
+
+/// After the stage resized: new bounds for the zoomed picture, and its pan
+/// clamped to them, so it still covers its frame.
+fn refit(stage: ElementHandle, picture: ElementHandle, zooming: Zooming) {
+    let (mut zoom, mut fit, held) = (zooming.zoom, zooming.fit, zooming.held());
+    if !held.is_zoomed() {
+        return;
+    }
+    spawn(async move {
+        let Some((bounds, ..)) = measure_fit(stage, picture, held.index).await else {
+            return;
+        };
+        // Only the zoom this measured: a move or a zoom out meanwhile wins.
+        let now = *zoom.peek();
+        if now.index != held.index || !now.is_zoomed() {
+            return;
+        }
+        fit.set(Some(bounds));
+        if now.clamped(bounds) != now {
+            zoom.set(now.clamped(bounds));
+        }
     });
 }
 
@@ -832,6 +865,7 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
         }
     }
     let picture = |i: usize| pictures.borrow()[i];
+    let resized_pictures = pictures.clone();
 
     let drag = use_lightbox_drag(
         zooming,
@@ -912,7 +946,16 @@ pub(crate) fn Lightbox(opening: LightboxOpening, options: LightboxOptions) -> El
             Box {
                 framework_sx: &LIGHTBOX_BODY_SX,
                 onmounted: stage.mount(),
-                Box { framework_sx: &LIGHTBOX_STAGE_SX, {stage_body} }
+                Box {
+                    framework_sx: &LIGHTBOX_STAGE_SX,
+                    // A window resize or a phone turned moves the pan bounds.
+                    onresize: move |_: Event<ResizeData>| {
+                        if let Some(&picture) = resized_pictures.borrow().get(*index.peek()) {
+                            refit(stage, picture, zooming);
+                        }
+                    },
+                    {stage_body}
+                }
                 if let Some(caption) = caption {
                     Box { component: "p", id: caption_id(), framework_sx: &LIGHTBOX_CAPTION_SX, "{caption}" }
                 }

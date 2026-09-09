@@ -124,6 +124,8 @@ pub fn ScrollAreaPage() -> Element {
                     .doc("Makes the viewport itself a tab stop, so content with no focusable elements of its own can still be reached and arrow-keyed."),
                 prop("onscroll", "EventHandler<ScrollPositionEvent>")
                     .doc("Fires on every scroll tick with the position as a percent of each axis's scrollable range."),
+                prop("onresize", "EventHandler<Event<ResizeData>>")
+                    .doc("Fires after the area resized, once it has re-measured itself for a Virtualize child."),
                 prop("ontopreached", "EventHandler<()>").doc("Fires once when the top edge is reached."),
                 prop("onbottomreached", "EventHandler<()>").doc("Fires once when the bottom edge is reached."),
                 prop("onleftreached", "EventHandler<()>").doc("Fires once when the left edge is reached."),

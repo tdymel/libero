@@ -25,6 +25,7 @@ mod notifications;
 mod picker_dialog;
 mod planted;
 mod radio_group;
+mod scroll_area;
 mod segmented_control;
 mod select;
 mod slider;

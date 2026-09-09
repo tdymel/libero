@@ -13,6 +13,7 @@
 
 use anyhow::{Result, bail};
 use chromiumoxide::Page;
+use chromiumoxide::cdp::browser_protocol::emulation::SetDeviceMetricsOverrideParams;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::suite::Step;
@@ -251,6 +252,118 @@ async fn assert_tab_skips_inert(page: &Page) -> Result<()> {
         "document.querySelectorAll('[data-planted]').forEach(img => { img.setAttribute('tabindex', '-1'); delete img.dataset.planted; })",
     )
     .await?;
+    Ok(())
+}
+
+/// Todo 421: zoom, pan to the edge, then turn the window into a phone. The pan
+/// has to be clamped to the new, smaller bounds, or the picture leaves its
+/// frame.
+#[test]
+fn a_resize_keeps_a_zoomed_picture_in_its_frame() {
+    block_on(async {
+        let fixture = Fixture::open("/lightbox", Viewport::Desktop).await.unwrap();
+        zoomed_resize(&fixture.page).await.unwrap();
+        fixture.console.assert_clean("the lightbox resize").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// The shown picture's centre offset from its frame's and how far it may be,
+/// per axis: `[dx, dy, x_bound, y_bound]`. The `<img>` box is the frame's, so
+/// its width over the frame's is the scale.
+const PAN_JS: &str = r#"(() => {
+    const frame = document.querySelector('[role=dialog] [data-lightbox-frame="0"]');
+    const img = frame.querySelector('img');
+    const f = frame.getBoundingClientRect(), i = img.getBoundingClientRect();
+    const s = i.width / f.width;
+    const r = Math.min(f.width / img.naturalWidth, f.height / img.naturalHeight, 1);
+    const bound = (natural, side) => Math.max(0, (natural * r * s - side) / 2);
+    return [
+        i.left + i.width / 2 - (f.left + f.width / 2),
+        i.top + i.height / 2 - (f.top + f.height / 2),
+        bound(img.naturalWidth, f.width),
+        bound(img.naturalHeight, f.height),
+    ];
+})()"#;
+
+async fn zoomed_resize(page: &Page) -> Result<()> {
+    const Z: keyboard::Key = keyboard::Key {
+        key: "z",
+        code: "KeyZ",
+        vk: 90,
+        text: Some("z"),
+    };
+    // No transform transition, so every rect read is the resting one.
+    motion::set_reduced_motion(page, true).await?;
+    // Short, so the 400x260 picture at 2x overhangs the 70vh stage (350px)
+    // and has somewhere to pan; still over the phone layout's 30rem.
+    page.execute(SetDeviceMetricsOverrideParams::new(900, 500, 1.0, false))
+        .await?;
+    keyboard::tab_to(page, TRIGGER, 5).await?;
+    keyboard::press(page, keyboard::ENTER).await?;
+    wait::for_visible(page, DIALOG).await?;
+    wait_showing(page, 0).await?;
+    // Decoded first: without a natural size the bounds are the whole frame.
+    wait::for_js_true(
+        page,
+        "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img')?.naturalWidth > 0",
+        "the first picture to decode",
+    )
+    .await?;
+    keyboard::tab_to(page, PICTURE, 12).await?;
+    keyboard::press(page, Z).await?;
+    wait::for_js_true(
+        page,
+        "document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText.includes('scale(2)')",
+        "the picture to zoom",
+    )
+    .await?;
+    // At picture 0 an arrow past the edge changes nothing.
+    for _ in 0..40 {
+        keyboard::press(page, keyboard::ARROW_LEFT).await?;
+        keyboard::press(page, keyboard::ARROW_UP).await?;
+    }
+    // Resting on its edge on both axes, and moved on at least one.
+    let at_edge = format!(
+        "(() => {{ const [dx, dy, bx, by] = {PAN_JS}; return Math.abs(dx) >= bx - 1 && Math.abs(dy) >= by - 1 && (bx >= 1 || by >= 1); }})()"
+    );
+    if wait::for_js_true(page, &at_edge, "the pan to reach the picture's edge")
+        .await
+        .is_err()
+    {
+        let style: String = page
+            .evaluate("document.querySelector('[role=dialog] [data-lightbox-frame=\"0\"] img').style.cssText")
+            .await?
+            .into_value()?;
+        let actual = focus::active_element(page).await?;
+        bail!("the pan never reached the picture's edge: style {style:?}, focus {actual:?}");
+    }
+    let [dx, dy, ..]: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+
+    let (width, height) = Viewport::Mobile.size();
+    page.execute(SetDeviceMetricsOverrideParams::new(
+        width, height, 1.0, true,
+    ))
+    .await?;
+    let settled = format!(
+        "(() => {{ const [dx, dy, bx, by] = {PAN_JS}; return Math.abs(dx) <= bx + 1 && Math.abs(dy) <= by + 1; }})()"
+    );
+    if wait::for_js_true(page, &settled, "the pan clamped to the resized frame")
+        .await
+        .is_err()
+    {
+        let seen: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+        bail!(
+            "after the resize the picture sits at {seen:?} ([dx, dy, x_bound, y_bound]); it left its frame"
+        );
+    }
+    // The clamp had to act: the old pan lies outside the new bounds.
+    let [.., bx, by]: [f64; 4] = page.evaluate(PAN_JS).await?.into_value()?;
+    if dx.abs() <= bx + 1.0 && dy.abs() <= by + 1.0 {
+        bail!(
+            "the old pan ({dx}, {dy}) still fits the new bounds ({bx}, {by}); the resize tested nothing"
+        );
+    }
     Ok(())
 }
 

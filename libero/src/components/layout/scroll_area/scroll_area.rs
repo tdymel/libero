@@ -188,6 +188,20 @@ base_props! {
         framework_sx: Option<ScrollAreaBase>,
         #[props(default)]
         onscroll: Option<EventHandler<ScrollPositionEvent>>,
+        /// After the area resized, once it has re-measured itself. A prop, not
+        /// a spread attribute: a spread `onresize` would replace the area's own.
+        ///
+        /// ```no_run
+        /// # use dioxus::prelude::*;
+        /// # use libero::components::ScrollArea;
+        /// # fn app() -> Element {
+        /// # let mut resized = use_signal(|| 0);
+        /// # rsx! {
+        /// ScrollArea { onresize: move |_: Event<ResizeData>| resized += 1, "Rows" }
+        /// # } }
+        /// ```
+        #[props(default)]
+        onresize: Option<EventHandler<Event<ResizeData>>>,
         #[props(default)]
         ontopreached: Option<EventHandler<()>>,
         #[props(default)]
@@ -243,8 +257,8 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
     let virtualized = use_signal(|| false);
     use_context_provider(|| ScrollViewport::new(content, geometry, offsets, virtualized));
     // A `Virtualize` child needs the viewport height before anything has been
-    // scrolled, and re-runs once the root is actually mounted.
-    use_effect(move || {
+    // scrolled, and again whenever a pane around it resizes.
+    let measure = move || {
         if !root.is_mounted() {
             return;
         }
@@ -257,9 +271,13 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
                 },
                 _ => ScrollGeometry::default(),
             };
-            geometry.set(Some(measured));
+            if *geometry.peek() != Some(measured) {
+                geometry.set(Some(measured));
+            }
         });
-    });
+    };
+    // Re-runs once the root is actually mounted.
+    use_effect(measure);
 
     let onscroll = props.onscroll;
     let scrolled = move |event: ScrollPositionEvent| {
@@ -322,6 +340,7 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         }
     };
 
+    let onresize = props.onresize;
     let scroll_position_x = props.scroll_position_x;
     let scroll_position_y = props.scroll_position_y;
     use_effect(use_reactive!(|scroll_position_x, scroll_position_y| {
@@ -368,6 +387,12 @@ pub fn ScrollArea(props: ScrollAreaProps) -> Element {
         .attr("tabindex", if props.focusable { "0" } else { "-1" })
         .event("onscroll", onscroll)
         .event("onscrollend", onscrollend)
+        .event("onresize", move |event: Event<ResizeData>| {
+            measure();
+            if let Some(onresize) = &onresize {
+                onresize.call(event);
+            }
+        })
         .render(HtmlTag::Div, props.attributes, body)
 }
 
