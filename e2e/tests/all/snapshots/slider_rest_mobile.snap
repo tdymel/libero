@@ -3,9 +3,13 @@ source: e2e/src/suite.rs
 description: slider at mobile (rest)
 expression: tree
 ---
+LabelText
+  StaticText "Volume"
 generic
   generic
     generic
     slider "Volume" = 40 [valuemax=100] [valuemin=0]
     tooltip "40"
       StaticText "40"
+paragraph
+  StaticText "40%"

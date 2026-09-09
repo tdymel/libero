@@ -24,15 +24,7 @@ const THUMB: &str = "[role=slider]";
 /// descriptions, so `the_thumb_is_described_by_its_value_bubble` checks that.
 #[test]
 fn it_meets_the_baseline() {
-    Suite::new("slider", "/slider")
-        // Todo 387: the fixture renders one `Slider` with an `aria_label` and no
-        // visible text at all, so there is nothing for axe's contrast rule to
-        // evaluate and `assert_clean` has always reported clean on zero
-        // elements. The fix is a visible label in the fixture, not a change
-        // here; deleting this line verifies it.
-        .no_contrast_coverage("todo 387 - the fixture has no on-screen text, so coverage over it would assert nothing")
-        .focusable(THUMB)
-        .run();
+    Suite::new("slider", "/slider").focusable(THUMB).run();
 }
 
 #[test]
@@ -62,6 +54,16 @@ fn the_thumb_tracks_a_drag() {
                     viewport.name()
                 )
             });
+            // The read-out is the text a theme colour can ruin, so it has to be the live value.
+            wait::for_js_true(
+                &fixture.page,
+                &format!(
+                    "document.querySelector('#volume-readout').textContent === {VALUE_NOW} + '%'"
+                ),
+                "the read-out to show the dragged value",
+            )
+            .await
+            .unwrap_or_else(|e| panic!("at {}: {e}", viewport.name()));
 
             fixture
                 .console
