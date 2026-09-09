@@ -229,6 +229,11 @@ fn to_css_value(property: &SxPropertyKey, value: &ThemeAwareValue) -> String {
         SxPropertyKey::Raw(_) => (None, None),
     };
 
+    #[cfg(debug_assertions)]
+    if let (SxPropertyKey::Known(property), ThemeAwareValue::String(raw)) = (property, value) {
+        super::unknown_color::warn_unknown_color_name(*property, raw);
+    }
+
     let in_role;
     let value = match role {
         Some(role) => {

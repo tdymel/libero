@@ -45,9 +45,8 @@ impl Color {
     /// of the page and now do not, so they no longer resolve to
     /// `--lsx-surface`/`--lsx-ink` - they fall through to the CSS keywords
     /// `white` and `black`, which are valid CSS and so fail **silently**,
-    /// pinning the color to one scheme instead of following the theme. Todo
-    /// 385 asks whether an unrecognised color name should fall through at
-    /// all.
+    /// pinning the color to one scheme instead of following the theme. A name
+    /// that is not a CSS keyword either (`"primry"`) warns in debug builds.
     pub fn parse(value: &str) -> Option<Self> {
         match value {
             "primary" => Some(Self::Primary),

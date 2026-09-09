@@ -10,6 +10,8 @@ mod sx;
 mod sx_entry;
 mod sx_key;
 mod theme_aware_value;
+#[cfg(debug_assertions)]
+mod unknown_color;
 pub(crate) mod variables;
 
 pub use breakpoint_value::{BreakpointValue, bp};
