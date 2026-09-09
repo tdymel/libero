@@ -16,7 +16,6 @@ const MEASURE: &str = "(() => {
         return [cell.left, cell.top, cell.width, cell.height, media.width, media.height];
     });
     return {
-        gap: getComputedStyle(list).gap,
         column_gap: cells[1][0] - (cells[0][0] + cells[0][2]),
         row_gap: cells[2][1] - (cells[1][1] + cells[1][3]),
         cells,
@@ -25,7 +24,6 @@ const MEASURE: &str = "(() => {
 
 #[derive(Deserialize, Debug)]
 struct Quilt {
-    gap: String,
     column_gap: f64,
     row_gap: f64,
     cells: Vec<[f64; 6]>,
