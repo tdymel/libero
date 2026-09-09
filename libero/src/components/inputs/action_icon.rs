@@ -155,6 +155,8 @@ base_props! {
         variant: Input<Variant>,
         #[props(default, into)]
         color: Input<ThemeAwareValue>,
+        /// `"sm"` is 20x20: it meets WCAG 2.5.8 only through the spacing
+        /// exception, so keep 2px clear of any other target (4px of another `sm`).
         #[props(default, into)]
         size: Input<ThemeAwareValue>,
         #[props(default, into)]
