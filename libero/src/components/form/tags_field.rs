@@ -397,8 +397,10 @@ fn tags_field_chips<F: Fn(Vec<String>) + Clone + 'static>(
     let chips = held.iter().cloned().enumerate().map(|(index, value)| {
         let list = held.to_vec();
         let onchange = onchange.clone();
+        // Guarded here as well as by disabling the x: a caller's own `tag`
+        // gets `remove` too, and Backspace refuses a locked field.
         let remove = Callback::new(move |_: ()| {
-            let Some(onchange) = &onchange else {
+            let (false, Some(onchange)) = (locked, &onchange) else {
                 return;
             };
             let mut next = list.clone();

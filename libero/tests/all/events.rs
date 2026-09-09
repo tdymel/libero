@@ -3096,3 +3096,172 @@ mod combobox_refusal {
         }
     }
 }
+
+/// Todo 439 (a): the pointer refuses what the keys refuse. Each case runs once
+/// editable, so the refusal is believed next to the same click being answered.
+mod pointer_guards {
+    use super::*;
+    use libero::components::Autocomplete;
+
+    /// The click listener on the element whose `aria-label` is `label`; the
+    /// two register apart, so both are recorded by element id.
+    struct FindLabelled {
+        label: &'static str,
+        last: Option<ElementId>,
+        clicked: std::collections::HashSet<ElementId>,
+        labelled: std::collections::HashSet<ElementId>,
+    }
+
+    impl FindLabelled {
+        fn new(label: &'static str) -> Self {
+            Self {
+                label,
+                last: None,
+                clicked: Default::default(),
+                labelled: Default::default(),
+            }
+        }
+
+        fn target(&self) -> Option<ElementId> {
+            self.clicked.intersection(&self.labelled).next().copied()
+        }
+    }
+
+    impl WriteMutations for FindLabelled {
+        fn push_id(&mut self, id: ElementId) {
+            self.last = Some(id);
+        }
+        fn set_id(&mut self, id: ElementId) {
+            self.last = Some(id);
+        }
+        fn add_event_listener(&mut self, name: &str) {
+            if name == "click"
+                && let Some(id) = self.last
+            {
+                self.clicked.insert(id);
+            }
+        }
+        fn child(&mut self, _index: usize) {}
+        fn pop(&mut self) {}
+        fn create_element(&mut self, _tag: &str, _ns: Option<&str>) {}
+        fn create_text(&mut self, _value: &str) {}
+        fn clone(&mut self) {}
+        fn append_children(&mut self, _m: usize) {}
+        fn replace_with(&mut self, _m: usize) {}
+        fn insert_after(&mut self, _m: usize) {}
+        fn insert_before(&mut self, _m: usize) {}
+        fn set_attribute(&mut self, name: &str, _ns: Option<&str>, value: &AttributeValue) {
+            if name == "aria-label"
+                && matches!(value, AttributeValue::Text(text) if text == self.label)
+                && let Some(id) = self.last
+            {
+                self.labelled.insert(id);
+            }
+        }
+        fn set_text(&mut self, _value: &str) {}
+        fn remove_event_listener(&mut self, _name: &str) {}
+        fn remove(&mut self) {}
+    }
+
+    /// Mounts `app` read-only or not and clicks the element labelled `label`,
+    /// if it was drawn at all. Returns what the handler heard.
+    fn click_labelled(app: fn() -> Element, readonly: bool, label: &'static str) -> Vec<String> {
+        dioxus::html::set_event_converter(Box::new(TestConverter));
+        READ_ONLY.set(readonly);
+        HEARD.with_borrow_mut(Vec::clear);
+        let mut dom = VirtualDom::new(app);
+        let mut find = FindLabelled::new(label);
+        dom.rebuild(&mut find);
+        dom.render_immediate(&mut find);
+        if let Some(target) = find.target() {
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), target);
+            dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        }
+        HEARD.with_borrow(Clone::clone)
+    }
+
+    fn own_tags() -> Element {
+        rsx! {
+            LiberoProvider {
+                TagsField {
+                    label: "Topics",
+                    value: vec!["rust".to_string()],
+                    readonly: READ_ONLY.get(),
+                    onchange: move |next: Vec<String>| heard(next),
+                    tag: move |args: SelectionArgs<String>| {
+                        let label = format!("Drop {}", args.value);
+                        rsx! {
+                            button { "aria-label": label, onclick: move |_| args.remove.call(()), "x" }
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    /// A caller's `tag` got an unguarded `remove`, while Backspace refuses a
+    /// read-only field.
+    #[test]
+    fn a_readonly_tags_field_refuses_a_custom_tags_remove() {
+        let heard = click_labelled(own_tags, false, "Drop rust");
+        assert_eq!(heard, ["[]"], "the custom x is the control");
+        let heard = click_labelled(own_tags, true, "Drop rust");
+        assert_eq!(heard, Vec::<String>::new());
+    }
+
+    fn own_chips() -> Element {
+        rsx! {
+            LiberoProvider {
+                MultiSelect::<String> {
+                    label: "Cities",
+                    options: vec!["Berlin".to_string(), "Bonn".to_string()],
+                    value: vec!["Berlin".to_string()],
+                    readonly: READ_ONLY.get(),
+                    onchange: move |next: Vec<String>| heard(next),
+                    selection: move |args: SelectionArgs<String>| {
+                        let label = format!("Drop {}", args.value);
+                        rsx! {
+                            button { "aria-label": label, onclick: move |_| args.remove.call(()), "x" }
+                        }
+                    },
+                }
+            }
+        }
+    }
+
+    /// The same for `MultiSelect`'s `selection`: the trigger's Backspace
+    /// refuses a read-only select.
+    #[test]
+    fn a_readonly_multi_select_refuses_a_custom_chips_remove() {
+        let heard = click_labelled(own_chips, false, "Drop Berlin");
+        assert_eq!(heard, ["[]"], "the custom x is the control");
+        let heard = click_labelled(own_chips, true, "Drop Berlin");
+        assert_eq!(heard, Vec::<String>::new());
+    }
+
+    fn clearable_fruit() -> Element {
+        rsx! {
+            LiberoProvider {
+                Autocomplete {
+                    label: "Fruit",
+                    options: vec!["apple".to_string()],
+                    value: "apple".to_string(),
+                    clearable: true,
+                    readonly: READ_ONLY.get(),
+                    oninput: move |next: String| heard(next),
+                }
+            }
+        }
+    }
+
+    /// Every other clearable field hides its x while read-only; `Autocomplete`
+    /// drew it, and a click emptied the text the native `readonly` protects.
+    #[test]
+    fn a_readonly_autocomplete_has_no_clear_to_click() {
+        let heard = click_labelled(clearable_fruit, false, "Clear");
+        assert_eq!(heard, ["\"\""], "the x is the control");
+        let heard = click_labelled(clearable_fruit, true, "Clear");
+        assert_eq!(heard, Vec::<String>::new());
+    }
+}

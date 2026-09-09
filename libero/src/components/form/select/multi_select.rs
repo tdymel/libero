@@ -117,7 +117,13 @@ pub fn MultiSelect<T: Options>(props: MultiSelectProps<T>) -> Element {
             let chips = picked.iter().cloned().enumerate().map(|(index, value)| {
                 let removing = picked.clone();
                 let onchange = chip_change.clone();
-                let remove = Callback::new(move |_: ()| drop_at(&removing, index, &onchange));
+                // Guarded as the trigger's Backspace is: a caller's own
+                // `selection` gets `remove` too.
+                let remove = Callback::new(move |_: ()| {
+                    if !disabled && !readonly {
+                        drop_at(&removing, index, &onchange);
+                    }
+                });
                 match &draw_selection {
                     Some(selection) => selection.call(SelectionArgs { value, remove }),
                     None => removable_chip(value.label(), remove, size, disabled || readonly),
