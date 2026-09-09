@@ -36,7 +36,7 @@ pub fn ButtonPage() -> Element {
                 prop("onclick", "EventHandler<MouseEvent>")
                     .doc("Click handler; not called when the button renders as a link."),
                 prop("to", "NavigationTarget")
-                    .doc("Renders as a router-aware link instead of a `<button>`."),
+                    .doc("Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`)."),
                 prop("target", "String")
                     .doc("The link's `target` attribute, when `to` is set."),
                 prop("children", "Element").doc("The button's label."),

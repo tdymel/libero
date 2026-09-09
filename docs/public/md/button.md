@@ -79,7 +79,7 @@ same. On a link `selected` keeps only the look.
 | `disabled` | `bool` | `false` | Disables interaction and dims the button. |
 | `loading` | `bool` | `false` | Overlays a `Loader` on the label and swallows clicks, but keeps the button focusable. Renders `aria-busy` and `aria-disabled`. Ignored on a link. |
 | `onclick` | `EventHandler<MouseEvent>` | - | Click handler; not called when the button renders as a link. |
-| `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. |
+| `to` | `NavigationTarget` | - | Renders as a router-aware link instead of a `<button>`. A path/URL or a typed route (`Route::Foo {}`). |
 | `target` | `String` | - | The link's `target` attribute, when `to` is set. |
 | `children` | `Element` | required | The button's label. |
 

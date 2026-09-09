@@ -173,6 +173,51 @@ fn the_elevated_variant_reads_the_surface_and_publishes_its_focus_contrast() {
     );
 }
 
+#[derive(Clone, PartialEq, Routable)]
+enum Route {
+    #[route("/settings")]
+    Settings {},
+}
+
+#[component]
+fn Settings() -> Element {
+    rsx! {}
+}
+
+/// `to` takes a typed route directly, the way `Anchor`'s does. No router is
+/// mounted, so it renders as a plain `href`.
+#[test]
+fn a_button_takes_a_route_as_its_target() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: Route::Settings {}, "Settings" } }
+        }
+    }
+
+    let attributes = attributes_of(&body(&render(app)), "a");
+
+    assert_eq!(attributes["href"], "/settings", "{attributes:?}");
+}
+
+/// The explicit conversion and a bare path still compile.
+#[test]
+fn a_button_still_takes_a_navigation_target_or_a_path() {
+    fn target() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: NavigationTarget::from(Route::Settings {}), "Settings" } }
+        }
+    }
+    fn path() -> Element {
+        rsx! {
+            LiberoProvider { Button { to: "/settings", "Settings" } }
+        }
+    }
+
+    for app in [target, path] {
+        assert_eq!(attributes_of(&body(&render(app)), "a")["href"], "/settings");
+    }
+}
+
 static OUTLINED: libero::theme::Theme = libero::theme::Theme {
     button: libero::theme::ButtonDefaults {
         variant: libero::theme::Variant::Outlined,

@@ -21,15 +21,22 @@ use crate::{
     utils::warn,
 };
 
-// Optional, since a Button is only a link when set. Costs the direct
-// `to: Route::Foo {}` that `Anchor` gets: `#[props(into)]` can't chain a
-// foreign conversion through a wrapper, so callers need
-// `NavigationTarget::from(..)`.
 input_from_str!(NavigationTarget);
 
 impl From<NavigationTarget> for Input<NavigationTarget> {
     fn from(value: NavigationTarget) -> Self {
         Input::Value(value)
+    }
+}
+
+#[doc(hidden)]
+pub struct RouteMarker;
+
+// A typed `Route`, as `Anchor`'s `to` takes. A `From<R: Routable>` would
+// overlap the impls above, so this rides `#[props(into)]`'s marker instead.
+impl<R: Routable> dioxus::core::SuperFrom<R, RouteMarker> for Input<NavigationTarget> {
+    fn super_from(value: R) -> Self {
+        Input::Value(value.into())
     }
 }
 
@@ -352,7 +359,8 @@ base_props! {
         #[props(default)]
         onclick: Option<EventHandler<MouseEvent>>,
         /// Renders a router-aware link instead of a `<button>`. No
-        /// ripple/`onclick` then - see `is_link` below.
+        /// ripple/`onclick` then - see `is_link` below. A path/URL or a typed
+        /// route (`Route::Foo {}`), as on `Anchor`.
         #[props(default, into)]
         to: Input<NavigationTarget>,
         #[props(default)]
