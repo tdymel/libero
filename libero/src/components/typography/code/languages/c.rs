@@ -27,10 +27,7 @@ const RULES: &[TokenRule] = &[
             r"\b(?:auto|break|case|char|const|continue|default|do|double|else|enum|extern|float|for|goto|if|int|long|register|return|short|signed|sizeof|static|struct|switch|typedef|union|unsigned|void|volatile|while)\b",
         )],
     },
-    TokenRule {
-        name: "function",
-        patterns: &[PatternDef::new(r"([a-zA-Z_]\w*)(\s*\()").lookahead(2)],
-    },
+    super::FUNCTION_CALL,
     TokenRule {
         name: "number",
         patterns: &[PatternDef::new(

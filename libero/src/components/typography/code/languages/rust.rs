@@ -7,7 +7,8 @@ const RULES: &[TokenRule] = &[
         name: "comment",
         patterns: &[
             PatternDef::new(r"//.*").greedy(),
-            PatternDef::new(r"/\*[\s\S]*?\*/").greedy(),
+            // Rust's block comments nest.
+            PatternDef::new(r"/\*").balanced("/*", "*/").greedy(),
         ],
     },
     TokenRule {
@@ -31,10 +32,7 @@ const RULES: &[TokenRule] = &[
             r"\b(?:as|async|await|break|const|continue|crate|dyn|else|enum|extern|fn|for|if|impl|in|let|loop|match|mod|move|mut|pub|ref|return|self|Self|static|struct|super|trait|type|unsafe|use|where|while)\b",
         )],
     },
-    TokenRule {
-        name: "function",
-        patterns: &[PatternDef::new(r"([a-zA-Z_][a-zA-Z0-9_]*)(\s*\()").lookahead(2)],
-    },
+    super::FUNCTION_CALL,
     TokenRule {
         name: "class-name",
         patterns: &[PatternDef::new(r"\b[A-Z][a-zA-Z0-9_]*\b")],

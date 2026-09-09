@@ -711,6 +711,8 @@ fn CodePage() -> Element {
         Flex { direction: "column", gap: "md", max_width: "320px",
             Code { id: "non-ascii-code", language: "rust", source: NON_ASCII_SOURCE }
             CodeBlock { id: "numbered-block", language: "rust", line_numbers: true, source: "let a = 1;\nlet b = 2;" }
+            // Todo 434: the leading `é` puts the scan's byte offsets apart from `RegExp`'s UTF-16 ones.
+            Code { id: "nested-comment-code", language: "rust", source: "é /* a /* b */ c */ x" }
         }
     }
 }

@@ -944,7 +944,10 @@ impl Surface {
                     // on a read-only field would navigate away from the form
                     // being reviewed, so it is taken and then refused below.
                     event.prevent_default();
-                    dragging_over.set(editable);
+                    // `dragover` fires every few ms; `set` re-renders even on an equal value.
+                    if dragging_over.get() != editable {
+                        dragging_over.set(editable);
+                    }
                 }
             })
             .event("ondragleave", move |_: DragEvent| dragging_off.set(false))

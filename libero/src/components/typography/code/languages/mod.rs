@@ -2,6 +2,16 @@
 //! covering common syntax, restricted to what both `RegexApi` engines support
 //! (no lookaround, no backreferences).
 
+use super::highlight::{PatternDef, TokenRule};
+
+/// An identifier followed by `(`, shared by the C-like grammars.
+// Unused when no grammar that takes it is compiled in.
+#[allow(dead_code)]
+pub(crate) const FUNCTION_CALL: TokenRule = TokenRule {
+    name: "function",
+    patterns: &[PatternDef::new(r"([a-zA-Z_]\w*)(\s*\()").lookahead(2)],
+};
+
 #[cfg(feature = "code-lang-bash")]
 pub(crate) mod bash;
 #[cfg(feature = "code-lang-c")]

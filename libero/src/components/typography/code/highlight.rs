@@ -86,6 +86,9 @@ pub(crate) struct PatternDef {
     /// what keeps a comment rule from starting inside a string and a string
     /// rule from starting inside a comment, whichever of the two comes first.
     greedy: bool,
+    /// Nesting stand-in: the pattern matches the opener, and the token runs to
+    /// the closer that balances it - or to the end, unclosed. Neither engine recurses.
+    balanced: Option<(&'static str, &'static str)>,
     inside: Option<fn() -> Grammar>,
     alias: Option<&'static str>,
 }
@@ -101,6 +104,7 @@ impl PatternDef {
             lookbehind_group: None,
             lookahead_group: None,
             greedy: false,
+            balanced: None,
             inside: None,
             alias: None,
         }
@@ -123,6 +127,15 @@ impl PatternDef {
 
     pub(crate) const fn greedy(mut self) -> Self {
         self.greedy = true;
+        self
+    }
+
+    pub(crate) const fn balanced(mut self, open: &'static str, close: &'static str) -> Self {
+        assert!(
+            open.is_ascii() && close.is_ascii(),
+            "`balanced_end` scans bytes"
+        );
+        self.balanced = Some((open, close));
         self
     }
 
@@ -225,7 +238,10 @@ fn apply_patterns<'a>(tokens: &mut Vec<Token<'a>>, patterns: &[(&'static str, &P
                 break;
             };
             let (name, pattern) = patterns[index];
-            let (start, end) = resolve_span(pattern, matched);
+            let (start, mut end) = resolve_span(pattern, matched);
+            if let Some((open, close)) = pattern.balanced {
+                end = balanced_end(span, end, open, close);
+            }
             if start >= end {
                 next[index] = None;
                 continue;
@@ -270,6 +286,31 @@ fn resolve_span(pattern: &PatternDef, matched: &RegexMatch) -> (usize, usize) {
         .map(|(group_start, _)| group_start)
         .unwrap_or(matched.end);
     (start, end)
+}
+
+/// Where the `close` balancing an `open` that ended at `from` ends, scanning
+/// left to right as a lexer does; `text.len()` when it is never closed.
+/// Bytewise: both delimiters are ASCII, so no match lands inside a character.
+fn balanced_end(text: &str, from: usize, open: &str, close: &str) -> usize {
+    let bytes = text.as_bytes();
+    let mut depth = 1;
+    let mut cursor = from;
+    while cursor < bytes.len() {
+        let rest = &bytes[cursor..];
+        if rest.starts_with(close.as_bytes()) {
+            depth -= 1;
+            cursor += close.len();
+            if depth == 0 {
+                return cursor;
+            }
+        } else if rest.starts_with(open.as_bytes()) {
+            depth += 1;
+            cursor += open.len();
+        } else {
+            cursor += 1;
+        }
+    }
+    text.len()
 }
 
 /// Prism token name/alias -> the `lsx-tok-*` classes `token_theme.rs` styles.
@@ -583,6 +624,48 @@ mod tests {
 
         assert!(spans.contains(&("// say \"hi\"".to_string(), Some("lsx-tok-comment"))));
         assert!(spans.contains(&("/* a // b */".to_string(), Some("lsx-tok-comment"))));
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-rust")]
+    fn highlight_rust_nested_block_comment_ends_at_its_balancing_close() {
+        let spans = flat("/* a /* b */ c */ x /**/ \"/*\" y\n", lang("rust"));
+
+        assert_eq!(
+            spans,
+            vec![
+                ("/* a /* b */ c */".to_string(), Some("lsx-tok-comment")),
+                (" x ".to_string(), None),
+                ("/**/".to_string(), Some("lsx-tok-comment")),
+                (" ".to_string(), None),
+                ("\"/*\"".to_string(), Some("lsx-tok-string")),
+                (" y".to_string(), None),
+            ]
+        );
+    }
+
+    #[test]
+    #[cfg(feature = "code-lang-rust")]
+    fn highlight_rust_unclosed_block_comment_runs_to_the_end() {
+        let spans = flat("x /* a /* b */ é\ny\n", lang("rust"));
+
+        assert_eq!(
+            spans,
+            vec![
+                ("x ".to_string(), None),
+                ("/* a /* b */ é".to_string(), Some("lsx-tok-comment")),
+                ("y".to_string(), Some("lsx-tok-comment")),
+            ]
+        );
+    }
+
+    #[test]
+    fn balanced_end_counts_nesting_like_a_lexer() {
+        let end = |text: &str| balanced_end(text, 2, "/*", "*/");
+        assert_eq!(end("/**/ x"), 4);
+        assert_eq!(end("/*/ */ x"), 6);
+        assert_eq!(end("/* /* */ */ x"), 11);
+        assert_eq!(end("/* /* */"), 8);
     }
 
     #[test]

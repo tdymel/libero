@@ -70,6 +70,41 @@ fn a_keyword_after_a_non_ascii_letter_is_highlighted_by_the_browsers_regexp() {
     });
 }
 
+/// Todo 434. A nested block comment ends at the `*/` that balances its opener.
+#[test]
+fn a_nested_block_comment_is_one_comment_on_the_web() {
+    block_on(async {
+        let fixture = Fixture::open("/code", Viewport::Desktop).await.unwrap();
+
+        const NESTED: &str = r#"[...(document.querySelector('#nested-comment-code')?.children ?? [])]
+            .map(c => [c.textContent, c.getAttribute('class')])"#;
+        wait::for_js_true(
+            &fixture.page,
+            &format!("{NESTED}.length > 0"),
+            "the highlighter to replace the source with spans",
+        )
+        .await
+        .unwrap();
+
+        let spans: Vec<(String, Option<String>)> = fixture
+            .page
+            .evaluate(NESTED)
+            .await
+            .unwrap()
+            .into_value()
+            .unwrap();
+        let expected: Vec<(String, Option<String>)> = vec![
+            ("é ".into(), None),
+            ("/* a /* b */ c */".into(), Some("lsx-tok-comment".into())),
+            (" x".into(), None),
+        ];
+        assert_eq!(spans, expected);
+
+        fixture.console.assert_clean("the code fixture").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
 /// Todo 424. The gutter is drawn only once highlighting resolves, which SSR
 /// never sees; read aloud, its numbers interleave with the code.
 #[test]

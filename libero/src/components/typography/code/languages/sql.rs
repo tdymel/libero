@@ -23,10 +23,7 @@ const RULES: &[TokenRule] = &[
             .case_insensitive(),
         ],
     },
-    TokenRule {
-        name: "function",
-        patterns: &[PatternDef::new(r"([a-zA-Z_]\w*)(\s*\()").lookahead(2)],
-    },
+    super::FUNCTION_CALL,
     TokenRule {
         name: "number",
         patterns: &[PatternDef::new(r"\b\d+(?:\.\d+)?\b")],
