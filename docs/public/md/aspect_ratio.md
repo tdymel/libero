@@ -24,7 +24,7 @@ fn Demo() -> Element {
             ratio: 16.0 / 9.0,
             sx: sx().width("240px"),
             Flex {
-                sx: sx().background("primary").color("white"),
+                sx: sx().background("primary").color("primary-contrast"),
                 align: "center",
                 justify: "center",
                 "The child fills the box"

@@ -53,7 +53,7 @@ fn Demo() -> Element {
             aria_label: "Example popover",
             style: popover.style(),
             onmounted: floating.mount(),
-            sx: sx().background("white").padding("var(--lsx-popover-padding)"),
+            sx: sx().background("surface").padding("var(--lsx-popover-padding)"),
             "Popover content"
         }
     }));

@@ -97,7 +97,7 @@ Burger {
 ## Styling
 
 The bars read `var(--lsx-burger-color, currentColor)`, and the theme never
-declares that var. So `color: "primary"` sets it, `sx().color("white")` on the
+declares that var. So `color: "primary"` sets it, `sx().color("surface")` on the
 button reaches the bars through the fallback, and neither silently wins over
 the other.
 

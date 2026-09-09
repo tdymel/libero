@@ -32,7 +32,7 @@ fn bar_sx() -> Sx {
     sx().display("block")
         .width(BURGER_SIZE.overridable())
         .height(BURGER_LINE_SIZE.value())
-        // The fallback is the point: `sx().color("white")` on the button
+        // The fallback is the point: `sx().color("surface")` on the button
         // still reaches the bars, because nothing here overrides it.
         .background_color(BURGER_COLOR.value_or("currentColor"))
         // A `background-color` is not painted in forced-colors mode; a

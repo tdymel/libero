@@ -121,21 +121,31 @@ impl ThemeAwareValue {
 /// surface, so a call site that predates the rename keeps compiling and
 /// paints the CSS keyword. Once per spelling, since this runs on every render
 /// of every `color: "gray"`.
+///
+/// `white` and `black` are the same trap in a dark theme: a fixed colour where
+/// `surface` or `ink` would follow the scheme.
 fn warn_misspelled_palette(value: &str) {
     thread_local! {
         static WARNED: std::cell::RefCell<Vec<String>> = const { std::cell::RefCell::new(Vec::new()) };
     }
-    if (value.eq_ignore_ascii_case("gray") || value.eq_ignore_ascii_case("grey"))
-        && WARNED.with_borrow_mut(|warned| {
-            let first = !warned.iter().any(|spelling| spelling == value);
-            if first {
-                warned.push(value.to_string());
-            }
-            first
-        })
-    {
+    let advice = if value.eq_ignore_ascii_case("gray") || value.eq_ignore_ascii_case("grey") {
+        "the palette name is `muted`"
+    } else if value.eq_ignore_ascii_case("white") {
+        "it stays white under a dark theme; `surface` follows the scheme"
+    } else if value.eq_ignore_ascii_case("black") {
+        "it stays black under a dark theme; `ink` follows the scheme"
+    } else {
+        return;
+    };
+    if WARNED.with_borrow_mut(|warned| {
+        let first = !warned.iter().any(|spelling| spelling == value);
+        if first {
+            warned.push(value.to_string());
+        }
+        first
+    }) {
         warn(&format!(
-            "`{value}` is a CSS keyword, not a palette colour; the palette name is `muted`."
+            "`{value}` is a CSS keyword, not a palette colour; {advice}."
         ));
     }
 }
@@ -266,6 +276,28 @@ mod tests {
         let warnings = crate::utils::take_warnings();
         assert_eq!(warnings.len(), 2, "{warnings:?}");
         assert!(warnings.iter().all(|warning| warning.contains("`muted`")));
+    }
+
+    #[test]
+    fn white_and_black_point_at_surface_and_ink_once_each() {
+        crate::utils::take_warnings();
+        for _ in 0..2 {
+            assert_eq!(
+                ThemeAwareValue::from("white"),
+                ThemeAwareValue::String("white".to_string())
+            );
+            assert_eq!(
+                ThemeAwareValue::from("black".to_string()),
+                ThemeAwareValue::String("black".to_string())
+            );
+        }
+        for silent in ["surface", "ink", "#fff", "#000000"] {
+            let _ = ThemeAwareValue::from(silent);
+        }
+        let warnings = crate::utils::take_warnings();
+        assert_eq!(warnings.len(), 2, "{warnings:?}");
+        assert!(warnings[0].contains("`white`") && warnings[0].contains("`surface`"));
+        assert!(warnings[1].contains("`black`") && warnings[1].contains("`ink`"));
     }
 
     #[test]
