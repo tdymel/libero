@@ -256,6 +256,19 @@ impl ClockView {
         }
     }
 
+    /// `base` moved into the morning or the afternoon and clamped to `min` and
+    /// `max`; `None` when that half lies wholly outside them.
+    fn half(self, pm: bool) -> Option<NaiveTime> {
+        let offset = if pm { 12 } else { 0 };
+        if !self.within(at(offset, 0, 0), at(offset + 11, 59, 59)) {
+            return None;
+        }
+        let base = self.base;
+        let next = at(base.hour() % 12 + offset, base.minute(), base.second());
+        let next = self.min.map_or(next, |min| next.max(min));
+        Some(self.max.map_or(next, |max| next.min(max)))
+    }
+
     fn emit(self, next: NaiveTime) {
         if let Some(onchange) = &self.onchange {
             onchange.call(Some(next));
@@ -266,12 +279,16 @@ impl ClockView {
     fn pick(self, column: Column, index: usize) {
         let base = self.base;
         let (hour, minute, second) = (base.hour(), base.minute(), base.second());
-        self.emit(match column {
+        let next = match column {
             Column::Hours => at(self.hour_of(self.hour_label(index)), minute, second),
             Column::Minutes => at(hour, index as u32 * u32::from(self.step), second),
             Column::Seconds => at(hour, minute, index as u32),
-            Column::Meridiem => at(hour % 12 + if index == 1 { 12 } else { 0 }, minute, second),
-        });
+            Column::Meridiem => match self.half(index == 1) {
+                Some(next) => next,
+                None => return,
+            },
+        };
+        self.emit(next);
     }
 
     /// A mark on the analog face: an hour moves the hand on to the minutes.
@@ -380,13 +397,13 @@ impl ClockView {
                     key: "am".into(),
                     label: names.am.into(),
                     selected: value.is_some() && !pm,
-                    disabled: false,
+                    disabled: self.half(false).is_none(),
                 },
                 Choice {
                     key: "pm".into(),
                     label: names.pm.into(),
                     selected: value.is_some() && pm,
-                    disabled: false,
+                    disabled: self.half(true).is_none(),
                 },
             ];
             column(Column::Meridiem, None, meridiem_column, choices)
@@ -509,7 +526,6 @@ impl ClockView {
         let ClockView {
             names,
             value,
-            base,
             pm,
             twelve,
             mut hand,
@@ -548,21 +564,32 @@ impl ClockView {
             .map(|value| format!("{:02}", value.minute()))
             .unwrap_or_else(|| "--".into());
         let halves = twelve.then(|| {
+            let (am_at, pm_at) = (self.half(false), self.half(true));
             rsx! {
                 button {
                     r#type: "button",
                     "data-active": (value.is_some() && !pm).then_some("true"),
                     "aria-pressed": if value.is_some() && !pm { "true" } else { "false" },
+                    disabled: am_at.is_none(),
                     tabindex,
-                    onclick: move |_| self.emit(at(base.hour() % 12, base.minute(), base.second())),
+                    onclick: move |_| {
+                        if let Some(next) = am_at {
+                            self.emit(next);
+                        }
+                    },
                     {names.am}
                 }
                 button {
                     r#type: "button",
                     "data-active": (value.is_some() && pm).then_some("true"),
                     "aria-pressed": if value.is_some() && pm { "true" } else { "false" },
+                    disabled: pm_at.is_none(),
                     tabindex,
-                    onclick: move |_| self.emit(at(base.hour() % 12 + 12, base.minute(), base.second())),
+                    onclick: move |_| {
+                        if let Some(next) = pm_at {
+                            self.emit(next);
+                        }
+                    },
                     {names.pm}
                 }
             }

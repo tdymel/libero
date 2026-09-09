@@ -37,6 +37,36 @@ fn a_time_picker_draws_a_column_per_part_and_posts_the_time() {
 }
 
 #[test]
+fn a_half_of_the_day_outside_min_and_max_is_disabled_on_both_faces() {
+    fn app() -> Element {
+        let (value, min) = (
+            NaiveTime::from_hms_opt(15, 20, 0),
+            NaiveTime::from_hms_opt(13, 0, 0),
+        );
+        rsx! {
+            LiberoProvider {
+                TimePicker { value, min, onchange: move |_| {}, variant: "analog", twelve_hour: true }
+                TimePicker { value, min, onchange: move |_| {}, variant: "digital", twelve_hour: true }
+            }
+        }
+    }
+    let html = body(&render(app));
+
+    // The tag of every button whose text starts with the label.
+    let tags = |label: &str| -> Vec<String> {
+        html.split(&format!(">{label}</button>"))
+            .filter_map(|before| before.rsplit("<button").next())
+            .take(2)
+            .map(str::to_owned)
+            .collect()
+    };
+    let (am, pm) = (tags("AM"), tags("PM"));
+    assert_eq!((am.len(), pm.len()), (2, 2));
+    assert!(am.iter().all(|tag| tag.contains("disabled")), "{am:?}");
+    assert!(pm.iter().all(|tag| !tag.contains("disabled")), "{pm:?}");
+}
+
+#[test]
 fn an_analog_time_picker_tells_its_toggles_apart_by_aria_pressed() {
     fn app() -> Element {
         rsx! {

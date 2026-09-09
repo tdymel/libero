@@ -9,12 +9,13 @@ use dioxus::html::PlatformEventData;
 use dioxus::prelude::*;
 use libero::{
     LiberoProvider,
+    chrono::NaiveTime,
     components::{
         ActionIcon, Box, Button, Checkbox, Chip, CodeBlock, Collapse, ColorCode, ColorField,
         Dialog, FileField, Form, Marquee, Menu, MenuItem, MultiSelect, NativeSelect, NumberField,
         OptionList, Options, PasswordField, PhoneField, PinField, RadioGroup, RangeSlider, Rule,
         SegmentedControl, SelectionArgs, Slider, SliderChangeEvent, Table, Tabs, TagsField,
-        TextField, column, not_empty, use_form, use_menu,
+        TextField, TimePicker, column, not_empty, use_form, use_menu,
     },
     hooks::{ModalScope, use_modal},
 };
@@ -27,6 +28,7 @@ struct FindClickListener {
     last: Option<ElementId>,
     click: Option<ElementId>,
     first_click: Option<ElementId>,
+    clicks: Vec<ElementId>,
     input: Option<ElementId>,
     change: Option<ElementId>,
     keydown: Vec<ElementId>,
@@ -46,6 +48,7 @@ impl WriteMutations for FindClickListener {
         if name == "click" {
             self.click = self.last;
             self.first_click = self.first_click.or(self.last);
+            self.clicks.extend(self.last);
         }
         if name == "input" {
             self.input = self.last;
@@ -1374,6 +1377,41 @@ fn swapping_the_forms_value_swaps_what_its_fields_read() {
     dom.render_immediate(&mut dioxus::core::NoOpMutations);
 
     assert_eq!(value(&dom).as_deref(), Some("Ada"));
+}
+
+/// AM from a 14:15 with `min` 02:30 lands on 02:30, not on 02:15 below the
+/// limit (todo 445).
+#[test]
+fn a_time_pickers_am_button_clamps_to_min() {
+    fn app() -> Element {
+        let mut value = use_signal(|| NaiveTime::from_hms_opt(14, 15, 0));
+        rsx! {
+            LiberoProvider {
+                TimePicker {
+                    value: value(),
+                    min: NaiveTime::from_hms_opt(2, 30, 0),
+                    onchange: move |next| value.set(next),
+                    variant: "analog",
+                    twelve_hour: true,
+                    name: "at",
+                }
+            }
+        }
+    }
+
+    dioxus::html::set_event_converter(Box::new(TestConverter));
+    let mut dom = VirtualDom::new(app);
+    let mut find = FindClickListener::default();
+    dom.rebuild(&mut find);
+    // The hour and minute readouts, then AM.
+    let am = find.clicks[2];
+
+    dom.runtime()
+        .handle_event("click", Event::new(click_event(), true), am);
+    dom.render_immediate(&mut dioxus::core::NoOpMutations);
+
+    let html = body(&dioxus_ssr::render(&dom));
+    assert!(html.contains("name=\"at\" value=\"02:30:00\""), "{html}");
 }
 
 /// A read-only checkbox keeps its tab stop and its place in the post, so the
