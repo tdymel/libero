@@ -8,7 +8,7 @@
 //! (`#caa7fc`) is a lightened purple the spec does not name, so Alucard has
 //! no counterpart for it and `info` takes Alucard's Cyan instead.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Alucard.
 pub static DRACULA_LIGHT: Theme = Theme {
@@ -27,7 +27,6 @@ pub static DRACULA_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -48,7 +47,6 @@ pub static DRACULA_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

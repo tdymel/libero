@@ -2,7 +2,7 @@
 //! Kanagawa Dragon, whose dark half is the Kopuz pack's and whose light half
 //! is Lotus again.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Kanagawa Lotus.
 pub static KANAGAWA_LIGHT: Theme = Theme {
@@ -21,7 +21,6 @@ pub static KANAGAWA_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -42,7 +41,6 @@ pub static KANAGAWA_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 
@@ -63,7 +61,6 @@ pub static KANAGAWA_DRAGON_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

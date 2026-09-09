@@ -1,7 +1,7 @@
 //! GitHub - Primer's light and dark (default) themes, from
 //! `primer/primitives` (`@primer/primitives` 11.10.0, functional tokens).
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Primer light.
 pub static GITHUB_LIGHT: Theme = Theme {
@@ -20,7 +20,6 @@ pub static GITHUB_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -41,7 +40,6 @@ pub static GITHUB_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

@@ -7,7 +7,7 @@
 //! two of its themes as a pair; ef-day is ef-night's counterpart by name
 //! only.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Ef Day.
 pub static EF_NIGHT_LIGHT: Theme = Theme {
@@ -26,7 +26,6 @@ pub static EF_NIGHT_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -47,7 +46,6 @@ pub static EF_NIGHT_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

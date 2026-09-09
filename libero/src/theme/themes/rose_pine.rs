@@ -1,6 +1,6 @@
 //! Rosé Pine - Rosé Pine and Rosé Pine Dawn.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Rosé Pine Dawn.
 pub static ROSE_PINE_LIGHT: Theme = Theme {
@@ -19,7 +19,6 @@ pub static ROSE_PINE_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -40,7 +39,6 @@ pub static ROSE_PINE_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

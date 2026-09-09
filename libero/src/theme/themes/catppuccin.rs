@@ -1,6 +1,6 @@
 //! Catppuccin - Catppuccin Mocha and Latte.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Catppuccin Latte.
 pub static CATPPUCCIN_LIGHT: Theme = Theme {
@@ -19,7 +19,6 @@ pub static CATPPUCCIN_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -40,7 +39,6 @@ pub static CATPPUCCIN_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

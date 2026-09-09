@@ -10,7 +10,7 @@
 //! The most-installed VS Code "Nord Light" (huytd) was not taken: its chrome
 //! and syntax are GitHub Light's colours on Nord's backgrounds.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Nord, bright ambiance.
 pub static NORD_LIGHT: Theme = Theme {
@@ -29,7 +29,6 @@ pub static NORD_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -50,7 +49,6 @@ pub static NORD_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

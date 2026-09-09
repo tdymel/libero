@@ -39,9 +39,6 @@ impl TooltipDefaults {
         color: "var(--lsx-surface)",
     };
 
-    /// [`DEFAULT`](Self::DEFAULT) already turns round on an inked page.
-    pub const DARK: Self = Self::DEFAULT;
-
     fn size_sx(size: Size) -> Sx {
         sx().font_size(TOOLTIP_FONT_SIZE.value(size))
     }

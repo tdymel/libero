@@ -14,7 +14,7 @@
 //! - `muted` is the dark `text-muted` (`#606079`) moved toward white until it
 //!   is as far from the light page (2.99:1) as it is from the dark one.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// Vague, light - derived, not upstream.
 pub static VAGUE_LIGHT: Theme = Theme {
@@ -33,7 +33,6 @@ pub static VAGUE_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -54,7 +53,6 @@ pub static VAGUE_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 

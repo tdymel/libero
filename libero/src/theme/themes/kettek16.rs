@@ -16,7 +16,7 @@
 //!   it is as far from the light page (14.66:1) as it is from the dark one -
 //!   kettek16's quiet text is barely quieter than its ink, and stays so.
 
-use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet};
 
 /// kettek16, light - derived, not upstream.
 pub static KETTEK16_LIGHT: Theme = Theme {
@@ -35,7 +35,6 @@ pub static KETTEK16_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
 
@@ -56,7 +55,6 @@ pub static KETTEK16_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
 
