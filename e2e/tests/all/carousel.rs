@@ -317,7 +317,11 @@ pub fn plant_arm_out(arm: &str) -> String {
 /// track is the component's own tab stop and the ring that matters. The dots'
 /// roving focus is exercised by the component's own keyboard tests in `libero`.
 ///
-/// ## Two passes not declared, and why
+/// Contrast coverage holds because the guard drops `inert` text, as axe does
+/// (todo 386). Only the live slide is claimed; in the advanced state the drawn
+/// slide may still be `inert` (todo 375), and its text is not evaluated.
+///
+/// ## A pass not declared, and why
 ///
 /// * **`targets(INDICATORS)`**, the dots. They are drawn **40x5, 24x5 and
 ///   24x5** at 1280x800, and since todo 389 each takes the pointer over a
@@ -325,21 +329,6 @@ pub fn plant_arm_out(arm: &str) -> String {
 ///   measures bounding boxes, which never include a pseudo-element, so it would
 ///   report 5px for dots that meet 2.5.8.
 ///   [`the_dots_take_the_pointer_over_24px`] hit-tests the area instead.
-/// * **`contrast_covers`, at all.** Three selectors were tried and all three
-///   fail, each naming text axe's `color-contrast` rule never evaluated:
-///   the whole region (the second and third slides' paragraphs), the
-///   `[data-current]` slide (the second slide's paragraph, in the advanced
-///   state) and the first slide (all four of its controls, in the advanced
-///   state). The reason is the component, and it is correct: exactly one
-///   slide is live and the rest are `inert`, which axe skips - and the
-///   advanced state's live slide is not the drawn one, because the strip's
-///   smooth scroll never lands in a `background: true` page (todo 375,
-///   `codebase/e2e-harness`). So in the advanced state there is no slide that
-///   is both live and on screen, and a coverage guard that cannot hold in a
-///   state the unit declares is a guard that would be deleted the first time
-///   somebody read it. axe still runs over the whole root in both states, so
-///   a contrast violation in drawn text fails the run; what is not claimed is
-///   that it looked at every slide.
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("carousel", "/carousel")
@@ -352,17 +341,6 @@ fn it_meets_the_baseline() {
         // page ends in a scroll event at the old offset, which puts the index
         // back (todo 375).
         .reduced_motion()
-        // Coverage cannot hold here, and the reason is the component being
-        // right: exactly one slide is live and the rest are `inert`, which
-        // axe skips. In the advanced state the live slide is not the drawn
-        // one either, because the strip's smooth scroll never lands in a
-        // `background: true` page (todo 375). So no slide is both live and on
-        // screen. axe still runs over the whole root in both states, so a
-        // contrast violation in drawn text fails the run; what is not claimed
-        // is that it looked at every slide. Full reasoning in the module doc.
-        .no_contrast_coverage(
-            "exactly one slide is live and the rest are `inert`, which axe skips;              in the advanced state the live slide is not the drawn one (todo 375)",
-        )
         .state("advanced", &[Step::Click(NEXT)], SECOND_CURRENT)
         .run();
 }

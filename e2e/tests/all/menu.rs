@@ -15,12 +15,6 @@ const MENU: &str = "[role=menu]";
 #[test]
 fn it_meets_the_baseline() {
     Suite::new("menu", "/menu")
-        // Todo 386: the fixture's disabled "Paste" item is `aria-disabled`, and
-        // axe's `color-contrast` rule skips a disabled control because WCAG
-        // 1.4.3 exempts inactive components. The coverage guard does not model
-        // that skip yet, so it reports the one label as an uncovered hole. A
-        // false red, not a menu defect; deleting this line verifies the fix.
-        .no_contrast_coverage("todo 386 - axe skips the `aria-disabled` item's label, and the guard does not model that yet")
         .focusable(TRIGGER)
         .targets("[role=menu] [role=menuitem]")
         .state(

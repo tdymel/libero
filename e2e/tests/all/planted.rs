@@ -443,6 +443,106 @@ fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
     });
 }
 
+/// A zero-height `overflow: hidden` menu: axe's `overflowHidden` calls every row
+/// clipped, while each row keeps its own on-screen rect. A hole for the guard.
+const MENU_CLIPPED: &str = "[role=menu] { overflow: hidden !important; height: 0 !important; \
+     min-height: 0 !important; padding: 0 !important; border: 0 !important; }";
+
+/// Open `/menu`, run `before` (a plant that must leave the guard green), then clip
+/// the menu and run the guard again, which must fail.
+async fn menu_coverage_with(fixture: &Fixture, before: &str) -> anyhow::Result<()> {
+    let page = &fixture.page;
+    keyboard::tab_to(page, crate::menu::TRIGGER, 10).await?;
+    keyboard::press(page, keyboard::ARROW_DOWN).await?;
+    wait::for_visible(page, "[role=menu]").await?;
+    page.evaluate(before).await?;
+    contrast::assert_covers(page, "[data-fixture-ready]", "[role=menu]")
+        .await
+        .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
+    page.evaluate(stylesheet(MENU_CLIPPED)).await?;
+    contrast::assert_covers(page, "[data-fixture-ready]", "[role=menu]")
+        .await
+        .map(|_| ())
+}
+
+/// The guard's disabled rule (todo 386), proved narrow. The clipped menu has to
+/// name all four enabled labels, `4 of 4`: the `aria-disabled` "Paste" is the
+/// only one dropped, and `5 of 5` would mean the rule stopped working.
+#[test]
+fn a_clipped_menu_fails_the_coverage_guard_on_its_enabled_rows_only() {
+    block_on(async {
+        must_fail(
+            "/menu",
+            None,
+            "4 of 4 on-screen text element(s) under [role=menu] were never evaluated",
+            |fixture| async move {
+                let result = menu_coverage_with(&fixture, "0").await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// An `inert` row is skipped by axe and by the guard (todo 386): green alone,
+/// then `3 of 3` once the menu is clipped, not `4 of 4`.
+#[test]
+fn an_inert_menu_row_is_no_hole_but_a_clipped_menu_still_is() {
+    block_on(async {
+        must_fail(
+            "/menu",
+            None,
+            "3 of 3 on-screen text element(s) under [role=menu] were never evaluated",
+            |fixture| async move {
+                let result = menu_coverage_with(
+                    &fixture,
+                    "Array.from(document.querySelectorAll('[role=menuitem]'))\
+                     .find(el => el.textContent.includes('Save')).inert = true",
+                )
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
+/// A closed `<details>` body keeps a rect in Chromium, but axe skips it and the
+/// guard has to as well (todo 386). Green alone; clipping its wrapper leaves only
+/// the summary as the hole, `1 of 2`, where `2 of 3` would count the body.
+#[test]
+fn a_closed_details_body_is_no_hole_but_its_clipped_summary_is() {
+    block_on(async {
+        must_fail(
+            "/menu",
+            Some(
+                "(() => { const box = document.createElement('div'); box.id = 'planted-box'; \
+                 box.innerHTML = '<details><summary>More</summary><p>Folded words</p></details>'; \
+                 document.querySelector('[data-fixture-ready]').append(box); })()",
+            ),
+            "1 of 2 on-screen text element(s) under [data-fixture-ready] were never evaluated",
+            |fixture| async move {
+                let page = &fixture.page;
+                let result = async {
+                    contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
+                        .await
+                        .map_err(|e| anyhow::anyhow!("green half: {e:#}"))?;
+                    page.evaluate(stylesheet(
+                        "#planted-box { overflow: hidden !important; height: 0 !important; }",
+                    ))
+                    .await?;
+                    contrast::assert_covers(page, "[data-fixture-ready]", "[data-fixture-ready]")
+                        .await
+                        .map(|_| ())
+                }
+                .await;
+                (fixture, result)
+            },
+        )
+        .await;
+    });
+}
+
 /// `Drawer` whose trigger is disabled while the drawer is open - a common way
 /// to stop a double open, and one that leaves focus nowhere to return to.
 ///

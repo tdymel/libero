@@ -247,6 +247,27 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                 }}
             }}
 
+            // axe's `isDisabled`: the nearest native `disabled` or `aria-disabled`
+            // decides. WCAG 1.4.3 exempts inactive controls, so axe skips them.
+            const disabled = el => {{
+                for (let at = el; at; at = at.parentElement) {{
+                    if (['FIELDSET', 'BUTTON', 'SELECT', 'INPUT', 'TEXTAREA'].includes(at.nodeName)
+                        && at.hasAttribute('disabled')) return true;
+                    const aria = at.getAttribute('aria-disabled');
+                    if (aria) return aria.toLowerCase() === 'true';
+                }}
+                return false;
+            }};
+            // Chromium still gives a closed `<details>` body a rect, but nobody sees it and axe skips it.
+            const folded = el => {{
+                for (let d = el.closest('details:not([open])'); d;
+                     d = d.parentElement && d.parentElement.closest('details:not([open])')) {{
+                    const summary = d.querySelector(':scope > summary');
+                    if (!summary || !summary.contains(el)) return true;
+                }}
+                return false;
+            }};
+
             const wanted = [];
             for (const host of document.querySelectorAll({selector})) {{
                 for (const el of [host, ...host.querySelectorAll('*')]) {{
@@ -257,8 +278,11 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                         .some(n => n.nodeType === Node.TEXT_NODE && /[\p{{L}}\p{{N}}]/u.test(n.textContent));
                     if (!owns) continue;
                     if (el.closest('[aria-hidden=true]')) continue;
-                    // Inactive text is exempt from 1.4.3, and axe skips it the same way.
-                    if (el.closest('[aria-disabled=true]')) continue;
+                    if (disabled(el)) continue;
+                    // A label of a disabled control is inactive too.
+                    const label = el.closest('label');
+                    if (label && label.control && disabled(label.control)) continue;
+                    if (el.closest('[inert]') || folded(el)) continue;
                     const style = getComputedStyle(el);
                     if (style.display === 'none' || style.visibility === 'hidden'
                         || style.opacity === '0') continue;
