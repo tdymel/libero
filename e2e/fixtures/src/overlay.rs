@@ -80,6 +80,25 @@ pub fn MenuPage() -> Element {
     }
 }
 
+/// Todo 408: a menu opened before it mounts still has to move focus in.
+#[component]
+pub fn MenuOpenOnMountPage() -> Element {
+    let menu = use_menu();
+    use_hook(|| menu.open());
+    let items = vec![
+        MenuItem::new("Save").onselect(|_| {}).into(),
+        MenuItem::new("Share").onselect(|_| {}).into(),
+    ];
+
+    rsx! {
+        Menu {
+            state: menu,
+            items,
+            Button { variant: "outlined", attributes: menu.a11y_attributes(), "Actions" }
+        }
+    }
+}
+
 /// The hook lives on the page, which outlives the trigger, as its docs ask.
 #[component]
 pub fn SpotlightPage() -> Element {

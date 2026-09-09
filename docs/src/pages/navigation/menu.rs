@@ -12,6 +12,13 @@ use libero::{
 const PREAMBLE: &str = r#"let menu = use_menu();
 let mut last = use_signal(|| String::from("nothing yet"));
 let pick = move |name: &'static str| move |_| last.set(name.to_string());
+let mut sort = use_signal(|| "Name");
+let sort_by = move |name: &'static str| -> MenuEntry {
+    MenuItem::new(name)
+        .checked(sort() == name)
+        .onselect(move |_| sort.set(name))
+        .into()
+};
 
 let items = vec![
     MenuEntry::Group {
@@ -42,6 +49,11 @@ let items = vec![
             MenuItem::new("Messages").onselect(pick("Messages")).into(),
         ])
         .into(),
+    MenuEntry::Separator,
+    MenuEntry::Group {
+        label: "Sort by".into(),
+        items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
+    },
     MenuEntry::Separator,
     MenuItem::new("Delete").onselect(pick("Delete")).into(),
 ];
@@ -108,6 +120,13 @@ fn MenuDemo(
     let menu = use_menu();
     let mut last = use_signal(|| String::from("nothing yet"));
     let pick = move |name: &'static str| move |_| last.set(name.to_string());
+    let mut sort = use_signal(|| "Name");
+    let sort_by = move |name: &'static str| -> MenuEntry {
+        MenuItem::new(name)
+            .checked(sort() == name)
+            .onselect(move |_| sort.set(name))
+            .into()
+    };
 
     let items = vec![
         MenuEntry::Group {
@@ -140,6 +159,11 @@ fn MenuDemo(
                 MenuItem::new("Messages").onselect(pick("Messages")).into(),
             ])
             .into(),
+        MenuEntry::Separator,
+        MenuEntry::Group {
+            label: "Sort by".into(),
+            items: vec![sort_by("Name"), sort_by("Date"), sort_by("Size")],
+        },
         MenuEntry::Separator,
         MenuItem::new("Delete").onselect(pick("Delete")).into(),
     ];
@@ -220,6 +244,8 @@ pub fn MenuPage() -> Element {
                         .doc("Before the label - an icon. It sits inside the item's button, so nothing interactive."),
                     prop("trailing", "Element")
                         .doc("At the far end - a shortcut hint. Nothing interactive, for the same reason."),
+                    prop("checked", "bool")
+                        .doc("Unset, a plain command. Set, it makes the item one choice of several: a `menuitemradio` announcing `aria-checked`, with a check before the label. Put the choices in one `Group`; keeping exactly one checked is yours. A menu holding a checked item opens on it."),
                     prop("disabled", "bool")
                         .default("false")
                         .doc("Stays in the arrow-key order, cannot be chosen, and typeahead skips it."),

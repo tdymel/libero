@@ -11,7 +11,8 @@
              trip. `dx serve` does not run it - build and serve the output to
              measure the difference. -->
         <!-- LIBERO_WASM_PRELOAD -->
-        <!-- `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT`, verbatim. In the
+        <!-- `libero::theme::COLOR_SCHEME_RESTORE_SCRIPT`, verbatim, pinned by
+             `src/index_html.rs`. In the
              head so it runs before the first paint: the wasm bundle has not
              booted then, so the Rust-side restore is one flash of the wrong
              scheme too late. Under a strict CSP this needs

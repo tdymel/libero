@@ -5,7 +5,7 @@
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard};
+use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
 /// `a11y_attributes()` gives the trigger a generated id, so it is found by
 /// the attribute that makes it a menu button instead.
@@ -53,5 +53,26 @@ fn it_honours_the_overlay_contract() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+/// Todo 408: the open request is older than the menu, so only its first
+/// placement can move focus onto the first item.
+#[test]
+fn a_menu_opened_before_it_mounts_focuses_its_first_item() {
+    block_on(async {
+        let fixture = Fixture::open("/menu-open-on-mount", Viewport::Desktop)
+            .await
+            .unwrap();
+        wait::for_visible(&fixture.page, MENU).await.unwrap();
+        let outcome = wait::for_js_true(
+            &fixture.page,
+            "document.activeElement?.textContent.trim() === 'Save'",
+            "focus on the first item",
+        )
+        .await;
+
+        fixture.close().await.unwrap();
+        outcome.unwrap();
     });
 }

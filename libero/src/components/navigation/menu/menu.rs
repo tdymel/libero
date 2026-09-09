@@ -486,7 +486,8 @@ fn use_level_focus(
     // pre-placement `visibility: hidden` box answers `Ok` and moves nothing.
     // A request only counts while it is newer than the last one handled, so a
     // submenu the pointer opened does not steal focus from its parent item.
-    let mut seen = use_signal(|| request);
+    // A level mounting open was asked before it existed: that request counts.
+    let mut seen = use_signal(|| if open { 0 } else { request });
     use_effect(use_reactive!(|(open, placed, request, len, first)| {
         // Read first, branch second: this subscribes the effect to a remount.
         let mounted = floating.mount_token().is_some();

@@ -22,6 +22,8 @@ use libero::{
 
 mod components;
 mod icons;
+#[cfg(test)]
+mod index_html;
 mod nav;
 mod pages;
 #[cfg(test)]

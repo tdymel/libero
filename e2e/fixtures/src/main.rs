@@ -84,6 +84,8 @@ enum Route {
     DrawerPage {},
     #[route("/menu")]
     MenuPage {},
+    #[route("/menu-open-on-mount")]
+    MenuOpenOnMountPage {},
     #[route("/spotlight")]
     SpotlightPage {},
     #[route("/collapse")]
@@ -208,7 +210,9 @@ fn NotificationsPage() -> Element {
 const TIMED_AUTO_CLOSE_MS: u32 = 4321;
 
 use combobox::{MultiSelectPage, SelectPage, TagsFieldPage};
-use overlay::{DrawerPage, FloatingWindowPage, LightboxPage, MenuPage, SpotlightPage};
+use overlay::{
+    DrawerPage, FloatingWindowPage, LightboxPage, MenuOpenOnMountPage, MenuPage, SpotlightPage,
+};
 use roving::{MenubarPage, RadioGroupPage, SegmentedControlPage};
 
 #[component]
