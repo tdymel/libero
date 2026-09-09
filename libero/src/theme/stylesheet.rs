@@ -1,12 +1,16 @@
 use crate::CssLayer;
 use crate::css::{CssDeclaration, CssScope, Stylesheet, ToCssDeclarations};
-use crate::tokens::Ends;
+use crate::tokens::{Ends, TEXT_CONTRAST};
 
 use super::{
-    Color, ColorShade, ColorValue, HexColor, INDICATOR_KEYFRAMES, LOADER_KEYFRAMES,
-    MARQUEE_KEYFRAMES, NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES,
-    RIPPLE_KEYFRAMES, SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE,
-    TEXT_FONT_WEIGHT, TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme, ThemeSet,
+    CODE_BLOCK_BACKGROUND, CODE_BLOCK_COPY_HOVER_BACKGROUND, CODE_BLOCK_COPY_HOVER_TEXT,
+    CODE_BLOCK_LINE_NUMBER, CODE_BLOCK_MUTED_TEXT, CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT,
+    CODE_TOK_CONSTANT, CODE_TOK_FUNCTION, CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER,
+    CODE_TOK_STRING, CODE_TOK_TAG, CODE_TOK_TYPE, Color, ColorShade, ColorValue, CssVar, HexColor,
+    INDICATOR_KEYFRAMES, KBD_BACKGROUND, KBD_COLOR, LOADER_KEYFRAMES, MARQUEE_KEYFRAMES,
+    NOTIFICATION_KEYFRAMES, NamedColorCss, PROGRESS_BAR_KEYFRAMES, RIPPLE_KEYFRAMES,
+    SKELETON_KEYFRAMES, Size, SizeCss, TEXT_FONT_FAMILY, TEXT_FONT_SIZE, TEXT_FONT_WEIGHT,
+    TEXT_LETTER_SPACING, TEXT_LINE_HEIGHT, Theme, ThemeSet,
 };
 
 const SHADES: [ColorShade; 9] = [
@@ -388,7 +392,80 @@ fn theme_declarations(theme: &Theme) -> Vec<CssDeclaration> {
     push_color_declarations(&mut declarations, Color::Success, *success, ends);
     push_color_declarations(&mut declarations, Color::Neutral, *neutral, ends);
     push_color_declarations(&mut declarations, Color::Muted, *muted, ends);
+    rebase_text_on_derived_surfaces(&mut declarations, ends);
     declarations
+}
+
+/// Code and `Kbd` sit on steps of the `muted` ramp, which follow the palette's
+/// page; the token hues do not. Each text var that falls short there walks the
+/// smallest mix that reads, and one that already reads is left alone (todo 396).
+fn rebase_text_on_derived_surfaces(declarations: &mut [CssDeclaration], ends: Ends) {
+    let block = CODE_BLOCK_BACKGROUND.name().to_string();
+    // Inline `Code`'s `muted.2` background, which `sx` resolves as a fill.
+    let inline = ColorValue::Fill(Color::Muted, ColorShade::S2).var_name();
+    let code = [block.clone(), inline];
+    let kbd = [KBD_BACKGROUND.name().to_string()];
+    let hover = [CODE_BLOCK_COPY_HOVER_BACKGROUND.name().to_string()];
+
+    let texts: [(CssVar, &[String], f32); 14] = [
+        (CODE_TOK_KEYWORD, &code, TEXT_CONTRAST),
+        (CODE_TOK_STRING, &code, TEXT_CONTRAST),
+        (CODE_TOK_COMMENT, &code, TEXT_CONTRAST),
+        (CODE_TOK_NUMBER, &code, TEXT_CONTRAST),
+        (CODE_TOK_CONSTANT, &code, TEXT_CONTRAST),
+        (CODE_TOK_FUNCTION, &code, TEXT_CONTRAST),
+        (CODE_TOK_TYPE, &code, TEXT_CONTRAST),
+        (CODE_TOK_TAG, &code, TEXT_CONTRAST),
+        (CODE_TOK_ATTRIBUTE, &code, TEXT_CONTRAST),
+        (CODE_TOK_HEADING, &code, TEXT_CONTRAST),
+        (CODE_BLOCK_MUTED_TEXT, &code[..1], TEXT_CONTRAST),
+        // 1.4.11, not 1.4.3: a line number cites a line (todo 241).
+        (CODE_BLOCK_LINE_NUMBER, &code[..1], 3.0),
+        (KBD_COLOR, &kbd, TEXT_CONTRAST),
+        // The copy button's icon, a graphic: 1.4.11.
+        (CODE_BLOCK_COPY_HOVER_TEXT, &hover, 3.0),
+    ];
+    for (text, surfaces, floor) in texts {
+        rebase_text(declarations, text.name(), surfaces, floor, ends);
+    }
+}
+
+/// Leaves `name` alone when it or a surface is not a colour this can read (a
+/// keyword, a translucent `rgba()`): nothing can be measured.
+fn rebase_text(
+    declarations: &mut [CssDeclaration],
+    name: &str,
+    surfaces: &[String],
+    floor: f32,
+    ends: Ends,
+) {
+    let resolve = |name: &str| {
+        let mut value = name.to_string();
+        for _ in 0..declarations.len() {
+            let declared = declarations.iter().find(|d| d.property() == value)?.value();
+            match CssVar::parse_value(declared) {
+                Some(next) => value = next.to_string(),
+                None => return HexColor::parse(declared),
+            }
+        }
+        None
+    };
+    let Some(text) = resolve(name) else { return };
+    let Some(surfaces) = surfaces
+        .iter()
+        .map(|surface| resolve(surface))
+        .collect::<Option<Vec<_>>>()
+    else {
+        return;
+    };
+    let readable = text.readable_on(&surfaces, floor, ends);
+    // Unchanged, so a var that already reads stays a var.
+    if readable == text {
+        return;
+    }
+    if let Some(declaration) = declarations.iter_mut().find(|d| d.property() == name) {
+        *declaration = CssDeclaration::new(name, readable.to_string());
+    }
 }
 
 // `@media` can't reference custom properties, and breakpoints go straight

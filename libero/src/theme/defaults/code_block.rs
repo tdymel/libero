@@ -29,31 +29,24 @@ pub struct CodeBlockDefaults {
 }
 
 impl CodeBlockDefaults {
+    /// Every colour is a step of the theme's `muted` ramp, so the block sits
+    /// on whatever page the palette draws and turns round with the scheme
+    /// (todo 396).
     pub const DEFAULT: Self = Self {
-        background: "#f6f8fa",
-        border: "#d0d7de",
-        muted_text: "#57606a",
-        // 4.27:1 on the background above; the lighter grey it replaced was
-        // 2.85:1, and a line number is the only way to cite a line (todo 241).
-        line_number: "#6e7781",
-        copy_hover_background: "rgba(31, 35, 40, 0.08)",
-        copy_hover_text: "#1f2328",
+        background: "var(--lsx-muted-1)",
+        border: "var(--lsx-muted-4)",
+        muted_text: "var(--lsx-muted-7)",
+        // Held to 1.4.11, not 1.4.3: a line number cites a line (todo 241).
+        line_number: "var(--lsx-text-dimmed)",
+        copy_hover_background: "var(--lsx-muted-3)",
+        copy_hover_text: "var(--lsx-ink)",
         header: true,
         copyable: true,
         line_numbers: true,
     };
 
-    /// The same block on an inked page. GitHub's own dark theme, because the
-    /// token colours in [`CodeDefaults::DARK`] are measured against it.
-    pub const DARK: Self = Self {
-        background: "#161b22",
-        border: "#30363d",
-        muted_text: "#8b949e",
-        line_number: "#8b949e",
-        copy_hover_background: "rgba(240, 246, 252, 0.10)",
-        copy_hover_text: "#c9d1d9",
-        ..Self::DEFAULT
-    };
+    /// [`DEFAULT`](Self::DEFAULT) already follows an inked page.
+    pub const DARK: Self = Self::DEFAULT;
 }
 
 impl ToCssDeclarations for CodeBlockDefaults {
@@ -72,74 +65,102 @@ impl ToCssDeclarations for CodeBlockDefaults {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::theme::CodeDefaults;
+    use crate::css::Stylesheet;
+    use crate::theme::{
+        CODE_TOK_ATTRIBUTE, CODE_TOK_COMMENT, CODE_TOK_CONSTANT, CODE_TOK_FUNCTION,
+        CODE_TOK_HEADING, CODE_TOK_KEYWORD, CODE_TOK_NUMBER, CODE_TOK_STRING, CODE_TOK_TAG,
+        CODE_TOK_TYPE, KBD_BACKGROUND, KBD_COLOR, TOOLTIP_BACKGROUND, TOOLTIP_COLOR, Theme,
+        ThemeSet,
+    };
     use crate::tokens::HexColor;
 
-    fn ratio(color: &str, background: &str) -> f32 {
-        HexColor::parse(color)
-            .expect("a hex")
-            .contrast_ratio(HexColor::parse(background).expect("a hex"))
-    }
-
-    /// Todo 241. Every printed example on the docs site is drawn in these,
-    /// and the block's background is tinted, so GitHub's own numbers - which
-    /// are measured on white - do not carry over.
-    #[test]
-    fn the_code_theme_reads_on_its_own_background() {
-        the_code_theme_reads_on(CodeBlockDefaults::DEFAULT, CodeDefaults::DEFAULT);
-    }
-
-    /// The same measurement for the dark theme's block. GitHub's dark tokens
-    /// are published against `#0d1117`, and ours sits on `#161b22`, so the
-    /// numbers have to be taken again rather than inherited.
-    #[test]
-    fn the_dark_code_theme_reads_on_its_own_background() {
-        the_code_theme_reads_on(CodeBlockDefaults::DARK, CodeDefaults::DARK);
-    }
-
-    fn the_code_theme_reads_on(block: CodeBlockDefaults, code: CodeDefaults) {
-        let background = block.background;
-        for (name, token) in [
-            ("keyword", code.tok_keyword),
-            ("string", code.tok_string),
-            ("number", code.tok_number),
-            ("constant", code.tok_constant),
-            ("function", code.tok_function),
-            ("type", code.tok_type),
-            ("tag", code.tok_tag),
-            ("attribute", code.tok_attribute),
-            ("heading", code.tok_heading),
-        ] {
-            let ratio = ratio(token, background);
-            assert!(
-                ratio >= 4.5,
-                "{name} {token} on {background} at {ratio:.2}:1"
-            );
+    /// `value` as `:root` resolves it, following `var()`s to a hex.
+    fn resolved(css: &str, value: &str) -> HexColor {
+        let root = css
+            .split_once(":root{")
+            .and_then(|(_, rest)| rest.split_once('}'))
+            .map(|(block, _)| block)
+            .expect("a :root block");
+        let mut value = value.to_string();
+        while let Some(name) = value.strip_prefix("var(").and_then(|v| v.strip_suffix(')')) {
+            value = root
+                .split(';')
+                .find_map(|declaration| declaration.strip_prefix(&format!("{name}:")))
+                .unwrap_or_else(|| panic!("{name} is declared"))
+                .to_string();
         }
+        HexColor::parse(&value).unwrap_or_else(|| panic!("{value} is a hex"))
+    }
 
+    /// Every text drawn on the block, inline `Code`, `Kbd` and `Tooltip`,
+    /// measured as `:root` ships it.
+    fn shortfalls(theme: &Theme) -> Vec<String> {
+        let css = Stylesheet::from(theme).as_str().to_string();
+        let on = |surface: &CssVar, what: &str, text: &CssVar, floor: f32| {
+            let ratio =
+                resolved(&css, &text.value()).contrast_ratio(resolved(&css, &surface.value()));
+            (ratio < floor).then(|| format!("{what} on {} {ratio:.2}", surface.name()))
+        };
+        let inline = CssVar::new("--lsx-muted-fill-2");
+        let mut short = Vec::new();
+        for (what, token) in [
+            ("keyword", CODE_TOK_KEYWORD),
+            ("string", CODE_TOK_STRING),
+            ("comment", CODE_TOK_COMMENT),
+            ("number", CODE_TOK_NUMBER),
+            ("constant", CODE_TOK_CONSTANT),
+            ("function", CODE_TOK_FUNCTION),
+            ("type", CODE_TOK_TYPE),
+            ("tag", CODE_TOK_TAG),
+            ("attribute", CODE_TOK_ATTRIBUTE),
+            ("heading", CODE_TOK_HEADING),
+        ] {
+            short.extend(on(&CODE_BLOCK_BACKGROUND, what, &token, 4.5));
+            short.extend(on(&inline, what, &token, 4.5));
+        }
+        short.extend(on(
+            &CODE_BLOCK_BACKGROUND,
+            "muted text",
+            &CODE_BLOCK_MUTED_TEXT,
+            4.5,
+        ));
         // A line number is held to 1.4.11 rather than 1.4.3 (todo 241): it is
         // a way to cite a line, not text the reader is meant to read through.
-        let ratio = ratio(block.line_number, background);
-        assert!(ratio >= 3.0, "line number at {ratio:.2}:1");
+        short.extend(on(
+            &CODE_BLOCK_BACKGROUND,
+            "line number",
+            &CODE_BLOCK_LINE_NUMBER,
+            3.0,
+        ));
+        short.extend(on(
+            &CODE_BLOCK_COPY_HOVER_BACKGROUND,
+            "copy icon",
+            &CODE_BLOCK_COPY_HOVER_TEXT,
+            3.0,
+        ));
+        short.extend(on(&KBD_BACKGROUND, "kbd", &KBD_COLOR, 4.5));
+        short.extend(on(&TOOLTIP_BACKGROUND, "tooltip", &TOOLTIP_COLOR, 4.5));
+        short
     }
 
+    /// Todo 241, taken on every shipped palette since the block follows the
+    /// page (todo 396): GitHub's token numbers are measured on white and do
+    /// not carry over to a tinted one.
     #[test]
-    fn the_light_code_theme_reads_on_its_own_background_the_way_todo_241_measured_it() {
-        let background = CodeBlockDefaults::DEFAULT.background;
-
-        assert!(
-            ratio(CodeDefaults::DEFAULT.tok_comment, background) >= 4.5,
-            "comments measured {:.2}:1",
-            ratio(CodeDefaults::DEFAULT.tok_comment, background)
-        );
-        // A line number is incidental - it labels, it does not carry the
-        // content - so it is held to 1.4.11's 3:1 rather than 1.4.3's 4.5:1.
-        // The ramp the theme is built from has nothing between 4.27 and the
-        // muted text the comments now use.
-        assert!(
-            ratio(CodeBlockDefaults::DEFAULT.line_number, background) >= 3.0,
-            "line numbers measured {:.2}:1",
-            ratio(CodeBlockDefaults::DEFAULT.line_number, background)
-        );
+    fn every_derived_surface_reads_on_every_shipped_palette() {
+        let mut short = Vec::new();
+        for set in ThemeSet::CATALOGUE {
+            for theme in [Some(set.light_theme()), set.dark_theme()]
+                .into_iter()
+                .flatten()
+            {
+                let falling = shortfalls(theme);
+                if !falling.is_empty() {
+                    let scheme = theme.surface.color_scheme();
+                    short.push(format!("{} {scheme}: {}", set.name(), falling.join(", ")));
+                }
+            }
+        }
+        assert_eq!(short, Vec::<String>::new());
     }
 }

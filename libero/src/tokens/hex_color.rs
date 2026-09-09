@@ -276,6 +276,21 @@ impl HexColor {
         })
     }
 
+    /// [`text_base`](Self::text_base) for text drawn on other surfaces than
+    /// the page: the smallest mix towards black or white, opposite the page,
+    /// that reads at `floor` on every background. Any colour, not only a base.
+    pub(crate) fn readable_on(self, backgrounds: &[Self], floor: f32, ends: Ends) -> Self {
+        let far = far_end(ShadeRamp::Chromatic, ends);
+        (0..=100)
+            .map(|weight| self.mix(far, weight))
+            .find(|&text| {
+                backgrounds
+                    .iter()
+                    .all(|&background| text.contrast_ratio(background) >= floor)
+            })
+            .unwrap_or(far)
+    }
+
     /// Walks the mix from this base towards the ramp's far end one percent at
     /// a time, as far as [`ColorShade::S9`] goes, and stops at the first
     /// colour that `passes`.

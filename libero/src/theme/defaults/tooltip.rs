@@ -33,17 +33,14 @@ impl TooltipDefaults {
         close_delay: 0,
         duration: 150,
         font_sizes: Sizes::new(10, 12, 13, 14, 16, 18),
-        background: "#1f2328",
-        color: "#ffffff",
+        // Drawn against the page, not on it: the `muted` step furthest from
+        // the page, lettered in the page itself (todo 396).
+        background: "var(--lsx-muted-9)",
+        color: "var(--lsx-surface)",
     };
 
-    /// A tooltip is drawn against the page, not on it, so its two colours
-    /// swap ends with the theme rather than following it.
-    pub const DARK: Self = Self {
-        background: "#e9ecef",
-        color: "#1f2328",
-        ..Self::DEFAULT
-    };
+    /// [`DEFAULT`](Self::DEFAULT) already turns round on an inked page.
+    pub const DARK: Self = Self::DEFAULT;
 
     fn size_sx(size: Size) -> Sx {
         sx().font_size(TOOLTIP_FONT_SIZE.value(size))

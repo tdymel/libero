@@ -55,10 +55,11 @@
 //! above by [`super::stylesheet`], so a ported theme is ten hex values and
 //! nothing else.
 //!
-//! The five `*Defaults` that hold literal CSS colours follow the *scheme*,
-//! not the palette: a ported dark theme takes `CodeDefaults::DARK` and the
-//! rest, a ported light one takes their `DEFAULT`. Only `Paper`'s background
-//! is per-palette, because the palettes name it.
+//! Code blocks, `Kbd` and `Tooltip` draw on steps of the `muted` ramp, so they
+//! follow the palette (todo 396). Two `*Defaults` still hold literal colours:
+//! `Paper`'s background, per palette because the palettes name it, and the
+//! syntax-token hues of `CodeDefaults`, which follow the *scheme* and are
+//! walked until they read on the palette's code block.
 
 mod ayu;
 mod catppuccin;

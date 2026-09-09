@@ -72,9 +72,9 @@ Like every component, `Kbd` also takes the shared props `sx`, `class`, `style`,
 | `size` | `Size` | Default `size` when the prop is omitted; `sm`, matching Mantine. |
 | `font_sizes` | `Sizes<u16>` | Font size in px per size step - 10, 12, 14, 16, 20, 24. |
 | `font_family` | `&'static str` | The keycap's font; the theme's mono stack. |
-| `background` | `&'static str` | Keycap fill; `#f6f8fa`. |
-| `border` | `&'static str` | Border color, used on all four sides; `#d0d7de`. |
-| `color` | `&'static str` | Label color; `#57606a`. |
+| `background` | `&'static str` | Keycap fill; `var(--lsx-muted-1)`. |
+| `border` | `&'static str` | Border color, used on all four sides; `var(--lsx-muted-4)`. |
+| `color` | `&'static str` | Label color; `var(--lsx-muted-7)`, darkened or lightened until it reads at 4.5:1. |
 
 ## CSS variables
 

@@ -26,18 +26,15 @@ impl KbdDefaults {
         size: Size::Sm,
         font_sizes: Sizes::new(10, 12, 14, 16, 20, 24),
         font_family: MONO_FONT_FAMILY,
-        background: "#f6f8fa",
-        border: "#d0d7de",
-        color: "#57606a",
+        // The code block's steps of the `muted` ramp, so a key follows the
+        // palette's page (todo 396).
+        background: "var(--lsx-muted-1)",
+        border: "var(--lsx-muted-4)",
+        color: "var(--lsx-muted-7)",
     };
 
-    /// The same key on an inked page.
-    pub const DARK: Self = Self {
-        background: "#21262d",
-        border: "#30363d",
-        color: "#c9d1d9",
-        ..Self::DEFAULT
-    };
+    /// [`DEFAULT`](Self::DEFAULT) already follows an inked page.
+    pub const DARK: Self = Self::DEFAULT;
 
     fn size_sx(size: Size) -> Sx {
         sx().font_size(KBD_FONT_SIZE.value(size))

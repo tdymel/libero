@@ -34,10 +34,9 @@ impl CodeDefaults {
         font_family: MONO_FONT_FAMILY,
         tok_keyword: "#cf222e",
         tok_string: "#0a3069",
-        // GitHub's own comment grey is 4.27:1 on the block's tinted
-        // background, not the 4.55:1 it clears on white (todo 241). This is
-        // the theme's `muted_text`, 6.0:1 on the same tint.
-        tok_comment: "#57606a",
+        // The block's `muted_text`: GitHub's own comment grey fell to 4.27:1
+        // on a tinted background (todo 241).
+        tok_comment: "var(--lsx-muted-7)",
         tok_number: "#0550ae",
         tok_constant: "#0550ae",
         tok_function: "#8250df",
@@ -53,7 +52,7 @@ impl CodeDefaults {
         font_family: MONO_FONT_FAMILY,
         tok_keyword: "#ff7b72",
         tok_string: "#a5d6ff",
-        tok_comment: "#8b949e",
+        tok_comment: "var(--lsx-muted-7)",
         tok_number: "#79c0ff",
         tok_constant: "#79c0ff",
         tok_function: "#d2a8ff",

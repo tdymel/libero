@@ -264,7 +264,7 @@ impl Theme {
     ///
     /// What is spelled out is everything that is *not* derived: the two ends
     /// of the page, the `neutral` control colour - which is a text-dark
-    /// neutral on paper and so has to be a text-light one here - and the five
+    /// neutral on paper and so has to be a text-light one here - and the
     /// `*Defaults` that carry literal CSS colours rather than theme ones.
     pub const DARK: Theme = Theme {
         // Mantine's `dark.7`, with `dark.6` as the card in `PaperDefaults`.

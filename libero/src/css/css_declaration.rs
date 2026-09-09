@@ -13,6 +13,14 @@ impl CssDeclaration {
             value: value.into(),
         }
     }
+
+    pub(crate) fn property(&self) -> &str {
+        &self.property
+    }
+
+    pub(crate) fn value(&self) -> &str {
+        &self.value
+    }
 }
 
 impl Display for CssDeclaration {

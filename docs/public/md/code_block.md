@@ -130,12 +130,16 @@ derive from the theme's primary, success and error.
 
 | Field | Type | Description |
 |---|---|---|
-| `background` | `&'static str` | Block background (`#f6f8fa`). |
-| `border` | `&'static str` | Block and header border (`#d0d7de`). |
-| `muted_text` | `&'static str` | Header text and the copy button's resting color (`#57606a`). |
-| `line_number` | `&'static str` | Gutter digits (`#8c959f`). |
-| `copy_hover_background` | `&'static str` | Copy button background on hover. |
-| `copy_hover_text` | `&'static str` | Copy button text on hover. |
+| `background` | `&'static str` | Block background (`var(--lsx-muted-1)`). |
+| `border` | `&'static str` | Block and header border (`var(--lsx-muted-4)`). |
+| `muted_text` | `&'static str` | Header text and the copy button's resting color (`var(--lsx-muted-7)`). |
+| `line_number` | `&'static str` | Gutter digits (`var(--lsx-text-dimmed)`). |
+| `copy_hover_background` | `&'static str` | Copy button background on hover (`var(--lsx-muted-3)`). |
+| `copy_hover_text` | `&'static str` | Copy button text on hover (`var(--lsx-ink)`). |
+
+The defaults are steps of the theme's `muted` ramp, so the block follows the
+palette's page. A token or text color that falls short of 4.5:1 there (3:1
+for line numbers) is darkened, or lightened on a dark page, until it reads.
 | `header` | `bool` | Default `header` when the prop is omitted (`true`). |
 | `copyable` | `bool` | Default `copyable` when the prop is omitted (`true`). |
 | `line_numbers` | `bool` | Default `line_numbers` when the prop is omitted (`true`). |
