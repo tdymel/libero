@@ -26,11 +26,10 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
         .and(PaperDefaults::background_sx())
         .color("ink")
         .focus_within(sx().border_color("primary.6"))
-        // The ring is the frame's, because focus lands on a child - the
-        // control, or a button in a slot. Each of them is followed by a ring
-        // overlay, and the frame is the overlay's containing block. Keyed off
-        // `:focus-visible`, not `:focus-within`, so a click on a trigger or a
-        // slot's button draws no ring.
+        // The control's ring is the frame's: the control is followed by a ring
+        // overlay, and the frame is the overlay's containing block. A button in
+        // a slot rings itself (todo 410). Keyed off `:focus-visible`, not
+        // `:focus-within`, so a click on a trigger draws no ring.
         .position("relative")
         .selector(
             "& [data-ring]",
@@ -38,7 +37,6 @@ static FIELD_FRAME_SX: StaticSx = StaticSx::new(|| {
                 // Out by the border, as an outline on the frame would sit.
                 .inset("-1px"),
         )
-        // Stated rather than inherited: a slot's overlay sits in the slot.
         .per_radius(|radius| {
             sx().selector(
                 "& [data-ring]",
@@ -173,14 +171,11 @@ impl PreparedFrame {
     }
 }
 
-/// A slot carries its own ring overlay, for a button placed straight in it:
-/// the frame's own overlay is not that button's sibling.
+/// No ring overlay in a slot: a button there draws its own ring, around
+/// itself rather than the whole frame.
 fn slot(slot: &'static str, content: &Element) -> Element {
     let content = content.clone();
     rsx! {
-        span { "data-slot": slot,
-            {content}
-            {ring_overlay()}
-        }
+        span { "data-slot": slot, {content} }
     }
 }

@@ -45,6 +45,7 @@ mod drag;
 mod drawer;
 mod events;
 mod field;
+mod field_slot_ring;
 mod file_field;
 mod flex;
 mod float;

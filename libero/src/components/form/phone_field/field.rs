@@ -5,7 +5,7 @@ use dioxus::prelude::*;
 use crate::{
     components::{
         ComboboxCore, ComboboxOption, ComboboxState, HtmlTag, Input,
-        common::{ChevronDownIcon, field_props, ring_overlay},
+        common::{ChevronDownIcon, field_props},
         form::{FIELD_CONTROL_SX, use_bound, use_field, use_field_frame},
         layout::{BoxStyle, use_box},
         use_combobox,
@@ -615,9 +615,6 @@ fn phone_leading(with_select: bool, parts: Picker, rows: Vec<Element>) -> Option
                 header: opened.then_some(search),
                 autofocus: search_element,
                 {picker}
-                // The picker sits inside the combobox's wrapper, not straight
-                // in the slot, so it brings the ring overlay it needs.
-                {ring_overlay()}
             }
         }),
         false => Some(prefix_box.render(HtmlTag::Span, Vec::new(), rsx! { "+{dial}" })),
