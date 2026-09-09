@@ -1,0 +1,13 @@
+---
+source: e2e/src/suite.rs
+description: button at mobile (rest)
+expression: tree
+---
+button "Plain"
+  StaticText "Plain"
+button "Busy" [busy=1] [disabled]
+  StaticText "Busy"
+paragraph
+  StaticText "Plain 0, busy 0"
+link "Go to landing"
+  StaticText "Go to landing"

@@ -1,0 +1,12 @@
+---
+source: e2e/src/suite.rs
+description: tooltip at desktop (rest)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+button "Save"
+  StaticText "Save"
+  generic
+button "After"
+  StaticText "After"

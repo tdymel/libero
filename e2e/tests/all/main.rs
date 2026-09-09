@@ -5,6 +5,7 @@
 //! A new component is `tests/all/<unit>.rs` plus its `mod` line here.
 
 mod autocomplete;
+mod button;
 mod carousel;
 mod code;
 mod collapse;
@@ -30,6 +31,7 @@ mod splitter;
 mod spotlight;
 mod tabs;
 mod tags_field;
+mod tooltip;
 mod tree;
 
 /// Every `.rs` file in this directory must have a `mod` line above it.

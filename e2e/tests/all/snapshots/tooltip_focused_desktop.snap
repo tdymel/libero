@@ -1,0 +1,14 @@
+---
+source: e2e/src/suite.rs
+description: tooltip at desktop (focused)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+button "Save"
+  StaticText "Save"
+  generic
+tooltip "Saves the draft"
+  StaticText "Saves the draft"
+button "After"
+  StaticText "After"

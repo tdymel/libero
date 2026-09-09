@@ -180,6 +180,11 @@ base_props! {
         #[props(default, into)]
         label_id: Option<String>,
         /// The trigger. `class`/`sx`/`states`/`attributes` style the *bubble*.
+        ///
+        /// Keyboard focus shows the bubble only when the focusable trigger is
+        /// a **direct child**: `Tooltip { Button { .. } }`, not
+        /// `Tooltip { div { Button { .. } } }`, which shows on hover alone.
+        /// Debug builds warn when no direct child can take focus.
         children: Element,
     }
 }
@@ -227,6 +232,8 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         .states(&wrapper_states)
         .variables(&variables)
         .prepare();
+    #[cfg(debug_assertions)]
+    let wrapper = wrapper.element(&use_trigger_check());
     let bubble = use_box()
         .framework_sx(&TOOLTIP_BUBBLE_SX)
         .class(&props.class)
@@ -244,4 +251,34 @@ pub fn Tooltip(props: TooltipProps) -> Element {
         .render(HtmlTag::Span, props.attributes, props.label);
 
     wrapper.render(HtmlTag::Span, Vec::new(), vec![props.children, bubble])
+}
+
+#[cfg(debug_assertions)]
+const NO_FOCUSABLE_TRIGGER: &str = "Tooltip: no direct child can take focus, so keyboard focus never shows the bubble. \
+     Put the focusable trigger directly inside `Tooltip`, not inside a wrapper element.";
+
+/// Warns once per mount when no direct child of the wrapper is focusable.
+#[cfg(debug_assertions)]
+fn use_trigger_check() -> crate::hooks::ElementHandle {
+    let wrapper = crate::hooks::use_element();
+    use_effect(move || {
+        if wrapper.is_mounted() && lacks_focusable_trigger(&wrapper) {
+            crate::utils::warn(NO_FOCUSABLE_TRIGGER);
+        }
+    });
+    wrapper
+}
+
+/// The bubble is always a direct child: a renderer that cannot find it cannot
+/// answer `:scope` queries, and says nothing rather than something false.
+#[cfg(debug_assertions)]
+fn lacks_focusable_trigger(wrapper: &impl crate::platform::ElementApi) -> bool {
+    use crate::components::a11y::FOCUSABLE_SELECTOR;
+
+    wrapper
+        .query_selector(&format!(":scope > {BUBBLE_SIBLING}"))
+        .is_ok()
+        && wrapper
+            .query_selector(&format!(":scope > {FOCUSABLE_SELECTOR}"))
+            .is_err()
 }

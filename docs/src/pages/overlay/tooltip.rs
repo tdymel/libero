@@ -73,7 +73,7 @@ pub fn TooltipPage() -> Element {
                 prop("label_id", "String")
                     .doc("The bubble's `id`, so the trigger can carry `aria-describedby`."),
                 prop("children", "Element")
-                    .doc("The trigger. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this."),
+                    .doc("The trigger. Keyboard focus shows the bubble only when the focusable trigger is a direct child. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this."),
             ])],
             lead: rsx! {
                 Text {
@@ -155,6 +155,15 @@ pub fn TooltipPage() -> Element {
             }
             DocSection {
                 title: "Accessibility",
+                Text {
+                    "Keyboard focus shows the bubble only when the focusable trigger is a direct "
+                    "child of "
+                    Code { source: "Tooltip" }
+                    ". Wrapped in another element, as in "
+                    Code { source: r#"Tooltip {{ div {{ Button {{ "Save" }} }} }}"# }
+                    ", it shows on hover alone. Debug builds warn when no direct child can take "
+                    "focus."
+                }
                 Text {
                     "The wrapper is not focusable, so an "
                     Code { source: "aria-describedby" }

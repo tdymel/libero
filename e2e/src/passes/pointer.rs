@@ -93,6 +93,11 @@ pub async fn drag(page: &Page, from: Point, to: Point, steps: usize) -> Result<(
 /// Move the pointer onto an element's centre, pressing nothing.
 pub async fn hover(page: &Page, selector: &str) -> Result<()> {
     let at = centre_of(page, selector).await?;
+    move_to(page, at).await
+}
+
+/// Move the pointer to a viewport point, pressing nothing.
+pub async fn move_to(page: &Page, at: Point) -> Result<()> {
     mouse(page, DispatchMouseEventType::MouseMoved, at, 0).await
 }
 

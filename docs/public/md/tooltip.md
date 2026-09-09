@@ -55,6 +55,11 @@ fn Demo() -> Element {
 
 ## Accessibility
 
+Keyboard focus shows the bubble only when the focusable trigger is a direct
+child of `Tooltip`. Wrapped in another element, as in
+`Tooltip { div { Button { "Save" } } }`, it shows on hover alone. Debug builds
+warn when no direct child can take focus.
+
 The wrapper is not focusable, so an `aria-describedby` on it would never be
 announced. Give the bubble an id with `label_id` and point your own trigger at
 it instead.
@@ -93,7 +98,7 @@ popover there.
 | `open` | `bool` | - | Forces the bubble open or closed; unset leaves it to hover and focus. |
 | `disabled` | `bool` | `false` | Renders `children` bare - no wrapper, no bubble. |
 | `label_id` | `String` | - | The bubble's `id`, so the trigger can carry `aria-describedby`. |
-| `children` | `Element` | required | The trigger. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this. |
+| `children` | `Element` | required | The trigger. Keyboard focus shows the bubble only when the focusable trigger is a direct child. Note that `class`, `sx`, `states` and spread attributes style the *bubble*, not this. |
 
 Every default above is the theme's, so changing `TooltipDefaults` changes them.
 

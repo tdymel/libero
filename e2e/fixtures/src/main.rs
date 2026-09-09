@@ -29,7 +29,7 @@ use libero::{
     components::{
         Anchor, Autocomplete, Button, Carousel, Code, CodeBlock, Collapse, Dialog, Flex, Mark,
         NotificationData, NotificationLive, NotificationOptions, Notifications, Options, Slider,
-        SliderChangeEvent, Splitter, Tabs, Text, TextField, Tree, TreeItem, TreeNode,
+        SliderChangeEvent, Splitter, Tabs, Text, TextField, Tooltip, Tree, TreeItem, TreeNode,
         TreeNodeRenderArgs, use_notifications,
     },
     hooks::{ModalScope, use_modal},
@@ -94,6 +94,14 @@ enum Route {
     LightboxPage {},
     #[route("/floating-window")]
     FloatingWindowPage {},
+    #[route("/tooltip")]
+    TooltipPage {},
+    #[route("/tooltip-wrapped")]
+    TooltipWrappedPage {},
+    #[route("/button")]
+    ButtonPage {},
+    #[route("/button/landing")]
+    ButtonLanding {},
 
     // A real component with one defect planted through a prop. Most plants
     // are injected by the test instead (`tests/all/planted.rs`); these are
@@ -368,6 +376,63 @@ fn SplitterPage() -> Element {
             Button { id: "after", "After" }
         }
     }
+}
+
+/// A `Tooltip` on a direct-child trigger, between two buttons so Tab has
+/// somewhere to come from and to go to. `bottom`, so the test knows where the
+/// gap it bridges lies.
+#[component]
+fn TooltipPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            Tooltip { label: rsx! { "Saves the draft" }, label_id: "save-tip", side: "bottom",
+                Button { id: "save", "aria-describedby": "save-tip", "Save" }
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
+
+/// The trigger one element too deep: hover shows the bubble, Tab does not,
+/// and a debug build says so in the console.
+#[component]
+fn TooltipWrappedPage() -> Element {
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "before", "Before" }
+            Tooltip { label: rsx! { "Saves the draft" }, label_id: "save-tip", side: "bottom",
+                div {
+                    Button { id: "save", "aria-describedby": "save-tip", "Save" }
+                }
+            }
+            Button { id: "after", "After" }
+        }
+    }
+}
+
+/// A plain button and a busy one, each counting its activations, and a
+/// link-mode button whose route is one only this page leads to.
+#[component]
+fn ButtonPage() -> Element {
+    let mut plain = use_signal(|| 0u32);
+    let mut busy = use_signal(|| 0u32);
+
+    rsx! {
+        Flex { direction: "column", gap: "md", max_width: "320px",
+            Button { id: "plain", onclick: move |_| plain += 1, "Plain" }
+            Button { id: "busy", loading: true, onclick: move |_| busy += 1, "Busy" }
+            Text { id: "presses", "data-plain": "{plain}", "data-busy": "{busy}",
+                "Plain {plain}, busy {busy}"
+            }
+            Button { id: "to-landing", to: NavigationTarget::from(Route::ButtonLanding {}), "Go to landing" }
+        }
+    }
+}
+
+#[component]
+fn ButtonLanding() -> Element {
+    rsx! { Text { id: "landing", "Landed" } }
 }
 
 /// The enum is the tab strip, so it is the fixture's whole configuration.
