@@ -1,11 +1,37 @@
 //! `Tree`.
 
 use dioxus::prelude::*;
-use libero::components::{Flex, Tree, TreeItem, TreeNode, TreeNodeRenderArgs};
+use libero::components::{Flex, NavLink, Tree, TreeItem, TreeNode, TreeNodeRenderArgs};
 
 use crate::Routes;
 
-pub const ROUTES: Routes = &[("/tree", || rsx! { TreePage {} })];
+pub const ROUTES: Routes = &[
+    ("/tree", || rsx! { TreePage {} }),
+    ("/tree/links", || rsx! { LinkTreePage {} }),
+    ("/tree/links/arrived", || rsx! { "arrived" }),
+];
+
+/// Leaves that are links, as the docs sidebar renders them: Enter on one has
+/// to navigate (todo 4).
+#[component]
+fn LinkTreePage() -> Element {
+    let data = vec![
+        TreeNode::new("/tree/links", "Here"),
+        TreeNode::new("/tree/links/arrived", "Elsewhere"),
+    ];
+
+    rsx! {
+        Tree {
+            aria_label: "Pages",
+            data,
+            render_node: move |args: TreeNodeRenderArgs<&'static str>| {
+                rsx! {
+                    NavLink { to: args.id, tabindex: args.tabindex, "{args.data}" }
+                }
+            },
+        }
+    }
+}
 
 /// A deliberately awkward fixture: `Tree` is listed under the roving-tabindex
 /// archetype, and this exists to find out whether that claim survives contact.

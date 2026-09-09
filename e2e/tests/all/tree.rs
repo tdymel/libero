@@ -9,6 +9,8 @@
 
 use e2e::archetypes::TreeWalk;
 use e2e::browser::block_on;
+use e2e::passes::keyboard;
+use e2e::wait;
 use e2e::{Fixture, Suite, Viewport};
 
 const ROW: &str = "[role=treeitem]";
@@ -29,6 +31,33 @@ fn it_meets_the_baseline() {
         .focusable(ROW)
         .targets(ROW)
         .run();
+}
+
+/// Todo 4: Enter on a leaf that is a link navigates. `Tree` activates the
+/// link through `ElementApi::click`, since the leaf is the caller's content.
+#[test]
+fn enter_on_a_link_leaf_navigates() {
+    block_on(async {
+        let fixture = Fixture::open("/tree/links", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        keyboard::tab_to(page, ROW, 5).await.unwrap();
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        wait::for_js_true(
+            page,
+            "location.pathname === '/tree/links/arrived'",
+            "Enter on the link leaf to navigate",
+        )
+        .await
+        .unwrap();
+        fixture
+            .console
+            .assert_clean("activating a link leaf")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 #[test]
