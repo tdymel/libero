@@ -2673,7 +2673,8 @@ fn oncomplete_fires_again_after_a_parent_resets_the_controlled_value() {
 mod combobox_refusal {
     use super::*;
     use libero::components::{
-        Autocomplete, Combobox, ComboboxOption, ComboboxOptionArgs, Select, use_combobox,
+        Autocomplete, Cascader, CascaderOption, Combobox, ComboboxOption, ComboboxOptionArgs,
+        DayField, Select, use_combobox,
     };
 
     thread_local! {
@@ -2994,5 +2995,104 @@ mod combobox_refusal {
         let button = find.first_click.expect("the country button takes clicks");
         press(&mut dom, button, Key::ArrowDown);
         assert_no_listbox_claimed(&dom, "readonly after ArrowDown");
+    }
+
+    /// A name for the failure message, and the app that locks that way.
+    type Case = (&'static str, fn() -> Element);
+
+    fn category(readonly: bool) -> Element {
+        rsx! {
+            LiberoProvider {
+                Cascader {
+                    label: "Category",
+                    data: vec![CascaderOption::new("tea", "Tea")],
+                    readonly: readonly && locked(),
+                    disabled: !readonly && locked(),
+                    onchange: move |_: Option<String>| {},
+                }
+            }
+        }
+    }
+
+    /// Todo 439 (b): `Cascader` reads its own state, so it needs the gate too.
+    #[test]
+    fn a_cascader_locked_while_open_claims_no_listbox() {
+        let cases: [Case; 2] = [
+            ("disabled", || category(false)),
+            ("readonly", || category(true)),
+        ];
+        for (how, app) in cases {
+            let (mut dom, find) = mount(app);
+            press(&mut dom, last_keydown(&find), Key::ArrowDown);
+            assert_listbox(&dom, "enabled after ArrowDown");
+
+            lock(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_no_listbox_claimed(&dom, &format!("{how} while open"));
+        }
+    }
+
+    fn due(readonly: bool) -> Element {
+        rsx! {
+            LiberoProvider {
+                DayField {
+                    label: "Due",
+                    readonly: readonly && locked(),
+                    disabled: !readonly && locked(),
+                    onchange: move |_| {},
+                }
+            }
+        }
+    }
+
+    fn accent(readonly: bool) -> Element {
+        rsx! {
+            LiberoProvider {
+                ColorField {
+                    label: "Accent",
+                    readonly: readonly && locked(),
+                    disabled: !readonly && locked(),
+                    oninput: move |_| {},
+                }
+            }
+        }
+    }
+
+    /// The picker fields open a dialog, not a listbox, and claim it the same
+    /// way: `aria-expanded` and `aria-controls` on the text input.
+    fn assert_dialog(dom: &VirtualDom, open: bool, what: &str) {
+        let html = body(&dioxus_ssr::render(dom));
+        assert_eq!(html.contains(r#"role="dialog""#), open, "{what}:\n{html}");
+        assert_eq!(
+            html.contains(r#"aria-expanded="true""#),
+            open,
+            "{what}: aria-expanded:\n{html}"
+        );
+        assert_eq!(
+            html.contains("aria-controls"),
+            open,
+            "{what}: aria-controls:\n{html}"
+        );
+    }
+
+    /// Todo 439 (b): the date and colour fields gate their dialog on
+    /// `disabled` and `readonly`, and the input's ARIA reads that same gate.
+    #[test]
+    fn a_picker_field_locked_while_open_claims_no_dialog() {
+        let cases: [Case; 4] = [
+            ("DayField disabled", || due(false)),
+            ("DayField readonly", || due(true)),
+            ("ColorField disabled", || accent(false)),
+            ("ColorField readonly", || accent(true)),
+        ];
+        for (how, app) in cases {
+            let (mut dom, find) = mount(app);
+            dom.runtime()
+                .handle_event("click", Event::new(click_event(), true), last_click(&find));
+            settle(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_dialog(&dom, true, &format!("{how}: after a click"));
+
+            lock(&mut dom, &mut dioxus::core::NoOpMutations);
+            assert_dialog(&dom, false, &format!("{how}: while open"));
+        }
     }
 }
