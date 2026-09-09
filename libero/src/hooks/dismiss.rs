@@ -28,7 +28,7 @@ use dioxus::prelude::*;
 
 use crate::{
     hooks::{ElementHandle, FocusReturn, focus_return::use_focus_return},
-    platform::{ElementApi, KeySubscription, key_taken, keyboard, next_task},
+    platform::{ElementApi, KeySubscription, PlatformError, key_taken, keyboard, next_task},
 };
 
 /// One open dismissible layer, identified only by when it opened.
@@ -278,14 +278,11 @@ pub(crate) struct DismissOptions {
     pub escape: bool,
     /// Focus leaving the box closes it.
     ///
-    /// **Web-only in practice, and off the web it is wrong rather than inert.**
-    /// The settle waits for `next_task()`, which is a no-op off the web, so the
-    /// check runs before focus has landed; and on the mounted floor
-    /// `is_focused()` always answers `false` and `query_selector` is
-    /// `Unsupported`, so nothing ever counts as inside and *every* focusout
-    /// closes the box - including focus moving from the trigger into the list.
-    /// A consumer that has to work on those backends should pass `false` and
-    /// close on its own signal.
+    /// **Web-only in practice: off the web it is inert.** A focusout closes the
+    /// box only where the platform can say focus is outside. The mounted floor
+    /// answers `query_selector` `Unsupported`, and Blitz does too from the task
+    /// the check runs in, so there nothing closes on focus (todo 46). Escape
+    /// and [`DismissHandle::dismiss`] still do.
     pub outside: bool,
     /// A deliberate close hands focus back to whatever opened the box.
     pub return_focus: bool,
@@ -479,11 +476,10 @@ impl DismissHandle {
             events.push(listener("onfocusout", move |_: Event<FocusData>| {
                 // `focusout` is dispatched *before* `focusin`, so a check here
                 // sees focus nowhere at all. After the platform's next task it
-                // has landed. Off the web `next_task()` is a no-op, which is
-                // why this settle is web-only in practice.
+                // has landed. A platform that cannot answer closes nothing.
                 spawn(async move {
                     next_task().await;
-                    if !handle.holds_focus() {
+                    if handle.focus_inside() == Some(false) {
                         handle.close(Dismissal::FocusMoved);
                     }
                 });
@@ -547,24 +543,36 @@ impl DismissHandle {
         }
     }
 
-    /// Whether focus is still somewhere that counts as inside this box.
+    /// Whether focus is still somewhere that counts as inside this box. `false`
+    /// also where the platform cannot tell; [`focus_inside`](Self::focus_inside)
+    /// keeps that case apart.
+    pub(crate) fn holds_focus(&self) -> bool {
+        self.focus_inside() == Some(true)
+    }
+
+    /// `None` when a mounted element cannot answer and none said yes.
     ///
     /// Each handle is asked twice: `query_selector(":focus")` finds a focused
     /// *descendant*, and `is_focused()` catches the element itself - which is
     /// the common case for an anchor, since a trigger is usually the focusable
-    /// element rather than a wrapper around one.
-    pub(crate) fn holds_focus(&self) -> bool {
-        let inside = |element: &ElementHandle| {
-            element.is_focused() || element.query_selector(":focus").is_ok()
-        };
-
-        inside(&self.anchor)
-            || inside(&self.floating)
-            || self
-                .inside
-                .peek()
-                .iter()
-                .any(|(_, element)| inside(element))
+    /// element rather than a wrapper around one. An unmounted handle has no
+    /// node, so it answers `false` rather than unknown.
+    fn focus_inside(&self) -> Option<bool> {
+        let inside = self.inside.peek();
+        let elements = [&self.anchor, &self.floating]
+            .into_iter()
+            .chain(inside.iter().map(|(_, element)| element));
+        focus_inside_of(elements.map(|element| {
+            if element.mounted().is_none() {
+                return Some(false);
+            }
+            match element.query_selector(":focus") {
+                Ok(_) => Some(true),
+                _ if element.is_focused() => Some(true),
+                Err(PlatformError::Unsupported) => None,
+                Err(_) => Some(false),
+            }
+        }))
     }
 
     /// Asks the consumer to close, and hands focus back if this was deliberate.
@@ -594,9 +602,9 @@ impl DismissHandle {
     /// an outside click, arriving through the other door. So that path asks.
     ///
     /// Asking only on the path that needs it also keeps the answer honest.
-    /// `holds_focus()` answers `false` unconditionally off the web
-    /// ([[todos]] item 46), and the document listener exists only on the web -
-    /// so the predicate is only ever consulted where it works.
+    /// `holds_focus()` cannot tell off the web, and the document listener
+    /// exists only on the web - so the predicate is only ever consulted where
+    /// it works.
     fn close(&self, reason: Dismissal) {
         let restore = self.return_focus
             && match reason {
@@ -784,6 +792,19 @@ pub(crate) fn use_dismiss(
     handle
 }
 
+/// Inside if any element says so, unknown if any cannot answer, else outside.
+fn focus_inside_of(answers: impl IntoIterator<Item = Option<bool>>) -> Option<bool> {
+    let mut known = true;
+    for answer in answers {
+        match answer {
+            Some(true) => return Some(true),
+            Some(false) => {}
+            None => known = false,
+        }
+    }
+    known.then_some(false)
+}
+
 /// One event attribute, built by hand - the one thing `rsx!` does that a plain
 /// call cannot.
 ///
@@ -838,6 +859,7 @@ mod tests {
         last: Option<ElementId>,
         keydown: Vec<ElementId>,
         focusout: Vec<ElementId>,
+        mounted: Vec<ElementId>,
         /// The element carrying `id="trigger"`, so a press can be dispatched at
         /// it even when it has no listener of its own - which is exactly the
         /// state `a_closed_box_does_not_swallow_escape_from_the_modal_around_it`
@@ -861,6 +883,7 @@ mod tests {
             match (name, self.last) {
                 ("keydown", Some(id)) => self.keydown.push(id),
                 ("focusout", Some(id)) => self.focusout.push(id),
+                ("mounted", Some(id)) => self.mounted.push(id),
                 _ => {}
             }
         }
@@ -982,8 +1005,10 @@ mod tests {
         fn convert_media_data(&self, _e: &PlatformEventData) -> dioxus::html::MediaData {
             unimplemented!()
         }
+        /// `()` backs no richer handle, so this is the mounted floor: every
+        /// focus-containment question answers `Unsupported`.
         fn convert_mounted_data(&self, _e: &PlatformEventData) -> dioxus::html::MountedData {
-            unimplemented!()
+            dioxus::html::MountedData::new(())
         }
         fn convert_mouse_data(&self, _e: &PlatformEventData) -> dioxus::html::MouseData {
             unimplemented!()
@@ -2038,12 +2063,25 @@ mod tests {
 
     /// Mounts [`Watched`] and sends `name` to its box.
     fn close_watched(with_focus_moved: bool, name: &str) -> String {
+        send_watched(with_focus_moved, false, name)
+    }
+
+    /// With `floor`, the box's handle is mounted on the mounted floor first,
+    /// which cannot answer where focus is. Otherwise it stays unmounted.
+    fn send_watched(with_focus_moved: bool, floor: bool, name: &str) -> String {
         dioxus::html::set_event_converter(Box::new(EscapeConverter));
         WITH_FOCUS_MOVED.set(with_focus_moved);
         let mut dom = VirtualDom::new(watched);
         let mut find = FindKeydownListeners::default();
         dom.rebuild(&mut find);
         dom.render_immediate(&mut find);
+        if floor {
+            let target = *find.mounted.last().expect("the box has a handle");
+            let data = Rc::new(PlatformEventData::new(Box::new(()))) as Rc<dyn std::any::Any>;
+            dom.runtime()
+                .handle_event("mounted", Event::new(data, false), target);
+            settle(&mut dom);
+        }
         let (target, data) = match name {
             "focusout" => (
                 find.focusout.last(),
@@ -2060,8 +2098,8 @@ mod tests {
 
     /// Focus leaving the box - a click or a Tab elsewhere, which is the only
     /// way this hook hears an outside pointer - calls `onfocusmoved` in place
-    /// of `onclose`. Off the web nothing counts as focused, so every focusout
-    /// here is focus leaving.
+    /// of `onclose`. Nothing is mounted here, so every focusout is focus
+    /// leaving.
     #[test]
     fn focus_leaving_calls_onfocusmoved_instead_of_onclose() {
         assert_eq!(
@@ -2084,5 +2122,34 @@ mod tests {
             close_watched(true, "keydown"),
             "state: open=false heard=onclose"
         );
+    }
+
+    /// Todo 46: a platform that cannot say where focus is closes nothing on a
+    /// focusout. The unmounted runs above are the control.
+    #[test]
+    fn a_platform_that_cannot_answer_ignores_focusout() {
+        assert_eq!(
+            send_watched(true, true, "focusout"),
+            "state: open=true heard="
+        );
+        assert_eq!(
+            send_watched(false, true, "focusout"),
+            "state: open=true heard="
+        );
+    }
+
+    #[test]
+    fn a_platform_that_cannot_answer_still_closes_on_escape() {
+        assert_eq!(
+            send_watched(true, true, "keydown"),
+            "state: open=false heard=onclose"
+        );
+    }
+
+    #[test]
+    fn one_yes_wins_and_one_unknown_blocks_a_no() {
+        assert_eq!(focus_inside_of([Some(false), None, Some(true)]), Some(true));
+        assert_eq!(focus_inside_of([Some(false), None]), None);
+        assert_eq!(focus_inside_of([Some(false), Some(false)]), Some(false));
     }
 }
