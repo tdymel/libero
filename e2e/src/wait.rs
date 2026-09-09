@@ -118,17 +118,32 @@ pub async fn for_js_true(page: &Page, expression: &str, what: &str) -> Result<()
     .await
 }
 
-/// Wait for a JavaScript expression to stop equalling `previous`.
+/// Read `expression`, run `act`, then wait for `expression` to stop equalling
+/// what it read.
 ///
 /// The shape wanted after an interaction that should change something: "the
-/// value moved", without hard-coding what it moved to.
-pub async fn for_js_change(
-    page: &Page,
-    expression: &str,
-    previous: &str,
-    what: &str,
-) -> Result<()> {
-    let previous = previous.to_string();
+/// value moved", without hard-coding what it moved to. The "before" value is
+/// read here, and nothing is not a value: a caller that defaulted a `None` to
+/// `""` had a wait that passed on its first poll (todo 383).
+///
+/// ```ignore
+/// wait::for_js_change(page, VALUE_NOW, "ArrowRight to step", || {
+///     keyboard::press(page, keyboard::ARROW_RIGHT)
+/// })
+/// .await?;
+/// ```
+pub async fn for_js_change<A, Fut>(page: &Page, expression: &str, what: &str, act: A) -> Result<()>
+where
+    A: FnOnce() -> Fut,
+    Fut: std::future::Future<Output = Result<()>>,
+{
+    let previous: Option<String> = page.evaluate(expression).await?.into_value()?;
+    let Some(previous) = previous else {
+        bail!(
+            "waiting for {what}: `{expression}` reads nothing before it, so no change can be seen"
+        );
+    };
+    act().await?;
     until(what, || {
         let previous = previous.clone();
         async move {

@@ -41,8 +41,6 @@ fn the_thumb_tracks_a_drag() {
         for viewport in Viewport::ALL {
             let fixture = Fixture::open("/slider", viewport).await.unwrap();
 
-            let before = value_now(&fixture).await;
-
             // Drag right along the track. The intermediate moves are the point:
             // a press followed straight by a release never reaches a component
             // that tracks movement.
@@ -51,16 +49,12 @@ fn the_thumb_tracks_a_drag() {
                 x: from.x + 80.0,
                 y: from.y,
             };
-            pointer::drag(&fixture.page, from, to, 10).await.unwrap();
 
             // Waited for, not read: the value is written by a dioxus
             // re-render that the drag does not block on.
-            wait::for_js_change(
-                &fixture.page,
-                VALUE_NOW,
-                &before,
-                "the slider value to move",
-            )
+            wait::for_js_change(&fixture.page, VALUE_NOW, "the slider value to move", || {
+                pointer::drag(&fixture.page, from, to, 10)
+            })
             .await
             .unwrap_or_else(|e| {
                 panic!(
@@ -87,15 +81,11 @@ fn the_thumb_moves_with_the_arrow_keys() {
         let fixture = Fixture::open("/slider", Viewport::Desktop).await.unwrap();
         keyboard::tab_to(&fixture.page, THUMB, 10).await.unwrap();
 
-        let before = value_now(&fixture).await;
-        keyboard::press(&fixture.page, keyboard::ARROW_RIGHT)
-            .await
-            .unwrap();
         wait::for_js_change(
             &fixture.page,
             VALUE_NOW,
-            &before,
             "ArrowRight to move the thumb",
+            || keyboard::press(&fixture.page, keyboard::ARROW_RIGHT),
         )
         .await
         .unwrap();
@@ -151,7 +141,6 @@ fn the_thumb_takes_the_pointer_over_24px() {
                 viewport.name()
             );
 
-            let before = value_now(&fixture).await;
             let from = pointer::Point {
                 x: centre.x,
                 y: centre.y - 11.0,
@@ -160,12 +149,11 @@ fn the_thumb_takes_the_pointer_over_24px() {
                 x: from.x + 80.0,
                 y: from.y,
             };
-            pointer::drag(&fixture.page, from, to, 10).await.unwrap();
             wait::for_js_change(
                 &fixture.page,
                 VALUE_NOW,
-                &before,
                 "a drag from the hit area to move the thumb",
+                || pointer::drag(&fixture.page, from, to, 10),
             )
             .await
             .unwrap_or_else(|e| {
@@ -207,14 +195,4 @@ fn the_thumb_is_described_by_its_value_bubble() {
         assert_eq!(description, "40", "the thumb's computed description");
         fixture.close().await.unwrap();
     });
-}
-
-async fn value_now(fixture: &Fixture) -> String {
-    fixture
-        .page
-        .evaluate("document.querySelector('[role=slider]').getAttribute('aria-valuenow')")
-        .await
-        .unwrap()
-        .into_value()
-        .unwrap()
 }

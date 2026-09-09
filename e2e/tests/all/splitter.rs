@@ -26,28 +26,17 @@ fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
             let page = &fixture.page;
 
             keyboard::tab_to(page, "#before", 5).await.unwrap();
-            let before: String = page
-                .evaluate(VALUE_NOW)
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
 
             let from = pointer::centre_of(page, DIVIDER).await.unwrap();
             let to = pointer::Point {
                 x: from.x + 40.0,
                 y: from.y,
             };
-            pointer::drag(page, from, to, 10).await.unwrap();
-            wait::for_js_change(page, VALUE_NOW, &before, "the drag to move the divider")
-                .await
-                .unwrap_or_else(|e| panic!("at {at}: {e}"));
-            let dragged: String = page
-                .evaluate(VALUE_NOW)
-                .await
-                .unwrap()
-                .into_value()
-                .unwrap();
+            wait::for_js_change(page, VALUE_NOW, "the drag to move the divider", || {
+                pointer::drag(page, from, to, 10)
+            })
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
 
             wait::for_js_true(
                 page,
@@ -57,10 +46,11 @@ fn a_drag_leaves_the_divider_focused_for_the_arrow_keys() {
             .await
             .unwrap_or_else(|e| panic!("at {at}: {e}"));
 
-            keyboard::press(page, keyboard::ARROW_RIGHT).await.unwrap();
-            wait::for_js_change(page, VALUE_NOW, &dragged, "ArrowRight to move the divider")
-                .await
-                .unwrap_or_else(|e| panic!("at {at}: {e}"));
+            wait::for_js_change(page, VALUE_NOW, "ArrowRight to move the divider", || {
+                keyboard::press(page, keyboard::ARROW_RIGHT)
+            })
+            .await
+            .unwrap_or_else(|e| panic!("at {at}: {e}"));
 
             fixture
                 .console
