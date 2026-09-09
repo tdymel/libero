@@ -33,6 +33,7 @@ mod common;
 mod drawer;
 mod floating_window;
 mod focus_contrast;
+mod image_list;
 mod lightbox;
 mod mark;
 mod menu;
@@ -71,6 +72,7 @@ const FIXTURES: &[Routes] = &[
     drawer::ROUTES,
     floating_window::ROUTES,
     focus_contrast::ROUTES,
+    image_list::ROUTES,
     lightbox::ROUTES,
     mark::ROUTES,
     menu::ROUTES,

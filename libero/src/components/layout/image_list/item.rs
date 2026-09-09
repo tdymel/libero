@@ -99,9 +99,9 @@ impl ImageItem {
 
     /// This cell's height, in rows - the `quilted` variant's whole vocabulary.
     ///
-    /// Ignored by every other variant, with a warn: `standard` has one row per
-    /// cell by definition, and `masonry` derives the row span from the
-    /// measured height.
+    /// Quilted only, by design: `standard` stays a uniform grid and `quilted`
+    /// is the variant that spans. Every other variant ignores it with a warn -
+    /// `masonry` derives the row span from the measured height.
     pub fn rows(mut self, rows: u8) -> Self {
         self.rows = Some(rows.max(1));
         self

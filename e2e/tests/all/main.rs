@@ -12,6 +12,7 @@ mod collapse;
 mod drawer;
 mod floating_window;
 mod focus_contrast;
+mod image_list;
 mod isolation;
 mod journal;
 mod lightbox;

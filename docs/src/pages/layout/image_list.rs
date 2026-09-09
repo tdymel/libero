@@ -1,4 +1,4 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, Wrap, prop, props};
 use crate::icons::CheckmarkIcon;
 use dioxus::prelude::*;
 use libero::{
@@ -6,8 +6,13 @@ use libero::{
         ActionIcon, Box, Code, GridSpan, Image, ImageBar, ImageItem, ImageList, Input, Text,
     },
     sx::sx,
+    theme::Theme,
     use_theme,
 };
+
+/// Four, not the theme's two: at two a wide cell is full width, so no row mixes
+/// widths - the case that found the stretched aspect-ratio box.
+const DEMO_COLS: &str = "4";
 
 /// Six pictures with six **different intrinsic heights**. Equal ones would
 /// make `masonry` look identical to `standard` and demonstrate nothing - the
@@ -41,17 +46,17 @@ const LINK_TARGETS: [&str; 6] = [
     "/data-display/image",
 ];
 
-/// Which cells the `span` switch widens, and which the `rows` switch heightens.
-/// Two of six each, so the demo shows the *mix* - a gallery of equal cells is
-/// what hid a whole class of defect from the first browser pass.
-const WIDE: [usize; 2] = [0, 3];
-const TALL: [usize; 2] = [0, 3];
+/// The cells `span` widens and `rows` heightens - two of six, so the demo shows
+/// the *mix*. Written as the snippet prints it.
+fn featured(index: usize) -> bool {
+    index.is_multiple_of(3)
+}
 
 /// Twice the width `cols` gives an ordinary cell, so the `span` control
 /// actually changes something at every column count.
 ///
-/// `GridSpan::Half` looked like the obvious choice and is a **no-op at the
-/// default `cols: 2`**, where an ordinary cell is already half the zone -
+/// `GridSpan::Half` looked like the obvious choice and is a **no-op at
+/// `cols: 2`**, where an ordinary cell is already half the zone -
 /// caught in a browser, because the demo looked identical with the control on.
 /// A span demo has to be relative to the count it sits in.
 fn wide_span(cols: u8) -> Option<GridSpan> {
@@ -123,12 +128,12 @@ fn items(values: &DemoValues) -> Vec<ImageItem> {
                 );
             }
             if span
-                && WIDE.contains(&index)
+                && featured(index)
                 && let Some(wide) = wide_span(cols)
             {
                 item = item.span(wide);
             }
-            if rows && TALL.contains(&index) {
+            if rows && featured(index) {
                 item = item.rows(2);
             }
             if link {
@@ -166,11 +171,17 @@ fn items_code(values: &DemoValues) -> String {
             chain.push_str(&format!("\n            .bar({bar})"));
         }
     }
+    if values.str("link") == "true" {
+        chain.push_str("\n            .to(Route::Photo { id: p.id })");
+    }
+
+    // Only the featured cells get these, so the block has to pick them out.
+    let mut featured = String::new();
     if values.str("span") == "true"
         && let Some(wide) = wide_span(values.str("cols").parse::<u8>().unwrap_or(2))
     {
-        chain.push_str(&format!(
-            "\n            // Two of the six, twice the width `cols` gives the rest.\n            .span(GridSpan::{})",
+        featured.push_str(&format!(
+            ".span(GridSpan::{})",
             match wide {
                 GridSpan::Full => "Full",
                 GridSpan::TwoThirds => "TwoThirds",
@@ -180,17 +191,35 @@ fn items_code(values: &DemoValues) -> String {
         ));
     }
     if values.str("rows") == "true" && values.str("variant") == "quilted" {
-        chain.push_str("\n            .rows(2)");
-    }
-    if values.str("link") == "true" {
-        chain.push_str("\n            .to(Route::Photo { id: p.id })");
+        featured.push_str(".rows(2)");
     }
 
-    format!(
-        "items: photos\n    .iter()\n    .map(|p| {{\n        ImageItem::new(rsx! {{\n            \
-         Image {{ src: p.url.clone(), alt: p.alt.clone(), fit: \"cover\" }}\n        }}){chain}\n    }})\n    \
-         .collect()"
-    )
+    let item = format!(
+        "ImageItem::new(rsx! {{\n            \
+         Image {{ src: p.url.clone(), alt: p.alt.clone(), fit: \"cover\" }}\n        }}){chain}"
+    );
+    match featured.is_empty() {
+        true => format!(
+            "items: photos\n    .iter()\n    .map(|p| {{\n        {item}\n    }})\n    .collect()"
+        ),
+        false => format!(
+            "items: photos\n    .iter()\n    .enumerate()\n    .map(|(i, p)| {{\n        let item = {item};\n        \
+             // Every third cell is bigger than `cols` makes the rest.\n        \
+             if i.is_multiple_of(3) {{ item{featured} }} else {{ item }}\n    }})\n    .collect()"
+        ),
+    }
+}
+
+/// Names the snippet's placeholders up front, so the pseudo-code is marked as such.
+fn placeholder_header(values: &DemoValues, code: &str) -> String {
+    let mut names = vec!["`photos` is your own list, each with a `url` and an `alt`".to_string()];
+    if values.str("bar") != "none" {
+        names.push("`caption(p)` your bar's content".to_string());
+    }
+    if values.str("link") == "true" {
+        names.push("`Route::Photo { id }` your route".to_string());
+    }
+    format!("// Placeholders: {}.\n{code}", names.join("; "))
 }
 
 #[component]
@@ -225,7 +254,7 @@ pub fn ImageListPage() -> Element {
                 props("ImageItem", vec![
                     prop("new(content)", "Element").doc("The cell's content - an `Image` with `fit: \"cover\"`, usually."),
                     prop("span(span)", "GridSpan").doc("This cell's width, overriding the one `cols` derives. The same twelfths a `GridItem` takes, so a span means here exactly what it means there."),
-                    prop("rows(rows)", "u8").doc("This cell's height, in rows - `quilted`'s whole vocabulary. Ignored by every other variant: `standard` has one row per cell by definition and `masonry` derives the span from the measured height."),
+                    prop("rows(rows)", "u8").doc("This cell's height, in rows - `quilted`'s whole vocabulary. Quilted only, by design: `standard` stays a uniform grid, and `masonry` derives the span from the measured height. Every other variant ignores it with a warn."),
                     prop("bar(bar)", "ImageBar").doc("The caption strip."),
                     prop("to(target)", "NavigationTarget").doc("Makes the cell a link. The anchor is the picture and a stretched `::after` extends the hit area over the tile, so the accessible name is the image's `alt` - a decorative image (`alt: \"\"`) leaves the link unnamed. The bar sits above the hit area, so a control in it still works. The link wins over a `zoomable` `Image`: it draws no zoom button there, and warns."),
                 ]),
@@ -279,11 +308,12 @@ pub fn ImageListPage() -> Element {
                 children_text: "",
                 controls: vec![
                     Control::slider("cols", ["1", "2", "3", "4", "6"])
-                        .default(defaults.cols.to_string())
-                        // Unquoted: `cols` is a `u8`, not a string.
-                        .code(|control, values| {
+                        .default(DEMO_COLS)
+                        // Unquoted: `cols` is a `u8`. Omitted at the theme's
+                        // default, not the demo's, which differs.
+                        .code(|_, values| {
                             let value = values.str("cols");
-                            match value == control.default {
+                            match value == Theme::DEFAULT.image_list.cols.to_string() {
                                 true => vec![],
                                 false => vec![format!("cols: {value}u8")],
                             }
@@ -309,6 +339,7 @@ pub fn ImageListPage() -> Element {
                     // Nothing is wider than a one-column cell, so the control
                     // would be a no-op there.
                     Control::switch("span")
+                        .default("true")
                         .hidden_when(|values| values.str("cols") == "1")
                         .code(|_, _| vec![]),
                     // `rows` is quilted's vocabulary and nothing else's.
@@ -348,6 +379,7 @@ pub fn ImageListPage() -> Element {
                         items: items(&values),
                     }
                 },
+                wrap: Wrap(placeholder_header),
             }
         }
     }
