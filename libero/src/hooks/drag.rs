@@ -2,7 +2,7 @@ use dioxus::{html::input_data::MouseButton, prelude::*};
 
 use crate::{
     hooks::ElementHandle,
-    platform::ElementApi,
+    platform::{self, ElementApi},
     sx::{Sx, sx},
 };
 
@@ -76,6 +76,10 @@ pub struct Drag {
 /// axes or units - convert the client-space delta yourself.
 ///
 /// Give the handle [`drag_handle_sx`], or a touch never produces a move.
+///
+/// The press is cancelled, so on the web the hook focuses the pressed tab stop
+/// itself: the outermost one between the target and `capture`. Elsewhere, and
+/// to focus something else (a slider's nearest thumb), focus it in `onstart`.
 pub fn use_drag(options: DragOptions) -> Drag {
     let DragOptions {
         capture,
@@ -119,6 +123,11 @@ pub fn use_drag(options: DragOptions) -> Drag {
         onstart.call(DragStart { client, cancel });
         if active.peek().is_none() {
             return;
+        }
+
+        // `prevent_default` also cancelled the focus the press would bring.
+        if let Some(within) = capture.mounted() {
+            platform::focus_pressed(&event, &within);
         }
 
         // Best-effort: where the platform has no capture this costs

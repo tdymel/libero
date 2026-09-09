@@ -60,8 +60,9 @@
 //!   repeating them faster than the reads land measures the race rather than
 //!   the clamp. The resize's Home and End clamp against the caller's bounds in
 //!   one press each, and that is the clamp this unit measures.
-//! * **Pointer drag.** `use_drag` is covered by its own hook tests, and the
-//!   keyboard path is the one that fails silently for a keyboard user.
+//! * **Pointer drag geometry.** `use_drag` is covered by its own hook tests,
+//!   and the keyboard path is the one that fails silently for a keyboard user.
+//!   Only the focus a drag leaves behind is asserted (todo 439c).
 //! * **Stacking.** One window on the page, so there is no order to measure;
 //!   `WindowHost`'s ordering has a unit test in `libero`.
 
@@ -70,7 +71,7 @@ use chromiumoxide::Page;
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, wait};
+use e2e::{Fixture, Suite, Viewport, passes::focus, passes::keyboard, passes::pointer, wait};
 
 pub const TRIGGER: &str = "#open-window";
 pub const DIALOG: &str = "[role=dialog]";
@@ -214,6 +215,42 @@ pub async fn keyboard_resize(page: &Page) -> Result<()> {
     keyboard::press(page, keyboard::END).await?;
     let largest = wait_for_size(page, MAX, "End").await?;
     assert_report(page, RESIZE_REPORT, largest, "End").await
+}
+
+/// `use_drag` cancels the pointerdown and with it the browser's focus, so the
+/// hook focuses the pressed handle itself (todo 439c). Focus starts on the
+/// window root after opening, so neither handle holds it beforehand.
+#[test]
+fn a_drag_leaves_its_handle_focused() {
+    block_on(async {
+        let fixture = Fixture::open("/floating-window", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open(page).await.unwrap();
+
+        for (handle, what) in [(SEPARATOR, "the resize grip"), (HANDLE, "the title bar")] {
+            let from = pointer::centre_of(page, handle).await.unwrap();
+            let to = pointer::Point {
+                x: from.x + 20.0,
+                y: from.y + 20.0,
+            };
+            pointer::drag(page, from, to, 5).await.unwrap();
+            wait::for_js_true(
+                page,
+                &format!(
+                    "document.activeElement === document.querySelector({})",
+                    serde_json::to_string(handle).unwrap()
+                ),
+                &format!("{what} to hold focus after a drag"),
+            )
+            .await
+            .unwrap();
+        }
+
+        fixture.console.assert_clean("a pointer drag").unwrap();
+        fixture.close().await.unwrap();
+    });
 }
 
 /// Open the window from the keyboard and wait for focus to land in it.

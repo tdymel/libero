@@ -3,7 +3,8 @@ use std::rc::Rc;
 use std::time::Duration;
 
 use dioxus::prelude::{
-    Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, TransitionData,
+    Event, FocusData, Key, KeyboardData, Modifiers, MountedData, MouseData, PointerData,
+    TransitionData,
 };
 use wasm_bindgen::{JsCast, JsValue};
 
@@ -98,6 +99,40 @@ pub(super) fn focus_entered_from(
         return None;
     }
     Some(Some(Box::new(WebElement { element })))
+}
+
+/// Walks up from the target because dioxus-web delegates from the root, so
+/// `currentTarget` is not the handle.
+pub(super) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {
+    let focus = || -> Option<()> {
+        let within = within.downcast::<web_sys::Element>()?;
+        let target = match event.downcast::<web_sys::PointerEvent>() {
+            Some(event) => event.target(),
+            None => event.downcast::<web_sys::MouseEvent>()?.target(),
+        };
+        let mut at = target?.dyn_into::<web_sys::Element>().ok()?;
+        let mut handle = None;
+        loop {
+            if let Some(element) = at.dyn_ref::<web_sys::HtmlElement>()
+                && element.tab_index() >= 0
+            {
+                handle = Some(element.clone());
+            }
+            if at == *within {
+                break;
+            }
+            at = at.parent_element()?;
+        }
+        let handle = handle?;
+        let active = web_sys::window()?.document()?.active_element();
+        if active.is_some_and(|active| handle.contains(Some(&active))) {
+            return None;
+        }
+        let options = web_sys::FocusOptions::new();
+        options.set_prevent_scroll(true);
+        handle.focus_with_options(&options).ok()
+    };
+    let _ = focus();
 }
 
 pub(super) fn prefers_reduced_motion() -> bool {

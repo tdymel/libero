@@ -36,7 +36,7 @@ pub use document::{DocumentApi, document};
 pub use element::{Dimensions, ElementApi, Read};
 pub use error::PlatformError;
 pub(crate) use eye_dropper::eye_dropper;
-pub(crate) use focus::focus_entered_from;
+pub(crate) use focus::{focus_entered_from, focus_pressed};
 pub(crate) use keyboard::arrow_target;
 pub(crate) use keyboard::key_taken;
 pub(crate) use keyboard::typing_target;

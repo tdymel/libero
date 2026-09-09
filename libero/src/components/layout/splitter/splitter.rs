@@ -215,8 +215,8 @@ pub fn Splitter(props: SplitterProps) -> Element {
                     return;
                 }
 
-                // `use_drag` cancels the pointerdown, and with it the browser's
-                // own focus: the keyboard must still reach it after a drag.
+                // `use_drag` gives the divider focus back only on the web, where
+                // it can see the press's target: this covers the other renderers.
                 let _ = divider.focus();
                 container_size.set(size);
                 start_a.set(a());

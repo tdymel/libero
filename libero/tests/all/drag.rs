@@ -4,6 +4,9 @@
 //! refuses a drag. It used to be overwritten by the drag starting after
 //! `onstart` returned, so the disabled slider still followed the pointer and
 //! reported its end.
+//!
+//! The focus a press gives its handle (todo 439c) needs a real DOM target, so
+//! `e2e/tests/all/splitter.rs` and `floating_window.rs` assert it.
 
 use std::cell::{Cell, RefCell};
 use std::rc::Rc;

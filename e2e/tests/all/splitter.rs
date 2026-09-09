@@ -1,7 +1,7 @@
 //! `Splitter`: the divider keeps the keyboard after a mouse drag (todo 431).
 //!
 //! `use_drag` cancels the pointerdown, and with it the browser's own focus, so
-//! the component has to focus the divider itself, as `Slider` does its thumb.
+//! the hook focuses the pressed divider itself (todo 439c).
 
 use e2e::browser::block_on;
 use e2e::passes::{keyboard, pointer};

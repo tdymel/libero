@@ -64,6 +64,11 @@ impl ElementHandle {
         }
     }
 
+    /// The mounted element, for a platform call that needs the node itself.
+    pub(crate) fn mounted(&self) -> Option<Rc<MountedData>> {
+        self.mounted.peek().clone()
+    }
+
     fn get(&self) -> Result<Box<dyn ElementApi>, PlatformError> {
         match self.mounted.read().as_ref() {
             Some(mounted) => Ok(backend::element(mounted)),

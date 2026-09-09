@@ -15,7 +15,7 @@
 use std::rc::Rc;
 
 use dioxus::prelude::{
-    Element, Event, FocusData, KeyboardData, MountedData, MouseData, TransitionData,
+    Element, Event, FocusData, KeyboardData, MountedData, MouseData, PointerData, TransitionData,
 };
 
 use super::{ColorSchemeApi, DocumentApi, ElementApi, KeyboardApi, ScrollApi, TimerApi};
@@ -178,6 +178,15 @@ pub(crate) fn focus_entered_from(
     return web::focus_entered_from(event, boundary);
     #[cfg(not(target_arch = "wasm32"))]
     return None;
+}
+
+/// Only the web can see a press's target - see
+/// [`focus_pressed`](crate::platform::focus_pressed).
+pub(crate) fn focus_pressed(event: &Event<PointerData>, within: &Rc<MountedData>) {
+    #[cfg(not(target_arch = "wasm32"))]
+    let _ = (event, within);
+    #[cfg(target_arch = "wasm32")]
+    web::focus_pressed(event, within);
 }
 
 /// Only the web can read a media query today - see
