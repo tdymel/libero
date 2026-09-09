@@ -645,9 +645,14 @@ mod tests {
     /// keep accents drawn for a dark page: Nord's bright ambiance, which
     /// reuses Frost and Aurora as Nord's docs say to, and the three derived
     /// halves (Vague, Osmium, kettek16), which take their dark half's.
+    ///
+    /// **`muted.6` on the page** is recorded the same way, with its ratio
+    /// (todo 394): it is the palette's own `text-muted`, exempt from the text
+    /// role, so a pale one stays pale and only this list says so.
     #[test]
     fn every_shipped_set_reads_on_its_own_page() {
         let mut short = Vec::new();
+        let mut quiet = Vec::new();
 
         for set in ThemeSet::CATALOGUE {
             for theme in [Some(set.light_theme()), set.dark_theme()]
@@ -669,6 +674,13 @@ mod tests {
                 let falling = text_roles_falling_short(theme);
                 if !falling.is_empty() {
                     short.push(format!("{} {scheme}: {}", set.name(), falling.join(" ")));
+                }
+
+                let ratio = muted_on_its_page(theme);
+                if ratio < TEXT_CONTRAST {
+                    // Floored, so a hair short never prints as a pass.
+                    let ratio = (ratio * 100.0).floor() / 100.0;
+                    quiet.push(format!("{} {scheme}: {ratio:.2}:1", set.name()));
                 }
             }
         }
@@ -699,6 +711,38 @@ mod tests {
             ],
             "the shipped palettes' text roles moved"
         );
+        assert_eq!(
+            quiet,
+            [
+                "Libero light: 3.32:1",
+                "Ayu light: 3.05:1",
+                "Ayu dark: 3.52:1",
+                "Ayu Mirage light: 3.05:1",
+                "Ayu Mirage dark: 3.58:1",
+                "Catppuccin light: 4.36:1",
+                "Dracula dark: 3.02:1",
+                "Ef Night light: 4.49:1",
+                "Everforest light: 3.08:1",
+                "Everforest dark: 4.24:1",
+                "Gruvbox Classic light: 4.28:1",
+                "Kanagawa light: 2.93:1",
+                "Kanagawa dark: 3.33:1",
+                "Kanagawa Dragon light: 2.93:1",
+                "One dark: 3.72:1",
+                "Vague light: 2.98:1",
+                "Vague dark: 3.02:1",
+            ],
+            "the shipped palettes' muted.6 moved"
+        );
+    }
+
+    /// `muted.6` on `theme`'s own surface. Never re-based to a text role, so
+    /// a palette's own `text-muted` reads as pale as its author drew it.
+    fn muted_on_its_page(theme: &Theme) -> f32 {
+        let css = Stylesheet::from(theme).as_str().to_string();
+        HexColor::parse(&root_var(&css, "--lsx-muted-6"))
+            .expect("a hex")
+            .contrast_ratio(theme.surface)
     }
 
     /// Which palette colours cannot reach [`TEXT_CONTRAST`] on `theme`'s own
