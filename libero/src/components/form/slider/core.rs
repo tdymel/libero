@@ -18,7 +18,8 @@ use crate::{
     sx::{StaticSx, Sx, ThemeAwareValue, sx},
     theme::NamedColorCss,
     theme::{
-        Color, ColorShade, ColorValue, CssVar, SLIDER_THUMB, SLIDER_TRACK, Size, SliderDefaults,
+        Color, ColorShade, ColorValue, CssVar, OWN_SHADOW, SLIDER_THUMB, SLIDER_TRACK, Size,
+        SliderDefaults,
     },
     utils::warn,
 };
@@ -52,6 +53,8 @@ fn along_track(fraction: CssVar) -> String {
     )
 }
 
+const PLAIN_THUMB_SHADOW: &str = "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)";
+
 static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
     SliderDefaults::theme_vars()
         .and(drag_handle_sx())
@@ -78,13 +81,18 @@ static SLIDER_ROOT_SX: StaticSx = StaticSx::new(|| {
         .when("readonly", sx().selector("& *", sx().cursor("default")))
         // The track is the scale, so the thumb must read against any color on
         // it: white ring, dark halo, the picked color as its face.
+        // The shadow only while unfocused: this selector outranks the thumb's
+        // own `:focus-visible` arm, which drew the ring without its halo.
         .when(
             "plain",
             sx().selector(
                 "& [role='slider']",
-                sx().border_color("surface").and(shadow_sx(
-                    "0 0 0 1px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.2)".to_string(),
-                )),
+                sx().border_color("surface")
+                    .var(OWN_SHADOW, PLAIN_THUMB_SHADOW),
+            )
+            .selector(
+                "& [role='slider']:not(:focus-visible)",
+                shadow_sx(PLAIN_THUMB_SHADOW.to_string()),
             ),
         )
 });
