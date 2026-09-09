@@ -1,9 +1,6 @@
 //! Ayu - Ayu Dark and Ayu Light, and Ayu Mirage with the same light half.
 
-use super::super::{
-    CodeBlockDefaults, CodeDefaults, HexColor, KbdDefaults, PaperDefaults, Theme, ThemeSet,
-    TooltipDefaults,
-};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
 
 /// Ayu Light.
 pub static AYU_LIGHT: Theme = Theme {
@@ -22,8 +19,6 @@ pub static AYU_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    code_block: CodeBlockDefaults::DEFAULT,
-    kbd: KbdDefaults::DEFAULT,
     tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
@@ -45,8 +40,6 @@ pub static AYU_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    code_block: CodeBlockDefaults::DARK,
-    kbd: KbdDefaults::DARK,
     tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };
@@ -68,8 +61,6 @@ pub static AYU_MIRAGE_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    code_block: CodeBlockDefaults::DARK,
-    kbd: KbdDefaults::DARK,
     tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };

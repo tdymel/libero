@@ -1,9 +1,6 @@
 //! Everforest - Everforest's medium-contrast pair.
 
-use super::super::{
-    CodeBlockDefaults, CodeDefaults, HexColor, KbdDefaults, PaperDefaults, Theme, ThemeSet,
-    TooltipDefaults,
-};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
 
 /// Everforest Light.
 pub static EVERFOREST_LIGHT: Theme = Theme {
@@ -22,8 +19,6 @@ pub static EVERFOREST_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    code_block: CodeBlockDefaults::DEFAULT,
-    kbd: KbdDefaults::DEFAULT,
     tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
@@ -45,8 +40,6 @@ pub static EVERFOREST_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    code_block: CodeBlockDefaults::DARK,
-    kbd: KbdDefaults::DARK,
     tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };

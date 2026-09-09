@@ -3,10 +3,7 @@
 //! The UI mapping is upstream's own (stephango.com/flexoki): `bg`, `bg-2`,
 //! `tx`, `tx-2`, with the 600 accents on light and the 400s on dark.
 
-use super::super::{
-    CodeBlockDefaults, CodeDefaults, HexColor, KbdDefaults, PaperDefaults, Theme, ThemeSet,
-    TooltipDefaults,
-};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
 
 /// Flexoki light: `paper` page, `base-50` card, `black` text.
 pub static FLEXOKI_LIGHT: Theme = Theme {
@@ -25,8 +22,6 @@ pub static FLEXOKI_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    code_block: CodeBlockDefaults::DEFAULT,
-    kbd: KbdDefaults::DEFAULT,
     tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
@@ -48,8 +43,6 @@ pub static FLEXOKI_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    code_block: CodeBlockDefaults::DARK,
-    kbd: KbdDefaults::DARK,
     tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };

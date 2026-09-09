@@ -46,8 +46,8 @@ impl CodeDefaults {
         tok_heading: "#cf222e",
     };
 
-    /// GitHub's dark tokens, measured against
-    /// [`CodeBlockDefaults::DARK`]'s background rather than against black.
+    /// GitHub's dark tokens. The stylesheet walks any that fall short on the
+    /// palette's code block (todo 396).
     pub const DARK: Self = Self {
         font_family: MONO_FONT_FAMILY,
         tok_keyword: "#ff7b72",

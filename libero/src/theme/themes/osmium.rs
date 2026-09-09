@@ -14,10 +14,7 @@
 //! - `muted` is the dark `text-muted` (`#949bb9`) moved toward the ink until
 //!   it is as far from the light page (6.70:1) as it is from the dark one.
 
-use super::super::{
-    CodeBlockDefaults, CodeDefaults, HexColor, KbdDefaults, PaperDefaults, Theme, ThemeSet,
-    TooltipDefaults,
-};
+use super::super::{CodeDefaults, HexColor, PaperDefaults, Theme, ThemeSet, TooltipDefaults};
 
 /// Osmium, light - derived, not upstream.
 pub static OSMIUM_LIGHT: Theme = Theme {
@@ -36,8 +33,6 @@ pub static OSMIUM_LIGHT: Theme = Theme {
         ..PaperDefaults::DEFAULT
     },
     code: CodeDefaults::DEFAULT,
-    code_block: CodeBlockDefaults::DEFAULT,
-    kbd: KbdDefaults::DEFAULT,
     tooltip: TooltipDefaults::DEFAULT,
     ..Theme::DEFAULT
 };
@@ -59,8 +54,6 @@ pub static OSMIUM_DARK: Theme = Theme {
         ..PaperDefaults::DARK
     },
     code: CodeDefaults::DARK,
-    code_block: CodeBlockDefaults::DARK,
-    kbd: KbdDefaults::DARK,
     tooltip: TooltipDefaults::DARK,
     ..Theme::DARK
 };

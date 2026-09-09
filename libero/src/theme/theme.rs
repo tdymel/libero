@@ -279,8 +279,6 @@ impl Theme {
         neutral: HexColor::new(0xCED4DA),
         paper: PaperDefaults::DARK,
         code: CodeDefaults::DARK,
-        code_block: CodeBlockDefaults::DARK,
-        kbd: KbdDefaults::DARK,
         tooltip: TooltipDefaults::DARK,
         ..Theme::DEFAULT
     };

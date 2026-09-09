@@ -33,9 +33,6 @@ impl KbdDefaults {
         color: "var(--lsx-muted-7)",
     };
 
-    /// [`DEFAULT`](Self::DEFAULT) already follows an inked page.
-    pub const DARK: Self = Self::DEFAULT;
-
     fn size_sx(size: Size) -> Sx {
         sx().font_size(KBD_FONT_SIZE.value(size))
     }

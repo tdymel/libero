@@ -44,9 +44,6 @@ impl CodeBlockDefaults {
         copyable: true,
         line_numbers: true,
     };
-
-    /// [`DEFAULT`](Self::DEFAULT) already follows an inked page.
-    pub const DARK: Self = Self::DEFAULT;
 }
 
 impl ToCssDeclarations for CodeBlockDefaults {
