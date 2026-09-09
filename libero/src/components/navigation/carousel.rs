@@ -229,6 +229,19 @@ static CAROUSEL_INDICATOR_SX: StaticSx = StaticSx::new(|| {
         )
         .media(REDUCED_MOTION, sx().transition("none"))
         .focus_visible(focus_ring_sx())
+        // WCAG 2.5.8: the dot is drawn 5px thick, so an invisible box at least
+        // 24px on both axes and centred on it takes the pointer, as `Slider`'s thumb.
+        .position("relative")
+        .selector(
+            "&::before",
+            sx().content("\"\"")
+                .position("absolute")
+                .top("50%")
+                .left("50%")
+                .width("max(100%, 24px)")
+                .height("max(100%, 24px)")
+                .transform("translate(-50%, -50%)"),
+        )
 });
 
 static CAROUSEL_PAUSE_SX: StaticSx = StaticSx::new(|| {
@@ -1873,6 +1886,15 @@ mod tests {
             "{}",
             css.as_str()
         );
+    }
+
+    /// WCAG 2.5.8: a 5px dot takes the pointer over a 24px box, not a fatter dot.
+    #[test]
+    fn a_dot_takes_the_pointer_over_24px() {
+        let css = Stylesheet::from(&CAROUSEL_INDICATOR_SX);
+
+        assert!(css.as_str().contains("::before"), "{}", css.as_str());
+        assert!(css.as_str().contains("max(100%, 24px)"), "{}", css.as_str());
     }
 
     /// A dot's ring is drawn outside the dot, so it has to contrast against

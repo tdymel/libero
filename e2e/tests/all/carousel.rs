@@ -33,6 +33,8 @@ use chromiumoxide::Page;
 use e2e::archetypes::reset_tab_position;
 use e2e::browser::block_on;
 use e2e::passes::keyboard;
+use e2e::passes::pointer;
+use e2e::passes::target_size::MINIMUM;
 use e2e::suite::Step;
 use e2e::{Fixture, Suite, Viewport, wait};
 
@@ -51,11 +53,6 @@ const BUTTON: &str = "#slide-button";
 const CONTROLS: &str = "[aria-roledescription=carousel] button[aria-controls]";
 /// The dots. Their ids are `<track id>-indicator-<n>`, and the track id is
 /// generated, so the stable half of it is what this matches.
-///
-/// Unused on purpose: `it_meets_the_baseline` cannot declare `targets` over it
-/// until todo 389 gives the dots a hit area, and keeping the selector here
-/// makes that fix one line rather than a rediscovery.
-#[allow(dead_code)]
 const INDICATORS: &str = "[aria-roledescription=carousel] button[id*='-indicator-']";
 const NEXT: &str = "[aria-roledescription=carousel] button[aria-label='Next slide']";
 /// The second slide once it is the current one. Nothing carries `data-current`
@@ -142,19 +139,10 @@ pub async fn the_slider_in_a_slide_takes_the_arrows(fixture: &Fixture) -> Result
     reach(page, SLIDER).await?;
 
     let value = format!("document.querySelector({SLIDER:?}).getAttribute('aria-valuenow')");
-    let before_value: Option<String> = page.evaluate(value.clone()).await?.into_value()?;
-    let Some(before_value) = before_value else {
-        bail!("the slider in the slide reports no aria-valuenow");
-    };
-
     let before = index(page).await?;
-    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
-    wait::for_js_change(
-        page,
-        &value,
-        &before_value,
-        "the slider in the slide to step",
-    )
+    wait::for_js_change(page, &value, "the slider in the slide to step", || {
+        keyboard::press(page, keyboard::ARROW_RIGHT)
+    })
     .await
     .map_err(|e| anyhow::anyhow!("the slider in the slide did not step: {e}"))?;
 
@@ -168,14 +156,12 @@ pub async fn a_raw_range_in_a_slide_steps(fixture: &Fixture) -> Result<()> {
     reach(page, RANGE).await?;
 
     let value = format!("document.querySelector({RANGE:?}).value");
-    let before_value: Option<String> = page.evaluate(value.clone()).await?.into_value()?;
-    let before_value = before_value.unwrap_or_default();
-
     let before = index(page).await?;
-    keyboard::press(page, keyboard::ARROW_RIGHT).await?;
-    wait::for_js_change(page, &value, &before_value, "the raw range to step")
-        .await
-        .map_err(|e| anyhow::anyhow!("the raw range in the slide did not step: {e}"))?;
+    wait::for_js_change(page, &value, "the raw range to step", || {
+        keyboard::press(page, keyboard::ARROW_RIGHT)
+    })
+    .await
+    .map_err(|e| anyhow::anyhow!("the raw range in the slide did not step: {e}"))?;
 
     assert_strip_held(page, before, "an arrow on a raw range in a slide").await
 }
@@ -333,15 +319,12 @@ pub fn plant_arm_out(arm: &str) -> String {
 ///
 /// ## Two passes not declared, and why
 ///
-/// * **`targets(INDICATORS)`**, the dots. Declared, it goes red: the dots
-///   measure **40x5, 24x5 and 24x5** at 1280x900 (todo 389). Five pixels tall
-///   is a WCAG 2.5.8 failure in the component, not in the test, and a unit that
-///   both adds coverage and repairs what it reveals cannot be reviewed - so it
-///   is filed and the declaration waits for the fix. `targets_spaced` is not
-///   the answer either: the dots clear each other (32 and 40px centre to
-///   centre) but sit **12.5px** below the track's bottom edge against the 12px
-///   the exception needs, and a pass with half a pixel of margin flips on the
-///   next theme change. `INDICATORS` is kept above so the fix is one line.
+/// * **`targets(INDICATORS)`**, the dots. They are drawn **40x5, 24x5 and
+///   24x5** at 1280x800, and since todo 389 each takes the pointer over a
+///   `::before` at least 24px on both axes, as `Slider`'s thumb does. The pass
+///   measures bounding boxes, which never include a pseudo-element, so it would
+///   report 5px for dots that meet 2.5.8.
+///   [`the_dots_take_the_pointer_over_24px`] hit-tests the area instead.
 /// * **`contrast_covers`, at all.** Three selectors were tried and all three
 ///   fail, each naming text axe's `color-contrast` rule never evaluated:
 ///   the whole region (the second and third slides' paragraphs), the
@@ -382,4 +365,73 @@ fn it_meets_the_baseline() {
         )
         .state("advanced", &[Step::Click(NEXT)], SECOND_CURRENT)
         .run();
+}
+
+/// WCAG 2.5.8 on the dots' hit area, not their box: a dot is drawn 5px thick
+/// and a `::before` at least 24px on both axes takes the pointer (todo 389).
+///
+/// Hit-tests each dot's corners 11.5px out from its centre on both axes, and
+/// 13px out as the control that the check can fail. Then clicks the third dot
+/// 11px above its centre, outside its drawn box, so only the hit area can take
+/// that click.
+#[test]
+fn the_dots_take_the_pointer_over_24px() {
+    block_on(async {
+        let fixture = Fixture::open("/carousel", Viewport::Desktop).await.unwrap();
+        let page = &fixture.page;
+
+        let inside = dot_corners(page, MINIMUM / 2.0 - 0.5).await.unwrap();
+        assert!(
+            !inside.is_empty() && inside.iter().all(|dot| dot.iter().all(|&hit| hit)),
+            "a corner of a dot's 24px hit area missed the dot: {inside:?}"
+        );
+        let outside = dot_corners(page, MINIMUM / 2.0 + 1.0).await.unwrap();
+        assert!(
+            outside.iter().all(|dot| dot.iter().all(|&hit| !hit)),
+            "a dot took the pointer outside its 24px hit area: {outside:?}"
+        );
+
+        let third = dot_centre(page, 2).await.unwrap();
+        let at = pointer::Point {
+            x: third.x,
+            y: third.y - 11.0,
+        };
+        pointer::drag(page, at, at, 1).await.unwrap();
+        wait::until(
+            "a click on the third dot's hit area to go there",
+            || async move { Ok(index(page).await? == 2) },
+        )
+        .await
+        .unwrap_or_else(|e| panic!("a click 11px above the third dot did not select it: {e}"));
+
+        fixture.console.assert_clean("clicks on the dots").unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Per dot, whether each corner of a square `offset` out from its centre
+/// hit-tests to that dot.
+async fn dot_corners(page: &Page, offset: f64) -> Result<Vec<Vec<bool>>> {
+    Ok(page
+        .evaluate(format!(
+            "[...document.querySelectorAll({INDICATORS:?})].map(dot => {{ \
+             const r = dot.getBoundingClientRect(); \
+             const x = r.x + r.width / 2, y = r.y + r.height / 2; \
+             return [[-1,-1],[1,-1],[-1,1],[1,1]].map(([dx, dy]) => \
+             document.elementFromPoint(x + dx * {offset}, y + dy * {offset}) === dot); }})"
+        ))
+        .await?
+        .into_value()?)
+}
+
+/// The centre of the `n`th dot, in viewport coordinates.
+async fn dot_centre(page: &Page, n: usize) -> Result<pointer::Point> {
+    let (x, y): (f64, f64) = page
+        .evaluate(format!(
+            "(() => {{ const r = document.querySelectorAll({INDICATORS:?})[{n}]\
+             .getBoundingClientRect(); return [r.x + r.width / 2, r.y + r.height / 2]; }})()"
+        ))
+        .await?
+        .into_value()?;
+    Ok(pointer::Point { x, y })
 }
