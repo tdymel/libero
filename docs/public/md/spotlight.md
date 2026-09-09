@@ -15,7 +15,7 @@ first, then description and keyword hits.
 
 Rows with a `group` are drawn under its header, groups in the order they first
 appear, and `limit` counts rows through the groups. A `shortcut` on an action is
-a hint, drawn as a `Kbd`, and never bound.
+a hint, drawn as one `Kbd` per key (split on spaces and `+`), and never bound.
 
 ## Usage
 

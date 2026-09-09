@@ -227,7 +227,7 @@ pub fn ImageListPage() -> Element {
                     prop("span(span)", "GridSpan").doc("This cell's width, overriding the one `cols` derives. The same twelfths a `GridItem` takes, so a span means here exactly what it means there."),
                     prop("rows(rows)", "u8").doc("This cell's height, in rows - `quilted`'s whole vocabulary. Ignored by every other variant: `standard` has one row per cell by definition and `masonry` derives the span from the measured height."),
                     prop("bar(bar)", "ImageBar").doc("The caption strip."),
-                    prop("to(target)", "NavigationTarget").doc("Makes the cell a link. The anchor is the picture and a stretched `::after` extends the hit area over the tile, so the accessible name is the image's `alt` - a decorative image (`alt: \"\"`) leaves the link unnamed. The bar sits above the hit area, so a control in it still works."),
+                    prop("to(target)", "NavigationTarget").doc("Makes the cell a link. The anchor is the picture and a stretched `::after` extends the hit area over the tile, so the accessible name is the image's `alt` - a decorative image (`alt: \"\"`) leaves the link unnamed. The bar sits above the hit area, so a control in it still works. The link wins over a `zoomable` `Image`: it draws no zoom button there, and warns."),
                 ]),
                 props("ImageBar", vec![
                     prop("new(content)", "Element").doc("The strip's content - anything. A flex row is all `ImageBar` adds, so a text block wants `flex: 1 1 auto; min-width: 0` and a `<button>` wants `color: inherit`. Sibling content, never a label for the image."),

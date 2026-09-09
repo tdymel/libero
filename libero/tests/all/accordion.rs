@@ -78,11 +78,17 @@ fn each_trigger_points_at_its_region_and_the_region_back() {
             .unwrap_or_else(|| panic!("region {index} missing:\n{html}"));
         let region_tag = &body[body[..region_at].rfind('<').unwrap()..];
         let region = attributes_of(region_tag, "div");
-        assert_eq!(region["role"], "region");
-        assert_eq!(
-            region["aria-labelledby"],
-            format!("checkout-trigger-{index}")
-        );
+        // Only the open panel (Shipping) is a region landmark.
+        if index == 0 {
+            assert_eq!(region["role"], "region");
+            assert_eq!(
+                region["aria-labelledby"],
+                format!("checkout-trigger-{index}")
+            );
+        } else {
+            assert!(!region.contains_key("role"), "{html}");
+            assert!(!region.contains_key("aria-labelledby"), "{html}");
+        }
     }
 }
 

@@ -43,7 +43,9 @@ never fetches the fallback.
 [Lightbox](lightbox.md): fitted to the stage with `object-fit: contain`, then
 double-click, `z` or the wheel to zoom, and drag or the arrows to pan. No
 thumbnails, captions or arrows. `zoomed_src` supplies a larger source for the
-overlay when the inline one is a thumbnail.
+overlay when the inline one is a thumbnail. Inside a linked
+[ImageItem](image_list.md) the link wins: `zoomable` is ignored, with a warning
+in a debug build, since a `<button>` inside an `<a>` is invalid HTML.
 
 ```rust
 use dioxus::prelude::*;
@@ -83,7 +85,7 @@ or the dialog's **Close** button close the overlay again.
 | `fit` | `ImageFit` | `cover` | Maps onto `object-fit`. |
 | `radius` | `Size` | `0` | Corner radius, a step on the radius scale. Anything else goes through `sx`. |
 | `alt` | `String` | required | Alt text. Empty marks the image decorative. |
-| `zoomable` | `bool` | `false` | Wraps the image in a click-to-zoom overlay. |
+| `zoomable` | `bool` | `false` | Wraps the image in a click-to-zoom overlay. Ignored inside a linked `ImageItem`. |
 
 `ImageFit` takes `fill`, `contain`, `cover`, `none` or `scale-down`.
 

@@ -89,6 +89,13 @@ static SPOTLIGHT_BODY_SX: StaticSx = StaticSx::new(|| {
                 .min_width("0"),
         )
         .selector(
+            "& [data-spotlight-shortcut]",
+            sx().display("inline-flex")
+                .align_items("center")
+                .gap("4px")
+                .white_space("nowrap"),
+        )
+        .selector(
             "& [data-spotlight-description]",
             sx().font_size("0.8125rem")
                 .color(SPOTLIGHT_DESCRIPTION_COLOR.value()),
@@ -510,7 +517,14 @@ fn spotlight_rows(
                             }
                         }
                         if let Some(shortcut) = action.shortcut {
-                            Kbd { "{shortcut}" }
+                            span { "data-spotlight-shortcut": "",
+                                for (position, key) in shortcut_keys(&shortcut).into_iter().enumerate() {
+                                    if position > 0 {
+                                        " + "
+                                    }
+                                    Kbd { "{key}" }
+                                }
+                            }
                         }
                     }
                 }
@@ -534,12 +548,21 @@ fn spotlight_rows(
                     }
                 }
             }
+            // Bare rows, as in `Combobox`: an unnamed group adds nothing.
             None => rsx! {
-                div { key: "group-{group_index}", "role": "group", {options_rows.into_iter()} }
+                Fragment { key: "group-{group_index}", {options_rows.into_iter()} }
             },
         });
     }
     rows
+}
+
+/// A shortcut hint's keys, split on spaces and `+`: one `Kbd` each.
+fn shortcut_keys(shortcut: &str) -> Vec<&str> {
+    shortcut
+        .split(|c: char| c == '+' || c.is_whitespace())
+        .filter(|key| !key.is_empty())
+        .collect()
 }
 
 /// The search box's keyboard: the two arrows wrap through the flat row list,

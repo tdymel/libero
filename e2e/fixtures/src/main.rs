@@ -21,6 +21,7 @@
 mod broken;
 mod combobox;
 mod overlay;
+mod picker_dialog;
 mod roving;
 
 use dioxus::prelude::*;
@@ -104,6 +105,10 @@ enum Route {
     ButtonPage {},
     #[route("/button/landing")]
     ButtonLanding {},
+    #[route("/color-field")]
+    ColorFieldPage {},
+    #[route("/date-field")]
+    DateFieldPage {},
 
     // A real component with one defect planted through a prop. Most plants
     // are injected by the test instead (`tests/all/planted.rs`); these are
@@ -223,6 +228,7 @@ use combobox::{MultiSelectPage, SelectPage, TagsFieldPage};
 use overlay::{
     DrawerPage, FloatingWindowPage, LightboxPage, MenuOpenOnMountPage, MenuPage, SpotlightPage,
 };
+use picker_dialog::{ColorFieldPage, DateFieldPage};
 use roving::{MenubarPage, RadioGroupPage, SegmentedControlPage};
 
 #[component]

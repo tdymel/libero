@@ -22,3 +22,5 @@ pub use marquee::{Marquee, MarqueeProps};
 pub use qr_code::QrCode;
 pub use table::{CellAlign, CellValue, Column, ColumnHeader, SortKey, Table, TableProps, column};
 pub use timeline::{Timeline, TimelineEvent, TimelineLine, TimelineProps};
+
+pub(crate) use image::LinkedImageScope;

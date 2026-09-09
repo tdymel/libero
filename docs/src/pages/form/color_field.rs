@@ -1,7 +1,7 @@
-use crate::components::{Control, Demo, DemoValues, DocPage, prop, props};
+use crate::components::{Control, Demo, DemoValues, DocPage, DocSection, prop, props};
 use dioxus::prelude::*;
 use libero::components::{
-    Code, ColorCode, ColorField, FieldStatus, Flex, SliderChangeEvent, Swatches, Text,
+    Code, ColorCode, ColorField, FieldStatus, Flex, Kbd, SliderChangeEvent, Swatches, Text,
 };
 
 const SIZES: [&str; 6] = ["xs", "sm", "md", "lg", "xl", "xxl"];
@@ -77,7 +77,7 @@ pub fn ColorFieldPage() -> Element {
                 }
                 Text {
                     "Typed text is kept as typed until the field blurs, and every time it parses the color is "
-                    "emitted. The input keeps focus while the dropdown is used, so its blur is what closes it."
+                    "emitted."
                 }
             },
             // snippet: item const SWATCHES: [&str; 7] = [""; 7];
@@ -152,6 +152,17 @@ pub fn ColorFieldPage() -> Element {
                 render: move |values: DemoValues| rsx! {
                     ColorFieldDemo { values }
                 },
+            }
+            DocSection {
+                title: "Accessibility",
+                Text {
+                    "Focus opens the dropdown and stays in the text, so typing works at once. "
+                    Kbd { "↓" } " moves focus into the picker, onto the saturation area or the first swatch, where the "
+                    Code { source: "ColorPicker" }
+                    " keys apply. "
+                    Kbd { "Escape" } " goes back to the text, and so does a swatch that closes the dropdown. "
+                    "Focus leaving both the text and the dropdown closes it. A mouse click in the dropdown leaves focus in the text."
+                }
             }
         }
     }

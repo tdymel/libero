@@ -120,7 +120,7 @@ ImageItem::new(rsx! { Image { src, alt: "Breakfast", fit: "cover" } })
     .to(Route::Photo { id })
 ```
 
-Two consequences:
+Three consequences:
 
 - **The accessible name is the image's `alt`**, in every linked cell. A
   decorative image (`alt: ""`) leaves the link unnamed. Give it a real `alt`, or
@@ -130,6 +130,9 @@ Two consequences:
   breaking it is silent: the component shipped once with a `position: absolute`
   bar, and the hit area was the caption strip rather than the tile. If you style
   a cell through `sx`, do not make anything inside it positioned.
+- **The link wins over a `zoomable` `Image`.** Inside a linked cell it draws no
+  zoom button, and warns in a debug build: a `<button>` inside the `<a>` is
+  invalid HTML and two controls on one tile. Zoom on the page the link opens.
 
 ## Columns
 
@@ -212,7 +215,7 @@ A builder, the `Table::column()` shape.
 | `span(span)` | `GridSpan` | This cell's width, overriding the one `cols` derives. |
 | `rows(rows)` | `u8` | This cell's height in rows. `quilted` only. |
 | `bar(bar)` | `ImageBar` | The caption strip. |
-| `to(target)` | `NavigationTarget` | Makes the cell a link, as a stretched link on the picture. |
+| `to(target)` | `NavigationTarget` | Makes the cell a link, as a stretched link on the picture. A `zoomable` `Image` in it draws no zoom button. |
 
 ### `ImageBar`
 

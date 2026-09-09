@@ -280,6 +280,27 @@ fn a_field_shows_its_format_and_posts_iso() {
     assert_eq!(html.matches("name=\"arrival\"").count(), 1);
 }
 
+/// APG Date Picker Combobox: the input is a combobox opening a dialog, and
+/// points at it only while the dialog exists. The browser pass opens it.
+#[test]
+fn a_closed_field_is_a_combobox_over_a_dialog() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                DayField { id: "due", value: NaiveDate::from_ymd_opt(2026, 9, 4), onchange: move |_| {} }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let input = tags_with(&html, &["id=\"due\""]);
+
+    assert_eq!(input.len(), 1, "{html}");
+    assert!(input[0].contains("role=\"combobox\""), "{html}");
+    assert!(input[0].contains("aria-haspopup=\"dialog\""), "{html}");
+    assert!(input[0].contains("aria-expanded=\"false\""), "{html}");
+    assert!(!input[0].contains("aria-controls"), "{html}");
+}
+
 /// The opening tags in `html` that carry every one of `attributes`.
 fn tags_with<'a>(html: &'a str, attributes: &[&str]) -> Vec<&'a str> {
     html.split('<')

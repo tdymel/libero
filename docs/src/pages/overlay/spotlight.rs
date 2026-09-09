@@ -359,7 +359,7 @@ pub fn SpotlightPage() -> Element {
                     prop("keywords", "Vec<String>").doc("Matched, never drawn."),
                     prop("group", "Option<String>").doc("A section header. Groups keep the order they first appear in."),
                     prop("icon", "Option<Element>").doc("Drawn before the label."),
-                    prop("shortcut", "Option<String>").doc("A hint drawn as a `Kbd`. Never bound."),
+                    prop("shortcut", "Option<String>").doc("A hint, one `Kbd` per key: split on spaces and `+`. Never bound."),
                     prop("onclick", "Option<Callback<()>>").doc("Run on Enter or a click."),
                 ]),
                 props("SpotlightHandle", vec![

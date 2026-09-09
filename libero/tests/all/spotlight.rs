@@ -30,6 +30,9 @@ fn actions() -> Vec<SpotlightAction> {
         SpotlightAction::new("New file")
             .group("Commands")
             .onclick(|_| {}),
+        SpotlightAction::new("Help")
+            .shortcut("Ctrl+Shift+H")
+            .onclick(|_| {}),
     ]
 }
 
@@ -100,9 +103,10 @@ fn the_search_box_is_a_combobox_over_a_listbox_that_exists() {
 fn rows_are_options_in_named_groups_and_never_selected() {
     let html = rendered("", None);
     let options = tags_with(&html, r#"role="option""#);
-    assert_eq!(options.len(), 3);
+    assert_eq!(options.len(), 4);
     assert!(!html.contains("aria-selected"));
 
+    // The ungrouped "Help" row sits bare in the listbox, with no unnamed group.
     let groups = tags_with(&html, r#"role="group""#);
     assert_eq!(groups.len(), 2);
     for group in groups {
@@ -111,7 +115,20 @@ fn rows_are_options_in_named_groups_and_never_selected() {
         assert!(html.contains(&format!(r#"id="{label_id}""#)));
     }
     assert!(html.contains(">Pages<") && html.contains(">Commands<"));
-    assert!(html.contains("<kbd"), "the shortcut hint is a Kbd");
+}
+
+#[test]
+fn a_shortcut_hint_is_one_kbd_per_key() {
+    let html = rendered("", None);
+    let keys: Vec<&str> = html
+        .match_indices("<kbd")
+        .map(|(at, _)| {
+            let text = &html[at + html[at..].find('>').unwrap() + 1..];
+            &text[..text.find("</kbd>").unwrap()]
+        })
+        .collect();
+    assert_eq!(keys, ["Ctrl", ",", "Ctrl", "Shift", "H"], "{html}");
+    assert!(html.contains("</kbd> + <kbd"), "{html}");
 }
 
 /// `aria-activedescendant` is built by `ComboboxState` from its own id scheme,

@@ -38,7 +38,7 @@ pub fn ImagePage() -> Element {
                     prop("alt", "String").doc("Alt text. Empty marks the image decorative."),
                     prop("zoomable", "bool")
                         .default("false")
-                        .doc("Opens the picture in a single-picture Lightbox on click."),
+                        .doc("Opens the picture in a single-picture Lightbox on click. Ignored inside a linked `ImageItem`, with a warning: the link wins."),
                 ]),
             ],
             lead: rsx! {

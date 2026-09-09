@@ -186,9 +186,9 @@ pub fn AccordionPage() -> Element {
                     Code { source: "size" }
                     " only changes the look. Every trigger is a tab stop; Up and Down move "
                     "between triggers and Home and End jump to the ends, without toggling. Every "
-                    "panel is a "
+                    "open panel is a "
                     Code { source: "role=\"region\"" }
-                    " named by its trigger, so a screen reader lists each open one as a landmark "
+                    " named by its trigger, so a screen reader lists each one as a landmark "
                     "- with a dozen sections open at once in "
                     Code { source: "Many" }
                     " mode that list gets long."

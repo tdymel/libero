@@ -1,0 +1,23 @@
+---
+source: e2e/src/suite.rs
+description: color_field at mobile (open)
+expression: tree
+---
+LabelText
+  StaticText "Accent"
+generic
+  combobox "Accent" = #1c7ed6 [expanded] [haspopup=dialog]
+    generic
+      StaticText "#1c7ed6"
+  button "Pick a color from the screen"
+generic
+  dialog "Choose color"
+    generic
+      slider = 87 [valuemax=100] [valuemin=0]
+    generic
+      generic
+        slider = 208 [valuemax=360] [valuemin=0]
+    button "#fa5252"
+    button "#40c057"
+    button "#228be6"
+--> aria-controls [id="color-field-dialog"] (rendered above)

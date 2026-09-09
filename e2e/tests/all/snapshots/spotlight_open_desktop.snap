@@ -24,8 +24,11 @@ generic
               StaticText "Changelog"
           group "Commands"
             StaticText "Commands"
-            option "New file Ctrl N" [selected=false]
+            option "New file Ctrl + N" [selected=false]
               StaticText "New file"
               generic
-                StaticText "Ctrl N"
+                StaticText "Ctrl"
+              StaticText "+"
+              generic
+                StaticText "N"
 --> aria-controls [id="lsx-N-listbox"] (rendered above)

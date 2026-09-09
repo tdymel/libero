@@ -66,9 +66,22 @@ Focusing or clicking the input opens it; Escape and blur close it. It holds a
 swatches, and no dropdown at all without any.
 `close_on_swatch_click: true` closes it when a swatch is picked.
 
-The input keeps focus the whole time: the picker inside is not focusable and a
-mousedown in the dropdown is cancelled, so a drag never blurs the field. The
-picker's own keyboard is therefore out of reach here - type the color instead.
+A mousedown in the dropdown is cancelled, so a drag never blurs the field and a
+mouse user's focus stays in the text.
+
+## Accessibility
+
+The input is a `combobox` whose dropdown is a non-modal `dialog` named "Choose
+color". Focus opens it
+and stays in the text input, so typing works at once.
+
+| Key | In the text input | In the dropdown |
+|---|---|---|
+| Arrow Down | moves focus into the picker: the saturation area, or the first swatch | the picker's own keys ([ColorPicker](color_picker.md#accessibility)) |
+| Escape | closes the dropdown | closes it and returns focus to the text |
+
+Picking a swatch that closes the dropdown returns focus to the text too. Focus
+leaving both the text and the dropdown closes it.
 
 ## Preview and eyedropper
 

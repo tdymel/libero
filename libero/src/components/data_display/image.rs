@@ -9,6 +9,7 @@ use crate::{
     hooks::{LightboxItem, LightboxOptions, use_lightbox, use_theme},
     sx::{StaticSx, Sx, sx},
     theme::{IMAGE_RADIUS, ImageDefaults, Size, SizeCss},
+    utils::warn,
 };
 
 pub use crate::theme::ImageFit;
@@ -72,9 +73,31 @@ fn zoom_label(alt: &str) -> String {
     }
 }
 
+#[derive(Clone, Copy)]
+struct InLink;
+
+/// Marks its children as inside a link, e.g. a linked `ImageItem`: an `Image`
+/// there renders no zoom button, which would nest a `<button>` in the `<a>`.
+#[component]
+pub(crate) fn LinkedImageScope(children: Element) -> Element {
+    use_context_provider(|| InLink);
+    children
+}
+
 #[component]
 pub fn Image(props: ImageProps) -> Element {
     let mut errored_src = use_signal(|| None::<String>);
+    let in_link = use_hook(|| try_consume_context::<InLink>().is_some());
+    // Once per mount, not per render.
+    use_hook(|| {
+        if props.zoomable && in_link {
+            warn(
+                "Image: zoomable is ignored inside a linked ImageItem - the link wins, and a \
+                 zoom button would nest a <button> in the <a>.",
+            );
+        }
+    });
+    let zoomable = props.zoomable && !in_link;
 
     let show_fallback = errored_src.read().as_deref() == Some(props.src.as_str());
     let src = if show_fallback {
@@ -98,7 +121,7 @@ pub fn Image(props: ImageProps) -> Element {
     // `ZoomButton`, which takes the caller's styling, when it can.
     let no_class = Input::None;
     let no_sx = Input::None;
-    let (class, user_sx, img_states): (_, _, Input<States>) = match props.zoomable {
+    let (class, user_sx, img_states): (_, _, Input<States>) = match zoomable {
         true => (
             &no_class,
             &no_sx,
@@ -126,7 +149,7 @@ pub fn Image(props: ImageProps) -> Element {
         errored_src.set(Some(on_error_src.clone()))
     });
 
-    if !props.zoomable {
+    if !zoomable {
         return image
             .attr("src", src)
             .attr("alt", props.alt)
@@ -219,5 +242,32 @@ mod tests {
     #[test]
     fn no_radius_emits_no_variable() {
         assert_eq!(image_variables(None).to_string(), "");
+    }
+
+    fn warnings_of(app: fn() -> Element) -> Vec<String> {
+        crate::utils::take_warnings();
+        let mut dom = VirtualDom::new(app);
+        dom.rebuild_in_place();
+        dom.render_immediate(&mut dioxus::core::NoOpMutations);
+        crate::utils::take_warnings()
+    }
+
+    #[test]
+    fn a_zoomable_image_in_a_link_warns() {
+        let linked = warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider {
+                    LinkedImageScope { Image { src: "/a.svg", alt: "A", zoomable: true } }
+                }
+            }
+        });
+        assert!(linked.iter().any(|w| w.starts_with("Image:")), "{linked:?}");
+
+        let alone = warnings_of(|| {
+            rsx! {
+                crate::LiberoProvider { Image { src: "/a.svg", alt: "A", zoomable: true } }
+            }
+        });
+        assert!(!alone.iter().any(|w| w.starts_with("Image:")), "{alone:?}");
     }
 }

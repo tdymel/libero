@@ -22,6 +22,7 @@ mod modal;
 mod multi_select;
 mod negative;
 mod notifications;
+mod picker_dialog;
 mod planted;
 mod radio_group;
 mod segmented_control;

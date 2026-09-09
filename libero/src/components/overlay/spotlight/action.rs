@@ -14,8 +14,9 @@ pub struct SpotlightAction {
     /// A section header. Groups are ordered by their first appearance.
     pub group: Option<String>,
     pub icon: Option<Element>,
-    /// A hint, drawn as a `Kbd` beside the row. Never bound - binding it would
-    /// make the palette an app-wide keybinding registry.
+    /// A hint beside the row, one `Kbd` per key (split on spaces and `+`, so
+    /// spell a plus key "Plus"). Never bound - binding it would make the
+    /// palette an app-wide keybinding registry.
     pub shortcut: Option<String>,
     pub onclick: Option<Callback<()>>,
 }

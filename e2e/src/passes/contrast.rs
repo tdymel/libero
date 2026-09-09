@@ -252,8 +252,9 @@ pub async fn assert_covers(page: &Page, root: &str, selector: &str) -> Result<us
                 for (const el of [host, ...host.querySelectorAll('*')]) {{
                     // The element that *owns* the text is the one axe reports,
                     // so a wrapper whose text lives in a child is not wanted.
+                    // A letter or digit: axe's `ignoreUnicode` strips punctuation-only text and skips it.
                     const owns = Array.from(el.childNodes)
-                        .some(n => n.nodeType === Node.TEXT_NODE && n.textContent.trim());
+                        .some(n => n.nodeType === Node.TEXT_NODE && /[\p{{L}}\p{{N}}]/u.test(n.textContent));
                     if (!owns) continue;
                     if (el.closest('[aria-hidden=true]')) continue;
                     const style = getComputedStyle(el);

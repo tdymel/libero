@@ -85,7 +85,9 @@ including one outside `min`/`max` or excluded - stays, and the field shows
 
 ## Accessibility
 
-Focus opens the dropdown and stays in the text input, so typing works at once.
+The input is a `combobox` whose dropdown is a non-modal `dialog`, named by
+`DateDefaults::date_label` (`time_label` for a time). Focus opens the dropdown
+and stays in the text input, so typing works at once.
 
 | Key | In the text input | In the dropdown |
 |---|---|---|

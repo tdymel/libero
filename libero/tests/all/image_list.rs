@@ -373,6 +373,32 @@ fn a_linked_cell_puts_the_anchor_on_the_picture() {
     }
 }
 
+/// The link wins: a zoomable `Image` in a linked cell draws no zoom button,
+/// which would nest a `<button>` in the `<a>`. An unlinked cell keeps it.
+#[test]
+fn a_linked_cell_drops_the_zoom_button() {
+    fn app() -> Element {
+        rsx! {
+            LiberoProvider {
+                ImageList {
+                    items: vec![
+                        ImageItem::new(rsx! { Image { src: "/a.svg", alt: "A", zoomable: true } })
+                            .to("/photos/1"),
+                        ImageItem::new(rsx! { Image { src: "/b.svg", alt: "B", zoomable: true } }),
+                    ],
+                }
+            }
+        }
+    }
+    let html = body(&render(app));
+    let first = &html[html.find("<li").expect("a cell")..html.rfind("<li").unwrap()];
+    let second = &html[html.rfind("<li").unwrap()..];
+
+    assert!(!first.contains("<button"), "{first}");
+    assert!(first.contains(r#"alt="A""#), "{first}");
+    assert!(second.contains("<button"), "{second}");
+}
+
 /// The bar is sibling content, not a label: nothing wires it to the picture,
 /// and the picture keeps its own `alt`.
 #[test]

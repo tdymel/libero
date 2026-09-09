@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 
 use crate::{
     components::{
-        HtmlTag, Input, States, Variables,
+        HtmlTag, Input, LinkedImageScope, States, Variables,
         common::{base_props, input_from_str, variables},
         layout::use_box,
         navigation::InternalAnchor,
@@ -371,7 +371,7 @@ pub fn ImageList(props: ImageListProps) -> Element {
                     framework_sx: Some(&IMAGE_LIST_MEDIA_LINK_SX),
                     states: media_states.clone(),
                     variables: media_variables.clone(),
-                    {item.content.clone()}
+                    LinkedImageScope { {item.content.clone()} }
                 }
             },
             None => media_style

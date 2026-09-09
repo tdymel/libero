@@ -10,7 +10,7 @@ use crate::{
         surface::paper_sx,
     },
     hooks::{PopoverOptions, use_element, use_field_list_layer, use_popover, use_theme},
-    platform::eye_dropper,
+    platform::{ElementApi, eye_dropper, next_task},
     sx::{StaticSx, ThemeAwareValue, sx},
     theme::{Size, SizeCss, Z_INDEX_POPOVER},
 };
@@ -27,6 +27,10 @@ static COLOR_FIELD_DROPDOWN_SX: StaticSx = StaticSx::new(|| {
         .border_radius(SizeCss::RADIUS.value(Size::Sm))
         .box_shadow(SizeCss::SHADOW.value(Size::Lg))
 });
+
+/// Where Arrow Down in the text input puts focus: the saturation area, or the
+/// first swatch when the dropdown holds only swatches.
+const DROPDOWN_ENTRY: &str = "[tabindex='0'], button:not([tabindex='-1'])";
 
 /// The leading preview, sized to the text rather than to a size step.
 static COLOR_FIELD_PREVIEW_SX: StaticSx =
@@ -128,6 +132,11 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
     // The text as typed, while it differs from `value`'s own spelling. `None`
     // shows `value` in `format`.
     let mut draft = use_signal(|| Option::<String>::None);
+    // Focus is coming back to the text input from the dropdown, which closed:
+    // that focus must not open it again.
+    let mut returning = use_signal(|| false);
+    // Arrow Down asked for focus in the picker, once the dropdown is drawn.
+    let mut entering = use_signal(|| false);
     // Asked after mount: a server render has no eyedropper, and a client that
     // answered otherwise while hydrating would not match it.
     let mut has_eye_dropper = use_signal(|| false);
@@ -235,14 +244,51 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         showing,
         PopoverOptions::new(theme.popover.gap, theme.popover.padding),
     );
+    let floating = *popover.floating();
     let dropdown_states: Input<States> = States::new().active("bordered").into();
     let dropdown = use_box()
         .framework_sx(&COLOR_FIELD_DROPDOWN_SX)
         .states(&dropdown_states)
         .style(popover.style())
         .prepare();
+    // Waits for placement too: Arrow Down on a closed field opens it, and the
+    // picker is not drawn until the box has been measured.
+    use_effect(move || {
+        if !entering() || !popover.placed() {
+            return;
+        }
+        entering.set(false);
+        let _ = floating
+            .query_selector(DROPDOWN_ENTRY)
+            .and_then(|element| element.focus());
+    });
+
+    // After the platform's next task focus has landed, so this can tell
+    // whether it stayed in the field - the text input or the dropdown - or
+    // left. Without a platform answer it counts as left.
+    let settle = move || {
+        spawn(async move {
+            next_task().await;
+            let inside = anchor.query_selector(":focus").is_ok()
+                || floating.query_selector(":focus").is_ok();
+            if !inside {
+                opened.set(false);
+            }
+        });
+    };
+    let mut focus_input = move || {
+        returning.set(true);
+        if anchor
+            .query_selector("input[data-controlled]")
+            .and_then(|input| input.focus())
+            .is_err()
+        {
+            returning.set(false);
+        }
+    };
 
     let text = draft().unwrap_or_else(|| value.to_format(format));
+    let dialog_id = format!("{}-dialog", field.id());
     let input = field
         .aria(control)
         .attr_default("type", "text")
@@ -255,8 +301,11 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
         .attr("readonly", disallow_input || readonly)
         .attr("autocomplete", "off")
         .attr("spellcheck", "false")
+        // APG Date Picker Combobox: a textbox may not carry `aria-expanded`.
+        .attr("role", has_dropdown.then_some("combobox"))
         .attr("aria-haspopup", has_dropdown.then_some("dialog"))
         .attr("aria-expanded", has_dropdown.then(|| showing.to_string()))
+        .attr("aria-controls", showing.then(|| dialog_id.clone()))
         .event("oninput", move |event: FormEvent| {
             let text = event.value();
             if let Ok(color) = text.parse::<ColorCode>() {
@@ -264,10 +313,13 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
             }
             draft.set(Some(text));
         })
-        .event("onfocus", move |_: FocusEvent| opened.set(true))
+        .event("onfocus", move |_: FocusEvent| match returning() {
+            true => returning.set(false),
+            false => opened.set(true),
+        })
         .event("onclick", move |_: MouseEvent| opened.set(true))
         .event("onblur", move |_: FocusEvent| {
-            opened.set(false);
+            settle();
             // Text that parsed was already emitted, so it goes back to the
             // value's own spelling; text that did not stays only if asked.
             let parses = draft
@@ -278,23 +330,41 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                 draft.set(None);
             }
         })
-        .event("onkeydown", move |event: KeyboardEvent| {
-            if event.key() == Key::Escape && opened() {
+        .event("onkeydown", move |event: KeyboardEvent| match event.key() {
+            Key::ArrowDown if has_dropdown && !readonly => {
+                event.prevent_default();
+                opened.set(true);
+                entering.set(true);
+            }
+            Key::Escape if opened() => {
                 event.prevent_default();
                 opened.set(false);
             }
+            _ => {}
         })
         .render(HtmlTag::Input, props.attributes, ());
 
-    // Portaled, so no `overflow: hidden` ancestor clips it. The picker inside
-    // is not focusable, and a mousedown anywhere in the box is cancelled: the
-    // text input keeps focus throughout, and its blur is what closes the box.
+    // Portaled, so no `overflow: hidden` ancestor clips it. A mousedown in the
+    // box is cancelled, so a click keeps focus on the text input; the keyboard
+    // enters the picker with Arrow Down and leaves it with Escape. The box
+    // closes once focus is in neither.
     let picker_setter = bound.setter();
     popover.show(showing.then(|| {
         dropdown
             .element(popover.floating())
+            .attr("id", dialog_id)
+            .attr("role", "dialog")
+            .attr("aria-label", "Choose color")
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
+            })
+            .event("onfocusout", move |_: FocusEvent| settle())
+            .event("onkeydown", move |event: KeyboardEvent| {
+                if event.key() == Key::Escape {
+                    event.prevent_default();
+                    focus_input();
+                    opened.set(false);
+                }
             })
             .render(
                 HtmlTag::Div,
@@ -308,7 +378,6 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         swatches: props.swatches.clone(),
                         swatches_per_row: props.swatches_per_row,
                         size,
-                        focusable: false,
                         oninput: move |event: SliderChangeEvent<ColorCode>| {
                             draft.set(None);
                             match (&oninput, &picker_setter) {
@@ -323,6 +392,10 @@ pub fn ColorField(props: ColorFieldProps) -> Element {
                         },
                         onswatchclick: move |_| {
                             if close_on_swatch_click {
+                                // The focused swatch is about to go; focus goes back first.
+                                if floating.query_selector(":focus").is_ok() {
+                                    focus_input();
+                                }
                                 opened.set(false);
                             }
                         },

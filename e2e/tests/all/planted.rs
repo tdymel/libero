@@ -412,7 +412,8 @@ fn spotlight_with_faint_rows_fails_the_contrast_pass_in_the_open_state() {
 /// harness injects style at run time, a plant must outrank it inline or it is
 /// not a plant at all - it is a test of the harness's own stylesheet.
 ///
-/// The expected message pins the **count**, `7 of 7`, not just the wording. A
+/// The expected message pins the **count**, `8 of 8`, not just the wording
+/// (the shortcut's "+" is punctuation, which axe and the guard both skip). A
 /// plant that only asserts "something was missed" would still pass if the lift
 /// half-worked and one row slipped through, which is the shape of failure this
 /// whole todo was.
@@ -422,7 +423,7 @@ fn spotlight_rows_axe_cannot_reach_fail_the_coverage_guard() {
         must_fail(
             "/spotlight",
             Some("document.body.style.setProperty('overflow', 'hidden', 'important')"),
-            "7 of 7 on-screen text element(s) under [role=dialog] were never evaluated by \
+            "8 of 8 on-screen text element(s) under [role=dialog] were never evaluated by \
              axe's `color-contrast` rule",
             |fixture| async move {
                 let page = &fixture.page;

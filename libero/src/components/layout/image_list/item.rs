@@ -121,6 +121,9 @@ impl ImageItem {
     ///
     /// The bar is not part of the hit area: it sits above the stretched link so
     /// that a control the caller put in it still works.
+    ///
+    /// The link wins over a `zoomable` `Image` in the cell: it draws no zoom
+    /// button, which would nest a `<button>` in the `<a>`, and warns.
     pub fn to(mut self, to: impl Into<NavigationTarget>) -> Self {
         self.to = Some(to.into());
         self

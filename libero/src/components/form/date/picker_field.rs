@@ -66,6 +66,10 @@ pub trait FieldValue: Copy + PartialEq + 'static {
     ) -> Result<Self, Unreadable>;
     /// What the hidden input posts: ISO 8601.
     fn iso(self) -> String;
+    /// Names the dropdown's dialog.
+    fn dialog_label(names: &DateDefaults) -> &'static str {
+        names.date_label
+    }
 }
 
 impl FieldValue for NaiveDate {
@@ -104,6 +108,10 @@ impl FieldValue for NaiveTime {
 
     fn iso(self) -> String {
         self.to_string()
+    }
+
+    fn dialog_label(names: &DateDefaults) -> &'static str {
+        names.time_label
     }
 }
 
@@ -175,6 +183,10 @@ impl<T: FieldValue + Ord> FieldValue for DateRange<T> {
             self.start.iso(),
             self.end.map(T::iso).unwrap_or_default()
         )
+    }
+
+    fn dialog_label(names: &DateDefaults) -> &'static str {
+        T::dialog_label(names)
     }
 }
 
@@ -391,6 +403,7 @@ pub(super) fn use_picker_field<V: FieldValue>(
         }
     };
 
+    let dialog_id = format!("{}-dialog", field_box.id());
     let input = field_box
         .aria(control)
         .attr_default("type", "text")
@@ -401,8 +414,11 @@ pub(super) fn use_picker_field<V: FieldValue>(
         .attr("readonly", readonly)
         .attr("required", required)
         .attr("autocomplete", "off")
+        // APG Date Picker Combobox: a textbox may not carry `aria-expanded`.
+        .attr("role", "combobox")
         .attr("aria-haspopup", "dialog")
         .attr("aria-expanded", showing.to_string())
+        .attr("aria-controls", showing.then(|| dialog_id.clone()))
         .event("oninput", move |event: FormEvent| {
             rejected.set(false);
             draft.set(Some(event.value()));
@@ -468,6 +484,9 @@ pub(super) fn use_picker_field<V: FieldValue>(
         });
         dropdown_box
             .element(popover.floating())
+            .attr("id", dialog_id)
+            .attr("role", "dialog")
+            .attr("aria-label", V::dialog_label(names))
             .event("onmousedown", move |event: MouseEvent| {
                 event.prevent_default()
             })
