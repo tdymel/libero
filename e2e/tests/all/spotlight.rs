@@ -10,14 +10,29 @@
 //! description planted there stayed green. The lock is lifted for the axe run
 //! now (`passes/contrast.rs`), and this line is what stops that regressing
 //! into silence again.
+//!
+//! The search box's keys (the arrows wrap, Enter runs the highlighted row) and
+//! the Ctrl/Cmd+K hotkey are driven below with real key presses (todo 406).
 
 use e2e::archetypes::Overlay;
 use e2e::browser::block_on;
+use e2e::passes::{focus, keyboard::Key};
 use e2e::suite::Step;
-use e2e::{Fixture, Suite, Viewport, passes::keyboard};
+use e2e::{Fixture, Suite, Viewport, passes::keyboard, wait};
 
 pub const TRIGGER: &str = "#open-spotlight";
 const DIALOG: &str = "[role=dialog]";
+const SEARCH: &str = "[role=dialog] input[role=combobox]";
+const OPTIONS: &str = "[role=dialog] [role=option]";
+/// The fixture writes the label of the action that ran into its `data-ran`.
+const RAN: &str = "#ran";
+/// A chord's key carries no text: a held Ctrl or Meta types nothing.
+const K: Key = Key {
+    key: "k",
+    code: "KeyK",
+    vk: 75,
+    text: None,
+};
 
 #[test]
 fn it_meets_the_baseline() {
@@ -55,5 +70,159 @@ fn it_honours_the_overlay_contract() {
                 .unwrap();
             fixture.close().await.unwrap();
         }
+    });
+}
+
+async fn js<T: serde::de::DeserializeOwned>(page: &chromiumoxide::Page, expression: &str) -> T {
+    page.evaluate(expression)
+        .await
+        .unwrap_or_else(|e| panic!("evaluate {expression}: {e}"))
+        .into_value()
+        .unwrap_or_else(|e| panic!("read {expression}: {e}"))
+}
+
+/// Waits for focus to land, then names where it is if it did not.
+async fn assert_focused(page: &chromiumoxide::Page, selector: &str, during: &str) {
+    let _ = wait::for_js_true(
+        page,
+        &format!(
+            "document.activeElement === document.querySelector({})",
+            serde_json::to_string(selector).unwrap()
+        ),
+        during,
+    )
+    .await;
+    focus::assert_focused(page, selector, during).await.unwrap();
+}
+
+/// `None` read as `""`: a JS `null` does not deserialise into an `Option`.
+async fn highlight(page: &chromiumoxide::Page) -> String {
+    js(
+        page,
+        &format!("document.querySelector({SEARCH:?}).getAttribute('aria-activedescendant') ?? ''"),
+    )
+    .await
+}
+
+/// The search box names `expected`, that row alone is drawn active, and focus
+/// never left the search box.
+async fn expect_active(page: &chromiumoxide::Page, expected: &str, during: &str) {
+    let check = format!(
+        "(() => {{ const input = document.querySelector({SEARCH:?}); \
+         const active = [...document.querySelectorAll({OPTIONS:?})] \
+           .filter(o => o.hasAttribute('data-active')).map(o => o.id); \
+         return input.getAttribute('aria-activedescendant') === {expected:?} \
+           && active.length === 1 && active[0] === {expected:?}; }})()"
+    );
+    if wait::for_js_true(page, &check, during).await.is_err() {
+        let actual = highlight(page).await;
+        panic!("after {during}, the highlight is on {actual:?}, expected {expected:?}");
+    }
+    focus::assert_focused(page, SEARCH, during).await.unwrap();
+}
+
+async fn open_by_keyboard(page: &chromiumoxide::Page) {
+    keyboard::tab_to(page, TRIGGER, 5).await.unwrap();
+    keyboard::press(page, keyboard::ENTER).await.unwrap();
+    wait::for_visible(page, DIALOG).await.unwrap();
+    assert_focused(page, SEARCH, "opening the palette").await;
+}
+
+async fn ran(page: &chromiumoxide::Page, label: &str, what: &str) {
+    wait::for_js_true(
+        page,
+        &format!("document.querySelector({RAN:?})?.dataset.ran === {label:?}"),
+        what,
+    )
+    .await
+    .unwrap();
+}
+
+/// The arrows wrap through the rows while focus stays in the search box, and
+/// Enter runs the highlighted row, closes, and hands focus back.
+#[test]
+fn the_arrows_move_the_highlight_and_enter_runs_it() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        open_by_keyboard(page).await;
+
+        let ids: Vec<String> = js(
+            page,
+            &format!("[...document.querySelectorAll({OPTIONS:?})].map(o => o.id)"),
+        )
+        .await;
+        assert_eq!(ids.len(), 3, "the fixture offers three actions: {ids:?}");
+        assert_eq!(highlight(page).await, "", "a highlight on opening");
+
+        for (index, id) in ids.iter().enumerate() {
+            keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+            expect_active(page, id, &format!("ArrowDown to row {index}")).await;
+        }
+        keyboard::press(page, keyboard::ARROW_DOWN).await.unwrap();
+        expect_active(page, &ids[0], "ArrowDown past the last row").await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect_active(page, &ids[2], "ArrowUp past the first row").await;
+        keyboard::press(page, keyboard::ARROW_UP).await.unwrap();
+        expect_active(page, &ids[1], "ArrowUp to row 1").await;
+
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        ran(page, "Changelog", "Enter to run the highlighted row").await;
+        wait::for_hidden(page, DIALOG).await.unwrap();
+        assert_focused(page, TRIGGER, "running an action").await;
+
+        // A typed query highlights its first hit, so Enter runs it at once.
+        open_by_keyboard(page).await;
+        keyboard::type_text(page, "new").await.unwrap();
+        wait::for_js_true(
+            page,
+            &format!("document.querySelectorAll({OPTIONS:?}).length === 1"),
+            "the query to narrow the rows to one",
+        )
+        .await
+        .unwrap();
+        keyboard::press(page, keyboard::ENTER).await.unwrap();
+        ran(page, "New file", "Enter to run the query's first hit").await;
+        wait::for_hidden(page, DIALOG).await.unwrap();
+
+        fixture
+            .console
+            .assert_clean("driving the palette's keys")
+            .unwrap();
+        fixture.close().await.unwrap();
+    });
+}
+
+/// Ctrl+K and Cmd+K each open the palette with focus in its search box, and
+/// the same chord from inside it closes it again.
+#[test]
+fn ctrl_or_cmd_k_toggles_the_palette() {
+    block_on(async {
+        let fixture = Fixture::open("/spotlight", Viewport::Desktop)
+            .await
+            .unwrap();
+        let page = &fixture.page;
+        wait::for_selector(page, TRIGGER).await.unwrap();
+
+        for (name, modifier) in [("Ctrl", keyboard::CTRL), ("Cmd", keyboard::META)] {
+            keyboard::press_with(page, K, modifier).await.unwrap();
+            wait::for_visible(page, DIALOG)
+                .await
+                .unwrap_or_else(|e| panic!("{name}+K to open the palette: {e}"));
+            assert_focused(page, SEARCH, &format!("{name}+K opening the palette")).await;
+
+            keyboard::press_with(page, K, modifier).await.unwrap();
+            wait::for_hidden(page, DIALOG)
+                .await
+                .unwrap_or_else(|e| panic!("{name}+K inside to close the palette: {e}"));
+        }
+
+        fixture
+            .console
+            .assert_clean("the palette's hotkey")
+            .unwrap();
+        fixture.close().await.unwrap();
     });
 }

@@ -105,7 +105,11 @@ pub const ARROW_DOWN: Key = Key {
     text: None,
 };
 
-const SHIFT: i64 = 8;
+/// CDP modifier bits, for [`press_with`].
+pub const ALT: i64 = 1;
+pub const CTRL: i64 = 2;
+pub const META: i64 = 4;
+pub const SHIFT: i64 = 8;
 
 /// Press and release a key.
 pub async fn press(page: &Page, key: Key) -> Result<()> {
@@ -115,6 +119,12 @@ pub async fn press(page: &Page, key: Key) -> Result<()> {
 /// Press a key with Shift held, for Shift+Tab.
 pub async fn press_shift(page: &Page, key: Key) -> Result<()> {
     dispatch(page, key, SHIFT).await
+}
+
+/// Press a key with the given modifier bits held, e.g. `CTRL` for Ctrl+K.
+/// Give a chord's key no `text`: a held Ctrl or Meta types nothing.
+pub async fn press_with(page: &Page, key: Key, modifiers: i64) -> Result<()> {
+    dispatch(page, key, modifiers).await
 }
 
 async fn dispatch(page: &Page, key: Key, modifiers: i64) -> Result<()> {

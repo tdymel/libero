@@ -1,0 +1,20 @@
+---
+source: e2e/src/suite.rs
+description: hover_card at desktop (open)
+expression: tree
+---
+button "Before"
+  StaticText "Before"
+button "Ada Lovelace"
+  StaticText "Ada Lovelace"
+  generic
+button "After"
+  StaticText "After"
+generic
+  dialog "Ada Lovelace"
+    paragraph
+      StaticText "Wrote the first algorithm meant for a machine."
+    button "Profile"
+      StaticText "Profile"
+    button "Follow"
+      StaticText "Follow"

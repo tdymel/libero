@@ -15,6 +15,7 @@ mod color_picker;
 mod drawer;
 mod floating_window;
 mod focus_contrast;
+mod hover_card;
 mod image_list;
 mod isolation;
 mod journal;

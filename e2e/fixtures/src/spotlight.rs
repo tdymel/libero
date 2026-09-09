@@ -10,17 +10,24 @@ use crate::Routes;
 pub const ROUTES: Routes = &[("/spotlight", || rsx! { SpotlightPage {} })];
 
 /// The hook lives on the page, which outlives the trigger, as its docs ask.
+/// Each action writes its label into `#ran`'s `data-ran`, so the resting
+/// accessibility tree is unchanged.
 #[component]
 fn SpotlightPage() -> Element {
+    let mut ran = use_signal(String::new);
     let all = use_hook(|| {
         vec![
             SpotlightAction::new("Home")
                 .group("Pages")
-                .description("The start page"),
-            SpotlightAction::new("Changelog").group("Pages"),
+                .description("The start page")
+                .onclick(move |_| ran.set("Home".into())),
+            SpotlightAction::new("Changelog")
+                .group("Pages")
+                .onclick(move |_| ran.set("Changelog".into())),
             SpotlightAction::new("New file")
                 .group("Commands")
-                .shortcut("Ctrl N"),
+                .shortcut("Ctrl N")
+                .onclick(move |_| ran.set("New file".into())),
         ]
     });
     let spotlight = use_spotlight(SpotlightOptions {
@@ -43,7 +50,7 @@ fn SpotlightPage() -> Element {
                 onclick: move |_| spotlight.open(),
                 "Open the palette"
             }
-            Text { size: "sm", "Or press Ctrl K." }
+            Text { id: "ran", "data-ran": "{ran}", size: "sm", "Or press Ctrl K." }
         }
     }
 }

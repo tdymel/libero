@@ -1,7 +1,7 @@
 //! `use_spotlight`'s markup: the search box is the combobox and names a
 //! listbox and an option that exist, groups are named by a real element,
 //! nothing is ever `aria-selected`, and the status region is there before it
-//! has anything to announce. Keys and the hotkey need a browser and are verified there.
+//! has anything to announce. Keys and the hotkey need a browser: `e2e/tests/all/spotlight.rs`.
 
 use std::cell::{Cell, RefCell};
 
